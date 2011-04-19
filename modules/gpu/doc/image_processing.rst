@@ -7,10 +7,7 @@ Image Processing
 
 gpu::meanShiftFiltering
 ---------------------------
-.. cpp:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst,
-   int sp, int sr,
-   TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
-   + TermCriteria::EPS, 5, 1))
+.. cpp:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
 
@@ -22,15 +19,13 @@ gpu::meanShiftFiltering
 
     :param sr: Color window radius.
 
-    :param criteria: Termination criteria. See :c:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
 
 .. index:: gpu::meanShiftProc
 
 gpu::meanShiftProc
 ----------------------
-.. cpp:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp,
-   int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER
-   + TermCriteria::EPS, 5, 1))
+.. cpp:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
@@ -44,7 +39,7 @@ gpu::meanShiftProc
 
     :param sr: Color window radius.
 
-    :param criteria: Termination criteria. See :c:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
 
 See Also:
 :c:func:`gpu::meanShiftFiltering` 
@@ -67,7 +62,7 @@ gpu::meanShiftSegmentation
 
     :param minsize: Minimum segment size. Smaller segements are merged.
 
-    :param criteria: Termination criteria. See :c:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
 
 .. index:: gpu::integral
 
@@ -116,15 +111,13 @@ gpu::columnSum
 
 gpu::cornerHarris
 ---------------------
-.. cpp:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst,
-   int blockSize, int ksize, double k,
-   int borderType=BORDER_REFLECT101)
+.. cpp:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
 
     Computes the Harris cornerness criteria at each image pixel.
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
-    :param dst: Destination image containing cornerness values. The size is the same??. The type is ``CV_32FC1`` .
+    :param dst: Destination image containing cornerness values. It has the same size as ``src`` and ``CV_32FC1`` type.
 
     :param blockSize: Neighborhood size.
 
@@ -141,9 +134,7 @@ See Also:
 
 gpu::cornerMinEigenVal
 --------------------------
-.. cpp:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst,
-   int blockSize, int ksize,
-   int borderType=BORDER_REFLECT101)
+.. cpp:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
 
     Computes the minimum eigen value of 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
 
@@ -165,8 +156,7 @@ See also: :c:func:`cornerMinEigenVal`
 
 gpu::mulSpectrums
 ---------------------
-.. cpp:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b,
-   GpuMat& c, int flags, bool conjB=false)
+.. cpp:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
 
     Performs a per-element multiplication of two Fourier spectrums.
 
@@ -189,8 +179,7 @@ See Also:
 
 gpu::mulAndScaleSpectrums
 -----------------------------
-.. cpp:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b,
-   GpuMat& c, int flags, float scale, bool conjB=false)
+.. cpp:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
 
     Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
@@ -254,11 +243,9 @@ See Also:
 
 gpu::convolve
 -----------------
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
-   bool ccorr=false)
+.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
 
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
-   bool ccorr, ConvolveBuf& buf)
+.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
 
     Computes a convolution (or cross-correlation) of two images.
 
@@ -314,8 +301,7 @@ gpu::ConvolveBuf::ConvolveBuf
 
 gpu::matchTemplate
 ----------------------
-.. cpp:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ,
-   GpuMat& result, int method)
+.. cpp:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
 
     Computes a proximity map for a raster template and an image where the template is searched for.
 

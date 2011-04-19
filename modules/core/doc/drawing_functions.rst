@@ -8,13 +8,9 @@ The boundaries of the shapes can be rendered with antialiasing (implemented only
 All the functions include the parameter ``color`` that uses an RGB value (that may be constructed
 with ``CV_RGB`` or the  :ref:`Scalar`  constructor
 ) for color
-images and brightness for grayscale images. For color images, the order?? channel
-is normally
-*Blue, Green, Red*.
-This is what
-:func:`imshow`,
-:func:`imread`, and
-:func:`imwrite` expect.
+images and brightness for grayscale images. For color images, the channel ordering
+is normally *Blue, Green, Red*.
+This is what :func:`imshow`, :func:`imread`, and :func:`imwrite` expect.
 So, if you form a color using the
 :ref:`Scalar` constructor, it should look like:
 
@@ -52,7 +48,7 @@ circle
 
     :param lineType: Type of the circle boundary. See  :func:`line`  description.
 
-    :param shift: Number of fractional bits in the center?? coordinates, and radius value.
+    :param shift: Number of fractional bits in the center's coordinates and in the radius value.
 
 The function ``circle`` draws a simple or filled circle with a given center and radius.
 
@@ -107,7 +103,7 @@ ellipse
 
     :param lineType: Type of the ellipse boundary. See  :func:`line`  description.
 
-    :param shift: Number of fractional bits in the center?? coordinates and axes' values.
+    :param shift: Number of fractional bits in the center's coordinates and axes' values.
 
 The functions ``ellipse`` with less parameters draw an ellipse outline, a filled ellipse, an elliptic arc, or a filled ellipse sector.
 A piecewise-linear curve is used to approximate the elliptic arc boundary. If you need more control of the ellipse rendering, you can retrieve the curve using

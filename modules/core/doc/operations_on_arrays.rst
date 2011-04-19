@@ -207,8 +207,6 @@ The functions ``bitwise_and`` compute the per-element bit-wise logical conjuncti
 
 In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently.
 
-See Also: ??
-
 .. index:: bitwise_not
 
 .. _bitwise_not_:
@@ -765,7 +763,7 @@ dft
             * **DFT_SCALE** Scale the result: divide it by the number of array elements. Normally, it is combined with  ``DFT_INVERSE`` .             .
             * **DFT_ROWS** Perform a forward or inverse transform of every individual row of the input matrix. This flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transforms and so forth.
 
-            * **DFT_COMPLEX_OUTPUT** Perform a forward transformation of 1D or 2D real array. The result, though being a complex array, has complex-conjugate symmetry ( *CCS* ).?? See the description below for details. Such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default. However, you may wish to get a full complex array (for simpler spectrum analysis, and so on). Pass the flag to enable the function to produce a full-size complex output array.
+            * **DFT_COMPLEX_OUTPUT** Perform a forward transformation of 1D or 2D real array. The result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details). Such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default. However, you may wish to get a full complex array (for simpler spectrum analysis, and so on). Pass the flag to enable the function to produce a full-size complex output array.
 
             * **DFT_REAL_OUTPUT** Perform an inverse transformation of 1D or 2D complex array. The result is normally a complex array of the same size. However, if the source array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array. While the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array. Note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array. So, the output will also be a real array.
 
@@ -1868,7 +1866,7 @@ mulSpectrums
     
     :param dst: Destination array. It has the same size and type as  ``src1`` .
     
-    :param flags: The same flags as passed to  :func:`dft` . Only the flag  ``DFT_ROWS``  is checked for.??
+    :param flags: The operation flags. Currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is independent 1D Fourier spectrum.
 
     :param conj: Optional flag that conjugates the second source array before the multiplication (true) or not (false).
 
@@ -2679,8 +2677,7 @@ randn
 
     :param stddev: Standard deviation of the generated random numbers.
 
-The function ``randn`` fills the matrix ``mtx`` with normally distributed random numbers with the specified mean and standard deviation.
-?? is applied to the generated numbers (that is, the values are clipped)
+The function ``randn`` fills the matrix ``mtx`` with normally distributed random numbers with the specified mean and standard deviation. The generated random numbers are clipped to fit the value range of the destination array data type.
 
 See Also:
 :func:`RNG`,
@@ -3445,12 +3442,11 @@ The function ``transform`` performs the matrix transformation of every element o
 
 (when ``mtx.cols=src.channels()+1`` )
 
-Every element of the ``N`` -channel array ``src`` is
-considered as an ``N`` -element vector that is transformed using
+Every element of the ``N`` -channel array ``src`` is interpreted as ``N`` -element vector that is transformed using
 the
 :math:`\texttt{M} \times \texttt{N}` or
-:math:`\texttt{M} \times \texttt{N+1}` matrix ``mtx`` into??
-an element of the ``M`` -channel array ``dst`` .
+:math:`\texttt{M} \times \texttt{N+1}` matrix ``mtx``
+to ``M``-element vector - the corresponding element of the destination array ``dst`` .
 
 The function may be used for geometrical transformation of
 :math:`N` -dimensional

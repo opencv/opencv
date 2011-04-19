@@ -1,11 +1,13 @@
 Object Detection
 ================
 
+.. highlight:: cpp
+
 .. index:: matchTemplate
 
 matchTemplate
 -----------------
-.. c:function:: void matchTemplate( const Mat\& image, const Mat\& templ,                    Mat\& result, int method )
+.. c:function:: void matchTemplate( const Mat& image, const Mat& temp, Mat& result, int method )
 
     Compares a template against overlapped image regions.
 

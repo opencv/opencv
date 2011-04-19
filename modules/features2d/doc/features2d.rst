@@ -2,6 +2,8 @@
 features2d. 2D Features Framework
 *********************************
 
+.. highlight:: cpp
+
 .. toctree::
     :maxdepth: 2
 

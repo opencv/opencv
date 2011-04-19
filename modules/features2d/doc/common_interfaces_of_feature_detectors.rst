@@ -1,6 +1,8 @@
 Common Interfaces of Feature Detectors
 ======================================
 
+.. highlight:: cpp
+
 Feature detectors in OpenCV have wrappers with common interface that enables to switch easily
 between different algorithms solving the same problem. All objects that implement keypoint detectors
 inherit
@@ -14,7 +16,7 @@ KeyPoint
 --------
 .. c:type:: KeyPoint
 
-  Data structure for salient point detectors. ::
+Data structure for salient point detectors. ::
 
     class KeyPoint
     {
@@ -63,6 +65,8 @@ KeyPoint
     void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
     // reads vector of keypoints from the specified file storage node
     void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
+
+..
 
 
 .. index:: FeatureDetector

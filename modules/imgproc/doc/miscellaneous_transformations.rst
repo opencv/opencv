@@ -1,6 +1,8 @@
 Miscellaneous Image Transformations
 ===================================
 
+.. highlight:: cpp
+
 .. index:: adaptiveThreshold
 
 .. _adaptiveThreshold:

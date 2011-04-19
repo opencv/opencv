@@ -1025,14 +1025,12 @@ Mat::Mat
 
     :param colRange: The range of the  ``m`` 's columns to take. Use  ``Range::all()``  to take all the columns.
 
-    :param ranges: The array of selected ranges of  ``m``  along each dimensionality
-
-    .
+    :param ranges: The array of selected ranges of  ``m``  along each dimensionality.
 
     :param expr: Matrix expression. See  :ref:`MatrixExpressions`.
 
-These are various constructors that form a matrix. As noticed in the ??
-, often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is de-referenced, or be allocated with
+These are various constructors that form a matrix. As noticed in the :ref:`AutomaticAllocation`,
+often the default constructor is enough, and the proper matrix will be allocated by an OpenCV function. The constructed matrix can further be assigned to another matrix or matrix expression, in which case the old content is de-referenced, or be allocated with
 :ref:`Mat::create` .
 
 .. index:: Mat::Mat
@@ -1623,7 +1621,7 @@ Mat::locateROI
 
     Locates the matrix header within a parent matrix.
 
-    :param wholeSize: An output parameter that contains the size of the whole matrix, which  ``*this``  is a part of.??
+    :param wholeSize: An output parameter that contains the size of the whole matrix, which contains ``*this`` is a part.
 
     :param ofs: An output parameter that contains an offset of  ``*this``  inside the whole matrix.
 

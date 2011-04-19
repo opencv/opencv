@@ -1,6 +1,8 @@
 Motion Analysis and Object Tracking
 ===================================
 
+.. highlight:: cpp
+
 .. index:: accumulate
 
 accumulate

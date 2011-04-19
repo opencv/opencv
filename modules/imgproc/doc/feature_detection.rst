@@ -1,6 +1,8 @@
 Feature Detection
 =================
 
+.. highlight:: cpp
+
 .. index:: Canny
 
 .. _Canny:

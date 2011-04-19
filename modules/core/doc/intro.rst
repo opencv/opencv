@@ -2,6 +2,8 @@
 Introduction
 ************
 
+.. highlight:: cpp
+
 OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is an open-source BSD-licensed library that includes several hundreds computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
 
 OpenCV has a modular structure, which means that the package includes several shared or static libraries. The modules are:
@@ -22,7 +24,7 @@ API Concepts
 ================
 
 *``cv``* Namespace
-----------------
+------------------
 
 All the OpenCV classes and functions are placed into the *``cv``* namespace. Therefore, to access this functionality from your code, use the ``cv::`` specifier or ``using namespace cv;`` directive:
 
@@ -81,7 +83,7 @@ First of all, ``std::vector``, ``Mat``, and other data structures used by the fu
     // matrix will be deallocated, since it is not referenced by anyone
     C = C.clone();
 
-Therefore, the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user data types created without automatic memory management in mind? For them OpenCV offers the ``Ptr<>`` template class that is similar to ``std::shared_ptr`` from C++ TR1. So, instead of using plain pointers::
+Therefore, the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user data types created without taking automatic memory management into account? For them OpenCV offers the ``Ptr<>`` template class that is similar to ``std::shared_ptr`` from C++ TR1. So, instead of using plain pointers::
 
    T* ptr = new T(...);
 
@@ -91,9 +93,7 @@ you can use::
 
 That is, ``Ptr<T> ptr`` incapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See ``Ptr`` description for details.
 
-.. todo::
-
-  Should we replace Ptr<> with the semi-standard shared_ptr<>?
+.. _AutomaticAllocation:
 
 Automatic Allocation of the Output Data
 ---------------------------------------
@@ -126,7 +126,7 @@ Here is the example: ::
         return 0;
     }
 
-The array ``frame`` is automatically allocated by the ``>>`` operator, since the video frame resolution and bit-depth is known to the video capturing module. The array ``edges`` is automatically allocated by the ``cvtColor`` function. It has the same size and the bit-depth as the input array. The number of channels is 1 because the color conversion code ``CV_BGR2GRAY`` is passed (that means color to grayscale conversion??). Note that ``frame`` and ``edges`` are allocated only once during the first execution of the loop body, since all the next video frames have the same resolution. If you somehow change the video resolution, the arrays are automatically reallocated.
+The array ``frame`` is automatically allocated by the ``>>`` operator, since the video frame resolution and bit-depth is known to the video capturing module. The array ``edges`` is automatically allocated by the ``cvtColor`` function. It has the same size and the bit-depth as the input array. The number of channels is 1 because the color conversion code ``CV_BGR2GRAY`` is passed, which means color to grayscale conversion. Note that ``frame`` and ``edges`` are allocated only once during the first execution of the loop body, since all the next video frames have the same resolution. If you somehow change the video resolution, the arrays are automatically reallocated.
 
 The key component of this technology is the ``Mat::create`` method. It takes the desired array size and type. If the array already has the specified size and type, the method does nothing. Otherwise, it releases the previously allocated data, if any (this part involves decrementing the reference counter and comparing it with zero), and then allocates a new buffer of the required size. Most functions call this the ``Mat::create`` method for each output array and so the automatic output data allocation is implemented.
 
@@ -163,9 +163,6 @@ There is a limited fixed set of primitive data types the library can operate on.
   * 64-bit floating-point number (double)
   * a tuple of several elements, where all elements have the same type (one of the above). An array, whose elements are such tuples, are called multi-channel arrays, as opposite to the single-channel arrays, whose elements are scalar values. The maximum possible number of channels is defined by the ``CV_CN_MAX`` constant (which is not smaller than 32).
 
-.. todo::
-  Need we extend the above list? Shouldn't we throw away 8-bit signed (schar)?
-
 For these basic types, the following enumeration is applied::
 
   enum { CV_8U=0, CV_8S=1, CV_16U=2, CV_16S=3, CV_32S=4, CV_32F=5, CV_64F=6 };
@@ -194,9 +191,6 @@ Arrays, whose elements are more complex, cannot be constructed or processed usin
 
 The subset of supported types for each functions has been defined from practical needs. All this information about supported types can be put together into a special table. In different implementations of the standard, the tables may look differently. For example, on embedded platforms the double-precision floating-point type (``CV_64F``) may be unavailable.
 
-.. todo::
-  Should we include such a table into the standard?
-  Should we specify minimum "must-have" set of supported formats for each functions?
 
 Error Handling
 --------------
@@ -218,6 +212,6 @@ The exception is typically thrown using either the ``CV_Error(errcode, descripti
     }
 
 Multi-threading and Re-enterability
-----------------------------------
+-----------------------------------
 
-The current OpenCV implementation is fully re-enterable as should be any alternative implementation targeted for multi-threaded environments. That is, the same function, the same *constant* method of a class instance, or the same *non-constant* method of different class instances can be called from different threads. Also, the same ``cv::Mat`` can be used in different threads because the reference-counting operations use the architecture-specific atomic instructions.
+The current OpenCV implementation is fully re-enterable. That is, the same function, the same *constant* method of a class instance, or the same *non-constant* method of different class instances can be called from different threads. Also, the same ``cv::Mat`` can be used in different threads because the reference-counting operations use the architecture-specific atomic instructions.

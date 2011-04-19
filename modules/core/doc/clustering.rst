@@ -1,6 +1,8 @@
 Clustering
 ==========
 
+.. highlight:: cpp
+
 .. index:: kmeans
 
 .. _kmeans:
@@ -8,7 +10,7 @@ Clustering
 kmeans
 ------
 
-.. c:function:: double kmeans( const Mat\& samples, int clusterCount, Mat\& labels,               TermCriteria termcrit, int attempts,               int flags, Mat* centers )
+.. c:function:: double kmeans( const Mat& samples, int clusterCount, Mat& labels, TermCriteria termcrit, int attempts,               int flags, Mat* centers )
 
     Finds centers of clusters and groups input samples around the clusters.
 
@@ -18,7 +20,7 @@ kmeans
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
-    :param termcrit: Flag to specify the maximum number of iterations and/or accuracy (distance the centers can move by between subsequent iterations??).
+    :param termcrit: Flag to specify the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``termcrit.epsilon``. As soon as each of the cluster centers moves by less than ``termcrit.epsilon`` on some iteration, the algorithm stops.
 
     :param attempts: Flag to specify how many times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 
@@ -57,7 +59,7 @@ partition
 -------------
 .. c:function:: template<typename _Tp, class _EqPredicate> int
 
-.. c:function:: partition( const vector<_Tp>\& vec, vector<int>\& labels,               _EqPredicate predicate=_EqPredicate())
+.. c:function:: partition( const vector<_Tp>& vec, vector<int>& labels,               _EqPredicate predicate=_EqPredicate())
 
     Splits an element set into equivalency classes.
 

@@ -1,5 +1,7 @@
 .. _ImageFiltering:
 
+.. highlight:: cpp
+
 Image Filtering
 ===============
 
@@ -881,10 +883,7 @@ The function does actually compute correlation, not the convolution:
 That is, the kernel is not mirrored around the anchor point. If you need a real convolution, flip the kernel using
 :func:`flip` and set the new anchor to ``(kernel.cols - anchor.x - 1, kernel.rows - anchor.y - 1)`` .
 
-The function uses the
-??-based algorithm in case of sufficiently large kernels (~
-:math:`11\times11` ) and the direct algorithm (that uses the engine retrieved by
-:func:`createLinearFilter` ) for small kernels.
+The function uses the DFT-based algorithm in case of sufficiently large kernels (~``11 x 11`` or larger) and the direct algorithm (that uses the engine retrieved by :func:`createLinearFilter` ) for small kernels.
 
 See Also:
 :func:`sepFilter2D`,
@@ -971,10 +970,12 @@ The function computes and returns the
 where
 :math:`i=0..\texttt{ksize}-1` and
 :math:`\alpha` is the scale factor chosen so that
-:math:`\sum_i G_i=1` . Two of such generated kernels can be passed to
+:math:`\sum_i G_i=1`.
+
+Two of such generated kernels can be passed to
 :func:`sepFilter2D` or to
-:func:`createSeparableLinearFilter` . These functions?? automatically recognize smoothing kernels and handle them accordingly. You may also use the higher-level
-:func:`GaussianBlur` .
+:func:`createSeparableLinearFilter`. Those functions automatically recognize smoothing kernels (i.e. symmetrical kernel with sum of weights = 1) and handle them accordingly. You may also use the higher-level
+:func:`GaussianBlur`.
 
 See Also:
 :func:`sepFilter2D`,

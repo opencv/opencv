@@ -1,6 +1,8 @@
 Structural Analysis and Shape Descriptors
 =========================================
 
+.. highlight:: cpp
+
 .. index:: moments
 
 moments

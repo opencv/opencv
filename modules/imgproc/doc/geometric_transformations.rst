@@ -1,6 +1,8 @@
 Geometric Image Transformations
 ===============================
 
+.. highlight:: cpp
+
 The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid, and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
 :math:`(x, y)` of the destination image, the functions compute coordinates of the corresponding "donor" pixel in the source image and copy the pixel value:
 
@@ -323,7 +325,7 @@ resize
 
             * **INTER_LINEAR** - a bilinear interpolation (used by default)
 
-            * **INTER_AREA** - resampling using pixel area relation. It may be a preferred method for image decimation, as it gives freer?? results. But when the image is zoomed, it is similar to the  ``INTER_NEAREST``  method.
+            * **INTER_AREA** - resampling using pixel area relation. It may be a preferred method for image decimation, as it gives moire-free results. But when the image is zoomed, it is similar to the  ``INTER_NEAREST``  method.
 
             * **INTER_CUBIC**  - a bicubic interpolation over 4x4 pixel neighborhood
 

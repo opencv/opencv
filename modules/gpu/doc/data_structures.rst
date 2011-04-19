@@ -1,6 +1,8 @@
 Data Structures
 ===============
 
+.. highlight:: cpp
+
 .. index:: gpu::DevMem2D\_
 
 gpu::DevMem2D\_
@@ -286,7 +288,7 @@ gpu::Stream::waitForCompletion
 ----------------------------------
 .. cpp:function:: void gpu::Stream::waitForCompletion()
 
-    Blocks ?? until all operations in the stream are complete.
+    Blocks the current CPU thread until all operations in the stream are complete.
 
 .. index:: gpu::StreamAccessor
 
@@ -348,9 +350,5 @@ gpu::ensureSizeIsEnough
 
     :param type: Desired matrix type.
 
-    :param m: Destination matrix.
-
-    The following wrapper is also available: ??
-
-    
+    :param m: Destination matrix.    
 
