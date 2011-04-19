@@ -275,6 +275,41 @@ namespace cv
 
 CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
 CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<double>& resultWeights, int groupThreshold = 2, double eps=0.2);
+CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 
+										  double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
+
+class MeanshiftGrouping
+{
+public:
+	MeanshiftGrouping(const Point3d& densKer, const vector<Point3d>& posV, 
+		const vector<double>& wV, double modeEps = 1e-4,
+		int maxIt = 20);
+	
+	void getModes(vector<Point3d>& modesV, vector<double>& resWeightsV, const double eps); 
+
+protected:
+	vector<Point3d> positionsV;
+	vector<double> weightsV;
+
+	Point3d densityKernel;
+	int positionsCount;
+
+	vector<Point3d> meanshiftV;
+	vector<Point3d> distanceV;
+	int iterMax;
+	double modeEps;
+
+	Point3d getNewValue(const Point3d& inPt) const;
+
+	double getResultWeight(const Point3d& inPt) const; 
+
+	Point3d moveToMode(Point3d aPt) const; 
+
+	double getDistance(Point3d p1, Point3d p2) const; 
+};
+
+
         
 class CV_EXPORTS FeatureEvaluator
 {
@@ -312,7 +347,10 @@ public:
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
-                                   Size maxSize=Size() );
+                                   Size maxSize=Size(),
+                                   bool outputRejectLevels = false, 
+                                   vector<int>& rejectLevels = vector<int>(0));
+
 
     bool isOldFormatCascade() const;
     virtual Size getOriginalWindowSize() const;
@@ -321,7 +359,8 @@ public:
 
 protected:
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-                                    int stripSize, int yStep, double factor, vector<Rect>& candidates );
+                                    int stripSize, int yStep, double factor, vector<Rect>& candidates,
+                                    bool outputRejectLevels = false, vector<int>& rejectLevels = vector<int>(0) );
 
 protected:
     enum { BOOST = 0 };
@@ -387,6 +426,35 @@ protected:
     Data data;
     Ptr<FeatureEvaluator> featureEvaluator;
     Ptr<CvHaarClassifierCascade> oldCascade;
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+public:
+    int getNumStages()
+    {
+        int numStages;
+        if( !isOldFormatCascade() )
+        {
+            numStages = data.stages.size();
+        }
+        else
+        {
+            numStages = this->oldCascade->count;
+        }
+        return numStages;
+    }
+    void setNumStages(int stageCount)
+    {
+        if( !isOldFormatCascade() )
+        {
+            if( stageCount )
+                data.stages.resize(stageCount);
+        }
+        else
+            if( stageCount )
+                this->oldCascade->count = stageCount;
+    }
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 };
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
@@ -438,23 +506,38 @@ public:
     CV_WRAP virtual bool load(const String& filename, const String& objname=String());
     CV_WRAP virtual void save(const String& filename, const String& objname=String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
-    
+
     CV_WRAP virtual void compute(const Mat& img,
                          CV_OUT vector<float>& descriptors,
                          Size winStride=Size(), Size padding=Size(),
                          const vector<Point>& locations=vector<Point>()) const;
+	//with found weights output
+    CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations, 
+						vector<double>& weights,
+                        double hitThreshold=0, Size winStride=Size(), 
+						Size padding=Size(),
+                        const vector<Point>& searchLocations=vector<Point>()) const;
+	//without found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT vector<Point>& foundLocations,
                         double hitThreshold=0, Size winStride=Size(),
                         Size padding=Size(),
                         const vector<Point>& searchLocations=vector<Point>()) const;
-    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations,
-                                  double hitThreshold=0, Size winStride=Size(),
-                                  Size padding=Size(), double scale=1.05,
-                                  int groupThreshold=2) const;
+	//with result weights output
+    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations, 
+								  vector<double>& foundWeights, double hitThreshold=0, 
+								  Size winStride=Size(), Size padding=Size(), double scale=1.05, 
+								  double finalThreshold=2.0,bool useMeanshiftGrouping = false) const;
+	//without found weights output
+	CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT vector<Rect>& foundLocations, 
+								  double hitThreshold=0, Size winStride=Size(),
+                                  Size padding=Size(), double scale=1.05, 
+								  double finalThreshold=2.0, bool useMeanshiftGrouping = false) const;
+
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
     
     static vector<float> getDefaultPeopleDetector();
+	static vector<float> getDaimlerPeopleDetector();
     
     CV_PROP Size winSize;
     CV_PROP Size blockSize;
