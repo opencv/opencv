@@ -926,7 +926,7 @@ struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } }
 
 bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                            int stripSize, int yStep, double factor, vector<Rect>& candidates,
-                                           bool outputRejectLevels, vector<int>& levels )
+                                           vector<int>& levels, bool outputRejectLevels )
 {
     if( !featureEvaluator->setImage( image, data.origWinSize ) )
         return false;
@@ -949,6 +949,14 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
     return true;
 }
 
+//bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
+//                                           int stripSize, int yStep, double factor, vector<Rect>& candidates )
+//{
+//    vector<int> fakeLevels;
+//    return detectSingleScale( image, stripCount, processingRectSize, 
+//        stripSize, yStep, factor, candidates, fakeLevels, false );
+//}
+
 bool CascadeClassifier::isOldFormatCascade() const
 {
     return !oldCascade.empty();
@@ -969,10 +977,11 @@ bool CascadeClassifier::setImage(const Mat& image)
     return featureEvaluator->setImage(image, data.origWinSize);
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects, 
+                                          vector<int>& rejectLevels,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize, 
-                                          bool outputRejectLevels, vector<int>& rejectLevels )
+                                          bool outputRejectLevels )
 {
     const double GROUP_EPS = 0.2;
     
@@ -1042,7 +1051,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
     #endif
 
         if( !detectSingleScale( scaledImage, stripCount, processingRectSize, stripSize, yStep, factor, candidates, 
-            outputRejectLevels, rejectLevels ) )
+            rejectLevels, outputRejectLevels ) )
             break;
     }
 
@@ -1051,6 +1060,15 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
 
     groupRectangles( objects, rejectLevels, minNeighbors, GROUP_EPS );
+}
+
+void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,
+                                          double scaleFactor, int minNeighbors,
+                                          int flags, Size minObjectSize, Size maxObjectSize)
+{
+    vector<int> fakeLevels;
+    detectMultiScale( image, objects, fakeLevels, scaleFactor, 
+        minNeighbors, flags, minObjectSize, maxObjectSize, false );
 }    
 
 bool CascadeClassifier::Data::read(const FileNode &root)

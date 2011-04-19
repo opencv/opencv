@@ -347,9 +347,16 @@ public:
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
+                                   Size maxSize=Size() );
+
+    CV_WRAP virtual void detectMultiScale( const Mat& image,
+                                   CV_OUT vector<Rect>& objects,
+                                   vector<int>& rejectLevels,
+                                   double scaleFactor=1.1,
+                                   int minNeighbors=3, int flags=0,
+                                   Size minSize=Size(),
                                    Size maxSize=Size(),
-                                   bool outputRejectLevels = false, 
-                                   vector<int>& rejectLevels = vector<int>(0));
+                                   bool outputRejectLevels = false );
 
 
     bool isOldFormatCascade() const;
@@ -358,9 +365,12 @@ public:
     bool setImage( const Mat& );
 
 protected:
+    //virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
+    //                                int stripSize, int yStep, double factor, vector<Rect>& candidates );
+
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                     int stripSize, int yStep, double factor, vector<Rect>& candidates,
-                                    bool outputRejectLevels = false, vector<int>& rejectLevels = vector<int>(0) );
+                                    vector<int>& rejectLevels, bool outputRejectLevels = false);
 
 protected:
     enum { BOOST = 0 };
