@@ -44,11 +44,17 @@
 using namespace cv;
 
 MeanshiftGrouping::MeanshiftGrouping(const Point3d& densKer, const vector<Point3d>& posV, 
-					 const vector<double>& wV, double modeEps, int maxIter):
-	densityKernel(densKer), weightsV(wV), positionsV(posV), positionsCount(posV.size()),
-	meanshiftV(positionsCount), distanceV(positionsCount), modeEps(modeEps),
-	iterMax (maxIter)
+					 const vector<double>& wV, double modeEps, int maxIter)
 {
+	densityKernel = densKer;
+    weightsV = wV;
+    positionsV = posV;
+    positionsCount = posV.size();
+	meanshiftV.resize(positionsCount);
+    distanceV.resize(positionsCount);
+    modeEps = modeEps;
+	iterMax = maxIter;
+    
 	for (unsigned i=0; i<positionsV.size(); i++)
 	{
 		meanshiftV[i] = getNewValue(positionsV[i]);

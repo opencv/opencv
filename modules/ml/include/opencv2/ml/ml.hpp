@@ -543,7 +543,8 @@ public:
         bool balanced=false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
-
+    virtual float predict( const CvMat* samples, CvMat* results ) const;
+    
 #ifndef SWIG
     CV_WRAP CvSVM( const cv::Mat& trainData, const cv::Mat& responses,
           const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
@@ -563,7 +564,7 @@ public:
                             CvParamGrid coeffGrid  = CvSVM::get_default_grid(CvSVM::COEF),
                             CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
                             bool balanced=false);
-    CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;    
+    CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
 #endif
     
     CV_WRAP virtual int get_support_vector_count() const;

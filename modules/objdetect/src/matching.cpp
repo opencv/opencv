@@ -1396,7 +1396,7 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
                    const int threadsNum, int *kLevels, int **processingLevels)
 {
     int rootFilterDim, sumPartFiltersDim, i, numLevels, dbx, dby, numDotProducts;
-    int averNumDotProd, j, minValue, argMin, tmp, lambda, maxValue, k;
+    int averNumDotProd, j, minValue, argMin, lambda, maxValue, k;
     int *dotProd, *weights, *disp;
     if (H == NULL || all_F == NULL)
     {

@@ -2081,12 +2081,50 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     CV_CALL( cvPreparePredictData( sample, var_all, var_idx,
                                    class_count, 0, &row_sample ));
     result = predict( row_sample, get_var_count(), returnDFVal );
-
+  
     __END__;
 
     if( sample && (!CV_IS_MAT(sample) || sample->data.fl != row_sample) )
         cvFree( &row_sample );
 
+    return result;
+}
+
+struct predict_body {
+    predict_body(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
+    {
+        pointer = _pointer;
+        result = _result;
+        samples = _samples;
+        results = _results;
+    }
+    
+    const CvSVM* pointer;
+    float* result;
+    const CvMat* samples;
+    CvMat* results;
+  
+    void operator()( const cv::BlockedRange& range ) const
+    {
+        for(int i = range.begin(); i < range.end(); i++ )
+        {
+            CvMat sample;
+            cvGetRow( samples, &sample, i );
+            int r = (int)pointer->predict(&sample);
+            if (results)
+                results->data.fl[i] = r;
+            if (i == 0)
+                *result = r;
+	}
+    }
+};
+
+float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
+{
+    float result = 0;
+    cv::parallel_for(cv::BlockedRange(0, samples->rows), 
+		     predict_body(this, &result, samples, results)
+    );
     return result;
 }
 
