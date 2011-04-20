@@ -2090,8 +2090,8 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
     return result;
 }
 
-struct predict_body {
-    predict_body(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
+struct predict_body_svm {
+    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
     {
         pointer = _pointer;
         result = _result;
@@ -2123,7 +2123,7 @@ float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
 {
     float result = 0;
     cv::parallel_for(cv::BlockedRange(0, samples->rows), 
-		     predict_body(this, &result, samples, results)
+		     predict_body_svm(this, &result, samples, results)
     );
     return result;
 }
