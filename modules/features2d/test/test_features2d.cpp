@@ -403,6 +403,8 @@ protected:
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
                 ts->printf( cvtest::TS::LOG, "Count of computed descriptors and keypoints count must be equal.\n" );
+                ts->printf( cvtest::TS::LOG, "Count of keypoints is            %d.\n", (int)keypoints.size() );
+                ts->printf( cvtest::TS::LOG, "Count of computed descriptors is %d.\n", calcDescriptors.rows );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }
@@ -410,6 +412,10 @@ protected:
             if( calcDescriptors.cols != dextractor->descriptorSize() || calcDescriptors.type() != dextractor->descriptorType() )
             {
                 ts->printf( cvtest::TS::LOG, "Incorrect descriptor size or descriptor type.\n" );
+                ts->printf( cvtest::TS::LOG, "Expected size is   %d.\n", dextractor->descriptorSize() );
+                ts->printf( cvtest::TS::LOG, "Calculated size is %d.\n", calcDescriptors.cols );
+                ts->printf( cvtest::TS::LOG, "Expected type is   %d.\n", dextractor->descriptorType() );
+                ts->printf( cvtest::TS::LOG, "Calculated type is %d.\n", calcDescriptors.type() );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }
