@@ -717,7 +717,7 @@ int  Core_SeqBaseTest::test_get_seq_reading( int _struct_idx, int iters )
             CV_TS_SEQ_CHECK_CONDITION( memcmp(elem, cvTsSimpleSeqElem(sseq, pos),
                                               sseq->elem_size) == 0, "reading is incorrect" );
             pos += direction;
-            if( pos < 0 ) pos += total;
+            if( -pos > 0 ) pos += total;
             if( pos >= total ) pos -= total;
             
             CV_TS_SEQ_CHECK_CONDITION( pos == cvGetSeqReaderPos( &reader ),
