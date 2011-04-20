@@ -1005,6 +1005,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
     set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -ggdb3 -DDEBUG -D_DEBUG")
+
+    if(ANDROID)
+      #force compiler to interpret char as signed char
+      set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -fsigned-char")
+    endif()
 endif()
 
 # Extra link libs if the user selects building static libs:
