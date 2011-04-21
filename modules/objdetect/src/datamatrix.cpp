@@ -1,4 +1,7 @@
+#if CV_SSE2
 #include <xmmintrin.h>
+#endif
+
 #include "precomp.hpp"
 #include <deque>
 using namespace std;
@@ -282,6 +285,7 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
 
 deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
 {
+#if CV_SSE2
   int r = im->rows;
   int c = im->cols;
 
@@ -419,4 +423,8 @@ endo: ; // end search for this o
     rc.push_back(cc);
   }
   return rc;
+#else
+  deque <DataMatrixCode> rc;
+  return rc;
+#endif
 }
