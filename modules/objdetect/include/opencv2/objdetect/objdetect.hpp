@@ -617,6 +617,21 @@ protected:
 
 }
 
+/****************************************************************************************\
+*                                Datamatrix                                              *
+\****************************************************************************************/
+
+typedef unsigned char uint8;
+
+class DatamatrixCode {
+public:
+  char msg[4];
+  CvMat *original;
+  CvMat *corners;
+};
+#include <deque>
+std::deque <DatamatrixCode> findcodes(CvMat *im);
+
 #endif
 
 #endif
