@@ -340,25 +340,26 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
         __m128 cyxyxB = _mm_cvtpi16_ps(*cd++);
         __m128 cx = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
         __m128 cy = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
-        __m128 cmag = _mm_sqrt_ps(cx * cx + cy * cy);
+        __m128 cmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(cx, cx), _mm_mul_ps(cy, cy)));
         __m128 crmag = _mm_rcp_ps(cmag);
-        __m128 ncx = cx * crmag;
-        __m128 ncy = cy * crmag;
+        __m128 ncx = _mm_mul_ps(cx, crmag);
+        __m128 ncy = _mm_mul_ps(cy, crmag);
 
         __m128 ccyxyxA = _mm_cvtpi16_ps(*ccd++);
         __m128 ccyxyxB = _mm_cvtpi16_ps(*ccd++);
         __m128 ccx = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
         __m128 ccy = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
-        __m128 ccmag = _mm_sqrt_ps(ccx * ccx + ccy * ccy);
+        __m128 ccmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(ccx, ccx), _mm_mul_ps(ccy, ccy)));
         __m128 ccrmag = _mm_rcp_ps(ccmag);
-        __m128 nccx = ccx * ccrmag;
-        __m128 nccy = ccy * ccrmag;
+        __m128 nccx = _mm_mul_ps(ccx, ccrmag);
+        __m128 nccy = _mm_mul_ps(ccy, ccrmag);
 
-        __m128 dot = ncx * nccx + ncy * nccy;
+        __m128 dot = _mm_mul_ps(_mm_mul_ps(ncx, nccx), _mm_mul_ps(ncy, nccy));
         // iscand = (cmag > 30) & (ccmag > 30) & (numpy.minimum(cmag, ccmag) * 1.1 > numpy.maximum(cmag, ccmag)) & (abs(dot) < 0.25)
         __m128 iscand = _mm_and_ps(_mm_cmpgt_ps(cmag, Kf(30)), _mm_cmpgt_ps(ccmag, Kf(30)));
-        iscand = _mm_and_ps(iscand, _mm_cmpgt_ps(_mm_min_ps(cmag, ccmag) * Kf(1.1), _mm_max_ps(cmag, ccmag)));
-        iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_abs_ps(dot), Kf(0.25)));
+
+        iscand = _mm_and_ps(iscand, _mm_cmpgt_ps(_mm_mul_ps(_mm_min_ps(cmag, ccmag), Kf(1.1)), _mm_max_ps(cmag, ccmag)));
+	    iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_and_ps(dot, _mm_castsi128_ps(Ki(0x7fffffff))),  Kf(0.25)));
 
         unsigned int result[4];
         *(__m128*)result = iscand;
