@@ -280,7 +280,7 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
   return r;
 }
 
-deque <DatamatrixCode> findcodes(CvMat *im)
+deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
 {
   int r = im->rows;
   int c = im->cols;
@@ -409,9 +409,9 @@ endo: ; // end search for this o
   cvFree(&cxy);
   cvFree(&ccxy);
 
-  deque <DatamatrixCode> rc;
+  deque <DataMatrixCode> rc;
   for (i = 0; i < codes.size(); i++) {
-    DatamatrixCode cc;
+    DataMatrixCode cc;
     strcpy(cc.msg, codes[i].msg);
     cc.original = codes[i].original;
     cc.corners = codes[i].sa.perim;
