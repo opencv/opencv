@@ -192,6 +192,25 @@ void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
     }
 }
 
+void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
+                              ushort* rgba, int rgba_step, CvSize size )
+{
+    int i;
+    for( ; size.height--; )
+    {
+        for( i = 0; i < size.width; i++, bgra += 4, rgba += 4 )
+        {
+            ushort t0 = bgra[0], t1 = bgra[1];
+            ushort t2 = bgra[2], t3 = bgra[3];
+
+            rgba[0] = t2; rgba[1] = t1;
+            rgba[2] = t0; rgba[3] = t3;
+        }
+        bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
+        rgba += rgba_step/sizeof(rgba[0]) - size.width*4;
+    }
+}
+
 
 void icvCvt_BGR2RGB_8u_C3R( const uchar* bgr, int bgr_step,
                             uchar* rgb, int rgb_step, CvSize size )
