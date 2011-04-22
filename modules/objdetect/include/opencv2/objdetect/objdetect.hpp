@@ -623,14 +623,14 @@ protected:
 
 typedef unsigned char uint8;
 
-class DataMatrixCode {
+class CV_EXPORTS DataMatrixCode {
 public:
   char msg[4];
   CvMat *original;
   CvMat *corners;
 };
 #include <deque>
-std::deque <DataMatrixCode> cvFindDataMatrix(CvMat *im);
+CV_EXPORTS std::deque<DataMatrixCode> cvFindDataMatrix(CvMat *im);
 
 #endif
 
