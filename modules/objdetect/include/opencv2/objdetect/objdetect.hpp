@@ -297,37 +297,6 @@ CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevel
 CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 
 										  double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
-class MeanshiftGrouping
-{
-public:
-	MeanshiftGrouping(const Point3d& densKer, const vector<Point3d>& posV, 
-		const vector<double>& wV, double modeEps = 1e-4,
-		int maxIt = 20);
-	
-	void getModes(vector<Point3d>& modesV, vector<double>& resWeightsV, const double eps); 
-
-protected:
-	vector<Point3d> positionsV;
-	vector<double> weightsV;
-
-	Point3d densityKernel;
-	int positionsCount;
-
-	vector<Point3d> meanshiftV;
-	vector<Point3d> distanceV;
-	int iterMax;
-	double modeEps;
-
-	Point3d getNewValue(const Point3d& inPt) const;
-
-	double getResultWeight(const Point3d& inPt) const; 
-
-	Point3d moveToMode(Point3d aPt) const; 
-
-	double getDistance(Point3d p1, Point3d p2) const; 
-};
-
-
         
 class CV_EXPORTS FeatureEvaluator
 {
