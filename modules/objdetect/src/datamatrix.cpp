@@ -38,7 +38,7 @@ public:
 
 #define dethresh 0.92f
 #define eincO    (2 * dethresh)         // e increment orthogonal
-#define eincD    (1.414 * dethresh)     // e increment diagonal
+#define eincD    (1.414f * dethresh)     // e increment diagonal
 
 static const float eincs[] = {
   eincO, eincD,
@@ -49,7 +49,9 @@ static const float eincs[] = {
 
 #define Ki(x) _mm_set_epi32((x),(x),(x),(x))
 #define Kf(x) _mm_set_ps((x),(x),(x),(x))
-#define _mm_abs_ps(x) (__m128)_mm_and_ps((__m128)(x), (__m128)Ki(0x7fffffff))
+
+static const int CV_DECL_ALIGNED(16) absmask[] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+#define _mm_abs_ps(x) _mm_and_ps((x), *(const __m128*)absmask)
 
 static void writexy(CvMat *m, int r, CvPoint p)
 {
@@ -65,10 +67,10 @@ Sampler::Sampler(CvMat *_im, CvPoint _o, CvPoint _c, CvPoint _cc)
   c = _c;
   cc = _cc;
   perim = cvCreateMat(4, 1, CV_32SC2);
-  writexy(perim, 0, fcoord(-.2,-.2));
-  writexy(perim, 1, fcoord(-.2,1.2));
-  writexy(perim, 2, fcoord(1.2,1.2));
-  writexy(perim, 3, fcoord(1.2,-.2));
+  writexy(perim, 0, fcoord(-.2f,-.2f));
+  writexy(perim, 1, fcoord(-.2f,1.2f));
+  writexy(perim, 2, fcoord(1.2f,1.2f));
+  writexy(perim, 3, fcoord(1.2f,-.2f));
   // printf("Sampler %d,%d %d,%d %d,%d\n", o.x, o.y, c.x, c.y, cc.x, cc.y);
 }
 
@@ -82,7 +84,7 @@ CvPoint Sampler::fcoord(float fx, float fy)
 
 CvPoint Sampler::coord(int ix, int iy)
 {
-  return fcoord(0.05 + 0.1 * ix, 0.05 + 0.1 * iy);
+  return fcoord(0.05f + 0.1f * ix, 0.05f + 0.1f * iy);
 }
 
 uint8 Sampler::getpixel(int ix, int iy)
@@ -95,8 +97,8 @@ uint8 Sampler::getpixel(int ix, int iy)
 int Sampler::isinside(int x, int y)
 {
   CvPoint2D32f fp;
-  fp.x = x;
-  fp.y = y;
+  fp.x = (float)x;
+  fp.y = (float)y;
   return cvPointPolygonTest(perim, fp, 0) < 0;
 }
 
@@ -182,14 +184,14 @@ static void cfollow(CvMat *src, CvMat *dst)
         x += xd;
         y += yd;
         if (e > 10.) {
-          float d = ((x - sx) * (x - sx)) + ((y - sy) * (y - sy));
+          float d = (float)(((x - sx) * (x - sx)) + ((y - sy) * (y - sy)));
           ontrack = d > (e * e);
         }
       }
       if ((24 <= e) && (e < 999)) {
         // printf("sx=%d, sy=%d, x=%d, y=%d\n", sx, sy, x, y);
-        *wr++ = x - sx;
-        *wr++ = y - sy;
+        *wr++ = (short)(x - sx);
+        *wr++ = (short)(y - sy);
       } else {
         *wr++ = 0;
         *wr++ = 0;
@@ -337,11 +339,12 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
     int r = cxy->rows;
     int c = cxy->cols;
     for (y = 0; y < r; y++) {
-      __m64 *cd = (__m64 *)cvPtr2D(cxy, y, 0);
-      __m64 *ccd = (__m64 *)cvPtr2D(ccxy, y, 0);
-      for (x = 0; x < c; x += 4) {
-        __m128 cyxyxA = _mm_cvtpi16_ps(*cd++);
-        __m128 cyxyxB = _mm_cvtpi16_ps(*cd++);
+      const short *cd = (const short*)cvPtr2D(cxy, y, 0);
+      const short *ccd = (const short*)cvPtr2D(ccxy, y, 0);
+      for (x = 0; x < c; x += 4, cd += 8, ccd += 8) {
+        __m128i v = _mm_loadu_si128((const __m128i*)cd);
+        __m128 cyxyxA = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v, v), 16));
+        __m128 cyxyxB = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v, v), 16));
         __m128 cx = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
         __m128 cy = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
         __m128 cmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(cx, cx), _mm_mul_ps(cy, cy)));
@@ -349,8 +352,9 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
         __m128 ncx = _mm_mul_ps(cx, crmag);
         __m128 ncy = _mm_mul_ps(cy, crmag);
 
-        __m128 ccyxyxA = _mm_cvtpi16_ps(*ccd++);
-        __m128 ccyxyxB = _mm_cvtpi16_ps(*ccd++);
+        v = _mm_loadu_si128((const __m128i*)ccd);
+        __m128 ccyxyxA = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v, v), 16));
+        __m128 ccyxyxB = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v, v), 16));
         __m128 ccx = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
         __m128 ccy = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
         __m128 ccmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(ccx, ccx), _mm_mul_ps(ccy, ccy)));
@@ -362,11 +366,11 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
         // iscand = (cmag > 30) & (ccmag > 30) & (numpy.minimum(cmag, ccmag) * 1.1 > numpy.maximum(cmag, ccmag)) & (abs(dot) < 0.25)
         __m128 iscand = _mm_and_ps(_mm_cmpgt_ps(cmag, Kf(30)), _mm_cmpgt_ps(ccmag, Kf(30)));
 
-        iscand = _mm_and_ps(iscand, _mm_cmpgt_ps(_mm_mul_ps(_mm_min_ps(cmag, ccmag), Kf(1.1)), _mm_max_ps(cmag, ccmag)));
-	    iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_and_ps(dot, _mm_castsi128_ps(Ki(0x7fffffff))),  Kf(0.25)));
+        iscand = _mm_and_ps(iscand, _mm_cmpgt_ps(_mm_mul_ps(_mm_min_ps(cmag, ccmag), Kf(1.1f)), _mm_max_ps(cmag, ccmag)));
+	    iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_abs_ps(dot),  Kf(0.25f)));
 
-        unsigned int result[4];
-        *(__m128*)result = iscand;
+        unsigned int CV_DECL_ALIGNED(16) result[4];
+        _mm_store_ps((float*)result, iscand);
         int ix;
         CvPoint np;
         for (ix = 0; ix < 4; ix++) {
