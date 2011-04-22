@@ -118,8 +118,6 @@ public:
     TiffEncoder();
     virtual ~TiffEncoder();
 
-    bool isFormatSupported( int depth ) const;
-
     bool  write( const Mat& img, const vector<int>& params );
     ImageEncoder newEncoder() const;
 

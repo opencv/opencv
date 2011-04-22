@@ -3677,28 +3677,6 @@ static PyObject *pycvClipLine(PyObject *self, PyObject *args)
   }
 }
 
-static PyObject *pyfinddatamatrix(PyObject *self, PyObject *args)
-{
-  PyObject *pyim;
-  if (!PyArg_ParseTuple(args, "O", &pyim))
-    return NULL;
-
-  CvMat *image;
-  if (!convert_to_CvMat(pyim, &image, "image")) return NULL;
-
-  std::deque <DataMatrixCode> codes;
-  ERRWRAP(codes = cvFindDataMatrix(image));
-
-  PyObject *pycodes = PyList_New(codes.size());
-  int i;
-  for (i = 0; i < codes.size(); i++) {
-    DataMatrixCode *pc = &codes[i];
-    PyList_SetItem(pycodes, i, Py_BuildValue("(sOO)", pc->msg, FROM_CvMat(pc->corners), FROM_CvMat(pc->original)));
-  }
-
-  return pycodes;
-}
-
 static PyObject *temp_test(PyObject *self, PyObject *args)
 {
 #if 0
@@ -3993,7 +3971,6 @@ static PyMethodDef methods[] = {
   //{"_HOGDetect", (PyCFunction)pycvHOGDetect, METH_KEYWORDS, "_HOGDetect(image, svm_classifier, win_stride=block_stride, locations=None, padding=(0,0), win_size=(64,128), block_size=(16,16), block_stride=(8,8), cell_size=(8,8), nbins=9, gammaCorrection=true) -> list_of_points"},
   //{"_HOGDetectMultiScale", (PyCFunction)pycvHOGDetectMultiScale, METH_KEYWORDS, "_HOGDetectMultiScale(image, svm_classifier, win_stride=block_stride, scale=1.05, group_threshold=2, padding=(0,0), win_size=(64,128), block_size=(16,16), block_stride=(8,8), cell_size=(8,8), nbins=9, gammaCorrection=true) -> list_of_points"},
 
-  {"FindDataMatrix", pyfinddatamatrix, METH_VARARGS},
   {"temp_test", temp_test, METH_VARARGS},
 
 #include "generated1.i"

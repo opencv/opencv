@@ -63,7 +63,7 @@ public:
 };    
     
 
-static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* foundWeights)
+static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights)
 {
     if( groupThreshold <= 0 || rectList.empty() )
     {
@@ -82,7 +82,8 @@ static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double e
     
     vector<Rect> rrects(nclasses);
     vector<int> rweights(nclasses, 0);
-	vector<double> outWeights(nclasses, 0.0);
+	vector<int> rejectLevels(nclasses, 0);
+    vector<double> rejectWeights(nclasses, DBL_MIN);
     int i, j, nlabels = (int)labels.size();
     for( i = 0; i < nlabels; i++ )
     {
@@ -93,12 +94,18 @@ static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double e
         rrects[cls].height += rectList[i].height;
         rweights[cls]++;
     }
-	if ( foundWeights && !foundWeights->empty() )
+    if ( levelWeights && weights && !weights->empty() && !levelWeights->empty() )
 	{
 		for( i = 0; i < nlabels; i++ )
 		{
 			int cls = labels[i];
-			outWeights[cls] = outWeights[cls] + (*foundWeights)[i];
+            if( (*weights)[i] > rejectLevels[cls] )
+            {
+                rejectLevels[cls] = (*weights)[i];
+                rejectWeights[cls] = (*levelWeights)[i];
+            }
+            else if( ( (*weights)[i] == rejectLevels[cls] ) && ( (*levelWeights)[i] > rejectWeights[cls] ) )
+                rejectWeights[cls] = (*levelWeights)[i];
 		}
 	}
     
@@ -115,14 +122,14 @@ static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double e
     rectList.clear();
     if( weights )
         weights->clear();
-	if( foundWeights )
-		foundWeights->clear();
+	if( levelWeights )
+		levelWeights->clear();
     
     for( i = 0; i < nclasses; i++ )
     {
         Rect r1 = rrects[i];
-        int n1 = rweights[i];
-		double w1 = outWeights[i];
+        int n1 = levelWeights ? rejectLevels[i] : rweights[i];
+		double w1 = rejectWeights[i];
         if( n1 <= groupThreshold )
             continue;
         // filter out small face rectangles inside large rectangles
@@ -151,8 +158,8 @@ static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double e
             rectList.push_back(r1);
             if( weights )
                 weights->push_back(n1);
-			if( foundWeights )
-				foundWeights->push_back(w1);
+			if( levelWeights )
+				levelWeights->push_back(w1);
         }
     }
 }
@@ -211,12 +218,12 @@ void groupRectangles(vector<Rect>& rectList, vector<int>& weights, int groupThre
 {
     groupRectangles(rectList, groupThreshold, eps, &weights, 0);
 }
-
-void groupRectangles(vector<Rect>& rectList, vector<double>& foundWeights, int groupThreshold, double eps)
+//used for cascade detection algorithm for ROC-curve calculating
+void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels, vector<double>& levelWeights, int groupThreshold, double eps)
 {
-    groupRectangles(rectList, groupThreshold, eps, 0, &foundWeights);
+    groupRectangles(rectList, groupThreshold, eps, &rejectLevels, &levelWeights);
 }
-
+//can be used for HOG detection algorithm only
 void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, 
 							   vector<double>& foundScales, double detectThreshold, Size winDetSize)
 {
@@ -706,7 +713,7 @@ bool CascadeClassifier::load(const string& filename)
 }
     
 template<class FEval>
-inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator )
+inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -720,7 +727,7 @@ inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_f
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
-        double sum = 0;
+        sum = 0;
         
         for( wi = 0; wi < ntrees; wi++ )
         {
@@ -745,7 +752,7 @@ inline int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_f
 }
 
 template<class FEval>
-inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator )
+inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -761,7 +768,7 @@ inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator>
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
-        double sum = 0;
+        sum = 0;
         
         for( wi = 0; wi < ntrees; wi++ )
         {
@@ -786,7 +793,7 @@ inline int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator>
 }
 
 template<class FEval>
-inline int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator )
+inline int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
     int nodeOfs = 0, leafOfs = 0;
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
@@ -798,7 +805,7 @@ inline int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator
     for( int stageIdx = 0; stageIdx < nstages; stageIdx++ )
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[stageIdx];
-        double sum = 0.0;
+        sum = 0.0;
 
         int ntrees = stage.ntrees;
         for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
@@ -816,7 +823,7 @@ inline int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator
 }
 
 template<class FEval>
-inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator )
+inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
@@ -831,7 +838,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
-        double sum = 0;
+        sum = 0;
 
         for( wi = 0; wi < ntrees; wi++ )
         {
@@ -848,7 +855,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     return 1;
 }
 
-int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& featureEvaluator, Point pt )
+int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& featureEvaluator, Point pt, double& weight )
 {
     CV_Assert( oldCascade.empty() );
         
@@ -857,11 +864,11 @@ int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& featureEvaluator, Point pt 
 
     return !featureEvaluator->setWindow(pt) ? -1 :
                 data.isStumpBased ? ( data.featureType == FeatureEvaluator::HAAR ?
-                    predictOrderedStump<HaarEvaluator>( *this, featureEvaluator ) :
-                    predictCategoricalStump<LBPEvaluator>( *this, featureEvaluator ) ) :
+                    predictOrderedStump<HaarEvaluator>( *this, featureEvaluator, weight ) :
+                    predictCategoricalStump<LBPEvaluator>( *this, featureEvaluator, weight ) ) :
                                  ( data.featureType == FeatureEvaluator::HAAR ?
-                    predictOrdered<HaarEvaluator>( *this, featureEvaluator ) :
-                    predictCategorical<LBPEvaluator>( *this, featureEvaluator ) );
+                    predictOrdered<HaarEvaluator>( *this, featureEvaluator, weight ) :
+                    predictCategorical<LBPEvaluator>( *this, featureEvaluator, weight ) );
 }
     
 bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& featureEvaluator, const Mat& image )
@@ -872,7 +879,7 @@ bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& featureEvaluator, const
 struct CascadeClassifierInvoker
 {
     CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor, 
-        ConcurrentRectVector& _vec, vector<int>& _levels, bool outputLevels = false  )
+        ConcurrentRectVector& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels = false  )
     {
         classifier = &_cc;
         processingRectSize = _sz1;
@@ -881,6 +888,7 @@ struct CascadeClassifierInvoker
         scalingFactor = _factor;
         rectangles = &_vec;
         rejectLevels  = outputLevels ? &_levels : 0;
+        levelWeights  = outputLevels ? &_weights : 0;
     }
     
     void operator()(const BlockedRange& range) const
@@ -894,15 +902,17 @@ struct CascadeClassifierInvoker
         {
             for( int x = 0; x < processingRectSize.width; x += yStep )
             {
-                int result = classifier->runAt(evaluator, Point(x, y));
+                double gypWeight;
+                int result = classifier->runAt(evaluator, Point(x, y), gypWeight);
                 if( rejectLevels )
                 {
                     if( result == 1 )
                         result =  -1*classifier->data.stages.size();
-                    if( classifier->data.stages.size() + result < 6 )
+                    if( classifier->data.stages.size() + result < 4 )
                     {
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height)); 
                         rejectLevels->push_back(-result);
+                        levelWeights->push_back(gypWeight);
                     }
                 }                    
                 else if( result > 0 )
@@ -920,47 +930,43 @@ struct CascadeClassifierInvoker
     int stripSize, yStep;
     double scalingFactor;
     vector<int> *rejectLevels;
+    vector<double> *levelWeights;
 };
     
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 
 bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                            int stripSize, int yStep, double factor, vector<Rect>& candidates,
-                                           vector<int>& levels, bool outputRejectLevels )
+                                           vector<int>& levels, vector<double>& weights, bool outputRejectLevels )
 {
     if( !featureEvaluator->setImage( image, data.origWinSize ) )
         return false;
 
     ConcurrentRectVector concurrentCandidates;
     vector<int> rejectLevels;
+    vector<double> levelWeights;
     if( outputRejectLevels )
     {
         parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, true));
+            concurrentCandidates, rejectLevels, levelWeights, true));
         levels.insert( levels.end(), rejectLevels.begin(), rejectLevels.end() );
+        weights.insert( weights.end(), levelWeights.begin(), levelWeights.end() );
     }
     else
     {
          parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, false));
+            concurrentCandidates, rejectLevels, levelWeights, false));
     }
     candidates.insert( candidates.end(), concurrentCandidates.begin(), concurrentCandidates.end() );
 
     return true;
 }
 
-//bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-//                                           int stripSize, int yStep, double factor, vector<Rect>& candidates )
-//{
-//    vector<int> fakeLevels;
-//    return detectSingleScale( image, stripCount, processingRectSize, 
-//        stripSize, yStep, factor, candidates, fakeLevels, false );
-//}
-
 bool CascadeClassifier::isOldFormatCascade() const
 {
     return !oldCascade.empty();
 }
+
 
 int CascadeClassifier::getFeatureType() const
 {
@@ -979,6 +985,7 @@ bool CascadeClassifier::setImage(const Mat& image)
 
 void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects, 
                                           vector<int>& rejectLevels,
+                                          vector<double>& levelWeights,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize, 
                                           bool outputRejectLevels )
@@ -994,8 +1001,8 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
     {
         MemStorage storage(cvCreateMemStorage(0));
         CvMat _image = image;
-        CvSeq* _objects = cvHaarDetectObjects( &_image, oldCascade, storage, scaleFactor,
-                                              minNeighbors, flags, minObjectSize );
+        CvSeq* _objects = cvHaarDetectObjectsForROC( &_image, oldCascade, storage, rejectLevels, levelWeights, scaleFactor,
+                                              minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
         vector<CvAvgComp> vecAvgComp;
         Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
         objects.resize(vecAvgComp.size());
@@ -1051,15 +1058,22 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
     #endif
 
         if( !detectSingleScale( scaledImage, stripCount, processingRectSize, stripSize, yStep, factor, candidates, 
-            rejectLevels, outputRejectLevels ) )
+            rejectLevels, levelWeights, outputRejectLevels ) )
             break;
     }
 
+    
     objects.resize(candidates.size());
     std::copy(candidates.begin(), candidates.end(), objects.begin());
 
-
-    groupRectangles( objects, rejectLevels, minNeighbors, GROUP_EPS );
+    if( outputRejectLevels )
+    {
+        groupRectangles( objects, rejectLevels, levelWeights, minNeighbors, GROUP_EPS );
+    }
+    else
+    {
+        groupRectangles( objects, minNeighbors, GROUP_EPS );
+    }
 }
 
 void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects,
@@ -1067,7 +1081,8 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
     vector<int> fakeLevels;
-    detectMultiScale( image, objects, fakeLevels, scaleFactor, 
+    vector<double> fakeWeights;
+    detectMultiScale( image, objects, fakeLevels, fakeWeights, scaleFactor, 
         minNeighbors, flags, minObjectSize, maxObjectSize, false );
 }    
 

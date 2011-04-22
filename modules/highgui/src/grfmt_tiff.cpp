@@ -301,11 +301,6 @@ TiffEncoder::~TiffEncoder()
 {
 }
 
-bool TiffEncoder::isFormatSupported( int depth ) const
-{
-    return depth == CV_8U || depth == CV_16U;
-}
-
 ImageEncoder TiffEncoder::newEncoder() const
 {
     return new TiffEncoder;
@@ -326,13 +321,7 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
-    int depth = img.depth();
-
-    if (depth != CV_8U && depth != CV_16U)
-        return false;
-
-    int bytesPerChannel = depth == CV_8U ? 1 : 2;
-    int fileStep = width * channels * bytesPerChannel;
+    int fileStep = width*channels;
     WLByteStream strm;
 
     if( m_buf )
@@ -367,7 +356,7 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
     uchar* buffer = _buffer;
     int  stripOffsetsOffset = 0;
     int  stripCountsOffset = 0;
-    int  bitsPerSample = 8 * bytesPerChannel;
+    int  bitsPerSample = 8; // TODO support 16 bit
     int  y = 0;
 
     strm.putBytes( fmtSignTiffII, 4 );
@@ -387,15 +376,9 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
         for( ; y < limit; y++ )
         {
             if( channels == 3 )
-                if (depth == CV_8U)
-                    icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGR2RGB_16u_C3R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
             else if( channels == 4 )
-                if (depth == CV_8U)
-                    icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
-                else
-                    icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
 
             strm.putBytes( channels > 1 ? buffer : img.data + img.step*y, fileStep );
         }
@@ -433,13 +416,12 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
 
     if( channels > 1 )
     {
-        int bitsPerSamplePos = strm.getPos();
-        strm.putWord(bitsPerSample);
-        strm.putWord(bitsPerSample);
-        strm.putWord(bitsPerSample);
+        bitsPerSample = strm.getPos();
+        strm.putWord(8);
+        strm.putWord(8);
+        strm.putWord(8);
         if( channels == 4 )
-            strm.putWord(bitsPerSample);
-        bitsPerSample = bitsPerSamplePos;
+            strm.putWord(8);
     }
 
     directoryOffset = strm.getPos();

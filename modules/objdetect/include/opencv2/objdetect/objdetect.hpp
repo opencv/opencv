@@ -125,9 +125,17 @@ CVAPI(void) cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** cascade );
 #define CV_HAAR_FIND_BIGGEST_OBJECT 4
 #define CV_HAAR_DO_ROUGH_SEARCH     8
 
+CVAPI(CvSeq*) cvHaarDetectObjectsForROC( const CvArr* image,
+                     CvHaarClassifierCascade* cascade, CvMemStorage* storage,
+                     std::vector<int>& rejectLevels, std::vector<double>& levelWeightds,
+                     double scale_factor CV_DEFAULT(1.1),
+                     int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
+                     CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)),
+                     bool outputRejectLevels = false );
+
 CVAPI(CvSeq*) cvHaarDetectObjects( const CvArr* image,
-                     CvHaarClassifierCascade* cascade,
-                     CvMemStorage* storage, double scale_factor CV_DEFAULT(1.1),
+                     CvHaarClassifierCascade* cascade, CvMemStorage* storage, 
+                     double scale_factor CV_DEFAULT(1.1),
                      int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
                      CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)));
 
@@ -275,7 +283,8 @@ namespace cv
 
 CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
 CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
-CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<double>& resultWeights, int groupThreshold = 2, double eps=0.2);
+CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels, 
+                                vector<double>& levelWeights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 
 										  double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
@@ -352,11 +361,12 @@ public:
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT vector<Rect>& objects,
                                    vector<int>& rejectLevels,
+                                   vector<double>& levelWeights,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
                                    Size maxSize=Size(),
-                                   bool outputRejectLevels = false );
+                                   bool outputRejectLevels=false );
 
 
     bool isOldFormatCascade() const;
@@ -370,7 +380,7 @@ protected:
 
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                     int stripSize, int yStep, double factor, vector<Rect>& candidates,
-                                    vector<int>& rejectLevels, bool outputRejectLevels = false);
+                                    vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
 
 protected:
     enum { BOOST = 0 };
@@ -380,19 +390,19 @@ protected:
     friend struct CascadeClassifierInvoker;
 
     template<class FEval>
-    friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+    friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+    friend int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+    friend int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator);
+    friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
-    virtual int runAt( Ptr<FeatureEvaluator>&, Point );
+    virtual int runAt( Ptr<FeatureEvaluator>&, Point, double& weight );
 
     class Data
     {
@@ -436,35 +446,6 @@ protected:
     Data data;
     Ptr<FeatureEvaluator> featureEvaluator;
     Ptr<CvHaarClassifierCascade> oldCascade;
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-public:
-    int getNumStages()
-    {
-        int numStages;
-        if( !isOldFormatCascade() )
-        {
-            numStages = data.stages.size();
-        }
-        else
-        {
-            numStages = this->oldCascade->count;
-        }
-        return numStages;
-    }
-    void setNumStages(int stageCount)
-    {
-        if( !isOldFormatCascade() )
-        {
-            if( stageCount )
-                data.stages.resize(stageCount);
-        }
-        else
-            if( stageCount )
-                this->oldCascade->count = stageCount;
-    }
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 };
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////

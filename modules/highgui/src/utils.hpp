@@ -88,10 +88,6 @@ void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
                               uchar* rgba, int rgba_step, CvSize size );
 #define icvCvt_RGBA2BGRA_8u_C4R icvCvt_BGRA2RGBA_8u_C4R
 
-void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
-                              ushort* rgba, int rgba_step, CvSize size );
-#define icvCvt_RGBA2BGRA_16u_C4R icvCvt_BGRA2RGBA_16u_C4R
-
 void icvCvt_BGR5552Gray_8u_C2C1R( const uchar* bgr555, int bgr555_step,
                                   uchar* gray, int gray_step, CvSize size );
 void icvCvt_BGR5652Gray_8u_C2C1R( const uchar* bgr565, int bgr565_step,
