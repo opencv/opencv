@@ -1011,7 +1011,7 @@ struct HaarDetectObjects_ScaleCascade_Invoker
 }
     
 
-CV_IMPL CvSeq*
+CvSeq*
 cvHaarDetectObjectsForROC( const CvArr* _img, 
                      CvHaarClassifierCascade* cascade, CvMemStorage* storage,
                      std::vector<int>& rejectLevels, std::vector<double>& levelWeights,

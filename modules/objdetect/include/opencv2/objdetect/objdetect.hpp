@@ -125,13 +125,14 @@ CVAPI(void) cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** cascade );
 #define CV_HAAR_FIND_BIGGEST_OBJECT 4
 #define CV_HAAR_DO_ROUGH_SEARCH     8
 
-CVAPI(CvSeq*) cvHaarDetectObjectsForROC( const CvArr* image,
-                     CvHaarClassifierCascade* cascade, CvMemStorage* storage,
-                     std::vector<int>& rejectLevels, std::vector<double>& levelWeightds,
-                     double scale_factor CV_DEFAULT(1.1),
-                     int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
-                     CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)),
-                     bool outputRejectLevels = false );
+//CVAPI(CvSeq*) cvHaarDetectObjectsForROC( const CvArr* image,
+//                     CvHaarClassifierCascade* cascade, CvMemStorage* storage,
+//                     CvSeq** rejectLevels, CvSeq** levelWeightds,
+//                     double scale_factor CV_DEFAULT(1.1),
+//                     int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
+//                     CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)),
+//                     bool outputRejectLevels = false );
+
 
 CVAPI(CvSeq*) cvHaarDetectObjects( const CvArr* image,
                      CvHaarClassifierCascade* cascade, CvMemStorage* storage, 
@@ -275,6 +276,14 @@ CVAPI(CvSeq*) cvLatentSvmDetectObjects(IplImage* image,
 
 #ifdef __cplusplus
 }
+
+CV_EXPORTS CvSeq* cvHaarDetectObjectsForROC( const CvArr* image,
+                     CvHaarClassifierCascade* cascade, CvMemStorage* storage,
+                     std::vector<int>& rejectLevels, std::vector<double>& levelWeightds,
+                     double scale_factor CV_DEFAULT(1.1),
+                     int min_neighbors CV_DEFAULT(3), int flags CV_DEFAULT(0),
+                     CvSize min_size CV_DEFAULT(cvSize(0,0)), CvSize max_size CV_DEFAULT(cvSize(0,0)),
+                     bool outputRejectLevels = false );
 
 namespace cv
 {
