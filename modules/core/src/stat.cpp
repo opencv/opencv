@@ -810,7 +810,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     {
         len *= cn;
         for( int i = 0; i < len; i++ )
-            result = std::max(result, std::abs(src[i]));
+            result = std::max(result, ST(std::abs(src[i])));
     }
     else
     {
@@ -818,7 +818,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, std::abs(src[k]));
+                    result = std::max(result, ST(std::abs(src[k])));
             }
     }
     *_result = result;
