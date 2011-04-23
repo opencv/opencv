@@ -104,6 +104,7 @@ protected:
     GstCaps            *caps;
     IplImage           *frame;
 };
+
 void CvCapture_GStreamer::init()
 {
     pipeline=0;
@@ -185,7 +186,9 @@ bool CvCapture_GStreamer::grabFrame()
     else
 #endif
     {
+//	printf("pulling buffer\n");
         buffer = gst_app_sink_pull_buffer(GST_APP_SINK(sink));
+//	printf("pulled buffer %p\n", GST_BUFFER_DATA(buffer));
     }
     if(!buffer)
         return false;
@@ -201,6 +204,8 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
     if(!buffer)
         return false;
 
+//    printf("retrieving buffer %p\n", GST_BUFFER_DATA(buffer));
+
     if(!frame) {
         gint height, width;
         GstCaps *buff_caps = gst_buffer_get_caps(buffer);
@@ -208,17 +213,18 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         GstStructure* structure = gst_caps_get_structure(buff_caps, 0);
 
         if(!gst_structure_get_int(structure, "width", &width) ||
-       !gst_structure_get_int(structure, "height", &height))
+           !gst_structure_get_int(structure, "height", &height))
             return false;
 
-        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+        frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, 3);
         gst_caps_unref(buff_caps);
     }
 
-    memcpy (frame->imageData, GST_BUFFER_DATA(buffer), GST_BUFFER_SIZE (buffer));
+    frame->imageData = (char *)GST_BUFFER_DATA(buffer);
+    //memcpy (frame->imageData, GST_BUFFER_DATA(buffer), GST_BUFFER_SIZE (buffer));
     //gst_data_copy_into (frame->imageData,GST_BUFFER_DATA(buffer));
-    gst_buffer_unref(buffer);
-    buffer = 0;
+    //gst_buffer_unref(buffer);
+    //buffer = 0;
     return frame;
 }
 
@@ -306,6 +312,14 @@ void CvCapture_GStreamer::newPad(GstElement *uridecodebin,
   gst_object_unref (sinkpad);
 }
 
+// static int buffernum = 0;
+// static GstFlowReturn newbuffer(GstAppSink *sink, gpointer data)
+// {
+	// printf("new buffer %d\n", buffernum);
+	// buffernum++;
+	// return GST_FLOW_OK;
+// }
+
 bool CvCapture_GStreamer::open( int type, const char* filename )
 {
     close();
@@ -384,6 +398,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     if (stream) {
         gst_app_sink_set_drop (GST_APP_SINK(sink),true);
     }
+//    GstAppSinkCallbacks cb = {0, 0, newbuffer, 0};
+//    gst_app_sink_set_callbacks(GST_APP_SINK(sink), &cb, 0, 0);
 #else
     sink = gst_element_factory_make("opencv-appsink", NULL);
 #endif
@@ -501,11 +517,11 @@ void CvVideoWriter_GStreamer::init()
 }
 void CvVideoWriter_GStreamer::close()
 {
-  if (pipeline) {
-    gst_app_src_end_of_stream(GST_APP_SRC(source));
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    gst_object_unref (GST_OBJECT (pipeline));
-  }
+    if (pipeline) {
+        gst_app_src_end_of_stream(GST_APP_SRC(source));
+        gst_element_set_state (pipeline, GST_STATE_NULL);
+        gst_object_unref (GST_OBJECT (pipeline));
+    }
 }
 bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         double fps, CvSize frameSize, bool is_color )
@@ -637,6 +653,10 @@ void CvCapture_GStreamer::close()
     }
     if(buffer)
         gst_buffer_unref(buffer);
+    if(frame) {
+        frame->imageData = 0;
+        cvReleaseImage(&frame);
+    }
 }
 
 double CvCapture_GStreamer::getProperty( int propId )
@@ -653,14 +673,14 @@ double CvCapture_GStreamer::getProperty( int propId )
     switch(propId) {
     case CV_CAP_PROP_POS_MSEC:
         format = GST_FORMAT_TIME;
-        if(!gst_element_query_position(pipeline, &format, &value)) {
+        if(!gst_element_query_position(sink, &format, &value)) {
             CV_WARN("GStreamer: unable to query position of stream");
             return false;
         }
         return value * 1e-6; // nano seconds to milli seconds
     case CV_CAP_PROP_POS_FRAMES:
         format = GST_FORMAT_DEFAULT;
-        if(!gst_element_query_position(pipeline, &format, &value)) {
+        if(!gst_element_query_position(sink, &format, &value)) {
             CV_WARN("GStreamer: unable to query position of stream");
             return false;
         }
@@ -693,6 +713,12 @@ double CvCapture_GStreamer::getProperty( int propId )
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
+    case CV_CAP_GSTREAMER_QUEUE_LENGTH:
+	if(!sink) {
+		CV_WARN("GStreamer: there is no sink yet");
+		return false;
+	}
+        return gst_app_sink_get_max_buffers(GST_APP_SINK(sink));
     default:
         CV_WARN("GStreamer: unhandled property");
         break;
@@ -772,6 +798,11 @@ bool CvCapture_GStreamer::setProperty( int propId, double value )
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
+    case CV_CAP_GSTREAMER_QUEUE_LENGTH:
+        if(!sink)
+	    break;
+	gst_app_sink_set_max_buffers(GST_APP_SINK(sink), (guint) value);
+	break;
     default:
         CV_WARN("GStreamer: unhandled property");
     }
