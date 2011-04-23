@@ -1065,7 +1065,13 @@ cv::Mat cv::findHomography( const InputArray& _points1, const InputArray& _point
         H = Scalar(0);
     return H;
 }
-    
+
+cv::Mat cv::findHomography( const InputArray& _points1, const InputArray& _points2,
+                            OutputArray _mask, int method, double ransacReprojThreshold )
+{
+    return cv::findHomography(_points1, _points2, method, ransacReprojThreshold, _mask);
+}
+
 cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _points2,
                                int method, double param1, double param2,
                                OutputArray _mask )
@@ -1088,6 +1094,13 @@ cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _p
         F = Scalar(0);
     return F;
 }
+
+cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _points2,
+                                OutputArray _mask, int method, double param1, double param2 )
+{
+    return cv::findFundamentalMat(_points1, _points2, method, param1, param2, _mask);
+}
+
 
 void cv::computeCorrespondEpilines( const InputArray& _points, int whichImage,
                                     const InputArray& _Fmat, OutputArray _lines )

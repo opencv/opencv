@@ -442,10 +442,13 @@ enum
 };
 
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
-CV_EXPORTS_W Mat findHomography( const InputArray& srcPoints,
-                                 const InputArray& dstPoints,
+CV_EXPORTS_W Mat findHomography( const InputArray& srcPoints, const InputArray& dstPoints,
                                  int method=0, double ransacReprojThreshold=3,
                                  OutputArray mask=OutputArray());
+
+//! variant of findHomography for backward compatibility
+CV_EXPORTS Mat findHomography( const InputArray& srcPoints, const InputArray& dstPoints,
+                               OutputArray mask, int method=0, double ransacReprojThreshold=3);
     
 //! Computes RQ decomposition of 3x3 matrix
 CV_EXPORTS_W Vec3d RQDecomp3x3( const InputArray& src, OutputArray mtxR, OutputArray mtxQ,
@@ -639,6 +642,11 @@ CV_EXPORTS_W Mat findFundamentalMat( const InputArray& points1, const InputArray
                                      int method=FM_RANSAC,
                                      double param1=3., double param2=0.99,
                                      OutputArray mask=OutputArray());
+
+//! variant of findFundamentalMat for backward compatibility
+CV_EXPORTS Mat findFundamentalMat( const InputArray& points1, const InputArray& points2,
+                                   OutputArray mask, int method=FM_RANSAC,
+                                   double param1=3., double param2=0.99);
 
 //! finds coordinates of epipolar lines corresponding the specified points
 CV_EXPORTS void computeCorrespondEpilines( const InputArray& points1,
