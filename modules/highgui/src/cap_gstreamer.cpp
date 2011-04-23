@@ -10,7 +10,7 @@
 //                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2008, Nils Hasler, all rights reserved.
+// Copyright (C) 2008, 2011, Nils Hasler, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -55,14 +55,9 @@
 #include <map>
 #include <gst/gst.h>
 #include <gst/video/video.h>
-#ifdef HAVE_GSTREAMER_APP
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/riff/riff-media.h>
-
-#else
-#include "gstappsink.h"
-#endif
 
 #ifdef NDEBUG
 #define CV_WARN(message)
@@ -168,28 +163,14 @@ bool CvCapture_GStreamer::grabFrame()
     if(!pipeline)
         return false;
 
-    if(gst_app_sink_is_eos(GST_APP_SINK(sink))) {
-        //printf("end of stream\n");
+    if(gst_app_sink_is_eos(GST_APP_SINK(sink)))
         return false;
-    }
 
     if(buffer)
         gst_buffer_unref(buffer);
     handleMessage();
 
-#ifndef HAVE_GSTREAMER_APP
-    if(gst_app_sink_get_queue_length(GST_APP_SINK(sink)))
-    {
-//        printf("peeking buffer, %d buffers in queue\n",
-        buffer = gst_app_sink_peek_buffer(GST_APP_SINK(sink));
-    }
-    else
-#endif
-    {
-//	printf("pulling buffer\n");
-        buffer = gst_app_sink_pull_buffer(GST_APP_SINK(sink));
-//	printf("pulled buffer %p\n", GST_BUFFER_DATA(buffer));
-    }
+    buffer = gst_app_sink_pull_buffer(GST_APP_SINK(sink));
     if(!buffer)
         return false;
 
@@ -203,8 +184,6 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 {
     if(!buffer)
         return false;
-
-//    printf("retrieving buffer %p\n", GST_BUFFER_DATA(buffer));
 
     if(!frame) {
         gint height, width;
@@ -220,9 +199,9 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
         gst_caps_unref(buff_caps);
     }
 
+    // no need to memcpy, just use gstreamer's buffer :-)
     frame->imageData = (char *)GST_BUFFER_DATA(buffer);
     //memcpy (frame->imageData, GST_BUFFER_DATA(buffer), GST_BUFFER_SIZE (buffer));
-    //gst_data_copy_into (frame->imageData,GST_BUFFER_DATA(buffer));
     //gst_buffer_unref(buffer);
     //buffer = 0;
     return frame;
@@ -270,7 +249,7 @@ void CvCapture_GStreamer::setFilter(const char *property, int type, int v1, int 
         else
             caps = gst_caps_new_simple("video/x-raw-rgb", property, type, v1, v2, NULL);
     } else {
-        printf("caps before setting %s\n", gst_caps_to_string(caps));
+        //printf("caps before setting %s\n", gst_caps_to_string(caps));
         if(type == G_TYPE_INT)
             gst_caps_set_simple(caps, "video/x-raw-rgb", property, type, v1, NULL);
         else
@@ -312,14 +291,6 @@ void CvCapture_GStreamer::newPad(GstElement *uridecodebin,
   gst_object_unref (sinkpad);
 }
 
-// static int buffernum = 0;
-// static GstFlowReturn newbuffer(GstAppSink *sink, gpointer data)
-// {
-	// printf("new buffer %d\n", buffernum);
-	// buffernum++;
-	// return GST_FLOW_OK;
-// }
-
 bool CvCapture_GStreamer::open( int type, const char* filename )
 {
     close();
@@ -347,11 +318,9 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     }
 
     if(!gst_uri_is_valid(filename)) {
-//        printf("file '%s' is not uri\n", filename);
         uri = realpath(filename, NULL);
         stream=false;
         if(uri) {
-//            printf("is file... ? %s\n", uri);
             uri = g_filename_to_uri(uri, NULL, NULL);
             if(!uri) {
                 CV_WARN("GStreamer: Error opening file\n");
@@ -367,18 +336,14 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
                 return false;
             }
             stream = true;
-//            printf("created custom bin\n");
             manualpipeline = true;
         }
-    }
-    else {
-//        printf("file '%s' is uri\n", filename);
+    } else {
         stream = true;
         uri = g_strdup(filename);
     }
 
     if(!uridecodebin) {
-//        printf("creating uridecodebin\n");
         uridecodebin = gst_element_factory_make ("uridecodebin", NULL);
         g_object_set(G_OBJECT(uridecodebin),"uri",uri, NULL);
     }
@@ -387,22 +352,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         close();
         return false;
     }
-//    printf("Trying to connect to stream \n");
     color = gst_element_factory_make("ffmpegcolorspace", NULL);
     
-    //printf("%sstreaming\n", stream ? "" : "not ");
-
-#ifdef HAVE_GSTREAMER_APP
     sink = gst_element_factory_make("appsink", NULL);
-    gst_app_sink_set_max_buffers (GST_APP_SINK(sink),1);
-    if (stream) {
-        gst_app_sink_set_drop (GST_APP_SINK(sink),true);
-    }
-//    GstAppSinkCallbacks cb = {0, 0, newbuffer, 0};
-//    gst_app_sink_set_callbacks(GST_APP_SINK(sink), &cb, 0, 0);
-#else
-    sink = gst_element_factory_make("opencv-appsink", NULL);
-#endif
+    gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
+    if(stream)
+        gst_app_sink_set_drop (GST_APP_SINK(sink), true);
     GstCaps* caps= gst_caps_new_simple("video/x-raw-rgb",
                                        "red_mask",   G_TYPE_INT, 255,
                                        "green_mask", G_TYPE_INT, 65280,
@@ -413,14 +368,12 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     pipeline = gst_pipeline_new (NULL);
 
-    //printf("adding stuff to pipeline\n");
     if(manualpipeline) {
 	// it is easier to link elements inside the same bin
         gst_bin_add_many(GST_BIN(uridecodebin), color, sink, NULL);
 	// need the pipeline around the bin because bins don't know about timing
         gst_bin_add(GST_BIN(pipeline), uridecodebin);
-    }	
-    else {
+    } else {
         gst_bin_add_many(GST_BIN(pipeline), uridecodebin, color, sink, NULL);
     }
 
@@ -428,11 +381,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         GstElement *e = gst_bin_get_by_name(GST_BIN(uridecodebin), "to-opencv");
         if(e) {
 	    if(!gst_element_link(e, color)) {
-		//printf("catching 'pad-added' for element 'to-opencv'\n");
 		g_signal_connect(e, "pad-added", G_CALLBACK(newPad), color);
-	    }/* else {
-		printf("linked to-opencv -> color\n");
-	    }*/
+	    }
             gst_object_unref(e);
         } else {
 	    CV_WARN("GStreamer: no element with 'name=to-opencv'\n");
@@ -475,7 +425,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     return true;
 }
-#ifdef HAVE_GSTREAMER_APP
+
 //
 //
 // gstreamer image sequence writer
@@ -638,13 +588,7 @@ CvVideoWriter* cvCreateVideoWriter_GStreamer(const char* filename, int fourcc, d
     delete wrt;
     return false;
 }
-#else
-CvVideoWriter* cvCreateVideoWriter_GStreamer(const char*, int, double, CvSize, int )
-{
-    return false;
-}
 
-#endif
 void CvCapture_GStreamer::close()
 {
     if(pipeline) {

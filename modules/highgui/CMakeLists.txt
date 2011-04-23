@@ -132,10 +132,6 @@ if(UNIX)
 
     if(HAVE_GSTREAMER)
         set(highgui_srcs ${highgui_srcs} src/cap_gstreamer.cpp)
-        if(NOT HAVE_GSTREAMER_APP)
-            set(highgui_srcs ${highgui_srcs} src/gstappsink.cpp)
-            set(highgui_hdrs ${highgui_hdrs} src/gstappsink.h)
-        endif()
     endif()
 
     if(HAVE_UNICAP)
