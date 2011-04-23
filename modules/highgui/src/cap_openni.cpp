@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #ifdef HAVE_OPENNI
 
@@ -183,7 +184,7 @@ CvCapture_OpenNI::CvCapture_OpenNI()
         // Write configuration to the temporary file.
         // This is a hack, because there is a bug in RunXmlScript().
         // TODO: remove hack when bug in RunXmlScript() will be fixed.
-        string xmlFilename = tempfile();
+        std::string xmlFilename = cv::tempfile();
         std::ofstream outfile( xmlFilename.c_str() );
         outfile.write( XMLConfig.c_str(), XMLConfig.length() );
         outfile.close();
