@@ -13,32 +13,32 @@ calcHist
 
 .. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               SparseMat\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
 
-    Calculates histogram of a set of arrays
+    Calculates a histogram of a set of arrays.
 
-    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels
+    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
-    :param narrays: The number of source arrays
+    :param narrays: Number of source arrays.
 
-    :param channels: The list of  ``dims``  channels that are used to compute the histogram. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``  etc.
+    :param channels: List of the  ``dims``  channels used to compute the histogram. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``  etc.
 
-    :param mask: The optional mask. If the matrix is not empty, it must be 8-bit array of the same size as  ``arrays[i]`` . The non-zero mask elements mark the array elements that are counted in the histogram
+    :param mask: Optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as  ``arrays[i]`` . The non-zero mask elements mark the array elements counted in the histogram.
 
-    :param hist: The output histogram, a dense or sparse  ``dims`` -dimensional array
+    :param hist: Output histogram, which is a dense or sparse  ``dims`` -dimensional array.
 
-    :param dims: The histogram dimensionality; must be positive and not greater than  ``CV_MAX_DIMS`` (=32 in the current OpenCV version)
+    :param dims: Histogram dimensionality that must be positive and not greater than  ``CV_MAX_DIMS`` (=32 in the current OpenCV version).
 
-    :param histSize: The array of histogram sizes in each dimension
+    :param histSize: Array of histogram sizes in each dimension.
 
-    :param ranges: The array of  ``dims``  arrays of the histogram bin boundaries in each dimension. When the histogram is uniform ( ``uniform`` =true), then for each dimension  ``i``  it's enough to specify the lower (inclusive) boundary  :math:`L_0`  of the 0-th histogram bin and the upper (exclusive) boundary  :math:`U_{\texttt{histSize}[i]-1}`  for the last histogram bin  ``histSize[i]-1`` . That is, in the case of uniform histogram each of  ``ranges[i]``  is an array of 2 elements. When the histogram is not uniform ( ``uniform=false`` ), then each of  ``ranges[i]``  contains  ``histSize[i]+1``  elements:  :math:`L_0, U_0=L_1, U_1=L_2, ..., U_{\texttt{histSize[i]}-2}=L_{\texttt{histSize[i]}-1}, U_{\texttt{histSize[i]}-1}` . The array elements, which are not between  :math:`L_0`  and  :math:`U_{\texttt{histSize[i]}-1}` , are not counted in the histogram
+    :param ranges: Array of the ``dims``  arrays of the histogram bin boundaries in each dimension. When the histogram is uniform ( ``uniform`` =true), then for each dimension  ``i``  it is enough to specify the lower (inclusive) boundary  :math:`L_0`  of the 0-th histogram bin and the upper (exclusive) boundary  :math:`U_{\texttt{histSize}[i]-1}`  for the last histogram bin  ``histSize[i]-1`` . That is, in case of a uniform histogram each of  ``ranges[i]``  is an array of 2 elements. When the histogram is not uniform ( ``uniform=false`` ), then each of  ``ranges[i]``  contains  ``histSize[i]+1``  elements:  :math:`L_0, U_0=L_1, U_1=L_2, ..., U_{\texttt{histSize[i]}-2}=L_{\texttt{histSize[i]}-1}, U_{\texttt{histSize[i]}-1}` . The array elements, that are not between  :math:`L_0`  and  :math:`U_{\texttt{histSize[i]}-1}` , are not counted in the histogram.
 
-    :param uniform: Indicates whether the histogram is uniform or not, see above
+    :param uniform: Flag indicatinfg whether the histogram is uniform or not (see above).
 
-    :param accumulate: Accumulation flag. If it is set, the histogram is not cleared in the beginning (when it is allocated). This feature allows user to compute a single histogram from several sets of arrays, or to update the histogram in time
+    :param accumulate: Accumulation flag. If it is set, the histogram is not cleared in the beginning when it is allocated. This feature enables you to compute a single histogram from several sets of arrays, or to update the histogram in time.
 
 The functions ``calcHist`` calculate the histogram of one or more
-arrays. The elements of a tuple that is used to increment
-a histogram bin are taken at the same location from the corresponding
-input arrays. The sample below shows how to compute 2D Hue-Saturation histogram for a color imag ::
+arrays. The elements of a tuple used to increment
+a histogram bin are taken from the corresponding
+input arrays at the same location. The sample below shows how to compute a 2D Hue-Saturation histogram for a color image. ::
 
     #include <cv.h>
     #include <highgui.h>
@@ -53,7 +53,7 @@ input arrays. The sample below shows how to compute 2D Hue-Saturation histogram 
 
         cvtColor(src, hsv, CV_BGR2HSV);
 
-        // let's quantize the hue to 30 levels
+        // Quantize the hue to 30 levels
         // and the saturation to 32 levels
         int hbins = 30, sbins = 32;
         int histSize[] = {hbins, sbins};
@@ -109,35 +109,37 @@ calcBackProject
 
     Calculates the back projection of a histogram.
 
-    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels
+    :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
-    :param narrays: The number of source arrays
+    :param narrays: Number of source arrays.
 
-    :param channels: The list of channels that are used to compute the back projection. The number of channels must match the histogram dimensionality. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``  etc.
+    :param channels: The list of channels that are used to compute the back projection. The number of channels must match the histogram dimensionality. The first array channels are numerated from 0 to  ``arrays[0].channels()-1`` , the second array channels are counted from  ``arrays[0].channels()``  to  ``arrays[0].channels() + arrays[1].channels()-1``  and so on.
 
-    :param hist: The input histogram, a dense or sparse
+    :param hist: Input histogram that can be dense or sparse.
 
-    :param backProject: Destination back projection aray; will be a single-channel array of the same size and the same depth as  ``arrays[0]``
-    :param ranges: The array of arrays of the histogram bin boundaries in each dimension. See  :func:`calcHist`
-    :param scale: The optional scale factor for the output back projection
+    :param backProject: Destination back projection aray that is a single-channel array of the same size and depth as  ``arrays[0]`` .
+	
+    :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :func:`calcHist` .
+	
+    :param scale: Optional scale factor for the output back projection.
 
-    :param uniform: Indicates whether the histogram is uniform or not, see above
+    :param uniform: Flag indicating whether the histogram is uniform or not (see above).
 
-The functions ``calcBackProject`` calculate the back project of the histogram. That is, similarly to ``calcHist`` , at each location ``(x, y)`` the function collects the values from the selected channels in the input images and finds the corresponding histogram bin. But instead of incrementing it, the function reads the bin value, scales it by ``scale`` and stores in ``backProject(x,y)`` . In terms of statistics, the function computes probability of each element value in respect with the empirical probability distribution represented by the histogram. Here is how, for example, you can find and track a bright-colored object in a scene:
+The functions ``calcBackProject`` calculate the back project of the histogram. That is, similarly to ``calcHist`` , at each location ``(x, y)`` the function collects the values from the selected channels in the input images and finds the corresponding histogram bin. But instead of incrementing it, the function reads the bin value, scales it by ``scale`` , and stores in ``backProject(x,y)`` . In terms of statistics, the function computes probability of each element value in respect with the empirical probability distribution represented by the histogram. See how, for example, you can find and track a bright-colored object in a scene:
 
 #.
-    Before the tracking, show the object to the camera such that covers almost the whole frame. Calculate a hue histogram. The histogram will likely have a strong maximums, corresponding to the dominant colors in the object.
+    Before tracking, show the object to the camera so that it covers almost the whole frame. Calculate a hue histogram. The histogram may have strong maximums, corresponding to the dominant colors in the object.
 
 #.
-    During the tracking, calculate back projection of a hue plane of each input video frame using that pre-computed histogram. Threshold the back projection to suppress weak colors. It may also have sense to suppress pixels with non sufficient color saturation and too dark or too bright pixels.
+    When tracking, calculate a back projection of a hue plane of each input video frame using that pre-computed histogram. Threshold the back projection to suppress weak colors. It may also make sense to suppress pixels with non-sufficient color saturation and too dark or too bright pixels.
 
 #.
     Find connected components in the resulting picture and choose, for example, the largest component.
 
-That is the approximate algorithm of
+This is an approximate algorithm of the
 :func:`CAMShift` color object tracker.
 
-See also:
+See Also:
 :func:`calcHist`
 
 .. index:: compareHist
@@ -151,20 +153,20 @@ compareHist
 
 .. c:function:: double compareHist( const SparseMat\& H1,  const SparseMat\& H2, int method )
 
-    Compares two histograms
+    Compares two histograms.
 
-    :param H1: The first compared histogram
+    :param H1: The first compared histogram.
 
-    :param H2: The second compared histogram of the same size as  ``H1``
-    :param method: The comparison method, one of the following:
+    :param H2: The second compared histogram of the same size as  ``H1`` .
+    :param method: Comparison method that could be one of the following:
 
-            * **CV_COMP_CORREL** Correlation
+            * **CV_COMP_CORREL** 	Correlation
 
-            * **CV_COMP_CHISQR** Chi-Square
+            * **CV_COMP_CHISQR** 	Chi-Square
 
-            * **CV_COMP_INTERSECT** Intersection
+            * **CV_COMP_INTERSECT** 	Intersection
 
-            * **CV_COMP_BHATTACHARYYA** Bhattacharyya distance
+            * **CV_COMP_BHATTACHARYYA** 	Bhattacharyya distance
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:
 
@@ -181,7 +183,7 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
         \bar{H_k} =  \frac{1}{N} \sum _J H_k(J)
 
     and
-    :math:`N`     is the total number of histogram bins.
+    :math:`N`     is a total number of histogram bins.
 
 * Chi-Square (method=CV\_COMP\_CHISQR)
 
@@ -204,7 +206,7 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
 The function returns
 :math:`d(H_1, H_2)` .
 
-While the function works well with 1-, 2-, 3-dimensional dense histograms, it may not be suitable for high-dimensional sparse histograms, where, because of aliasing and sampling problems the coordinates of non-zero histogram bins can slightly shift. To compare such histograms or more general sparse configurations of weighted points, consider using the
+While the function works well with 1-, 2-, 3-dimensional dense histograms, it may not be suitable for high-dimensional sparse histograms. In such histograms,  because of aliasing and sampling problems, the coordinates of non-zero histogram bins can slightly shift. To compare such histograms or more general sparse configurations of weighted points, consider using the
 :func:`calcEMD` function.
 
 .. index:: equalizeHist
@@ -217,28 +219,28 @@ equalizeHist
 
     Equalizes the histogram of a grayscale image.
 
-    :param src: The source 8-bit single channel image
+    :param src: Source 8-bit single channel image.
 
-    :param dst: The destination image; will have the same size and the same type as  ``src``
+    :param dst: Destination image of the same size and type as  ``src`` .
 
 The function equalizes the histogram of the input image using the following algorithm:
 
 #.
-    calculate the histogram
-    :math:`H`     for ``src``     .
+    Calculate the histogram
+    :math:`H`     for ``src``  .
 
 #.
-    normalize the histogram so that the sum of histogram bins is 255.
+    Normalize the histogram so that the sum of histogram bins is 255.
 
 #.
-    compute the integral of the histogram:
+    Compute the integral of the histogram:
 
     .. math::
 
         H'_i =  \sum _{0  \le j < i} H(j)
 
 #.
-    transform the image using
+    Transform the image using
     :math:`H'`     as a look-up table:
     :math:`\texttt{dst}(x,y) = H'(\texttt{src}(x,y))`
 

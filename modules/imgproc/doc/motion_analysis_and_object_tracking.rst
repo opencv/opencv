@@ -9,39 +9,41 @@ accumulate
 --------------
 .. c:function:: void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() )
 
-    Adds image to the accumulator.
+    Adds an image to the accumulator.
 
-    :param src: The input image, 1- or 3-channel, 8-bit or 32-bit floating point
+    :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
-    :param dst: The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point
+    :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
 
-    :param mask: Optional operation mask
+    :param mask: Optional operation mask.
 
-The function adds ``src`` , or some of its elements, to ``dst`` :
+The function adds ``src``  or some of its elements to ``dst`` :
 
 .. math::
 
     \texttt{dst} (x,y)  \leftarrow \texttt{dst} (x,y) +  \texttt{src} (x,y)  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-The function supports multi-channel images; each channel is processed independently.
+The function supports multi-channel images. Each channel is processed independently.
 
-The functions ``accumulate*`` can be used, for example, to collect statistic of background of a scene, viewed by a still camera, for the further foreground-background segmentation.
+The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
-See also:
-:func:`accumulateSquare`,:func:`accumulateProduct`,:func:`accumulateWeighted`
+See Also:
+:func:`accumulateSquare`,
+:func:`accumulateProduct`,
+:func:`accumulateWeighted`
 .. index:: accumulateSquare
 
 accumulateSquare
 --------------------
 .. c:function:: void accumulateSquare( const Mat\& src, Mat\& dst,  const Mat\& mask=Mat() )
 
-    Adds the square of the source image to the accumulator.
+    Adds the square of a source image to the accumulator.
 
-    :param src: The input image, 1- or 3-channel, 8-bit or 32-bit floating point
+    :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
-    :param dst: The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point
+    :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
 
-    :param mask: Optional operation mask
+    :param mask: Optional operation mask.
 
 The function adds the input image ``src`` or its selected region, raised to power 2, to the accumulator ``dst`` :
 
@@ -49,10 +51,13 @@ The function adds the input image ``src`` or its selected region, raised to powe
 
     \texttt{dst} (x,y)  \leftarrow \texttt{dst} (x,y) +  \texttt{src} (x,y)^2  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-The function supports multi-channel images; each channel is processed independently.
+The function supports multi-channel images Each channel is processed independently.
 
-See also:
-:func:`accumulateSquare`,:func:`accumulateProduct`,:func:`accumulateWeighted`
+See Also:
+:func:`accumulateSquare`,
+:func:`accumulateProduct`,
+:func:`accumulateWeighted`
+
 .. index:: accumulateProduct
 
 accumulateProduct
@@ -61,12 +66,13 @@ accumulateProduct
 
     Adds the per-element product of two input images to the accumulator.
 
-    :param src1: The first input image, 1- or 3-channel, 8-bit or 32-bit floating point
+    :param src1: The first input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
-    :param src2: The second input image of the same type and the same size as  ``src1``
-    :param dst: Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point
+    :param src2: The second input image of the same type and the same size as  ``src1`` .
+	
+    :param dst: Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point.
 
-    :param mask: Optional operation mask
+    :param mask: Optional operation mask.
 
 The function adds the product of 2 images or their selected regions to the accumulator ``dst`` :
 
@@ -74,34 +80,39 @@ The function adds the product of 2 images or their selected regions to the accum
 
     \texttt{dst} (x,y)  \leftarrow \texttt{dst} (x,y) +  \texttt{src1} (x,y)  \cdot \texttt{src2} (x,y)  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-The function supports multi-channel images; each channel is processed independently.
+The function supports multi-channel images. Each channel is processed independently.
 
-See also:
-:func:`accumulate`,:func:`accumulateSquare`,:func:`accumulateWeighted`
+See Also:
+:func:`accumulate`,
+:func:`accumulateSquare`,
+:func:`accumulateWeighted`
+
 .. index:: accumulateWeighted
 
 accumulateWeighted
 ----------------------
 .. c:function:: void accumulateWeighted( const Mat\& src, Mat\& dst,                         double alpha, const Mat\& mask=Mat() )
 
-    Updates the running average.
+    Updates a running average.
 
-    :param src: The input image, 1- or 3-channel, 8-bit or 32-bit floating point
+    :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
-    :param dst: The accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point
+    :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
 
-    :param alpha: Weight of the input image
+    :param alpha: Weight of the input image.
 
-    :param mask: Optional operation mask
+    :param mask: Optional operation mask.
 
-The function calculates the weighted sum of the input image ``src`` and the accumulator ``dst`` so that ``dst`` becomes a running average of frame sequence:
+The function calculates the weighted sum of the input image ``src`` and the accumulator ``dst`` so that ``dst`` becomes a running average of a frame sequence:
 
 .. math::
 
     \texttt{dst} (x,y)  \leftarrow (1- \texttt{alpha} )  \cdot \texttt{dst} (x,y) +  \texttt{alpha} \cdot \texttt{src} (x,y)  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-that is, ``alpha`` regulates the update speed (how fast the accumulator "forgets" about earlier images).
-The function supports multi-channel images; each channel is processed independently.
+That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets" about earlier images).
+The function supports multi-channel images. Each channel is processed independently.
 
-See also:
-:func:`accumulate`,:func:`accumulateSquare`,:func:`accumulateProduct` 
+See Also:
+:func:`accumulate`,
+:func:`accumulateSquare`,
+:func:`accumulateProduct` 
