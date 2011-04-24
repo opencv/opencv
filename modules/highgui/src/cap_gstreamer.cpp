@@ -329,7 +329,8 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
             }
         } else {
             GError *err = NULL;
-            uridecodebin = gst_parse_bin_from_description(filename, FALSE, &err);
+            //uridecodebin = gst_parse_bin_from_description(filename, FALSE, &err);
+            uridecodebin = gst_parse_launch(filename, &err);
             if(!uridecodebin) {
                 CV_WARN("GStreamer: Error opening bin\n");
                 close();
@@ -352,58 +353,45 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
         close();
         return false;
     }
-    color = gst_element_factory_make("ffmpegcolorspace", NULL);
-    
-    sink = gst_element_factory_make("appsink", NULL);
+
+    if(manualpipeline) {
+        GstIterator *it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
+        if(gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK) {
+	    CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
+	    return false;
+        }
+
+	pipeline = uridecodebin;
+    } else {
+	pipeline = gst_pipeline_new (NULL);
+
+        color = gst_element_factory_make("ffmpegcolorspace", NULL);
+        sink = gst_element_factory_make("appsink", NULL);
+
+        gst_bin_add_many(GST_BIN(pipeline), uridecodebin, color, sink, NULL);
+        g_signal_connect(uridecodebin, "pad-added", G_CALLBACK(newPad), color);
+
+        if(!gst_element_link(color, sink)) {
+            CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
+            gst_object_unref(pipeline);
+            return false;
+        }
+    }
+
     gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
-    if(stream)
-        gst_app_sink_set_drop (GST_APP_SINK(sink), true);
+    gst_app_sink_set_drop (GST_APP_SINK(sink), stream);
+
     GstCaps* caps= gst_caps_new_simple("video/x-raw-rgb",
-                                       "red_mask",   G_TYPE_INT, 255,
-                                       "green_mask", G_TYPE_INT, 65280,
-                                       "blue_mask",  G_TYPE_INT, 16711680,
+                                       "red_mask",   G_TYPE_INT, 0x0000FF,
+                                       "green_mask", G_TYPE_INT, 0x00FF00,
+                                       "blue_mask",  G_TYPE_INT, 0xFF0000,
                                        NULL);
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
 
-    pipeline = gst_pipeline_new (NULL);
-
-    if(manualpipeline) {
-	// it is easier to link elements inside the same bin
-        gst_bin_add_many(GST_BIN(uridecodebin), color, sink, NULL);
-	// need the pipeline around the bin because bins don't know about timing
-        gst_bin_add(GST_BIN(pipeline), uridecodebin);
-    } else {
-        gst_bin_add_many(GST_BIN(pipeline), uridecodebin, color, sink, NULL);
-    }
-
-    if(manualpipeline) {
-        GstElement *e = gst_bin_get_by_name(GST_BIN(uridecodebin), "to-opencv");
-        if(e) {
-	    if(!gst_element_link(e, color)) {
-		g_signal_connect(e, "pad-added", G_CALLBACK(newPad), color);
-	    }
-            gst_object_unref(e);
-        } else {
-	    CV_WARN("GStreamer: no element with 'name=to-opencv'\n");
-	    gst_object_unref(pipeline);
-	    return false;
-	}
-    } else {
-        g_signal_connect(uridecodebin, "pad-added", G_CALLBACK(newPad), color);
-    }
-
-    if(!gst_element_link(color, sink)) {
-        CV_ERROR(CV_StsError, "GStreamer: cannot link color -> sink\n");
-        gst_object_unref(pipeline);
-        return false;
-    }
-
     if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_READY) ==
        GST_STATE_CHANGE_FAILURE) {
         CV_WARN("GStreamer: unable to set pipeline to ready\n");
-//        icvHandleMessage(capture);
-//        cvReleaseCapture((CvCapture **)(void *)&capture);
         gst_object_unref(pipeline);
         return false;
     }
@@ -411,8 +399,6 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING) ==
        GST_STATE_CHANGE_FAILURE) {
         CV_WARN("GStreamer: unable to set pipeline to playing\n");
-//        icvHandleMessage(capture);
-//        cvReleaseCapture((CvCapture **)(void *)&capture);
         gst_object_unref(pipeline);
         return false;
     }
@@ -658,10 +644,10 @@ double CvCapture_GStreamer::getProperty( int propId )
     case CV_CAP_PROP_CONVERT_RGB:
         break;
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
-	if(!sink) {
-		CV_WARN("GStreamer: there is no sink yet");
-		return false;
-	}
+        if(!sink) {
+                CV_WARN("GStreamer: there is no sink yet");
+                return false;
+        }
         return gst_app_sink_get_max_buffers(GST_APP_SINK(sink));
     default:
         CV_WARN("GStreamer: unhandled property");
@@ -744,9 +730,9 @@ bool CvCapture_GStreamer::setProperty( int propId, double value )
         break;
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
         if(!sink)
-	    break;
-	gst_app_sink_set_max_buffers(GST_APP_SINK(sink), (guint) value);
-	break;
+            break;
+        gst_app_sink_set_max_buffers(GST_APP_SINK(sink), (guint) value);
+        break;
     default:
         CV_WARN("GStreamer: unhandled property");
     }
