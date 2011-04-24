@@ -96,65 +96,65 @@ cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream);
  * \return NCV status code
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32u_C1R(Ncv32u *d_src, Ncv32u srcStep,
-                                          Ncv32u *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_32u_C1R(Ncv32u *d_src, Ncv32u srcStep,
+                                 Ncv32u *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit signed pixels, single channel.
- * \see nppiStDownsampleNearest_32u_C1R
+ * \see nppiStDecimate_32u_C1R
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32s_C1R(Ncv32s *d_src, Ncv32u srcStep,
-                                          Ncv32s *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_32s_C1R(Ncv32s *d_src, Ncv32u srcStep,
+                                 Ncv32s *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit float pixels, single channel.
- * \see nppiStDownsampleNearest_32u_C1R
+ * \see nppiStDecimate_32u_C1R
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
-                                          Ncv32f *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
+                                 Ncv32f *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
 * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit unsigned pixels, single channel.
-* \see nppiStDownsampleNearest_32u_C1R
+* \see nppiStDecimate_32u_C1R
 */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64u_C1R(Ncv64u *d_src, Ncv32u srcStep,
-                                          Ncv64u *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_64u_C1R(Ncv64u *d_src, Ncv32u srcStep,
+                                 Ncv64u *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit signed pixels, single channel.
- * \see nppiStDownsampleNearest_32u_C1R
+ * \see nppiStDecimate_32u_C1R
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64s_C1R(Ncv64s *d_src, Ncv32u srcStep,
-                                          Ncv64s *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_64s_C1R(Ncv64s *d_src, Ncv32u srcStep,
+                                 Ncv64s *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit float pixels, single channel.
- * \see nppiStDownsampleNearest_32u_C1R
+ * \see nppiStDecimate_32u_C1R
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64f_C1R(Ncv64f *d_src, Ncv32u srcStep,
-                                          Ncv64f *d_dst, Ncv32u dstStep,
-                                          NcvSize32u srcRoi, Ncv32u scale,
-                                          NcvBool readThruTexture);
+NCVStatus nppiStDecimate_64f_C1R(Ncv64f *d_src, Ncv32u srcStep,
+                                 Ncv64f *d_dst, Ncv32u dstStep,
+                                 NcvSize32u srcRoi, Ncv32u scale,
+                                 NcvBool readThruTexture);
 
 
 /**
@@ -170,59 +170,59 @@ NCVStatus nppiStDownsampleNearest_64f_C1R(Ncv64f *d_src, Ncv32u srcStep,
  * \return NCV status code
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStep,
-                                               Ncv32u *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_32u_C1R_host(Ncv32u *h_src, Ncv32u srcStep,
+                                      Ncv32u *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit signed pixels, single channel. Host implementation.
- * \see nppiStDownsampleNearest_32u_C1R_host
+ * \see nppiStDecimate_32u_C1R_host
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStep,
-                                               Ncv32s *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_32s_C1R_host(Ncv32s *h_src, Ncv32u srcStep,
+                                      Ncv32s *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit float pixels, single channel. Host implementation.
- * \see nppiStDownsampleNearest_32u_C1R_host
+ * \see nppiStDecimate_32u_C1R_host
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
-                                               Ncv32f *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_32f_C1R_host(Ncv32f *h_src, Ncv32u srcStep,
+                                      Ncv32f *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit unsigned pixels, single channel. Host implementation.
- * \see nppiStDownsampleNearest_32u_C1R_host
+ * \see nppiStDecimate_32u_C1R_host
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStep,
-                                               Ncv64u *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_64u_C1R_host(Ncv64u *h_src, Ncv32u srcStep,
+                                      Ncv64u *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit signed pixels, single channel. Host implementation.
- * \see nppiStDownsampleNearest_32u_C1R_host
+ * \see nppiStDecimate_32u_C1R_host
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStep,
-                                               Ncv64s *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStep,
+                                      Ncv64s *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 64-bit float pixels, single channel. Host implementation.
- * \see nppiStDownsampleNearest_32u_C1R_host
+ * \see nppiStDecimate_32u_C1R_host
  */
 NCV_EXPORTS
-NCVStatus nppiStDownsampleNearest_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStep,
-                                               Ncv64f *h_dst, Ncv32u dstStep,
-                                               NcvSize32u srcRoi, Ncv32u scale);
+NCVStatus nppiStDecimate_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStep,
+                                      Ncv64f *h_dst, Ncv32u dstStep,
+                                      NcvSize32u srcRoi, Ncv32u scale);
 
 
 /**
@@ -334,6 +334,15 @@ NCVStatus nppiStTranspose_64f_C1R(Ncv64f *d_src, Ncv32u srcStride,
 
 
 /**
+ * Transposes an image. 128-bit pixels of any type, single channel
+ * \see nppiStTranspose_32u_C1R
+ */
+NCV_EXPORTS
+NCVStatus nppiStTranspose_128_C1R(void *d_src, Ncv32u srcStep,
+                                  void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi);
+
+
+/**
  * Transposes an image. 32-bit unsigned pixels, single channel. Host implementation
  *
  * \param h_src             [IN] Source image pointer (Host or pinned memory)
@@ -392,6 +401,15 @@ NCVStatus nppiStTranspose_64s_C1R_host(Ncv64s *h_src, Ncv32u srcStride,
 NCV_EXPORTS
 NCVStatus nppiStTranspose_64f_C1R_host(Ncv64f *h_src, Ncv32u srcStride,
                                        Ncv64f *h_dst, Ncv32u dstStride, NcvSize32u srcRoi);
+
+
+/**
+ * Transposes an image. 128-bit pixels of any type, single channel. Host implementation
+ * \see nppiStTranspose_32u_C1R_host
+ */
+NCV_EXPORTS
+NCVStatus nppiStTranspose_128_C1R_host(void *d_src, Ncv32u srcStep,
+                                       void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi);
 
 
 /**

@@ -150,14 +150,14 @@ namespace NCVRuntimeTemplateBool
     {
         //Convenience function used by the user
         //Takes a variable argument list, transforms it into a list
-        static void call(Func *functor, int dummy, ...)
+        static void call(Func *functor, ...)
         {
             //Vector used to collect arguments
             std::vector<int> templateParamList;
 
             //Variable argument list manipulation
             va_list listPointer;
-            va_start(listPointer, dummy);
+            va_start(listPointer, functor);
             //Collect parameters into the list
             for(int i=0; i<NumArguments; i++)
             {

@@ -83,17 +83,17 @@ bool TestResize<T>::process()
     NCV_SKIP_COND_BEGIN
     if (sizeof(T) == sizeof(Ncv32u))
     {
-        ncvStat = nppiStDownsampleNearest_32u_C1R((Ncv32u *)d_img.ptr(), d_img.pitch(),
-                                                  (Ncv32u *)d_small.ptr(), d_small.pitch(),
-                                                  srcSize, this->scaleFactor,
-                                                  this->bTextureCache);
+        ncvStat = nppiStDecimate_32u_C1R((Ncv32u *)d_img.ptr(), d_img.pitch(),
+                                         (Ncv32u *)d_small.ptr(), d_small.pitch(),
+                                         srcSize, this->scaleFactor,
+                                         this->bTextureCache);
     }
     else if (sizeof(T) == sizeof(Ncv64u))
     {
-        ncvStat = nppiStDownsampleNearest_64u_C1R((Ncv64u *)d_img.ptr(), d_img.pitch(),
-                                                  (Ncv64u *)d_small.ptr(), d_small.pitch(),
-                                                  srcSize, this->scaleFactor,
-                                                  this->bTextureCache);
+        ncvStat = nppiStDecimate_64u_C1R((Ncv64u *)d_img.ptr(), d_img.pitch(),
+                                         (Ncv64u *)d_small.ptr(), d_small.pitch(),
+                                         srcSize, this->scaleFactor,
+                                         this->bTextureCache);
     }
     else
     {
@@ -107,15 +107,15 @@ bool TestResize<T>::process()
     NCV_SKIP_COND_BEGIN
     if (sizeof(T) == sizeof(Ncv32u))
     {
-        ncvStat = nppiStDownsampleNearest_32u_C1R_host((Ncv32u *)h_img.ptr(), h_img.pitch(),
-                                                       (Ncv32u *)h_small.ptr(), h_small.pitch(),
-                                                       srcSize, this->scaleFactor);
+        ncvStat = nppiStDecimate_32u_C1R_host((Ncv32u *)h_img.ptr(), h_img.pitch(),
+                                              (Ncv32u *)h_small.ptr(), h_small.pitch(),
+                                              srcSize, this->scaleFactor);
     }
     else if (sizeof(T) == sizeof(Ncv64u))
     {
-        ncvStat = nppiStDownsampleNearest_64u_C1R_host((Ncv64u *)h_img.ptr(), h_img.pitch(),
-                                                       (Ncv64u *)h_small.ptr(), h_small.pitch(),
-                                                       srcSize, this->scaleFactor);
+        ncvStat = nppiStDecimate_64u_C1R_host((Ncv64u *)h_img.ptr(), h_img.pitch(),
+                                              (Ncv64u *)h_small.ptr(), h_small.pitch(),
+                                              srcSize, this->scaleFactor);
     }
     else
     {

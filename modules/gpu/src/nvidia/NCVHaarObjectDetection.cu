@@ -63,8 +63,6 @@
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVHaarObjectDetection.hpp"
 
-void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights);
-
 
 //==============================================================================
 //
@@ -785,7 +783,6 @@ void applyHaarClassifierAnchorParallelDynTemplate(NcvBool tbInitMaskPositively,
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 5, applyHaarClassifierAnchorParallelFunctor>
         ::call( &functor,
-                0xC001C0DE, //this is dummy int for the va_args C compatibility
                 tbInitMaskPositively,
                 tbCacheTextureIImg,
                 tbCacheTextureCascade,
@@ -890,7 +887,6 @@ void applyHaarClassifierClassifierParallelDynTemplate(NcvBool tbCacheTextureIImg
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 3, applyHaarClassifierClassifierParallelFunctor>
         ::call( &functor,
-                0xC001C0DE, //this is dummy int for the va_args C compatibility
                 tbCacheTextureIImg,
                 tbCacheTextureCascade,
                 tbDoAtomicCompaction);
@@ -957,7 +953,6 @@ void initializeMaskVectorDynTemplate(NcvBool tbMaskByInmask,
     //Second parameter is the number of "dynamic" template parameters
     NCVRuntimeTemplateBool::KernelCaller<Loki::NullType, 2, initializeMaskVectorFunctor>
         ::call( &functor,
-                0xC001C0DE, //this is dummy int for the va_args C compatibility
                 tbMaskByInmask,
                 tbDoAtomicCompaction);
 }
@@ -1556,172 +1551,6 @@ NCVStatus ncvGrowDetectionsVector_device(NCVVector<Ncv32u> &pixelMask,
 
 //==============================================================================
 //
-// Visualize file
-//
-//==============================================================================
-
-
-const Ncv32u NUMTHREADS_DRAWRECTS = 32;
-const Ncv32u NUMTHREADS_DRAWRECTS_LOG2 = 5;
-
-
-template <class T>
-__global__ void drawRects(T *d_dst,
-                          Ncv32u dstStride,
-                          Ncv32u dstWidth,
-                          Ncv32u dstHeight,
-                          NcvRect32u *d_rects,
-                          Ncv32u numRects,
-                          T color)
-{
-    Ncv32u blockId = blockIdx.y * 65535 + blockIdx.x;
-    if (blockId > numRects * 4)
-    {
-        return;
-    }
-
-    NcvRect32u curRect = d_rects[blockId >> 2];
-    NcvBool bVertical = blockId & 0x1;
-    NcvBool bTopLeft = blockId & 0x2;
-
-    Ncv32u pt0x, pt0y;
-    if (bVertical)
-    {
-        Ncv32u numChunks = (curRect.height + NUMTHREADS_DRAWRECTS - 1) >> NUMTHREADS_DRAWRECTS_LOG2;
-
-        pt0x = bTopLeft ? curRect.x : curRect.x + curRect.width - 1;
-        pt0y = curRect.y;
-
-        if (pt0x < dstWidth)
-        {
-            for (Ncv32u chunkId = 0; chunkId < numChunks; chunkId++)
-            {
-                Ncv32u ptY = pt0y + chunkId * NUMTHREADS_DRAWRECTS + threadIdx.x;
-                if (ptY < pt0y + curRect.height && ptY < dstHeight)
-                {
-                    d_dst[ptY * dstStride + pt0x] = color;
-                }
-            }
-        }
-    }
-    else
-    {
-        Ncv32u numChunks = (curRect.width + NUMTHREADS_DRAWRECTS - 1) >> NUMTHREADS_DRAWRECTS_LOG2;
-
-        pt0x = curRect.x;
-        pt0y = bTopLeft ? curRect.y : curRect.y + curRect.height - 1;
-
-        if (pt0y < dstHeight)
-        {
-            for (Ncv32u chunkId = 0; chunkId < numChunks; chunkId++)
-            {
-                Ncv32u ptX = pt0x + chunkId * NUMTHREADS_DRAWRECTS + threadIdx.x;
-                if (ptX < pt0x + curRect.width && ptX < dstWidth)
-                {
-                    d_dst[pt0y * dstStride + ptX] = color;
-                }
-            }
-        }
-    }
-}
-
-
-template <class T>
-static NCVStatus drawRectsWrapperDevice(T *d_dst,
-                                        Ncv32u dstStride,
-                                        Ncv32u dstWidth,
-                                        Ncv32u dstHeight,
-                                        NcvRect32u *d_rects,
-                                        Ncv32u numRects,
-                                        T color,
-                                        cudaStream_t cuStream)
-{
-    ncvAssertReturn(d_dst != NULL && d_rects != NULL, NCV_NULL_PTR);
-    ncvAssertReturn(dstWidth > 0 && dstHeight > 0, NCV_DIMENSIONS_INVALID);
-    ncvAssertReturn(dstStride >= dstWidth, NCV_INVALID_STEP);
-    ncvAssertReturn(numRects <= dstWidth * dstHeight, NCV_DIMENSIONS_INVALID);
-
-    if (numRects == 0)
-    {
-        return NCV_SUCCESS;
-    }
-
-#if defined _SELF_TEST_
-    T *h_dst;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_dst, dstStride * dstHeight * sizeof(T)), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_dst, d_dst, dstStride * dstHeight * sizeof(T), cudaMemcpyDeviceToHost), NCV_CUDA_ERROR);
-    NcvRect32s *h_rects;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_rects, numRects * sizeof(NcvRect32s)), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_rects, d_rects, numRects * sizeof(NcvRect32s), cudaMemcpyDeviceToHost), NCV_CUDA_ERROR);
-    ncvAssertReturnNcvStat(drawRectsWrapperHost(h_dst, dstStride, dstWidth, dstHeight, h_rects, numRects, color));
-#endif
-
-    dim3 grid(numRects * 4);
-    dim3 block(NUMTHREADS_DRAWRECTS);
-    if (grid.x > 65535)
-    {
-        grid.y = (grid.x + 65534) / 65535;
-        grid.x = 65535;
-    }
-
-    drawRects<T><<<grid, block>>>(d_dst, dstStride, dstWidth, dstHeight, d_rects, numRects, color);
-
-    ncvAssertCUDAReturn(cudaGetLastError(), NCV_CUDA_ERROR);
-
-#if defined _SELF_TEST_
-    T *h_dst_after;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_dst_after, dstStride * dstHeight * sizeof(T)), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_dst_after, d_dst, dstStride * dstHeight * sizeof(T), cudaMemcpyDeviceToHost), NCV_CUDA_ERROR);
-    bool bPass = true;
-    for (Ncv32u i=0; i<dstHeight && bPass; i++)
-    {
-        for (Ncv32u j=0; j<dstWidth && bPass; j++)
-        {
-            if (h_dst[i*dstStride+j] != h_dst_after[i*dstStride+j])
-            {
-                printf("::drawRectsWrapperDevice self test failed: i=%d, j=%d, cpu=%d, gpu=%d\n", i, j, h_dst[i*dstStride+j], h_dst_after[i*dstStride+j]);
-                bPass = false;
-            }
-        }
-    }
-    ncvAssertCUDAReturn(cudaFreeHost(h_dst_after), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_dst), NCV_CUDA_ERROR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_rects), NCV_CUDA_ERROR);
-    printf("::drawRectsWrapperDevice %s\n", bPass?"PASSED":"FAILED");
-#endif
-
-    return NCV_SUCCESS;
-}
-
-
-NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst,
-                                 Ncv32u dstStride,
-                                 Ncv32u dstWidth,
-                                 Ncv32u dstHeight,
-                                 NcvRect32u *d_rects,
-                                 Ncv32u numRects,
-                                 Ncv8u color,
-                                 cudaStream_t cuStream)
-{
-    return drawRectsWrapperDevice(d_dst, dstStride, dstWidth, dstHeight, d_rects, numRects, color, cuStream);
-}
-
-
-NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst,
-                                  Ncv32u dstStride,
-                                  Ncv32u dstWidth,
-                                  Ncv32u dstHeight,
-                                  NcvRect32u *d_rects,
-                                  Ncv32u numRects,
-                                  Ncv32u color,
-                                  cudaStream_t cuStream)
-{
-    return drawRectsWrapperDevice(d_dst, dstStride, dstWidth, dstHeight, d_rects, numRects, color, cuStream);
-}
-
-
-//==============================================================================
-//
 // Pipeline file
 //
 //==============================================================================
@@ -1901,13 +1730,13 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
 
         NCV_SKIP_COND_BEGIN
 
-        nppStat = nppiStDownsampleNearest_32u_C1R(
+        nppStat = nppiStDecimate_32u_C1R(
             d_integralImage.ptr(), d_integralImage.pitch(),
             d_scaledIntegralImage.ptr(), d_scaledIntegralImage.pitch(),
             srcIIRoi, scale, true);
         ncvAssertReturnNcvStat(nppStat);
 
-        nppStat = nppiStDownsampleNearest_64u_C1R(
+        nppStat = nppiStDecimate_64u_C1R(
             d_sqIntegralImage.ptr(), d_sqIntegralImage.pitch(),
             d_scaledSqIntegralImage.ptr(), d_scaledSqIntegralImage.pitch(),
             srcIIRoi, scale, true);
@@ -1969,7 +1798,7 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
             }
 
             Ncv32u numStrongHypothesesNow = dstNumRects;
-            ncvStat = ncvFilterHypotheses_host(
+            ncvStat = ncvGroupRectangles_host(
                 h_hypothesesIntermediate,
                 numStrongHypothesesNow,
                 minNeighbors,
@@ -2031,7 +1860,7 @@ NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcImg,
             ncvAssertCUDAReturn(cudaStreamSynchronize(cuStream), NCV_CUDA_ERROR);
         }
 
-        ncvStat = ncvFilterHypotheses_host(
+        ncvStat = ncvGroupRectangles_host(
             h_hypothesesIntermediate,
             dstNumRects,
             minNeighbors,
@@ -2282,133 +2111,6 @@ NCVStatus ncvGrowDetectionsVector_host(NCVVector<Ncv32u> &pixelMask,
 
     totalDetections += numDetsToCopy;
     return ncvStat;
-}
-
-
-
-
-
-NCVStatus ncvFilterHypotheses_host(NCVVector<NcvRect32u> &hypotheses,
-                                   Ncv32u &numHypotheses,
-                                   Ncv32u minNeighbors,
-                                   Ncv32f intersectEps,
-                                   NCVVector<Ncv32u> *hypothesesWeights)
-{
-    ncvAssertReturn(hypotheses.memType() == NCVMemoryTypeHostPageable ||
-                    hypotheses.memType() == NCVMemoryTypeHostPinned, NCV_MEM_RESIDENCE_ERROR);
-    if (hypothesesWeights != NULL)
-    {
-        ncvAssertReturn(hypothesesWeights->memType() == NCVMemoryTypeHostPageable ||
-                        hypothesesWeights->memType() == NCVMemoryTypeHostPinned, NCV_MEM_RESIDENCE_ERROR);
-    }
-
-    if (numHypotheses == 0)
-    {
-        return NCV_SUCCESS;
-    }
-
-    std::vector<NcvRect32u> rects(numHypotheses);
-    memcpy(&rects[0], hypotheses.ptr(), numHypotheses * sizeof(NcvRect32u));
-
-    std::vector<Ncv32u> weights;
-    if (hypothesesWeights != NULL)
-    {
-        groupRectangles(rects, minNeighbors, intersectEps, &weights);
-    }
-    else
-    {
-        groupRectangles(rects, minNeighbors, intersectEps, NULL);
-    }
-
-    numHypotheses = (Ncv32u)rects.size();
-    if (numHypotheses > 0)
-    {
-        memcpy(hypotheses.ptr(), &rects[0], numHypotheses * sizeof(NcvRect32u));
-    }
-
-    if (hypothesesWeights != NULL)
-    {
-        memcpy(hypothesesWeights->ptr(), &weights[0], numHypotheses * sizeof(Ncv32u));
-    }
-
-    return NCV_SUCCESS;
-}
-
-
-template <class T>
-static NCVStatus drawRectsWrapperHost(T *h_dst,
-                                      Ncv32u dstStride,
-                                      Ncv32u dstWidth,
-                                      Ncv32u dstHeight,
-                                      NcvRect32u *h_rects,
-                                      Ncv32u numRects,
-                                      T color)
-{
-    ncvAssertReturn(h_dst != NULL && h_rects != NULL, NCV_NULL_PTR);
-    ncvAssertReturn(dstWidth > 0 && dstHeight > 0, NCV_DIMENSIONS_INVALID);
-    ncvAssertReturn(dstStride >= dstWidth, NCV_INVALID_STEP);
-    ncvAssertReturn(numRects != 0, NCV_SUCCESS);
-    ncvAssertReturn(numRects <= dstWidth * dstHeight, NCV_DIMENSIONS_INVALID);
-
-    for (Ncv32u i=0; i<numRects; i++)
-    {
-        NcvRect32u rect = h_rects[i];
-
-        if (rect.x < dstWidth)
-        {
-            for (Ncv32u i=rect.y; i<rect.y+rect.height && i<dstHeight; i++)
-            {
-                h_dst[i*dstStride+rect.x] = color;
-            }
-        }
-        if (rect.x+rect.width-1 < dstWidth)
-        {
-            for (Ncv32u i=rect.y; i<rect.y+rect.height && i<dstHeight; i++)
-            {
-                h_dst[i*dstStride+rect.x+rect.width-1] = color;
-            }
-        }
-        if (rect.y < dstHeight)
-        {
-            for (Ncv32u j=rect.x; j<rect.x+rect.width && j<dstWidth; j++)
-            {
-                h_dst[rect.y*dstStride+j] = color;
-            }
-        }
-        if (rect.y + rect.height - 1 < dstHeight)
-        {
-            for (Ncv32u j=rect.x; j<rect.x+rect.width && j<dstWidth; j++)
-            {
-                h_dst[(rect.y+rect.height-1)*dstStride+j] = color;
-            }
-        }
-    }
-
-    return NCV_SUCCESS;
-}
-
-
-NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst,
-                               Ncv32u dstStride,
-                               Ncv32u dstWidth,
-                               Ncv32u dstHeight,
-                               NcvRect32u *h_rects,
-                               Ncv32u numRects,
-                               Ncv8u color)
-{
-    return drawRectsWrapperHost(h_dst, dstStride, dstWidth, dstHeight, h_rects, numRects, color);
-}
-
-
-NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst,
-                                Ncv32u dstStride,
-                                Ncv32u dstWidth,
-                                Ncv32u dstHeight,
-                                NcvRect32u *h_rects,
-                                Ncv32u numRects,
-                                Ncv32u color)
-{
-    return drawRectsWrapperHost(h_dst, dstStride, dstWidth, dstHeight, h_rects, numRects, color);
 }
 
 

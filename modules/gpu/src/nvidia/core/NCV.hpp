@@ -129,8 +129,8 @@ struct NcvRect8u
     Ncv8u y;
     Ncv8u width;
     Ncv8u height;
-    NcvRect8u() : x(0), y(0), width(0), height(0) {};
-    NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect8u() : x(0), y(0), width(0), height(0) {};
+    __host__ __device__ NcvRect8u(Ncv8u x, Ncv8u y, Ncv8u width, Ncv8u height) : x(x), y(y), width(width), height(height) {}
 };
 
 
@@ -140,8 +140,8 @@ struct NcvRect32s
     Ncv32s y;          ///< y-coordinate of upper left corner.
     Ncv32s width;      ///< Rectangle width.
     Ncv32s height;     ///< Rectangle height.
-    NcvRect32s() : x(0), y(0), width(0), height(0) {};
-    NcvRect32s(Ncv32s x, Ncv32s y, Ncv32s width, Ncv32s height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect32s() : x(0), y(0), width(0), height(0) {};
+    __host__ __device__ NcvRect32s(Ncv32s x, Ncv32s y, Ncv32s width, Ncv32s height) : x(x), y(y), width(width), height(height) {}
 };
 
 
@@ -151,8 +151,8 @@ struct NcvRect32u
     Ncv32u y;          ///< y-coordinate of upper left corner.
     Ncv32u width;      ///< Rectangle width.
     Ncv32u height;     ///< Rectangle height.
-    NcvRect32u() : x(0), y(0), width(0), height(0) {};
-    NcvRect32u(Ncv32u x, Ncv32u y, Ncv32u width, Ncv32u height) : x(x), y(y), width(width), height(height) {}
+    __host__ __device__ NcvRect32u() : x(0), y(0), width(0), height(0) {};
+    __host__ __device__ NcvRect32u(Ncv32u x, Ncv32u y, Ncv32u width, Ncv32u height) : x(x), y(y), width(width), height(height) {}
 };
 
 
@@ -160,8 +160,8 @@ struct NcvSize32s
 {
     Ncv32s width;  ///< Rectangle width.
     Ncv32s height; ///< Rectangle height.
-    NcvSize32s() : width(0), height(0) {};
-    NcvSize32s(Ncv32s width, Ncv32s height) : width(width), height(height) {}
+    __host__ __device__ NcvSize32s() : width(0), height(0) {};
+    __host__ __device__ NcvSize32s(Ncv32s width, Ncv32s height) : width(width), height(height) {}
 };
 
 
@@ -169,8 +169,8 @@ struct NcvSize32u
 {
     Ncv32u width;  ///< Rectangle width.
     Ncv32u height; ///< Rectangle height.
-    NcvSize32u() : width(0), height(0) {};
-    NcvSize32u(Ncv32u width, Ncv32u height) : width(width), height(height) {}
+    __host__ __device__ NcvSize32u() : width(0), height(0) {};
+    __host__ __device__ NcvSize32u(Ncv32u width, Ncv32u height) : width(width), height(height) {}
 };
 
 
@@ -275,6 +275,7 @@ enum NCVStatus
 {
     //NCV statuses
     NCV_SUCCESS,
+    NCV_UNKNOWN_ERROR,
 
     NCV_CUDA_ERROR,
     NCV_NPP_ERROR,
@@ -501,11 +502,16 @@ private:
 
 
 /**
-* Copy dispatcher
+* Copy dispatchers
 */
 NCV_EXPORTS NCVStatus memSegCopyHelper(void *dst, NCVMemoryType dstType,
                                        const void *src, NCVMemoryType srcType,
                                        size_t sz, cudaStream_t cuStream);
+
+
+NCV_EXPORTS NCVStatus memSegCopyHelper2D(void *dst, Ncv32u dstPitch, NCVMemoryType dstType,
+                                         const void *src, Ncv32u srcPitch, NCVMemoryType srcType,
+                                         Ncv32u widthbytes, Ncv32u height, cudaStream_t cuStream);
 
 
 /**
@@ -532,7 +538,7 @@ public:
         _memtype = NCVMemoryTypeNone;
     }
 
-    NCVStatus copySolid(NCVVector<T> &dst, cudaStream_t cuStream, size_t howMuch=0)
+    NCVStatus copySolid(NCVVector<T> &dst, cudaStream_t cuStream, size_t howMuch=0) const
     {
         if (howMuch == 0)
         {
@@ -600,7 +606,6 @@ public:
         this->_memtype = this->allocatedMem.begin.memtype;
     }
 
-
     ~NCVVectorAlloc()
     {
         NCVStatus ncvStat;
@@ -611,25 +616,22 @@ public:
         this->clear();
     }
 
-
     NcvBool isMemAllocated() const
     {
         return (this->allocatedMem.begin.ptr != NULL) || (this->allocator.isCounting());
     }
-
 
     Ncv32u getAllocatorsAlignment() const
     {
         return allocator.alignment();
     }
 
-
     NCVMemSegment getSegment() const
     {
         return allocatedMem;
     }
 
-private:		
+private:
     INCVMemAllocator &allocator;
     NCVMemSegment allocatedMem;
 };
@@ -658,7 +660,6 @@ public:
         this->bReused = true;
     }
 
-
     NCVVectorReuse(const NCVMemSegment &memSegment, Ncv32u length)
     {
         this->bReused = false;
@@ -673,7 +674,6 @@ public:
 
         this->bReused = true;
     }
-
 
     NcvBool isMemReused() const
     {
@@ -703,7 +703,6 @@ public:
 
     virtual ~NCVMatrix() {}
 
-
     void clear()
     {
         _ptr = NULL;
@@ -713,14 +712,13 @@ public:
         _memtype = NCVMemoryTypeNone;
     }
 
-
     Ncv32u stride() const
     {
         return _pitch / sizeof(T);
     }
 
-
-    NCVStatus copySolid(NCVMatrix<T> &dst, cudaStream_t cuStream, size_t howMuch=0)
+    //a side effect of this function is that it copies everything in a single chunk, so the "padding" will be overwritten
+    NCVStatus copySolid(NCVMatrix<T> &dst, cudaStream_t cuStream, size_t howMuch=0) const
     {
         if (howMuch == 0)
         {
@@ -743,6 +741,24 @@ public:
             ncvStat = memSegCopyHelper(dst._ptr, dst._memtype, 
                                        this->_ptr, this->_memtype, 
                                        howMuch, cuStream);
+        }
+
+        return ncvStat;
+    }
+
+    NCVStatus copy2D(NCVMatrix<T> &dst, NcvSize32u roi, cudaStream_t cuStream) const
+    {
+        ncvAssertReturn(this->width() >= roi.width && this->height() >= roi.height &&
+                        dst.width() >= roi.width && dst.height() >= roi.height, NCV_MEM_COPY_ERROR);
+        ncvAssertReturn((this->_ptr != NULL || this->_memtype == NCVMemoryTypeNone) && 
+                        (dst._ptr != NULL || dst._memtype == NCVMemoryTypeNone), NCV_NULL_PTR);
+
+        NCVStatus ncvStat = NCV_SUCCESS;
+        if (this->_memtype != NCVMemoryTypeNone)
+        {
+            ncvStat = memSegCopyHelper2D(dst._ptr, dst._pitch, dst._memtype,
+                                         this->_ptr, this->_pitch, this->_memtype,
+                                         roi.width * sizeof(T), roi.height, cuStream);
         }
 
         return ncvStat;
@@ -817,18 +833,15 @@ public:
         this->clear();
     }
 
-
     NcvBool isMemAllocated() const
     {
         return (this->allocatedMem.begin.ptr != NULL) || (this->allocator.isCounting());
     }
 
-
     Ncv32u getAllocatorsAlignment() const
     {
         return allocator.alignment();
     }
-
 
     NCVMemSegment getSegment() const
     {
@@ -888,6 +901,23 @@ public:
         this->bReused = true;
     }
 
+    NCVMatrixReuse(const NCVMatrix<T> &mat, NcvRect32u roi)
+    {
+        this->bReused = false;
+        this->clear();
+
+        ncvAssertPrintReturn(roi.x < mat.width() && roi.y < mat.height() && \
+            roi.x + roi.width <= mat.width() && roi.y + roi.height <= mat.height(),
+            "NCVMatrixReuse ctor:: memory binding failed due to mismatching ROI and source matrix dims", );
+
+        this->_width = roi.width;
+        this->_height = roi.height;
+        this->_pitch = mat.pitch();
+        this->_ptr = mat.ptr() + roi.y * mat.stride() + roi.x;
+        this->_memtype = mat.memType();
+
+        this->bReused = true;
+    }
 
     NcvBool isMemReused() const
     {
@@ -898,5 +928,28 @@ private:
 
     NcvBool bReused;
 };
+
+
+/**
+* Operations with rectangles
+*/
+NCV_EXPORTS NCVStatus ncvGroupRectangles_host(NCVVector<NcvRect32u> &hypotheses, Ncv32u &numHypotheses,
+                                              Ncv32u minNeighbors, Ncv32f intersectEps, NCVVector<Ncv32u> *hypothesesWeights);
+
+
+NCV_EXPORTS NCVStatus ncvDrawRects_8u_host(Ncv8u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+                                           NcvRect32u *h_rects, Ncv32u numRects, Ncv8u color);
+
+
+NCV_EXPORTS NCVStatus ncvDrawRects_32u_host(Ncv32u *h_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+                                            NcvRect32u *h_rects, Ncv32u numRects, Ncv32u color);
+
+
+NCV_EXPORTS NCVStatus ncvDrawRects_8u_device(Ncv8u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+                                             NcvRect32u *d_rects, Ncv32u numRects, Ncv8u color, cudaStream_t cuStream);
+
+
+NCV_EXPORTS NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst, Ncv32u dstStride, Ncv32u dstWidth, Ncv32u dstHeight,
+                                              NcvRect32u *d_rects, Ncv32u numRects, Ncv32u color, cudaStream_t cuStream);
 
 #endif // _ncv_hpp_

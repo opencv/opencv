@@ -44,10 +44,6 @@
 #include <cuda_runtime.h>
 #include "NPP_staging.hpp"
 
-#if defined _SELF_TEST_
-#include <stdio.h>
-#endif
-
 
 texture<Ncv8u,  1, cudaReadModeElementType> tex8u;
 texture<Ncv32u, 1, cudaReadModeElementType> tex32u;
@@ -161,12 +157,6 @@ const Ncv32u NUM_SCAN_THREADS = 256;
 const Ncv32u LOG2_NUM_SCAN_THREADS = 8;
 
 
-struct T_true {};
-struct T_false {};
-template <typename T, typename U> struct is_same : T_false {};
-template <typename T> struct is_same<T, T> : T_true {};
-
-
 template<class T_in, class T_out>
 struct _scanElemOp
 {
@@ -175,13 +165,16 @@ struct _scanElemOp
     {
         return scanElemOp( elem, Int2Type<(int)tbDoSqr>() );
     }
+
 private:
+
     template <int v> struct Int2Type { enum { value = v }; };
 
     static inline __host__ __device__ T_out scanElemOp(T_in elem, Int2Type<0>)
     {
         return (T_out)elem;
     }
+
     static inline __host__ __device__ T_out scanElemOp(T_in elem, Int2Type<1>)
     {
         return (T_out)(elem*elem);
@@ -190,25 +183,25 @@ private:
 
 
 template<class T>
-inline __device__ T readElem(T *d_src, Ncv32u srcStride, Ncv32u curElemOffs);
+inline __device__ T readElem(T *d_src, Ncv32u texOffs, Ncv32u srcStride, Ncv32u curElemOffs);
 
 
 template<>
-inline __device__ Ncv8u readElem<Ncv8u>(Ncv8u *d_src, Ncv32u srcStride, Ncv32u curElemOffs)
+inline __device__ Ncv8u readElem<Ncv8u>(Ncv8u *d_src, Ncv32u texOffs, Ncv32u srcStride, Ncv32u curElemOffs)
 {
-    return tex1Dfetch(tex8u, srcStride * blockIdx.x + curElemOffs);
+    return tex1Dfetch(tex8u, texOffs + srcStride * blockIdx.x + curElemOffs);
 }
 
 
 template<>
-inline __device__ Ncv32u readElem<Ncv32u>(Ncv32u *d_src, Ncv32u srcStride, Ncv32u curElemOffs)
+inline __device__ Ncv32u readElem<Ncv32u>(Ncv32u *d_src, Ncv32u texOffs, Ncv32u srcStride, Ncv32u curElemOffs)
 {
     return d_src[curElemOffs];
 }
 
 
 template<>
-inline __device__ Ncv32f readElem<Ncv32f>(Ncv32f *d_src, Ncv32u srcStride, Ncv32u curElemOffs)
+inline __device__ Ncv32f readElem<Ncv32f>(Ncv32f *d_src, Ncv32u texOffs, Ncv32u srcStride, Ncv32u curElemOffs)
 {
     return d_src[curElemOffs];
 }
@@ -233,7 +226,7 @@ inline __device__ Ncv32f readElem<Ncv32f>(Ncv32f *d_src, Ncv32u srcStride, Ncv32
 * \return None
 */
 template <class T_in, class T_out, bool tbDoSqr>
-__global__ void scanRows(T_in *d_src, Ncv32u srcWidth, Ncv32u srcStride,
+__global__ void scanRows(T_in *d_src, Ncv32u texOffs, Ncv32u srcWidth, Ncv32u srcStride,
                          T_out *d_II, Ncv32u IIstride)
 {
     //advance pointers to the current line
@@ -263,7 +256,7 @@ __global__ void scanRows(T_in *d_src, Ncv32u srcWidth, Ncv32u srcStride,
         if (curElemOffs < srcWidth)
         {
             //load elements
-            curElem = readElem<T_in>(d_src, srcStride, curElemOffs);
+            curElem = readElem<T_in>(d_src, texOffs, srcStride, curElemOffs);
         }
         curElemMod = _scanElemOp<T_in, T_out>::scanElemOp<tbDoSqr>(curElem);
 
@@ -298,55 +291,28 @@ NCVStatus scanRowsWrapperDevice(T_in *d_src, Ncv32u srcStride,
                                 T_out *d_dst, Ncv32u dstStride, NcvSize32u roi)
 {
     cudaChannelFormatDesc cfdTex;
+    size_t alignmentOffset = 0;
     if (sizeof(T_in) == 1)
     {
         cfdTex = cudaCreateChannelDesc<Ncv8u>();
-        size_t alignmentOffset;
         ncvAssertCUDAReturn(cudaBindTexture(&alignmentOffset, tex8u, d_src, cfdTex, roi.height * srcStride), NPPST_TEXTURE_BIND_ERROR);
-        ncvAssertReturn(alignmentOffset==0, NPPST_TEXTURE_BIND_ERROR);
+        if (alignmentOffset > 0)
+        {
+            ncvAssertCUDAReturn(cudaUnbindTexture(tex8u), NCV_CUDA_ERROR);
+            ncvAssertCUDAReturn(cudaBindTexture(&alignmentOffset, tex8u, d_src, cfdTex, alignmentOffset + roi.height * srcStride), NPPST_TEXTURE_BIND_ERROR);
+        }
     }
     scanRows
         <T_in, T_out, tbDoSqr>
         <<<roi.height, NUM_SCAN_THREADS, 0, nppStGetActiveCUDAstream()>>>
-        (d_src, roi.width, srcStride, d_dst, dstStride);
+        (d_src, (Ncv32u)alignmentOffset, roi.width, srcStride, d_dst, dstStride);
     ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
-
-#if defined _SELF_TEST_
-    T_in *h_src;
-    T_out *h_dst;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_src, srcStride * roi.height * sizeof(T_in)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMallocHost(&h_dst, dstStride * roi.height * sizeof(T_out)), NPPST_MEM_ALLOC_ERR);
-    memset(h_src, 0, srcStride * roi.height * sizeof(T_in));
-    memset(h_dst, 0, dstStride * roi.height * sizeof(T_out));
-    ncvAssertCUDAReturn(cudaMemcpy(h_src, d_src, srcStride * roi.height * sizeof(T_in), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_dst, d_dst, dstStride * roi.height * sizeof(T_out), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    NcvBool bPass = true;
-    for (Ncv32u i=0; i<roi.height && bPass; i++)
-    {
-        T_out curElem = 0;
-        for (Ncv32u j=0; j<roi.width+1 && bPass; j++)
-        {
-            if (curElem != h_dst[i * dstStride + j])
-            {
-                printf("CIntegralImage::scanRowsWrapperDevice self test failed: i=%d, j=%d, cpu=%d, gpu=%d\n", i, j, curElem, h_dst[i * dstStride + j]);
-                bPass = false;
-            }
-            if (j < roi.width)
-            {
-                curElem += scanElemOp<T_op>(h_src[i*srcStride+j]);
-            }
-        }
-    }
-    ncvAssertCUDAReturn(cudaFreeHost(h_src), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_dst), NPPST_MEMFREE_ERR);
-    printf("CIntegralImage::scanRowsWrapperDevice %s\n", bPass?"PASSED":"FAILED");
-#endif
 
     return NPPST_SUCCESS;
 }
 
 
-Ncv32u getPaddedDimension(Ncv32u dim, Ncv32u elemTypeSize, Ncv32u allocatorAlignment)
+static Ncv32u getPaddedDimension(Ncv32u dim, Ncv32u elemTypeSize, Ncv32u allocatorAlignment)
 {
     Ncv32u alignMask = allocatorAlignment-1;
     Ncv32u inverseAlignMask = ~alignMask;
@@ -676,7 +642,7 @@ NCVStatus nppiStSqrIntegral_8u64u_C1R_host(Ncv8u *h_src, Ncv32u srcStep,
 
 //==============================================================================
 //
-// DownsampleNearest.cu
+// Decimate.cu
 //
 //==============================================================================
 
@@ -686,25 +652,25 @@ const Ncv32u NUM_DOWNSAMPLE_NEAREST_THREADS_Y = 8;
 
 
 template<class T, NcvBool tbCacheTexture>
-__device__ T getElem_DownsampleNearest(Ncv32u x, T *d_src);
+__device__ T getElem_Decimate(Ncv32u x, T *d_src);
 
 
 template<>
-__device__ Ncv32u getElem_DownsampleNearest<Ncv32u, true>(Ncv32u x, Ncv32u *d_src)
+__device__ Ncv32u getElem_Decimate<Ncv32u, true>(Ncv32u x, Ncv32u *d_src)
 {
     return tex1Dfetch(tex32u, x);
 }
 
 
 template<>
-__device__ Ncv32u getElem_DownsampleNearest<Ncv32u, false>(Ncv32u x, Ncv32u *d_src)
+__device__ Ncv32u getElem_Decimate<Ncv32u, false>(Ncv32u x, Ncv32u *d_src)
 {
     return d_src[x];
 }
 
 
 template<>
-__device__ Ncv64u getElem_DownsampleNearest<Ncv64u, true>(Ncv32u x, Ncv64u *d_src)
+__device__ Ncv64u getElem_Decimate<Ncv64u, true>(Ncv32u x, Ncv64u *d_src)
 {
     uint2 tmp = tex1Dfetch(tex64u, x);
     Ncv64u res = (Ncv64u)tmp.y;
@@ -715,14 +681,14 @@ __device__ Ncv64u getElem_DownsampleNearest<Ncv64u, true>(Ncv32u x, Ncv64u *d_sr
 
 
 template<>
-__device__ Ncv64u getElem_DownsampleNearest<Ncv64u, false>(Ncv32u x, Ncv64u *d_src)
+__device__ Ncv64u getElem_Decimate<Ncv64u, false>(Ncv32u x, Ncv64u *d_src)
 {
     return d_src[x];
 }
 
 
 template <class T, NcvBool tbCacheTexture>
-__global__ void downsampleNearest_C1R(T *d_src, Ncv32u srcStep, T *d_dst, Ncv32u dstStep,
+__global__ void decimate_C1R(T *d_src, Ncv32u srcStep, T *d_dst, Ncv32u dstStep,
                                       NcvSize32u dstRoi, Ncv32u scale)
 {
     int curX = blockIdx.x * blockDim.x + threadIdx.x;
@@ -733,12 +699,12 @@ __global__ void downsampleNearest_C1R(T *d_src, Ncv32u srcStep, T *d_dst, Ncv32u
         return;
     }
 
-    d_dst[curY * dstStep + curX] = getElem_DownsampleNearest<T, tbCacheTexture>((curY * srcStep + curX) * scale, d_src);
+    d_dst[curY * dstStep + curX] = getElem_Decimate<T, tbCacheTexture>((curY * srcStep + curX) * scale, d_src);
 }
 
 
 template <class T>
-static NCVStatus downsampleNearestWrapperDevice(T *d_src, Ncv32u srcStep,
+static NCVStatus decimateWrapperDevice(T *d_src, Ncv32u srcStep,
                                                 T *d_dst, Ncv32u dstStep,
                                                 NcvSize32u srcRoi, Ncv32u scale,
                                                 NcvBool readThruTexture)
@@ -761,7 +727,7 @@ static NCVStatus downsampleNearestWrapperDevice(T *d_src, Ncv32u srcStep,
 
     if (!readThruTexture)
     {
-        downsampleNearest_C1R
+        decimate_C1R
             <T, false>
             <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
             (d_src, srcStep, d_dst, dstStep, dstRoi, scale);
@@ -787,7 +753,7 @@ static NCVStatus downsampleNearestWrapperDevice(T *d_src, Ncv32u srcStep,
             ncvAssertReturn(alignmentOffset==0, NPPST_TEXTURE_BIND_ERROR);
         }
 
-        downsampleNearest_C1R
+        decimate_C1R
             <T, true>
             <<<grid, block, 0, nppStGetActiveCUDAstream()>>>
             (d_src, srcStep, d_dst, dstStep, dstRoi, scale);
@@ -795,39 +761,12 @@ static NCVStatus downsampleNearestWrapperDevice(T *d_src, Ncv32u srcStep,
 
     ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
-#if defined _SELF_TEST_
-    T *h_src;
-    T *h_dst;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_src, srcStep * srcRoi.height * sizeof(T)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMallocHost(&h_dst, dstStep * dstRoi.height * sizeof(T)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_src, d_src, srcStep * srcRoi.height * sizeof(T), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_dst, d_dst, dstStep * dstRoi.height * sizeof(T), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-
-    bool bPass = true;
-
-    for (Ncv32u i=0; i<dstRoi.height && bPass; i++)
-    {
-        for (Ncv32u j=0; j<dstRoi.width && bPass; j++)
-        {
-            if (h_dst[i*dstStep+j] != h_src[i*scale*srcStep + j*scale])
-            {
-                printf("::downsampleNearestWrapperDevice self test failed: i=%d, j=%d, cpu=%ld, gpu=%ld\n", i, j, (long long)h_src[i*scale*srcStep + j*scale], (long long)h_dst[i*dstStep+j]);
-                bPass = false;
-            }
-        }
-    }
-
-    ncvAssertCUDAReturn(cudaFreeHost(h_src), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_dst), NPPST_MEMFREE_ERR);
-    printf("::downsampleNearestWrapperDevice %s\n", bPass?"PASSED":"FAILED");
-#endif
-
     return NPPST_SUCCESS;
 }
 
 
 template <class T>
-static NCVStatus downsampleNearestWrapperHost(T *h_src, Ncv32u srcStep,
+static NCVStatus decimateWrapperHost(T *h_src, Ncv32u srcStep,
                                               T *h_dst, Ncv32u dstStep,
                                               NcvSize32u srcRoi, Ncv32u scale)
 {
@@ -856,40 +795,40 @@ static NCVStatus downsampleNearestWrapperHost(T *h_src, Ncv32u srcStep,
 }
 
 
-#define implementNppDownsampleNearest(bit, typ) \
-    NCVStatus nppiStDownsampleNearest_##bit##typ##_C1R(Ncv##bit##typ *d_src, Ncv32u srcStep, \
+#define implementNppDecimate(bit, typ) \
+    NCVStatus nppiStDecimate_##bit##typ##_C1R(Ncv##bit##typ *d_src, Ncv32u srcStep, \
                                                      Ncv##bit##typ *d_dst, Ncv32u dstStep, \
                                                      NcvSize32u srcRoi, Ncv32u scale, NcvBool readThruTexture) \
     { \
-        return downsampleNearestWrapperDevice<Ncv##bit##u>((Ncv##bit##u *)d_src, srcStep, \
+        return decimateWrapperDevice<Ncv##bit##u>((Ncv##bit##u *)d_src, srcStep, \
                                                            (Ncv##bit##u *)d_dst, dstStep, \
                                                            srcRoi, scale, readThruTexture); \
     }
 
 
-#define implementNppDownsampleNearestHost(bit, typ) \
-    NCVStatus nppiStDownsampleNearest_##bit##typ##_C1R_host(Ncv##bit##typ *h_src, Ncv32u srcStep, \
+#define implementNppDecimateHost(bit, typ) \
+    NCVStatus nppiStDecimate_##bit##typ##_C1R_host(Ncv##bit##typ *h_src, Ncv32u srcStep, \
                                                           Ncv##bit##typ *h_dst, Ncv32u dstStep, \
                                                           NcvSize32u srcRoi, Ncv32u scale) \
     { \
-        return downsampleNearestWrapperHost<Ncv##bit##u>((Ncv##bit##u *)h_src, srcStep, \
+        return decimateWrapperHost<Ncv##bit##u>((Ncv##bit##u *)h_src, srcStep, \
                                                          (Ncv##bit##u *)h_dst, dstStep, \
                                                          srcRoi, scale); \
     }
 
 
-implementNppDownsampleNearest(32, u)
-implementNppDownsampleNearest(32, s)
-implementNppDownsampleNearest(32, f)
-implementNppDownsampleNearest(64, u)
-implementNppDownsampleNearest(64, s)
-implementNppDownsampleNearest(64, f)
-implementNppDownsampleNearestHost(32, u)
-implementNppDownsampleNearestHost(32, s)
-implementNppDownsampleNearestHost(32, f)
-implementNppDownsampleNearestHost(64, u)
-implementNppDownsampleNearestHost(64, s)
-implementNppDownsampleNearestHost(64, f)
+implementNppDecimate(32, u)
+implementNppDecimate(32, s)
+implementNppDecimate(32, f)
+implementNppDecimate(64, u)
+implementNppDecimate(64, s)
+implementNppDecimate(64, f)
+implementNppDecimateHost(32, u)
+implementNppDecimateHost(32, s)
+implementNppDecimateHost(32, f)
+implementNppDecimateHost(64, u)
+implementNppDecimateHost(64, s)
+implementNppDecimateHost(64, f)
 
 
 //==============================================================================
@@ -1051,46 +990,6 @@ NCVStatus nppiStRectStdDev_32f_C1R(Ncv32u *d_sum, Ncv32u sumStep,
 
     ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
-#if defined _SELF_TEST_
-    Ncv32u *h_sum;
-    Ncv64u *h_sqsum;
-    Ncv32f *h_norm_d;
-    Ncv32u ExtHeight = roi.height + rect.y + rect.height;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_sum, sumStep * ExtHeight * sizeof(Ncv32u)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMallocHost(&h_sqsum, sqsumStep * ExtHeight * sizeof(Ncv64u)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMallocHost(&h_norm_d, normStep * roi.height * sizeof(Ncv32u)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_sum, d_sum, sumStep * ExtHeight * sizeof(Ncv32u), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_sqsum, d_sqsum, sqsumStep * ExtHeight * sizeof(Ncv64u), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_norm_d, d_norm, normStep * roi.height * sizeof(Ncv32f), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-
-    Ncv32f *h_norm_h;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_norm_h, normStep * roi.height * sizeof(Ncv32u)), NPPST_MEM_ALLOC_ERR);
-
-    ncvAssertReturnNcvStat(nppRectStdDev_32f_C1R_host(h_sum, sqsumStep, h_sqsum, sqsumStep, h_norm_h, normStep, roi, rect, scaleArea));
-
-    const Ncv64f relEPS = 0.005;
-    bool bPass = true;
-    for (Ncv32u i=0; i<roi.height && bPass; i++)
-    {
-        for (Ncv32u j=0; j<roi.width && bPass; j++)
-        {
-            Ncv64f absErr = fabs(h_norm_h[i * normStep + j] - h_norm_d[i * normStep + j]);
-            Ncv64f relErr = absErr / h_norm_h[i * normStep + j];
-
-            if (relErr > relEPS)
-            {
-                printf("::ncvRectStdDev_32f_C1R self test failed: i=%d, j=%d, cpu=%f, gpu=%f\n", i, j, h_norm_h[i * normStep + j], h_norm_d[i * normStep + j]);
-                bPass = false;
-            }
-        }
-    }
-    ncvAssertCUDAReturn(cudaFreeHost(h_sum), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_sqsum), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_norm_d), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_norm_h), NPPST_MEMFREE_ERR);
-    printf("::ncvRectStdDev_32f_C1R %s\n", bPass?"PASSED":"FAILED");
-#endif
-
     return NPPST_SUCCESS;
 }
 
@@ -1251,34 +1150,6 @@ NCVStatus transposeWrapperDevice(T *d_src, Ncv32u srcStride,
         (d_src, srcStride, d_dst, dstStride, srcRoi);
     ncvAssertCUDAReturn(cudaGetLastError(), NPPST_CUDA_KERNEL_EXECUTION_ERROR);
 
-#if defined _SELF_TEST_
-    Ncv32u widthExt = grid.x * TRANSPOSE_TILE_DIM;
-    Ncv32u heightExt = grid.y * TRANSPOSE_TILE_DIM;
-    T *h_src;
-    T *h_dst;
-    ncvAssertCUDAReturn(cudaMallocHost(&h_src, srcStride * heightExt * sizeof(T)), NPPST_MEM_ALLOC_ERR);
-    ncvAssertCUDAReturn(cudaMallocHost(&h_dst, dstStride * widthExt * sizeof(T)), NPPST_MEM_ALLOC_ERR);
-    memset(h_src, 0, srcStride * heightExt * sizeof(T));
-    memset(h_dst, 0, dstStride * widthExt * sizeof(T));
-    ncvAssertCUDAReturn(cudaMemcpy(h_src, d_src, srcStride * heightExt * sizeof(T), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    ncvAssertCUDAReturn(cudaMemcpy(h_dst, d_dst, dstStride * widthExt * sizeof(T), cudaMemcpyDeviceToHost), NPPST_MEMCPY_ERROR);
-    NcvBool bPass = true;
-    for (Ncv32u i=0; i<srcRoi.height && bPass; i++)
-    {
-        for (Ncv32u j=0; j<srcRoi.width && bPass; j++)
-        {
-            if (h_src[i * srcStride + j] != h_dst[j * dstStride + i])
-            {
-                printf("CIntegralImage::transposeWrapperDevice self test failed: i=%d, j=%d, cpu=%d, gpu=%d\n", i, j, h_src[j * srcStride + i], h_dst[i * dstStride + j]);
-                bPass = false;
-            }
-        }
-    }
-    ncvAssertCUDAReturn(cudaFreeHost(h_src), NPPST_MEMFREE_ERR);
-    ncvAssertCUDAReturn(cudaFreeHost(h_dst), NPPST_MEMFREE_ERR);
-    printf("CIntegralImage::transposeWrapperDevice %s\n", bPass?"PASSED":"FAILED");
-#endif
-
     return NPPST_SUCCESS;
 }
 
@@ -1339,6 +1210,20 @@ implementNppTransposeHost(32,f)
 implementNppTransposeHost(64,u)
 implementNppTransposeHost(64,s)
 implementNppTransposeHost(64,f)
+
+
+NCVStatus nppiStTranspose_128_C1R(void *d_src, Ncv32u srcStep,
+                                  void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi)
+{
+    return transposeWrapperDevice<uint4>((uint4 *)d_src, srcStep, (uint4 *)d_dst, dstStep, srcRoi);
+}
+
+
+NCVStatus nppiStTranspose_128_C1R_host(void *d_src, Ncv32u srcStep,
+                                       void *d_dst, Ncv32u dstStep, NcvSize32u srcRoi)
+{
+    return transposeWrapperHost<uint4>((uint4 *)d_src, srcStep, (uint4 *)d_dst, dstStep, srcRoi);
+}
 
 
 //==============================================================================
