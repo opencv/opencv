@@ -1595,13 +1595,13 @@ static double cvTsSVDet( CvMat* mat, double* ratio )
     {
         for( i = 0; i < nm; i++ )
             det *= w->data.fl[i];
-        *ratio = w->data.fl[nm-1] < FLT_EPSILON ? FLT_MAX : w->data.fl[nm-1]/w->data.fl[0];
+        *ratio = w->data.fl[nm-1] < FLT_EPSILON ? 0 : w->data.fl[nm-1]/w->data.fl[0];
     }
     else
     {
         for( i = 0; i < nm; i++ )
             det *= w->data.db[i];
-        *ratio = w->data.db[nm-1] < FLT_EPSILON ? DBL_MAX : w->data.db[nm-1]/w->data.db[0];
+        *ratio = w->data.db[nm-1] < FLT_EPSILON ? 0 : w->data.db[nm-1]/w->data.db[0];
     }
     
     cvReleaseMat( &w );
@@ -1673,6 +1673,8 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     CvSize in_sz = sizes[INPUT][0];
+    if( in_sz.width > in_sz.height )
+        in_sz = cvSize(in_sz.height, in_sz.width);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     sizes[INPUT][0] = in_sz;
     int min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
@@ -1912,7 +1914,7 @@ void Core_SVDTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scalar
 double Core_SVDTest::get_success_error_level( int test_case_idx, int i, int j )
 {
     int input_depth = CV_MAT_DEPTH(cvGetElemType( test_array[INPUT][0] ));
-    double input_precision = input_depth < CV_32F ? 0 : input_depth == CV_32F ? 5e-5 : 5e-11;
+    double input_precision = input_depth < CV_32F ? 0 : input_depth == CV_32F ? 1e-5 : 5e-11;
     double output_precision = Base::get_success_error_level( test_case_idx, i, j );
     return MAX(input_precision, output_precision);
 }
@@ -1926,7 +1928,7 @@ void Core_SVDTest::run_func()
 }
 
 
-void Core_SVDTest::prepare_to_validation( int )
+void Core_SVDTest::prepare_to_validation( int test_case_idx )
 {
     Mat& input = test_mat[INPUT][0];
     int depth = input.depth();
@@ -2036,7 +2038,8 @@ flags(0), have_b(false), symmetric(false), compact(false), vector_w(false)
 }
 
 
-void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes,
+                                                      vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
     int bits = cvtest::randInt(rng);
@@ -2150,7 +2153,7 @@ void Core_SVBkSbTest::prepare_to_validation( int )
     CvMat _w = w, _wdb = wdb;
     // use exactly the same threshold as in icvSVD... ,
     // so the changes in the library and here should be synchronized.
-    double threshold = cv::sum(w)[0]*2*(is_float ? FLT_EPSILON : DBL_EPSILON);
+    double threshold = cv::sum(w)[0]*(is_float ? FLT_EPSILON*10 : DBL_EPSILON*2);
     
     wdb = Scalar::all(0);
     for( i = 0; i < min_size; i++ )

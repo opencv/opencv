@@ -427,25 +427,25 @@ inline size_t Mat::total() const
 
 inline uchar* Mat::ptr(int y)
 {
-    CV_DbgAssert( data && dims >= 1 && (unsigned)y < (unsigned)size.p[0] );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
     return data + step.p[0]*y;
 }
 
 inline const uchar* Mat::ptr(int y) const
 {
-    CV_DbgAssert( data && dims >= 1 && (unsigned)y < (unsigned)size.p[0] );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
     return data + step.p[0]*y;
 }
 
 template<typename _Tp> inline _Tp* Mat::ptr(int y)
 {
-    CV_DbgAssert( data && dims >= 1 && (unsigned)y < (unsigned)size.p[0] );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
     return (_Tp*)(data + step.p[0]*y);
 }
 
 template<typename _Tp> inline const _Tp* Mat::ptr(int y) const
 {
-    CV_DbgAssert( dims >= 1 && data && (unsigned)y < (unsigned)size.p[0] );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && data && (unsigned)y < (unsigned)size.p[0]) );
     return (const _Tp*)(data + step.p[0]*y);
 }
 

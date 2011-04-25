@@ -683,10 +683,10 @@ Matx<_Tp, m, n> Matx<_Tp, m, n>::mul(const Matx<_Tp, m, n>& a) const
 }
 
     
-CV_EXPORTS int LU(float* A, int m, float* b, int n);
-CV_EXPORTS int LU(double* A, int m, double* b, int n);
-CV_EXPORTS bool Cholesky(float* A, int m, float* b, int n);
-CV_EXPORTS bool Cholesky(double* A, int m, double* b, int n);    
+CV_EXPORTS int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n);
+CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n);
+CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);    
 
 
 template<typename _Tp, int m> struct CV_EXPORTS Matx_DetOp
@@ -694,7 +694,7 @@ template<typename _Tp, int m> struct CV_EXPORTS Matx_DetOp
     double operator ()(const Matx<_Tp, m, m>& a) const
     {
         Matx<_Tp, m, m> temp = a;
-        double p = LU(temp.val, m, 0, 0);
+        double p = LU(temp.val, m, m, 0, 0, 0);
         if( p == 0 )
             return p;
         for( int i = 0; i < m; i++ )
@@ -767,9 +767,9 @@ template<typename _Tp, int m> struct CV_EXPORTS Matx_FastInvOp
             b(i, i) = (_Tp)1;
         
         if( method == DECOMP_CHOLESKY )
-            return Cholesky(temp.val, m, b.val, m);
+            return Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
         
-        return LU(temp.val, m, b.val, m) != 0;
+        return LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
     }
 };
 
@@ -839,9 +839,9 @@ template<typename _Tp, int m, int n> struct CV_EXPORTS Matx_FastSolveOp
         Matx<_Tp, m, m> temp = a;
         x = b;
         if( method == DECOMP_CHOLESKY )
-            return Cholesky(temp.val, m, x.val, n);
+            return Cholesky(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n);
         
-        return LU(temp.val, m, x.val, n) != 0;
+        return LU(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n) != 0;
     }
 };
 
