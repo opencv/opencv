@@ -104,14 +104,3 @@ videoInput-0.1995 - Video capturing library for Windows using DirectShow as back
              http://muonics.net/school/spring05/videoInput/
 
 ------------------------------------------------------------------------------------
-
-clapack-3.2.1 - F2C translation of the Linear Algebra PACKage (LAPACK),
-                Copyright (c) 1992-2010 The University of Tennessee. All rights reserved.
-                http://www.netlib.org/lapack/
-                http://www.netlib.org/clapack/
-
-                Note, that only a subset of package is used in OpenCV.
-                It can be extended and/or replaced with future upstream releases
-                in the future.
-
-------------------------------------------------------------------------------------

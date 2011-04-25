@@ -54,40 +54,40 @@ LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 # Link libraries: e.g.   opencv_core220.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
 if(NOT ANDROID)
-	set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib opencv_flann)
+    set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib opencv_flann)
 else()
-	#libraries order is very important because linker from Android NDK is one-pass linker
-	set(OPENCV_LIB_COMPONENTS opencv_calib3d opencv_objdetect opencv_features2d opencv_imgproc opencv_video  opencv_highgui opencv_ml opencv_legacy  opencv_flann opencv_core )
+    #libraries order is very important because linker from Android NDK is one-pass linker
+    set(OPENCV_LIB_COMPONENTS opencv_calib3d opencv_objdetect opencv_features2d opencv_imgproc opencv_video  opencv_highgui opencv_ml opencv_legacy  opencv_flann opencv_core )
 endif()
 
 SET(OpenCV_LIBS "")
 foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
-	# CMake>=2.6 supports the notation "debug XXd optimized XX"
-	if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-		# Modern CMake:
-		SET(OpenCV_LIBS ${OpenCV_LIBS} debug ${__CVLIB}@OPENCV_DLLVERSION@@OPENCV_DEBUG_POSTFIX@ optimized ${__CVLIB}@OPENCV_DLLVERSION@)
-	else(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-		# Old CMake:
-		SET(OpenCV_LIBS ${OpenCV_LIBS} ${__CVLIB}@OPENCV_DLLVERSION@)
-	endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+    # CMake>=2.6 supports the notation "debug XXd optimized XX"
+    if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+        # Modern CMake:
+        SET(OpenCV_LIBS ${OpenCV_LIBS} debug ${__CVLIB}@OPENCV_DLLVERSION@@OPENCV_DEBUG_POSTFIX@ optimized ${__CVLIB}@OPENCV_DLLVERSION@)
+    else(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+        # Old CMake:
+        SET(OpenCV_LIBS ${OpenCV_LIBS} ${__CVLIB}@OPENCV_DLLVERSION@)
+    endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
 endforeach(__CVLIB)
 
 # ==============================================================
 #  Extra include directories, needed by OpenCV 2 new structure
 # ==============================================================
 if(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
-	SET(BASEDIR @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@)
-	foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
-		# We only need the "core",... part here: "opencv_core" -> "core"
-		STRING(REGEX REPLACE "opencv_(.*)" "\\1" MODNAME ${__CVLIB})
-		INCLUDE_DIRECTORIES("${BASEDIR}/modules/${MODNAME}/include")
-	endforeach(__CVLIB)
+    SET(BASEDIR @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@)
+    foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
+        # We only need the "core",... part here: "opencv_core" -> "core"
+        STRING(REGEX REPLACE "opencv_(.*)" "\\1" MODNAME ${__CVLIB})
+        INCLUDE_DIRECTORIES("${BASEDIR}/modules/${MODNAME}/include")
+    endforeach(__CVLIB)
 endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 
 # For OpenCV built as static libs, we need the user to link against
 #  many more dependencies:
 IF (NOT @OPENCV_BUILD_SHARED_LIB@)
-	# Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
+    # Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
     LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
     if(WIN32)
         LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
@@ -98,13 +98,13 @@ IF (NOT @OPENCV_BUILD_SHARED_LIB@)
         LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../share/opencv/3rdparty/lib)
     endif()    
 
-	set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
+    set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
 
-    set(OPENCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ zlib opencv_lapack)
+    set(OPENCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ zlib)
 
     if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
         foreach(__EXTRA_LIB ${OPENCV_EXTRA_COMPONENTS})
-	        set(OpenCV_LIBS ${OpenCV_LIBS}
+            set(OpenCV_LIBS ${OpenCV_LIBS}
                 debug ${__EXTRA_LIB}@OPENCV_DEBUG_POSTFIX@
                 optimized ${__EXTRA_LIB})
         endforeach(__EXTRA_LIB)
