@@ -142,6 +142,10 @@ install(FILES ${lib_hdrs}
 	DESTINATION include/opencv2/${name}
 	COMPONENT main)
 
+install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
+	DESTINATION include/opencv2/${name}
+	COMPONENT main)
+
 #install(FILES ${lib_device_hdrs}
 #	DESTINATION include/opencv2/${name}/device
 #	COMPONENT main)
