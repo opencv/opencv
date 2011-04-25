@@ -43,7 +43,10 @@
 #include <ios>
 #include <stdarg.h>
 #include <vector>
+#include <cstdio>
 #include "NCV.hpp"
+
+using namespace std;
 
 
 //==============================================================================
