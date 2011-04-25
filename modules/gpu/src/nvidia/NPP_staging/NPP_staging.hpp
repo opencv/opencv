@@ -62,6 +62,7 @@
  * NOT THREAD SAFE
  * \return Current CUDA stream
  */
+NCV_EXPORTS
 cudaStream_t nppStGetActiveCUDAstream();
 
 
@@ -71,6 +72,7 @@ cudaStream_t nppStGetActiveCUDAstream();
  * \param cudaStream        [IN] cudaStream CUDA stream to become current
  * \return CUDA stream used before
  */
+NCV_EXPORTS
 cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream);
 
 
