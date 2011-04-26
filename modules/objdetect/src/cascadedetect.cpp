@@ -63,7 +63,7 @@ public:
 };    
     
 
-static void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights)
+void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights)
 {
     if( groupThreshold <= 0 || rectList.empty() )
     {
