@@ -247,9 +247,15 @@ static int decode(Sampler &sa, code &cc)
 {
   uint8 binary[8] = {0,0,0,0,0,0,0,0};
   uint8 b = 0;
+  int i, sum;
 
-  for (int i = 0; i < 64; i++) {
-    b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= 128);
+  sum = 0;
+
+  for (i = 0; i < 64; i++)
+    sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
+  uint8 mean = sum / 64;
+  for (i = 0; i < 64; i++) {
+    b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
     if ((i & 7) == 7) {
       binary[i >> 3] = b;
       b = 0;
