@@ -827,7 +827,7 @@ erode
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
-    :param element: Structuring element used for dilation. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used.
+    :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used.
 
     :param anchor: Position of the anchor within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the element center.
 
