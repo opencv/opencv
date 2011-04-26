@@ -246,6 +246,10 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/src"
                     "${CMAKE_CURRENT_BINARY_DIR}")
 
+if(WIN32)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/include")
+endif()
+
 add_library(${the_target} ${lib_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
 
 if(PCHSupport_FOUND)
