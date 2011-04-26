@@ -66,7 +66,7 @@ macro(define_opencv_module name)
                 )
         endif()
         set_target_properties(${the_target} PROPERTIES
-            LINK_FLAGS "/NODEFAULTLIB:libc"
+            LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG"
             )
     endif()
 
