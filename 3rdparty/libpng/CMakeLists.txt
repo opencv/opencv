@@ -8,6 +8,12 @@ project(libpng)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
+if(ZLIB_FOUND)
+    include_directories(${ZLIB_INCLUDE_DIR})
+else()
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../zlib")
+endif()
+
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
