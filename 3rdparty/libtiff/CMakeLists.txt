@@ -6,10 +6,7 @@ project(libtiff)
 
 # List of C++ files:
 
-include_directories(
-	"${CMAKE_CURRENT_SOURCE_DIR}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../include"
-	)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_definitions(-DHAVE_STRING_H=1)
 
@@ -76,8 +73,6 @@ endif(WIN32)
 
 file(GLOB lib_hdrs *.h*)
 
-set(lib_ext_hdrs "../include/tiff.h" "../include/tiffio.h" "../include/tiffvers.h" "../include/tiffconf.h")
-
 set(the_target "libtiff")
 
 if(MSVC)
@@ -91,7 +86,7 @@ if(UNIX)
     endif()
 endif()
 
-add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
+add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs})
 
 set_target_properties(${the_target}
 	PROPERTIES

@@ -8,15 +8,12 @@ project(libjasper)
 add_definitions(-DEXCLUDE_MIF_SUPPORT -DEXCLUDE_PNM_SUPPORT -DEXCLUDE_BMP_SUPPORT -DEXCLUDE_RAS_SUPPORT  -DEXCLUDE_JPG_SUPPORT -DEXCLUDE_PGX_SUPPORT)
 
 # List of C++ files:
-include_directories(
-	${CMAKE_CURRENT_SOURCE_DIR}
-	"${CMAKE_CURRENT_SOURCE_DIR}/../include"
-	)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # The .cpp files:
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
-file(GLOB lib_ext_hdrs ../include/jasper/*.h)
+file(GLOB lib_ext_hdrs jasper/*.h)
 
 # ----------------------------------------------------------------------------------
 # 				Define the library target:

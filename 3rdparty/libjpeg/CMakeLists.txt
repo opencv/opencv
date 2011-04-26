@@ -6,15 +6,11 @@ project(libjpeg)
 
 # List of C++ files:
 
-include_directories(
-	${CMAKE_CURRENT_SOURCE_DIR}
-	"${CMAKE_CURRENT_SOURCE_DIR}/../include"
-	)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # The .cpp files:
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
-set(lib_ext_hdrs "../include/jconfig.h" "../include/jmorecfg.h" "../include/jpeglib.h")
 
 # ----------------------------------------------------------------------------------
 # 				Define the library target:
@@ -22,7 +18,7 @@ set(lib_ext_hdrs "../include/jconfig.h" "../include/jmorecfg.h" "../include/jpeg
 
 set(the_target "libjpeg")
 
-add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
+add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs})
 
 if(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
