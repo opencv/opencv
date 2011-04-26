@@ -224,7 +224,9 @@ set(lib_srcs ${highgui_srcs} ${grfmt_srcs})
 # ----------------------------------------------------------------------------------
 set(the_target "opencv_highgui")
 
-add_definitions(-DHIGHGUI_EXPORTS -DCVAPI_EXPORTS)
+if (OPENCV_BUILD_SHARED_LIB) 
+    add_definitions(-DHIGHGUI_EXPORTS -DCVAPI_EXPORTS)
+endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
 					"${CMAKE_CURRENT_SOURCE_DIR}/../core/include"

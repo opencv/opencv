@@ -2,7 +2,9 @@
 macro(define_opencv_module name)
     
     project(opencv_${name})
-    add_definitions(-DCVAPI_EXPORTS)
+    if (OPENCV_BUILD_SHARED_LIB) 
+        add_definitions(-DCVAPI_EXPORTS) 
+    endif()
 
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/src"
