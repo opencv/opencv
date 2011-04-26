@@ -166,6 +166,7 @@ void crossCorr( const Mat& img, const Mat& templ, Mat& corr,
         for( k = 0; k < cn; k++ )
         {
             Mat src = src0;
+            dftImg = Scalar::all(0);
             
             if( cn > 1 )
             {
@@ -180,12 +181,6 @@ void crossCorr( const Mat& img, const Mat& templ, Mat& corr,
             if( x2 - x1 < dsz.width || y2 - y1 < dsz.height )
                 copyMakeBorder(dst1, dst, y1-y0, dst.rows-dst1.rows-(y1-y0),
                                x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
-
-            if( dftsize.width > dsz.width )
-            {
-                Mat part(dftImg, Range(0, dsz.height), Range(dsz.width, dftsize.width));
-                part = Scalar::all(0);
-            }
 
             dft( dftImg, dftImg, 0, dsz.height );
             Mat dftTempl1(dftTempl, Rect(0, tcn > 1 ? k*dftsize.height : 0,
