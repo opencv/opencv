@@ -689,19 +689,22 @@ RNG& theRNG()
 #else
 
 static pthread_key_t tlsRNGKey = 0;
+static pthread_once_t tlsRNGKeyOnce = PTHREAD_ONCE_INIT;
 
 static void deleteRNG(void* data)
 {
     delete (RNG*)data;
 }
 
+static void makeRNGKey()
+{
+	int errcode = pthread_key_create(&tlsRNGKey, deleteRNG);
+	CV_Assert(errcode == 0);
+}
+
 RNG& theRNG()
 {
-    if( !tlsRNGKey )
-    {
-        int errcode = pthread_key_create(&tlsRNGKey, deleteRNG);
-        CV_Assert(errcode == 0);
-    }
+    pthread_once(&tlsRNGKeyOnce, makeRNGKey);
     RNG* rng = (RNG*)pthread_getspecific(tlsRNGKey);
     if( !rng )
     {
