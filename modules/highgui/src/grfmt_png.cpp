@@ -107,7 +107,7 @@ void  PngDecoder::close()
 void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
 {
     png_structp png_ptr = (png_structp)_png_ptr;
-    PngDecoder* decoder = (PngDecoder*)(png_ptr->io_ptr);
+    PngDecoder* decoder = (PngDecoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( decoder );
     const Mat& buf = decoder->m_buf;
     if( decoder->m_buf_pos + size > buf.cols*buf.rows*buf.elemSize() )
@@ -138,7 +138,7 @@ bool  PngDecoder::readHeader()
 
         if( info_ptr && end_info )
         {
-            if( setjmp( png_ptr->jmpbuf ) == 0 )
+            if( setjmp( png_jmpbuf( png_ptr ) ) == 0 )
             {
                 if( !m_buf.empty() )
                     png_set_read_fn(png_ptr, this, (png_rw_ptr)readDataFromBuf );
@@ -200,7 +200,7 @@ bool  PngDecoder::readData( Mat& img )
         png_infop info_ptr = (png_infop)m_info_ptr;
         png_infop end_info = (png_infop)m_end_info;
 
-        if( setjmp(png_ptr->jmpbuf) == 0 )
+        if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
         {
             int y;
 
@@ -284,7 +284,7 @@ void PngEncoder::writeDataToBuf(void* _png_ptr, uchar* src, size_t size)
     if( size == 0 )
         return;
     png_structp png_ptr = (png_structp)_png_ptr;
-    PngEncoder* encoder = (PngEncoder*)(png_ptr->io_ptr);
+    PngEncoder* encoder = (PngEncoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( encoder && encoder->m_buf );
     size_t cursz = encoder->m_buf->size();
     encoder->m_buf->resize(cursz + size);
@@ -326,7 +326,7 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
 
         if( info_ptr )
         {
-            if( setjmp( png_ptr->jmpbuf ) == 0 )
+            if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
             {
                 if( m_buf )
                 {
