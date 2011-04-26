@@ -426,6 +426,8 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 };
 
+void CV_EXPORTS_W groupRectangles( vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights );
+
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 struct CV_EXPORTS_W HOGDescriptor
@@ -572,6 +574,110 @@ protected:
     vector<KeyPoint> modelPoints;
     LDetector ldetector;
     FernClassifier fernClassifier;
+};
+
+/****************************************************************************************\
+*                           Dominant Orientation Templates                               *
+\****************************************************************************************/
+
+class CV_EXPORTS DOTDetector
+{
+public:
+    struct TrainParams
+    {
+        enum { BIN_COUNT = 7 };
+        static double BIN_RANGE() { return 180.0 / BIN_COUNT; }
+
+        TrainParams();
+        TrainParams( const Size& winSize, int regionSize=7, int minMagnitude=60,
+                     int maxStrongestCount=7, int maxNonzeroBits=6,
+                     float minRatio=0.85f );
+
+        void read( FileNode& fn );
+        void write( FileStorage& fs ) const;
+
+        void asserts() const;
+
+        Size winSize;
+        int regionSize;
+
+        int minMagnitude;
+        int maxStrongestCount;
+        int maxNonzeroBits;
+
+        float minRatio;
+    };
+
+    struct DetectParams
+    {
+        DetectParams();
+        DetectParams( float minRatio, int minRegionSize, int maxRegionSize, int regionSizeStep,
+                      bool isGroup, int groupThreshold, double groupEps );
+
+        void asserts( float minTrainRatio=1.f) const;
+
+        float minRatio;
+
+        int minRegionSize;
+        int maxRegionSize;
+        int regionSizeStep;
+
+        bool isGroup;
+
+        int groupThreshold;
+        double groupEps;
+    };
+
+    struct DOTTemplate
+    {
+        DOTTemplate();
+        DOTTemplate( const cv::Mat& quantizedImage, int classID,
+                     const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& gradientMask=cv::Mat() );
+        void addClassID( int classID, const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& gradientMask=cv::Mat() );
+
+        static float computeTexturelessRatio( const cv::Mat& quantizedImage );
+
+        void read( FileNode& fn );
+        void write( FileStorage& fs ) const;
+
+        cv::Mat quantizedImage;
+        std::vector<int> classIDs;
+        float texturelessRatio;
+
+        std::vector<cv::Mat> maskedImages;
+        std::vector<cv::Mat> gradientMasks;
+    };
+
+    DOTDetector();
+    DOTDetector( const std::string& filename ); // load from xml-file
+
+    virtual ~DOTDetector();
+    void clear();
+
+    void read( FileNode& fn );
+    void write( FileStorage& fs ) const;
+
+    void load( const std::string& filename );
+    void save( const std::string& filename ) const;
+
+    void train( const string& baseDirName, const TrainParams& trainParams=TrainParams(), bool isAddImageAndGradientMask=false );
+    void detectMultiScale( const Mat& image, vector<vector<Rect> >& rects,
+                           const DetectParams& detectParams=DetectParams(),
+                           vector<vector<float> >*ratios=0, vector<vector<int> >* trainTemplateIndices=0 ) const;
+
+    const vector<DOTTemplate>& getDOTTemplates() const;
+    const vector<string>& getClassNames() const;
+
+    static void groupRectanglesList( std::vector<std::vector<cv::Rect> >& rectList, int groupThreshold, double eps );
+
+protected:
+    void detectQuantized( const Mat& queryQuantizedImage, float minRatio,
+                          vector<vector<Rect> >& rects, vector<vector<float> >& ratios, vector<vector<int> >& trainTemlateIdxs ) const;
+    TrainParams trainParams;
+    bool isAddImageAndGradientMask;
+
+    std::vector<std::string> classNames;
+    std::vector<DOTTemplate> dotTemplates;
 };
 
 }
