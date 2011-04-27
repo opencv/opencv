@@ -770,7 +770,7 @@ TEST(projectPoints)
         dst.resize(size);
 
         CPU_ON;
-        projectPoints(src, rvec, tvec, camera_mat, Mat(), dst);
+        projectPoints(src, rvec, tvec, camera_mat, Mat::zeros(1, 5, CV_32F), dst);
         CPU_OFF;
 
         d_src = src;
@@ -814,12 +814,12 @@ TEST(solvePnPRansac)
         vector<int> inliers_cpu, inliers_gpu;
 
         CPU_ON;
-        solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, num_iters, 
+        solvePnPRansac(object, image, camera_mat, Mat::zeros(1, 5, CV_32F), rvec, tvec, false, num_iters,
                        max_dist, int(num_points * 0.05), inliers_cpu);
         CPU_OFF;
 
         GPU_ON;
-        gpu::solvePnPRansac(object, image, camera_mat, Mat(), rvec, tvec, false, num_iters,
+        gpu::solvePnPRansac(object, image, camera_mat, Mat::zeros(1, 5, CV_32F), rvec, tvec, false, num_iters,
                             max_dist, int(num_points * 0.05), &inliers_gpu);
         GPU_OFF;
     }
