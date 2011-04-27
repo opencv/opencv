@@ -1104,9 +1104,9 @@ double cv::invert( const InputArray& _src, OutputArray _dst, int method )
     setIdentity(dst);
     
     if( method == DECOMP_LU && type == CV_32F )
-        result = LU((float*)src1.data, src1.step, n, (float*)dst.data, dst.step, n);
+        result = LU((float*)src1.data, src1.step, n, (float*)dst.data, dst.step, n) != 0;
     else if( method == DECOMP_LU && type == CV_64F )
-        result = LU((double*)src1.data, src1.step, n, (double*)dst.data, dst.step, n);
+        result = LU((double*)src1.data, src1.step, n, (double*)dst.data, dst.step, n) != 0;
     else if( method == DECOMP_CHOLESKY && type == CV_32F )
         result = Cholesky((float*)src1.data, src1.step, n, (float*)dst.data, dst.step, n);
     else
@@ -1163,7 +1163,7 @@ bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray 
                     d = 1./d;
                     t = (float)(((double)bf(0)*Sf(1,1) - (double)bf(1)*Sf(0,1))*d);
                     Df(1,0) = (float)(((double)bf(1)*Sf(0,0) - (double)bf(0)*Sf(1,0))*d);
-                    Df(0,0) = t;
+                    Df(0,0) = (float)t;
                 }
                 else
                     result = false;
@@ -1294,7 +1294,7 @@ bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray 
     }
     
     size_t asize = astep*(method == DECOMP_SVD || is_normal ? n : m);
-    bufsize += asize;
+    bufsize += asize + 32;
 
     if( is_normal )
         bufsize += n*nb*esz;
@@ -1303,7 +1303,7 @@ bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray 
         bufsize += n*5*esz + n*vstep + nb*sizeof(double) + 32;
     
     buffer.allocate(bufsize);
-    uchar* ptr = buffer;
+    uchar* ptr = alignPtr((uchar*)buffer, 16);
 
     Mat a(m_, n, type, ptr, astep);
 
@@ -1340,9 +1340,9 @@ bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray 
     if( method == DECOMP_LU )
     {
         if( type == CV_32F )
-            result = LU(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
+            result = LU(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
         else
-            result = LU(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
+            result = LU(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
     }
     else if( method == DECOMP_CHOLESKY )
     {
@@ -1417,11 +1417,11 @@ static bool eigen( const InputArray& _src, OutputArray _evals, OutputArray _evec
         v = _evects.getMat();
     }
     
-    size_t elemSize = src.elemSize();
-    AutoBuffer<uchar> buf((n*n + n*5)*elemSize + 16);
-    uchar* ptr = buf;
-    Mat w(n, 1, type, ptr), a(n, n, type, ptr + n*elemSize);
-    ptr += (n*n + n)*elemSize;
+    size_t elemSize = src.elemSize(), astep = alignSize(n*elemSize, 16);
+    AutoBuffer<uchar> buf(n*astep + n*5*elemSize + 32);
+    uchar* ptr = alignPtr((uchar*)buf, 16);
+    Mat a(n, n, type, ptr, astep), w(n, 1, type, ptr + astep*n);
+    ptr += astep*n + elemSize*n;
     src.copyTo(a);
     bool ok = type == CV_32F ?
         Jacobi(a.ptr<float>(), a.step, w.ptr<float>(), v.ptr<float>(), v.step, n, ptr) :
@@ -1454,7 +1454,7 @@ static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
     int m = src.rows, n = src.cols;
     int type = src.type();
     bool compute_uv = _u.needed() || _vt.needed();
-    bool full_uv = flags & SVD::FULL_UV;
+    bool full_uv = (flags & SVD::FULL_UV) != 0;
     
     CV_Assert( type == CV_32F || type == CV_64F );
     
@@ -1475,7 +1475,7 @@ static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
     int urows = full_uv ? m : n;
     size_t esz = src.elemSize(), astep = alignSize(m*esz, 16), vstep = alignSize(n*esz, 16);
     AutoBuffer<uchar> _buf(urows*astep + n*vstep + n*esz + 32);
-    uchar* buf = _buf;
+    uchar* buf = alignPtr((uchar*)_buf, 16);
     Mat temp_a(n, m, type, buf, astep);
     Mat temp_w(n, 1, type, buf + urows*astep);
     Mat temp_u(urows, m, type, buf, astep), temp_v;
