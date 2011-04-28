@@ -173,7 +173,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             if (capture)
                 return capture;
         #endif
-        #if defined (HAVE_CAMV4L) || defined (HAVE_CAMV4L2)
+        #if defined (HAVE_CAMV4L) && defined (HAVE_CAMV4L2)
             capture = cvCreateCameraCapture_V4L (index);
             if (capture)
                 return capture;
