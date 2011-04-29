@@ -2,6 +2,7 @@
 #include "opencv2/ml/ml.hpp"
 
 #include <cstdio>
+#include <vector>
 /*
 
 */
@@ -667,9 +668,9 @@ int build_svm_classifier( char* data_filename )
     svm.train(&train_data, train_resp, 0, 0, param);
 
     // classification
-    float _sample[var_count * (nsamples_all - ntrain_samples)];
-    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
-    float true_results[nsamples_all - ntrain_samples];
+    std::vector<float> _sample(var_count * (nsamples_all - ntrain_samples));
+    CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, &_sample[0] );
+    std::vector<float> true_results(nsamples_all - ntrain_samples);
     for (int j = ntrain_samples; j < nsamples_all; j++)
     {
         float *s = data->data.fl + j * var_count;
@@ -683,7 +684,7 @@ int build_svm_classifier( char* data_filename )
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
     
     printf("Classification (may take a few minutes)...\n");
-    (int)svm.predict(&sample, result);
+    svm.predict(&sample, result);
 
     int true_resp = 0;
     for (int i = 0; i < nsamples_all - ntrain_samples; i++)

@@ -583,7 +583,7 @@ protected:
 class CV_EXPORTS DOTDetector
 {
 public:
-    struct TrainParams
+    struct CV_EXPORTS TrainParams
     {
         enum { BIN_COUNT = 7 };
         static double BIN_RANGE() { return 180.0 / BIN_COUNT; }
@@ -608,7 +608,7 @@ public:
         float minRatio;
     };
 
-    struct DetectParams
+    struct CV_EXPORTS DetectParams
     {
         DetectParams();
         DetectParams( float minRatio, int minRegionSize, int maxRegionSize, int regionSizeStep,
