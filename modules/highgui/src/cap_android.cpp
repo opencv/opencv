@@ -102,10 +102,18 @@ private:
     bool m_hasGray;
     bool m_hasColor;
 
+    enum CvCapture_Android_DataState {
+	    CVCAPTURE_ANDROID_STATE_NO_FRAME=0,
+	    CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED,
+	    CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED
+    };
+    volatile CvCapture_Android_DataState m_dataState;
+
     //synchronization
     pthread_mutex_t m_nextFrameMutex;
     pthread_cond_t m_nextFrameCond;
     volatile bool m_waitingNextFrame;
+    volatile bool m_shouldAutoGrab;
 
     void prepareCacheForYUV420i(int width, int height);
     static bool convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
@@ -131,11 +139,15 @@ public:
         if(isConnected() && buffer != 0 && bufferSize > 0)
         {
             m_framesReceived++;
-            if (m_capture->m_waitingNextFrame)
+            if (m_capture->m_waitingNextFrame || m_capture->m_shouldAutoGrab)
             {
-                m_capture->setFrame(buffer, bufferSize);
                 pthread_mutex_lock(&m_capture->m_nextFrameMutex);
+
+                m_capture->setFrame(buffer, bufferSize);
+
+		m_capture->m_dataState = CvCapture_Android::CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
                 m_capture->m_waitingNextFrame = false;//set flag that no more frames required at this moment
+
                 pthread_cond_broadcast(&m_capture->m_nextFrameCond);
                 pthread_mutex_unlock(&m_capture->m_nextFrameMutex);
             }
@@ -174,7 +186,9 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_frameYUV420inext    = 0;
     m_hasGray             = false;
     m_hasColor            = false;
+    m_dataState           = CVCAPTURE_ANDROID_STATE_NO_FRAME;
     m_waitingNextFrame    = false;
+    m_shouldAutoGrab      = false;
     m_framesGrabbed       = 0;
     m_CameraParamsChanged = false;
 
@@ -209,16 +223,22 @@ CvCapture_Android::~CvCapture_Android()
     {
         ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
 
-        //m_activity->disconnect() will be automatically called inside destructor;
-        delete m_frameYUV420i;
-        delete m_frameYUV420inext;
-        m_frameYUV420i = 0;
-        m_frameYUV420inext = 0;
 
 	pthread_mutex_lock(&m_nextFrameMutex);
+
+	unsigned char *tmp1=m_frameYUV420i;
+	unsigned char *tmp2=m_frameYUV420inext;
+        m_frameYUV420i = 0;
+        m_frameYUV420inext = 0;
+        delete tmp1;
+        delete tmp2;
+
+	m_dataState=CVCAPTURE_ANDROID_STATE_NO_FRAME;
 	pthread_cond_broadcast(&m_nextFrameCond);
+
 	pthread_mutex_unlock(&m_nextFrameMutex);
 
+        //m_activity->disconnect() will be automatically called inside destructor;
         delete m_activity;
         m_activity = 0;
 
@@ -255,11 +275,20 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
         case CV_CAP_PROP_FRAME_HEIGHT:
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT, propValue);
             break;
+
+        case CV_CAP_PROP_AUTOGRAB:
+	    m_shouldAutoGrab=(propValue != 0);
+            break;
+
         default:
             CV_Error( CV_StsOutOfRange, "Failed attempt to SET unsupported camera property." );
-            break;
+	    return false;
         }
-        m_CameraParamsChanged = true;
+
+	if (propIdx != CV_CAP_PROP_AUTOGRAB) {// property for highgui class CvCapture_Android only
+		m_CameraParamsChanged = true;
+	}
+	res = true;
     }
 
     return res;
@@ -270,59 +299,84 @@ bool CvCapture_Android::grabFrame()
     if( !isOpened() )
         return false;
 
+    bool res=false;
     pthread_mutex_lock(&m_nextFrameMutex);
     if (m_CameraParamsChanged)
     {
         m_activity->applyProperties();
         m_CameraParamsChanged = false;
+	m_dataState= CVCAPTURE_ANDROID_STATE_NO_FRAME;//we will wait new frame
     }
-    m_waitingNextFrame = true;
-    pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
-    int res=pthread_mutex_unlock(&m_nextFrameMutex);
-    if (res) {
-	    LOGE("Error in CvCapture_Android::grabFrame: pthread_mutex_unlock returned %d --- probably, this object has been destroyed", res);
+
+    if (m_dataState!=CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
+	    m_waitingNextFrame = true;
+	    pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
+    }
+
+    if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
+	    //swap current and new frames
+	    unsigned char* tmp = m_frameYUV420i;
+	    m_frameYUV420i = m_frameYUV420inext;
+	    m_frameYUV420inext = tmp;
+
+	    //discard cached frames
+	    m_hasGray = false;
+	    m_hasColor = false;
+
+	    m_dataState=CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED;
+	    m_framesGrabbed++;
+
+	    res=true;
+    }
+
+    int res_unlock=pthread_mutex_unlock(&m_nextFrameMutex);
+    if (res_unlock) {
+	    LOGE("Error in CvCapture_Android::grabFrame: pthread_mutex_unlock returned %d --- probably, this object has been destroyed", res_unlock);
 	    return false;
     }
 
-    m_framesGrabbed++;
-    return true;
+    return res;
 }
 
 IplImage* CvCapture_Android::retrieveFrame( int outputType )
 {
-    IplImage* image = 0;
-    if (0 != m_frameYUV420i)
+    IplImage* image = NULL;
+
+    unsigned char *current_frameYUV420i=m_frameYUV420i;
+    //Attention! all the operations in this function below should occupy less time than the period between two frames from camera
+    if (NULL != current_frameYUV420i)
     {
         switch(outputType)
         {
         case CV_CAP_ANDROID_COLOR_FRAME:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2BGR888(m_width, m_height, m_frameYUV420i, m_frameColor.mat)))
-                    return 0;
+                if (!(m_hasColor = convertYUV420i2BGR888(m_width, m_height, current_frameYUV420i, m_frameColor.mat)))
+                    return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
         case CV_CAP_ANDROID_GREY_FRAME:
             if (!m_hasGray)
-                if (!(m_hasGray = convertYUV420i2Grey(m_width, m_height, m_frameYUV420i, m_frameGray.mat)))
-                    return 0;
+                if (!(m_hasGray = convertYUV420i2Grey(m_width, m_height, current_frameYUV420i, m_frameGray.mat)))
+                    return NULL;
             image = m_frameGray.getIplImagePtr();
             break;
         case CV_CAP_ANDROID_COLOR_FRAME_RGB:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2RGB888(m_width, m_height, m_frameYUV420i, m_frameColor.mat)))
-                    return 0;
+                if (!(m_hasColor = convertYUV420i2RGB888(m_width, m_height, current_frameYUV420i, m_frameColor.mat)))
+                    return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
         default:
             LOGE("Unsupported frame output format: %d", outputType);
             CV_Error( CV_StsOutOfRange, "Output frame format is not supported." );
-            image = 0;
+            image = NULL;
             break;
         }
     }
     return image;
 }
 
+//Attention: this method should be called inside pthread_mutex_lock(m_nextFrameMutex) only
 void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
 {
     int width = m_activity->getFrameWidth();
@@ -335,12 +389,13 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
         return;
     }
 
-    //allocate memery if needed
+    //allocate memory if needed
     prepareCacheForYUV420i(width, height);
 
     //copy data
     memcpy(m_frameYUV420inext, buffer, bufferSize);
 
+#if 0 //moved this part of code into grabFrame
     //swap current and new frames
     unsigned char* tmp = m_frameYUV420i;
     m_frameYUV420i = m_frameYUV420inext;
@@ -349,6 +404,7 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
     //discard cached frames
     m_hasGray = false;
     m_hasColor = false;
+#endif
 }
 
 void CvCapture_Android::prepareCacheForYUV420i(int width, int height)
