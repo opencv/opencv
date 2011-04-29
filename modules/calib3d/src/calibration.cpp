@@ -2913,17 +2913,17 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
 
     /* Find Givens rotation for y axis. */
     /*
-         ( c  0  s )
-    Qy = ( 0  1  0 ), c = m33/sqrt(m31^2 + m33^2), s = m31/sqrt(m31^2 + m33^2)
-         (-s  0  c )
+         ( c  0 -s )
+    Qy = ( 0  1  0 ), c = m33/sqrt(m31^2 + m33^2), s = -m31/sqrt(m31^2 + m33^2)
+         ( s  0  c )
     */
-    s = matR[2][0];
+    s = -matR[2][0];
     c = matR[2][2];
     z = 1./sqrt(c * c + s * s + DBL_EPSILON);
     c *= z;
     s *= z;
 
-    double _Qy[3][3] = { {c, 0, s}, {0, 1, 0}, {-s, 0, c} };
+    double _Qy[3][3] = { {c, 0, -s}, {0, 1, 0}, {s, 0, c} };
     CvMat Qy = cvMat(3, 3, CV_64F, _Qy);
     cvMatMul(&R, &Qy, &M);
 
@@ -3016,7 +3016,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     if( eulerAngles )
     {
         eulerAngles->x = acos(_Qx[1][1]) * (_Qx[1][2] >= 0 ? 1 : -1) * (180.0 / CV_PI);
-        eulerAngles->y = acos(_Qy[0][0]) * (_Qy[0][2] >= 0 ? 1 : -1) * (180.0 / CV_PI);
+        eulerAngles->y = acos(_Qy[0][0]) * (_Qy[2][0] >= 0 ? 1 : -1) * (180.0 / CV_PI);
         eulerAngles->z = acos(_Qz[0][0]) * (_Qz[0][1] >= 0 ? 1 : -1) * (180.0 / CV_PI);
     }
 
