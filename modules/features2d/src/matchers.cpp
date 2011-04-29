@@ -658,7 +658,11 @@ void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _imag
 
 void GenericDescriptorMatcher::KeyPointCollection::clear()
 {
+    pointCount = 0;
+
+    images.clear();
     keypoints.clear();
+    startIndices.clear();
 }
 
 size_t GenericDescriptorMatcher::KeyPointCollection::keypointCount() const
