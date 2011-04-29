@@ -264,13 +264,13 @@ void DescriptorMatcher::checkMasks( const vector<Mat>& masks, int queryDescripto
 void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                   const vector<Mat>& masks, bool compactResult )
 {
-        matches.clear();
-	if( empty() || queryDescriptors.empty() )
-		return;
+    matches.clear();
+    if( empty() || queryDescriptors.empty() )
+        return;
 
-	CV_Assert( knn > 0 );
+    CV_Assert( knn > 0 );
 	
-	checkMasks( masks, queryDescriptors.rows );
+    checkMasks( masks, queryDescriptors.rows );
 
     train();
     knnMatchImpl( queryDescriptors, matches, knn, masks, compactResult );
@@ -279,13 +279,13 @@ void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMa
 void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                                      const vector<Mat>& masks, bool compactResult )
 {
-	matches.empty();
-	if( empty() || queryDescriptors.empty() )
-		return;
+    matches.clear();
+    if( empty() || queryDescriptors.empty() )
+        return;
 
-	CV_Assert( maxDistance > std::numeric_limits<float>::epsilon() );
+    CV_Assert( maxDistance > std::numeric_limits<float>::epsilon() );
 	
-	checkMasks( masks, queryDescriptors.rows );
+    checkMasks( masks, queryDescriptors.rows );
 
     train();
     radiusMatchImpl( queryDescriptors, matches, maxDistance, masks, compactResult );
