@@ -622,7 +622,7 @@ bool HaarEvaluator::setImage( const Mat &image, Size _origWinSize )
             tilted0.create( rn, cn, CV_32S);
     }
     sum = Mat(rn, cn, CV_32S, sum0.data);
-    sqsum = Mat(rn, cn, CV_32S, sqsum0.data);
+    sqsum = Mat(rn, cn, CV_64F, sqsum0.data);
 
     if( hasTiltedFeatures )
     {

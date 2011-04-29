@@ -1576,7 +1576,7 @@ CV_IntegralTest::CV_IntegralTest()
     test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
-    element_wise_relative_error = false;
+    element_wise_relative_error = true;
 }
 
 
@@ -1603,7 +1603,8 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 
     depth = depth == 0 ? CV_8U : CV_32F;
     cn += cn == 2;
-    sum_depth = depth == CV_8U && (cvtest::randInt(rng) & 1) == 1 ? CV_32S : CV_64F;
+    int b = (cvtest::randInt(rng) & 1) != 0;
+    sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
 
     types[INPUT][0] = CV_MAKETYPE(depth,cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] =
@@ -1626,10 +1627,10 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 }
 
 
-double CV_IntegralTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
+double CV_IntegralTest::get_success_error_level( int, int i, int j )
 {
     int depth = test_mat[i][j].depth();
-    return depth == CV_32S ? 0 : FLT_EPSILON;
+    return depth == CV_32S ? 0 : depth == CV_64F ? FLT_EPSILON : 5e-3;
 }
 
 

@@ -214,7 +214,7 @@ void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, QT* sqs
 DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
 DEF_INTEGRAL_FUNC(8u32f, uchar, float, double)
 DEF_INTEGRAL_FUNC(8u64f, uchar, double, double)
-DEF_INTEGRAL_FUNC(32f, float, float, float)
+DEF_INTEGRAL_FUNC(32f, float, float, double)
 DEF_INTEGRAL_FUNC(32f64f, float, double, double)
 DEF_INTEGRAL_FUNC(64f, double, double, double)
     
