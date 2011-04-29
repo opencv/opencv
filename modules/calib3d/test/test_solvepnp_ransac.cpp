@@ -97,7 +97,11 @@ protected:
             }
         }
         double eps = 1.0e-7;
-        for (int testIndex = 0; testIndex<  10; testIndex++)
+
+        int successfulTestsCount = 0;
+        int totalTestsCount = 10;
+
+        for (int testIndex = 0; testIndex < totalTestsCount; testIndex++)
         {
             try
             {
@@ -118,12 +122,9 @@ protected:
                 isTestSuccess = isTestSuccess
                                 && (abs(tvec.at<double> (1, 0) - 1) < eps);
                 isTestSuccess = isTestSuccess && (abs(tvec.at<double> (2, 0)) < eps);
-                if (!isTestSuccess)
-                {
-                    ts.printf( cvtest::TS::LOG, "Invalid accuracy, inliers.size = %d\n", inliers.size());
-                    ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                    break;
-                }
+
+                if (isTestSuccess)
+                    successfulTestsCount++;
 
             }
             catch(...)
@@ -131,6 +132,13 @@ protected:
                     ts.printf(cvtest::TS::LOG, "Exception in solvePnPRansac\n");
                     ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
             }
+        }
+
+        if (successfulTestsCount < 0.8*totalTestsCount)
+        {
+            ts.printf( cvtest::TS::LOG, "Invalid accuracy, failed %d tests from %d\n",
+                totalTestsCount - successfulTestsCount, totalTestsCount);
+            ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         }
     }
 };

@@ -73,7 +73,7 @@ namespace cv
             Mat R(3, 3, CV_64FC1);
             Rodrigues(rvec, R);
             Mat transformation(3, 4, CV_64F);
-            Mat r = transformation.colRange(0, 2);
+            Mat r = transformation.colRange(0, 3);
             R.copyTo(r);
             Mat t = transformation.colRange(3, 4);
             tvec.copyTo(t);
