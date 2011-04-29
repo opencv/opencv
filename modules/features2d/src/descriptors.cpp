@@ -54,19 +54,15 @@ namespace cv
  */
 struct RoiPredicate
 {
-    RoiPredicate( float _minX, float _minY, float _maxX, float _maxY )
-        : minX(_minX), minY(_minY), maxX(_maxX), maxY(_maxY)
+    RoiPredicate( const Rect& _r ) : r(_r)
     {}
 
     bool operator()( const KeyPoint& keyPt ) const
     {
-        Point2f pt = keyPt.pt;
-        float eps = std::numeric_limits<float>::epsilon();
-        return (pt.x < minX + eps) || (pt.x >= maxX - eps) ||
-               (pt.y < minY + eps) || (pt.y >= maxY - eps);
+        return !r.contains( keyPt.pt );
     }
 
-    float minX, minY, maxX, maxY;
+    Rect r;
 };
 
 DescriptorExtractor::~DescriptorExtractor()
@@ -74,14 +70,14 @@ DescriptorExtractor::~DescriptorExtractor()
 
 void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 {
-	if( image.empty() || keypoints.empty() )
-		return;
+    if( image.empty() || keypoints.empty() )
+            return;
 
-	// Check keypoints are in image. Do filter bad points here?
+    // Check keypoints are in image. Do filter bad points here?
     //for( size_t i = 0; i < keypoints.size(); i++ )
     //  CV_Assert( Rect(0,0, image.cols, image.rows).contains(keypoints[i].pt) );
 
-	computeImpl( image, keypoints, descriptors );
+    computeImpl( image, keypoints, descriptors );
 }
 
 void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, vector<Mat>& descCollection ) const
@@ -104,14 +100,13 @@ bool DescriptorExtractor::empty() const
 }
 
 void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                                 Size imageSize, float borderSize )
+                                                 Size imageSize, int borderSize )
 {
     if( borderSize > 0)
     {
         keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
-                                   RoiPredicate(borderSize, borderSize,
-                                                (float)imageSize.width - borderSize,
-                                                (float)imageSize.height - borderSize)),
+                                   RoiPredicate(Rect(Point(borderSize, borderSize),
+                                                     Point(imageSize.width - borderSize, imageSize.height - borderSize)))),
                          keypoints.end() );
     }
 }

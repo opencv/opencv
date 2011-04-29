@@ -1630,7 +1630,7 @@ protected:
      * Remove keypoints within borderPixels of an image edge.
      */
     static void removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                       Size imageSize, float borderSize );
+                                       Size imageSize, int borderSize );
 };
 
 /*
