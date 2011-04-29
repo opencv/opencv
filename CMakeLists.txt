@@ -683,6 +683,14 @@ if (WITH_TBB)
 	endif()
 endif(WITH_TBB)
 
+#Threading Framework -- temporary decision for ARM-s instead of TBB
+if (NOT HAVE_TBB)
+	file(GLOB THREADING_FRAMEWORK_HEADER "${CMAKE_SOURCE_DIR}/modules/core/include/opencv2/core/threading_framework.hpp")
+	file(GLOB THREADING_FRAMEWORK_SOURCE "${CMAKE_SOURCE_DIR}/modules/core/src/threading_framework.cpp")
+	if(THREADING_FRAMEWORK_HEADER AND THREADING_FRAMEWORK_SOURCE)
+		set(HAVE_THREADING_FRAMEWORK 1)
+	endif()
+endif()
 
 ############################ Intel IPP #############################
 set(IPP_FOUND)
@@ -1453,6 +1461,11 @@ if(HAVE_TBB)
 message(STATUS "    Use TBB:                    YES")
 else()
 message(STATUS "    Use TBB:                    NO")
+if(HAVE_THREADING_FRAMEWORK)
+message(STATUS "    Use ThreadingFramework:     YES")
+else()
+message(STATUS "    Use ThreadingFramework:     NO")
+endif()
 endif()
 
 if (HAVE_CUDA)

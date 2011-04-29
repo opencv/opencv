@@ -185,11 +185,24 @@ CV_INLINE IppiSize ippiSize(int width, int height)
             int _begin, _end, _grainsize;
         };
 
+
+#ifdef HAVE_THREADING_FRAMEWORK 
+#include "threading_framework.hpp"
+
+	template<typename Body> 
+	static void parallel_for( const BlockedRange& range, const Body& body )
+	{
+		tf::parallel_for<Body>(range, body);
+	}
+        typedef tf::ConcurrentVector<Rect> ConcurrentRectVector;
+#else
         template<typename Body> static inline
         void parallel_for( const BlockedRange& range, const Body& body )
         {
-            body(range);
+            body(range); 
         }
+        typedef std::vector<Rect> ConcurrentRectVector;
+#endif
         
         template<typename Iterator, typename Body> static inline
         void parallel_do( Iterator first, Iterator last, const Body& body )
@@ -206,7 +219,6 @@ CV_INLINE IppiSize ippiSize(int width, int height)
             body(range);
         }
         
-        typedef std::vector<Rect> ConcurrentRectVector;
     }
 #endif
 #endif

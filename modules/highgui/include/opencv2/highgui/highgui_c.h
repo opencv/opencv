@@ -396,7 +396,8 @@ enum
 enum
 {
   CV_CAP_ANDROID_COLOR_FRAME = 0, //BGR
-  CV_CAP_ANDROID_GREY_FRAME  = 1  //Y
+  CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
+  CV_CAP_ANDROID_COLOR_FRAME_RGB = 2 //RGB
 };
 
 /* retrieve or set capture properties */

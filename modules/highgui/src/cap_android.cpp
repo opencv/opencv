@@ -110,6 +110,7 @@ private:
     void prepareCacheForYUV420i(int width, int height);
     static bool convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
     static bool convertYUV420i2BGR888(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
+    static bool convertYUV420i2RGB888(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
 
 
     friend class HighguiAndroidCameraActivity;
@@ -209,12 +210,17 @@ CvCapture_Android::~CvCapture_Android()
         ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
 
         //m_activity->disconnect() will be automatically called inside destructor;
-        delete m_activity;
         delete m_frameYUV420i;
         delete m_frameYUV420inext;
-        m_activity = 0;
         m_frameYUV420i = 0;
         m_frameYUV420inext = 0;
+
+	pthread_mutex_lock(&m_nextFrameMutex);
+	pthread_cond_broadcast(&m_nextFrameCond);
+	pthread_mutex_unlock(&m_nextFrameMutex);
+
+        delete m_activity;
+        m_activity = 0;
 
         pthread_mutex_destroy(&m_nextFrameMutex);
         pthread_cond_destroy(&m_nextFrameCond);
@@ -223,7 +229,7 @@ CvCapture_Android::~CvCapture_Android()
 
 double CvCapture_Android::getProperty( int propIdx )
 {
-    switch ( propIdx )
+  switch ( propIdx )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         return (double)m_activity->getFrameWidth();
@@ -272,7 +278,11 @@ bool CvCapture_Android::grabFrame()
     }
     m_waitingNextFrame = true;
     pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
-    pthread_mutex_unlock(&m_nextFrameMutex);
+    int res=pthread_mutex_unlock(&m_nextFrameMutex);
+    if (res) {
+	    LOGE("Error in CvCapture_Android::grabFrame: pthread_mutex_unlock returned %d --- probably, this object has been destroyed", res);
+	    return false;
+    }
 
     m_framesGrabbed++;
     return true;
@@ -296,6 +306,12 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
                 if (!(m_hasGray = convertYUV420i2Grey(m_width, m_height, m_frameYUV420i, m_frameGray.mat)))
                     return 0;
             image = m_frameGray.getIplImagePtr();
+            break;
+        case CV_CAP_ANDROID_COLOR_FRAME_RGB:
+            if (!m_hasColor)
+                if (!(m_hasColor = convertYUV420i2RGB888(m_width, m_height, m_frameYUV420i, m_frameColor.mat)))
+                    return 0;
+            image = m_frameColor.getIplImagePtr();
             break;
         default:
             LOGE("Unsupported frame output format: %d", outputType);
@@ -365,7 +381,7 @@ bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigne
 {
     if (yuv == 0) return false;
 
-    resmat.create(width, height, CV_8UC1);
+    resmat.create(height, width, CV_8UC1);
     unsigned char* matBuff = resmat.ptr<unsigned char> (0);
     memcpy(matBuff, yuv, width * height);
     return !resmat.empty();
@@ -418,6 +434,79 @@ bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsig
             int ruv = 409 * cr + 128;
             int guv = 128 - 100 * cb - 208 * cr;
             int buv = 516 * cb + 128;
+
+            int y00 = (y1[i] - 16) * 298;
+            row1[0] = clamp((y00 + buv) >> 8);
+            row1[1] = clamp((y00 + guv) >> 8);
+            row1[2] = clamp((y00 + ruv) >> 8);
+
+            int y01 = (y1[i+1] - 16) * 298;
+            row1[3] = clamp((y01 + buv) >> 8);
+            row1[4] = clamp((y01 + guv) >> 8);
+            row1[5] = clamp((y01 + ruv) >> 8);
+
+            int y10 = (y2[i] - 16) * 298;
+            row2[0] = clamp((y10 + buv) >> 8);
+            row2[1] = clamp((y10 + guv) >> 8);
+            row2[2] = clamp((y10 + ruv) >> 8);
+
+            int y11 = (y2[i+1] - 16) * 298;
+            row2[3] = clamp((y11 + buv) >> 8);
+            row2[4] = clamp((y11 + guv) >> 8);
+            row2[5] = clamp((y11 + ruv) >> 8);
+        }
+    }
+
+    return !resmat.empty();
+}
+
+bool CvCapture_Android::convertYUV420i2RGB888(int width, int height, const unsigned char* yuv, cv::Mat& resmat) ///TODO: FIXME: copiued from BGR variant
+{
+    if (yuv == 0) return false;
+    CV_Assert(width % 2 == 0 && height % 2 == 0);
+
+    resmat.create(height, width, CV_8UC3);
+
+    unsigned char* y1 = (unsigned char*)yuv;
+    unsigned char* uv = y1 + width * height;
+
+    //B = 1.164(Y - 16)                  + 2.018(U - 128)
+    //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
+    //R = 1.164(Y - 16) + 1.596(V - 128)
+
+    for (int j = 0; j < height; j+=2, y1+=width*2, uv+=width)
+    {
+        unsigned char* row1 = resmat.ptr<unsigned char>(j);
+        unsigned char* row2 = resmat.ptr<unsigned char>(j+1);
+        unsigned char* y2 = y1 + width;
+
+        for(int i = 0; i < width; i+=2,row1+=6,row2+=6)
+        {
+//            unsigned char cr = uv[i];
+//            unsigned char cb = uv[i+1];
+
+//            row1[0] = y1[i];
+//            row1[1] = cr;
+//            row1[2] = cb;
+
+//            row1[3] = y1[i+1];
+//            row1[4] = cr;
+//            row1[5] = cb;
+
+//            row2[0] = y2[i];
+//            row2[1] = cr;
+//            row2[2] = cb;
+
+//            row2[3] = y2[i+1];
+//            row2[4] = cr;
+//            row2[5] = cb;
+
+            int cr = uv[i] - 128;
+            int cb = uv[i+1] - 128;
+
+            int buv = 409 * cr + 128;
+            int guv = 128 - 100 * cb - 208 * cr;
+            int ruv = 516 * cb + 128;
 
             int y00 = (y1[i] - 16) * 298;
             row1[0] = clamp((y00 + buv) >> 8);
