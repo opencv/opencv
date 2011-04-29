@@ -914,7 +914,8 @@ void OneWayDescriptorMatcher::clear()
     GenericDescriptorMatcher::clear();
 
     prevTrainCount = 0;
-    base->clear();
+    if( !base.empty() )
+        base->clear();
 }
 
 void OneWayDescriptorMatcher::train()
