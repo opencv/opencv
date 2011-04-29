@@ -32,7 +32,7 @@ void on_trackbar(int, void*)
 	
 	Mat dst = Mat::zeros(img.size(), CV_8UC3);
 
-    if( contours.size() > 0 )
+    if( !contours.empty() && !hierarchy.empty() )
     {
         // iterate through all the top-level contours,
         // draw each connected component with its own random color
