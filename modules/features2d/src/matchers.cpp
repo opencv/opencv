@@ -264,7 +264,7 @@ void DescriptorMatcher::checkMasks( const vector<Mat>& masks, int queryDescripto
 void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                   const vector<Mat>& masks, bool compactResult )
 {
-	matches.empty();
+        matches.clear();
 	if( empty() || queryDescriptors.empty() )
 		return;
 
