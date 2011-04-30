@@ -31,6 +31,7 @@ See Also:
 :func:`accumulateSquare`,
 :func:`accumulateProduct`,
 :func:`accumulateWeighted`
+
 .. index:: accumulateSquare
 
 accumulateSquare
