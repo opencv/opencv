@@ -1,9 +1,7 @@
 Geometric Image Transformations
 ===============================
-
 .. highlight:: cpp
-
-The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid, and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
+The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
 :math:`(x, y)` of the destination image, the functions compute coordinates of the corresponding "donor" pixel in the source image and copy the pixel value:
 
 .. math::
@@ -55,7 +53,7 @@ convertMaps
 
     :param dstmap1type: Type of the first output map that should be  ``CV_16SC2`` , ``CV_32FC1`` , or  ``CV_32FC2`` .
     
-    :param nninterpolation: Flag indicatingwhether the fixed-point maps are used for the nearest-neighbor or for a more complex interpolation.
+    :param nninterpolation: Flag indicating whether the fixed-point maps are used for the nearest-neighbor or for a more complex interpolation.
 
 The function converts a pair of maps for
 :func:`remap` from one representation to another. The following options ( ``(map1.type(), map2.type())`` :math:`\rightarrow` ``(dstmap1.type(), dstmap2.type())`` ) are supported:
@@ -83,7 +81,7 @@ getAffineTransform
 ----------------------
 .. c:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
-    Calculates the affine transform from three pairs of the corresponding points.
+    Calculates an affine transform from three pairs of the corresponding points.
 
     :param src: Coordinates of triangle vertices in the source image.
 
@@ -116,7 +114,7 @@ getPerspectiveTransform
 ---------------------------
 .. c:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
-    Calculates the perspective transform from four pairs of the corresponding points.
+    Calculates a perspective transform from four pairs of the corresponding points.
 
     :param src: Coordinates of quadrangle vertices in the source image.
 
@@ -149,7 +147,7 @@ getRectSubPix
 -----------------
 .. c:function:: void getRectSubPix( const Mat& image, Size patchSize, Point2f center, Mat& dst, int patchType=-1 )
 
-    Retrieves the pixel rectangle from an image with sub-pixel accuracy.
+    Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
     :param src: Source image.
 
@@ -296,7 +294,7 @@ resize
 
     :param src: Source image.
 
-    :param dst: Destination image. It has size  ``dsize``  (when it is non-zero) or the size computed from  ``src.size()``  ,  ``fx`` ,  and  ``fy`` . The type of  ``dst``  is the same as of  ``src`` .
+    :param dst: Destination image. It has the size  ``dsize``  (when it is non-zero) or the size computed from  ``src.size()``  ,  ``fx`` ,  and  ``fy`` . The type of  ``dst``  is the same as of  ``src`` .
 
     :param dsize: Destination image size. If it is zero, it is computed as:
 
@@ -325,7 +323,7 @@ resize
 
             * **INTER_LINEAR** - a bilinear interpolation (used by default)
 
-            * **INTER_AREA** - resampling using pixel area relation. It may be a preferred method for image decimation, as it gives moire-free results. But when the image is zoomed, it is similar to the  ``INTER_NEAREST``  method.
+            * **INTER_AREA** - resampling using pixel area relation. It may be a preferred method for image decimation, as it gives freer?? results. But when the image is zoomed, it is similar to the  ``INTER_NEAREST``  method.
 
             * **INTER_CUBIC**  - a bicubic interpolation over 4x4 pixel neighborhood
 
