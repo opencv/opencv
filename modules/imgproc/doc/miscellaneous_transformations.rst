@@ -708,7 +708,8 @@ See Also:
 :func:`adaptiveThreshold`,
 :func:`findContours`,
 :func:`compare`,
-:func:`min`,:func:`max`
+:func:`min`,
+:func:`max`
 
 .. index:: watershed
 
