@@ -1114,15 +1114,15 @@ bool CvGBTrees::train( const cv::Mat& trainData, int tflag,
     CvMat _varIdx = varIdx, _sampleIdx = sampleIdx, _varType = varType;
     CvMat _missingDataMask = missingDataMask;
     
-    return train(&_trainData, tflag, &_responses, varIdx.empty() ? &_varIdx : 0,
-          sampleIdx.empty() ? &_sampleIdx : 0, varType.empty() ? &_varType : 0,
-          missingDataMask.empty() ? &_missingDataMask : 0, params, update);
+    return train( &_trainData, tflag, &_responses, varIdx.empty() ? 0 : &_varIdx,
+                  sampleIdx.empty() ? 0 : &_sampleIdx, varType.empty() ? 0 : &_varType,
+                  missingDataMask.empty() ? 0 : &_missingDataMask, params, update);
 }
 
 float CvGBTrees::predict( const cv::Mat& sample, const cv::Mat& missing,
                           const cv::Range& slice, int k ) const
 {
     CvMat _sample = sample, _missing = missing;
-    return predict(&_sample, missing.empty() ? &_missing : 0, 0,
+    return predict(&_sample, missing.empty() ? 0 : &_missing, 0,
                    slice==cv::Range::all() ? CV_WHOLE_SEQ : cvSlice(slice.start, slice.end), k);
 }
