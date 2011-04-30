@@ -34,11 +34,6 @@ ELSE()
 	ENDIF()
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-#if (ANDROID)
-  #SET(PCHSupport_FOUND FALSE)
-#endif()
-
-
 MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
 
 
@@ -213,6 +208,12 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
   ELSE(${_targetType} STREQUAL SHARED_LIBRARY)
     ADD_LIBRARY(${_targetName}_pch_dephelp STATIC ${_pch_dephelp_cxx})
   ENDIF(${_targetType} STREQUAL SHARED_LIBRARY)
+  
+  set_target_properties(${_targetName}_pch_dephelp PROPERTIES
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
+    )
+
 
   FILE(MAKE_DIRECTORY ${_outdir})
 

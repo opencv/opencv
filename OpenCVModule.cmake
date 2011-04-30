@@ -46,7 +46,7 @@ macro(define_opencv_module name)
         INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
         )
 
-    if(PCHSupport_FOUND)
+    if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
         set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
         if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
             if(${CMAKE_GENERATOR} MATCHES "Visual*")
@@ -110,7 +110,7 @@ macro(define_opencv_module name)
 
         add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
-        if(PCHSupport_FOUND)
+        if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
             set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
             if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
                 if(${CMAKE_GENERATOR} MATCHES "Visual*")

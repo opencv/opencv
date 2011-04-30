@@ -38,6 +38,12 @@ set(cvhaartraining_lib_src
     )
 
 add_library(opencv_haartraining_engine STATIC ${cvhaartraining_lib_src})
+set_target_properties(opencv_haartraining_engine PROPERTIES
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+    INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    )
 
 if(NOT ANDROID)
 # -----------------------------------------------------------

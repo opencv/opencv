@@ -252,7 +252,7 @@ endif()
 
 add_library(${the_target} ${lib_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
 
-if(PCHSupport_FOUND)
+if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
     set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
     if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
         if(${CMAKE_GENERATOR} MATCHES "Visual*")

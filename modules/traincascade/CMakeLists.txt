@@ -30,6 +30,9 @@ add_executable(${the_target} ${traincascade_files})
 add_dependencies(${the_target} ${traincascade_libs})
 set_target_properties(${the_target} PROPERTIES
                       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+                      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
+                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+                      INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
                       OUTPUT_NAME "opencv_traincascade")
 
 target_link_libraries(${the_target} ${traincascade_libs})

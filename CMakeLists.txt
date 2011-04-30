@@ -230,6 +230,12 @@ endif()
 include(OpenCVPCHSupport.cmake REQUIRED)
 include(OpenCVModule.cmake REQUIRED)
 
+if(PCHSupport_FOUND)
+    SET(USE_PRECOMPILED_HEADERS ON CACHE BOOL "Use precompiled headers")
+else()
+    SET(USE_PRECOMPILED_HEADERS OFF CACHE BOOL "Use precompiled headers" FORCE)
+endif()
+
 if(UNIX)
     include(OpenCVFindPkgConfig.cmake OPTIONAL)
     include(CheckFunctionExists)
