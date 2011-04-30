@@ -584,7 +584,7 @@ PredictorEncodeTile(TIFF* tif, tidata_t bp0, tsize_t cc0, tsample_t s)
         {
             TIFFErrorExt(tif->tif_clientdata, module, 
                          "Out of memory allocating %d byte temp buffer.",
-                         cc0 );
+                         (int)cc0 );
             return 0;
         }
         memcpy( working_copy, bp0, cc0 );

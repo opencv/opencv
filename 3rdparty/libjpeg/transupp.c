@@ -1309,6 +1309,8 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
   case JXFORM_ROT_270:
     transpose_critical_parameters(dstinfo);
     break;
+  default:
+    break;
   }
 
   /* Adjust Exif properties */
@@ -1445,6 +1447,8 @@ jtransform_perfect_transform(JDIMENSION image_width, JDIMENSION image_height,
       result = FALSE;
     if (image_height % (JDIMENSION) MCU_height)
       result = FALSE;
+    break;
+  default:
     break;
   }
 

@@ -481,10 +481,9 @@ protected:
         return true;
     }
 
+    string name;
     const DistanceType maxDist;
     const float prevTime;
-
-    string name;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
 
@@ -516,7 +515,7 @@ class CV_DescriptorMatcherTest : public cvtest::BaseTest
 {
 public:
     CV_DescriptorMatcherTest( const string& _name, const Ptr<DescriptorMatcher>& _dmatcher, float _badPart ) :
-        name(_name), badPart(_badPart), dmatcher(_dmatcher)
+        badPart(_badPart), name(_name), dmatcher(_dmatcher)
         {}
 protected:
     static const int dim = 500;

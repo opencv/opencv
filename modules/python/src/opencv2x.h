@@ -555,7 +555,6 @@ template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& 
 }
 
 static PyObject* pyopencv_from(const KeyPoint&);
-static bool pyopencv_from(PyObject*,KeyPoint&,const char*);
 
 template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
 {

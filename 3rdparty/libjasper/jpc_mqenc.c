@@ -386,7 +386,7 @@ int jpc_mqenc_dump(jpc_mqenc_t *mqenc, FILE *out)
 	fprintf(out, "AREG = %08x, CREG = %08x, CTREG = %d\n",
 	  mqenc->areg, mqenc->creg, mqenc->ctreg);
 	fprintf(out, "IND = %02d, MPS = %d, QEVAL = %04x\n",
-	  *mqenc->curctx - jpc_mqstates, (*mqenc->curctx)->mps,
-	  (*mqenc->curctx)->qeval);
+	  (int)(*mqenc->curctx - jpc_mqstates), (int)(*mqenc->curctx)->mps,
+	  (int)(*mqenc->curctx)->qeval);
 	return 0;
 }

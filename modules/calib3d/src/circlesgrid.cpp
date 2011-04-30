@@ -73,7 +73,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 
   int patternClusterIdx = 0;
-  while(clusters[patternClusterIdx].size() < patternSize.area() && countNonZero(distsMask == 255) > 0)
+  while((int)clusters[patternClusterIdx].size() < patternSize.area() && countNonZero(distsMask == 255) > 0)
   {
     Point minLoc;
     minMaxLoc(dists, 0, 0, &minLoc, 0, distsMask);
@@ -93,7 +93,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 
   patternPoints.clear();
-  if(clusters[patternClusterIdx].size() != patternSize.area())
+  if((int)clusters[patternClusterIdx].size() != patternSize.area())
   {
     return;
   }

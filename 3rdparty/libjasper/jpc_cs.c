@@ -240,8 +240,7 @@ jpc_ms_t *jpc_getms(jas_stream_t *in, jpc_cstate_t *cstate)
 	}
 
 	/* Get the marker type. */
-	if (jpc_getuint16(in, &ms->id) || ms->id < JPC_MS_MIN ||
-	  ms->id > JPC_MS_MAX) {
+	if (jpc_getuint16(in, &ms->id) || ms->id < JPC_MS_MIN /*|| ms->id > JPC_MS_MAX*/) {
 		jpc_ms_destroy(ms);
 		return 0;
 	}

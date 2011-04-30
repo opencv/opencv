@@ -122,7 +122,7 @@ static bool wasInitialized = false;
 - (void)createSliderWithName:(const char *)name maxValue:(int)max value:(int *)value callback:(CvTrackbarCallback)callback;
 @end
 
-static void icvCocoaCleanup(void)
+/*static void icvCocoaCleanup(void)
 {
 	//cout << "icvCocoaCleanup" << endl; 
     if( application )
@@ -132,7 +132,7 @@ static void icvCocoaCleanup(void)
         application = 0;
         [pool release];
     }
-}
+}*/
 
 CV_IMPL int cvInitSystem( int argc, char** argv) 
 {

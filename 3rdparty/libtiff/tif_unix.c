@@ -51,25 +51,25 @@
 static tsize_t
 _tiffReadProc(thandle_t fd, tdata_t buf, tsize_t size)
 {
-	return ((tsize_t) read((int) fd, buf, (size_t) size));
+	return ((tsize_t) read((int) (size_t)fd, buf, (size_t) size));
 }
 
 static tsize_t
 _tiffWriteProc(thandle_t fd, tdata_t buf, tsize_t size)
 {
-	return ((tsize_t) write((int) fd, buf, (size_t) size));
+	return ((tsize_t) write((int) (size_t)fd, buf, (size_t) size));
 }
 
 static toff_t
 _tiffSeekProc(thandle_t fd, toff_t off, int whence)
 {
-	return ((toff_t) lseek((int) fd, (off_t) off, whence));
+	return ((toff_t) lseek((int) (size_t)fd, (off_t) off, whence));
 }
 
 static int
 _tiffCloseProc(thandle_t fd)
 {
-	return (close((int) fd));
+	return (close((int) (size_t)fd));
 }
 
 
@@ -81,7 +81,7 @@ _tiffSizeProc(thandle_t fd)
 	return ((fsize = lseek((int) fd, 0, SEEK_END)) < 0 ? 0 : fsize);
 #else
 	struct stat sb;
-	return (toff_t) (fstat((int) fd, &sb) < 0 ? 0 : sb.st_size);
+	return (toff_t) (fstat((int) (size_t)fd, &sb) < 0 ? 0 : sb.st_size);
 #endif
 }
 
@@ -133,7 +133,7 @@ TIFFFdOpen(int fd, const char* name, const char* mode)
 	TIFF* tif;
 
 	tif = TIFFClientOpen(name, mode,
-	    (thandle_t) fd,
+	    (thandle_t) (size_t)fd,
 	    _tiffReadProc, _tiffWriteProc,
 	    _tiffSeekProc, _tiffCloseProc, _tiffSizeProc,
 	    _tiffMapProc, _tiffUnmapProc);

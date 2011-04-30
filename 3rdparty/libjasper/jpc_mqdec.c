@@ -300,7 +300,7 @@ void jpc_mqdec_dump(jpc_mqdec_t *mqdec, FILE *out)
 	fprintf(out, "MQDEC A = %08lx, C = %08lx, CT=%08lx, ",
 	  (unsigned long) mqdec->areg, (unsigned long) mqdec->creg,
 	  (unsigned long) mqdec->ctreg);
-	fprintf(out, "CTX = %d, ", mqdec->curctx - mqdec->ctxs);
-	fprintf(out, "IND %d, MPS %d, QEVAL %x\n", *mqdec->curctx -
-	  jpc_mqstates, (*mqdec->curctx)->mps, (*mqdec->curctx)->qeval);
+	fprintf(out, "CTX = %d, ", (int)(mqdec->curctx - mqdec->ctxs));
+	fprintf(out, "IND %d, MPS %d, QEVAL %x\n", (int)(*mqdec->curctx -
+	  jpc_mqstates), (int)(*mqdec->curctx)->mps, (int)(*mqdec->curctx)->qeval);
 }

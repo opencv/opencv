@@ -1394,7 +1394,7 @@ static void cvsubdiv2dpoint_specials(void)
 /************************************************************************/
 /* convert_to_X: used after PyArg_ParseTuple in the generated code  */
 
-static int convert_to_PyObjectPTR(PyObject *o, PyObject **dst, const char *name = "no_name")
+/*static int convert_to_PyObjectPTR(PyObject *o, PyObject **dst, const char *name = "no_name")
 {
   *dst = o;
   return 1;
@@ -1404,7 +1404,7 @@ static int convert_to_PyCallableObjectPTR(PyObject *o, PyObject **dst, const cha
 {
   *dst = o;
   return 1;
-}
+}*/
 
 static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 {
@@ -2097,7 +2097,7 @@ static int convert_to_CvArrs(PyObject *o, CvArrs *dst, const char *name = "no_na
   return 1;
 }
 
-static int convert_to_floatPTRPTR(PyObject *o, float*** dst, const char *name = "no_name")
+/*static int convert_to_floatPTRPTR(PyObject *o, float*** dst, const char *name = "no_name")
 {
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
@@ -2113,7 +2113,7 @@ static int convert_to_floatPTRPTR(PyObject *o, float*** dst, const char *name = 
   }
   *dst = r;
   return 1;
-}
+}*/
 
 static int convert_to_CvFontPTR(PyObject *o, CvFont** dst, const char *name = "no_name")
 {
@@ -2126,7 +2126,7 @@ static int convert_to_CvFontPTR(PyObject *o, CvFont** dst, const char *name = "n
   }
 }
 
-static int convert_to_CvContourTreePTR(PyObject *o, CvContourTree** dst, const char *name = "no_name")
+/*static int convert_to_CvContourTreePTR(PyObject *o, CvContourTree** dst, const char *name = "no_name")
 {
   if (PyType_IsSubtype(o->ob_type, &cvcontourtree_Type)) {
     (*dst) = ((cvcontourtree_t*)o)->a;
@@ -2135,7 +2135,7 @@ static int convert_to_CvContourTreePTR(PyObject *o, CvContourTree** dst, const c
     (*dst) = NULL;
     return failmsg("Expected CvContourTree for argument '%s'", name);
   }
-}
+}*/
 
 static int convert_to_CvRNGPTR(PyObject *o, CvRNG** dst, const char *name = "no_name")
 {
@@ -2607,12 +2607,12 @@ static PyObject *FROM_CvRNG(CvRNG r)
   return (PyObject*)m;
 }
 
-static PyObject *FROM_CvContourTreePTR(CvContourTree *r)
+/*static PyObject *FROM_CvContourTreePTR(CvContourTree *r)
 {
   cvcontourtree_t *m = PyObject_NEW(cvcontourtree_t, &cvcontourtree_Type);
   m->a = r;
   return (PyObject*)m;
-}
+}*/
 
 static PyObject *FROM_generic(generic r)
 {
@@ -3690,8 +3690,7 @@ static PyObject *pyfinddatamatrix(PyObject *self, PyObject *args)
   ERRWRAP(codes = cvFindDataMatrix(image));
 
   PyObject *pycodes = PyList_New(codes.size());
-  int i;
-  for (i = 0; i < codes.size(); i++) {
+  for (size_t i = 0; i < codes.size(); i++) {
     DataMatrixCode *pc = &codes[i];
     PyList_SetItem(pycodes, i, Py_BuildValue("(sOO)", pc->msg, FROM_CvMat(pc->corners), FROM_CvMat(pc->original)));
   }
