@@ -24,9 +24,6 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
 #Build 3rd party libraries
 set(OPENCV_BUILD_3RDPARTY_LIBS ON CACHE BOOL "" )
 
-#Build tests
-set(BUILD_TESTS OFF CACHE BOOL "" )
-
 #Choose the type of build, options are: None Debug Release RelWithDebInfo
 # MinSizeRel.
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" )

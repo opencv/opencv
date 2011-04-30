@@ -1,5 +1,6 @@
 if (ANDROID)
   ADD_DEFINITIONS(-DGTEST_HAS_STD_WSTRING=0)
+  ADD_DEFINITIONS(-DGTEST_HAS_CLONE=0)
 endif()
 
 add_subdirectory(calib3d)
@@ -14,7 +15,7 @@ if(MSVC OR MINGW)
 endif()
 
 if(BUILD_TESTS)
-add_subdirectory(ts)
+  add_subdirectory(ts)
 endif()
 add_subdirectory(highgui)
 add_subdirectory(imgproc)
@@ -24,7 +25,7 @@ add_subdirectory(ml)
 add_subdirectory(objdetect)
 
 if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT)
-    add_subdirectory(python)
+  add_subdirectory(python)
 endif()
 
 add_subdirectory(video)
@@ -32,9 +33,5 @@ add_subdirectory(traincascade)
 add_subdirectory(haartraining)
 
 if(NOT ANDROID)
-add_subdirectory(gpu)
+  add_subdirectory(gpu)
 endif()
-
-
-
-
