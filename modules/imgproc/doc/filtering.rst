@@ -1017,15 +1017,15 @@ getStructuringElement
 
     :param shape: Element shape that could be one of the following:
 
-      * ``MORPH_RECT``         - a rectangular structuring element:
+      * **MORPH_RECT**         - a rectangular structuring element:
 
         .. math::
 
             E_{ij}=1
 
-      * ``MORPH_ELLIPSE``         - an elliptic structuring element, that is, a filled ellipse inscribed into the rectangle ``Rect(0, 0, esize.width, 0.esize.height)``
+      * **MORPH_ELLIPSE**         - an elliptic structuring element, that is, a filled ellipse inscribed into the rectangle ``Rect(0, 0, esize.width, 0.esize.height)``
     
-      * ``MORPH_CROSS``         - a cross-shaped structuring element:
+      * **MORPH_CROSS**         - a cross-shaped structuring element:
 
         .. math::
 
@@ -1063,6 +1063,7 @@ See Also:
 :func:`blur`,
 :func:`boxFilter`,
 :func:`GaussianBlur`
+
 .. index:: morphologyEx
 
 morphologyEx
@@ -1133,6 +1134,7 @@ See Also:
 :func:`dilate`,
 :func:`erode`,
 :func:`createMorphologyFilter`
+
 .. index:: Laplacian
 
 Laplacian
@@ -1171,6 +1173,7 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
 See Also:
 :func:`Sobel`,
 :func:`Scharr`
+
 .. index:: pyrDown
 
 pyrDown
@@ -1326,6 +1329,7 @@ See Also:
 :func:`sepFilter2D`,
 :func:`filter2D`,
 :func:`GaussianBlur`
+
 .. index:: Scharr
 
 Scharr
