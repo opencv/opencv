@@ -1072,6 +1072,8 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
         cvSeqPush( weak, &tree );
         update_weights( tree );
         trim_weights();
+        if( cvCountNonZero(subsample_mask) == 0 )
+            break;
     }
 
     get_active_vars(); // recompute active_vars* maps and condensed_idx's in the splits.
