@@ -24,7 +24,7 @@ vector<Scalar> classColors;
 #define SVM 0 // support vectors machine
 #define DT  1 // decision tree
 #define BT  0 // ADA Boost
-#define GBT 1 // gradient boosted trees
+#define GBT 0 // gradient boosted trees
 #define RF  0 // random forest
 #define ERT 0 // extremely randomized trees
 #define ANN 0 // artificial neural networks
@@ -284,7 +284,7 @@ void find_decision_boundary_GBT()
                              0.05f, // shrinkage
                              0.6f, // subsample_portion
                              2, // max_depth
-                             true // use_surrogates )
+                             false // use_surrogates )
                          );
 
     gbtrees.train( trainSamples, CV_ROW_SAMPLE, trainClasses, Mat(), Mat(), var_types, Mat(), params );
@@ -555,31 +555,31 @@ int main()
 
 #if DT
             find_decision_boundary_DT();
-            namedWindow( "DT", 1 );
+            namedWindow( "DT", WINDOW_AUTOSIZE );
             imshow( "DT", imgDst );
 #endif
 
 #if BT
             find_decision_boundary_BT();
-            namedWindow( "BT", 1 );
+            namedWindow( "BT", WINDOW_AUTOSIZE );
             imshow( "BT", imgDst);
 #endif
 
 #if GBT
             find_decision_boundary_GBT();
-            namedWindow( "GBT", 1 );
+            namedWindow( "GBT", WINDOW_AUTOSIZE );
             imshow( "GBT", imgDst);
 #endif
 
 #if RF
             find_decision_boundary_RF();
-            namedWindow( "RF", 1 );
+            namedWindow( "RF", WINDOW_AUTOSIZE );
             imshow( "RF", imgDst);
 #endif
 
 #if ERT
             find_decision_boundary_ERT();
-            namedWindow( "ERT", 1 );
+            namedWindow( "ERT", WINDOW_AUTOSIZE );
             imshow( "ERT", imgDst);
 #endif
 
