@@ -263,6 +263,26 @@ CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint
 //! reads vector of keypoints from the specified file storage node
 CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);    
 
+/*
+ * A class filters a vector of keypoints.
+ * Because now it is difficult to provide a convenient interface for all usage scenarios of the keypoints filter class,
+ * it has only 2 needed by now static methods.
+ */
+class CV_EXPORTS KeyPointsFilter
+{
+public:
+    KeyPointsFilter(){}
+
+    /*
+     * Remove keypoints within borderPixels of an image edge.
+     */
+    static void runByImageBorder( vector<KeyPoint>& keypoints, Size imageSize, int borderSize );
+    /*
+     * Remove keypoints of sizes out of range.
+     */
+    static void runByKeypointSize( vector<KeyPoint>& keypoints, float minSize, float maxSize=std::numeric_limits<float>::max() );
+};
+
 /*!
  SIFT implementation.
  
@@ -1624,13 +1644,7 @@ public:
     static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
 
 protected:
-	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
-
-    /*
-     * Remove keypoints within borderPixels of an image edge.
-     */
-    static void removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                       Size imageSize, int borderSize );
+    virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
 };
 
 /*
@@ -1715,7 +1729,7 @@ void CalonderDescriptorExtractor<T>::computeImpl( const cv::Mat& image,
                                               cv::Mat& descriptors) const
 {
     // Cannot compute descriptors for keypoints on the image border.
-    removeBorderKeypoints(keypoints, image.size(), BORDER_SIZE);
+    KeyPointsFilter::runByImageBorder(keypoints, image.size(), BORDER_SIZE);
 
     /// @todo Check 16-byte aligned
     descriptors.create(keypoints.size(), classifier_.classes(), cv::DataType<T>::type);

@@ -65,14 +65,14 @@ FeatureDetector::~FeatureDetector()
 
 void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
-	keypoints.clear();
+    keypoints.clear();
 
-	if( image.empty() )
-		return;
+    if( image.empty() )
+        return;
 
-	CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()) );
 
-	detectImpl( image, keypoints, mask );
+    detectImpl( image, keypoints, mask );
 }
 
 void FeatureDetector::detect(const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, const vector<Mat>& masks ) const

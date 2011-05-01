@@ -152,4 +152,52 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
     return ovrl;
 }
 
+struct RoiPredicate
+{
+    RoiPredicate( const Rect& _r ) : r(_r)
+    {}
+
+    bool operator()( const KeyPoint& keyPt ) const
+    {
+        return !r.contains( keyPt.pt );
+    }
+
+    Rect r;
+};
+
+void KeyPointsFilter::runByImageBorder( vector<KeyPoint>& keypoints, Size imageSize, int borderSize )
+{
+    if( borderSize > 0)
+    {
+        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
+                                   RoiPredicate(Rect(Point(borderSize, borderSize),
+                                                     Point(imageSize.width - borderSize, imageSize.height - borderSize)))),
+                         keypoints.end() );
+    }
+}
+
+struct SizePredicate
+{
+    SizePredicate( float _minSize, float _maxSize ) : minSize(_minSize), maxSize(_maxSize)
+    {}
+
+    bool operator()( const KeyPoint& keyPt ) const
+    {
+        float size = keyPt.size;
+        return (size < minSize) || (size > maxSize);
+    }
+
+    float minSize, maxSize;
+};
+
+void KeyPointsFilter::runByKeypointSize( vector<KeyPoint>& keypoints, float minSize, float maxSize )
+{
+    CV_Assert( minSize >= 0 );
+    CV_Assert( maxSize >= 0);
+    CV_Assert( minSize <= maxSize );
+
+    keypoints.erase( remove_if(keypoints.begin(), keypoints.end(), SizePredicate(minSize, maxSize)),
+                     keypoints.end() );
+}
+
 }

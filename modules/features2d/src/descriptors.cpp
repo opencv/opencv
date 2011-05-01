@@ -52,30 +52,20 @@ namespace cv
 /*
  *   DescriptorExtractor
  */
-struct RoiPredicate
-{
-    RoiPredicate( const Rect& _r ) : r(_r)
-    {}
-
-    bool operator()( const KeyPoint& keyPt ) const
-    {
-        return !r.contains( keyPt.pt );
-    }
-
-    Rect r;
-};
-
 DescriptorExtractor::~DescriptorExtractor()
 {}
 
 void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
-{
+{    
     if( image.empty() || keypoints.empty() )
-            return;
+    {
+        descriptors.release();
+        return;
+    }
 
-    // Check keypoints are in image. Do filter bad points here?
-    //for( size_t i = 0; i < keypoints.size(); i++ )
-    //  CV_Assert( Rect(0,0, image.cols, image.rows).contains(keypoints[i].pt) );
+
+    KeyPointsFilter::runByImageBorder( keypoints, image.size(), 0 );
+    KeyPointsFilter::runByKeypointSize( keypoints, std::numeric_limits<float>::epsilon() );
 
     computeImpl( image, keypoints, descriptors );
 }
@@ -97,18 +87,6 @@ void DescriptorExtractor::write( FileStorage& ) const
 bool DescriptorExtractor::empty() const
 {
     return false;
-}
-
-void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
-                                                 Size imageSize, int borderSize )
-{
-    if( borderSize > 0)
-    {
-        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(),
-                                   RoiPredicate(Rect(Point(borderSize, borderSize),
-                                                     Point(imageSize.width - borderSize, imageSize.height - borderSize)))),
-                         keypoints.end() );
-    }
 }
 
 Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)

@@ -244,21 +244,21 @@ void DescriptorMatcher::match( const Mat& queryDescriptors, vector<DMatch>& matc
 
 void DescriptorMatcher::checkMasks( const vector<Mat>& masks, int queryDescriptorsCount ) const
 {
-	if( isMaskSupported() && !masks.empty() )
-	{
-		// Check masks
-		size_t imageCount = trainDescCollection.size();
-		CV_Assert( masks.size() == imageCount );
-		for( size_t i = 0; i < imageCount; i++ )
-		{
-			if( !masks[i].empty() && !trainDescCollection[i].empty() )
-			{
-				CV_Assert( masks[i].rows == queryDescriptorsCount && 
-					       masks[i].cols == trainDescCollection[i].rows &&
-						   masks[i].type() == CV_8UC1 );
-			}
-		}
-	}
+    if( isMaskSupported() && !masks.empty() )
+    {
+        // Check masks
+        size_t imageCount = trainDescCollection.size();
+        CV_Assert( masks.size() == imageCount );
+        for( size_t i = 0; i < imageCount; i++ )
+        {
+            if( !masks[i].empty() && !trainDescCollection[i].empty() )
+            {
+                    CV_Assert( masks[i].rows == queryDescriptorsCount &&
+                                   masks[i].cols == trainDescCollection[i].rows &&
+                                       masks[i].type() == CV_8UC1 );
+            }
+        }
+    }
 }
 
 void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
@@ -736,10 +736,20 @@ GenericDescriptorMatcher::GenericDescriptorMatcher()
 GenericDescriptorMatcher::~GenericDescriptorMatcher()
 {}
 
-void GenericDescriptorMatcher::add( const vector<Mat>& imgCollection,
-                                    vector<vector<KeyPoint> >& pointCollection )
+void GenericDescriptorMatcher::add( const vector<Mat>& images,
+                                    vector<vector<KeyPoint> >& keypoints )
 {
-    trainPointCollection.add( imgCollection, pointCollection );
+    CV_Assert( !images.empty() );
+    CV_Assert( images.size() == keypoints.size() );
+
+    for( size_t i = 0; i < images.size(); i++ )
+    {
+        CV_Assert( !images[i].empty() );
+        KeyPointsFilter::runByImageBorder( keypoints[i], images[i].size(), 0 );
+        KeyPointsFilter::runByKeypointSize( keypoints[i], std::numeric_limits<float>::epsilon() );
+    }
+
+    trainPointCollection.add( images, keypoints );
 }
 
 const vector<Mat>& GenericDescriptorMatcher::getTrainImages() const
@@ -827,6 +837,14 @@ void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, vector<KeyPoint>
                                          vector<vector<DMatch> >& matches, int knn,
                                          const vector<Mat>& masks, bool compactResult )
 {
+    matches.clear();
+
+    if( queryImage.empty() || queryKeypoints.empty() )
+        return;
+
+    KeyPointsFilter::runByImageBorder( queryKeypoints, queryImage.size(), 0 );
+    KeyPointsFilter::runByKeypointSize( queryKeypoints, std::numeric_limits<float>::epsilon() );
+    
     train();
     knnMatchImpl( queryImage, queryKeypoints, matches, knn, masks, compactResult );
 }
@@ -835,6 +853,14 @@ void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, vector<KeyPoi
                                             vector<vector<DMatch> >& matches, float maxDistance,
                                             const vector<Mat>& masks, bool compactResult )
 {
+    matches.clear();
+
+    if( queryImage.empty() || queryKeypoints.empty() )
+        return;
+
+    KeyPointsFilter::runByImageBorder( queryKeypoints, queryImage.size(), 0 );
+    KeyPointsFilter::runByKeypointSize( queryKeypoints, std::numeric_limits<float>::epsilon() );
+	
     train();
     radiusMatchImpl( queryImage, queryKeypoints, matches, maxDistance, masks, compactResult );
 }

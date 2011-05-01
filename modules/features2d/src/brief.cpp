@@ -208,7 +208,7 @@ void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoin
     integral( grayImage, sum, CV_32S);
 
     //Remove keypoints very close to the border
-    removeBorderKeypoints(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);
+    KeyPointsFilter::runByImageBorder(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);
 
     descriptors = Mat::zeros((int)keypoints.size(), bytes_, CV_8U);
     test_fn_(sum, keypoints, descriptors);
