@@ -45,8 +45,13 @@ set_target_properties(${the_target} PROPERTIES
                       DEFINE_SYMBOL "CVAPI_EXPORTS"
                       ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
                       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
-                      LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG"
                       )
+
+if (MSVC)
+    set_target_properties(${the_target} PROPERTIES
+                          LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG"
+                          )
+endif ()
 
 install(TARGETS ${the_target}
     RUNTIME DESTINATION bin COMPONENT main
