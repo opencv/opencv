@@ -628,7 +628,7 @@ public:
         double groupEps;
     };
 
-    struct DOTTemplate
+    struct CV_EXPORTS DOTTemplate
     {
         DOTTemplate();
         DOTTemplate( const cv::Mat& quantizedImage, int classID,
