@@ -623,11 +623,14 @@ CV_EXPORTS_W Mat getOptimalNewCameraMatrix( const InputArray& cameraMatrix, cons
                                             CV_OUT Rect* validPixROI=0);
 
 //! converts point coordinates from normal pixel coordinates to homogeneous coordinates ((x,y)->(x,y,1))
-CV_EXPORTS void convertPointsToHomogeneous( const InputArray& src, OutputArray dst );
+CV_EXPORTS_W void convertPointsToHomogeneous( const InputArray& src, OutputArray dst );
     
 //! converts point coordinates from homogeneous to normal pixel coordinates ((x,y,z)->(x/z, y/z))
-CV_EXPORTS void convertPointsFromHomogeneous( const InputArray& src, OutputArray dst );
+CV_EXPORTS_W void convertPointsFromHomogeneous( const InputArray& src, OutputArray dst );
 
+//! for backward compatibility
+CV_EXPORTS void convertPointsHomogeneous( const InputArray& src, OutputArray dst );
+    
 //! the algorithm for finding fundamental matrix
 enum
 { 

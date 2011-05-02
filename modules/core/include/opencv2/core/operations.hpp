@@ -1131,27 +1131,30 @@ operator - (const Vec<_Tp, cn>& a, const Vec<_Tp, cn>& b)
     return c -= b;
 }
 
-template<typename _Tp> static inline
-Vec<_Tp, 2>& operator *= (Vec<_Tp, 2>& a, _Tp alpha)
+template<typename _Tp, int cn> static inline
+Vec<_Tp, cn>& operator *= (Vec<_Tp, cn>& a, _Tp alpha)
 {
-    a[0] *= alpha; a[1] *= alpha;
+    for( int i = 0; i < cn; i++ )
+        a[i] *= alpha;
     return a;
 }
 
-template<typename _Tp> static inline
-Vec<_Tp, 3>& operator *= (Vec<_Tp, 3>& a, _Tp alpha)
+template<int cn> static inline
+Vec<float, cn>& operator *= (Vec<float, cn>& a, double alpha)
 {
-    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha;
+    for( int i = 0; i < cn; i++ )
+        a[i] *= (float)alpha;
     return a;
 }
 
-template<typename _Tp> static inline
-Vec<_Tp, 4>& operator *= (Vec<_Tp, 4>& a, _Tp alpha)
+template<int cn> static inline
+Vec<float, cn>& operator *= (Vec<float, cn>& a, int alpha)
 {
-    a[0] *= alpha; a[1] *= alpha; a[2] *= alpha; a[3] *= alpha;
+    for( int i = 0; i < cn; i++ )
+        a[i] *= (float)alpha;
     return a;
 }
-
+    
 template<typename _Tp, int cn> static inline Vec<_Tp, cn>
 operator * (const Vec<_Tp, cn>& a, _Tp alpha)
 {
@@ -1162,10 +1165,38 @@ operator * (const Vec<_Tp, cn>& a, _Tp alpha)
 template<typename _Tp, int cn> static inline Vec<_Tp, cn>
 operator * (_Tp alpha, const Vec<_Tp, cn>& a)
 {
-    return a * alpha;
+    Vec<_Tp, cn> c = a;
+    return c *= alpha;
+}
+
+template<int cn> static inline Vec<float, cn>
+operator * (double alpha, const Vec<float, cn>& a)
+{
+    Vec<float, cn> c = a;
+    return c *= (float)alpha;
+}
+
+template<int cn> static inline Vec<float, cn>
+operator * (const Vec<float, cn>& a, double alpha)
+{
+    Vec<float, cn> c = a;
+    return c *= (float)alpha;
+}
+
+template<int cn> static inline Vec<float, cn>
+operator * (int alpha, const Vec<float, cn>& a)
+{
+    Vec<float, cn> c = a;
+    return c *= (float)alpha;
+}
+
+template<int cn> static inline Vec<float, cn>
+operator * (const Vec<float, cn>& a, int alpha)
+{
+    Vec<float, cn> c = a;
+    return c *= (float)alpha;
 }
     
-
 template<typename _Tp> static inline Vec<_Tp, 4>
 operator * (const Vec<_Tp, 4>& a, const Vec<_Tp, 4>& b)
 {

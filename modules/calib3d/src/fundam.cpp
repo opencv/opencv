@@ -1148,4 +1148,15 @@ void cv::convertPointsToHomogeneous( const InputArray& _src, OutputArray _dst )
     cvConvertPointsHomogeneous(&c_src, &c_dst);
 }
 
+void cv::convertPointsHomogeneous( const InputArray& _src, OutputArray _dst )
+{
+    int stype = _src.type(), dtype = _dst.type();
+    CV_Assert( _dst.fixedType() );
+    
+    if( CV_MAT_CN(stype) > CV_MAT_CN(dtype) )
+        convertPointsFromHomogeneous(_src, _dst);
+    else
+        convertPointsToHomogeneous(_src, _dst);
+}
+
 /* End of file. */
