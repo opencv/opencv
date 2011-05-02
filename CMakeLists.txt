@@ -20,12 +20,10 @@ endif()
 
 
 # it _must_ go before PROJECT(OpenCV) in order to work
-if (NOT CMAKE_INSTALL_PREFIX)
-    if(WIN32)
-        set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR} CACHE INTERNAL "" FORCE)
-    elseif()
-        set(CMAKE_INSTALL_PREFIX "/usr" CACHE INTERNAL "" FORCE)
-    endif()
+if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
+else()
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
 endif()
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
@@ -58,10 +56,6 @@ cmake_minimum_required(VERSION 2.4)
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
-
-#set(CMAKE_C_COMPILER "/opt/BullseyeCoverage/bin/gcc")
-#set(CMAKE_CXX_COMPILER "/opt/BullseyeCoverage/bin/g++")
-#set(CMAKE_CXX_COMPILER_INIT "/opt/BullseyeCoverage/bin/gcc")
 
 
 # --------------------------------------------------------------
