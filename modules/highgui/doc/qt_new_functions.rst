@@ -1,17 +1,18 @@
-Qt new functions
+Qt New Functions
 ================
+.. highlight:: cpp
 
 .. image:: pics/qtgui.png
 
-This figure explains the new functionalities implemented with Qt GUI. As we can see, the new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
+This figure explains new functionality implemented with Qt* GUI. The new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
 
 *
     To attach a trackbar, the window name parameter must be NULL.
 
 *
     To attach a buttonbar, a button must be created.
-    If the last bar attached to the control panel is a buttonbar, the new button is added on the right of the last button.
-    If the last bar attached to the control panel is a trackbar, or the control panel is empty, a new buttonbar is created. Then a new button is attached to it.
+    If the last bar attached to the control panel is a buttonbar, the new button is added to the right of the last button.
+    If the last bar attached to the control panel is a trackbar, or the control panel is empty, a new buttonbar is created. Then, a new button is attached to it.
 
 The following code is an example used to generate the figure. ::
 
@@ -63,33 +64,33 @@ setWindowProperty
 ---------------------
 .. c:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
-    Change the parameters of the window dynamically.
+    Changes parameters of a window dynamically.
 
     :param name: Name of the window.
 
-    :param prop_id: Window's property to edit. The operation flags:
+    :param prop_id: Window property to edit. The following operation flags are available:
         
             * **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( ``CV_WINDOW_NORMAL``  or  ``CV_WINDOW_FULLSCREEN`` ).
             
-            * **CV_WND_PROP_AUTOSIZE** Change if the user can resize the window (texttt {CV\_WINDOW\_NORMAL}  or   ``CV_WINDOW_AUTOSIZE`` ).
+            * **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (texttt {CV\_WINDOW\_NORMAL}  or   ``CV_WINDOW_AUTOSIZE`` ).
             
-            * **CV_WND_PROP_ASPECTRATIO** Change if the image's aspect ratio is preserved  (texttt {CV\_WINDOW\_FREERATIO}  or  ``CV_WINDOW_KEEPRATIO`` ).
+            * **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved  (texttt {CV\_WINDOW\_FREERATIO}  or  ``CV_WINDOW_KEEPRATIO`` ).
             
 
-    :param prop_value: New value of the Window's property. The operation flags:
+    :param prop_value: New value of the window property. The following operation flags are available:
         
-            * **CV_WINDOW_NORMAL** Change the window in normal size, or allows the user to resize the window.
+            * **CV_WINDOW_NORMAL** Change the window to normal size or make the window resizable.
             
-            * **CV_WINDOW_AUTOSIZE** The user cannot resize the window, the size is constrainted by the image displayed.
+            * **CV_WINDOW_AUTOSIZE** Constrain the size by the displayed image. The window is not resizable.
             
             * **CV_WINDOW_FULLSCREEN** Change the window to fullscreen.
             
-            * **CV_WINDOW_FREERATIO** The image expends as much as it can (no ratio constraint)
+            * **CV_WINDOW_FREERATIO** Make the image extendable (no ratio constraint).??
             
-            * **CV_WINDOW_KEEPRATIO** The ration image is respected.
+            * **CV_WINDOW_KEEPRATIO** Maintain the image ratio.??
             
 
-The function `` setWindowProperty`` allows to change the window's properties.
+The function ``setWindowProperty``  enables changing properties of a window.
 
 .. index:: getWindowProperty
 
@@ -97,23 +98,23 @@ getWindowProperty
 ---------------------
 .. c:function:: void  getWindowProperty(const char* name, int prop_id)
 
-    Get the parameters of the window.
+    Provides parameters of a window.
 
     :param name: Name of the window.
 
-    :param prop_id: Window's property to retrive. The operation flags:
+    :param prop_id: Window property to retrive. The following operation flags are available:
         
             * **CV_WND_PROP_FULLSCREEN** Change if the window is fullscreen ( ``CV_WINDOW_NORMAL``  or  ``CV_WINDOW_FULLSCREEN`` ).
             
-            * **CV_WND_PROP_AUTOSIZE** Change if the user can resize the window (texttt {CV\_WINDOW\_NORMAL}  or   ``CV_WINDOW_AUTOSIZE`` ).
+            * **CV_WND_PROP_AUTOSIZE** Change if the window is resizable (texttt {CV\_WINDOW\_NORMAL}  or   ``CV_WINDOW_AUTOSIZE`` ).
             
-            * **CV_WND_PROP_ASPECTRATIO** Change if the image's aspect ratio is preserved  (texttt {CV\_WINDOW\_FREERATIO}  or  ``CV_WINDOW_KEEPRATIO`` ).
+            * **CV_WND_PROP_ASPECTRATIO** Change if the aspect ratio of the image is preserved  (texttt {CV\_WINDOW\_FREERATIO}  or  ``CV_WINDOW_KEEPRATIO`` ).
             
 
 See
 :ref:`setWindowProperty` to know the meaning of the returned values.
 
-The function `` getWindowProperty`` return window's properties.
+The function ``getWindowProperty``  returns properties of a window.
 
 .. index:: fontQt
 
@@ -123,15 +124,15 @@ fontQt
 ----------
 .. c:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
 
-    Create the font to be used to draw text on an image.
+    Creates the font to draw a text on an image.
 
-    :param nameFont: Name of the font. The name should match the name of a system font (such as *Times*). If the font is not found, a default one will be used.
+    :param nameFont: Name of the font. The name should match the name of a system font (such as *Times*). If the font is not found, a default one is used.
 
     :param pointSize: Size of the font. If not specified, equal zero or negative, the point size of the font is set to a system-dependent default value. Generally, this is 12 points.
 
-    :param color: Color of the font in BGRA --  A = 255 is fully transparent. Use the macro CV _ RGB for simplicity.
+    :param color: Color of the font in BGRA --  A = 255 is fully transparent. Use the macro ``CV _ RGB`` for simplicity.
 
-    :param weight: The operation flags:
+    :param weight: Font weight. The following operation flags are available:
         
             * **CV_FONT_LIGHT** Weight of 25
             
@@ -143,21 +144,21 @@ fontQt
             
             * **CV_FONT_BLACK** Weight of 87
 
-            You can also specify a positive integer for more control.
+            You can also specify a positive integer for better control.
 
-    :param style: The operation flags:
+    :param style: Font style. The following operation flags are available:
         
-            * **CV_STYLE_NORMAL** Font is normal
+            * **CV_STYLE_NORMAL** Normal font
             
-            * **CV_STYLE_ITALIC** Font is in italic
+            * **CV_STYLE_ITALIC** Italic font
             
-            * **CV_STYLE_OBLIQUE** Font is oblique
+            * **CV_STYLE_OBLIQUE** Oblique font
             
-    :param spacing: Spacing between characters. Can be negative or positive
+    :param spacing: Spacing between characters. It can be negative or positive.
 
-The function ``fontQt`` creates a CvFont object. This CvFont is not compatible with putText.
+The function ``fontQt`` creates a ``CvFont`` object. This ``CvFont`` is not compatible with ``putText`` .
 
-A basic usage of this function is: ::
+A basic usage of this function is the following: ::
 
     CvFont font = fontQt(''Times'');
     addText( img1, ``Hello World !'', Point(50,50), font);
@@ -168,19 +169,19 @@ addText
 -----------
 .. c:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
 
-    Create the font to be used to draw text on an image
+    Creates the font to draw a text on an image.
 
-    :param img: Image where the text should be drawn
+    :param img: Image where the text should be drawn.
 
-    :param text: Text to write on the image
+    :param text: Text to write on an image.
 
-    :param location: Point(x,y) where the text should start on the image
+    :param location: Point(x,y) where the text should start on an image.
 
-    :param font: Font to use to draw the text
+    :param font: Font to use to draw a text.
 
-The function ``addText`` draw
+The function ``addText`` draws
 *text*
-on the image
+on an image
 *img*
 using a specific font
 *font*
@@ -193,17 +194,17 @@ displayOverlay
 ------------------
 .. c:function:: void displayOverlay(const string& name, const string& text, int delay)
 
-    Display text on the window's image as an overlay for delay milliseconds. This is not editing the image's data. The text is display on the top of the image.
+    Displays a  text on a window image as an overlay for a specified duration.  
 
-    :param name: Name of the window
+    :param name: Name of the window.
 
-    :param text: Overlay text to write on the window's image
+    :param text: Overlay text to write on a window image.
 
-    :param delay: Delay to display the overlay text. If this function is called before the previous overlay text time out, the timer is restarted and the text updated. . If this value is zero, the text never disapers.
+    :param delay: Duration (in milliseconds)? to display the overlay text. If this function is called before the previous overlay text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
 
-The function ``displayOverlay`` aims at displaying useful information/tips on the window for a certain amount of time
+The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time
 *delay*
-. This information is display on the top of the window.
+. This does not affect the image data.?? 
 
 .. index:: displayStatusBar
 
@@ -211,17 +212,17 @@ displayStatusBar
 --------------------
 .. c:function:: void displayStatusBar(const string& name, const string& text, int delayms)
 
-    Display text on the window's statusbar as for delay milliseconds.
+    Displays a text on the window statusbar for a specified duration.??
 
-    :param name: Name of the window
+    :param name: Name of the window.
 
-    :param text: Text to write on the window's statusbar
+    :param text: Text to write on the window statusbar.
 
-    :param delay: Delay to display the text. If this function is called before the previous text time out, the timer is restarted and the text updated. If this value is zero, the text never disapers.
+    :param delay: Duration (in milliseconds) to display the text. If this function is called before the previous text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
 
-The function ``displayOverlay`` aims at displaying useful information/tips on the window for a certain amount of time
+The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time
 *delay*
-. This information is displayed on the window's statubar (the window must be created with ``CV_GUI_EXPANDED`` flags).
+. This information is displayed on the window statubar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
 
 .. index:: createOpenGLCallback
 
@@ -230,21 +231,19 @@ createOpenGLCallback
 
 .. c:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
 
-    Create a callback function called to draw OpenGL on top the the image display by windowname.
+    Creates a callback function called to draw OpenGL on top the the image display by ``windowname`` .
 
-    :param window_name: Name of the window
+    :param window_name: Name of the window.
 
-    :param callbackOpenGL:
-        Pointer to the function to be called every frame.
-        This function should be prototyped as  ``void Foo(*void);`` .
+    :param callbackOpenGL: Pointer to the function to be called every frame. This function should be prototyped as  ``void Foo(*void);`` .
 
-    :param userdata: pointer passed to the callback function.  *(Optional)*
+    :param userdata: Pointer passed to the callback function.  *(Optional)*
 
-    :param angle: Specifies the field of view angle, in degrees, in the y direction..  *(Optional - Default 45 degree)*
+    :param angle: Parameter specifying the field of view angle, in degrees, in the y direction. Default value is 45 degrees. *(Optional)*
 
-    :param zmin: Specifies the distance from the viewer to the near clipping plane (always positive).  *(Optional - Default 0.01)*
+    :param zmin: Parameter specifying the distance from the viewer to the near clipping plane (always positive). Default value is 0.01. *(Optional)*
 
-    :param zmax: Specifies the distance from the viewer to the far clipping plane (always positive).  *(Optional - Default 1000)*
+    :param zmax: Parameter specifying the distance from the viewer to the far clipping plane (always positive). Default value is 1000. *(Optional)*
 
 The function ``createOpenGLCallback`` can be used to draw 3D data on the window.  An example of callback could be: ::
 
@@ -284,12 +283,12 @@ saveWindowParameters
 
 .. c:function:: void saveWindowParameters(const string& name)
 
-    Save parameters of the window windowname.
+    Saves parameters of the window ``windowname`` .
 
-    :param name: Name of the window
+    :param name: Name of the window.
 
-The function ``saveWindowParameters`` saves size, location, flags,  trackbars' value, zoom and panning location of the window
-*window_name*
+The function ``saveWindowParameters`` saves size, location, flags,  trackbars value, zoom and panning location of the window
+``window_name`` .
 
 .. index:: loadWindowParameters
 
@@ -298,12 +297,12 @@ loadWindowParameters
 
 .. c:function:: void loadWindowParameters(const string& name)
 
-    Load parameters of the window windowname.
+    Loads parameters of the window ``windowname`` .
 
-    :param name: Name of the window
+    :param name: Name of the window.
 
-The function ``loadWindowParameters`` load size, location, flags,  trackbars' value, zoom and panning location of the window
-*window_name*
+The function ``loadWindowParameters`` loads size, location, flags, trackbars value, zoom and panning location of the window
+``window_name`` .
 
 .. index:: createButton
 
@@ -312,31 +311,29 @@ createButton
 
 .. c:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
 
-    Create a callback function called to draw OpenGL on top the the image display by windowname.
+    Creates a callback function called to draw OpenGL on top of the image display by ``windowname`` .
 
-    :param  button_name: Name of the button   *( if NULL, the name will be "button <number of boutton>")*
+    :param  button_name: Name of the button. If NULL, the name is ``button <number of buttons>`` .??
 
-    :param on_change:
-        Pointer to the function to be called every time the button changed its state.
-        This function should be prototyped as  ``void Foo(int state,*void);`` .  *state*  is the current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
+    :param on_change: Pointer to the function to be called every time the button changes its state. This function should be prototyped as  ``void Foo(int state,*void);`` .  *state*  is the current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 
-    :param userdata: pointer passed to the callback function.  *(Optional)*
+    :param userdata: Pointer passed to the callback function.  *(Optional)*
 
-The ``button_type`` parameter can be :
-    * (Optional -- Will be a push button by default.)
+The ``button_type`` parameter can be any of the following:
+    * (Optional -- Will be a push button by default.)??
 
-    * **CV_PUSH_BUTTON** The button will be a push button.
+    * **CV_PUSH_BUTTON** Push button
 
-    * **CV_CHECKBOX** The button will be a checkbox button.
+    * **CV_CHECKBOX** Checkbox button
 
-    * **CV_RADIOBOX** The button will be a radiobox button. The radiobox on the same buttonbar (same line) are exclusive; one on can be select at the time.
+    * **CV_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are exclusive, that is only one can be selected at a time.
 
-    * **initial_button_state** Default state of the button. Use for checkbox and radiobox, its value could be 0 or 1.  *(Optional)*
+    * **initial_button_state** Default state of the button. Use for checkbox and radiobox. Its value could be 0 or 1.  *(Optional)*
 
-The function ``createButton`` attach a button to the control panel. Each button is added to a buttonbar on the right of the last button.
-A new buttonbar is create if nothing was attached to the control panel before, or if the last element attached to the control panel was a trackbar.
+The function ``createButton`` attaches a button to the control panel. Each button is added to a buttonbar to the right of the last button.
+A new buttonbar is created if nothing was attached to the control panel before, or if the last element attached to the control panel was a trackbar.
 
-Here are various example of ``createButton`` function call: ::
+Here are various examples of the ``createButton`` function call: ::
 
     createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
     createButton("button2",callbackButton,NULL,CV_CHECKBOX,0);
