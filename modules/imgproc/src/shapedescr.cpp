@@ -969,7 +969,7 @@ cvFitEllipse2( const CvArr* array )
 
     n = ptseq->total;
     if( n < 5 )
-        CV_Error( CV_StsBadSize, "Number of points should be >= 6" );
+        CV_Error( CV_StsBadSize, "Number of points should be >= 5" );
 #if 1
     icvFitEllipse_F( ptseq, &box );
 #else
