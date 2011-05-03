@@ -243,7 +243,7 @@ namespace
                     if (dcn <= 0) dcn = 3;
                     CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
 
-                    bidx = code == CV_BGR2YCrCb || code == CV_RGB2YUV ? 0 : 2;
+                    bidx = code == CV_BGR2YCrCb || code == CV_BGR2YUV ? 0 : 2;
 
                     static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
                     static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
@@ -281,7 +281,7 @@ namespace
 
                     CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
 
-                    bidx = code == CV_YCrCb2BGR || code == CV_YUV2RGB ? 0 : 2;
+                    bidx = code == CV_YCrCb2BGR || code == CV_YUV2BGR ? 0 : 2;
 
                     static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
                     static const int yuv_i[] = { 33292, -6472, -9519, 18678 }; 
@@ -391,9 +391,9 @@ namespace
                         
                     dst.create(sz, CV_MAKETYPE(depth, dcn));
                     
-                    //const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
+                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
 
-                    funcs[depth](src, scn, dst, dcn, coeffs_i, stream);
+                    funcs[depth](src, scn, dst, dcn, coeffs, stream);
                     break;
                 }
 
