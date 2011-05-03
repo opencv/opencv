@@ -1,5 +1,12 @@
-#ifndef OPENCV2X_PYTHON_WRAPPERS
-#define OPENCV2X_PYTHON_WRAPPERS
+#include <Python.h>
+
+#if !PYTHON_USE_NUMPY
+#error "The module can only be built if NumPy is available"
+#endif
+
+#define MODULESTR "cv2"
+
+#include "numpy/ndarrayobject.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -11,6 +18,21 @@
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv_extra_api.hpp"
+
+static PyObject* opencv_error = 0;
+
+static int failmsg(const char *fmt, ...)
+{
+    char str[1000];
+    
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(str, sizeof(str), fmt, ap);
+    va_end(ap);
+    
+    PyErr_SetString(PyExc_TypeError, str);
+    return 0;
+}
 
 #define ERRWRAP2(expr) \
 try \
@@ -693,4 +715,131 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
     return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
+#define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
+
+#include "pyopencv_generated_types.h"
+#include "pyopencv_generated_funcs.h"
+
+static PyMethodDef methods[] = {
+
+#include "pyopencv_generated_func_tab.h"
+
+  {NULL, NULL},
+};
+
+/************************************************************************/
+/* Module init */
+
+static int to_ok(PyTypeObject *to)
+{
+  to->tp_alloc = PyType_GenericAlloc;
+  to->tp_new = PyType_GenericNew;
+  to->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+  return (PyType_Ready(to) == 0);
+}
+
+extern "C"
+#if defined WIN32 || defined _WIN32
+__declspec(dllexport)
 #endif
+
+void initcv2()
+{
+#if PYTHON_USE_NUMPY
+    import_array();
+#endif
+    
+#if PYTHON_USE_NUMPY
+#include "pyopencv_generated_type_reg.h"
+#endif
+
+  PyObject* m = Py_InitModule(MODULESTR"", methods);
+  PyObject* d = PyModule_GetDict(m);
+
+  PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
+
+  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
+  PyDict_SetItemString(d, "error", opencv_error);
+
+  // AFAIK the only floating-point constant
+  PyDict_SetItemString(d, "CV_PI", PyFloat_FromDouble(CV_PI));
+
+#define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
+#define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
+#define PUBLISH2(I, value) PyDict_SetItemString(d, #I, PyLong_FromLong(value))
+
+  PUBLISHU(IPL_DEPTH_8U);
+  PUBLISHU(IPL_DEPTH_8S);
+  PUBLISHU(IPL_DEPTH_16U);
+  PUBLISHU(IPL_DEPTH_16S);
+  PUBLISHU(IPL_DEPTH_32S);
+  PUBLISHU(IPL_DEPTH_32F);
+  PUBLISHU(IPL_DEPTH_64F);
+
+  PUBLISH(CV_LOAD_IMAGE_COLOR);
+  PUBLISH(CV_LOAD_IMAGE_GRAYSCALE);
+  PUBLISH(CV_LOAD_IMAGE_UNCHANGED);
+  PUBLISH(CV_HIST_ARRAY);
+  PUBLISH(CV_HIST_SPARSE);
+  PUBLISH(CV_8U);
+  PUBLISH(CV_8UC1);
+  PUBLISH(CV_8UC2);
+  PUBLISH(CV_8UC3);
+  PUBLISH(CV_8UC4);
+  PUBLISH(CV_8S);
+  PUBLISH(CV_8SC1);
+  PUBLISH(CV_8SC2);
+  PUBLISH(CV_8SC3);
+  PUBLISH(CV_8SC4);
+  PUBLISH(CV_16U);
+  PUBLISH(CV_16UC1);
+  PUBLISH(CV_16UC2);
+  PUBLISH(CV_16UC3);
+  PUBLISH(CV_16UC4);
+  PUBLISH(CV_16S);
+  PUBLISH(CV_16SC1);
+  PUBLISH(CV_16SC2);
+  PUBLISH(CV_16SC3);
+  PUBLISH(CV_16SC4);
+  PUBLISH(CV_32S);
+  PUBLISH(CV_32SC1);
+  PUBLISH(CV_32SC2);
+  PUBLISH(CV_32SC3);
+  PUBLISH(CV_32SC4);
+  PUBLISH(CV_32F);
+  PUBLISH(CV_32FC1);
+  PUBLISH(CV_32FC2);
+  PUBLISH(CV_32FC3);
+  PUBLISH(CV_32FC4);
+  PUBLISH(CV_64F);
+  PUBLISH(CV_64FC1);
+  PUBLISH(CV_64FC2);
+  PUBLISH(CV_64FC3);
+  PUBLISH(CV_64FC4);
+  PUBLISH(CV_NEXT_AROUND_ORG);
+  PUBLISH(CV_NEXT_AROUND_DST);
+  PUBLISH(CV_PREV_AROUND_ORG);
+  PUBLISH(CV_PREV_AROUND_DST);
+  PUBLISH(CV_NEXT_AROUND_LEFT);
+  PUBLISH(CV_NEXT_AROUND_RIGHT);
+  PUBLISH(CV_PREV_AROUND_LEFT);
+  PUBLISH(CV_PREV_AROUND_RIGHT);
+
+  PUBLISH(CV_WINDOW_AUTOSIZE);
+
+  PUBLISH(CV_PTLOC_INSIDE);
+  PUBLISH(CV_PTLOC_ON_EDGE);
+  PUBLISH(CV_PTLOC_VERTEX);
+  PUBLISH(CV_PTLOC_OUTSIDE_RECT);
+
+  PUBLISH(GC_BGD);
+  PUBLISH(GC_FGD);
+  PUBLISH(GC_PR_BGD);
+  PUBLISH(GC_PR_FGD);
+  PUBLISH(GC_INIT_WITH_RECT);
+  PUBLISH(GC_INIT_WITH_MASK);
+  PUBLISH(GC_EVAL);
+
+#include "pyopencv_generated_const_reg.h"
+}
+
