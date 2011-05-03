@@ -126,9 +126,11 @@ int main(int ac, char ** av)
   imshow("matches - popcount - outliers removed", outimg);
 
   Mat warped;
+  Mat diff;
   warpPerspective(im2, warped, H, im1.size());
   imshow("warped", warped);
-  imshow("diff", im1 - warped);
+  absdiff(im1,warped,diff);
+  imshow("diff", diff);
   waitKey();
   return 0;
 }
