@@ -446,6 +446,7 @@ if(UNIX)
             set(HAVE_XINE FALSE)
         endif()
         if(WITH_V4L)
+
             CHECK_MODULE(libv4l1 HAVE_LIBV4L)
             CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
             CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)

@@ -216,6 +216,14 @@ if(HAVE_ANDROID_NATIVE_CAMERA)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
 endif()
 
+if(COMMAND get_module_external_sources)
+    set( lib_srcs "${highgui_srcs}" )
+    set( lib_int_hdrs "${highgui_hdrs}" )
+    get_module_external_sources(highgui)
+    set( highgui_srcs "${lib_srcs}" )
+    set( highgui_hdrs "${lib_int_hdrs}" )
+endif()
+
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 
