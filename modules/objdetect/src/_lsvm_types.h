@@ -5,13 +5,10 @@
 
 //#define FFT_CONV
 
-// «начение числа PI
 #define PI    CV_PI
 
-// “очность сравнени€ пары вещественных чисел
 #define EPS 0.000001
 
-// ћинимальное и максимальное значение дл€ вещественного типа данных
 #define F_MAX FLT_MAX
 #define F_MIN -FLT_MAX
 
