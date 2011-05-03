@@ -2876,8 +2876,8 @@ void cv::warpAffine( const InputArray& _src, OutputArray _dst,
                     {
                         int X = (X0 + adelta[x+x1]) >> AB_BITS;
                         int Y = (Y0 + bdelta[x+x1]) >> AB_BITS;
-                        xy[x1*2] = (short)X;
-                        xy[x1*2+1] = (short)Y;
+                        xy[x1*2] = saturate_cast<short>(X);
+                        xy[x1*2+1] = saturate_cast<short>(Y);
                     }
                 else
                 {
@@ -2909,7 +2909,7 @@ void cv::warpAffine( const InputArray& _src, OutputArray _dst,
                                                           _mm_srai_epi32(tx1, INTER_BITS));
                             ty0 = _mm_packs_epi32(_mm_srai_epi32(ty0, INTER_BITS),
                                                   _mm_srai_epi32(ty1, INTER_BITS));
-                            fx_ = _mm_add_epi16(fx_, _mm_slli_epi16(fy_, INTER_BITS));
+                            fx_ = _mm_adds_epi16(fx_, _mm_slli_epi16(fy_, INTER_BITS));
 
                             _mm_storeu_si128((__m128i*)(xy + x1*2), _mm_unpacklo_epi16(tx0, ty0));
                             _mm_storeu_si128((__m128i*)(xy + x1*2 + 8), _mm_unpackhi_epi16(tx0, ty0));
@@ -2921,8 +2921,8 @@ void cv::warpAffine( const InputArray& _src, OutputArray _dst,
                     {
                         int X = (X0 + adelta[x+x1]) >> (AB_BITS - INTER_BITS);
                         int Y = (Y0 + bdelta[x+x1]) >> (AB_BITS - INTER_BITS);
-                        xy[x1*2] = (short)(X >> INTER_BITS);
-                        xy[x1*2+1] = (short)(Y >> INTER_BITS);
+                        xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
+                        xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
                         alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
                                 (X & (INTER_TAB_SIZE-1)));
                     }
@@ -2992,10 +2992,13 @@ void cv::warpPerspective( const InputArray& _src, OutputArray _dst, const InputA
                     {
                         double W = W0 + M[6]*x1;
                         W = W ? 1./W : 0;
-                        int X = saturate_cast<int>((X0 + M[0]*x1)*W);
-                        int Y = saturate_cast<int>((Y0 + M[3]*x1)*W);
-                        xy[x1*2] = (short)X;
-                        xy[x1*2+1] = (short)Y;
+                        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+                        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+                        int X = saturate_cast<int>(fX);
+                        int Y = saturate_cast<int>(fY);
+                        
+                        xy[x1*2] = saturate_cast<short>(X);
+                        xy[x1*2+1] = saturate_cast<short>(Y);
                     }
                 else
                 {
@@ -3004,10 +3007,13 @@ void cv::warpPerspective( const InputArray& _src, OutputArray _dst, const InputA
                     {
                         double W = W0 + M[6]*x1;
                         W = W ? INTER_TAB_SIZE/W : 0;
-                        int X = saturate_cast<int>((X0 + M[0]*x1)*W);
-                        int Y = saturate_cast<int>((Y0 + M[3]*x1)*W);
-                        xy[x1*2] = (short)(X >> INTER_BITS);
-                        xy[x1*2+1] = (short)(Y >> INTER_BITS);
+                        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
+                        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+                        int X = saturate_cast<int>(fX);
+                        int Y = saturate_cast<int>(fY);
+                        
+                        xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
+                        xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
                         alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
                                 (X & (INTER_TAB_SIZE-1)));
                     }
