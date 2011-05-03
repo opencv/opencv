@@ -53,9 +53,9 @@ public:
     CV_MserTest();  
 protected:    
     void run(int);
-	int LoadBoxes(const char* path, vector<CvBox2D>& boxes);
-	int SaveBoxes(const char* path, const vector<CvBox2D>& boxes);
-	int CompareBoxes(const vector<CvBox2D>& boxes1,const vector<CvBox2D>& boxes2, float max_rel_diff = 0.01f);
+    int LoadBoxes(const char* path, vector<CvBox2D>& boxes);
+    int SaveBoxes(const char* path, const vector<CvBox2D>& boxes);
+    int CompareBoxes(const vector<CvBox2D>& boxes1,const vector<CvBox2D>& boxes2, float max_rel_diff = 0.01f);
 };
 
 CV_MserTest::CV_MserTest()
@@ -64,139 +64,149 @@ CV_MserTest::CV_MserTest()
 
 int CV_MserTest::LoadBoxes(const char* path, vector<CvBox2D>& boxes)
 {
-	boxes.clear();
-	FILE* f = fopen(path,"r");
+    boxes.clear();
+    FILE* f = fopen(path,"r");
 
-	if (f==NULL)
-	{
-		return 0;
-	}
-	
-	while (!feof(f))
-	{
-		CvBox2D box;
-		fscanf(f,"%f,%f,%f,%f,%f\n",&box.angle,&box.center.x,&box.center.y,&box.size.width,&box.size.height);
-		boxes.push_back(box);
-	}
-	fclose(f);
-	return 1;
+    if (f==NULL)
+    {
+        return 0;
+    }
+    
+    while (!feof(f))
+    {
+        CvBox2D box;
+        fscanf(f,"%f,%f,%f,%f,%f\n",&box.angle,&box.center.x,&box.center.y,&box.size.width,&box.size.height);
+        boxes.push_back(box);
+    }
+    fclose(f);
+    return 1;
 }
 
 int CV_MserTest::SaveBoxes(const char* path, const vector<CvBox2D>& boxes)
 {
-	FILE* f = fopen(path,"w");
-	if (f==NULL)
-	{
-		return 0;
-	}
-	for (int i=0;i<(int)boxes.size();i++)
-	{
-		fprintf(f,"%f,%f,%f,%f,%f\n",boxes[i].angle,boxes[i].center.x,boxes[i].center.y,boxes[i].size.width,boxes[i].size.height);
-	}
-	fclose(f);
-	return 1;
+    FILE* f = fopen(path,"w");
+    if (f==NULL)
+    {
+        return 0;
+    }
+    for (int i=0;i<(int)boxes.size();i++)
+    {
+        fprintf(f,"%f,%f,%f,%f,%f\n",boxes[i].angle,boxes[i].center.x,boxes[i].center.y,boxes[i].size.width,boxes[i].size.height);
+    }
+    fclose(f);
+    return 1;
 }
 
 int CV_MserTest::CompareBoxes(const vector<CvBox2D>& boxes1,const vector<CvBox2D>& boxes2, float max_rel_diff)
 {
-	if (boxes1.size() != boxes2.size())
-		return 0;
+    if (boxes1.size() != boxes2.size())
+        return 0;
 
-	for (int i=0; i<(int)boxes1.size();i++)
-	{
-		float rel_diff;
-		if (!((boxes1[i].angle == 0.0f) && (abs(boxes2[i].angle) < max_rel_diff)))
-		{
-			rel_diff = abs(boxes1[i].angle-boxes2[i].angle)/abs(boxes1[i].angle);
-			if (rel_diff > max_rel_diff)
-				return i;
-		}
+    for (int i=0; i<(int)boxes1.size();i++)
+    {
+        float rel_diff;
+        if (!((boxes1[i].angle == 0.0f) && (abs(boxes2[i].angle) < max_rel_diff)))
+        {
+            float angle_diff = (float)fmod(boxes1[i].angle - boxes2[i].angle, 180);
+            // for angular correctness, it makes no sense to use a "relative" error.
+            // a 1-degree error around 5 degrees is equally bas as around 250 degrees.
+            // in correct cases, angle_diff can now be a bit above 0 or a bit below 180
+            if (angle_diff > 90.0f)
+            {
+                    angle_diff -= 180.0f;
+            }
+            rel_diff = (float)fabs(angle_diff);
+            if (rel_diff > max_rel_diff)
+                return i;
+        }
 
-		if (!((boxes1[i].center.x == 0.0f) && (abs(boxes2[i].center.x) < max_rel_diff)))
-		{
-			rel_diff = abs(boxes1[i].center.x-boxes2[i].center.x)/abs(boxes1[i].center.x);
-			if (rel_diff > max_rel_diff)
-				return i;
-		}
+        if (!((boxes1[i].center.x == 0.0f) && (abs(boxes2[i].center.x) < max_rel_diff)))
+        {
+            rel_diff = abs(boxes1[i].center.x-boxes2[i].center.x)/abs(boxes1[i].center.x);
+            if (rel_diff > max_rel_diff)
+                return i;
+        }
 
-		if (!((boxes1[i].center.y == 0.0f) && (abs(boxes2[i].center.y) < max_rel_diff)))
-		{
-			rel_diff = abs(boxes1[i].center.y-boxes2[i].center.y)/abs(boxes1[i].center.y);
-			if (rel_diff > max_rel_diff)
-				return i;
-		}
-		if (!((boxes1[i].size.width == 0.0f) && (abs(boxes2[i].size.width) < max_rel_diff)))
-		{
-			rel_diff = abs(boxes1[i].size.width-boxes2[i].size.width)/abs(boxes1[i].size.width);
-			if (rel_diff > max_rel_diff)
-			return i;
-		}
+        if (!((boxes1[i].center.y == 0.0f) && (abs(boxes2[i].center.y) < max_rel_diff)))
+        {
+            rel_diff = abs(boxes1[i].center.y-boxes2[i].center.y)/abs(boxes1[i].center.y);
+            if (rel_diff > max_rel_diff)
+                return i;
+        }
+        if (!((boxes1[i].size.width == 0.0f) && (abs(boxes2[i].size.width) < max_rel_diff)))
+        {
+            rel_diff = abs(boxes1[i].size.width-boxes2[i].size.width)/abs(boxes1[i].size.width);
+            if (rel_diff > max_rel_diff)
+            return i;
+        }
 
-		if (!((boxes1[i].size.height == 0.0f) && (abs(boxes2[i].size.height) < max_rel_diff)))
-		{
-			rel_diff = abs(boxes1[i].size.height-boxes2[i].size.height)/abs(boxes1[i].size.height);
-			if (rel_diff > max_rel_diff)
-				return i;
-		}
-	}
+        if (!((boxes1[i].size.height == 0.0f) && (abs(boxes2[i].size.height) < max_rel_diff)))
+        {
+            rel_diff = abs(boxes1[i].size.height-boxes2[i].size.height)/abs(boxes1[i].size.height);
+            if (rel_diff > max_rel_diff)
+                return i;
+        }
+    }
 
-	return -1;
+    return -1;
 }
 
 void CV_MserTest::run(int)
 {
-	string image_path = string(ts->get_data_path()) + "mser/puzzle.png";
+    string image_path = string(ts->get_data_path()) + "mser/puzzle.png";
 
-	IplImage* img = cvLoadImage( image_path.c_str());
-	if (!img)
-	{
-		ts->printf( cvtest::TS::LOG, "Unable to open image mser/puzzle.png\n");
-		ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-		return;
-	}
+    IplImage* img = cvLoadImage( image_path.c_str());
+    if (!img)
+    {
+        ts->printf( cvtest::TS::LOG, "Unable to open image mser/puzzle.png\n");
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
 
-	CvSeq* contours;
-	CvMemStorage* storage= cvCreateMemStorage();
-	IplImage* hsv = cvCreateImage( cvGetSize( img ), IPL_DEPTH_8U, 3 );
-	cvCvtColor( img, hsv, CV_BGR2YCrCb );
-	CvMSERParams params = cvMSERParams();//cvMSERParams( 5, 60, cvRound(.2*img->width*img->height), .25, .2 );
-	cvExtractMSER( hsv, NULL, &contours, storage, params );
+    CvSeq* contours;
+    CvMemStorage* storage= cvCreateMemStorage();
+    IplImage* hsv = cvCreateImage( cvGetSize( img ), IPL_DEPTH_8U, 3 );
+    cvCvtColor( img, hsv, CV_BGR2YCrCb );
+    CvMSERParams params = cvMSERParams();//cvMSERParams( 5, 60, cvRound(.2*img->width*img->height), .25, .2 );
+    cvExtractMSER( hsv, NULL, &contours, storage, params );
 
-	vector<CvBox2D> boxes;
-	vector<CvBox2D> boxes_orig;
-	for ( int i = 0; i < contours->total; i++ )
-	{
-		CvContour* r = *(CvContour**)cvGetSeqElem( contours, i );
-		CvBox2D box = cvFitEllipse2( r );
-		box.angle=(float)CV_PI/2-box.angle;
-		boxes.push_back(box);			
-	}
+    vector<CvBox2D> boxes;
+    vector<CvBox2D> boxes_orig;
+    for ( int i = 0; i < contours->total; i++ )
+    {
+        CvContour* r = *(CvContour**)cvGetSeqElem( contours, i );
+        CvBox2D box = cvFitEllipse2( r );
+        box.angle=(float)CV_PI/2-box.angle;
+        boxes.push_back(box);           
+    }
 
-	string boxes_path = string(ts->get_data_path()) + "mser/boxes.txt";
-	
-	if (!LoadBoxes(boxes_path.c_str(),boxes_orig))
-	{
-		SaveBoxes(boxes_path.c_str(),boxes);
-		ts->printf( cvtest::TS::LOG, "Unable to open data file mser/boxes.txt\n");
-		ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-		return;
-	}
+    string boxes_path = string(ts->get_data_path()) + "mser/boxes.txt";
+    string calc_boxes_path = string(ts->get_data_path()) + "mser/boxes.calc.txt";
+    
+    if (!LoadBoxes(boxes_path.c_str(),boxes_orig))
+    {
+        SaveBoxes(boxes_path.c_str(),boxes);
+        ts->printf( cvtest::TS::LOG, "Unable to open data file mser/boxes.txt\n");
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+        return;
+    }
 
-	const float dissimularity = 0.01f;
-	int n_box = CompareBoxes(boxes_orig,boxes,dissimularity);
-	if (n_box < 0)
-	{
-		ts->set_failed_test_info(cvtest::TS::OK);
-	}
-	else
-	{
-		ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-		ts->printf( cvtest::TS::LOG, "Incorrect correspondence in %d box\n",n_box);
-	}
+    const float dissimularity = 0.01f;
+    int n_box = CompareBoxes(boxes_orig,boxes,dissimularity);
+    if (n_box < 0)
+    {
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+    else
+    {
+        SaveBoxes(calc_boxes_path.c_str(), boxes);
+        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        ts->printf( cvtest::TS::LOG, "Incorrect correspondence in box %d\n",n_box);
+    }
 
-	cvReleaseMemStorage(&storage);
-	cvReleaseImage(&hsv);
-	cvReleaseImage(&img);
+    cvReleaseMemStorage(&storage);
+    cvReleaseImage(&hsv);
+    cvReleaseImage(&img);
 }
 
 TEST(Features2d_MSER, regression) { CV_MserTest test; test.safe_run(); }
