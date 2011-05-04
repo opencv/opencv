@@ -79,7 +79,7 @@ add_custom_command(
       DEPENDS ${opencv_hdrs})
 
 set(cv2_target "opencv2_python")
-add_library(${cv2_target} src2/cv2.cpp src2/opencv_extra_api.hpp ${cv2_generated_headers})
+add_library(${cv2_target} src2/cv2.cpp src2/opencv_extra_api.hpp ${cv2_generated_hdrs})
 target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
 
 set_target_properties(${cv2_target} PROPERTIES PREFIX "")
