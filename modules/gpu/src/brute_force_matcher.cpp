@@ -414,6 +414,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     distance.create(nQuery, k, CV_32F);
 
     ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
+    allDist.setTo(Scalar::all(numeric_limits<float>::max()));
 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
