@@ -3,10 +3,10 @@ Common Interfaces of Feature Detectors
 
 .. highlight:: cpp
 
-Feature detectors in OpenCV have wrappers with common interface that enables to switch easily
+Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
 between different algorithms solving the same problem. All objects that implement keypoint detectors
-inherit
-:func:`FeatureDetector` interface.
+inherit the
+:ref:`FeatureDetector` interface.
 
 .. index:: KeyPoint
 
@@ -16,7 +16,7 @@ KeyPoint
 --------
 .. c:type:: KeyPoint
 
-Data structure for salient point detectors. ::
+Data structure for salient point detectors ::
 
     class KeyPoint
     {
@@ -39,7 +39,7 @@ Data structure for salient point detectors. ::
                             std::vector<Point2f>& points2f,
                             const std::vector<int>& keypointIndexes=std::vector<int>());
         // converts vector of points to the vector of keypoints, where each
-        // keypoint is assigned the same size and the same orientation
+        // keypoint is assigned to the same size and the same orientation
         static void convert(const std::vector<Point2f>& points2f,
                             std::vector<KeyPoint>& keypoints,
                             float size=1, float response=1, int octave=0,
@@ -47,14 +47,14 @@ Data structure for salient point detectors. ::
 
         // computes overlap for pair of keypoints;
         // overlap is a ratio between area of keypoint regions intersection and
-        // area of keypoint regions union (now keypoint region is circle)
+        // area of keypoint regions union (now keypoint region is a circle)
         static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
         Point2f pt; // coordinates of the keypoints
-        float size; // diameter of the meaningfull keypoint neighborhood
+        float size; // diameter of the meaningful keypoint neighborhood
         float angle; // computed orientation of the keypoint (-1 if not applicable)
         float response; // the response by which the most strong keypoints
-                        // have been selected. Can be used for the further sorting
+                        // have been selected. Can be used for further sorting
                         // or subsampling
         int octave; // octave (pyramid layer) from which the keypoint has been extracted
         int class_id; // object class (if the keypoints need to be clustered by
@@ -77,7 +77,7 @@ FeatureDetector
 ---------------
 .. c:type:: FeatureDetector
 
-Abstract base class for 2D image feature detectors. ::
+Abstract base class for 2D image feature detectors ::
 
     class CV_EXPORTS FeatureDetector
     {
@@ -107,23 +107,21 @@ FeatureDetector::detect
 ---------------------------
 .. c:function:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
 
-    Detect keypoints in an image (first variant) or image set (second variant).
+    Detects keypoints in an image (first variant) or image set (second variant).
 
-    :param image: The image.
+    :param image: Image.
 
-    :param keypoints: The detected keypoints.
+    :param keypoints: Detected keypoints.
 
-    :param mask: Mask specifying where to look for keypoints (optional). Must be a char matrix
-                             with non-zero values in the region of interest.
+    :param mask: Mask specifying where to look for keypoints (optional). It must be a char matrix with non-zero values in the region of interest.
 
 .. c:function:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
 
-    * **images** Images set.
+    :param images: Image set.
 
-    * **keypoints** Collection of keypoints detected in an input images. keypoints[i] is a set of keypoints detected in an images[i].
+    :param keypoints: Collection of keypoints detected in input images. ``keypoints[i]`` is a set of keypoints detected in ``images[i]`` .
 
-    * **masks** Masks for each input image specifying where to look for keypoints (optional). masks[i] is a mask for images[i].
-                      Each element of  ``masks``  vector must be a char matrix with non-zero values in the region of interest.
+    :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]`` .                     Each element of the ``masks``  vector must be a char matrix with non-zero values in the region of interest.
 
 .. index:: FeatureDetector::read
 
@@ -131,9 +129,9 @@ FeatureDetector::read
 -------------------------
 .. c:function:: void FeatureDetector::read( const FileNode\& fn )
 
-    Read feature detector object from file node.
+    Reads a feature detector object from a file node.
 
-    :param fn: File node from which detector will be read.
+    :param fn: File node from which the detector is read.
 
 .. index:: FeatureDetector::write
 
@@ -141,35 +139,34 @@ FeatureDetector::write
 --------------------------
 .. c:function:: void FeatureDetector::write( FileStorage\& fs ) const
 
-    Write feature detector object to file storage.
+    Writes a feature detector object to a file storage.
 
-    :param fs: File storage in which detector will be written.
+    :param fs: File storage where the detector is written.
 
 .. index:: FeatureDetector::create
 
 FeatureDetector::create
 ---------------------------
-:func:`FeatureDetector`
 .. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
 
-    Feature detector factory that creates of given type with default parameters (rather using default constructor).
+    Creates a feature detector of a given type with the default parameters (or using the default constructor).??
 
     :param detectorType: Feature detector type.
 
-Now the following detector types are supported:
-\ ``"FAST"`` --
-:func:`FastFeatureDetector`,\ ``"STAR"`` --
-:func:`StarFeatureDetector`,\ ``"SIFT"`` --
-:func:`SiftFeatureDetector`,\ ``"SURF"`` --
-:func:`SurfFeatureDetector`,\ ``"MSER"`` --
-:func:`MserFeatureDetector`,\ ``"GFTT"`` --
-:func:`GfttFeatureDetector`,\ ``"HARRIS"`` --
-:func:`HarrisFeatureDetector` .
-\
-Also combined format is supported: feature detector adapter name ( ``"Grid"`` --
-:func:`GridAdaptedFeatureDetector`,``"Pyramid"`` --
+The following detector types are supported:
+
+* ``"FAST"`` -- :func:`FastFeatureDetector`
+* ``"STAR"`` -- :func:`StarFeatureDetector`
+* ``"SIFT"`` -- :func:`SiftFeatureDetector`
+* ``"SURF"`` -- :func:`SurfFeatureDetector`
+* ``"MSER"`` -- :func:`MserFeatureDetector`
+* ``"GFTT"`` -- :func:`GfttFeatureDetector`
+* ``"HARRIS"`` -- :func:`HarrisFeatureDetector`
+
+Also a combined format is supported: feature detector adapter name ( ``"Grid"`` --
+:func:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --
 :func:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-e.g. ``"GridFAST"``,``"PyramidSTAR"`` , etc.
+for example, ``"GridFAST"``, ``"PyramidSTAR"`` .
 
 .. index:: FastFeatureDetector
 
@@ -179,8 +176,8 @@ FastFeatureDetector
 -------------------
 .. c:type:: FastFeatureDetector
 
-Wrapping class for feature detection using
-:func:`FAST` method. ::
+Wrapping class for feature detection using the
+:func:`FAST` method ::
 
     class FastFeatureDetector : public FeatureDetector
     {
@@ -201,8 +198,8 @@ GoodFeaturesToTrackDetector
 ---------------------------
 .. c:type:: GoodFeaturesToTrackDetector
 
-Wrapping class for feature detection using
-:func:`goodFeaturesToTrack` function. ::
+Wrapping class for feature detection using the
+:func:`goodFeaturesToTrack` function ::
 
     class GoodFeaturesToTrackDetector : public FeatureDetector
     {
@@ -244,8 +241,8 @@ MserFeatureDetector
 -------------------
 .. c:type:: MserFeatureDetector
 
-Wrapping class for feature detection using
-:func:`MSER` class. ::
+Wrapping class for feature detection using the
+:func:`MSER` class ::
 
     class MserFeatureDetector : public FeatureDetector
     {
@@ -270,8 +267,8 @@ StarFeatureDetector
 -------------------
 .. c:type:: StarFeatureDetector
 
-Wrapping class for feature detection using
-:func:`StarDetector` class. ::
+Wrapping class for feature detection using the
+:func:`StarDetector` class ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -294,8 +291,8 @@ SiftFeatureDetector
 -------------------
 .. c:type:: SiftFeatureDetector
 
-Wrapping class for feature detection using
-:func:`SIFT` class. ::
+Wrapping class for feature detection using the
+:func:`SIFT` class ::
 
     class SiftFeatureDetector : public FeatureDetector
     {
@@ -323,8 +320,8 @@ SurfFeatureDetector
 -------------------
 .. c:type:: SurfFeatureDetector
 
-Wrapping class for feature detection using
-:func:`SURF` class. ::
+Wrapping class for feature detection using the
+:func:`SURF` class ::
 
     class SurfFeatureDetector : public FeatureDetector
     {
@@ -346,7 +343,7 @@ GridAdaptedFeatureDetector
 --------------------------
 .. c:type:: GridAdaptedFeatureDetector
 
-Adapts a detector to partition the source image into a grid and detect points in each cell. ::
+Class adapting a detector to partition the source image into a grid and detect points in each cell ::
 
     class GridAdaptedFeatureDetector : public FeatureDetector
     {
@@ -354,8 +351,8 @@ Adapts a detector to partition the source image into a grid and detect points in
         /*
          * detector            Detector that will be adapted.
          * maxTotalKeypoints   Maximum count of keypoints detected on the image.
-         *                     Only the strongest keypoints will be keeped.
-         * gridRows            Grid rows count.
+         *                     Only the strongest keypoints will be kept.
+         * gridRows            Grid row count.
          * gridCols            Grid column count.
          */
         GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector,
@@ -376,7 +373,7 @@ PyramidAdaptedFeatureDetector
 -----------------------------
 .. c:type:: PyramidAdaptedFeatureDetector
 
-Adapts a detector to detect points over multiple levels of a Gaussian pyramid. Useful for detectors that are not inherently scaled. ::
+Class adapting a detector to detect points over multiple levels of a Gaussian pyramid. Consider using this class for detectors that are not inherently scaled. ::
 
     class PyramidAdaptedFeatureDetector : public FeatureDetector
     {
@@ -397,7 +394,7 @@ DynamicAdaptedFeatureDetector
 
 .. c:type:: DynamicAdaptedFeatureDetector
 
-   An adaptively adjusting detector that iteratively detects until the desired number of features are found. ::
+Adaptively adjusting detector that iteratively detects features until the desired number is found ::
 
        class DynamicAdaptedFeatureDetector: public FeatureDetector
        {
@@ -408,24 +405,24 @@ DynamicAdaptedFeatureDetector
        };
 
 If the detector is persisted, it will "remember" the parameters
-used on the last detection. In this way, the detector may be used for consistent numbers
-of keypoints in a sets of images that are temporally related such as video streams or
+used for the last detection. In this case, the detector may be used for consistent numbers
+of keypoints in a set of temporally related images, such as video streams or
 panorama series.
 
-The DynamicAdaptedFeatureDetector uses another detector such as FAST or SURF to do the dirty work,
-with the help of an AdjusterAdapter.
-After a detection, and an unsatisfactory number of features are detected,
-the AdjusterAdapter will adjust the detection parameters so that the next detection will
-result in more or less features.  This is repeated until either the number of desired features are found
+``DynamicAdaptedFeatureDetector``  uses another detector such as FAST or SURF to do the dirty work,
+with the help of ``AdjusterAdapter`` .
+If the detected number of features is not enough,??
+``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
+results in more or less features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
 
-Adapters can easily be implemented for any detector via the
-AdjusterAdapter interface.
+Adapters can be easily implemented for any detector via the
+``AdjusterAdapter`` interface.
 
-Beware that this is not thread safe - as the adjustment of parameters breaks the const
-of the detection routine...
+Beware that this is not thread-safe since the adjustment of parameters breaks the const??
+of the detection routine.
 
-Here is a sample of how to create a DynamicAdaptedFeatureDetector. ::
+Here is a sample of how to create ``DynamicAdaptedFeatureDetector`` : ::
 
     //sample usage:
     //will create a detector that attempts to find
@@ -436,23 +433,22 @@ Here is a sample of how to create a DynamicAdaptedFeatureDetector. ::
                                   new FastAdjuster(20,true)));
 
 
+
 .. index:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
 .. c:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
 
-    DynamicAdaptedFeatureDetector constructor.
+``DynamicAdaptedFeatureDetector`` constructor
 
-    :param adjaster:  An  :func:`AdjusterAdapter`  that will do the detection and parameter
-                  adjustment
+    :param adjaster:  :func:`AdjusterAdapter`  that detects features and adjusts parameters.??parameter formatting is broken here
 
-    :param min_features: This minimum desired number features.
+    :param min_features: Minimum desired number features.
 
-    :param max_features: The maximum desired number of features.
+    :param max_features: Maximum desired number of features.
 
-    :param max_iters: The maximum number of times to try to adjust the feature detector parameters. For the  :func:`FastAdjuster`  this number can be high,
-                         but with Star or Surf, many iterations can get time consuming.  At each iteration the detector is rerun, so keep this in mind when choosing this value.
+    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :func:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf`` , many iterations can be time-comsuming.  At each iteration the detector is rerun. 
 
 .. index:: AdjusterAdapter
 
@@ -461,7 +457,7 @@ AdjusterAdapter
 
 .. c:type:: AdjusterAdapter
 
-  A feature detector parameter adjuster interface, this is used by the :func:`DynamicAdaptedFeatureDetector` and is a wrapper for :func:`FeatureDetecto` r that allow them to be adjusted after a detection. ::
+Class providing an interface for adjusting parameters of a feature detector. This interface is used by :func:`DynamicAdaptedFeatureDetector` . It is a wrapper for :func:`FeatureDetector` that enables adjusting parameters after detection.?? ::
   
      class AdjusterAdapter: public FeatureDetector
      {
@@ -474,7 +470,9 @@ AdjusterAdapter
 
 
 See
-:func:`FastAdjuster`,:func:`StarAdjuster`,:func:`SurfAdjuster` for concrete implementations.
+:func:`FastAdjuster`,
+:func:`StarAdjuster`,
+:func:`SurfAdjuster` for concrete implementations.
 
 
 .. index:: AdjusterAdapter::tooFew
@@ -483,13 +481,13 @@ AdjusterAdapter::tooFew
 ---------------------------
 .. c:function:: virtual void tooFew(int min, int n_detected) = 0
 
-Too few features were detected so, adjust the detector parameters accordingly - so that the next detection detects more features.
+	Adjusts the detector parameters to detect more features.
 
-    :param min: This minimum desired number features.
+    :param min: Minimum desired number of features.
 
-    :param n_detected: The actual number detected last run.
+    :param n_detected: Number of features detected during the latest run.
 
-An example implementation of this is ::
+Example: ::
 
     void FastAdjuster::tooFew(int min, int n_detected)
     {
@@ -503,13 +501,13 @@ AdjusterAdapter::tooMany
 ----------------------------
 .. c:function:: virtual void tooMany(int max, int n_detected) = 0
 
-    Too many features were detected so, adjust the detector parameters accordingly - so that the next detection detects less features.
+    Adjusts the detector parameters detect less features.
 
-    :param max: This maximum desired number features.
+    :param max: Maximum desired number of features.
 
-    :param n_detected: The actual number detected last run.
+    :param n_detected: Number of features detected during the latest run.
 
-An example implementation of this is ::
+Example: ::
 
     void FastAdjuster::tooMany(int min, int n_detected)
     {
@@ -523,7 +521,9 @@ AdjusterAdapter::good
 -------------------------
 .. c:function:: virtual bool good() const = 0
 
-    Are params maxed out or still valid? Returns false if the parameters can't be adjusted any more. An example implementation of this is ::
+    Returns false if the detector parameters cannot be adjusted any more. 
+
+Example: ::
 
         bool FastAdjuster::good() const
         {
@@ -538,7 +538,7 @@ FastAdjuster
 
 .. c:type:: FastAdjuster
 
-    :func:`AdjusterAdapter` for the :func:`FastFeatureDetector`. This will basically decrement or increment the threshhold by 1 ::
+:func:`AdjusterAdapter` for :func:`FastFeatureDetector`. This class decrements or increments the threshhold by 1.?? ::
 
         class FastAdjuster FastAdjuster: public AdjusterAdapter
         {
@@ -554,7 +554,7 @@ StarAdjuster
 
 .. c:type:: StarAdjuster
 
-    :func:`AdjusterAdapter` for the :func:`StarFeatureDetector` .  This adjusts the responseThreshhold of StarFeatureDetector. ::
+:func:`AdjusterAdapter` for :func:`StarFeatureDetector` .  This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector`` .  ::
 
         class StarAdjuster: public AdjusterAdapter
         {
@@ -569,7 +569,7 @@ SurfAdjuster
 
 .. c:type:: SurfAdjuster
 
-    :func:`AdjusterAdapter` for the :func:`SurfFeatureDetector` .  This adjusts the hessianThreshold of SurfFeatureDetector. ::
+:func:`AdjusterAdapter` for :func:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
 
         class SurfAdjuster: public SurfAdjuster
         {
@@ -583,7 +583,7 @@ FeatureDetector
 ---------------
 .. c:type:: FeatureDetector
 
-  Abstract base class for 2D image feature detectors. ::
+Abstract base class for 2D image feature detectors ::
 
     class CV_EXPORTS FeatureDetector
     {
@@ -613,22 +613,22 @@ FeatureDetector::detect
 ---------------------------
 .. c:function:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
 
-    Detect keypoints in an image (first variant) or image set (second variant).
+    Detects keypoints in an image (first variant) or image set (second variant).
 
-    :param image: The image.
+    :param image: Image.
 
-    :param keypoints: The detected keypoints.
+    :param keypoints: Detected keypoints.
 
-    :param mask: Mask specifying where to look for keypoints (optional). Must be a char matrix
+    :param mask: Mask specifying where to look for keypoints (optional). It must be a char matrix
                              with non-zero values in the region of interest.
 
 .. c:function:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
 
-    * **images** Images set.
+    :param images: Image set.
 
-    * **keypoints** Collection of keypoints detected in an input images. keypoints[i] is a set of keypoints detected in an images[i].
+    :param keypoints: Collection of keypoints detected in an input image. ``keypoints[i]`` is a set of keypoints detected in ``images[i]`` .
 
-    * **masks** Masks for each input image specifying where to look for keypoints (optional). masks[i] is a mask for images[i].
+    :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]`` .
                       Each element of  ``masks``  vector must be a char matrix with non-zero values in the region of interest.
 
 .. index:: FeatureDetector::read
@@ -637,9 +637,9 @@ FeatureDetector::read
 -------------------------
 .. c:function:: void FeatureDetector::read( const FileNode\& fn )
 
-    Read feature detector object from file node.
+    Reads a feature detector object from a file node.
 
-    :param fn: File node from which detector will be read.
+    :param fn: File node from which the detector is read.
 
 .. index:: FeatureDetector::write
 
@@ -647,34 +647,33 @@ FeatureDetector::write
 --------------------------
 .. c:function:: void FeatureDetector::write( FileStorage\& fs ) const
 
-    Write feature detector object to file storage.
+    Writes a feature detector object to a file storage.
 
-    :param fs: File storage in which detector will be written.
+    :param fs: File storage where the detector is written.
 
 .. index:: FeatureDetector::create
 
 FeatureDetector::create
 ---------------------------
-:func:`FeatureDetector`
-.. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
+.. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )??
 
-    Feature detector factory that creates of given type with default parameters (rather using default constructor).
+    Creates a feature detector of a given type with the default parameters (or using the default constructor).??
 
     :param detectorType: Feature detector type.
 
 Now the following detector types are supported:
- * ``"FAST"`` -- :func:`FastFeatureDetector`,
- * ``"STAR"`` -- :func:`StarFeatureDetector`,
- * ``"SIFT"`` -- :func:`SiftFeatureDetector`,
- * ``"SURF"`` -- :func:`SurfFeatureDetector`,
- * ``"MSER"`` -- :func:`MserFeatureDetector`,
- * ``"GFTT"`` -- :func:`GfttFeatureDetector`,
- * ``"HARRIS"`` -- :func:`HarrisFeatureDetector` .
+ * ``"FAST"`` -- :func:`FastFeatureDetector`
+ * ``"STAR"`` -- :func:`StarFeatureDetector`
+ * ``"SIFT"`` -- :func:`SiftFeatureDetector`
+ * ``"SURF"`` -- :func:`SurfFeatureDetector`
+ * ``"MSER"`` -- :func:`MserFeatureDetector`
+ * ``"GFTT"`` -- :func:`GfttFeatureDetector`
+ * ``"HARRIS"`` -- :func:`HarrisFeatureDetector`
 
-Also combined format is supported: feature detector adapter name ( ``"Grid"`` --
-:func:`GridAdaptedFeatureDetector`,``"Pyramid"`` --
+A combined format is also supported: feature detector adapter name ( ``"Grid"`` --
+:func:`GridAdaptedFeatureDetector` , ``"Pyramid"`` --
 :func:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-e.g. ``"GridFAST"``,``"PyramidSTAR"`` , etc.
+for example, ``"GridFAST"`` , ``"PyramidSTAR"`` .
 
 .. index:: FastFeatureDetector
 
@@ -682,8 +681,8 @@ FastFeatureDetector
 -------------------
 .. c:type:: FastFeatureDetector
 
-Wrapping class for feature detection using
-:func:`FAST` method. ::
+Wrapping class for feature detection using the
+:func:`FAST` method ::
 
     class FastFeatureDetector : public FeatureDetector
     {
@@ -702,7 +701,7 @@ GoodFeaturesToTrackDetector
 ---------------------------
 .. c:type:: GoodFeaturesToTrackDetector
 
- Wrapping class for feature detection using :func:`goodFeaturesToTrack` function. ::
+ Wrapping class for feature detection using the :func:`goodFeaturesToTrack` function ::
 
     class GoodFeaturesToTrackDetector : public FeatureDetector
     {
@@ -742,7 +741,7 @@ MserFeatureDetector
 -------------------
 .. c:type:: MserFeatureDetector
 
- Wrapping class for feature detection using :func:`MSER` class. ::
+ Wrapping class for feature detection using the :func:`MSER` class ::
 
     class MserFeatureDetector : public FeatureDetector
     {
@@ -765,7 +764,7 @@ StarFeatureDetector
 -------------------
 .. c:type:: StarFeatureDetector
 
- Wrapping class for feature detection using :func:`StarDetector` class. ::
+Wrapping class for feature detection using the :func:`StarDetector` class ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -786,7 +785,7 @@ SiftFeatureDetector
 -------------------
 .. c:type:: SiftFeatureDetector
 
-  Wrapping class for feature detection using :func:`SIFT` class. ::
+Wrapping class for feature detection using the :func:`SIFT` class ::
 
     class SiftFeatureDetector : public FeatureDetector
     {
@@ -812,7 +811,7 @@ SurfFeatureDetector
 -------------------
 .. c:type:: SurfFeatureDetector
 
- Wrapping class for feature detection using :func:`SURF` class. ::
+Wrapping class for feature detection using the :func:`SURF` class ::
 
     class SurfFeatureDetector : public FeatureDetector
     {
@@ -832,7 +831,7 @@ GridAdaptedFeatureDetector
 --------------------------
 .. c:type:: GridAdaptedFeatureDetector
 
- Adapts a detector to partition the source image into a grid and detect points in each cell. ::
+Class adapting a detector to partition the source image into a grid and detect points in each cell ::
 
     class GridAdaptedFeatureDetector : public FeatureDetector
     {
@@ -840,8 +839,8 @@ GridAdaptedFeatureDetector
         /*
          * detector            Detector that will be adapted.
          * maxTotalKeypoints   Maximum count of keypoints detected on the image.
-         *                     Only the strongest keypoints will be keeped.
-         * gridRows            Grid rows count.
+         *                     Only the strongest keypoints are kept.
+         * gridRows            Grid row count.
          * gridCols            Grid column count.
          */
         GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector,
@@ -860,7 +859,7 @@ PyramidAdaptedFeatureDetector
 -----------------------------
 .. c:type:: PyramidAdaptedFeatureDetector
 
- Adapts a detector to detect points over multiple levels of a Gaussian pyramid. Useful for detectors that are not inherently scaled. ::
+Class adapting a detector to detect points over multiple levels of a Gaussian pyramid. Consider using this class for detectors that are not inherently scaled. ::
 
     class PyramidAdaptedFeatureDetector : public FeatureDetector
     {
@@ -881,7 +880,7 @@ DynamicAdaptedFeatureDetector
 
 .. c:type:: DynamicAdaptedFeatureDetector
 
-  An adaptively adjusting detector that iteratively detects until the desired number of features are found. ::
+Adaptively adjusting detector that iteratively detects features until the desired number is found. ::
 
     class DynamicAdaptedFeatureDetector: public FeatureDetector
     {
@@ -892,25 +891,25 @@ DynamicAdaptedFeatureDetector
     };
 
 
-If the detector is persisted, it will "remember" the parameters
-used on the last detection. In this way, the detector may be used for consistent numbers
-of keypoints in a sets of images that are temporally related such as video streams or
+If the detector is persisted, it "remembers" the parameters
+used on the last detection. In this case, the detector may be used for consistent numbers
+of keypoints in a set of images that are temporally related, such as video streams or
 panorama series.
 
-The DynamicAdaptedFeatureDetector uses another detector such as FAST or SURF to do the dirty work,
-with the help of an AdjusterAdapter.
-After a detection, and an unsatisfactory number of features are detected,
-the AdjusterAdapter will adjust the detection parameters so that the next detection will
-result in more or less features.  This is repeated until either the number of desired features are found
+``DynamicAdaptedFeatureDetector`` uses another detector such as FAST or SURF to do the dirty work,
+with the help of ``AdjusterAdapter`` .
+If the number of detected features is not enough,
+``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
+results in a bigger or smaller number of features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
 
 Adapters can easily be implemented for any detector via the
-AdjusterAdapter interface.
+``AdjusterAdapter`` interface.
 
-Beware that this is not thread safe - as the adjustment of parameters breaks the const
-of the detection routine...
+Beware that this is not thread safe as the adjustment of parameters breaks the const??
+of the detection routine.
 
-Here is a sample of how to create a DynamicAdaptedFeatureDetector. ::
+Example of creating ``DynamicAdaptedFeatureDetector``: ::
 
     //sample usage:
     //will create a detector that attempts to find
@@ -926,17 +925,15 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
 .. c:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
 
-    DynamicAdaptedFeatureDetector constructor.
+	Provides the ``DynamicAdaptedFeatureDetector`` constructor.??
 
-    :param adjaster:  An  :func:`AdjusterAdapter`  that will do the detection and parameter
-                  adjustment
+    :param adjaster:  :func:`AdjusterAdapter`  that detects features and adjusts parameters.??formatting issue again
 
-    :param min_features: This minimum desired number features.
+    :param min_features: Minimum desired number features.
 
-    :param max_features: The maximum desired number of features.
+    :param max_features: Maximum desired number of features.
 
-    :param max_iters: The maximum number of times to try to adjust the feature detector parameters. For the  :func:`FastAdjuster`  this number can be high,
-                         but with Star or Surf, many iterations can get time consuming.  At each iteration the detector is rerun, so keep this in mind when choosing this value.
+    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For  :func:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf`` , many iterations can be time-consuming.  At each iteration the detector is rerun. 
 
 .. index:: AdjusterAdapter
 
@@ -945,7 +942,7 @@ AdjusterAdapter
 
 .. c:type:: AdjusterAdapter
 
-  A feature detector parameter adjuster interface, this is used by the :func:`DynamicAdaptedFeatureDetector` and is a wrapper for :func:`FeatureDetecto` r that allow them to be adjusted after a detection. ::
+Class providing an interface for adjusting parameters of a feature detector. This interface is used by :func:`DynamicAdaptedFeatureDetector` . It is a wrapper for :func:`FeatureDetector` that enables adjusting parameters after detection. ::
   
       class AdjusterAdapter: public FeatureDetector
       {
@@ -957,7 +954,9 @@ AdjusterAdapter
       };  
 
 See
-:func:`FastAdjuster`,:func:`StarAdjuster`,:func:`SurfAdjuster` for concrete implementations.
+:func:`FastAdjuster`,
+:func:`StarAdjuster`,
+:func:`SurfAdjuster` for concrete implementations.
 
 .. index:: AdjusterAdapter::tooFew
 
@@ -965,13 +964,13 @@ AdjusterAdapter::tooFew
 ---------------------------
 .. c:function:: virtual void tooFew(int min, int n_detected) = 0
 
-Too few features were detected so, adjust the detector parameters accordingly - so that the next detection detects more features.
+	Adjusts the detector parameters to detect more features.
 
-    :param min: This minimum desired number features.
+    :param min: Minimum desired number of features.
 
-    :param n_detected: The actual number detected last run.
+    :param n_detected: Number of features detected during the latest run.
 
-An example implementation of this is ::
+Example: ::
 
     void FastAdjuster::tooFew(int min, int n_detected)
     {
