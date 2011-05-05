@@ -9,10 +9,10 @@
 using namespace std;
 using namespace cv;
 
-void printHelp()
+void printUsage()
 {
-    cout << "Rotation model stitcher.\n" 
-        << "Usage: stitch img1 img2 [...imgN]\n" 
+    cout << "Rotation model images stitcher.\n" 
+        << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
         << "\t[--matchconf <0.0-1.0>]\n"
         << "\t[--ba (ray_space|focal_ray_space)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
@@ -30,13 +30,13 @@ int main(int argc, char* argv[])
     int ba_space = BundleAdjuster::RAY_SPACE;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
-    float match_conf;
+    float match_conf = 0.55f;
     int seam_find_type = SeamFinder::GRAPH_CUT;
     int blend_type = Blender::MULTI_BAND;
 
     if (argc == 1)
     {
-        printHelp();
+        printUsage();
         return 0;
     }
 
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
         focals.push_back(cameras[i].focal);
     }
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
-    float camera_focal = focals[focals.size() / 2];
+    float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
     vector<Mat> masks(num_images);
     for (int i = 0; i < num_images; ++i)
@@ -189,8 +189,8 @@ int main(int argc, char* argv[])
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = (*warper)(images[i], cameras[i].focal, cameras[i].M, images_warped[i]);
-        (*warper)(masks[i], cameras[i].focal, cameras[i].M, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].M, images_warped[i]);
+        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].M, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
     vector<Mat> images_f(num_images);
     for (int i = 0; i < num_images; ++i)

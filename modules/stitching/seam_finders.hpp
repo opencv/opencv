@@ -1,5 +1,5 @@
-#ifndef _OPENCV_SEAM_FINDERS_HPP_
-#define _OPENCV_SEAM_FINDERS_HPP_
+#ifndef __OPENCV_SEAM_FINDERS_HPP__
+#define __OPENCV_SEAM_FINDERS_HPP__
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -65,4 +65,4 @@ private:
     cv::Ptr<Impl> impl_;
 };
 
-#endif // _OPENCV_SEAM_FINDERS_HPP_
+#endif // __OPENCV_SEAM_FINDERS_HPP__

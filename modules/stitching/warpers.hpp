@@ -1,5 +1,5 @@
-#ifndef _OPENCV_WARPERS_HPP_
-#define _OPENCV_WARPERS_HPP_
+#ifndef __OPENCV_WARPERS_HPP__
+#define __OPENCV_WARPERS_HPP__
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -9,7 +9,7 @@ class Warper
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
 
-    static cv::Ptr<Warper> createByCameraFocal(int focal, int type);
+    static cv::Ptr<Warper> createByCameraFocal(float focal, int type);
 
     virtual ~Warper() {}
 
@@ -118,4 +118,4 @@ private:
 
 #include "warpers_inl.hpp"
 
-#endif // _OPENCV_WARPERS_HPP_
+#endif // __OPENCV_WARPERS_HPP__

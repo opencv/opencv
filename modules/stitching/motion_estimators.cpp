@@ -242,8 +242,8 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
 
-            CV_Assert(m0.queryIdx < features1.keypoints.size());
-            CV_Assert(m0.trainIdx < features2.keypoints.size());
+            CV_Assert(m0.queryIdx < static_cast<int>(features1.keypoints.size()));
+            CV_Assert(m0.trainIdx < static_cast<int>(features2.keypoints.size()));
 
             if (m0.distance < (1.f - match_conf_) * m1.distance)
                 matches_info.matches.push_back(m0);
@@ -260,8 +260,8 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
 
-            CV_Assert(m0.trainIdx < features1.keypoints.size());
-            CV_Assert(m0.queryIdx < features2.keypoints.size());
+            CV_Assert(m0.trainIdx < static_cast<int>(features1.keypoints.size()));
+            CV_Assert(m0.queryIdx < static_cast<int>(features2.keypoints.size()));
 
             if (m0.distance < (1.f - match_conf_) * m1.distance)
                 matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
@@ -416,7 +416,7 @@ struct CalcRotation
 };
 
 
-void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<ImageFeatures> &features,
+void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<ImageFeatures> &/*features*/,
                                         const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
 {
     const int num_images = static_cast<int>(images.size());
@@ -514,7 +514,6 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
     cvCopy(&matParams, solver.param);
 
     int count = 0;
-    double last_err = numeric_limits<double>::max();
     for(;;)
     {
         const CvMat* _param = 0;
@@ -580,8 +579,8 @@ void BundleAdjuster::calcError(Mat &err)
     {
         int i = edges_[edge_idx].first;
         int j = edges_[edge_idx].second;
-        float f1 = static_cast<float>(cameras_.at<double>(i * 4, 0));
-        float f2 = static_cast<float>(cameras_.at<double>(j * 4, 0));
+        double f1 = cameras_.at<double>(i * 4, 0);
+        double f2 = cameras_.at<double>(j * 4, 0);
         double R1[9], R2[9];
         Mat R1_(3, 3, CV_64F, R1), R2_(3, 3, CV_64F, R2);
         Mat rvec(3, 1, CV_64F);
@@ -602,25 +601,25 @@ void BundleAdjuster::calcError(Mat &err)
         {
             const DMatch& m = matches_info.matches[k];
 
-            Point2f kp1 = features1.keypoints[m.queryIdx].pt;
-            kp1.x -= 0.5f * images_[i].cols;
-            kp1.y -= 0.5f * images_[i].rows;
-            Point2f kp2 = features2.keypoints[m.trainIdx].pt;
-            kp2.x -= 0.5f * images_[j].cols;
-            kp2.y -= 0.5f * images_[j].rows;
-            float len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);
-            float len2 = sqrt(kp2.x * kp2.x + kp2.y * kp2.y + f2 * f2);
-            Point3f p1(kp1.x / len1, kp1.y / len1, f1 / len1);
-            Point3f p2(kp2.x / len2, kp2.y / len2, f2 / len2);
+            Point2d kp1 = features1.keypoints[m.queryIdx].pt;
+            kp1.x -= 0.5 * images_[i].cols;
+            kp1.y -= 0.5 * images_[i].rows;
+            Point2d kp2 = features2.keypoints[m.trainIdx].pt;
+            kp2.x -= 0.5 * images_[j].cols;
+            kp2.y -= 0.5 * images_[j].rows;
+            double len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);
+            double len2 = sqrt(kp2.x * kp2.x + kp2.y * kp2.y + f2 * f2);
+            Point3d p1(kp1.x / len1, kp1.y / len1, f1 / len1);
+            Point3d p2(kp2.x / len2, kp2.y / len2, f2 / len2);
 
-            Point3f d1(p1.x * R1[0] + p1.y * R1[1] + p1.z * R1[2],
+            Point3d d1(p1.x * R1[0] + p1.y * R1[1] + p1.z * R1[2],
                        p1.x * R1[3] + p1.y * R1[4] + p1.z * R1[5],
                        p1.x * R1[6] + p1.y * R1[7] + p1.z * R1[8]);
-            Point3f d2(p2.x * R2[0] + p2.y * R2[1] + p2.z * R2[2],
+            Point3d d2(p2.x * R2[0] + p2.y * R2[1] + p2.z * R2[2],
                        p2.x * R2[3] + p2.y * R2[4] + p2.z * R2[5],
                        p2.x * R2[6] + p2.y * R2[7] + p2.z * R2[8]);
 
-            float mult = 1.f;
+            double mult = 1;
             if (cost_space_ == FOCAL_RAY_SPACE)
                 mult = sqrt(f1 * f2);
             err.at<double>(3 * match_idx, 0) = mult * (d1.x - d2.x);

@@ -1,5 +1,5 @@
-#ifndef _OPENCV_MOTION_ESTIMATORS_HPP_
-#define _OPENCV_MOTION_ESTIMATORS_HPP_
+#ifndef __OPENCV_MOTION_ESTIMATORS_HPP__
+#define __OPENCV_MOTION_ESTIMATORS_HPP__
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -154,4 +154,4 @@ private:
 void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
                          Graph &span_tree, std::vector<int> &centers);
 
-#endif // _OPENCV_MOTION_ESTIMATORS_HPP_
+#endif // __OPENCV_MOTION_ESTIMATORS_HPP__

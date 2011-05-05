@@ -1,5 +1,5 @@
-#ifndef _OPENCV_BLENDERS_HPP_
-#define _OPENCV_BLENDERS_HPP_
+#ifndef __OPENCV_BLENDERS_HPP__
+#define __OPENCV_BLENDERS_HPP__
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -68,4 +68,4 @@ void createLaplacePyr(const std::vector<cv::Mat>& pyr_gauss, std::vector<cv::Mat
 // Restores source image in-place. Result will be in pyr[0].
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
 
-#endif // _OPENCV_BLENDERS_HPP_
+#endif // __OPENCV_BLENDERS_HPP__

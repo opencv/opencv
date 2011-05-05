@@ -3,7 +3,7 @@
 using namespace std;
 using namespace cv;
 
-Ptr<Warper> Warper::createByCameraFocal(int focal, int type)
+Ptr<Warper> Warper::createByCameraFocal(float focal, int type)
 {
     if (type == PLANE)
         return new PlaneWarper(focal);

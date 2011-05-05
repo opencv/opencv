@@ -1,5 +1,5 @@
-#ifndef _OPENCV_STITCHING_UTIL_HPP_
-#define _OPENCV_STITCHING_UTIL_HPP_
+#ifndef __OPENCV_STITCHING_UTIL_HPP__
+#define __OPENCV_STITCHING_UTIL_HPP__
 
 #include <vector>
 #include <list>
@@ -69,4 +69,4 @@ private:
 
 #include "util_inl.hpp"
 
-#endif // _OPENCV_STITCHING_UTIL_HPP_
+#endif // __OPENCV_STITCHING_UTIL_HPP__

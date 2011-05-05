@@ -1,5 +1,5 @@
-#ifndef _OPENCV_STITCHING_UTIL_INL_HPP_
-#define _OPENCV_STITCHING_UTIL_INL_HPP_
+#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
+#define __OPENCV_STITCHING_UTIL_INL_HPP__
 
 #include <queue>
 #include "util.hpp" // Make your IDE see declarations
@@ -71,4 +71,4 @@ T sqr(T x)
     return x * x;
 }
 
-#endif // _OPENCV_STITCHING_UTIL_INL_HPP_
+#endif // __OPENCV_STITCHING_UTIL_INL_HPP__

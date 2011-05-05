@@ -1,5 +1,5 @@
-#ifndef _OPENCV_WARPERS_INL_HPP_
-#define _OPENCV_WARPERS_INL_HPP_
+#ifndef __OPENCV_WARPERS_INL_HPP__
+#define __OPENCV_WARPERS_INL_HPP__
 
 #include "warpers.hpp" // Make your IDE see declarations
 
@@ -195,4 +195,4 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     y = focal * y / z + size.height * 0.5f;
 }
 
-#endif // _OPENCV_WARPERS_INL_HPP_
+#endif // __OPENCV_WARPERS_INL_HPP__

@@ -1,5 +1,5 @@
-#ifndef _OPENCV_FOCAL_ESTIMATORS_HPP_
-#define _OPENCV_FOCAL_ESTIMATORS_HPP_
+#ifndef __OPENCV_FOCAL_ESTIMATORS_HPP__
+#define __OPENCV_FOCAL_ESTIMATORS_HPP__
 
 #include <opencv2/core/core.hpp>
 
@@ -9,4 +9,4 @@ void focalsFromHomography(const cv::Mat &H, double &f0, double &f1, bool &f0_ok,
 
 bool focalsFromFundamental(const cv::Mat &F, double &f0, double &f1);
 
-#endif // _OPENCV_FOCAL_ESTIMATORS_HPP_
+#endif // __OPENCV_FOCAL_ESTIMATORS_HPP__
