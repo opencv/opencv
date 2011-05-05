@@ -58,7 +58,7 @@ TEST(projectPoints, accuracy)
     camera_mat.at<float>(2, 1) = 0.f;
 
     vector<Point2f> dst;
-    projectPoints(src, rvec, tvec, camera_mat, Mat::zeros(1, 5, CV_32F), dst);
+    projectPoints(src, rvec, tvec, camera_mat, Mat::zeros(1, 8, CV_32F), dst);
 
     GpuMat d_dst;
     projectPoints(GpuMat(src), rvec, tvec, camera_mat, Mat(), d_dst);
@@ -123,12 +123,12 @@ TEST(solvePnPRansac, accuracy)
     Mat tvec_gold = randomMat(rng, Size(3, 1), CV_32F, 0, 1, false);
 
     vector<Point2f> image_vec;
-    projectPoints(object, rvec_gold, tvec_gold, camera_mat, Mat::zeros(1, 5, CV_32F), image_vec);
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, Mat::zeros(1, 8, CV_32F), image_vec);
     Mat image(1, image_vec.size(), CV_32FC2, &image_vec[0]);
 
     Mat rvec, tvec;
     vector<int> inliers;
-    gpu::solvePnPRansac(object, image, camera_mat, Mat::zeros(1, 5, CV_32F), rvec, tvec, false, 200, 2.f, 100, &inliers);
+    gpu::solvePnPRansac(object, image, camera_mat, Mat::zeros(1, 8, CV_32F), rvec, tvec, false, 200, 2.f, 100, &inliers);
 
     ASSERT_LE(norm(rvec - rvec_gold), 1e-3f);
     ASSERT_LE(norm(tvec - tvec_gold), 1e-3f);
