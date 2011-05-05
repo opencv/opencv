@@ -48,17 +48,6 @@ namespace cv
 /*
  *  FeatureDetector
  */
-class MaskPredicate
-{
-public:
-    MaskPredicate( const Mat& _mask ) : mask(_mask) {}
-    bool operator() (const KeyPoint& key_pt) const
-    {
-      return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
-    }
-private:
-	const Mat mask;
-};
 
 FeatureDetector::~FeatureDetector()
 {}
@@ -81,14 +70,6 @@ void FeatureDetector::detect(const vector<Mat>& imageCollection, vector<vector<K
     for( size_t i = 0; i < imageCollection.size(); i++ )
         detect( imageCollection[i], pointCollection[i], masks.empty() ? Mat() : masks[i] );
 }
-
-void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints )
-{
-    if( mask.empty() )
-        return;
-
-    keypoints.erase(remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
-};
 
 void FeatureDetector::read( const FileNode& )
 {}
@@ -179,7 +160,7 @@ void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
     FAST( grayImage, keypoints, threshold, nonmaxSuppression );
-    removeInvalidPoints( mask, keypoints );
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
 /*
@@ -360,7 +341,7 @@ void StarFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
 
     star(grayImage, keypoints);
-    removeInvalidPoints(mask, keypoints);
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
 /*
@@ -482,7 +463,7 @@ void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypo
         if( params.varyImgBoundWithScale ) curBound = static_cast<int>( curBound * params.featureScaleMul + 0.5f );
     }
 
-    removeInvalidPoints( mask, keypoints );
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
 /*
@@ -566,7 +547,7 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
     {
         // Detect on current level of the pyramid
         vector<KeyPoint> new_pts;
-        detector->detect(src, new_pts);
+        detector->detect( src, new_pts, mask );
         for( vector<KeyPoint>::iterator it = new_pts.begin(), end = new_pts.end(); it != end; ++it)
         {
             it->pt.x *= multiplier;
@@ -574,7 +555,6 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
             it->size *= multiplier;
             it->octave = l;
         }
-        removeInvalidPoints( mask, new_pts );
         keypoints.insert( keypoints.end(), new_pts.begin(), new_pts.end() );
 
         // Downsample

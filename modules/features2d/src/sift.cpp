@@ -2194,16 +2194,49 @@ static void removeDuplicatedKeypoints(vector<KeyPoint>& keypoints)
     keypoints.resize(j);
 }
 
-
 // detectors
-void SIFT::operator()(const Mat& img, const Mat& mask,
+void SIFT::operator()(const Mat& image, const Mat& mask,
                       vector<KeyPoint>& keypoints) const
 {
-    if( img.empty() || img.type() != CV_8UC1 )
-        CV_Error( CV_StsBadArg, "img is empty or has incorrect type" );
+    if( image.empty() || image.type() != CV_8UC1 )
+        CV_Error( CV_StsBadArg, "image is empty or has incorrect type (!=CV_8UC1)" );
+
+    if( !mask.empty() && mask.type() != CV_8UC1 )
+        CV_Error( CV_StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
+
+    Mat subImage, subMask;
+    Rect brect( 0, 0, image.cols, image.rows );
+    if( mask.empty() )
+    {
+        subImage = image;
+    }
+    else
+    {
+        vector<Point> points;
+        points.reserve( image.rows * image.cols );
+        for( int y = 0; y < mask.rows; y++ )
+        {
+            for( int x = 0; x < mask.cols; x++ )
+            {
+                if( mask.at<uchar>(y,x) )
+                    points.push_back( cv::Point(x,y) );
+            }
+        }
+        brect = cv::boundingRect( points );
+
+        if( brect.x == 0 && brect.y == 0 && brect.width == mask.cols && brect.height == mask.rows )
+        {
+            subImage = image;
+        }
+        else
+        {
+            subImage = image( brect );
+            subMask = mask( brect );
+        }
+    }
 
     Mat fimg;
-    img.convertTo(fimg, CV_32FC1, 1.0/255.0);
+    subImage.convertTo( fimg, CV_32FC1, 1.0/255.0 );
 
     const double sigman = .5 ;
     const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
@@ -2225,7 +2258,20 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
             keypoints.push_back( vlKeypointToOcv(vlsift, *iter, angleVal*a_180divPI) );
         }
     }
+
     removeDuplicatedKeypoints(keypoints);
+
+    if( !subMask.empty() )
+    {
+        // filter points by subMask and convert the points coordinates from subImage size to image size
+        KeyPointsFilter::runByPixelsMask( keypoints, subMask );
+        int dx = brect.x, dy = brect.y;
+        for( vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it )
+        {
+            it->pt.x += dx;
+            it->pt.y += dy;
+        }
+    }
 }
 
 struct InvalidKeypoint
@@ -2234,16 +2280,16 @@ struct InvalidKeypoint
 };
 
 // descriptors
-void SIFT::operator()(const Mat& img, const Mat& mask,
+void SIFT::operator()(const Mat& image, const Mat& mask,
                       vector<KeyPoint>& keypoints,
                       Mat& descriptors,
                       bool useProvidedKeypoints) const
 {
-    if( img.empty() || img.type() != CV_8UC1 )
+    if( image.empty() || image.type() != CV_8UC1 )
         CV_Error( CV_StsBadArg, "img is empty or has incorrect type" );
 
     Mat fimg;
-    img.convertTo(fimg, CV_32FC1, 1.0/255.0);
+    image.convertTo(fimg, CV_32FC1, 1.0/255.0);
 
     const double sigman = .5 ;
     const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
@@ -2251,7 +2297,12 @@ void SIFT::operator()(const Mat& img, const Mat& mask,
     const double a_PIdiv180 = CV_PI/180.;
 
     if( !useProvidedKeypoints )
-        (*this)(img, mask, keypoints);
+        (*this)(image, mask, keypoints);
+    else
+    {
+        // filter keypoints by mask
+        KeyPointsFilter::runByPixelsMask( keypoints, mask );
+    }
 
     VL::Sift vlsift((float*)fimg.data, fimg.cols, fimg.rows,
                     sigman, sigma0, commParams.nOctaves, commParams.nOctaveLayers,

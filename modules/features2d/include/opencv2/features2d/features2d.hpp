@@ -266,7 +266,7 @@ CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
 /*
  * A class filters a vector of keypoints.
  * Because now it is difficult to provide a convenient interface for all usage scenarios of the keypoints filter class,
- * it has only 2 needed by now static methods.
+ * it has only 3 needed by now static methods.
  */
 class CV_EXPORTS KeyPointsFilter
 {
@@ -281,6 +281,10 @@ public:
      * Remove keypoints of sizes out of range.
      */
     static void runByKeypointSize( vector<KeyPoint>& keypoints, float minSize, float maxSize=std::numeric_limits<float>::max() );
+    /*
+     * Remove keypoints from some image by mask for pixels of this image.
+     */
+    static void runByPixelsMask( vector<KeyPoint>& keypoints, const Mat& mask );
 };
 
 /*!
@@ -1243,13 +1247,7 @@ public:
     static Ptr<FeatureDetector> create( const string& detectorType );
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
-    /*
-     * Remove keypoints that are not in the mask.
-     * Helper function, useful when wrapping a library call for keypoint detection that
-     * does not support a mask argument.
-     */
-    static void removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints );
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
 };
 
 class CV_EXPORTS FastFeatureDetector : public FeatureDetector

@@ -200,4 +200,25 @@ void KeyPointsFilter::runByKeypointSize( vector<KeyPoint>& keypoints, float minS
                      keypoints.end() );
 }
 
+class MaskPredicate
+{
+public:
+    MaskPredicate( const Mat& _mask ) : mask(_mask) {}
+    bool operator() (const KeyPoint& key_pt) const
+    {
+        return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
+    }
+
+private:
+    const Mat mask;
+};
+
+void KeyPointsFilter::runByPixelsMask( vector<KeyPoint>& keypoints, const Mat& mask )
+{
+    if( mask.empty() )
+        return;
+
+    keypoints.erase(remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
+}
+
 }
