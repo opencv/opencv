@@ -14,7 +14,8 @@ void printUsage()
     cout << "Rotation model images stitcher.\n" 
         << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
         << "\t[--matchconf <0.0-1.0>]\n"
-        << "\t[--ba (ray_space|focal_ray_space)]\n"
+        << "\t[--ba (ray|focal_ray)]\n"
+        //<< "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--seam (no|voronoi|graphcut)]\n" 
         << "\t[--blend (no|feather|multiband)]\n"
@@ -28,6 +29,7 @@ int main(int argc, char* argv[])
     vector<Mat> images;
     string result_name = "result.png";
     int ba_space = BundleAdjuster::RAY_SPACE;
+    bool wave_correct = false;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
     float match_conf = 0.55f;
@@ -55,9 +57,9 @@ int main(int argc, char* argv[])
         }
         else if (string(argv[i]) == "--ba")
         {
-            if (string(argv[i + 1]) == "ray_space")
+            if (string(argv[i + 1]) == "ray")
                 ba_space = BundleAdjuster::RAY_SPACE;
-            else if (string(argv[i + 1]) == "focal_ray_space")
+            else if (string(argv[i + 1]) == "focal_ray")
                 ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
             else
             {
@@ -66,6 +68,19 @@ int main(int argc, char* argv[])
             }
             i++;
         }
+        //else if (string(argv[i]) == "--wavecorrect")
+        //{
+        //    if (string(argv[i + 1]) == "no")
+        //        wave_correct = false;
+        //    else if (string(argv[i + 1]) == "yes")
+        //        wave_correct = true;
+        //    else
+        //    {
+        //        cout << "Bad wave correct flag value\n";
+        //        return -1;
+        //    }
+        //    i++;
+        //}
         else if (string(argv[i]) == "--warp")
         {
             if (string(argv[i + 1]) == "plane")
@@ -163,6 +178,17 @@ int main(int argc, char* argv[])
     LOGLN("Bundle adjustment...");
     BundleAdjuster adjuster(ba_space);
     adjuster(images, features, pairwise_matches, cameras);
+
+    if (wave_correct)
+    {
+        LOGLN("Wave correcting...");
+        vector<Mat> rmats;
+        for (size_t i = 0; i < cameras.size(); ++i)
+            rmats.push_back(cameras[i].M);
+        waveCorrect(rmats);
+        for (size_t i = 0; i < cameras.size(); ++i)
+            cameras[i].M = rmats[i];
+    }
 
     // Find median focal length
     vector<double> focals;

@@ -19,8 +19,8 @@ namespace
     public:
         inline CpuSurfFeaturesFinder() 
         {
-            detector_ = new SurfFeatureDetector(500.0);
-            extractor_ = new SurfDescriptorExtractor;
+            detector_ = new SurfFeatureDetector(500);
+            extractor_ = new SurfDescriptorExtractor();
         }
 
     protected:
@@ -491,17 +491,8 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
 
     edges_.clear();
     for (int i = 0; i < num_images_ - 1; ++i)
-    {
         for (int j = i + 1; j < num_images_; ++j)
-        {
-            int pair_idx = i * num_images_ + j;
-            const MatchesInfo& mi = pairwise_matches_[pair_idx];
-            float ni = static_cast<float>(mi.num_inliers);
-            float nf = static_cast<float>(mi.matches.size());
-            if (ni / (8.f + 0.3f * nf) > 1.f)
-                edges_.push_back(make_pair(i, j));
-        }
-    }
+            edges_.push_back(make_pair(i, j));
 
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
@@ -680,6 +671,43 @@ void BundleAdjuster::calcJacobian()
         calcDeriv(err1_, err2_, 2 * dr, J_.col(i * 4 + 3));
         cameras_.at<double>(i * 4 + 3, 0) = r;
     }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+// TODO test on adobe/halfdome
+void waveCorrect(vector<Mat> &rmats)
+{
+    float data[9];
+    Mat r0(1, 3, CV_32F, data);
+    Mat r1(1, 3, CV_32F, data + 3);
+    Mat r2(1, 3, CV_32F, data + 6);
+    Mat R(3, 3, CV_32F, data);
+
+    Mat cov = Mat::zeros(3, 3, CV_32F);
+    for (size_t i = 0; i < rmats.size(); ++i)
+    {   
+        Mat r0 = rmats[i].col(0);
+        cov += r0 * r0.t();
+    }
+
+    SVD svd;
+    svd(cov, SVD::FULL_UV);
+    svd.vt.row(2).copyTo(r1);
+    if (determinant(svd.vt) < 0)
+        r1 *= -1;
+
+    Mat avgz = Mat::zeros(3, 1, CV_32F);
+    for (size_t i = 0; i < rmats.size(); ++i)
+        avgz += rmats[i].col(2);
+    avgz.t().cross(r1).copyTo(r0);
+    normalize(r0, r0);
+
+    r0.cross(r1).copyTo(r2);
+
+    for (size_t i = 0; i < rmats.size(); ++i)
+        rmats[i] = R * rmats[i];
 }
 
 
