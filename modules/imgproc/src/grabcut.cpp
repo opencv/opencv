@@ -192,7 +192,7 @@ void GMM::endLearning()
             c[6] = prods[ci][2][0]/n - m[2]*m[0]; c[7] = prods[ci][2][1]/n - m[2]*m[1]; c[8] = prods[ci][2][2]/n - m[2]*m[2];
 
             double dtrm = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
-            if( dtrm < std::numeric_limits<double>::epsilon() )
+            if( dtrm <= std::numeric_limits<double>::epsilon() )
             {
                 // Adds the white noise to avoid singular covariance matrix.
                 c[0] += variance;
@@ -213,7 +213,7 @@ void GMM::calcInverseCovAndDeterm( int ci )
         double dtrm =
               covDeterms[ci] = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
 
-		CV_Assert( dtrm > std::numeric_limits<double>::epsilon() );
+        CV_Assert( dtrm > std::numeric_limits<double>::epsilon() );
         inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) / dtrm;
         inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) / dtrm;
         inverseCovs[ci][2][0] =  (c[3]*c[7] - c[4]*c[6]) / dtrm;
