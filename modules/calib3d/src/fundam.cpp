@@ -440,6 +440,7 @@ int CvFMEstimator::run8Point( const CvMat* _m1, const CvMat* _m2, CvMat* _fmatri
     const CvPoint2D64f* m1 = (const CvPoint2D64f*)_m1->data.ptr;
     const CvPoint2D64f* m2 = (const CvPoint2D64f*)_m2->data.ptr;
     double* fmatrix = _fmatrix->data.db;
+    CV_Assert( (_m1->cols == 1 || _m1->rows == 1) && CV_ARE_SIZES_EQ(_m1, _m2));
     int i, j, k, count = _m1->cols*_m1->rows;
 
     // compute centers and average distances for each of the two point sets
@@ -464,7 +465,7 @@ int CvFMEstimator::run8Point( const CvMat* _m1, const CvMat* _m2, CvMat* _fmatri
         double x = m1[i].x - m0c.x, y = m1[i].y - m0c.y;
         scale0 += sqrt(x*x + y*y);
 
-        x = fabs(m2[i].x - m1c.x), y = fabs(m2[i].y - m1c.y);
+        x = m2[i].x - m1c.x, y = m2[i].y - m1c.y;
         scale1 += sqrt(x*x + y*y);
     }
 

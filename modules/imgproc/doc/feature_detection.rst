@@ -158,7 +158,7 @@ cornerSubPix
 
     :param zeroZone: Half of the size of the dead region in the middle of the search zone over which the summation in the formula below is not done. It is used sometimes to avoid possible singularities of the autocorrelation matrix. The value of (-1,-1) indicates that there is no such a size.
 
-    :param criteria: Criteria for termination of the iterative process of corner refinement. That is, the process of corner position refinement stops either after a certain number of iterations or when a required accuracy is achieved. The  ``criteria``  may specify either the maximum number of iteration or the required accuracy, or both of them.??
+    :param criteria: Criteria for termination of the iterative process of corner refinement. That is, the process of corner position refinement stops either after ``criteria.maxCount`` iterations or when the corner position moves by less than ``criteria.epsilon`` on some iteration.
 
 The function iterates to find the sub-pixel accurate location of corners or radial saddle points, as shown on the picture below.
 
@@ -223,11 +223,11 @@ goodFeaturesToTrack
 
     :param blockSize: Size of an average block for computing a derivative covariation matrix over each pixel neighborhood. See  :func:`cornerEigenValsAndVecs` .
     
-    :param useHarrisDetector: Parameter indicating whether to use an operator or  :func:`cornerMinEigenVal` .??
+    :param useHarrisDetector: Parameter indicating whether to use a Harris detector (see :func:`cornerHarris`) or :func:`cornerMinEigenVal`.
     
     :param k: Free parameter of the Harris detector.
 
-The function finds the most prominent corners in the image or in the specified image region, as described in Shi94:
+The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]:
 
 #.
     Function calculates the corner quality measure at every source image pixel using the

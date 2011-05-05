@@ -78,7 +78,7 @@ cvtColor
 
     :param dst: Destination image of the same size and depth as  ``src`` .
     
-	:param code: Color space conversion code. See the details below.??/formatting/
+	:param code: Color space conversion code. See the description below.
 
     :param dstCn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
 
@@ -207,7 +207,7 @@ The function can do the following transformations:
     If
     :math:`H<0`     then
     :math:`H \leftarrow H+360`  . On output
-    :math:`0 \leq V \leq 1`,    :math:`0 \leq S \leq 1`,    :math:`0 \leq H \leq 360`     .??
+    :math:`0 \leq V \leq 1`,    :math:`0 \leq S \leq 1`,    :math:`0 \leq H \leq 360`     .
 
     The values are then converted to the destination data type:
 
@@ -414,7 +414,7 @@ distanceTransform
 
     :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
     :param distanceType: Type of distance. It can be  ``CV_DIST_L1, CV_DIST_L2`` , or  ``CV_DIST_C`` .
-    :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function??). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
+    :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
 
     :param labels: Optional output 2D array of labels (the discrete Voronoi diagram). It has the type  ``CV_32SC1``  and the same size as  ``src`` . See the details below.
 
@@ -500,58 +500,70 @@ floodFill
             * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), but fills the mask.  The flag can be used for the second variant only.
 
 The functions ``floodFill`` fill a connected component starting from the seed point with the specified color. The connectivity is determined by the color/brightness closeness of the neighbor pixels. The pixel at
-:math:`(x,y)` is considered to belong to the repainted domain if??:
+:math:`(x,y)` is considered to belong to the repainted domain if:
 
-* Grayscale image, floating range
-
+* 
     .. math::
 
         \texttt{src} (x',y')- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} (x',y')+ \texttt{upDiff}
 
-* Grayscale image, fixed range
+    in the case of grayscale image and floating range
+
+* 
 
     .. math::
 
         \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)+ \texttt{upDiff}
 
-* Color image, floating range
+    in the case of grayscale image and fixed range
+
+*
 
     .. math::
 
-        \texttt{src} (x',y')_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} (x',y')_r+ \texttt{upDiff} _r
+        \texttt{src} (x',y')_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} (x',y')_r+ \texttt{upDiff} _r,
 
     .. math::
 
         \texttt{src} (x',y')_g- \texttt{loDiff} _g \leq \texttt{src} (x,y)_g \leq \texttt{src} (x',y')_g+ \texttt{upDiff} _g
+        
+    and
 
     .. math::
 
         \texttt{src} (x',y')_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} (x',y')_b+ \texttt{upDiff} _b
 
-* Color image, fixed range
+    in the case of color image and floating range
+
+
+*
 
     .. math::
 
-        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r+ \texttt{upDiff} _r
+        \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r- \texttt{loDiff} _r \leq \texttt{src} (x,y)_r \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_r+ \texttt{upDiff} _r,
 
     .. math::
 
         \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_g- \texttt{loDiff} _g \leq \texttt{src} (x,y)_g \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_g+ \texttt{upDiff} _g
 
+    and
+
     .. math::
 
         \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b+ \texttt{upDiff} _b
+
+    in the case of color image and fixed range
 
 where
 :math:`src(x',y')` is the value of one of pixel neighbors that is already known to belong to the component. That is, to be added to the connected component, a color/brightness of the pixel should be close enough to:
 
 *
-    Color/brightness of one of its neighbors that are already referred to in?? the connected component in case of floating range.
+    Color/brightness of one of its neighbors that already belong to the connected component in case of floating range.
 
 *
     Color/brightness of the seed point in case of fixed range.
 
-Use these functions to either mark a connected component with the specified color in-place, or build a mask and then extract the contour, or copy the region to another image, and so on. Various modes of the function are demonstrated in the ``floodfill.c`` sample.
+Use these functions to either mark a connected component with the specified color in-place, or build a mask and then extract the contour, or copy the region to another image, and so on. Various modes of the function are demonstrated in the ``floodfill.cpp`` sample.
 
 See Also:
 :func:`findContours`
@@ -564,7 +576,7 @@ inpaint
 -----------
 .. c:function:: void inpaint( const Mat& src, const Mat& inpaintMask,              Mat& dst, double inpaintRadius, int flags )
 
-    Removes?? the selected region in an image.
+    Restores the selected region in an image using the region neighborhood.
 
     :param src: Input 8-bit 1-channel or 3-channel image.
 
@@ -602,11 +614,11 @@ integral
 
     :param sum: Integral image as  :math:`(W+1)\times (H+1)` , 32-bit integer or floating-point (32f or 64f).
 
-    :param sqsum: Integral image for squared pixel values represented as??  :math:`(W+1)\times (H+1)` , double precision floating-point (64f).
+    :param sqsum: Integral image for squared pixel values. It will be :math:`(W+1)\times (H+1)`, double-precision floating-point (64f) array.
 
-    :param tilted: Integral for the image rotated by 45 degrees represented as  :math:`(W+1)\times (H+1)` , with the same data type as  ``sum`` .
+    :param tilted: Integral for the image rotated by 45 degrees. It will be :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
     
-    :param sdepth: Desired depth of the integral and the tilted integral images,  ``CV_32S`` ,   ``CV_32F`` ,  or  ``CV_64F`` .
+    :param sdepth: Desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
 
 The functions calculate one or more integral images for the source image as following:
 
@@ -644,7 +656,7 @@ As a practical example, the next figure shows the calculation of the integral of
 
 threshold
 -------------
-.. c:function:: double threshold( const Mat& src, Mat& dst, double thresh,                  double maxVal, int thresholdType )
+.. c:function:: double threshold( const Mat& src, Mat& dst, double thresh, double maxVal, int thresholdType )
 
     Applies a fixed-level threshold to each array element.
 
@@ -727,9 +739,7 @@ watershed
 
 The function implements one of the variants
 of watershed, non-parametric marker-based segmentation algorithm,
-described in
-Meyer92??
-. Before passing the image to the
+described in [Meyer92]. Before passing the image to the
 function, you have to roughly outline the desired regions in the image ``markers`` with positive (
 :math:`>0` ) indices. So, every region is
 represented as one or more connected components with the pixel values
@@ -766,9 +776,9 @@ grabCut
 
     :param image: Input 8-bit 3-channel image.
 
-    :param mask: Input/output 8-bit single-channel mask. Its elements may have one of four values. The mask is initialized when  ``mode==GC_INIT_WITH_RECT`` .
-        
-		* **GC_BGD** defines an obvious background pixel.??
+    :param mask: Input/output 8-bit single-channel mask. The mask is initialized by the function when  ``mode`` is set to ``GC_INIT_WITH_RECT``. Its elements may have one of following values:
+
+        * **GC_BGD** defines an obvious background pixels.
 
         * **GC_FGD** defines an obvious foreground (object) pixel.
 
@@ -776,7 +786,7 @@ grabCut
 
         * **GC_PR_BGD** defines a possible foreground pixel.
 
-    :param rect: ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background"??. The parameter is only used when  ``mode==GC_INIT_WITH_RECT`` .
+    :param rect: ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background". The parameter is only used when  ``mode==GC_INIT_WITH_RECT`` .
     
     :param bgdModel, fgdModel: Temporary arrays used for segmentation. Do not modify them while you are processing the same image.
 

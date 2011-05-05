@@ -210,17 +210,15 @@ VideoCapture::VideoCapture
 ------------------------------
 .. c:function:: VideoCapture::VideoCapture()
 
-.. c:function:: VideoCapture::VideoCapture(const string\& filename)
+.. c:function:: VideoCapture::VideoCapture(const string& filename)
 
 .. c:function:: VideoCapture::VideoCapture(int device)
 
-VideoCapture constructors.?? No desc here and further??
+VideoCapture constructors.
 
-    :param filename: TOWRITE
+    :param filename: name of the opened video file
 
-    :param device: TOWRITE
-
-
+    :param device: id of the opened video capturing device (i.e. a camera index).
 
 .. index:: VideoCapture::get
 
@@ -281,7 +279,7 @@ VideoCapture::set
 ---------------------
 .. c:function:: bool VideoCapture::set(int property_id, double value)
 
-	Sets a property in the VideoCapture backend.
+    Sets a property in the VideoCapture backend.
 
     :param property_id: Property identifier. It can be one of the following:
 

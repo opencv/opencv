@@ -10,7 +10,7 @@ moments
 .. c:function:: Moments moments( const Mat& array, bool binaryImage=false )
 
     Calculates all of the moments up to the third order of a polygon or rasterized shape where the class ``Moments`` is defined as: ::
-	
+
     class Moments
     {
     public:
@@ -131,7 +131,7 @@ findContours
 
     :param method: Contour approximation method.
 
-            * **CV_CHAIN_APPROX_NONE** stores absolutely all contour points. That is, every 2 points of a contour stored with this method are 8?? connected neighbors of each other.
+            * **CV_CHAIN_APPROX_NONE** stores absolutely all the contour points. That is, any 2 subsequent points ``(x1,y1)`` and ``(x2,y2)`` of the contour will be either horizontal, vertical or diagonal neighbors, that is, ``max(abs(x1-x2),abs(y2-y1))==1``.
 
             * **CV_CHAIN_APPROX_SIMPLE** compresses horizontal, vertical, and diagonal segments and leaves only their end points. For example, an up-right rectangular contour is encoded with 4 points.
 
@@ -227,7 +227,7 @@ approxPolyDP
 
     Approximates a polygonal curve(s) with the specified precision.
 
-    :param curve: Polygon or curve to approximate. It must be  :math:`1 \times N`  or  :math:`N \times 1`  matrix of type  ``CV_32SC2``  or  ``CV_32FC2`` . You can also convert  ``vector<Point>``  or  ``vector<Point2f`` >?? to the matrix by calling the  ``Mat(const vector<T>&)``  constructor.
+    :param curve: Polygon or curve to approximate. It must be  :math:`1 \times N`  or  :math:`N \times 1`  matrix of type  ``CV_32SC2``  or  ``CV_32FC2`` . You can also convert  ``vector<Point>``  or  ``vector<Point2f>`` to the matrix by calling the  ``Mat(const vector<T>&)``  constructor.
 
     :param approxCurve: Result of the approximation. The type should match the type of the input curve.
 
@@ -306,7 +306,7 @@ See Also:
 
 estimateAffine3D
 --------------------
-.. c:function:: int estimateAffine3D(const Mat& srcpt, const Mat& dstpt, Mat& out,                     vector<uchar>& outliers,                     double ransacThreshold = 3.0,                     double confidence = 0.99)
+.. c:function:: int estimateAffine3D(const Mat& srcpt, const Mat& dstpt, Mat& out,                     vector<uchar>& outliers, double ransacThreshold = 3.0, double confidence = 0.99)
 
     Computes an optimal affine transformation between two 3D point sets.
 
@@ -315,12 +315,12 @@ estimateAffine3D
     :param dstpt: The second input 3D point set.
 
     :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
-	
+
     :param outliers: Output vector indicating which points are outliers.
 
     :param ransacThreshold: Maximum reprojection error in the RANSAC algorithm to consider a point as an inlier.
 
-    :param confidence: Confidence level, between 0 and 1, to estimate a matrix.??
+    :param confidence: The confidence level, between 0 and 1, that the estimated transformation will have. Anything between 0.95 and 0.99 is usually good enough. Too close to 1 values can slow down the estimation too much, lower than 0.8-0.9 confidence values can result in an incorrectly estimated transformation.
 
 The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
 
@@ -385,11 +385,11 @@ that has
 
 fitEllipse
 --------------
-.. c:function:: RotatedRect fitEllipse( const Mat& points )
+.. c:function:: RotatedRect fitEllipse( const InputArray& points )
 
     Fits an ellipse around a set of 2D points.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to a matrix using the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
 
 The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed.
 
@@ -397,18 +397,13 @@ The function calculates the ellipse that fits (in least-squares sense) a set of 
 
 fitLine
 -----------
-.. c:function:: void fitLine( const Mat& points, Vec4f& line, int distType,              double param, double reps, double aeps )
-
-.. c:function:: void fitLine( const Mat& points, Vec6f& line, int distType,              double param, double reps, double aeps )
+.. c:function:: void fitLine( const InputArray& points, OutputArray& line, int distType,              double param, double reps, double aeps )
 
     Fits a line to a 2D or 3D point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by ``vector<Point>`` /``vector<Point2f>`` / ``vector<Point3i>``  /``vector<Point3f>``  converted to a matrix by the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D or 3D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by ``vector<Point>``, ``vector<Point2f>``, ``vector<Point3i>`` or ``vector<Point3f>``.
 
-    :param line: Output line parameters. In case of 2D fitting,
-        it is a vector of 4 floats  ``(vx, vy, x0, y0)``  where  ``(vx, vy)``  is a normalized vector collinear to the
-        line and  ``(x0, y0)``  is a point on the line. In case of
-        3D fitting, it is a vector of 6 floats  ``(vx, vy, vz, x0, y0, z0)`` where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
+    :param line: Output line parameters. In case of 2D fitting it should be ``Vec4f``, a vector of 4 floats  ``(vx, vy, x0, y0)``,  where  ``(vx, vy)``  is a normalized vector collinear to the line and  ``(x0, y0)``  is a point on the line. In case of 3D fitting, it should be ``Vec6f``, a vector of 6 floats  ``(vx, vy, vz, x0, y0, z0)``, where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
 
     :param distType: Distance used by the M-estimator (see the discussion).
 
@@ -416,7 +411,7 @@ fitLine
 
     :param reps, aeps: Sufficient accuracy for the radius (distance between the coordinate origin and the line) and angle, respectively. 0.01 would be a good default value for both.
 
-The functions ``fitLine`` fit a line to a 2D or 3D point set by minimizing
+The function ``fitLine`` fits a line to a 2D or 3D point set by minimizing
 :math:`\sum_i \rho(r_i)` where
 :math:`r_i` is a distance between the
 :math:`i^{th}` point, the line and
@@ -468,11 +463,11 @@ http://en.wikipedia.org/wiki/M-estimator
 
 isContourConvex
 -------------------
-.. c:function:: bool isContourConvex( const Mat& contour )
+.. c:function:: bool isContourConvex( const InputArray& contour )
 
     Tests a contour convexity.
 
-    :param contour: Tested contour, a matrix of type  ``CV_32SC2``  or  ``CV_32FC2`` , or  ``vector<Point>`` /``vector<Point2f>``  converted to the matrix using the  ``Mat(const vector<T>&)``  constructor.??
+    :param contour: Tested contour, a matrix of type ``CV_32SC2``  or  ``CV_32FC2`` , or  ``vector<Point>`` or ``vector<Point2f>``.
 
 The function tests whether the input contour is convex or not. The contour must be simple, that is, without self-intersections. Otherwise, the function output is undefined.
 
@@ -480,35 +475,35 @@ The function tests whether the input contour is convex or not. The contour must 
 
 minAreaRect
 ---------------
-.. c:function:: RotatedRect minAreaRect( const Mat& points )
+.. c:function:: RotatedRect minAreaRect( const InputArray& points )
 
-    Finds a rotated rectangle of the minimum area enclosing a 2D point set.??
+    Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to the matrix using  the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
 
-The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.c`` .
+The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
 
 .. index:: minEnclosingCircle
 
 minEnclosingCircle
 ----------------------
-.. c:function:: void minEnclosingCircle( const Mat& points, Point2f& center, float& radius )
+.. c:function:: void minEnclosingCircle( const InputArray& points, Point2f& center, float& radius )
 
     Finds a circle of the minimum area enclosing a 2D point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to the matrix using the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
 
     :param center: Output center of the circle.
 
     :param radius: Output radius of the circle.
 
-The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See the OpenCV sample ``minarea.c`` .
+The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See the OpenCV sample ``minarea.cpp`` .
 
 .. index:: matchShapes
 
 matchShapes
 ---------------
-.. c:function:: double matchShapes( const Mat& object1,                    const Mat& object2,                    int method, double parameter=0 )
+.. c:function:: double matchShapes( const InputArray& object1, const InputArray& object2, int method, double parameter=0 )
 
     Compares two shapes.
 
@@ -558,7 +553,7 @@ and
 
 pointPolygonTest
 --------------------
-.. c:function:: double pointPolygonTest( const Mat& contour, Point2f pt, bool measureDist )
+.. c:function:: double pointPolygonTest( const InputArray& contour, Point2f pt, bool measureDist )
 
     Performs a point-in-contour test.
 

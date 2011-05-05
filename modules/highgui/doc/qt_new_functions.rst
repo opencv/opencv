@@ -85,9 +85,9 @@ setWindowProperty
             
             * **CV_WINDOW_FULLSCREEN** Change the window to fullscreen.
             
-            * **CV_WINDOW_FREERATIO** Make the image extendable (no ratio constraint).??
+            * **CV_WINDOW_FREERATIO** Make the window resizable without any ratio constraints.
             
-            * **CV_WINDOW_KEEPRATIO** Maintain the image ratio.??
+            * **CV_WINDOW_KEEPRATIO** Make the window resizable, but preserve the proportions of the displayed image.
             
 
 The function ``setWindowProperty``  enables changing properties of a window.
@@ -200,19 +200,17 @@ displayOverlay
 
     :param text: Overlay text to write on a window image.
 
-    :param delay: Duration (in milliseconds)? to display the overlay text. If this function is called before the previous overlay text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
+    :param delay: The period (in milliseconds), during which the overlay text is displayed. If this function is called before the previous overlay text timed out, the timer is restarted and the text is updated. If this value is zero, the text never disappears.
 
-The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time
-*delay*
-. This does not affect the image data.?? 
+The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time *delay*. The function does not modify the image, displayed in the window, that is, after the specified delay the original content of the window is restored.
 
 .. index:: displayStatusBar
 
 displayStatusBar
 --------------------
-.. c:function:: void displayStatusBar(const string& name, const string& text, int delayms)
+.. c:function:: void displayStatusBar(const string& name, const string& text, int delay)
 
-    Displays a text on the window statusbar for a specified duration.??
+    Displays a text on the window statusbar during the specified period of time.
 
     :param name: Name of the window.
 
@@ -231,7 +229,7 @@ createOpenGLCallback
 
 .. c:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
 
-    Creates a callback function called to draw OpenGL on top the the image display by ``windowname`` .
+    Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
     :param window_name: Name of the window.
 
@@ -313,7 +311,7 @@ createButton
 
     Creates a callback function called to draw OpenGL on top of the image display by ``windowname`` .
 
-    :param  button_name: Name of the button. If NULL, the name is ``button <number of buttons>`` .??
+    :param  button_name: Name of the button.
 
     :param on_change: Pointer to the function to be called every time the button changes its state. This function should be prototyped as  ``void Foo(int state,*void);`` .  *state*  is the current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 
