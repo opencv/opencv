@@ -491,8 +491,17 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
 
     edges_.clear();
     for (int i = 0; i < num_images_ - 1; ++i)
+    {
         for (int j = i + 1; j < num_images_; ++j)
-            edges_.push_back(make_pair(i, j));
+        {
+            int pair_idx = i * num_images_ + j;
+            const MatchesInfo& mi = pairwise_matches_[pair_idx];
+            float ni = static_cast<float>(mi.num_inliers);
+            float nf = static_cast<float>(mi.matches.size());
+            if (ni / (8.f + 0.3f * nf) > dist_thresh_)
+                edges_.push_back(make_pair(i, j));
+        }
+    }
 
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
@@ -528,7 +537,7 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
         if (_err)
         {
             calcError(err_);
-            //LOGLN("Error: " << sqrt(err_.dot(err_)));
+            LOGLN("Error: " << sqrt(err_.dot(err_)));
             count++;
             CvMat matErr = err_;
             cvCopy( &matErr, _err );

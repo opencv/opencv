@@ -15,6 +15,7 @@ void printUsage()
         << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
         << "\t[--matchconf <0.0-1.0>]\n"
         << "\t[--ba (ray|focal_ray)]\n"
+        << "\t[--ba_thresh <float>]\n"
         //<< "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--seam (no|voronoi|graphcut)]\n" 
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
     vector<Mat> images;
     string result_name = "result.png";
     int ba_space = BundleAdjuster::RAY_SPACE;
+    float ba_thresh = 1.f;
     bool wave_correct = false;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
@@ -52,7 +54,7 @@ int main(int argc, char* argv[])
         else if (string(argv[i]) == "--matchconf")
         {
             user_match_conf = true;
-            match_conf = static_cast<float>(atof(string(argv[i + 1]).c_str()));
+            match_conf = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--ba")
@@ -66,6 +68,11 @@ int main(int argc, char* argv[])
                 cout << "Bad bundle adjustment space\n";
                 return -1;
             }
+            i++;
+        }
+        else if (string(argv[i]) == "--ba_thresh")
+        {
+            ba_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         //else if (string(argv[i]) == "--wavecorrect")
@@ -176,7 +183,7 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Bundle adjustment...");
-    BundleAdjuster adjuster(ba_space);
+    BundleAdjuster adjuster(ba_space, ba_thresh);
     adjuster(images, features, pairwise_matches, cameras);
 
     if (wave_correct)
