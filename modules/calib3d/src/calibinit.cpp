@@ -1929,6 +1929,10 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
 bool cv::findCirclesGrid( const InputArray& _image, Size patternSize,
                           OutputArray _centers, int flags )
 {
+    bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID);
+    bool isSymmetricGrid = (flags & CALIB_CB_SYMMETRIC_GRID);
+    CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
+
     Mat image = _image.getMat();
     vector<Point2f> centers;
     SimpleBlobDetector::Params params;
@@ -1947,9 +1951,9 @@ bool cv::findCirclesGrid( const InputArray& _image, Size patternSize,
       points.push_back (keypoints[i].pt);
     }
 
-    if((flags & CALIB_CB_CLUSTERING) && (flags & CALIB_CB_ASYMMETRIC_GRID))
+    if(flags & CALIB_CB_CLUSTERING)
     {
-      CirclesGridClusterFinder circlesGridClusterFinder;
+      CirclesGridClusterFinder circlesGridClusterFinder(isAsymmetricGrid);
       circlesGridClusterFinder.findGrid(points, patternSize, centers);
       Mat(centers).copyTo(_centers);
       return !centers.empty();

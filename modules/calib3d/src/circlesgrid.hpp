@@ -53,8 +53,9 @@
 class CirclesGridClusterFinder
 {
 public:
-  CirclesGridClusterFinder()
+  CirclesGridClusterFinder(bool _isAsymmetricGrid)
   {
+    isAsymmetricGrid = _isAsymmetricGrid;
     squareSize = 1.0f;
     maxRectifiedDistance = squareSize / 2.0;
   }
@@ -66,10 +67,13 @@ private:
   void findCorners(const std::vector<cv::Point2f> &hull2f, std::vector<cv::Point2f> &corners);
   void findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners);
   void getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners);
-  void rectifyPatternPoints(const cv::Size &patternSize, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &sortedCorners, std::vector<cv::Point2f> &rectifiedPatternPoints);
-  void parsePatternPoints(const cv::Size &patternSize, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers);
+  void rectifyPatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &sortedCorners, std::vector<cv::Point2f> &rectifiedPatternPoints);
+  void parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers);
 
   float squareSize, maxRectifiedDistance;
+  bool isAsymmetricGrid;
+
+  cv::Size patternSize;
 };
 
 class Graph

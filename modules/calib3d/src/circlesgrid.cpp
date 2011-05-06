@@ -73,7 +73,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 
   int patternClusterIdx = 0;
-  while((int)clusters[patternClusterIdx].size() < patternSize.area() && countNonZero(distsMask == 255) > 0)
+  while(clusters[patternClusterIdx].size() < static_cast<size_t>(patternSize.area()) && countNonZero(distsMask == 255) > 0)
   {
     Point minLoc;
     minMaxLoc(dists, 0, 0, &minLoc, 0, distsMask);
@@ -93,7 +93,8 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 
   patternPoints.clear();
-  if((int)clusters[patternClusterIdx].size() != patternSize.area())
+
+  if(clusters[patternClusterIdx].size() != static_cast<size_t>(patternSize.area()))
   {
     return;
   }
@@ -104,8 +105,9 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 }
 
-void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size patternSize, vector<Point2f>& centers)
+void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size _patternSize, vector<Point2f>& centers)
 {
+  patternSize = _patternSize;
   centers.clear();
   if(points.empty())
   {
@@ -121,7 +123,7 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, c
 
   vector<Point2f> hull2f;
   convexHull(Mat(patternPoints), hull2f, false);
-  const size_t cornersCount = 6;
+  const size_t cornersCount = isAsymmetricGrid ? 6 : 4;
   if(hull2f.size() < cornersCount)
     return;
 
@@ -130,23 +132,24 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, c
   if(corners.size() != cornersCount)
     return;
 
-  vector<Point2f> outsideCorners;
-  findOutsideCorners(corners, outsideCorners);
-  const size_t outsideCornersCount = 2;
-  if(outsideCorners.size() != outsideCornersCount)
-    return;
-
-  vector<Point2f> sortedCorners;
+  vector<Point2f> outsideCorners, sortedCorners;
+  if(isAsymmetricGrid)
+  {
+    findOutsideCorners(corners, outsideCorners);
+    const size_t outsideCornersCount = 2;
+    if(outsideCorners.size() != outsideCornersCount)
+      return;
+  }
   getSortedCorners(hull2f, corners, outsideCorners, sortedCorners);
   if(sortedCorners.size() != cornersCount)
     return;
 
   vector<Point2f> rectifiedPatternPoints;
-  rectifyPatternPoints(patternSize, patternPoints, sortedCorners, rectifiedPatternPoints);
+  rectifyPatternPoints(patternPoints, sortedCorners, rectifiedPatternPoints);
   if(patternPoints.size() != rectifiedPatternPoints.size())
     return;
 
-  parsePatternPoints(patternSize, patternPoints, rectifiedPatternPoints, centers);
+  parsePatternPoints(patternPoints, rectifiedPatternPoints, centers);
 }
 
 void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2f, std::vector<cv::Point2f> &corners)
@@ -167,7 +170,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   Mat sortedIndices;
   sortIdx(anglesMat, sortedIndices, CV_SORT_EVERY_COLUMN + CV_SORT_DESCENDING);
   CV_Assert(sortedIndices.type() == CV_32SC1);
-  const int cornersCount = 6;
+  const int cornersCount = isAsymmetricGrid ? 6 : 4;
   corners.clear();
   for(int i=0; i<cornersCount; i++)
   {
@@ -224,20 +227,28 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 
 void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners)
 {
-  Point2f center = std::accumulate(corners.begin(), corners.end(), Point2f(0.0f, 0.0f));
-  center *= 1.0 / corners.size();
-
-  vector<Point2f> centerToCorners;
-  for(size_t i=0; i<outsideCorners.size(); i++)
+  Point2f firstCorner;
+  if(isAsymmetricGrid)
   {
-    centerToCorners.push_back(outsideCorners[i] - center);
-  }
+    Point2f center = std::accumulate(corners.begin(), corners.end(), Point2f(0.0f, 0.0f));
+    center *= 1.0 / corners.size();
 
-  //TODO: use CirclesGridFinder::getDirection
-  float crossProduct = centerToCorners[0].x * centerToCorners[1].y - centerToCorners[0].y * centerToCorners[1].x;
-  //y axis is inverted in computer vision so we check > 0
-  bool isClockwise = crossProduct > 0;
-  Point2f firstCorner  = isClockwise ? outsideCorners[1] : outsideCorners[0];
+    vector<Point2f> centerToCorners;
+    for(size_t i=0; i<outsideCorners.size(); i++)
+    {
+      centerToCorners.push_back(outsideCorners[i] - center);
+    }
+
+    //TODO: use CirclesGridFinder::getDirection
+    float crossProduct = centerToCorners[0].x * centerToCorners[1].y - centerToCorners[0].y * centerToCorners[1].x;
+    //y axis is inverted in computer vision so we check > 0
+    bool isClockwise = crossProduct > 0;
+    firstCorner  = isClockwise ? outsideCorners[1] : outsideCorners[0];
+  }
+  else
+  {
+    firstCorner = corners[0];
+  }
 
   std::vector<Point2f>::const_iterator firstCornerIterator = std::find(hull2f.begin(), hull2f.end(), firstCorner);
   sortedCorners.clear();
@@ -257,16 +268,34 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
       sortedCorners.push_back(*it);
     }
   }
+
+  if(!isAsymmetricGrid)
+  {
+    double dist1 = norm(sortedCorners[0] - sortedCorners[1]);
+    double dist2 = norm(sortedCorners[1] - sortedCorners[2]);
+
+    if((dist1 > dist2 && patternSize.height > patternSize.width) || (dist1 < dist2 && patternSize.height < patternSize.width))
+    {
+      for(size_t i=0; i<sortedCorners.size()-1; i++)
+      {
+        sortedCorners[i] = sortedCorners[i+1];
+      }
+      sortedCorners[sortedCorners.size() - 1] = firstCorner;
+    }
+  }
 }
 
-void CirclesGridClusterFinder::rectifyPatternPoints(const cv::Size &patternSize, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &sortedCorners, std::vector<cv::Point2f> &rectifiedPatternPoints)
+void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &sortedCorners, std::vector<cv::Point2f> &rectifiedPatternPoints)
 {
   //indices of corner points in pattern
   vector<Point> trueIndices;
   trueIndices.push_back(Point(0, 0));
   trueIndices.push_back(Point(patternSize.width - 1, 0));
-  trueIndices.push_back(Point(patternSize.width - 1, 1));
-  trueIndices.push_back(Point(patternSize.width - 1, patternSize.height - 2));
+  if(isAsymmetricGrid)
+  {
+    trueIndices.push_back(Point(patternSize.width - 1, 1));
+    trueIndices.push_back(Point(patternSize.width - 1, patternSize.height - 2));
+  }
   trueIndices.push_back(Point(patternSize.width - 1, patternSize.height - 1));
   trueIndices.push_back(Point(0, patternSize.height - 1));
 
@@ -275,7 +304,14 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const cv::Size &patternSize,
   {
     int i = trueIndices[idx].y;
     int j = trueIndices[idx].x;
-    idealPoints.push_back(Point2f((2*j + i % 2)*squareSize, i*squareSize));
+    if(isAsymmetricGrid)
+    {
+      idealPoints.push_back(Point2f((2*j + i % 2)*squareSize, i*squareSize));
+    }
+    else
+    {
+      idealPoints.push_back(Point2f(j*squareSize, i*squareSize));
+    }
   }
 
   Mat homography = findHomography(Mat(sortedCorners), Mat(idealPoints), 0);
@@ -285,7 +321,7 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const cv::Size &patternSize,
   convertPointsFromHomogeneous(rectifiedPointsMat, rectifiedPatternPoints);
 }
 
-void CirclesGridClusterFinder::parsePatternPoints(const cv::Size &patternSize, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
+void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
   flann::LinearIndexParams flannIndexParams;
   flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
@@ -295,7 +331,12 @@ void CirclesGridClusterFinder::parsePatternPoints(const cv::Size &patternSize, c
   {
     for( int j = 0; j < patternSize.width; j++ )
     {
-      Point2f idealPt((2*j + i % 2)*squareSize, i*squareSize);
+      Point2f idealPt;
+      if(isAsymmetricGrid)
+        idealPt = Point2f((2*j + i % 2)*squareSize, i*squareSize);
+      else
+        idealPt = Point2f(j*squareSize, i*squareSize);
+
       vector<float> query = Mat(idealPt);
       int knn = 1;
       vector<int> indices(knn);
