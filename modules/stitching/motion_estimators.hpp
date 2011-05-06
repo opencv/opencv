@@ -44,6 +44,7 @@ struct MatchesInfo
 
     int src_img_idx, dst_img_idx; // Optional images indices
     std::vector<cv::DMatch> matches;
+    std::vector<uchar> inliers_mask;
     int num_inliers; // Number of geometrically consistent matches
     cv::Mat H; // Homography
 };

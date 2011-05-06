@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     string result_name = "result.png";
     int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
     float ba_thresh = 1.f;
-    bool wave_correct = false;
+    bool wave_correct = true;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
     float match_conf = 0.55f;

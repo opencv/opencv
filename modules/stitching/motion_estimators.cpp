@@ -309,13 +309,12 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
     }
 
     // Find pair-wise motion
-    vector<uchar> inlier_mask;
-    matches_info.H = findHomography(src_points, dst_points, inlier_mask, CV_RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
 
     // Find number of inliers
     matches_info.num_inliers = 0;
-    for (size_t i = 0; i < inlier_mask.size(); ++i)
-        if (inlier_mask[i])
+    for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+        if (matches_info.inliers_mask[i])
             matches_info.num_inliers++;
 
     // Check if we should try to refine motion
@@ -328,8 +327,9 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
     int inlier_idx = 0;
     for (size_t i = 0; i < matches_info.matches.size(); ++i)
     {
-        if (!inlier_mask[i])
+        if (!matches_info.inliers_mask[i])
             continue;
+
         const DMatch& m = matches_info.matches[i];
 
         Point2f p = features1.keypoints[m.queryIdx].pt;
@@ -346,13 +346,7 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
     }
 
     // Rerun motion estimation on inliers only
-    matches_info.H = findHomography(src_points, dst_points, inlier_mask, CV_RANSAC);
-
-    // Find number of inliers
-    matches_info.num_inliers = 0;
-    for (size_t i = 0; i < inlier_mask.size(); ++i)
-        if (inlier_mask[i])
-            matches_info.num_inliers++;
+    matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
 }
 
 
@@ -505,7 +499,7 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
 
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
-        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].matches.size());
+        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].num_inliers);
 
     CvLevMarq solver(num_images_ * 4, total_num_matches_ * 3,
                      cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 100, DBL_EPSILON));
@@ -599,6 +593,9 @@ void BundleAdjuster::calcError(Mat &err)
 
         for (size_t k = 0; k < matches_info.matches.size(); ++k)
         {
+            if (!matches_info.inliers_mask[k])
+                continue;
+
             const DMatch& m = matches_info.matches[k];
 
             Point2d kp1 = features1.keypoints[m.queryIdx].pt;
