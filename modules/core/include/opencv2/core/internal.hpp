@@ -122,8 +122,13 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #if defined ANDROID && defined __ARM_NEON__
 #include "arm_neon.h"
 #define CV_NEON 1
+
+#define CPU_HAS_NEON_FEATURE (true)
+//TODO: make real check using stuff from "cpu-features.h"
+//((bool)android_getCpuFeatures() & ANDROID_CPU_ARM_FEATURE_NEON)
 #else
 #define CV_NEON 0
+#define CPU_HAS_NEON_FEATURE (false)
 #endif
 
 #ifndef IPPI_CALL

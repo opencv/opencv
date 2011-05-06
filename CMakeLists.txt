@@ -447,6 +447,7 @@ if(UNIX)
         endif()
         if(WITH_V4L)
 
+
             CHECK_MODULE(libv4l1 HAVE_LIBV4L)
             CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
             CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
@@ -889,6 +890,7 @@ if(MSVC)
     # 64-bit portability warnings, in MSVC8
     if(MSVC80)
         set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /Wp64")
+
     endif()
     #if(MSVC90)
     #    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /D _BIND_TO_CURRENT_CRT_VERSION=1 /D _BIND_TO_CURRENT_VCLIBS_VERSION=1")
@@ -1016,10 +1018,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
     set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -ggdb3 -DDEBUG -D_DEBUG")
 
-    if(ANDROID)
-      #force compiler to interpret char as signed char
-      set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -fsigned-char")
-    endif()
 endif()
 
 # Extra link libs if the user selects building static libs:
