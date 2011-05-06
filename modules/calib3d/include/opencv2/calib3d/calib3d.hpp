@@ -44,6 +44,7 @@
 #define __OPENCV_CALIB3D_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -527,11 +528,12 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
                                          const InputArray& corners, bool patternWasFound );
 
 enum { CALIB_CB_SYMMETRIC_GRID = 1, CALIB_CB_ASYMMETRIC_GRID = 2,
-       CALIB_CB_CLUSTERING = 4, CALIB_CB_WHITE_CIRCLES = 8 };
+       CALIB_CB_CLUSTERING = 4 };
 
 //! finds circles' grid pattern of the specified size in the image
-CV_EXPORTS_W bool findCirclesGrid( const InputArray& image, Size patternSize,
-                                   OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID );
+CV_EXPORTS bool findCirclesGrid( const InputArray& image, Size patternSize,
+                                 OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID,
+                                 const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector());
 
 enum
 {

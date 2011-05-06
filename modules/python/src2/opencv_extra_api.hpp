@@ -406,6 +406,14 @@ CV_WRAP static inline void convertPointsHomogeneous( const Mat& src, CV_OUT Mat&
     cvConvertPointsHomogeneous(&_src, &_dst);
 }
 
+//! finds circles' grid pattern of the specified size in the image
+CV_WRAP static inline void findCirclesGridDefault( const InputArray& image, Size patternSize,
+                                                   OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID )
+{
+    findCirclesGrid(image, patternSize, centers, flags);
+}
+
+
 /*
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_WRAP static inline Mat initCameraMatrix2D( const vector<Mat>& objectPoints,
