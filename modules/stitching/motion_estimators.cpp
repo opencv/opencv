@@ -685,7 +685,6 @@ void BundleAdjuster::calcJacobian()
 
 //////////////////////////////////////////////////////////////////////////////
 
-// TODO test on adobe/halfdome
 void waveCorrect(vector<Mat> &rmats)
 {
     float data[9];
@@ -710,10 +709,13 @@ void waveCorrect(vector<Mat> &rmats)
     Mat avgz = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
         avgz += rmats[i].col(2);
-    avgz.t().cross(r1).copyTo(r0);
+    r1.cross(avgz.t()).copyTo(r0);
     normalize(r0, r0);
 
-    r0.cross(r1).copyTo(r2);
+    r1.cross(r0).copyTo(r2);
+
+    if (determinant(R) < 0)
+        R *= -1;
 
     for (size_t i = 0; i < rmats.size(); ++i)
         rmats[i] = R * rmats[i];

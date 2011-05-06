@@ -11,16 +11,20 @@ using namespace cv;
 
 void printUsage()
 {
-    cout << "Rotation model images stitcher.\n" 
-        << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
-        << "\t[--matchconf <0.0-1.0>]\n"
+    cout << "Rotation model images stitcher.\n\n";
+    cout << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
+        << "\t[--matchconf <float>]\n"
         << "\t[--ba (ray|focal_ray)]\n"
         << "\t[--ba_thresh <float>]\n"
-        //<< "\t[--wavecorrect (no|yes)]\n"
+        << "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--seam (no|voronoi|graphcut)]\n" 
         << "\t[--blend (no|feather|multiband)]\n"
-        << "\t[--output <result_img>]\n";
+        << "\t[--output <result_img>]\n\n";
+    cout << "--matchconf\n"
+        << "\tGood values are in [0.2, 0.8] range usually.\n\n";
+    cout << "--ba_thresh\n"
+        << "\tGood values are in [0.3, 1.0] range usually.\n";
 }
 
 int main(int argc, char* argv[])
@@ -29,7 +33,7 @@ int main(int argc, char* argv[])
 
     vector<Mat> images;
     string result_name = "result.png";
-    int ba_space = BundleAdjuster::RAY_SPACE;
+    int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
     float ba_thresh = 1.f;
     bool wave_correct = false;
     int warp_type = Warper::SPHERICAL;
@@ -75,19 +79,19 @@ int main(int argc, char* argv[])
             ba_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
-        //else if (string(argv[i]) == "--wavecorrect")
-        //{
-        //    if (string(argv[i + 1]) == "no")
-        //        wave_correct = false;
-        //    else if (string(argv[i + 1]) == "yes")
-        //        wave_correct = true;
-        //    else
-        //    {
-        //        cout << "Bad wave correct flag value\n";
-        //        return -1;
-        //    }
-        //    i++;
-        //}
+        else if (string(argv[i]) == "--wavecorrect")
+        {
+            if (string(argv[i + 1]) == "no")
+                wave_correct = false;
+            else if (string(argv[i + 1]) == "yes")
+                wave_correct = true;
+            else
+            {
+                cout << "Bad wave correct flag value\n";
+                return -1;
+            }
+            i++;
+        }
         else if (string(argv[i]) == "--warp")
         {
             if (string(argv[i + 1]) == "plane")
