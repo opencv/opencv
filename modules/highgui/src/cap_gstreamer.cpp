@@ -278,17 +278,17 @@ void CvCapture_GStreamer::newPad(GstElement *uridecodebin,
                              GstPad     *pad,
                              gpointer    data)
 {
-  GstPad *sinkpad;
-  GstElement *color = (GstElement *) data;
+    GstPad *sinkpad;
+    GstElement *color = (GstElement *) data;
 
 
-  sinkpad = gst_element_get_static_pad (color, "sink");
+    sinkpad = gst_element_get_static_pad (color, "sink");
   
 //  printf("linking dynamic pad to colourconverter %p %p\n", uridecodebin, pad);
 
-  gst_pad_link (pad, sinkpad);
+    gst_pad_link (pad, sinkpad);
 
-  gst_object_unref (sinkpad);
+    gst_object_unref (sinkpad);
 }
 
 bool CvCapture_GStreamer::open( int type, const char* filename )
@@ -347,11 +347,11 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     if(!uridecodebin) {
         uridecodebin = gst_element_factory_make ("uridecodebin", NULL);
         g_object_set(G_OBJECT(uridecodebin),"uri",uri, NULL);
-    }
-    if(!uridecodebin) {
-        CV_WARN("GStreamer: Failed to create uridecodebin\n");
-        close();
-        return false;
+        if(!uridecodebin) {
+            CV_WARN("GStreamer: Failed to create uridecodebin\n");
+            close();
+            return false;
+        }
     }
 
     if(manualpipeline) {
@@ -384,10 +384,10 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
     {
     GstCaps* caps;
     caps = gst_caps_new_simple("video/x-raw-rgb",
-                               "red_mask",   G_TYPE_INT, 0x0000FF,
-                               "green_mask", G_TYPE_INT, 0x00FF00,
-                               "blue_mask",  G_TYPE_INT, 0xFF0000,
-                               NULL);
+			       "red_mask",   G_TYPE_INT, 0x0000FF,
+			       "green_mask", G_TYPE_INT, 0x00FF00,
+			       "blue_mask",  G_TYPE_INT, 0xFF0000,
+			       NULL);
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
     gst_caps_unref(caps);
     }
@@ -401,6 +401,7 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING) ==
        GST_STATE_CHANGE_FAILURE) {
+        gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
         CV_WARN("GStreamer: unable to set pipeline to playing\n");
         gst_object_unref(pipeline);
         return false;
