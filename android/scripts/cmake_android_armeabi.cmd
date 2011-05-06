@@ -8,4 +8,4 @@ SET CMAKE_EXE=C:\apps\cmake\bin\cmake.exe
 SET MAKE_EXE=C:\apps\gnuport\make.exe
 
 cd build
-%CMAKE_EXE% -G"Unix Makefiles" -DARM_TARGET=armeabi -DCMAKE_TOOLCHAIN_FILE=..\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=%MAKE_EXE% ..\..
+%CMAKE_EXE% -C ../CMakeCache.android.initial.cmake -G"Unix Makefiles" -DARM_TARGET=armeabi -DCMAKE_TOOLCHAIN_FILE=..\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=%MAKE_EXE% ..\..
