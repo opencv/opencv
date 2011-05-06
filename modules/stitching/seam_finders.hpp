@@ -52,7 +52,7 @@ class GraphCutSeamFinder : public PairwiseSeamFinder
 {
 public:
     // TODO add COST_COLOR_GRAD support
-    enum { COST_COLOR/*, COST_COLOR_GRAD*/ };
+    enum { COST_COLOR };
 
     GraphCutSeamFinder(int cost_type = COST_COLOR, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);

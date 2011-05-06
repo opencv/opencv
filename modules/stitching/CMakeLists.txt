@@ -18,13 +18,7 @@ include_directories(
 
 set(stitching_libs opencv_core opencv_imgproc opencv_highgui opencv_features2d opencv_calib3d opencv_gpu)
 
-set(stitching_files blenders.hpp blenders.cpp
-                    focal_estimators.hpp focal_estimators.cpp
-                    motion_estimators.hpp motion_estimators.cpp
-                    seam_finders.hpp seam_finders.cpp
-                    util.hpp util.cpp util_inl.hpp
-                    warpers.hpp warpers.cpp warpers_inl.hpp
-                    main.cpp)
+FILE(GLOB stitching_files "*.hpp" "*.cpp")
 
 set(the_target opencv_stitching)    
 add_executable(${the_target} ${stitching_files})
