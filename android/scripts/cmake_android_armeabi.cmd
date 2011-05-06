@@ -1,7 +1,7 @@
 cd %~dp0\..
 
 ::rmdir /S /Q build
-mkdir build 2>null
+mkdir build 2>nul
 
 SET ANDROID_NDK=C:\apps\android-ndk-r5b
 SET CMAKE_EXE=C:\apps\cmake\bin\cmake.exe
