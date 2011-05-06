@@ -299,7 +299,7 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
       normalizer += centers[i][j].confidence;
     }
     sumPoint *= (1. / normalizer);
-    KeyPoint kpt(sumPoint, params.defaultKeypointSize);
+    KeyPoint kpt(sumPoint, (float)params.defaultKeypointSize);
     keypoints.push_back(kpt);
   }
 }

@@ -1116,13 +1116,13 @@ CvDTreeSplit* CvForestERTree::find_split_cat_class( CvDTreeNode* node, int vi, f
                     
                     if (var_class_mask->data.ptr[mask_class_idx])
                     {
-                        lc[r]+=p;
+                        lc[r]+=(int)p;
                         L+=p;                 
                         split->subset[var_class_idx >> 5] |= 1 << (var_class_idx & 31);
                     }
                     else
                     {
-                        rc[r]+=p;
+                        rc[r]+=(int)p;
                         R+=p;
                     }
                 }

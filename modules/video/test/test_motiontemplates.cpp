@@ -177,7 +177,7 @@ void CV_UpdateMHITest::run_func()
 
 void CV_UpdateMHITest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    CvMat m0 = test_mat[REF_INPUT_OUTPUT][0];
+    //CvMat m0 = test_mat[REF_INPUT_OUTPUT][0];
     test_updateMHI( test_mat[INPUT][0], test_mat[REF_INPUT_OUTPUT][0], timestamp, duration );
 }
 

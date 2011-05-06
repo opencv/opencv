@@ -58,7 +58,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   {
     for(size_t j=i+1; j<points.size(); j++)
     {
-      dists.at<float>(i, j) = norm(points[i] - points[j]);
+      dists.at<float>(i, j) = (float)norm(points[i] - points[j]);
       distsMask.at<uchar>(i, j) = 255;
       //TODO: use symmetry
       distsMask.at<uchar>(j, i) = distsMask.at<uchar>(i, j);
@@ -160,7 +160,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   {
     Point2f vec1 = hull2f[(i+1) % hull2f.size()] - hull2f[i % hull2f.size()];
     Point2f vec2 = hull2f[(i-1 + static_cast<int>(hull2f.size())) % hull2f.size()] - hull2f[i % hull2f.size()];
-    float angle = vec1.ddot(vec2) / (norm(vec1) * norm(vec2));
+    float angle = (float)(vec1.ddot(vec2) / (norm(vec1) * norm(vec2)));
     angles.push_back(angle);
   }
 
@@ -626,9 +626,9 @@ bool CirclesGridFinder::isDetectionCorrect()
       }
 
       size_t largeWidth = patternSize.width;
-      size_t largeHeight = ceil(patternSize.height / 2.);
+      size_t largeHeight = (size_t)ceil(patternSize.height / 2.);
       size_t smallWidth = patternSize.width;
-      size_t smallHeight = floor(patternSize.height / 2.);
+      size_t smallHeight = (size_t)floor(patternSize.height / 2.);
 
       size_t sw = smallWidth, sh = smallHeight, lw = largeWidth, lh = largeHeight;
       if (largeHoles->size() != largeHeight)
@@ -782,7 +782,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
 
 size_t CirclesGridFinder::findNearestKeypoint(Point2f pt) const
 {
-  size_t bestIdx = -1;
+  size_t bestIdx = 0;
   double minDist = std::numeric_limits<double>::max();
   for (size_t i = 0; i < keypoints.size(); i++)
   {

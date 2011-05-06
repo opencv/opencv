@@ -77,7 +77,7 @@ int main( int argc, char* argv[] )
     int width  = 24;
     int height = 24;
 
-    srand(time(0));
+    srand((unsigned int)time(0));
 
     if( argc == 1 )
     {

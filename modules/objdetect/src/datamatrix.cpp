@@ -253,7 +253,7 @@ static int decode(Sampler &sa, code &cc)
 
   for (i = 0; i < 64; i++)
     sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
-  uint8 mean = sum / 64;
+  uint8 mean = (uint8)(sum / 64);
   for (i = 0; i < 64; i++) {
     b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
     if ((i & 7) == 7) {

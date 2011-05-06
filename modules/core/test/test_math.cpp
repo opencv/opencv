@@ -1928,7 +1928,7 @@ void Core_SVDTest::run_func()
 }
 
 
-void Core_SVDTest::prepare_to_validation( int test_case_idx )
+void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat& input = test_mat[INPUT][0];
     int depth = input.depth();

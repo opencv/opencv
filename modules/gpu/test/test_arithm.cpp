@@ -56,7 +56,7 @@ using namespace gpu;
 class CV_GpuArithmTest : public cvtest::BaseTest
 {
 public:
-    CV_GpuArithmTest(const char* test_name, const char* test_funcs){}
+    CV_GpuArithmTest(const char* /*test_name*/, const char* /*test_funcs*/){}
     virtual ~CV_GpuArithmTest() {}
 
 protected:

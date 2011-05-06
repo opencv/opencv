@@ -647,7 +647,7 @@ void DOTDetector::save( const std::string& filename ) const
     }
 }
 
-void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainParams, bool _isAddImageAndGradientMask )
+void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainParams, bool /*_isAddImageAndGradientMask*/ )
 {
     clear();
 

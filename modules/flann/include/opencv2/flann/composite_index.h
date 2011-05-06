@@ -77,7 +77,8 @@ class CompositeIndex : public NNIndex<ELEM_TYPE>
 
     const IndexParams& index_params;
 
-
+	CompositeIndex& operator=(const CompositeIndex&);
+	CompositeIndex(const CompositeIndex&);
 public:
 
 	CompositeIndex(const Matrix<ELEM_TYPE>& inputData, const CompositeIndexParams& params = CompositeIndexParams() ) :

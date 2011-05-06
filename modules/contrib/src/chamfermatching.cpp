@@ -1113,7 +1113,7 @@ ChamferMatcher::Match* ChamferMatcher::Matching::localChamferDistance(Point offs
 		}
 
 		if (cnt_orientation>0) {
-                        cost = beta*cost+alpha*(sum_orientation/(2*CV_PI))/cnt_orientation;
+                        cost = (float)(beta*cost+alpha*(sum_orientation/(2*CV_PI))/cnt_orientation);
 		}
 
 	}

@@ -247,7 +247,7 @@ int CV_MorphologyBaseTest::prepare_test_case( int test_case_idx )
 }
 
 
-void CV_MorphologyBaseTest::prepare_to_validation( int test_case_idx )
+void CV_MorphologyBaseTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat& src = test_mat[INPUT][0], &dst = test_mat[REF_OUTPUT][0];
     Mat _ielement(element->nRows, element->nCols, CV_32S, element->values);
@@ -422,7 +422,7 @@ void CV_FilterTest::run_func()
 }
 
 
-void CV_FilterTest::prepare_to_validation( int test_case_idx )
+void CV_FilterTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     cvtest::filter2D( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].type(),
                       test_mat[INPUT][1], anchor, 0, BORDER_REPLICATE );
@@ -539,7 +539,7 @@ void CV_SobelTest::run_func()
 }
 
 
-void CV_SobelTest::prepare_to_validation( int test_case_idx )
+void CV_SobelTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat kernel = cvtest::calcSobelKernel2D( dx, dy, _aperture_size, 0 );
     cvtest::filter2D( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].depth(),
@@ -600,7 +600,7 @@ int CV_LaplaceTest::prepare_test_case( int test_case_idx )
 }
 
 
-void CV_LaplaceTest::prepare_to_validation( int test_case_idx )
+void CV_LaplaceTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat kernel = cvtest::calcLaplaceKernel2D( _aperture_size );
     cvtest::filter2D( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].depth(),
@@ -703,7 +703,7 @@ int CV_BlurTest::prepare_test_case( int test_case_idx )
 }
 
 
-void CV_BlurTest::prepare_to_validation( int test_case_idx )
+void CV_BlurTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat kernel(aperture_size, CV_64F);
     kernel.setTo(Scalar::all(normalize ? 1./(aperture_size.width*aperture_size.height) : 1.));
@@ -823,7 +823,7 @@ static Mat calcGaussianKernel2D( Size ksize, double sigma )
 }
 
 
-void CV_GaussianBlurTest::prepare_to_validation( int test_case_idx )
+void CV_GaussianBlurTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat kernel = calcGaussianKernel2D( aperture_size, sigma );
     cvtest::filter2D( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].depth(),

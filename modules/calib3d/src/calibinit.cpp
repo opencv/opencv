@@ -1929,8 +1929,8 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
 bool cv::findCirclesGrid( const InputArray& _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector )
 {
-    bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID);
-    bool isSymmetricGrid = (flags & CALIB_CB_SYMMETRIC_GRID);
+    bool isAsymmetricGrid = (bool)(flags & CALIB_CB_ASYMMETRIC_GRID);
+    bool isSymmetricGrid = (bool)(flags & CALIB_CB_SYMMETRIC_GRID);
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
 
     Mat image = _image.getMat();

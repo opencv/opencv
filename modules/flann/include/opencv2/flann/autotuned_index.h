@@ -90,6 +90,9 @@ class AutotunedIndex : public NNIndex<ELEM_TYPE>
      */
     const AutotunedIndexParams& index_params;
 
+	AutotunedIndex& operator=(const AutotunedIndex&);
+	AutotunedIndex(const AutotunedIndex&);
+
 public:
 
     AutotunedIndex(const Matrix<ELEM_TYPE>& inputData, const AutotunedIndexParams& params = AutotunedIndexParams() ) :

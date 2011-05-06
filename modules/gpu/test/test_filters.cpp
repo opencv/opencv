@@ -51,7 +51,7 @@ using namespace gpu;
 class CV_GpuNppFilterTest : public cvtest::BaseTest
 {
 public:
-    CV_GpuNppFilterTest(const char* test_name, const char* test_funcs) {}
+    CV_GpuNppFilterTest(const char* /*test_name*/, const char* /*test_funcs*/) {}
     virtual ~CV_GpuNppFilterTest() {}
 
 protected:

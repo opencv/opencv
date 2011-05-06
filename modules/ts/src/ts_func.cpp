@@ -2712,7 +2712,7 @@ Mat calcLaplaceKernel2D( int aperture_size )
     
     for( int i = 0; i < ksize; i++ )
         for( int j = 0; j < ksize; j++ )
-            kernel.at<float>(i, j) = kx[j]*ky[i] + kx[i]*ky[j];
+            kernel.at<float>(i, j) = (float)(kx[j]*ky[i] + kx[i]*ky[j]);
     
     return kernel;
 }

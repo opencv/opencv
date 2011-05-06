@@ -1652,15 +1652,18 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 #ifdef _MSC_VER
 
 #if GTEST_LINKED_AS_SHARED_LIBRARY
-#define GTEST_API_ __declspec(dllimport)
+#define GTEST_API_ 
+#define GTEST_API_2 __declspec(dllimport)
 #elif GTEST_CREATE_SHARED_LIBRARY
 #define GTEST_API_ __declspec(dllexport)
+#define GTEST_API_2 GTEST_API_
 #endif
 
 #endif  // _MSC_VER
 
 #ifndef GTEST_API_
 #define GTEST_API_
+#define GTEST_API_2
 #endif
 
 namespace testing {
@@ -8378,7 +8381,7 @@ namespace testing {
 namespace internal {
 
 // Protects copying of all linked_ptr objects.
-GTEST_API_ GTEST_DECLARE_STATIC_MUTEX_(g_linked_ptr_mutex);
+GTEST_API_2 GTEST_DECLARE_STATIC_MUTEX_(g_linked_ptr_mutex);
 
 // This is used internally by all instances of linked_ptr<>.  It needs to be
 // a non-template class because different types of linked_ptr<> can refer to
@@ -15359,7 +15362,7 @@ class GTEST_API_ TestPartResultArray {
 };
 
 // This interface knows how to report a test part result.
-class TestPartResultReporterInterface {
+class GTEST_API_ TestPartResultReporterInterface {
  public:
   virtual ~TestPartResultReporterInterface() {}
 

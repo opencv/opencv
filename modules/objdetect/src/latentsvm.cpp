@@ -272,7 +272,7 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                           float scoreThreshold,
                           CvPoint **points, int **levels, int *kPoints, 
                           float **score, CvPoint ***partsDisplacement,
-                          int numThreads)
+                          int /*numThreads*/)
 {
     int opResult;
 
@@ -551,7 +551,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
                                         float **score, int *kPoints,
-                                        int numThreads)
+                                        int /*numThreads*/)
 {
     int error = 0;
     int i, j, s, f, componentIndex;

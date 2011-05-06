@@ -77,6 +77,7 @@ CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
 #else
+	(void)feature_set;
 	return false;
 #endif
 }
@@ -93,6 +94,8 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
 #else
+	(void)major;
+	(void)minor;
 	return false;
 #endif
 }
@@ -103,6 +106,8 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
 #else
+	(void)major;
+	(void)minor;
 	return false;
 #endif
 }
@@ -114,6 +119,8 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::less_equal<int>());
 #else
+	(void)major;
+	(void)minor;
 	return false;
 #endif
 }
@@ -132,6 +139,8 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, 
                      std::greater_equal<int>());
 #else
+	(void)major;
+	(void)minor;
 	return false;
 #endif
 }
@@ -143,6 +152,8 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, 
                      std::greater_equal<int>());
 #else
+	(void)major;
+	(void)minor;
 	return false;
 #endif
 }

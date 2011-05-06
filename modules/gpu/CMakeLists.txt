@@ -3,11 +3,8 @@ set(name "gpu")
 set(the_target "opencv_${name}")
 project(${the_target})
 
-
 set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann" "opencv_calib3d") #"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
-
-add_definitions(-DCVAPI_EXPORTS)
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"                    
 					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"                    
@@ -70,6 +67,10 @@ if (HAVE_CUDA)
         string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
         string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     endif()
+	
+	if (OPENCV_BUILD_SHARED_LIB) 
+		set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-DCVAPI_EXPORTS")
+	endif()
     
     CUDA_COMPILE(cuda_objs ${lib_cuda} ${ncv_cuda})
     #CUDA_BUILD_CLEAN_TARGET()
@@ -102,6 +103,11 @@ set_target_properties(${the_target} PROPERTIES
 	SOVERSION ${OPENCV_SOVERSION}
 	OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
 	)
+	
+if (OPENCV_BUILD_SHARED_LIB) 
+	#add_definitions(-DCVAPI_EXPORTS)	   
+	set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+endif()
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES

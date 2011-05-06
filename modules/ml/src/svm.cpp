@@ -2112,9 +2112,9 @@ struct predict_body_svm {
             cvGetRow( samples, &sample, i );
             int r = (int)pointer->predict(&sample);
             if (results)
-                results->data.fl[i] = r;
+                results->data.fl[i] = (float)r;
             if (i == 0)
-                *result = r;
+                *result = (float)r;
 	}
     }
 };
