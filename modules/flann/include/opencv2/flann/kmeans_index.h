@@ -596,6 +596,8 @@ public:
 
 private:
 
+	KMeansIndex& operator=(const KMeansIndex&);
+	KMeansIndex(const KMeansIndex&);
 
     void save_tree(FILE* stream, KMeansNode node)
     {

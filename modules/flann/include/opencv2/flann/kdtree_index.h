@@ -314,6 +314,9 @@ public:
 
 private:
 
+	KDTreeIndex& operator=(const KDTreeIndex&);
+	KDTreeIndex(const KDTreeIndex&);
+
 
     void save_tree(FILE* stream, Tree tree)
     {

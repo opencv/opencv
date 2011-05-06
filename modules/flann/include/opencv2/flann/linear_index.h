@@ -54,6 +54,9 @@ class LinearIndex : public NNIndex<ELEM_TYPE>
 	const Matrix<ELEM_TYPE> dataset;
 	const LinearIndexParams& index_params;
 
+	LinearIndex(const LinearIndex&);
+	LinearIndex& operator=(const LinearIndex&);
+
 public:
 
 	LinearIndex(const Matrix<ELEM_TYPE>& inputData, const LinearIndexParams& params = LinearIndexParams() ) :
