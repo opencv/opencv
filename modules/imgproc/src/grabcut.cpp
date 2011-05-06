@@ -260,7 +260,11 @@ double calcBeta( const Mat& img )
             }
         }
     }
-    beta = 1.f / (2 * beta/(4*img.cols*img.rows - 3*img.cols - 3*img.rows + 2) );
+    if( beta <= std::numeric_limits<double>::epsilon() )
+        beta = 0;
+    else
+        beta = 1.f / (2 * beta/(4*img.cols*img.rows - 3*img.cols - 3*img.rows + 2) );
+
     return beta;
 }
 
