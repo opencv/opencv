@@ -3,11 +3,11 @@ Common Interfaces of Descriptor Extractors
 
 .. highlight:: cpp
 
-Extractors of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily
+Extractors of keypoint descriptors in OpenCV have wrappers with a common interface that enables you to easily switch
 between different algorithms solving the same problem. This section is devoted to computing descriptors
-that are represented as vectors in a multidimensional space. All objects that implement ''vector''
-descriptor extractors inherit
-:func:`DescriptorExtractor` interface.
+that are represented as vectors in a multidimensional space. All objects that implement the ``vector``
+descriptor extractors inherit the
+:ref:`DescriptorExtractor` interface.
 
 .. index:: DescriptorExtractor
 
@@ -15,7 +15,7 @@ DescriptorExtractor
 -------------------
 .. c:type:: DescriptorExtractor
 
-Abstract base class for computing descriptors for image keypoints. ::
+Abstract base class for computing descriptors for image keypoints ::
 
     class CV_EXPORTS DescriptorExtractor
     {
@@ -40,12 +40,12 @@ Abstract base class for computing descriptors for image keypoints. ::
     };
 
 
-In this interface we assume a keypoint descriptor can be represented as a
-dense, fixed-dimensional vector of some basic type. Most descriptors used
-in practice follow this pattern, as it makes it very easy to compute
-distances between descriptors. Therefore we represent a collection of
-descriptors as a
-:func:`Mat` , where each row is one keypoint descriptor.
+In this interface, a keypoint descriptor can be represented as a
+dense, fixed-dimensional vector of a basic type. Most descriptors 
+follow this pattern as it simplifies computing
+distances between descriptors. Therefore, a collection of
+descriptors is represented as
+:ref:`Mat` , where each row is a keypoint descriptor.
 
 .. index:: DescriptorExtractor::compute
 
@@ -53,24 +53,23 @@ DescriptorExtractor::compute
 --------------------------------
 .. c:function:: void DescriptorExtractor::compute( const Mat\& image,                                      vector<KeyPoint>\& keypoints,                                                                      Mat\& descriptors ) const
 
-    Compute the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
+    Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
-    :param image: The image.
+    :param image: Image.
 
-    :param keypoints: The keypoints. Keypoints for which a descriptor cannot be computed are removed.
+    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed.
 
-    :param descriptors: The descriptors. Row i is the descriptor for keypoint i.
+    :param descriptors: Descriptors. Row i is the descriptor for keypoint i.
 
 .. c:function:: void DescriptorExtractor::compute( const vector<Mat>\& images,                                                           vector<vector<KeyPoint> >\& keypoints,                                                       vector<Mat>\& descriptors ) const
 
-    * **images** The image set.
+    :param images: Image set.
 
-    * **keypoints** Input keypoints collection. keypoints[i] is keypoints
-                          detected in images[i]. Keypoints for which a descriptor
-                          can not be computed are removed.
+    :param keypoints: Input keypoints collection. ``keypoints[i]`` are keypoints
+                          detected in ``images[i]`` . Keypoints for which a descriptor
+                          cannot be computed are removed.
 
-    * **descriptors** Descriptor collection. descriptors[i] are descriptors computed for
-                            a set keypoints[i].
+    :param descriptors: Descriptor collection. ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`` set.
 
 .. index:: DescriptorExtractor::read
 
@@ -78,9 +77,9 @@ DescriptorExtractor::read
 -----------------------------
 .. c:function:: void DescriptorExtractor::read( const FileNode\& fn )
 
-    Read descriptor extractor object from file node.
+    Reads the object of a descriptor extractor from a file node.
 
-    :param fn: File node from which detector will be read.
+    :param fn: File node from which the detector is read.
 
 .. index:: DescriptorExtractor::write
 
@@ -88,30 +87,29 @@ DescriptorExtractor::write
 ------------------------------
 .. c:function:: void DescriptorExtractor::write( FileStorage\& fs ) const
 
-    Write descriptor extractor object to file storage.
+    Writes the object of a descriptor extractor to a file storage.
 
-    :param fs: File storage in which detector will be written.
+    :param fs: File storage where the detector is written.
 
 .. index:: DescriptorExtractor::create
 
 DescriptorExtractor::create
 -------------------------------
-:func:`DescriptorExtractor`
 .. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string\& descriptorExtractorType )
 
-    Descriptor extractor factory that creates of given type with default parameters (rather using default constructor).
+    Creates a descriptor extractor of a given type with the default parameters (using the default constructor).??
 
     :param descriptorExtractorType: Descriptor extractor type.
 
-Now the following descriptor extractor types are supported:
+The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :func:`SiftFeatureDetector`,
- * ``"SURF"`` -- :func:`SurfFeatureDetector`,
- * ``"BRIEF"`` -- :func:`BriefFeatureDetector` .
+ * ``"SIFT"`` -- :func:`SiftFeatureDetector`
+ * ``"SURF"`` -- :func:`SurfFeatureDetector`
+ * ``"BRIEF"`` -- :func:`BriefFeatureDetector` 
 
-Also combined format is supported: descriptor extractor adapter name ( ``"Opponent"`` --
-:func:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
-e.g. ``"OpponentSIFT"`` , etc.
+A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
+:ref:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
+for example, ``"OpponentSIFT"`` .
 
 .. index:: SiftDescriptorExtractor
 
@@ -119,8 +117,8 @@ SiftDescriptorExtractor
 -----------------------
 .. c:type:: SiftDescriptorExtractor
 
-Wrapping class for descriptors computing using
-:func:`SIFT` class. ::
+Wrapping class for descriptors computing using the
+:ref:`SIFT` class ::
 
     class SiftDescriptorExtractor : public DescriptorExtractor
     {
@@ -149,8 +147,8 @@ SurfDescriptorExtractor
 -----------------------
 .. c:type:: SurfDescriptorExtractor
 
-Wrapping class for descriptors computing using
-:func:`SURF` class. ::
+Wrapping class for computing descriptors using the
+:ref:`SURF` class ::
 
     class SurfDescriptorExtractor : public DescriptorExtractor
     {
@@ -173,8 +171,8 @@ CalonderDescriptorExtractor
 ---------------------------
 .. c:type:: CalonderDescriptorExtractor
 
-Wrapping class for descriptors computing using
-:func:`RTreeClassifier` class. ::
+Wrapping class for computing descriptors using the
+:ref:`RTreeClassifier` class ::
 
     template<typename T>
     class CalonderDescriptorExtractor : public DescriptorExtractor
@@ -199,10 +197,10 @@ OpponentColorDescriptorExtractor
 --------------------------------
 .. c:type:: OpponentColorDescriptorExtractor
 
-Adapts a descriptor extractor to compute descripors in Opponent Color Space
-(refer to van de Sande et al., CGIV 2008 "Color Descriptors for Object Category Recognition").
-Input RGB image is transformed in Opponent Color Space. Then unadapted descriptor extractor
-(set in constructor) computes descriptors on each of the three channel and concatenate
+Class adapting a descriptor extractor to compute descripors in the Opponent Color Space
+(refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
+Input RGB image is transformed in the Opponent Color Space. Then, an unadapted descriptor extractor
+(set in the constructor) computes descriptors on each of three channels and concatenates
 them into a single color descriptor. ::
 
     class OpponentColorDescriptorExtractor : public DescriptorExtractor
@@ -227,9 +225,9 @@ BriefDescriptorExtractor
 ------------------------
 .. c:type:: BriefDescriptorExtractor
 
-Class for computing BRIEF descriptors described in paper of Calonder M., Lepetit V.,
-Strecha C., Fua P.: ''BRIEF: Binary Robust Independent Elementary Features.''
-11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
+Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
+Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
+11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010 ::
 
     class BriefDescriptorExtractor : public DescriptorExtractor
     {
