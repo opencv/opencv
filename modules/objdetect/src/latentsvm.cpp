@@ -272,7 +272,7 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                           float scoreThreshold,
                           CvPoint **points, int **levels, int *kPoints, 
                           float **score, CvPoint ***partsDisplacement,
-                          int /*numThreads*/)
+                          int numThreads)
 {
     int opResult;
 
@@ -294,6 +294,8 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
                                         scoreThreshold, 
                                         score, points, levels, 
                                         kPoints, partsDisplacement);
+
+	(void)numThreads;
 #endif
     if (opResult != LATENT_SVM_OK)
     {
@@ -551,7 +553,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
                                         const float *b, float scoreThreshold,
                                         CvPoint **points, CvPoint **oppPoints,
                                         float **score, int *kPoints,
-                                        int /*numThreads*/)
+                                        int numThreads)
 {
     int error = 0;
     int i, j, s, f, componentIndex;
@@ -592,6 +594,7 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
             return LATENT_SVM_SEARCH_OBJECT_FAILED;
         }
 #else
+		(void)numThreads;
         searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold, 
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]), 

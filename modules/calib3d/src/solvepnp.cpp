@@ -224,10 +224,8 @@ namespace cv
                 tvec.copyTo(initTvec);
             }
         private:
-
 			PnPSolver& operator=(const PnPSolver&);
-			PnPSolver(const PnPSolver&);
-
+			
             const Mat& objectPoints;
             const Mat& imagePoints;
             const Parameters& parameters;
