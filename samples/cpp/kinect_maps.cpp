@@ -79,8 +79,8 @@ void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f, float S=
 float getMaxDisparity( VideoCapture& capture )
 {
     const int minDistance = 400; // mm
-    float b = capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
-    float F = capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
+    float b = (float)capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
+    float F = (float)capture.get( CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
     return b * F / minDistance;
 }
 

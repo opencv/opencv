@@ -495,8 +495,8 @@ int build_knearest_classifier( char* data_filename, int K )
 
     int ok = read_num_class_data( data_filename, 16, &data, &responses );
     int nsamples_all = 0, ntrain_samples = 0;
-    int i, j;
-    double train_hr = 0, test_hr = 0;
+    //int i, j;
+    //double /*train_hr = 0,*/ test_hr = 0;
     CvANN_MLP mlp;
 
     if( !ok )
@@ -572,8 +572,8 @@ int build_nbayes_classifier( char* data_filename )
 
     int ok = read_num_class_data( data_filename, 16, &data, &responses );
     int nsamples_all = 0, ntrain_samples = 0;
-    int i, j;
-    double train_hr = 0, test_hr = 0;
+    //int i, j;
+    //double /*train_hr = 0, */test_hr = 0;
     CvANN_MLP mlp;
 
     if( !ok )
@@ -612,7 +612,7 @@ int build_nbayes_classifier( char* data_filename )
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
     (int)nbayes.predict(&sample, result);
     int true_resp = 0;
-    int accuracy = 0;
+    //int accuracy = 0;
     for (int i = 0; i < nsamples_all - ntrain_samples; i++)
     {
         if (result->data.fl[i] == true_results[i])

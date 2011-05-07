@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     for( i = 0; i < (int)pairs.size(); i += 2 )
     {
         line( correspond, objKeypoints[pairs[i]].pt,
-             imgKeypoints[pairs[i+1]].pt + Point2f(0,object.rows),
+             imgKeypoints[pairs[i+1]].pt + Point2f(0,(float)object.rows),
              Scalar(0,255,0) );
     }
     

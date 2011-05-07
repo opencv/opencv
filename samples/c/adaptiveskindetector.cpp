@@ -180,7 +180,7 @@ bool ASDFrameSequencer::isOpen()
 	return false;
 };
 
-void ASDFrameSequencer::getFrameCaption(char *caption) {
+void ASDFrameSequencer::getFrameCaption(char* /*caption*/) {
 	return;
 };
 

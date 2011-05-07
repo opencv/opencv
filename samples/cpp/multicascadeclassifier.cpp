@@ -155,7 +155,7 @@ void DetectAndDraw( Mat& img, CascadeClassifier& cascade)
         int radius;
         center.x = cvRound(r->x + r->width*0.5);
         center.y = cvRound(r->y + r->height*0.5);
-        radius = cvRound(r->width + r->height)*0.25;
+        radius = (int)(cvRound(r->width + r->height)*0.25);
         circle( img, center, radius, color, 3, 8, 0 );
     }
 

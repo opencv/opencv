@@ -2001,6 +2001,7 @@ float CvSVM::predict( const float* row_sample, int row_len, bool returnDFVal ) c
 
     int var_count = get_var_count();
     assert( row_len == var_count );
+	(void)row_len;
 
     int class_count = class_labels ? class_labels->cols :
                   params.svm_type == ONE_CLASS ? 1 : 0;

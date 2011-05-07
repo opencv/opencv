@@ -855,7 +855,7 @@ void VocData::calcPrecRecall_impl(const vector<char>& ground_truth, const vector
     {
         recall_norm = recall_normalization;
     } else {
-        recall_norm = (int)std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<bool>(),true));
+        recall_norm = (int)std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<char>(),(char)1));
     }
 
     ap = 0;
@@ -985,7 +985,7 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
         /* in order to calculate the total number of relevant images for normalization of recall
             it's necessary to extract the ground truth for the images under consideration */
         getClassifierGroundTruth(obj_class, images, ground_truth);
-        total_relevant = std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<bool>(),true));
+        total_relevant = std::count_if(ground_truth.begin(),ground_truth.end(),std::bind2nd(std::equal_to<char>(),(char)1));
     }
 
     /* iterate through images */
@@ -2292,8 +2292,8 @@ void removeBowImageDescriptorsByCount( vector<ObdImage>& images, vector<Mat> bow
                                        const SVMTrainParamsExt& svmParamsExt, int descsToDelete )
 {
     RNG& rng = theRNG();
-    int pos_ex = std::count( objectPresent.begin(), objectPresent.end(), true );
-    int neg_ex = std::count( objectPresent.begin(), objectPresent.end(), false );
+    int pos_ex = std::count( objectPresent.begin(), objectPresent.end(), (char)1 );
+    int neg_ex = std::count( objectPresent.begin(), objectPresent.end(), (char)0 );
 
     while( descsToDelete != 0 )
     {

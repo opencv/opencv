@@ -108,7 +108,7 @@ IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1,
 
     for (size_t i = 0; i < features2.size(); i++)
     {
-        CvPoint pt = cvPoint(features2[i].pt.x + img1->width, features2[i].pt.y);
+        CvPoint pt = cvPoint((int)features2[i].pt.x + img1->width, (int)features2[i].pt.y);
         cvCircle(img_corr, pt, 3, CV_RGB(255, 0, 0));
         cvLine(img_corr, features1[desc_idx[i]].pt, pt, CV_RGB(0, 255, 0));
     }
