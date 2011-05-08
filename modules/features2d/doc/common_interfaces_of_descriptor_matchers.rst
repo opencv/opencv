@@ -136,7 +136,7 @@ DescriptorMatcher::empty
 ----------------------------
 .. c:function:: bool DescriptorMatcher::empty() const
 
-    Returns true if there are not train descriptors in the collection.
+    Returns true if there are no train descriptors in the collection.
 
 .. index:: DescriptorMatcher::isMaskSupported
 
@@ -160,7 +160,7 @@ DescriptorMatcher::match
 ----------------------------
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                           const Mat\& trainDescriptors,               vector<DMatch>\& matches,              const Mat\& mask=Mat() ) const
 
-    Finds the best match for each descriptor from a query set with train descriptors. Query descriptors are supposed to be of keypoints detected on the same query image. In the first variant of this method, train descriptors are set as an input argument and are supposed to be of keypoints detected on the same train image. In the second variant of the method, train descriptors collection that was set using ``addmethod`` is used. Optional mask (or masks) can be set to describe which descriptors can be matched. ``queryDescriptors[i]`` can be matched with ``trainDescriptors[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero.?? what does "of keypoints" mean?
+    Finds the best match for each descriptor from a query set with train descriptors. Query descriptors are supposed to belong?? to keypoints detected on the same query image. In the first variant of this method, train descriptors are set as an input argument and are supposed to belong to keypoints detected on the same train image. In the second variant of the method, train descriptors collection that was set by ``addmethod`` is used. Optional mask (or masks) can be set to describe descriptors that can be matched. ``queryDescriptors[i]`` can be matched with ``trainDescriptors[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero.?? 
 
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                                   vector<DMatch>\& matches,                  const vector<Mat>\& masks=vector<Mat>() )
 
@@ -172,7 +172,7 @@ DescriptorMatcher::match
 
     :param mask: Mask specifying permissible matches between an input query and train matrices of descriptors.
 
-    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]`` .
+    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
 
 .. index:: DescriptorMatcher::knnMatch
 
@@ -196,7 +196,6 @@ DescriptorMatcher::knnMatch
 
 DescriptorMatcher::radiusMatch
 ----------------------------------
-:func:`DescriptorMatcher::match`
 .. c:function:: void DescriptorMatcher::radiusMatch( const Mat\& queryDescriptors,           const Mat\& trainDescriptors,           vector<vector<DMatch> >\& matches,           float maxDistance, const Mat\& mask=Mat(),           bool compactResult=false ) const
 
     Finds the best matches for each query descriptor that has a distance smaller than the given threshold. Found matches are returned in the distance increasing order. See the details about query and train descriptors in ??.
@@ -225,14 +224,13 @@ DescriptorMatcher::clone
 
 DescriptorMatcher::create
 -----------------------------
-:func:`DescriptorMatcher`
 .. c:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string\& descriptorMatcherType )
 
     Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
-    :param descriptorMatcherType: Descriptor matcher type.
+    :param descriptorMatcherType: Descriptor matcher type.??broken param formatting
 
-Now the following matcher types are supported: ``"BruteForce"`` (it uses ``L2`` ), ``"BruteForce-L1"`` ,``"BruteForce-Hamming"`` ,``"BruteForce-HammingLUT"`` , and ``"FlannBased"`` .
+Now the following matcher types are supported: ``BruteForce`` (it uses ``L2`` ), ``BruteForce-L1`` ,``BruteForce-Hamming`` ,``BruteForce-HammingLUT`` , and ``FlannBased`` .
 
 .. index:: BruteForceMatcher
 
@@ -258,7 +256,7 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
     }
 
 
-For efficiency, ``BruteForceMatcher`` is used as a template for the distance metric??. For float descriptors, a common choice is ``L2<float>`` . The following class of supported distances is used: ::
+For efficiency, ``BruteForceMatcher`` is used as a template for the distance metric??. For float descriptors, ``L2<float>`` is a common choice. The following distances are supported: ::
 
     template<typename T>
     struct Accumulator

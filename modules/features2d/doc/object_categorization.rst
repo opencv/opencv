@@ -3,7 +3,7 @@ Object Categorization
 
 .. highlight:: cpp
 
-This section describes some approaches based on local 2D features and used to categorize objects.
+This section describes approaches based on local 2D features and used to categorize objects.
 
 .. index:: BOWTrainer
 
@@ -13,7 +13,7 @@ BOWTrainer
 ----------
 .. c:type:: BOWTrainer
 
-Abstract base class for training the ''bag of visual words'' vocabulary from a set of descriptors.
+Abstract base class for training the *bag of visual words* vocabulary from a set of descriptors.
 For details, see, for example, *Visual Categorization with Bags of Keypoints* by Gabriella Csurka, Christopher R. Dance,
 Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
@@ -43,7 +43,7 @@ BOWTrainer::add
 -------------------
 .. c:function:: void BOWTrainer::add( const Mat\& descriptors )
 
-    Adds descriptors to a training set. The training set ise clustered using ``clustermethod`` to construct the vocabulary.
+    Adds descriptors to a training set. The training set is clustered using ``clustermethod`` to construct the vocabulary.
 
     :param descriptors: Descriptors to add to a training set. Each row of  the ``descriptors``  matrix is a descriptor.
 
@@ -83,7 +83,7 @@ BOWKMeansTrainer
 ----------------
 .. c:type:: BOWKMeansTrainer
 
-:ref:`kmeans` -based class to train visual vocabulary using the ''bag of visual words'' approach ::
+:ref:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach ::
 
     class BOWKMeansTrainer : public BOWTrainer
     {
@@ -178,11 +178,11 @@ BOWImgDescriptorExtractor::compute
 
     Computes an image descriptor using the set visual vocabulary.
 
-    :param image: Image. Image descriptor is computed for this.
+    :param image: Image. Descriptor is computed for each image.??
 
     :param keypoints: Keypoints detected in the input image.
 
-    :param imgDescriptor: Output computed image descriptor.
+    :param imgDescriptor: Computed output image descriptor.
 
     :param pointIdxsOfClusters: Indices of keypoints that belong to the cluster. This means that ``pointIdxsOfClusters[i]``  are keypoint indices that belong to the  ``i`` -th cluster (word of vocabulary) returned if it is non-zero.
 

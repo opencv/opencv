@@ -30,7 +30,7 @@ drawMatches
 
     :param flags: Flags setting drawing features. Possible  ``flags``  bit values are defined by  ``DrawMatchesFlags``.
     
-This function draws matches of keypints from two images in the output image. Match is a line connecting two keypoints (circles). The structure ``DrawMatchesFlags`` is defined as follows:
+This function draws matches of keypoints from two images in the output image. Match is a line connecting two keypoints (circles). The structure ``DrawMatchesFlags`` is defined as follows:
 
 .. code-block:: cpp
 

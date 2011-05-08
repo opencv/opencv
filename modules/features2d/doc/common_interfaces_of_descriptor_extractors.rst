@@ -41,7 +41,7 @@ Abstract base class for computing descriptors for image keypoints ::
 
 
 In this interface, a keypoint descriptor can be represented as a
-dense, fixed-dimensional vector of a basic type. Most descriptors 
+dense, fixed-dimension vector of a basic type. Most descriptors 
 follow this pattern as it simplifies computing
 distances between descriptors. Therefore, a collection of
 descriptors is represented as
@@ -103,13 +103,13 @@ DescriptorExtractor::create
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :func:`SiftFeatureDetector`
- * ``"SURF"`` -- :func:`SurfFeatureDetector`
- * ``"BRIEF"`` -- :func:`BriefFeatureDetector` 
+ * ``"SIFT"`` -- :ref:`SiftFeatureDetector`
+ * ``"SURF"`` -- :ref:`SurfFeatureDetector`
+ * ``"BRIEF"`` -- :ref:`BriefFeatureDetector` 
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
 :ref:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
-for example, ``"OpponentSIFT"`` .
+for example: ``"OpponentSIFT"`` .
 
 .. index:: SiftDescriptorExtractor
 
@@ -117,7 +117,7 @@ SiftDescriptorExtractor
 -----------------------
 .. c:type:: SiftDescriptorExtractor
 
-Wrapping class for descriptors computing using the
+Wrapping class for computing descriptors by using the
 :ref:`SIFT` class ::
 
     class SiftDescriptorExtractor : public DescriptorExtractor
@@ -147,7 +147,7 @@ SurfDescriptorExtractor
 -----------------------
 .. c:type:: SurfDescriptorExtractor
 
-Wrapping class for computing descriptors using the
+Wrapping class for computing descriptors by using the
 :ref:`SURF` class ::
 
     class SurfDescriptorExtractor : public DescriptorExtractor
@@ -171,7 +171,7 @@ CalonderDescriptorExtractor
 ---------------------------
 .. c:type:: CalonderDescriptorExtractor
 
-Wrapping class for computing descriptors using the
+Wrapping class for computing descriptors by using the
 :ref:`RTreeClassifier` class ::
 
     template<typename T>
@@ -197,7 +197,7 @@ OpponentColorDescriptorExtractor
 --------------------------------
 .. c:type:: OpponentColorDescriptorExtractor
 
-Class adapting a descriptor extractor to compute descripors in the Opponent Color Space
+Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
 (refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
 Input RGB image is transformed in the Opponent Color Space. Then, an unadapted descriptor extractor
 (set in the constructor) computes descriptors on each of three channels and concatenates

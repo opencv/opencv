@@ -149,24 +149,24 @@ FeatureDetector::create
 ---------------------------
 .. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
 
-    Creates a feature detector of a given type with the default parameters (or using the default constructor).??
+    Creates a feature detector of a given type with the default parameters (using the default constructor).??
 
     :param detectorType: Feature detector type.
 
 The following detector types are supported:
 
-* ``"FAST"`` -- :func:`FastFeatureDetector`
-* ``"STAR"`` -- :func:`StarFeatureDetector`
-* ``"SIFT"`` -- :func:`SiftFeatureDetector`
-* ``"SURF"`` -- :func:`SurfFeatureDetector`
-* ``"MSER"`` -- :func:`MserFeatureDetector`
-* ``"GFTT"`` -- :func:`GfttFeatureDetector`
-* ``"HARRIS"`` -- :func:`HarrisFeatureDetector`
+* ``"FAST"`` -- :ref:`FastFeatureDetector`
+* ``"STAR"`` -- :ref:`StarFeatureDetector`
+* ``"SIFT"`` -- :ref:`SiftFeatureDetector`
+* ``"SURF"`` -- :ref:`SurfFeatureDetector`
+* ``"MSER"`` -- :ref:`MserFeatureDetector`
+* ``"GFTT"`` -- :ref:`GfttFeatureDetector`
+* ``"HARRIS"`` -- :ref:`HarrisFeatureDetector`
 
 Also a combined format is supported: feature detector adapter name ( ``"Grid"`` --
-:func:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --
-:func:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-for example, ``"GridFAST"``, ``"PyramidSTAR"`` .
+:ref:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --
+:ref:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
+for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 
 .. index:: FastFeatureDetector
 
@@ -177,7 +177,7 @@ FastFeatureDetector
 .. c:type:: FastFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`FAST` method ::
+:ref:`FAST` method ::
 
     class FastFeatureDetector : public FeatureDetector
     {
@@ -199,7 +199,7 @@ GoodFeaturesToTrackDetector
 .. c:type:: GoodFeaturesToTrackDetector
 
 Wrapping class for feature detection using the
-:func:`goodFeaturesToTrack` function ::
+:ref:`goodFeaturesToTrack` function ::
 
     class GoodFeaturesToTrackDetector : public FeatureDetector
     {
@@ -242,7 +242,7 @@ MserFeatureDetector
 .. c:type:: MserFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`MSER` class ::
+:ref:`MSER` class ::
 
     class MserFeatureDetector : public FeatureDetector
     {
@@ -268,7 +268,7 @@ StarFeatureDetector
 .. c:type:: StarFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`StarDetector` class ::
+:ref:`StarDetector` class ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -292,7 +292,7 @@ SiftFeatureDetector
 .. c:type:: SiftFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`SIFT` class ::
+:ref:`SIFT` class ::
 
     class SiftFeatureDetector : public FeatureDetector
     {
@@ -321,7 +321,7 @@ SurfFeatureDetector
 .. c:type:: SurfFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`SURF` class ::
+:ref:`SURF` class ::
 
     class SurfFeatureDetector : public FeatureDetector
     {
@@ -404,7 +404,7 @@ Adaptively adjusting detector that iteratively detects features until the desire
            ...
        };
 
-If the detector is persisted, it will "remember" the parameters
+If the detector is persisted, it "remembers" the parameters
 used for the last detection. In this case, the detector may be used for consistent numbers
 of keypoints in a set of temporally related images, such as video streams or
 panorama series.
@@ -413,7 +413,7 @@ panorama series.
 with the help of ``AdjusterAdapter`` .
 If the detected number of features is not enough,??
 ``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
-results in more or less features.  This is repeated until either the number of desired features are found
+results in bigger or smaller number of features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
 
 Adapters can be easily implemented for any detector via the
@@ -422,7 +422,7 @@ Adapters can be easily implemented for any detector via the
 Beware that this is not thread-safe since the adjustment of parameters breaks the const??
 of the detection routine.
 
-Here is a sample of how to create ``DynamicAdaptedFeatureDetector`` : ::
+Example of creating ``DynamicAdaptedFeatureDetector`` : ::
 
     //sample usage:
     //will create a detector that attempts to find
@@ -442,13 +442,13 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
 ``DynamicAdaptedFeatureDetector`` constructor
 
-    :param adjaster:  :func:`AdjusterAdapter`  that detects features and adjusts parameters.??parameter formatting is broken here
+    :param adjaster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.??parameter formatting is broken here
 
-    :param min_features: Minimum desired number features.
+    :param min_features: Minimum desired number of features.
 
     :param max_features: Maximum desired number of features.
 
-    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :func:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf`` , many iterations can be time-comsuming.  At each iteration the detector is rerun. 
+    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :ref:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-comsuming.  At each iteration the detector is rerun. 
 
 .. index:: AdjusterAdapter
 
@@ -457,7 +457,7 @@ AdjusterAdapter
 
 .. c:type:: AdjusterAdapter
 
-Class providing an interface for adjusting parameters of a feature detector. This interface is used by :func:`DynamicAdaptedFeatureDetector` . It is a wrapper for :func:`FeatureDetector` that enables adjusting parameters after detection.?? ::
+Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after detection.?? ::
   
      class AdjusterAdapter: public FeatureDetector
      {
@@ -470,9 +470,9 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
 
 
 See
-:func:`FastAdjuster`,
-:func:`StarAdjuster`,
-:func:`SurfAdjuster` for concrete implementations.
+:ref:`FastAdjuster`,
+:ref:`StarAdjuster`,
+:ref:`SurfAdjuster` for concrete implementations.
 
 
 .. index:: AdjusterAdapter::tooFew
@@ -501,7 +501,7 @@ AdjusterAdapter::tooMany
 ----------------------------
 .. c:function:: virtual void tooMany(int max, int n_detected) = 0
 
-    Adjusts the detector parameters detect less features.
+    Adjusts the detector parameters to detect less features.
 
     :param max: Maximum desired number of features.
 
@@ -538,7 +538,7 @@ FastAdjuster
 
 .. c:type:: FastAdjuster
 
-:func:`AdjusterAdapter` for :func:`FastFeatureDetector`. This class decrements or increments the threshhold by 1.?? ::
+:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decrements or increments the threshhold by 1.?? ::
 
         class FastAdjuster FastAdjuster: public AdjusterAdapter
         {
@@ -554,7 +554,7 @@ StarAdjuster
 
 .. c:type:: StarAdjuster
 
-:func:`AdjusterAdapter` for :func:`StarFeatureDetector` .  This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector`` .  ::
+:ref:`AdjusterAdapter` for :ref:`StarFeatureDetector` .  This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector`` .  ::
 
         class StarAdjuster: public AdjusterAdapter
         {
@@ -569,7 +569,7 @@ SurfAdjuster
 
 .. c:type:: SurfAdjuster
 
-:func:`AdjusterAdapter` for :func:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
+:ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
 
         class SurfAdjuster: public SurfAdjuster
         {
@@ -657,23 +657,24 @@ FeatureDetector::create
 ---------------------------
 .. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )??
 
-    Creates a feature detector of a given type with the default parameters (or using the default constructor).??
+    Creates a feature detector of a given type with the default parameters (using the default constructor).??
 
     :param detectorType: Feature detector type.
 
 Now the following detector types are supported:
- * ``"FAST"`` -- :func:`FastFeatureDetector`
- * ``"STAR"`` -- :func:`StarFeatureDetector`
- * ``"SIFT"`` -- :func:`SiftFeatureDetector`
- * ``"SURF"`` -- :func:`SurfFeatureDetector`
- * ``"MSER"`` -- :func:`MserFeatureDetector`
- * ``"GFTT"`` -- :func:`GfttFeatureDetector`
- * ``"HARRIS"`` -- :func:`HarrisFeatureDetector`
+
+ * ``"FAST"`` -- :ref:`FastFeatureDetector`
+ * ``"STAR"`` -- :ref:`StarFeatureDetector`
+ * ``"SIFT"`` -- :ref:`SiftFeatureDetector`
+ * ``"SURF"`` -- :ref:`SurfFeatureDetector`
+ * ``"MSER"`` -- :ref:`MserFeatureDetector`
+ * ``"GFTT"`` -- :ref:`GfttFeatureDetector`
+ * ``"HARRIS"`` -- :ref:`HarrisFeatureDetector`
 
 A combined format is also supported: feature detector adapter name ( ``"Grid"`` --
-:func:`GridAdaptedFeatureDetector` , ``"Pyramid"`` --
-:func:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-for example, ``"GridFAST"`` , ``"PyramidSTAR"`` .
+:ref:`GridAdaptedFeatureDetector` , ``"Pyramid"`` --
+:ref:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
+for example: ``"GridFAST"`` , ``"PyramidSTAR"`` .
 
 .. index:: FastFeatureDetector
 
@@ -682,7 +683,7 @@ FastFeatureDetector
 .. c:type:: FastFeatureDetector
 
 Wrapping class for feature detection using the
-:func:`FAST` method ::
+:ref:`FAST` method ::
 
     class FastFeatureDetector : public FeatureDetector
     {
@@ -701,7 +702,7 @@ GoodFeaturesToTrackDetector
 ---------------------------
 .. c:type:: GoodFeaturesToTrackDetector
 
- Wrapping class for feature detection using the :func:`goodFeaturesToTrack` function ::
+ Wrapping class for feature detection using the :ref:`goodFeaturesToTrack` function ::
 
     class GoodFeaturesToTrackDetector : public FeatureDetector
     {
@@ -741,7 +742,7 @@ MserFeatureDetector
 -------------------
 .. c:type:: MserFeatureDetector
 
- Wrapping class for feature detection using the :func:`MSER` class ::
+ Wrapping class for feature detection using the :ref:`MSER` class ::
 
     class MserFeatureDetector : public FeatureDetector
     {
@@ -764,7 +765,7 @@ StarFeatureDetector
 -------------------
 .. c:type:: StarFeatureDetector
 
-Wrapping class for feature detection using the :func:`StarDetector` class ::
+Wrapping class for feature detection using the :ref:`StarDetector` class ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -785,7 +786,7 @@ SiftFeatureDetector
 -------------------
 .. c:type:: SiftFeatureDetector
 
-Wrapping class for feature detection using the :func:`SIFT` class ::
+Wrapping class for feature detection using the :ref:`SIFT` class ::
 
     class SiftFeatureDetector : public FeatureDetector
     {
@@ -811,7 +812,7 @@ SurfFeatureDetector
 -------------------
 .. c:type:: SurfFeatureDetector
 
-Wrapping class for feature detection using the :func:`SURF` class ::
+Wrapping class for feature detection using the :ref:`SURF` class ::
 
     class SurfFeatureDetector : public FeatureDetector
     {
@@ -906,7 +907,7 @@ or the parameters are maxed out.
 Adapters can easily be implemented for any detector via the
 ``AdjusterAdapter`` interface.
 
-Beware that this is not thread safe as the adjustment of parameters breaks the const??
+Beware that this is not thread-safe as the adjustment of parameters breaks the const??
 of the detection routine.
 
 Example of creating ``DynamicAdaptedFeatureDetector``: ::
@@ -927,13 +928,13 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
 	Provides the ``DynamicAdaptedFeatureDetector`` constructor.??
 
-    :param adjaster:  :func:`AdjusterAdapter`  that detects features and adjusts parameters.??formatting issue again
+    :param adjaster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.??formatting issue again
 
-    :param min_features: Minimum desired number features.
+    :param min_features: Minimum desired number of features.
 
     :param max_features: Maximum desired number of features.
 
-    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For  :func:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf`` , many iterations can be time-consuming.  At each iteration the detector is rerun. 
+    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For  :ref:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-consuming.  At each iteration the detector is rerun. 
 
 .. index:: AdjusterAdapter
 
@@ -942,7 +943,7 @@ AdjusterAdapter
 
 .. c:type:: AdjusterAdapter
 
-Class providing an interface for adjusting parameters of a feature detector. This interface is used by :func:`DynamicAdaptedFeatureDetector` . It is a wrapper for :func:`FeatureDetector` that enables adjusting parameters after detection. ::
+Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after detection. ::
   
       class AdjusterAdapter: public FeatureDetector
       {
@@ -954,9 +955,9 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
       };  
 
 See
-:func:`FastAdjuster`,
-:func:`StarAdjuster`,
-:func:`SurfAdjuster` for concrete implementations.
+:ref:`FastAdjuster`,
+:ref:`StarAdjuster`,
+:ref:`SurfAdjuster` for concrete implementations.
 
 .. index:: AdjusterAdapter::tooFew
 
@@ -984,13 +985,13 @@ AdjusterAdapter::tooMany
 ----------------------------
 .. c:function:: virtual void tooMany(int max, int n_detected) = 0
 
-    Too many features were detected so, adjust the detector parameters accordingly - so that the next detection detects less features.
+    Adjusts the detector parameters to detect less features.
 
-    :param max: This maximum desired number features.
+    :param max: Maximum desired number of features.
 
-    :param n_detected: The actual number detected last run.
+    :param n_detected: Number of features detected during the latest run.
 
-An example implementation of this is ::
+Example: ::
 
     void FastAdjuster::tooMany(int min, int n_detected)
     {
@@ -1004,7 +1005,9 @@ AdjusterAdapter::good
 -------------------------
 .. c:function:: virtual bool good() const = 0
 
-    Are params maxed out or still valid? Returns false if the parameters can't be adjusted any more. An example implementation of this is ::
+    Are params maxed out or still valid?? Returns false if the parameters cannot be adjusted any more.
+
+Example: ::
 
         bool FastAdjuster::good() const
         {
@@ -1018,7 +1021,7 @@ FastAdjuster
 
 .. c:type:: FastAdjuster
 
-  :func:`AdjusterAdapter` for the :func:`FastFeatureDetector`. This will basically decrement or increment the threshhold by 1 ::
+:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decrements or increments the threshhld by 1. ::
 
     class FastAdjuster FastAdjuster: public AdjusterAdapter
     {
@@ -1035,7 +1038,7 @@ StarAdjuster
 
 .. c:type:: StarAdjuster
 
-  :func:`AdjusterAdapter` for the :func:`StarFeatureDetector` .  This adjusts the responseThreshhold of StarFeatureDetector. ::
+:ref:`AdjusterAdapter` for :ref:`StarFeatureDetector` .  This classadjusts the responseThreshhold of StarFeatureDetector. ::
 
     class StarAdjuster: public AdjusterAdapter
     {
@@ -1051,7 +1054,7 @@ SurfAdjuster
 
 .. c:type:: SurfAdjuster
 
-  :func:`AdjusterAdapter` for the :func:`SurfFeatureDetector` .  This adjusts the hessianThreshold of SurfFeatureDetector. ::
+:ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
 
     class SurfAdjuster: public SurfAdjuster
     {

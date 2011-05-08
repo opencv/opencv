@@ -18,7 +18,7 @@ GenericDescriptorMatcher
 ------------------------
 .. c:type:: GenericDescriptorMatcher
 
-Abstract interface for extracting and matching a keypoint descriptor. There are aslo :ref:`DescriptorExtractor` and :ref:`DescriptorMatcher` for these purposes but their interfaces are intended for descriptors represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. :ref:`DescriptorMatcher` and``GenericDescriptorMatcher`` have two groups of match methods: for matching keypoints of an image with another image or with an image set. ::
+Abstract interface for extracting and matching a keypoint descriptor. There are also :ref:`DescriptorExtractor` and :ref:`DescriptorMatcher` for these purposes but their interfaces are intended for descriptors represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. :ref:`DescriptorMatcher` and ``GenericDescriptorMatcher`` have two groups of match methods: for matching keypoints of an image with another image or with an image set. ::
 
     class GenericDescriptorMatcher
     {
@@ -154,7 +154,6 @@ GenericDescriptorMatcher::classify
 
 GenericDescriptorMatcher::match
 -----------------------------------
-:func:`GenericDescriptorMatcher::add` :func:`DescriptorMatcher::match`
 .. c:function:: void GenericDescriptorMatcher::match(           const Mat\& queryImage, vector<KeyPoint>\& queryKeypoints,      const Mat\& trainImage, vector<KeyPoint>\& trainKeypoints,      vector<DMatch>\& matches, const Mat\& mask=Mat() ) const
 
     Finds the best match for query keypoints to the training set. In the first version of the method, a train image and keypoints detected on it are input arguments. In the second version, query keypoints are matched to a training collection set using ??. As in the mask can be set.??

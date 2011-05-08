@@ -84,7 +84,7 @@ Class implementing the Star keypoint detector ::
         void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
     };
 
-The class implements a modified version of the CenSurE keypoint detector described in
+The class implements a modified version of the ``CenSurE`` keypoint detector described in
 [Agrawal08].
 
 .. index:: SIFT
@@ -301,19 +301,19 @@ RandomizedTree::train
 
 .. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
-    :param base_set: Vector of ``BaseKeypoint`` type. Contains keypoints from the image that are used for training
+    :param base_set: Vector of ``BaseKeypoint`` type. Contains image keypoints used for training.
     
-    :param rng: Random numbers generator is used for training
+    :param rng: Random-number generator used for training.
     
-    :param make_patch: Patch generator is used for training
+    :param make_patch: Patch generator used for training.
     
-    :param depth: Maximum tree depth
+    :param depth: Maximum tree depth.
 
-    :param views: The number of random views of each keypoint neighborhood to generate
+    :param views: Number of random views of each keypoint neighborhood to generate.
 
-    :param reduced_num_dim: Number of dimensions are used in compressed signature
+    :param reduced_num_dim: Number of dimensions used in the compressed signature.
     
-    :param num_quant_bits: Number of bits are used for quantization
+    :param num_quant_bits: Number of bits used for quantization.
 
 .. index:: RandomizedTree::read
 
@@ -323,13 +323,13 @@ RandomizedTree::read
 
 .. c:function:: read(std::istream &is, int num_quant_bits)
 
-    Read a pre-saved randomized tree from a file or stream.
+    Reads a pre-saved randomized tree from a file or stream.
 
     :param file_name: Name of the file that contains randomized tree data.
 
     :param is: Input stream associated with the file that contains randomized tree data.
 
-    :param num_quant_bits: Number of bits are used for quantization
+    :param num_quant_bits: Number of bits used for quantization.
 
 .. index:: RandomizedTree::write
 
@@ -353,7 +353,7 @@ RandomizedTree::applyQuantization
 
     Applies quantization to the current randomized tree.
 
-    :param num_quant_bits: Number of bits are used for quantization
+    :param num_quant_bits: Number of bits used for quantization.
 
 .. index:: RTreeNode
 
@@ -391,7 +391,7 @@ RTreeClassifier
 ---------------
 .. c:type:: RTreeClassifier
 
-Class containing ``RTreeClassifier`` . It represents the Calonder descriptor that was originally introduced by Michael Calonder ::
+Class containing ``RTreeClassifier`` . It represents the Calonder descriptor that was originally introduced by Michael Calonder. ::
 
     class CV_EXPORTS RTreeClassifier
     {
@@ -465,23 +465,23 @@ RTreeClassifier::train
 
 .. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
-    :param base_set: Vector of ``BaseKeypoint``     type. Contains image keypoints used for training
+    :param base_set: Vector of ``BaseKeypoint``     type. It contains image keypoints used for training.
     
-    :param rng: Random-number generator is used for training
+    :param rng: Random-number generator used for training.
     
-    :param make_patch: Patch generator is used for training
+    :param make_patch: Patch generator used for training.
     
-    :param num_trees: Number of randomized trees used in RTreeClassificator
+    :param num_trees: Number of randomized trees used in ``RTreeClassificator`` .
     
-    :param depth: Maximum tree depth
+    :param depth: Maximum tree depth.
 
-    :param views: The number of random views of each keypoint neighborhood to generate
+    :param views: Number of random views of each keypoint neighborhood to generate.
 
-    :param reduced_num_dim: Number of dimensions are used in compressed signature
+    :param reduced_num_dim: Number of dimensions used in the compressed signature.
     
-    :param num_quant_bits: Number of bits are used for quantization
+    :param num_quant_bits: Number of bits used for quantization.
     
-    :param print_status: Print current status of training on the console
+    :param print_status: Current status of training printed on the console.
 
 .. index:: RTreeClassifier::getSignature
 
@@ -493,8 +493,8 @@ RTreeClassifier::getSignature
 
 .. c:function:: void getSignature(IplImage *patch, float *sig)
 
-    :param patch: Image patch to calculate signature for
-    :param sig: Output signature (array dimension is ``reduced_num_dim)``
+    :param patch: Image patch to calculate the signature for.
+    :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
 
 .. index:: RTreeClassifier::getSparseSignature
 
@@ -503,13 +503,13 @@ RTreeClassifier::getSparseSignature
 
 .. c:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
 
-    Similarly to ``getSignature``, but it uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
+    Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
 
-    :param patch: Image patch to calculate signature for
+    :param patch: Image patch to calculate the nsignature for.
     
-    :param sig: Output signature (array dimension is ``reduced_num_dim)``
+    :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
     
-    :param thresh: The threshold that is used for compressing the signature
+    :param thresh: Threshold that is used for compressing the signature.
 
 .. index:: RTreeClassifier::countNonZeroElements
 
@@ -523,7 +523,7 @@ RTreeClassifier::countNonZeroElements
 
     :param n: Input vector size.
 
-    :param tol: The threshold used for counting elements. We take all elements are less than ``tol``     as zero elements
+    :param tol: Threshold used for counting elements. All elements less than ``tol``  are considered as zero elements.
 
 .. index:: RTreeClassifier::read
 
@@ -545,7 +545,7 @@ RTreeClassifier::write
 --------------------------
 .. c:function:: void write(const char* file_name) const
 
-    Writes the current RTreeClassifier to a file or stream.
+    Writes the current ``RTreeClassifier`` to a file or stream.
 
 .. c:function:: void write(std::ostream &os) const
 
@@ -561,9 +561,9 @@ RTreeClassifier::setQuantization
 
     Applies quantization to the current randomized tree.
 
-    :param num_quant_bits: Number of bits are used for quantization
+    :param num_quant_bits: Number of bits used for quantization.
 
-The example below demonstrates the usage of ``RTreeClassifier`` for feature matching. There are test and train images and features are extracted from both with SURF. Output is
+The example below demonstrates the usage of ``RTreeClassifier`` for matching the features. The features are extracted from the test and train images with SURF. Output is
 :math:`best\_corr` and
 :math:`best\_corr\_idx` arrays that keep the best probabilities and corresponding features indices for every train feature. ::
 
