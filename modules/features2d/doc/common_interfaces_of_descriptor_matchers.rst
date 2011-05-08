@@ -3,11 +3,11 @@ Common Interfaces of Descriptor Matchers
 
 .. highlight:: cpp
 
-Matchers of keypoint descriptors in OpenCV have wrappers with common interface that enables to switch easily
+Matchers of keypoint descriptors in OpenCV have wrappers with a common interface that enables you to easily switch
 between different algorithms solving the same problem. This section is devoted to matching descriptors
-that are represented as vectors in a multidimensional space. All objects that implement ''vector''
+that are represented as vectors in a multidimensional space. All objects that implement ``vector``
 descriptor matchers inherit
-:func:`DescriptorMatcher` interface.
+:ref:`DescriptorMatcher` interface.
 
 .. index:: DMatch
 
@@ -17,8 +17,8 @@ DMatch
 ------
 .. c:type:: DMatch
 
-Match between two keypoint descriptors: query descriptor index,
-train descriptor index, train image index and distance between descriptors. ::
+Class for matching keypoint descriptors: query descriptor index,
+train descriptor index, train image index, and distance between descriptors ::??
 
     struct DMatch
     {
@@ -51,8 +51,8 @@ DescriptorMatcher
 .. c:type:: DescriptorMatcher
 
 Abstract base class for matching keypoint descriptors. It has two groups
-of match methods: for matching descriptors of one image with other image or
-with image set. ::
+of match methods: for matching descriptors of an image with another image or
+with an image set. ::
 
     class DescriptorMatcher
     {
@@ -69,7 +69,7 @@ with image set. ::
         virtual void train();
 
         /*
-         * Group of methods to match descriptors from image pair.
+         * Group of methods to match descriptors from an image pair.
          */
         void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
                     vector<DMatch>& matches, const Mat& mask=Mat() ) const;
@@ -80,7 +80,7 @@ with image set. ::
                           vector<vector<DMatch> >& matches, float maxDistance,
                           const Mat& mask=Mat(), bool compactResult=false ) const;
         /*
-         * Group of methods to match descriptors from one image to image set.
+         * Group of methods to match descriptors from one image to an image set.
          */
         void match( const Mat& queryDescriptors, vector<DMatch>& matches,
                     const vector<Mat>& masks=vector<Mat>() );
@@ -110,10 +110,9 @@ DescriptorMatcher::add
 --------------------------
 .. c:function:: void add( const vector<Mat>\& descriptors )
 
-    Add descriptors to train descriptor collection. If collection trainDescCollectionis not empty the new descriptors are added to existing train descriptors.
+    Adds descriptors to train a descriptor collection. If the collection ``trainDescCollectionis`` is not empty, the new descriptors are added to existing train descriptors.
 
-    :param descriptors: Descriptors to add. Each  ``descriptors[i]``  is a set of descriptors
-                            from the same (one) train image.
+    :param descriptors: Descriptors to add. Each  ``descriptors[i]``  is a set of descriptors from the same train image.
 
 .. index:: DescriptorMatcher::getTrainDescriptors
 
@@ -121,7 +120,7 @@ DescriptorMatcher::getTrainDescriptors
 ------------------------------------------
 .. c:function:: const vector<Mat>\& getTrainDescriptors() const
 
-    Returns constant link to the train descriptor collection (i.e. trainDescCollection).
+    Returns a constant link to the train descriptor collection ``trainDescCollection`` .
 
 .. index:: DescriptorMatcher::clear
 
@@ -129,7 +128,7 @@ DescriptorMatcher::clear
 ----------------------------
 .. c:function:: void DescriptorMatcher::clear()
 
-    Clear train descriptor collection.
+    Clears the train descriptor collection.
 
 .. index:: DescriptorMatcher::empty
 
@@ -137,7 +136,7 @@ DescriptorMatcher::empty
 ----------------------------
 .. c:function:: bool DescriptorMatcher::empty() const
 
-    Return true if there are not train descriptors in collection.
+    Returns true if there are not train descriptors in the collection.
 
 .. index:: DescriptorMatcher::isMaskSupported
 
@@ -145,7 +144,7 @@ DescriptorMatcher::isMaskSupported
 --------------------------------------
 .. c:function:: bool DescriptorMatcher::isMaskSupported()
 
-    Returns true if descriptor matcher supports masking permissible matches.
+    Returns true if the descriptor matcher supports masking permissible matches.
 
 .. index:: DescriptorMatcher::train
 
@@ -153,7 +152,7 @@ DescriptorMatcher::train
 ----------------------------
 .. c:function:: void DescriptorMatcher::train()
 
-    Train descriptor matcher (e.g. train flann index).  In all methods to match the method train() is run every time before matching. Some descriptor matchers (e.g. BruteForceMatcher) have empty implementation of this method, other matchers realy train their inner structures (e.g. FlannBasedMatcher trains flann::Index)
+    Trains a descriptor matcher (for example, the flann index). In all methods to match, the method ``train()`` is run every time before matching. Some descriptor matchers (for example, ``BruteForceMatcher``) have an empty implementation of this method. Other matchers really train their inner structures (for example, ``FlannBasedMatcher`` trains ``flann::Index`` ).
 
 .. index:: DescriptorMatcher::match
 
@@ -161,41 +160,37 @@ DescriptorMatcher::match
 ----------------------------
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                           const Mat\& trainDescriptors,               vector<DMatch>\& matches,              const Mat\& mask=Mat() ) const
 
-    Find the best match for each descriptor from a query set with train descriptors. Supposed that the query descriptors are of keypoints detected on the same query image. In first variant of this method train descriptors are set as input argument and supposed that they are of keypoints detected on the same train image. In second variant of the method train descriptors collection that was set using addmethod is used. Optional mask (or masks) can be set to describe which descriptors can be matched. queryDescriptors[i] can be matched with trainDescriptors[j] only if mask.at<uchar>(i,j)is non-zero.
+    Finds the best match for each descriptor from a query set with train descriptors. Query descriptors are supposed to be of keypoints detected on the same query image. In the first variant of this method, train descriptors are set as an input argument and are supposed to be of keypoints detected on the same train image. In the second variant of the method, train descriptors collection that was set using ``addmethod`` is used. Optional mask (or masks) can be set to describe which descriptors can be matched. ``queryDescriptors[i]`` can be matched with ``trainDescriptors[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero.?? what does "of keypoints" mean?
 
 .. c:function:: void DescriptorMatcher::match( const Mat\& queryDescriptors,                                   vector<DMatch>\& matches,                  const vector<Mat>\& masks=vector<Mat>() )
 
     :param queryDescriptors: Query set of descriptors.
 
-    :param trainDescriptors: Train set of descriptors. This will not be added to train descriptors collection
-                                           stored in class object.
+    :param trainDescriptors: Train set of descriptors. This set is not added to the train descriptors collection stored in the class object.
 
-    :param matches: Matches. If some query descriptor masked out in  ``mask``  no match will be added for this descriptor.
-                                        So  ``matches``  size may be less query descriptors count.
+    :param matches: Matches. If a query descriptor masked out in  ``mask`` , no match is added for this descriptor. So, ``matches``  size may be smaller than the query descriptors count.
 
-    :param mask: Mask specifying permissible matches between input query and train matrices of descriptors.
+    :param mask: Mask specifying permissible matches between an input query and train matrices of descriptors.
 
-    :param masks: The set of masks. Each  ``masks[i]``  specifies permissible matches between input query descriptors
-                      and stored train descriptors from i-th image (i.e.  ``trainDescCollection[i])`` .
+    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]`` .
 
 .. index:: DescriptorMatcher::knnMatch
 
 DescriptorMatcher::knnMatch
 -------------------------------
-:func:`DescriptorMatcher::match`
 .. c:function:: void DescriptorMatcher::knnMatch( const Mat\& queryDescriptors,       const Mat\& trainDescriptors,       vector<vector<DMatch> >\& matches,       int k, const Mat\& mask=Mat(),       bool compactResult=false ) const
 
-    Find the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in distance increasing order. Details about query and train descriptors see in .
+    Finds the k best matches for each descriptor from a query set with train descriptors. Found k (or less if not possible) matches are returned in the distance increasing order. See the details about query and train descriptors in ??.
 
 .. c:function:: void DescriptorMatcher::knnMatch( const Mat\& queryDescriptors,           vector<vector<DMatch> >\& matches, int k,      const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
-    :param queryDescriptors, trainDescriptors, mask, masks: See in  :func:`DescriptorMatcher::match` .
+    :param queryDescriptors, trainDescriptors, mask, masks: See  :ref:`DescriptorMatcher::match` .
 
     :param matches: Mathes. Each  ``matches[i]``  is k or less matches for the same query descriptor.
 
-    :param k: Count of best matches will be found per each query descriptor (or less if it's not possible).
+    :param k: Count of best matches found per each query descriptor (or less if it is not possible).
 
-    :param compactResult: It's used when mask (or masks) is not empty. If  ``compactResult``  is false  ``matches``  vector will have the same size as  ``queryDescriptors``  rows. If  ``compactResult``         is true  ``matches``  vector will not contain matches for fully masked out query descriptors.
+    :param compactResult: Parameter that is used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
 .. index:: DescriptorMatcher::radiusMatch
 
@@ -204,15 +199,15 @@ DescriptorMatcher::radiusMatch
 :func:`DescriptorMatcher::match`
 .. c:function:: void DescriptorMatcher::radiusMatch( const Mat\& queryDescriptors,           const Mat\& trainDescriptors,           vector<vector<DMatch> >\& matches,           float maxDistance, const Mat\& mask=Mat(),           bool compactResult=false ) const
 
-    Find the best matches for each query descriptor which have distance less than given threshold. Found matches are returned in distance increasing order. Details about query and train descriptors see in.
+    Finds the best matches for each query descriptor that has a distance smaller than the given threshold. Found matches are returned in the distance increasing order. See the details about query and train descriptors in ??.
 
 .. c:function:: void DescriptorMatcher::radiusMatch( const Mat\& queryDescriptors,           vector<vector<DMatch> >\& matches,           float maxDistance,      const vector<Mat>\& masks=vector<Mat>(),       bool compactResult=false )
 
-    :param queryDescriptors, trainDescriptors, mask, masks: See in  :func:`DescriptorMatcher::match` .
+    :param queryDescriptors, trainDescriptors, mask, masks: See :ref:`DescriptorMatcher::match` .
 
-    :param matches, compactResult: See in  :func:`DescriptorMatcher::knnMatch` .
+    :param matches, compactResult: See :ref:`DescriptorMatcher::knnMatch` .
 
-    :param maxDistance: The threshold to found match distances.
+    :param maxDistance: Threshold for found match distances.
 
 .. index:: DescriptorMatcher::clone
 
@@ -220,11 +215,11 @@ DescriptorMatcher::clone
 ----------------------------
 .. c:function:: Ptr<DescriptorMatcher> \\DescriptorMatcher::clone( bool emptyTrainData ) const
 
-    Clone the matcher.
+    Clones the matcher.
 
-    :param emptyTrainData: If emptyTrainData is false the method create deep copy of the object, i.e. copies
-             both parameters and train data. If emptyTrainData is true the method create object copy with current parameters
-             but with empty train data..
+    :param emptyTrainData: If ``emptyTrainData`` is false, the method creates a deep copy of the object, that is, copies
+             both parameters and train data. If ``emptyTrainData`` is true, the method creates an object copy with the current parameters
+             but with empty train data.
 
 .. index:: DescriptorMatcher::create
 
@@ -233,11 +228,11 @@ DescriptorMatcher::create
 :func:`DescriptorMatcher`
 .. c:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string\& descriptorMatcherType )
 
-    Descriptor matcher factory that creates of given type with default parameters (rather using default constructor).
+    Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
     :param descriptorMatcherType: Descriptor matcher type.
 
-Now the following matcher types are supported: ``"BruteForce"`` (it uses ``L2`` ), ``"BruteForce-L1"``,``"BruteForce-Hamming"``,``"BruteForce-HammingLUT"``,``"FlannBased"`` .
+Now the following matcher types are supported: ``"BruteForce"`` (it uses ``L2`` ), ``"BruteForce-L1"`` ,``"BruteForce-Hamming"`` ,``"BruteForce-HammingLUT"`` , and ``"FlannBased"`` .
 
 .. index:: BruteForceMatcher
 
@@ -263,7 +258,7 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
     }
 
 
-For efficiency, BruteForceMatcher is templated on the distance metric. For float descriptors, a common choice would be ``L2<float>``. Class of supported distances are: ::
+For efficiency, ``BruteForceMatcher`` is used as a template for the distance metric??. For float descriptors, a common choice is ``L2<float>`` . The following class of supported distances is used: ::
 
     template<typename T>
     struct Accumulator
@@ -333,7 +328,7 @@ FlannBasedMatcher
 -----------------
 .. c:type:: FlannBasedMatcher
 
-Flann based descriptor matcher. This matcher trains :func:`flann::Index` on train descriptor collection and calls it's nearest search methods to find best matches. So this matcher may be faster in cases of matching to large train collection than brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches between descriptor sets, because :func:`flann::Index` does not support this. ::
+Flann-based descriptor matcher. This matcher trains :ref:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster in cases of matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches between descriptor sets because :ref:`flann::Index` does not support this. ::
 
     class FlannBasedMatcher : public DescriptorMatcher
     {
