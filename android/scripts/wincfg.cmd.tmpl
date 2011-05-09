@@ -1,0 +1,26 @@
+:: variables required for OpenCV build ::
+SET ANDROID_NDK=C:\full\path\to\your\copy\of\android\NDK\android-ndk-r5b
+SET CMAKE_EXE=C:\full\path\to\cmake\utility\cmake.exe
+SET MAKE_EXE=C:\full\path\to\native\port\of\make\utility\make.exe
+
+:: variables required for android-opencv build ::
+SET SWIG_DIR=C:\full\path\to\SWIG\directory\swigwin-2.0.3
+SET ANDROID_SDK=C:\full\path\to\your\copy\of\android\SDK\android-sdk-windows
+SET ANT_DIR=C:\full\path\to\ant\directory\apache-ant-1.8.2
+SET JAVA_HOME=C:\full\path\to\JDK\jdk1.6.0_25
+
+:: configuration options ::
+:::: general ARM-V7 settings
+SET ARM_TARGET=armeabi-v7a
+SET BUILD_DIR=build
+
+:::: uncomment following lines to compile for emulator or old device
+::SET ARM_TARGET=armeabi
+::SET BUILD_DIR=build_armeabi
+
+:::: uncomment following lines to compile for ARM-V7 with NEON support
+::SET ARM_TARGET="armeabi-v7a with NEON"
+::SET BUILD_DIR=build_neon
+
+:::: other options
+::SET ANDROID_API_LEVEL=8   &:: android-3 is enough for OpenCV but android-8 is recommended

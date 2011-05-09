@@ -148,20 +148,21 @@ if( EXISTS ${ANDROID_NDK} )
  endif()
 
  set( ANDROID_API_LEVEL $ENV{ANDROID_API_LEVEL} )
- string( REGEX REPLACE "android-([0-9]+)" "\\1" ANDROID_API_LEVEL "${ANDROID_API_LEVEL}" )
+ string( REGEX REPLACE "[\t ]*android-([0-9]+)[\t ]*" "\\1" ANDROID_API_LEVEL "${ANDROID_API_LEVEL}" )
+ string( REGEX REPLACE "[\t ]*([0-9]+)[\t ]*" "\\1" ANDROID_API_LEVEL "${ANDROID_API_LEVEL}" )
 
  set( PossibleAndroidLevels "3;4;5;8;9" )
  set( ANDROID_API_LEVEL ${ANDROID_API_LEVEL} CACHE STRING "android API level" )
  set_property( CACHE ANDROID_API_LEVEL PROPERTY STRINGS ${PossibleAndroidLevels} )
  
  if( NOT ANDROID_API_LEVEL GREATER 2 )
-  set( ANDROID_API_LEVEL 8 )
+  set( ANDROID_API_LEVEL 8)
   message( STATUS "Using default android API level android-${ANDROID_API_LEVEL}" )
   message( STATUS "If you prefer to use a different API level, please define the environment variable: ANDROID_API_LEVEL" )
  endif()
 
  set( ANDROID_NDK_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/${NDKSYSTEM}" )
- set( ANDROID_NDK_SYSROOT "${ANDROID_NDK}/platforms/android-${ANDROID_API_LEVEL}/arch-arm/" )
+ set( ANDROID_NDK_SYSROOT "${ANDROID_NDK}/platforms/android-${ANDROID_API_LEVEL}/arch-arm" )
  
  __TOOLCHAIN_DETECT_API_LEVEL( "${ANDROID_NDK_SYSROOT}/usr/include/android/api-level.h" ${ANDROID_API_LEVEL} )
  
@@ -180,6 +181,7 @@ else()
  endif()
 
  set( ANDROID_NDK_TOOLCHAIN_ROOT ${ANDROID_NDK_TOOLCHAIN_ROOT} CACHE PATH "root of the Android NDK standalone toolchain" FORCE )
+ set( ANDROID_NDK_SYSROOT "${ANDROID_NDK_TOOLCHAIN_ROOT}/sysroot" )
 
  if( NOT EXISTS ${ANDROID_NDK_TOOLCHAIN_ROOT} )
   message( FATAL_ERROR "neither ${ANDROID_NDK} nor ${ANDROID_NDK_TOOLCHAIN_ROOT} does not exist!
@@ -192,7 +194,7 @@ else()
       sudo ln -s ~/my-android-toolchain ${ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH}" )
  endif()
  
- __TOOLCHAIN_DETECT_API_LEVEL( "${ANDROID_NDK_TOOLCHAIN_ROOT}/sysroot/usr/include/android/api-level.h" )
+ __TOOLCHAIN_DETECT_API_LEVEL( "${ANDROID_NDK_SYSROOT}/usr/include/android/api-level.h" )
 
  #message( STATUS "Using android NDK standalone toolchain from ${ANDROID_NDK_TOOLCHAIN_ROOT}" )
  set( BUILD_WITH_ANDROID_NDK_TOOLCHAIN True )
@@ -253,15 +255,16 @@ endif()
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS ON CACHE INTERNAL "" FORCE)
 
 # where is the target environment 
+set( CMAKE_FIND_ROOT_PATH ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi ${ANDROID_NDK_SYSROOT} ${CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_PREFIX}/share )
+
 if( BUILD_WITH_ANDROID_NDK )
- set( STL_LIBRARIES_PATH "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ARMEABI_NDK_NAME}" )
- set( CMAKE_FIND_ROOT_PATH  ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi ${ANDROID_NDK_SYSROOT} )
- include_directories( ${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/include ${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ARMEABI_NDK_NAME}/include )
+ set( STL_PATH "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++" )
+ set( STL_LIBRARIES_PATH "${STL_PATH}/libs/${ARMEABI_NDK_NAME}" )
+ include_directories( ${STL_PATH}/include ${STL_LIBRARIES_PATH}/include )
 endif()
 
 if( BUILD_WITH_ANDROID_NDK_TOOLCHAIN )
  set( STL_LIBRARIES_PATH "${CMAKE_INSTALL_PREFIX}/lib" )
- set( CMAKE_FIND_ROOT_PATH  ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi ${ANDROID_NDK_TOOLCHAIN_ROOT}/sysroot ${CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_PREFIX}/share )
  #for some reason this is needed? TODO figure out why...
  include_directories( ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi )
 endif()
@@ -345,7 +348,7 @@ if( NOT NO_SWIG )
   macro( SET_SWIG_JAVA_PACKAGE package_name )
    string( REGEX REPLACE "[.]" "/" package_name_output ${package_name} )
    set( CMAKE_SWIG_OUTDIR ${SWIG_OUTPUT_ROOT}/${package_name_output} )
-   set( CMAKE_SWIG_FLAGS "-package" "'${package_name}'" )
+   set( CMAKE_SWIG_FLAGS "-package" "\"${package_name}\"" )
   endmacro()
  else()
   message( STATUS "SWIG is not found" )
