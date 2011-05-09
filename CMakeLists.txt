@@ -832,7 +832,7 @@ endif()
 
 
 ################## Reference Manual ##################
-set(BUILD_REFMAN ON CACHE BOOL "Build OpenCV Reference Manual")
+set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Reference Manual")
 
 
 ################### DOXYGEN ###############
@@ -1284,7 +1284,7 @@ endif()
 add_subdirectory(include)
 add_subdirectory(modules)
 
-if(BUILD_REFMAN)
+if(BUILD_DOCS)
   include(OpenCVFindLATEX.cmake REQUIRED)
 
   if(PDFLATEX_COMPILER)
@@ -1292,7 +1292,7 @@ if(BUILD_REFMAN)
   endif()
 endif()
 
-add_subdirectory(docroot)
+add_subdirectory(doc)
 add_subdirectory(data)
 
 if(BUILD_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
@@ -1482,10 +1482,10 @@ endif()
 message(STATUS "")
 message(STATUS "  Documentation: ")
 
-if(BUILD_REFMAN AND PDFLATEX_COMPILER AND HAVE_SPHINX)
-message(STATUS "    Build Reference Manual:     YES")
+if(BUILD_DOCS AND PDFLATEX_COMPILER AND HAVE_SPHINX)
+message(STATUS "    Build Documentation:        YES")
 else()
-message(STATUS "    Build Reference Manual:     NO")
+message(STATUS "    Build Documentation:        NO")
 endif()
 
 #if(BUILD_DOXYGEN_DOCS AND DOXYGEN_FOUND)

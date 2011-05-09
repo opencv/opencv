@@ -7,7 +7,7 @@ file(GLOB FILES_DOC_VS vidsurv/*.doc)
 file(GLOB FILES_TEX *.tex *.sty *.bib)
 file(GLOB FILES_TEX_PICS pics/*.png pics/*.jpg)
 
-if(BUILD_REFMAN AND PDFLATEX_COMPILER AND HAVE_SPHINX)
+if(BUILD_DOCS AND PDFLATEX_COMPILER AND HAVE_SPHINX)
 
 add_subdirectory(opencv1)
 add_subdirectory(opencv2)

@@ -8,7 +8,7 @@ add_custom_target(refman1
                     -b latex -c ${CMAKE_CURRENT_SOURCE_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR} .
                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/pics
+                    ${CMAKE_CURRENT_SOURCE_DIR}/../pics ${CMAKE_CURRENT_BINARY_DIR}/pics
                   COMMAND ${CMAKE_COMMAND} -E copy
                     ${CMAKE_CURRENT_SOURCE_DIR}/../mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
                   COMMAND ${PDFLATEX_COMPILER} opencv1x
