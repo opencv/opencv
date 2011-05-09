@@ -1,0 +1,42 @@
+\ProvidesPackage{mymath}
+
+\newcommand{\matTT}[9]{
+\[
+\left|\begin{array}{ccc}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{array}\right|
+\]
+}
+
+\newcommand{\fork}[4]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  \end{array} \right.}
+\newcommand{\forkthree}[6]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  #5 & \mbox{#6}\\
+  \end{array} \right.}
+
+\newcommand{\vecthree}[3]{
+\begin{bmatrix}
+ #1\\
+ #2\\
+ #3
+\end{bmatrix}
+}
+
+\newcommand{\vecthreethree}[9]{
+\begin{bmatrix}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{bmatrix}
+}
+
