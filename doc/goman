@@ -1,6 +1,0 @@
-(pdflatex '\newcommand{\genc}{true}\newcommand{\genpy}{true}\newcommand{\targetlang}{c}\input{opencv_user.tex}' &&
-# bibtex opencv_user &&
-# makeindex opencv_user &&
- pdflatex '\newcommand{\genc}{true}\newcommand{\genpy}{true}\newcommand{\targetlang}{c}\input{opencv_user.tex}' > 1
- ) || exit 1
-#gv -page=480 opencv_user.pdf

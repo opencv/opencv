@@ -1,9 +1,0 @@
-* automatically put generated rst files in subdirectories 
-  (e.g. cxcore/, cvreference/ etc.)
-
-* fixup translation of function groups (e.g. cv*Dget)
-
-* generate opencv_function_names on the fly during parsing of the tex source
-
-* improve plastex
-    - allow pickling of dom tree --> only regenerate when necessary
