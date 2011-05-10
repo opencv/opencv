@@ -596,11 +596,11 @@ bool cv::gpu::CudaMem::canMapHostMemory()
 
 namespace
 {
-    int alignUp(int what, int alignment)
+    size_t alignUpStep(size_t what, size_t alignment)
     {
-        int alignMask = alignment-1;
-        int inverseAlignMask = ~alignMask;
-        int res = (what + alignMask) & inverseAlignMask;
+        size_t alignMask = alignment-1;
+        size_t inverseAlignMask = ~alignMask;
+        size_t res = (what + alignMask) & inverseAlignMask;
         return res;
     }
 }
@@ -626,7 +626,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
         {
             cudaDeviceProp prop;
             cudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
-            step = alignUp(step, prop.textureAlignment);
+            step = alignUpStep(step, prop.textureAlignment);
         }
         int64 _nettosize = (int64)step*rows;
         size_t nettosize = (size_t)_nettosize;
