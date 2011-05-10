@@ -424,8 +424,8 @@ void DOTDetector::TrainParams::isConsistent() const
 
 void DOTDetector::TrainParams::read( FileNode& fn )
 {
-    winSize.width = fn["winSize.width"];
-    winSize.height = fn["winSize.height"];
+    winSize.width = fn["winSize_width"];
+    winSize.height = fn["winSize_height"];
     regionSize = fn["regionSize"];
 
     minMagnitude = fn["minMagnitude"];
@@ -441,8 +441,8 @@ void DOTDetector::TrainParams::write( FileStorage& fs ) const
 {
     CV_Assert( fs.isOpened() );
 
-    fs << "winSize.width" << winSize.width;
-    fs << "winSize.height" << winSize.height;
+    fs << "winSize_width" << winSize.width;
+    fs << "winSize_height" << winSize.height;
     fs << "regionSize" << regionSize;
 
     fs << "minMagnitude" << minMagnitude;
@@ -557,14 +557,22 @@ float DOTDetector::DOTTemplate::computeTexturelessRatio( const cv::Mat& quantize
 void DOTDetector::DOTTemplate::read( FileNode& fn )
 {
     fn["template"] >> quantizedImage;
-    fn["objectClassIDs"] >> objectClassIDs;
+    for( FileNodeIterator fni = fn["objectClassIDs"].begin(); fni != fn["objectClassIDs"].end(); fni++ )
+    {
+        objectClassIDs.push_back( *fni );
+    }
     texturelessRatio = fn["texturelessRatio"];
 }
 
 void DOTDetector::DOTTemplate::write( FileStorage& fs ) const
 {
     fs << "template" << quantizedImage;
-    fs << "objectClassIDs" << objectClassIDs;
+    fs << "objectClassIDs" << "[";
+    for( size_t i = 0; i < objectClassIDs.size(); i++ )
+    {
+        fs << objectClassIDs[i];
+    }
+    fs << "]";
     fs << "texturelessRatio" << texturelessRatio;
 }
 
@@ -601,8 +609,8 @@ void DOTDetector::read( FileNode& fn )
     trainParams.read( fn_params );
 
     // read class names
-    int classCount = fn["class_count"];
-    FileNodeIterator fni = fn["class_names"].begin();
+    int classCount = fn["object_class_count"];
+    FileNodeIterator fni = fn["object_class_names"].begin();
     for( int i = 0; i < classCount; i++ )
     {
         string name;
@@ -612,11 +620,12 @@ void DOTDetector::read( FileNode& fn )
 
     // read DOT templates
     int templatesCount = fn["templates_count"];
-    fni = fn["templates"].begin();
     for( int i = 0; i < templatesCount; i++ )
     {
+        stringstream ss;
+        ss << "template_" << i;
         dotTemplates.push_back( DOTTemplate() );
-        FileNode cur_fn = *fni;
+        FileNode cur_fn = fn["templates"][ss.str()];
         dotTemplates.rbegin()->read( cur_fn );
     }
 }
@@ -629,8 +638,8 @@ void DOTDetector::write( FileStorage& fs ) const
     fs << "}"; //params
 
     // write class names
-    fs << "class_count" << (int)objectClassNames.size();
-    fs << "class_names" << "[";
+    fs << "object_class_count" << (int)objectClassNames.size();
+    fs << "object_class_names" << "[";
     for( size_t i = 0; i < objectClassNames.size(); i++ )
     {
         fs << objectClassNames[i];
@@ -639,12 +648,16 @@ void DOTDetector::write( FileStorage& fs ) const
 
     // write dot templates
     fs << "templates_count" << (int)dotTemplates.size();
-    fs << "templates" << "[";
+    fs << "templates" << "{";
     for( size_t i = 0; i < dotTemplates.size(); i++ )
     {
+        stringstream ss;
+        ss << "template_" << i;
+        fs << ss.str() << "{";
         dotTemplates[i].write( fs );
+        fs << "}";
     }
-    fs << "]";
+    fs << "}";
 }
 
 void DOTDetector::load( const std::string& filename )

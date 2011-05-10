@@ -41,15 +41,15 @@ int main( int argc, char **argv )
 {
     if( argc != 1 && argc != 3 )
     {
-        cout << "Format: base; " << endl << "or without arguments to use default data" << endl;
+        cout << "Format: train_data test_data; " << endl << "or without arguments to use default data" << endl;
         return -1;
     }
 
     string baseDirName, testDirName;
     if( argc == 1 )
     {
-        baseDirName = "../MultiScaleDOT/Data/train/";
-        testDirName = "../MultiScaleDOT/Data/test/";
+        baseDirName = "../../opencv/samples/cpp/dot_data/train/";
+        testDirName = "../../opencv/samples/cpp/dot_data/test/";
     }
     else
     {
@@ -70,6 +70,9 @@ int main( int argc, char **argv )
     // 1. Train detector
     DOTDetector dotDetector;
     dotDetector.train( baseDirName, trainParams, true );
+
+//    dotDetector.save( "../../dot.xml.gz" );
+//    dotDetector.load( "../../dot.xml.gz" );
 
     const vector<string>& objectClassNames = dotDetector.getObjectClassNames();
     const vector<DOTDetector::DOTTemplate>& dotTemplates = dotDetector.getDOTTemplates();

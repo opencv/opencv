@@ -684,7 +684,6 @@ protected:
                           vector<vector<int> >& dotTemplateIndices ) const;
 
     TrainParams trainParams;
-    //bool isAddImageAndGradientMask;
 
     std::vector<std::string> objectClassNames;
     std::vector<DOTTemplate> dotTemplates;
