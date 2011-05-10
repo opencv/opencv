@@ -7,7 +7,8 @@
 using namespace cv;
 using namespace std;
 
-#define SHOW_ALL_RECTS_BY_ONE 1
+#define SHOW_ALL_RECTS_BY_ONE 0
+
 static void fillColors( vector<Scalar>& colors )
 {
     cv::RNG rng = theRNG();
@@ -33,6 +34,8 @@ static void readTestImageNames( const string& descrFilename, vector<string>& nam
     }
     file.close();
 }
+
+// find -name "image_*.png" | grep -v mask | sed 's/.\///' >> images.txt
 
 int main( int argc, char **argv )
 {
@@ -68,10 +71,10 @@ int main( int argc, char **argv )
     DOTDetector dotDetector;
     dotDetector.train( baseDirName, trainParams, true );
 
-    const vector<string>& classNames = dotDetector.getClassNames();
+    const vector<string>& objectClassNames = dotDetector.getObjectClassNames();
     const vector<DOTDetector::DOTTemplate>& dotTemplates = dotDetector.getDOTTemplates();
 
-    vector<Scalar> colors( classNames.size() );
+    vector<Scalar> colors( objectClassNames.size() );
     fillColors( colors );
     cout << "Templates count " << dotTemplates.size() << endl;
 
@@ -88,6 +91,7 @@ int main( int argc, char **argv )
     detectParams.minRatio = 0.8f;
     detectParams.minRegionSize = 5;
     detectParams.maxRegionSize = 11;
+
 #if SHOW_ALL_RECTS_BY_ONE
     detectParams.isGroup = false;
 #endif
@@ -102,26 +106,43 @@ int main( int argc, char **argv )
             continue;
 
         cout << "Detection start ..." << endl;
+
         vector<vector<Rect> > rects;
+#if SHOW_ALL_RECTS_BY_ONE
         vector<vector<float> > ratios;
-        vector<vector<int> > trainTemlateIdxs;
-        dotDetector.detectMultiScale( queryImage, rects, detectParams, &ratios, &trainTemlateIdxs );
+        vector<vector<int> > dotTemlateIndices;
+        dotDetector.detectMultiScale( queryImage, rects, detectParams, &ratios, &dotTemlateIndices );
+
+        const vector<DOTDetector::DOTTemplate>& dotTemplates = dotDetector.getDOTTemplates();
+#else
+        dotDetector.detectMultiScale( queryImage, rects, detectParams );
+#endif
         cout << "end" << endl;
 
         Mat draw;
         cvtColor( queryImage, draw, CV_GRAY2BGR );
 
-#if SHOW_ALL_RECTS_BY_ONE
-        DOTDetector::groupRectanglesList( rects, 3, 0.2 );
-#endif
-
         const int textStep = 25;
-        for( size_t ci = 0; ci < classNames.size(); ci++ )
+        for( size_t ci = 0; ci < objectClassNames.size(); ci++ )
         {
-            putText( draw, classNames[ci], Point(textStep, textStep*(1+ci)), 1, 2, colors[ci], 3 );
+            putText( draw, objectClassNames[ci], Point(textStep, textStep*(1+ci)), 1, 2, colors[ci], 3 );
             for( size_t ri = 0; ri < rects[ci].size(); ri++ )
             {
                 rectangle( draw, rects[ci][ri], colors[ci], 3 );
+
+#if SHOW_ALL_RECTS_BY_ONE
+                int dotTemplateIndex = dotTemlateIndices[ci][ri];
+                const DOTDetector::DOTTemplate::TrainData* trainData = dotTemplates[dotTemplateIndex].getTrainData(ci);
+
+                imshow( "maskedImage", trainData->maskedImage );
+                imshow( "strongestGradientsMask", trainData->strongestGradientsMask );
+
+                Mat scaledDraw;
+                cv::resize( draw, scaledDraw, Size(640, 480) );
+                imshow( "detection result", scaledDraw );
+
+                cv::waitKey();
+#endif
             }
         }
         Mat scaledDraw;
@@ -130,5 +151,4 @@ int main( int argc, char **argv )
 
         cv::waitKey();
     }
-
 }

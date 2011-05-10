@@ -56,7 +56,7 @@ static void readDirContent( const string& descrFilename, vector<string>& names )
 {
     names.clear();
 
-    ifstream file( descrFilename.c_str() );
+    ifstream file( descrFilename.c_str(), ifstream::in );
     if ( !file.is_open() )
         return;
 
@@ -233,7 +233,7 @@ static void quantizeToTrain( const Mat& _magnitudesExt, const Mat& _anglesExt, c
                     subMagnitudes.copyTo( subMagnitudesCopy );
                     Mat subAngles( anglesExt, shiftedRect );
 
-                    double maxMagnitude;
+                    double maxMagnitude = 0;
                     int strongestCount = 0;
                     for( ; strongestCount < params.maxStrongestCount; strongestCount++ )
                     {
@@ -268,16 +268,17 @@ static void quantizeToTrain( const Mat& _magnitudesExt, const Mat& _anglesExt, c
     }
 }
 
-static void quantizeToDetect( const Mat& _magnitudes, const Mat& angles, Mat& quantizedImage, const DOTDetector::TrainParams& params )
+static void quantizeToDetect( const Mat& _magnitudes, const Mat& angles,
+                              Mat& quantizedImage, int regionSize, const DOTDetector::TrainParams& params )
 {
     Mat magnitudes; _magnitudes.copyTo( magnitudes );
 
-    const int verticalRegionCount = magnitudes.rows / params.regionSize;
-    const int horizontalRegionCount = magnitudes.cols / params.regionSize;
+    const int verticalRegionCount = magnitudes.rows / regionSize;
+    const int horizontalRegionCount = magnitudes.cols / regionSize;
 
     quantizedImage = Mat( verticalRegionCount, horizontalRegionCount, CV_8UC1, Scalar::all(0) );
 
-    Rect curRect(0, 0, params.regionSize, params.regionSize);
+    Rect curRect(0, 0, regionSize, regionSize);
     const int maxStrongestCount = 1;
     for( int vRegIdx = 0; vRegIdx < verticalRegionCount; vRegIdx++ )
     {
@@ -311,10 +312,10 @@ static void quantizeToDetect( const Mat& _magnitudes, const Mat& angles, Mat& qu
                 curRectBits |= 1 << DOTDetector::TrainParams::BIN_COUNT;
 
             quantizedImage.at<uchar>(vRegIdx, hRegIdx) = curRectBits;
-            curRect.x += params.regionSize;
+            curRect.x += regionSize;
         }
         curRect.x = 0;
-        curRect.y += params.regionSize;
+        curRect.y += regionSize;
     }
 }
 
@@ -327,7 +328,7 @@ inline void andQuantizedImages( const Mat& queryQuantizedImage, const Mat& train
     int area = cv::countNonZero( trainQuantizedImage );
 
     ratio = (float)nonZeroCount / area;
-    texturelessRatio = texturelessCount / nonZeroCount;
+    texturelessRatio = (float)texturelessCount / nonZeroCount;
 }
 
 static void computeTrainUsedStrongestMask( const Mat& _magnitudesExt, const Mat& _anglesExt, const Mat& maskExt, const Mat& quantizedImage,
@@ -402,10 +403,10 @@ DOTDetector::TrainParams::TrainParams( const Size& _winSize, int _regionSize, in
                                 maxStrongestCount(_maxStrongestCount), maxNonzeroBits(_maxNonzeroBits),
                                 minRatio(_minRatio)
 {
-    asserts();
+    isConsistent();
 }
 
-void DOTDetector::TrainParams::asserts() const
+void DOTDetector::TrainParams::isConsistent() const
 {
     CV_Assert( winSize.width > 0 && winSize.height > 0 );
     CV_Assert( regionSize > 0 && regionSize % 2 == 1);
@@ -433,7 +434,7 @@ void DOTDetector::TrainParams::read( FileNode& fn )
 
     minRatio = fn["minRatio"];
 
-    asserts();
+    isConsistent();
 }
 
 void DOTDetector::TrainParams::write( FileStorage& fs ) const
@@ -459,10 +460,10 @@ DOTDetector::DetectParams::DetectParams( float _minRatio, int _minRegionSize, in
     minRatio(_minRatio), minRegionSize(_minRegionSize), maxRegionSize(_maxRegionSize), regionSizeStep(_regionSizeStep),
     isGroup(_isGroup), groupThreshold(_groupThreshold), groupEps(_groupEps)
 {
-    asserts();
+    isConsistent();
 }
 
-void DOTDetector::DetectParams::asserts( float minTrainRatio ) const
+void DOTDetector::DetectParams::isConsistent( float minTrainRatio ) const
 {
     CV_Assert( minRatio > 0 && minRatio < 1 );
     CV_Assert( minRatio <= minTrainRatio );
@@ -484,22 +485,30 @@ void DOTDetector::DetectParams::asserts( float minTrainRatio ) const
  * DOTDetector::DOTTemplate
  */
 
-DOTDetector::DOTTemplate::DOTTemplate() : texturelessRatio(-1.f) {}
-
-DOTDetector::DOTTemplate::DOTTemplate( const cv::Mat& _quantizedImage, int _classID, const cv::Mat& _maskedImage, const cv::Mat& _gradientMask ) :
-        quantizedImage(_quantizedImage), texturelessRatio(computeTexturelessRatio(_quantizedImage))
+DOTDetector::DOTTemplate::TrainData::TrainData()
 {
-    addClassID( _classID, _maskedImage, _gradientMask );
+}
+DOTDetector::DOTTemplate::TrainData::TrainData( const Mat& _maskedImage, const cv::Mat& _strongestGradientsMask )
+    : maskedImage( _maskedImage ), strongestGradientsMask( _strongestGradientsMask )
+{
 }
 
-void DOTDetector::DOTTemplate::addClassID( int _classID, const cv::Mat& _maskedImage, const cv::Mat& _gradientMask )
+DOTDetector::DOTTemplate::DOTTemplate() : texturelessRatio(-1.f) {}
+
+DOTDetector::DOTTemplate::DOTTemplate( const cv::Mat& _quantizedImage, int _objectClassID, const cv::Mat& _maskedImage, const cv::Mat& _strongestGradientsMask ) :
+        quantizedImage(_quantizedImage), texturelessRatio(computeTexturelessRatio(_quantizedImage))
 {
-    CV_Assert( _classID >= 0 );
+    addObjectClassID( _objectClassID, _maskedImage, _strongestGradientsMask );
+}
+
+void DOTDetector::DOTTemplate::addObjectClassID( int _objectClassID, const cv::Mat& _maskedImage, const cv::Mat& _strongestGradientsMask )
+{
+    CV_Assert( _objectClassID >= 0 );
     bool isFound = false;
 
-    for( size_t i = 0; i < classIDs.size(); i++ )
+    for( size_t i = 0; i < objectClassIDs.size(); i++ )
     {
-        if( classIDs[i] == _classID )
+        if( objectClassIDs[i] == _objectClassID )
         {
             isFound = true;
             break;
@@ -508,14 +517,26 @@ void DOTDetector::DOTTemplate::addClassID( int _classID, const cv::Mat& _maskedI
 
     if( !isFound )
     {
-        classIDs.push_back( _classID );
+        objectClassIDs.push_back( _objectClassID );
         if( !_maskedImage.empty() )
         {
-            CV_Assert( !_gradientMask.empty() );
-            maskedImages.push_back( _maskedImage );
-            gradientMasks.push_back( _gradientMask );
+            CV_Assert( !_strongestGradientsMask.empty() );
+            trainData.push_back( TrainData(_maskedImage, _strongestGradientsMask) );
         }
     }
+}
+
+const DOTDetector::DOTTemplate::TrainData* DOTDetector::DOTTemplate::getTrainData( int objectClassID ) const
+{
+    if( objectClassID >= 0 )
+    {
+        for( size_t i = 0; i < objectClassIDs.size(); i++ )
+        {
+            if( objectClassID == objectClassIDs[i] )
+                return &trainData[i];
+        }
+    }
+    return 0;
 }
 
 float DOTDetector::DOTTemplate::computeTexturelessRatio( const cv::Mat& quantizedImage )
@@ -536,14 +557,14 @@ float DOTDetector::DOTTemplate::computeTexturelessRatio( const cv::Mat& quantize
 void DOTDetector::DOTTemplate::read( FileNode& fn )
 {
     fn["template"] >> quantizedImage;
-    fn["classIDs"] >> classIDs;
+    fn["objectClassIDs"] >> objectClassIDs;
     texturelessRatio = fn["texturelessRatio"];
 }
 
 void DOTDetector::DOTTemplate::write( FileStorage& fs ) const
 {
     fs << "template" << quantizedImage;
-    fs << "classIDs" << classIDs;
+    fs << "objectClassIDs" << objectClassIDs;
     fs << "texturelessRatio" << texturelessRatio;
 }
 
@@ -551,11 +572,11 @@ void DOTDetector::DOTTemplate::write( FileStorage& fs ) const
  * DOTDetector
  */
 
-DOTDetector::DOTDetector() : isAddImageAndGradientMask( false )
+DOTDetector::DOTDetector()
 {
 }
 
-DOTDetector::DOTDetector( const std::string& filename ) : isAddImageAndGradientMask( false )
+DOTDetector::DOTDetector( const std::string& filename )
 {
     load( filename );
 }
@@ -567,7 +588,7 @@ DOTDetector::~DOTDetector()
 
 void DOTDetector::clear()
 {
-    classNames.clear();
+    objectClassNames.clear();
     dotTemplates.clear();
 }
 
@@ -586,7 +607,7 @@ void DOTDetector::read( FileNode& fn )
     {
         string name;
         fni >> name;
-        classNames.push_back( name );
+        objectClassNames.push_back( name );
     }
 
     // read DOT templates
@@ -608,11 +629,11 @@ void DOTDetector::write( FileStorage& fs ) const
     fs << "}"; //params
 
     // write class names
-    fs << "class_count" << (int)classNames.size();
+    fs << "class_count" << (int)objectClassNames.size();
     fs << "class_names" << "[";
-    for( size_t i = 0; i < classNames.size(); i++ )
+    for( size_t i = 0; i < objectClassNames.size(); i++ )
     {
-        fs << classNames[i];
+        fs << objectClassNames[i];
     }
     fs << "]";
 
@@ -647,29 +668,31 @@ void DOTDetector::save( const std::string& filename ) const
     }
 }
 
-void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainParams, bool /*_isAddImageAndGradientMask*/ )
+void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainParams, bool isAddImageAndGradientMask )
 {
     clear();
 
     trainParams = _trainParams;
-    trainParams.asserts();
+    trainParams.isConsistent();
 
     string baseDirName = _baseDirName + (*(_baseDirName.end()-1) == '/' ? "" : "/");
     const int regionSize_2 = trainParams.regionSize / 2;
 
-    readDirContent( baseDirName+"objects.txt", classNames );
+    vector<string> allObjectClassNames;
+    readDirContent( baseDirName + "objects.txt", allObjectClassNames );
 
-    for( size_t objIdx = 0; objIdx < classNames.size(); objIdx++ )
+    for( size_t objIdx = 0; objIdx < allObjectClassNames.size(); objIdx++ )
     {
-        string curObjDirName = baseDirName + classNames[objIdx] + "/";
+        string curObjDirName = baseDirName + allObjectClassNames[objIdx] + "/";
 
-        cout << "===============" << classNames[objIdx] << "===============" << endl;
+        cout << "===============" << allObjectClassNames[objIdx] << "===============" << endl;
         vector<string> imagesFilenames;
         readDirContent( curObjDirName + "images.txt", imagesFilenames );
 
         if( imagesFilenames.empty() )
             continue;
 
+        objectClassNames.push_back( allObjectClassNames[objIdx] );
         int countSamples = 0;
         for( size_t imgIdx = 0; imgIdx < imagesFilenames.size(); imgIdx++ )
         {
@@ -692,47 +715,62 @@ void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainPa
 
             countSamples++;
 
-            Mat trainImageExt, trainMaskExt, trainQuantizedImage, detectQuantizedImage;
+            Mat trainImageExt, trainMaskExt, trainQuantizedImage, queryQuantizedImage;
             Mat trainMagnitudesExt, trainAnglesExt;
 
             computeWinData( image, mask, trainParams.winSize,
                             trainImageExt, trainMaskExt,
                             trainMagnitudesExt, trainAnglesExt, regionSize_2 );
+            static int index_ = 0;
+            {
+                stringstream ss;
+                ss << "/files/Datasets/test_temp/" << index_ << ".png";
+                index_++;
+                imwrite( ss.str(), trainImageExt );
+            }
 
             quantizeToTrain( trainMagnitudesExt, trainAnglesExt, trainMaskExt, trainQuantizedImage, trainParams );
 
-            quantizeToDetect( trainMagnitudesExt, trainAnglesExt, detectQuantizedImage, trainParams );
+            quantizeToDetect( trainMagnitudesExt, trainAnglesExt, queryQuantizedImage,
+                              trainParams.regionSize, trainParams );
 
             vector<vector<Rect> > rects;
             vector<vector<float> > ratios;
-            vector<vector<int> > trainTemplatesIdxs;
-            detectQuantized( detectQuantizedImage, trainParams.minRatio, rects, ratios, trainTemplatesIdxs );
+            vector<vector<int> > dotTemplateIndices;
 
-            Mat maskedTrainImage, trainGradientMask;
+            detectQuantized( queryQuantizedImage, trainParams.minRatio, rects, ratios, dotTemplateIndices );
+
+            Mat trainMaskedImage, trainStrongestGradientMask;
             if( isAddImageAndGradientMask )
             {
-                trainImageExt.copyTo( maskedTrainImage, trainMaskExt);
+                trainImageExt.copyTo( trainMaskedImage, trainMaskExt );
                 computeTrainUsedStrongestMask( trainMagnitudesExt, trainAnglesExt, trainMaskExt, trainQuantizedImage,
-                                               trainGradientMask, trainParams.regionSize, trainParams.minMagnitude );
+                                               trainStrongestGradientMask, trainParams.regionSize, trainParams.minMagnitude );
             }
-            int classID = classNames.size()-1;
+            int objectClassID = objectClassNames.size()-1;
             bool isFound = false;
-            for( size_t cIdx = 0; cIdx < trainTemplatesIdxs.size(); cIdx++ )
+            for( size_t cIdx = 0; cIdx < dotTemplateIndices.size(); cIdx++ )
             {
-                if( trainTemplatesIdxs[cIdx].size() )
+                if( dotTemplateIndices[cIdx].size() )
                 {
-                    for( size_t i = 0; i < trainTemplatesIdxs[cIdx].size(); i++ )
+                    for( size_t i = 0; i < dotTemplateIndices[cIdx].size(); i++ )
                     {
-                        int tIdx = trainTemplatesIdxs[cIdx][i];
+                        int tIdx = dotTemplateIndices[cIdx][i];
 
-                        dotTemplates[tIdx].addClassID( classID, maskedTrainImage, trainGradientMask );
+                        if( isAddImageAndGradientMask )
+                            dotTemplates[tIdx].addObjectClassID( objectClassID, trainMaskedImage, trainStrongestGradientMask );
+                        else
+                            dotTemplates[tIdx].addObjectClassID( objectClassID );
                         isFound = true;
                     }
                 }
             }
             if( !isFound )
             {
-                dotTemplates.push_back( DOTTemplate(trainQuantizedImage, classID, maskedTrainImage, trainGradientMask) );
+                if( isAddImageAndGradientMask )
+                    dotTemplates.push_back( DOTTemplate(trainQuantizedImage, objectClassID, trainMaskedImage, trainStrongestGradientMask) );
+                else
+                    dotTemplates.push_back( DOTTemplate(trainQuantizedImage, objectClassID ) );
             }
 
             cout << "dot templates size = " << dotTemplates.size() << endl;
@@ -740,8 +778,10 @@ void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainPa
     }
 }
 
-void DOTDetector::detectQuantized( const Mat& testQuantizedImage, float minRatio,
-                                   vector<vector<Rect> >& rects, vector<vector<float> >& ratios, vector<vector<int> >& trainTemlateIdxs ) const
+void DOTDetector::detectQuantized( const Mat& queryQuantizedImage, float minRatio,
+                                   vector<vector<Rect> >& rects,
+                                   vector<vector<float> >& ratios,
+                                   vector<vector<int> >& dotTemplateIndices ) const
 {
     if( dotTemplates.empty() )
         return;
@@ -749,29 +789,29 @@ void DOTDetector::detectQuantized( const Mat& testQuantizedImage, float minRatio
     const int regionsPerRow = dotTemplates[0].quantizedImage.rows;
     const int regionsPerCol = dotTemplates[0].quantizedImage.cols;
 
-    int classCount = classNames.size();
+    int objectClassCount = objectClassNames.size();
 
-    rects.resize( classCount );
-    ratios.resize( classCount );
-    trainTemlateIdxs.resize( classCount );
+    rects.resize( objectClassCount );
+    ratios.resize( objectClassCount );
+    dotTemplateIndices.resize( objectClassCount );
 
     for( size_t tIdx = 0; tIdx < dotTemplates.size(); tIdx++ )
     {
         Rect r( 0, 0, regionsPerCol, regionsPerRow );
-        for( r.y = 0; r.y <= testQuantizedImage.rows-r.height; r.y++ )
+        for( r.y = 0; r.y <= queryQuantizedImage.rows-r.height; r.y++ )
         {
-            for( r.x = 0; r.x <= testQuantizedImage.cols-r.width; r.x++ )
+            for( r.x = 0; r.x <= queryQuantizedImage.cols-r.width; r.x++ )
             {
                 float ratio, texturelessRatio;
-                andQuantizedImages( testQuantizedImage(r), dotTemplates[tIdx].quantizedImage, ratio, texturelessRatio );
+                andQuantizedImages( queryQuantizedImage(r), dotTemplates[tIdx].quantizedImage, ratio, texturelessRatio );
                 if( ratio > minRatio && texturelessRatio < dotTemplates[tIdx].texturelessRatio )
                 {
-                    for( size_t cIdx = 0; cIdx < dotTemplates[tIdx].classIDs.size(); cIdx++ )
+                    for( size_t cIdx = 0; cIdx < dotTemplates[tIdx].objectClassIDs.size(); cIdx++ )
                     {
-                        int classID =  dotTemplates[tIdx].classIDs[cIdx];
-                        rects[classID].push_back( r );
-                        ratios[classID].push_back( ratio );
-                        trainTemlateIdxs[classID].push_back( tIdx );
+                        int objectClassID =  dotTemplates[tIdx].objectClassIDs[cIdx];
+                        rects[objectClassID].push_back( r );
+                        ratios[objectClassID].push_back( ratio );
+                        dotTemplateIndices[objectClassID].push_back( tIdx );
                     }
                 }
             }
@@ -780,23 +820,23 @@ void DOTDetector::detectQuantized( const Mat& testQuantizedImage, float minRatio
 }
 
 void DOTDetector::detectMultiScale( const Mat& image, vector<vector<Rect> >& rects,
-                                    const DetectParams& detectParams, vector<vector<float> >* ratios, vector<vector<int> >* trainTemplateIndices ) const
+                                    const DetectParams& detectParams, vector<vector<float> >* ratios, vector<vector<int> >* dotTemplateIndices ) const
 {
-    detectParams.asserts( trainParams.minRatio );
+    detectParams.isConsistent( trainParams.minRatio );
 
-    int classCount = classNames.size();
-    rects.resize( classCount );
+    int objectClassCount = objectClassNames.size();
+    rects.resize( objectClassCount );
     if( ratios )
     {
         ratios->clear();
         if( !detectParams.isGroup )
-            ratios->resize( classCount );
+            ratios->resize( objectClassCount );
     }
-    if( trainTemplateIndices )
+    if( dotTemplateIndices )
     {
-        trainTemplateIndices->clear();
+        dotTemplateIndices->clear();
         if( !detectParams.isGroup )
-            trainTemplateIndices->resize( classCount );
+            dotTemplateIndices->resize( objectClassCount );
     }
 
     Mat magnitudes, angles;
@@ -806,11 +846,11 @@ void DOTDetector::detectMultiScale( const Mat& image, vector<vector<Rect> >& rec
         Mat quantizedImage;
         vector<vector<Rect> > curRects;
         vector<vector<float> > curRatios;
-        vector<vector<int> > curTrainTemlateIdxs;
-        quantizeToDetect( magnitudes, angles, quantizedImage, trainParams );
-        detectQuantized( quantizedImage, detectParams.minRatio, curRects, curRatios, curTrainTemlateIdxs );
+        vector<vector<int> > curDotTemlateIndices;
+        quantizeToDetect( magnitudes, angles, quantizedImage, regionSize, trainParams );
+        detectQuantized( quantizedImage, detectParams.minRatio, curRects, curRatios, curDotTemlateIndices );
 
-        for( int ci = 0; ci < classCount; ci++ )
+        for( int ci = 0; ci < objectClassCount; ci++ )
         {
             for( size_t ri = 0; ri < curRects[ci].size(); ri++  )
             {
@@ -823,8 +863,8 @@ void DOTDetector::detectMultiScale( const Mat& image, vector<vector<Rect> >& rec
                 rects[ci].push_back( r );
                 if( ratios && !detectParams.isGroup )
                     (*ratios)[ci].push_back( curRatios[ci][ri] );
-                if( trainTemplateIndices && !detectParams.isGroup )
-                    (*trainTemplateIndices)[ci].push_back( curTrainTemlateIdxs[ci][ri] );
+                if( dotTemplateIndices && !detectParams.isGroup )
+                    (*dotTemplateIndices)[ci].push_back( curDotTemlateIndices[ci][ri] );
             }
         }
     }
@@ -839,9 +879,9 @@ const vector<DOTDetector::DOTTemplate>& DOTDetector::getDOTTemplates() const
     return dotTemplates;
 }
 
-const vector<string>& DOTDetector::getClassNames() const
+const vector<string>& DOTDetector::getObjectClassNames() const
 {
-    return classNames;
+    return objectClassNames;
 }
 
 void DOTDetector::groupRectanglesList( std::vector<std::vector<cv::Rect> >& rectList, int groupThreshold, double eps )

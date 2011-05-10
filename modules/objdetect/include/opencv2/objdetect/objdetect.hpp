@@ -596,7 +596,7 @@ public:
         void read( FileNode& fn );
         void write( FileStorage& fs ) const;
 
-        void asserts() const;
+        void isConsistent() const;
 
         Size winSize;
         int regionSize;
@@ -612,9 +612,9 @@ public:
     {
         DetectParams();
         DetectParams( float minRatio, int minRegionSize, int maxRegionSize, int regionSizeStep,
-                      bool isGroup, int groupThreshold, double groupEps );
+                      bool isGroup, int groupThreshold=3, double groupEps=0.2f );
 
-        void asserts( float minTrainRatio=1.f) const;
+        void isConsistent( float minTrainRatio=1.f ) const;
 
         float minRatio;
 
@@ -623,17 +623,27 @@ public:
         int regionSizeStep;
 
         bool isGroup;
-
         int groupThreshold;
         double groupEps;
     };
 
     struct CV_EXPORTS DOTTemplate
     {
+        struct CV_EXPORTS TrainData
+        {
+            TrainData();
+            TrainData( const Mat& maskedImage, const cv::Mat& strongestGradientsMask );
+
+            cv::Mat maskedImage;
+            cv::Mat strongestGradientsMask;
+        };
+
         DOTTemplate();
-        DOTTemplate( const cv::Mat& quantizedImage, int classID,
-                     const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& gradientMask=cv::Mat() );
-        void addClassID( int classID, const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& gradientMask=cv::Mat() );
+        DOTTemplate( const cv::Mat& quantizedImage, int objectClassID,
+                     const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& strongestGradientsMask=cv::Mat() );
+
+        void addObjectClassID( int objectClassID, const cv::Mat& maskedImage=cv::Mat(), const cv::Mat& strongestGradientsMask=cv::Mat() );
+        const TrainData* getTrainData( int objectClassID ) const;
 
         static float computeTexturelessRatio( const cv::Mat& quantizedImage );
 
@@ -641,11 +651,9 @@ public:
         void write( FileStorage& fs ) const;
 
         cv::Mat quantizedImage;
-        std::vector<int> classIDs;
         float texturelessRatio;
-
-        std::vector<cv::Mat> maskedImages;
-        std::vector<cv::Mat> gradientMasks;
+        std::vector<int> objectClassIDs;
+        std::vector<TrainData> trainData;
     };
 
     DOTDetector();
@@ -661,22 +669,24 @@ public:
     void save( const std::string& filename ) const;
 
     void train( const string& baseDirName, const TrainParams& trainParams=TrainParams(), bool isAddImageAndGradientMask=false );
-    void detectMultiScale( const Mat& image, vector<vector<Rect> >& rects,
-                           const DetectParams& detectParams=DetectParams(),
-                           vector<vector<float> >*ratios=0, vector<vector<int> >* trainTemplateIndices=0 ) const;
+    void detectMultiScale( const Mat& image, vector<vector<Rect> >& rects, const DetectParams& detectParams=DetectParams(),
+                           vector<vector<float> >* ratios=0, vector<vector<int> >* dotTemplateIndices=0 ) const;
 
     const vector<DOTTemplate>& getDOTTemplates() const;
-    const vector<string>& getClassNames() const;
+    const vector<string>& getObjectClassNames() const;
 
     static void groupRectanglesList( std::vector<std::vector<cv::Rect> >& rectList, int groupThreshold, double eps );
 
 protected:
     void detectQuantized( const Mat& queryQuantizedImage, float minRatio,
-                          vector<vector<Rect> >& rects, vector<vector<float> >& ratios, vector<vector<int> >& trainTemlateIdxs ) const;
-    TrainParams trainParams;
-    bool isAddImageAndGradientMask;
+                          vector<vector<Rect> >& rects,
+                          vector<vector<float> >& ratios,
+                          vector<vector<int> >& dotTemplateIndices ) const;
 
-    std::vector<std::string> classNames;
+    TrainParams trainParams;
+    //bool isAddImageAndGradientMask;
+
+    std::vector<std::string> objectClassNames;
     std::vector<DOTTemplate> dotTemplates;
 };
 
