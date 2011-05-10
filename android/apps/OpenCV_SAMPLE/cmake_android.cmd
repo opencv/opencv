@@ -1,0 +1,7 @@
+@ECHO OFF
+SETLOCAL
+PUSHD %~dp0
+SET PROJECT_NAME=OpenCV_SAMPLE
+CALL ..\..\scripts\build.cmd %*
+POPD
+ENDLOCAL
