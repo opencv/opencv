@@ -145,9 +145,6 @@ public:
 
                 m_capture->setFrame(buffer, bufferSize);
 
-		m_capture->m_dataState = CvCapture_Android::CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
-                m_capture->m_waitingNextFrame = false;//set flag that no more frames required at this moment
-
                 pthread_cond_broadcast(&m_capture->m_nextFrameCond);
                 pthread_mutex_unlock(&m_capture->m_nextFrameMutex);
             }
@@ -255,6 +252,9 @@ double CvCapture_Android::getProperty( int propIdx )
         return (double)m_activity->getFrameWidth();
     case CV_CAP_PROP_FRAME_HEIGHT:
         return (double)m_activity->getFrameHeight();
+
+    case CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING:
+	return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
     default:
         CV_Error( CV_StsOutOfRange, "Failed attempt to GET unsupported camera property." );
         break;
@@ -296,8 +296,10 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
 
 bool CvCapture_Android::grabFrame()
 {
-    if( !isOpened() )
-        return false;
+    if( !isOpened() ) {
+	    LOGE("CvCapture_Android::grabFrame(): camera is not opened");
+	    return false;
+    }
 
     bool res=false;
     pthread_mutex_lock(&m_nextFrameMutex);
@@ -314,6 +316,7 @@ bool CvCapture_Android::grabFrame()
     }
 
     if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
+	    LOGD("CvCapture_Android::grabFrame: get new frame");
 	    //swap current and new frames
 	    unsigned char* tmp = m_frameYUV420i;
 	    m_frameYUV420i = m_frameYUV420inext;
@@ -327,7 +330,10 @@ bool CvCapture_Android::grabFrame()
 	    m_framesGrabbed++;
 
 	    res=true;
+    } else {
+	    LOGE("CvCapture_Android::grabFrame: NO new frame");
     }
+
 
     int res_unlock=pthread_mutex_unlock(&m_nextFrameMutex);
     if (res_unlock) {
@@ -394,6 +400,7 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
 
     //copy data
     memcpy(m_frameYUV420inext, buffer, bufferSize);
+    LOGD("CvCapture_Android::setFrame -- memcpy is done");
 
 #if 0 //moved this part of code into grabFrame
     //swap current and new frames
@@ -405,21 +412,30 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
     m_hasGray = false;
     m_hasColor = false;
 #endif
+
+    m_dataState = CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
+    m_waitingNextFrame = false;//set flag that no more frames required at this moment
 }
 
+//Attention: this method should be called inside pthread_mutex_lock(m_nextFrameMutex) only
 void CvCapture_Android::prepareCacheForYUV420i(int width, int height)
 {
     if (width != m_width || height != m_height)
     {
+	LOGD("CvCapture_Android::prepareCacheForYUV420i: Changing size of buffers: from width=%d height=%d to width=%d height=%d", m_width, m_height, width, height);
         m_width = width;
         m_height = height;
         unsigned char *tmp = m_frameYUV420inext;
         m_frameYUV420inext = new unsigned char [width * height * 3 / 2];
-        delete[] tmp;
+	if (tmp != NULL) {
+		delete[] tmp;
+	}
 
         tmp = m_frameYUV420i;
         m_frameYUV420i = new unsigned char [width * height * 3 / 2];
-        delete[] tmp;
+	if (tmp != NULL) {
+		delete[] tmp;
+	}
     }
 }
 

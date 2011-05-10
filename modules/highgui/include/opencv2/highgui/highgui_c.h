@@ -354,6 +354,7 @@ enum
     CV_CAP_PROP_WHITE_BALANCE_RED_V =26,
     CV_CAP_PROP_MAX_DC1394    =27,
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
+    CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // tricky property, returns cpnst char* indeed
 	// OpenNI map generators
     CV_CAP_OPENNI_DEPTH_GENERATOR = 0,
     CV_CAP_OPENNI_IMAGE_GENERATOR = 1 << 31,
