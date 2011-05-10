@@ -1,6 +1,6 @@
-###########
-C Reference
-###########
+##########################
+OpenCV 1.x C API Reference
+##########################
 
 .. highlight:: python
 

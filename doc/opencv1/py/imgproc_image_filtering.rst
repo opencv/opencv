@@ -23,7 +23,7 @@ filter, then during the processing of the left-most pixels in each row we need p
 IplConvKernel
 -------------
 
-`id=0.589941281227 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/IplConvKernel>`__
+
 
 .. class:: IplConvKernel
 
@@ -41,7 +41,7 @@ An IplConvKernel is a rectangular convolution kernel, created by function
 CopyMakeBorder
 --------------
 
-`id=0.392095677822 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CopyMakeBorder>`__
+
 
 
 .. function:: CopyMakeBorder(src,dst,offset,bordertype,value=(0,0,0,0))-> None
@@ -96,7 +96,7 @@ The function copies the source 2D array into the interior of the destination arr
 CreateStructuringElementEx
 --------------------------
 
-`id=0.317060827729 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CreateStructuringElementEx>`__
+
 
 
 .. function:: CreateStructuringElementEx(cols,rows,anchorX,anchorY,shape,values=None)-> kernel
@@ -165,7 +165,7 @@ The function CreateStructuringElementEx allocates and fills the structure
 Dilate
 ------
 
-`id=0.716788417488 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Dilate>`__
+
 
 
 .. function:: Dilate(src,dst,element=None,iterations=1)-> None
@@ -220,7 +220,7 @@ The function supports the in-place mode. Dilation can be applied several (
 Erode
 -----
 
-`id=0.842620131268 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Erode>`__
+
 
 
 .. function:: Erode(src,dst,element=None,iterations=1)-> None
@@ -275,7 +275,7 @@ The function supports the in-place mode. Erosion can be applied several (
 Filter2D
 --------
 
-`id=0.460981812748 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Filter2D>`__
+
 
 
 .. function:: Filter2D(src,dst,kernel,anchor=(-1,-1))-> None
@@ -318,7 +318,7 @@ The function applies an arbitrary linear filter to the image. In-place operation
 Laplace
 -------
 
-`id=0.292603296168 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Laplace>`__
+
 
 
 .. function:: Laplace(src,dst,apertureSize=3)-> None
@@ -378,7 +378,7 @@ function, no scaling is done and the same combinations of input and output forma
 MorphologyEx
 ------------
 
-`id=0.989292823459 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MorphologyEx>`__
+
 
 
 .. function:: MorphologyEx(src,dst,temp,element,operation,iterations=1)-> None
@@ -492,7 +492,7 @@ is required for a morphological gradient and, in the case of in-place operation,
 PyrDown
 -------
 
-`id=0.761058003811 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/PyrDown>`__
+
 
 
 .. function:: PyrDown(src,dst,filter=CV_GAUSSIAN_5X5)-> None
@@ -530,7 +530,7 @@ The function performs the downsampling step of the Gaussian pyramid decompositio
 Smooth
 ------
 
-`id=0.981627398232 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Smooth>`__
+
 
 
 .. function:: Smooth(src,dst,smoothtype=CV_GAUSSIAN,param1=3,param2=0,param3=0,param4=0)-> None
@@ -616,7 +616,7 @@ Median and bilateral filters work with 1- or 3-channel 8-bit images and can not 
 Sobel
 -----
 
-`id=0.141242620837 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Sobel>`__
+
 
 
 .. function:: Sobel(src,dst,xorder,yorder,apertureSize = 3)-> None

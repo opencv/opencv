@@ -12,7 +12,7 @@ Motion Analysis and Object Tracking
 Acc
 ---
 
-`id=0.629029815041 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Acc>`__
+
 
 
 .. function:: Acc(image,sum,mask=NULL)-> None
@@ -61,7 +61,7 @@ or its selected region to the accumulator
 MultiplyAcc
 -----------
 
-`id=0.767428702085 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MultiplyAcc>`__
+
 
 
 .. function:: MultiplyAcc(image1,image2,acc,mask=NULL)-> None
@@ -113,7 +113,7 @@ The function adds the product of 2 images or their selected regions to the accum
 RunningAvg
 ----------
 
-`id=0.136357383909 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/RunningAvg>`__
+
 
 
 .. function:: RunningAvg(image,acc,alpha,mask=NULL)-> None
@@ -173,7 +173,7 @@ regulates the update speed (how fast the accumulator forgets about previous fram
 SquareAcc
 ---------
 
-`id=0.606012635939 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/SquareAcc>`__
+
 
 
 .. function:: SquareAcc(image,sqsum,mask=NULL)-> None

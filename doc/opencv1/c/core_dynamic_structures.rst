@@ -12,7 +12,7 @@ Dynamic Structures
 CvMemStorage
 ------------
 
-`id=0.334804981773 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvMemStorage>`__
+
 
 .. ctype:: CvMemStorage
 
@@ -115,7 +115,7 @@ or reset via
 CvMemBlock
 ----------
 
-`id=0.108820280688 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvMemBlock>`__
+
 
 .. ctype:: CvMemBlock
 
@@ -158,7 +158,7 @@ to access the storage structure fields directly.
 CvMemStoragePos
 ---------------
 
-`id=0.832479670677 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvMemStoragePos>`__
+
 
 .. ctype:: CvMemStoragePos
 
@@ -196,7 +196,7 @@ and restored via
 CvSeq
 -----
 
-`id=0.387726368946 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSeq>`__
+
 
 .. ctype:: CvSeq
 
@@ -436,7 +436,7 @@ blocks of sequences can be found below.
 CvSeqBlock
 ----------
 
-`id=0.211082721332 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSeqBlock>`__
+
 
 .. ctype:: CvSeqBlock
 
@@ -506,7 +506,7 @@ some elements have been inserted at the beginning of the sequence.
 CvSlice
 -------
 
-`id=0.519045630752 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSlice>`__
+
 
 .. ctype:: CvSlice
 
@@ -598,7 +598,7 @@ buffer with
 CvSet
 -----
 
-`id=0.825263988294 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSet>`__
+
 
 .. ctype:: CvSet
 
@@ -703,7 +703,7 @@ sparse multi-dimensional arrays (
 CvGraph
 -------
 
-`id=0.878989998624 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvGraph>`__
+
 
 .. ctype:: CvGraph
 
@@ -807,7 +807,7 @@ edges.
 CvGraphScanner
 --------------
 
-`id=0.551304755988 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvGraphScanner>`__
+
 
 .. ctype:: CvGraphScanner
 
@@ -863,7 +863,7 @@ functions described below in this section.
 CvTreeNodeIterator
 ------------------
 
-`id=0.486956655882 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvTreeNodeIterator>`__
+
 
 .. ctype:: CvTreeNodeIterator
 
@@ -946,7 +946,7 @@ comply with the requirement.
 ClearGraph
 ----------
 
-`id=0.332439919365 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClearGraph>`__
+
 
 
 
@@ -974,7 +974,7 @@ The function removes all vertices and edges from a graph. The function has O(1) 
 ClearMemStorage
 ---------------
 
-`id=0.771544719824 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClearMemStorage>`__
+
 
 
 
@@ -1005,7 +1005,7 @@ all blocks to the parent.
 ClearSeq
 --------
 
-`id=0.773624423506 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClearSeq>`__
+
 
 
 
@@ -1037,7 +1037,7 @@ memory is reused later when new elements are added to the sequence. The function
 ClearSet
 --------
 
-`id=0.561246622558 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClearSet>`__
+
 
 
 
@@ -1066,7 +1066,7 @@ The function removes all elements from set. It has O(1) time complexity.
 CloneGraph
 ----------
 
-`id=0.516560929963 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneGraph>`__
+
 
 
 
@@ -1101,7 +1101,7 @@ the vertex and edge sets.
 CloneSeq
 --------
 
-`id=0.219909371893 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneSeq>`__
+
 
 
 
@@ -1159,7 +1159,7 @@ is equivalent to
 CreateChildMemStorage
 ---------------------
 
-`id=0.901847234907 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateChildMemStorage>`__
+
 
 
 
@@ -1225,7 +1225,7 @@ Dynamic data processing using a child storage
 CreateGraph
 -----------
 
-`id=0.714927849129 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateGraph>`__
+
 
 
 
@@ -1265,7 +1265,7 @@ The function creates an empty graph and returns a pointer to it.
 CreateGraphScanner
 ------------------
 
-`id=0.761147235713 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateGraphScanner>`__
+
 
 
 
@@ -1320,7 +1320,7 @@ function - the incremental traversal procedure.
 CreateMemStorage
 ----------------
 
-`id=0.484842854055 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateMemStorage>`__
+
 
 
 
@@ -1350,7 +1350,7 @@ description.
 CreateSeq
 ---------
 
-`id=0.879299981261 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateSeq>`__
+
 
 
 
@@ -1406,7 +1406,7 @@ bytes.
 CreateSet
 ---------
 
-`id=0.149633794529 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateSet>`__
+
 
 
 
@@ -1445,7 +1445,7 @@ The function creates an empty set with a specified header size and element size,
 CvtSeqToArray
 -------------
 
-`id=0.900164505728 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvtSeqToArray>`__
+
 
 
 
@@ -1479,7 +1479,7 @@ The function copies the entire sequence or subsequence to the specified buffer a
 EndWriteSeq
 -----------
 
-`id=0.919895703214 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/EndWriteSeq>`__
+
 
 
 
@@ -1513,7 +1513,7 @@ and
 FindGraphEdge
 -------------
 
-`id=0.18087190834 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FindGraphEdge>`__
+
 
 
 
@@ -1561,7 +1561,7 @@ The function finds the graph edge connecting two specified vertices and returns 
 FindGraphEdgeByPtr
 ------------------
 
-`id=0.509139476588 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FindGraphEdgeByPtr>`__
+
 
 
 
@@ -1607,7 +1607,7 @@ The function finds the graph edge connecting two specified vertices and returns 
 FlushSeqWriter
 --------------
 
-`id=0.821406812895 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FlushSeqWriter>`__
+
 
 
 
@@ -1642,7 +1642,7 @@ instead.
 GetGraphVtx
 -----------
 
-`id=0.802641800298 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetGraphVtx>`__
+
 
 
 
@@ -1674,7 +1674,7 @@ The function finds the graph vertex by using its index and returns the pointer t
 GetSeqElem
 ----------
 
-`id=0.778073099468 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetSeqElem>`__
+
 
 
 
@@ -1744,7 +1744,7 @@ number of elements.
 GetSeqReaderPos
 ---------------
 
-`id=0.869101167847 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetSeqReaderPos>`__
+
 
 
 
@@ -1774,7 +1774,7 @@ The function returns the current reader position (within 0 ...
 GetSetElem
 ----------
 
-`id=0.506490712171 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetSetElem>`__
+
 
 
 
@@ -1807,7 +1807,7 @@ to locate the node.
 GraphAddEdge
 ------------
 
-`id=0.752253770377 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphAddEdge>`__
+
 
 
 
@@ -1847,7 +1847,7 @@ The function connects two specified vertices. The function returns 1 if the edge
 GraphAddEdgeByPtr
 -----------------
 
-`id=0.313903446977 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphAddEdgeByPtr>`__
+
 
 
 
@@ -1892,7 +1892,7 @@ the result is negative), the function also reports an error by default.
 GraphAddVtx
 -----------
 
-`id=0.236553727886 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphAddVtx>`__
+
 
 
 
@@ -1926,7 +1926,7 @@ The function adds a vertex to the graph and returns the vertex index.
 GraphEdgeIdx
 ------------
 
-`id=0.571043881578 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphEdgeIdx>`__
+
 
 
 
@@ -1957,7 +1957,7 @@ The function returns the index of a graph edge.
 GraphRemoveEdge
 ---------------
 
-`id=0.608632884153 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphRemoveEdge>`__
+
 
 
 
@@ -1991,7 +1991,7 @@ The function removes the edge connecting two specified vertices. If the vertices
 GraphRemoveEdgeByPtr
 --------------------
 
-`id=0.642579664169 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphRemoveEdgeByPtr>`__
+
 
 
 
@@ -2025,7 +2025,7 @@ The function removes the edge connecting two specified vertices. If the vertices
 GraphRemoveVtx
 --------------
 
-`id=0.970005049786 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphRemoveVtx>`__
+
 
 
 
@@ -2059,7 +2059,7 @@ number of edges deleted, or -1 if the vertex does not belong to the graph.
 GraphRemoveVtxByPtr
 -------------------
 
-`id=0.605088135179 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphRemoveVtxByPtr>`__
+
 
 
 
@@ -2090,7 +2090,7 @@ The function removes a vertex from the graph by using its pointer together with 
 GraphVtxDegree
 --------------
 
-`id=0.257037043726 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphVtxDegree>`__
+
 
 
 
@@ -2146,7 +2146,7 @@ that follows after
 GraphVtxDegreeByPtr
 -------------------
 
-`id=0.739296929217 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphVtxDegreeByPtr>`__
+
 
 
 
@@ -2178,7 +2178,7 @@ The function returns the number of edges incident to the specified vertex, both 
 GraphVtxIdx
 -----------
 
-`id=0.717221417419 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GraphVtxIdx>`__
+
 
 
 
@@ -2209,7 +2209,7 @@ The function returns the index of a graph vertex.
 InitTreeNodeIterator
 --------------------
 
-`id=0.483111798793 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitTreeNodeIterator>`__
+
 
 
 
@@ -2243,7 +2243,7 @@ The function initializes the tree iterator. The tree is traversed in depth-first
 InsertNodeIntoTree
 ------------------
 
-`id=0.159347112834 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InsertNodeIntoTree>`__
+
 
 
 
@@ -2277,7 +2277,7 @@ The function adds another node into tree. The function does not allocate any mem
 MakeSeqHeaderForArray
 ---------------------
 
-`id=0.960790357917 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MakeSeqHeaderForArray>`__
+
 
 
 
@@ -2329,7 +2329,7 @@ most cases.
 MemStorageAlloc
 ---------------
 
-`id=0.301172131439 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MemStorageAlloc>`__
+
 
 
 
@@ -2364,7 +2364,7 @@ otherwise a runtime error is raised. The buffer address is aligned by
 MemStorageAllocString
 ---------------------
 
-`id=0.109838084699 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MemStorageAllocString>`__
+
 
 
 
@@ -2417,7 +2417,7 @@ or computed length of the string and pointer to the copied string.
 NextGraphItem
 -------------
 
-`id=0.801658747963 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/NextGraphItem>`__
+
 
 
 
@@ -2476,7 +2476,7 @@ vertex of the edge - at
 NextTreeNode
 ------------
 
-`id=0.892783495145 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/NextTreeNode>`__
+
 
 
 
@@ -2511,7 +2511,7 @@ are no more nodes.
 PrevTreeNode
 ------------
 
-`id=0.199395520003 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/PrevTreeNode>`__
+
 
 
 
@@ -2546,7 +2546,7 @@ if there are no more nodes.
 ReleaseGraphScanner
 -------------------
 
-`id=0.572499008135 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseGraphScanner>`__
+
 
 
 
@@ -2576,7 +2576,7 @@ The function completes the graph traversal procedure and releases the traverser 
 ReleaseMemStorage
 -----------------
 
-`id=0.449342726691 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseMemStorage>`__
+
 
 
 
@@ -2608,7 +2608,7 @@ parent storage block is released.
 RestoreMemStoragePos
 --------------------
 
-`id=0.0596222862557 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RestoreMemStoragePos>`__
+
 
 
 
@@ -2644,7 +2644,7 @@ are the only methods to release memory occupied in memory blocks. Note again tha
 SaveMemStoragePos
 -----------------
 
-`id=0.625300615076 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SaveMemStoragePos>`__
+
 
 
 
@@ -2680,7 +2680,7 @@ can further retrieve this position.
 SeqElemIdx
 ----------
 
-`id=0.724143019934 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqElemIdx>`__
+
 
 
 
@@ -2714,7 +2714,7 @@ The function returns the index of a sequence element or a negative number if the
 SeqInsert
 ---------
 
-`id=0.0992440051218 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqInsert>`__
+
 
 
 
@@ -2751,7 +2751,7 @@ content there if the pointer is not NULL. The function returns a pointer to the 
 SeqInsertSlice
 --------------
 
-`id=0.819564817378 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqInsertSlice>`__
+
 
 
 
@@ -2789,7 +2789,7 @@ can be a matrix or another sequence.
 SeqInvert
 ---------
 
-`id=0.695189452157 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqInvert>`__
+
 
 
 
@@ -2817,7 +2817,7 @@ The function reverses the sequence in-place - makes the first element go last, t
 SeqPop
 ------
 
-`id=0.891792572997 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPop>`__
+
 
 
 
@@ -2848,7 +2848,7 @@ The function removes an element from a sequence. The function reports an error i
 SeqPopFront
 -----------
 
-`id=0.802844810483 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPopFront>`__
+
 
 
 
@@ -2879,7 +2879,7 @@ The function removes an element from the beginning of a sequence. The function r
 SeqPopMulti
 -----------
 
-`id=0.260750127544 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPopMulti>`__
+
 
 
 
@@ -2922,7 +2922,7 @@ The function removes several elements from either end of the sequence. If the nu
 SeqPush
 -------
 
-`id=0.90060051534 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPush>`__
+
 
 
 
@@ -2988,7 +2988,7 @@ and related functions).
 SeqPushFront
 ------------
 
-`id=0.862751238482 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPushFront>`__
+
 
 
 
@@ -3021,7 +3021,7 @@ but it adds the new element to the beginning of the sequence. The function has O
 SeqPushMulti
 ------------
 
-`id=0.958302949543 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPushMulti>`__
+
 
 
 
@@ -3067,7 +3067,7 @@ different sequence blocks.
 SeqRemove
 ---------
 
-`id=0.432719803682 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqRemove>`__
+
 
 
 
@@ -3105,7 +3105,7 @@ the sequence elements between the nearest end of the sequence and the
 SeqRemoveSlice
 --------------
 
-`id=0.971861630547 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqRemoveSlice>`__
+
 
 
 
@@ -3136,7 +3136,7 @@ The function removes a slice from the sequence.
 SeqSearch
 ---------
 
-`id=0.729745795436 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqSearch>`__
+
 
 
 
@@ -3198,7 +3198,7 @@ elements if a linear search is used, or to the smallest index
 SeqSlice
 --------
 
-`id=0.0557062585643 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqSlice>`__
+
 
 
 
@@ -3235,7 +3235,7 @@ The function creates a sequence that represents the specified slice of the input
 SeqSort
 -------
 
-`id=0.290622936492 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqSort>`__
+
 
 
 
@@ -3327,7 +3327,7 @@ The function sorts the sequence in-place using the specified criteria. Below is 
 SetAdd
 ------
 
-`id=0.151496822644 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetAdd>`__
+
 
 
 
@@ -3368,7 +3368,7 @@ a faster function for allocating set nodes (see
 SetNew
 ------
 
-`id=0.448446991925 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetNew>`__
+
 
 
 
@@ -3399,7 +3399,7 @@ The function is an inline lightweight variant of
 SetRemove
 ---------
 
-`id=0.513485030618 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetRemove>`__
+
 
 
 
@@ -3435,7 +3435,7 @@ if it is located already.
 SetRemoveByPtr
 --------------
 
-`id=0.511092796762 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetRemoveByPtr>`__
+
 
 
 
@@ -3469,7 +3469,7 @@ that requires an element pointer. The function does not check whether the node i
 SetSeqBlockSize
 ---------------
 
-`id=0.94569516135 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetSeqBlockSize>`__
+
 
 
 
@@ -3515,7 +3515,7 @@ constraints.
 SetSeqReaderPos
 ---------------
 
-`id=0.435675937023 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetSeqReaderPos>`__
+
 
 
 
@@ -3550,7 +3550,7 @@ The function moves the read position to an absolute position or relative to the 
 StartAppendToSeq
 ----------------
 
-`id=0.481797162299 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartAppendToSeq>`__
+
 
 
 
@@ -3589,7 +3589,7 @@ yield an incorrect result or even corrupt the sequence (see description of
 StartReadSeq
 ------------
 
-`id=0.274476331583 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartReadSeq>`__
+
 
 
 
@@ -3688,7 +3688,7 @@ to use the sequence writer and reader.
 StartWriteSeq
 -------------
 
-`id=0.633886985438 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartWriteSeq>`__
+
 
 
 
@@ -3737,7 +3737,7 @@ function that should be called at the end.
 TreeToNodeSeq
 -------------
 
-`id=0.995912413662 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/TreeToNodeSeq>`__
+
 
 
 

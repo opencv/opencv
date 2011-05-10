@@ -23,7 +23,7 @@ filter, then during the processing of the left-most pixels in each row we need p
 IplConvKernel
 -------------
 
-`id=0.193062601082 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/IplConvKernel>`__
+
 
 .. ctype:: IplConvKernel
 
@@ -41,7 +41,7 @@ An IplConvKernel is a rectangular convolution kernel, created by function
 CopyMakeBorder
 --------------
 
-`id=0.294015080522 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CopyMakeBorder>`__
+
 
 
 
@@ -88,7 +88,7 @@ The function copies the source 2D array into the interior of the destination arr
 CreateStructuringElementEx
 --------------------------
 
-`id=0.198112593438 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CreateStructuringElementEx>`__
+
 
 
 
@@ -147,7 +147,7 @@ The function CreateStructuringElementEx allocates and fills the structure
 Dilate
 ------
 
-`id=0.862952069683 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Dilate>`__
+
 
 
 
@@ -196,7 +196,7 @@ The function supports the in-place mode. Dilation can be applied several (
 Erode
 -----
 
-`id=0.789537037619 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Erode>`__
+
 
 
 
@@ -245,7 +245,7 @@ The function supports the in-place mode. Erosion can be applied several (
 Filter2D
 --------
 
-`id=0.417959887843 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Filter2D>`__
+
 
 
 
@@ -282,7 +282,7 @@ The function applies an arbitrary linear filter to the image. In-place operation
 Laplace
 -------
 
-`id=0.525523278714 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Laplace>`__
+
 
 
 
@@ -338,7 +338,7 @@ function, no scaling is done and the same combinations of input and output forma
 MorphologyEx
 ------------
 
-`id=0.564904115593 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MorphologyEx>`__
+
 
 
 
@@ -442,7 +442,7 @@ is required for a morphological gradient and, in the case of in-place operation,
 PyrDown
 -------
 
-`id=0.202607003604 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PyrDown>`__
+
 
 
 
@@ -476,7 +476,7 @@ The function performs the downsampling step of the Gaussian pyramid decompositio
 ReleaseStructuringElement
 -------------------------
 
-`id=0.80859820706 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ReleaseStructuringElement>`__
+
 
 
 
@@ -509,7 +509,7 @@ is
 Smooth
 ------
 
-`id=0.653842638158 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Smooth>`__
+
 
 
 
@@ -585,7 +585,7 @@ Median and bilateral filters work with 1- or 3-channel 8-bit images and can not 
 Sobel
 -----
 
-`id=0.415353284486 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Sobel>`__
+
 
 
 

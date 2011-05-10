@@ -12,7 +12,7 @@ Feature Detection
 Canny
 -----
 
-`id=0.573160740956 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Canny>`__
+
 
 
 .. function:: Canny(image,edges,threshold1,threshold2,aperture_size=3)-> None
@@ -68,7 +68,7 @@ is used for edge linking, the largest value is used to find the initial segments
 CornerEigenValsAndVecs
 ----------------------
 
-`id=0.769586068428 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CornerEigenValsAndVecs>`__
+
 
 
 .. function:: CornerEigenValsAndVecs(image,eigenvv,blockSize,aperture_size=3)-> None
@@ -145,7 +145,7 @@ where
 CornerHarris
 ------------
 
-`id=0.619256620171 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CornerHarris>`__
+
 
 
 .. function:: CornerHarris(image,harris_dst,blockSize,aperture_size=3,k=0.04)-> None
@@ -212,7 +212,7 @@ to the destination image. Corners in the image can be found as the local maxima 
 CornerMinEigenVal
 -----------------
 
-`id=0.523904183834 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CornerMinEigenVal>`__
+
 
 
 .. function:: CornerMinEigenVal(image,eigenval,blockSize,aperture_size=3)-> None
@@ -259,7 +259,7 @@ in terms of the previous function.
 FindCornerSubPix
 ----------------
 
-`id=0.448453276565 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FindCornerSubPix>`__
+
 
 
 .. function:: FindCornerSubPix(image,corners,win,zero_zone,criteria)-> corners
@@ -370,7 +370,7 @@ and then iterates until the center keeps within a set threshold.
 GoodFeaturesToTrack
 -------------------
 
-`id=0.0875265840344 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GoodFeaturesToTrack>`__
+
 
 
 .. function:: GoodFeaturesToTrack(image,eigImage,tempImage,cornerCount,qualityLevel,minDistance,mask=NULL,blockSize=3,useHarris=0,k=0.04)-> corners
@@ -472,7 +472,7 @@ will be the prefix of the output corners array with
 HoughLines2
 -----------
 
-`id=0.925466467327 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/HoughLines2>`__
+
 
 
 .. function:: HoughLines2(image,storage,method,rho,theta,threshold,param1=0,param2=0)-> lines
@@ -577,7 +577,7 @@ The function implements a few variants of the Hough transform for line detection
 PreCornerDetect
 ---------------
 
-`id=0.420590326716 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/PreCornerDetect>`__
+
 
 
 .. function:: PreCornerDetect(image,corners,apertureSize=3)-> None

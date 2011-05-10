@@ -12,7 +12,7 @@ XML/YAML Persistence
 CvFileStorage
 -------------
 
-`id=0.857247720381 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvFileStorage>`__
+
 
 .. ctype:: CvFileStorage
 
@@ -97,7 +97,7 @@ file, .xml for XML files and .yml or .yaml for YAML.
 CvFileNode
 ----------
 
-`id=0.608842304291 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvFileNode>`__
+
 
 .. ctype:: CvFileNode
 
@@ -263,7 +263,7 @@ functions.
 CvAttrList
 ----------
 
-`id=0.988512335517 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvAttrList>`__
+
 
 .. ctype:: CvAttrList
 
@@ -309,7 +309,7 @@ attribute).
 CvTypeInfo
 ----------
 
-`id=0.181522293243 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvTypeInfo>`__
+
 
 .. ctype:: CvTypeInfo
 
@@ -383,7 +383,7 @@ standard types and override the basic methods.
 Clone
 -----
 
-`id=0.360041292134 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Clone>`__
+
 
 
 
@@ -413,7 +413,7 @@ with the passed object.
 EndWriteStruct
 --------------
 
-`id=0.211232129115 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/EndWriteStruct>`__
+
 
 
 
@@ -441,7 +441,7 @@ The function finishes the currently written structure.
 FindType
 --------
 
-`id=0.0662543825018 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FindType>`__
+
 
 
 
@@ -470,7 +470,7 @@ The function finds a registered type by its name. It returns NULL if there is no
 FirstType
 ---------
 
-`id=0.938501911774 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FirstType>`__
+
 
 
 
@@ -497,7 +497,7 @@ structure.
 GetFileNode
 -----------
 
-`id=0.800469512645 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetFileNode>`__
+
 
 
 
@@ -538,7 +538,7 @@ discussion). Also, the function can insert a new node, if it is not in the map y
 GetFileNodeByName
 -----------------
 
-`id=0.715012469883 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetFileNodeByName>`__
+
 
 
 
@@ -587,7 +587,7 @@ and
 GetFileNodeName
 ---------------
 
-`id=0.83341764078 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetFileNodeName>`__
+
 
 
 
@@ -620,7 +620,7 @@ is
 GetHashedKey
 ------------
 
-`id=0.30931895543 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetHashedKey>`__
+
 
 
 
@@ -748,7 +748,7 @@ in a single numeric sequence.
 GetRootFileNode
 ---------------
 
-`id=0.971822903294 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetRootFileNode>`__
+
 
 
 
@@ -786,7 +786,7 @@ may be used as a base for recursive traversal of the file storage.
 Load
 ----
 
-`id=0.212907012591 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Load>`__
+
 
 
 
@@ -829,7 +829,7 @@ should pass a valid memory storage destination to the function.
 OpenFileStorage
 ---------------
 
-`id=0.471296965858 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/OpenFileStorage>`__
+
 
 
 
@@ -891,7 +891,7 @@ structure.
 Read
 ----
 
-`id=0.832153339685 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Read>`__
+
 
 
 
@@ -943,7 +943,7 @@ using the generic
 ReadByName
 ----------
 
-`id=0.859151866222 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadByName>`__
+
 
 
 
@@ -984,7 +984,7 @@ and
 ReadInt
 -------
 
-`id=0.251615646906 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadInt>`__
+
 
 
 
@@ -1032,7 +1032,7 @@ result is not determined.
 ReadIntByName
 -------------
 
-`id=0.556319809758 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadIntByName>`__
+
 
 
 
@@ -1074,7 +1074,7 @@ and
 ReadRawData
 -----------
 
-`id=0.664870960197 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadRawData>`__
+
 
 
 
@@ -1111,7 +1111,7 @@ The function reads elements from a file node that represents a sequence of scala
 ReadRawDataSlice
 ----------------
 
-`id=0.0436069303098 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadRawDataSlice>`__
+
 
 
 
@@ -1165,7 +1165,7 @@ using
 ReadReal
 --------
 
-`id=0.547608842907 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadReal>`__
+
 
 
 
@@ -1213,7 +1213,7 @@ and returned. Otherwise the result is not determined.
 ReadRealByName
 --------------
 
-`id=0.199185093644 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadRealByName>`__
+
 
 
 
@@ -1254,7 +1254,7 @@ and
 ReadString
 ----------
 
-`id=0.228184525072 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadString>`__
+
 
 
 
@@ -1295,7 +1295,7 @@ is returned. Otherwise the result is not determined.
 ReadStringByName
 ----------------
 
-`id=0.742009259569 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReadStringByName>`__
+
 
 
 
@@ -1336,7 +1336,7 @@ and
 RegisterType
 ------------
 
-`id=0.10246276777 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RegisterType>`__
+
 
 
 
@@ -1368,7 +1368,7 @@ so the user should delete it after calling the function.
 Release
 -------
 
-`id=0.367773300801 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Release>`__
+
 
 
 
@@ -1398,7 +1398,7 @@ with the double pointer.
 ReleaseFileStorage
 ------------------
 
-`id=0.300689925981 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseFileStorage>`__
+
 
 
 
@@ -1426,7 +1426,7 @@ The function closes the file associated with the storage and releases all the te
 Save
 ----
 
-`id=0.697129486728 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Save>`__
+
 
 
 
@@ -1468,7 +1468,7 @@ The function saves an object to a file. It provides a simple interface to
 StartNextStream
 ---------------
 
-`id=0.540837242781 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartNextStream>`__
+
 
 
 
@@ -1496,7 +1496,7 @@ The function starts the next stream in file storage. Both YAML and XML support m
 StartReadRawData
 ----------------
 
-`id=0.262029855416 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartReadRawData>`__
+
 
 
 
@@ -1532,7 +1532,7 @@ The function initializes the sequence reader to read data from a file node. The 
 StartWriteStruct
 ----------------
 
-`id=0.604510957069 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/StartWriteStruct>`__
+
 
 
 
@@ -1598,7 +1598,7 @@ function for a some user object (see
 TypeOf
 ------
 
-`id=0.618133406874 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/TypeOf>`__
+
 
 
 
@@ -1631,7 +1631,7 @@ the latter case, the function returns NULL.
 UnregisterType
 --------------
 
-`id=0.894988383071 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/UnregisterType>`__
+
 
 
 
@@ -1668,7 +1668,7 @@ iterating the type list, starting from
 Write
 -----
 
-`id=0.950003121002 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Write>`__
+
 
 
 
@@ -1784,7 +1784,7 @@ description:
 WriteComment
 ------------
 
-`id=0.075756561075 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteComment>`__
+
 
 
 
@@ -1818,7 +1818,7 @@ The function writes a comment into file storage. The comments are skipped when t
 WriteFileNode
 -------------
 
-`id=0.595246053119 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteFileNode>`__
+
 
 
 
@@ -1856,7 +1856,7 @@ The function writes a copy of a file node to file storage. Possible applications
 WriteInt
 --------
 
-`id=0.339025962084 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteInt>`__
+
 
 
 
@@ -1890,7 +1890,7 @@ The function writes a single integer value (with or without a name) to the file 
 WriteRawData
 ------------
 
-`id=0.300064906822 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteRawData>`__
+
 
 
 
@@ -1968,7 +1968,7 @@ have a name, they should be written to a sequence rather than a map.
 WriteReal
 ---------
 
-`id=0.882217128317 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteReal>`__
+
 
 
 
@@ -2033,7 +2033,7 @@ registering a new type.
 WriteString
 -----------
 
-`id=0.310765342599 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/WriteString>`__
+
 
 
 

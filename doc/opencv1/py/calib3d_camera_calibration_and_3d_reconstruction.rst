@@ -157,7 +157,7 @@ The functions below use the above model to
 CalibrateCamera2
 ----------------
 
-`id=0.782194232075 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CalibrateCamera2>`__
+
 
 
 .. function:: CalibrateCamera2(objectPoints,imagePoints,pointCounts,imageSize,cameraMatrix,distCoeffs,rvecs,tvecs,flags=0)-> None
@@ -316,7 +316,7 @@ See also:
 ComputeCorrespondEpilines
 -------------------------
 
-`id=0.812565376037 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/ComputeCorrespondEpilines>`__
+
 
 
 .. function:: ComputeCorrespondEpilines(points, whichImage, F, lines) -> None
@@ -398,7 +398,7 @@ Line coefficients are defined up to a scale. They are normalized, such that
 ConvertPointsHomogeneous
 ------------------------
 
-`id=0.174046913553 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/ConvertPointsHomogeneous>`__
+
 
 
 .. function:: ConvertPointsHomogeneous( src, dst ) -> None
@@ -442,7 +442,7 @@ If the output array dimensionality is larger, an extra 1 is appended to each poi
 CreatePOSITObject
 -----------------
 
-`id=0.575884728475 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CreatePOSITObject>`__
+
 
 
 .. function:: CreatePOSITObject(points)-> POSITObject
@@ -484,7 +484,7 @@ must be called to free memory.
 CreateStereoBMState
 -------------------
 
-`id=0.181953212374 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CreateStereoBMState>`__
+
 
 
 .. function:: CreateStereoBMState(preset=CV_STEREO_BM_BASIC,numberOfDisparities=0)-> StereoBMState
@@ -529,7 +529,7 @@ the calls to
 CreateStereoGCState
 -------------------
 
-`id=0.718216892131 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CreateStereoGCState>`__
+
 
 
 .. function:: CreateStereoGCState(numberOfDisparities,maxIters)-> StereoGCState
@@ -564,7 +564,7 @@ The function creates the stereo correspondence structure and initializes it. It 
 CvStereoBMState
 ---------------
 
-`id=0.314911926499 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CvStereoBMState>`__
+
 
 .. class:: CvStereoBMState
 
@@ -698,7 +698,7 @@ Note that the algorithm searches for the corresponding blocks in x direction onl
 CvStereoGCState
 ---------------
 
-`id=0.396531770881 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/CvStereoGCState>`__
+
 
 .. class:: CvStereoGCState
 
@@ -782,7 +782,7 @@ and then override necessary parameters if needed.
 DecomposeProjectionMatrix
 -------------------------
 
-`id=0.997149293534 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/DecomposeProjectionMatrix>`__
+
 
 
 .. function:: DecomposeProjectionMatrix(projMatrix, cameraMatrix, rotMatrix, transVect, rotMatrX = None, rotMatrY = None, rotMatrZ = None) -> eulerAngles
@@ -851,7 +851,7 @@ The function is based on
 DrawChessboardCorners
 ---------------------
 
-`id=0.657339526052 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/DrawChessboardCorners>`__
+
 
 
 .. function:: DrawChessboardCorners(image,patternSize,corners,patternWasFound)-> None
@@ -894,7 +894,7 @@ The function draws the individual chessboard corners detected as red circles if 
 FindChessboardCorners
 ---------------------
 
-`id=0.629260035574 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindChessboardCorners>`__
+
 
 
 .. function:: FindChessboardCorners(image, patternSize, flags=CV_CALIB_CB_ADAPTIVE_THRESH) -> corners
@@ -995,7 +995,7 @@ the function requires some white space (like a square-thick border, the wider th
 FindExtrinsicCameraParams2
 --------------------------
 
-`id=0.0389878424328 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindExtrinsicCameraParams2>`__
+
 
 
 .. function:: FindExtrinsicCameraParams2(objectPoints,imagePoints,cameraMatrix,distCoeffs,rvec,tvec,useExtrinsicGuess=0)-> None
@@ -1061,7 +1061,7 @@ The function's counterpart in the C++ API is
 FindFundamentalMat
 ------------------
 
-`id=0.89177797951 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindFundamentalMat>`__
+
 
 
 .. function:: FindFundamentalMat(points1, points2, fundamentalMatrix, method=CV_FM_RANSAC, param1=1., param2=0.99, status = None) -> None
@@ -1161,7 +1161,7 @@ to compute the rectification transformation.
 FindHomography
 --------------
 
-`id=0.964547232485 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindHomography>`__
+
 
 
 .. function:: FindHomography(srcPoints,dstPoints,H,method,ransacReprojThreshold=3.0, status=None)-> None
@@ -1304,7 +1304,7 @@ See also:
 FindStereoCorrespondenceBM
 --------------------------
 
-`id=0.6416249077 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindStereoCorrespondenceBM>`__
+
 
 
 .. function:: FindStereoCorrespondenceBM(left,right,disparity,state)-> None
@@ -1351,7 +1351,7 @@ in the case of 16-bit fixed-point disparity map)
 FindStereoCorrespondenceGC
 --------------------------
 
-`id=0.511426409323 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/FindStereoCorrespondenceGC>`__
+
 
 
 .. function:: FindStereoCorrespondenceGC( left, right, dispLeft, dispRight, state, useDisparityGuess=(0))-> None
@@ -1458,7 +1458,7 @@ left disparity images are usually negative):
 GetOptimalNewCameraMatrix
 -------------------------
 
-`id=0.850139058889 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/GetOptimalNewCameraMatrix>`__
+
 
 
 .. function:: GetOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha, newCameraMatrix, newImageSize=(0,0), validPixROI=0) -> None
@@ -1529,7 +1529,7 @@ to produce the maps for
 InitIntrinsicParams2D
 ---------------------
 
-`id=0.845508653607 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/InitIntrinsicParams2D>`__
+
 
 
 .. function:: InitIntrinsicParams2D(objectPoints, imagePoints, npoints, imageSize, cameraMatrix, aspectRatio=1.) -> None
@@ -1583,7 +1583,7 @@ Currently, the function only supports planar calibration patterns, i.e. patterns
 InitUndistortMap
 ----------------
 
-`id=0.720345336817 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/InitUndistortMap>`__
+
 
 
 .. function:: InitUndistortMap(cameraMatrix,distCoeffs,map1,map2)-> None
@@ -1632,7 +1632,7 @@ is identity matrix and
 InitUndistortRectifyMap
 -----------------------
 
-`id=0.00679135152837 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/InitUndistortRectifyMap>`__
+
 
 
 .. function:: InitUndistortRectifyMap(cameraMatrix,distCoeffs,R,newCameraMatrix,map1,map2)-> None
@@ -1751,7 +1751,7 @@ can be chosen arbitrarily.
 POSIT
 -----
 
-`id=0.474051901242 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/POSIT>`__
+
 
 
 .. function:: POSIT(posit_object,imagePoints,focal_length,criteria)-> (rotationMatrix,translation_vector)
@@ -1808,7 +1808,7 @@ serves to stop the algorithm if the difference is small.
 ProjectPoints2
 --------------
 
-`id=0.754356933502 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/ProjectPoints2>`__
+
 
 
 .. function:: ProjectPoints2(objectPoints,rvec,tvec,cameraMatrix,distCoeffs, imagePoints,dpdrot=NULL,dpdt=NULL,dpdf=NULL,dpdc=NULL,dpddist=NULL)-> None
@@ -1907,7 +1907,7 @@ to 3x3 identity matrix, or by passing zero distortion coefficients, you can get 
 ReprojectImageTo3D
 ------------------
 
-`id=0.392860739717 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/ReprojectImageTo3D>`__
+
 
 
 .. function:: ReprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues=0) -> None
@@ -1972,7 +1972,7 @@ matrix, e.g. the one computed by
 RQDecomp3x3
 -----------
 
-`id=0.479738869484 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/RQDecomp3x3>`__
+
 
 
 .. function:: RQDecomp3x3(M, R, Q, Qx = None, Qy = None, Qz = None) -> eulerAngles
@@ -2035,7 +2035,7 @@ that could be used in OpenGL.
 Rodrigues2
 ----------
 
-`id=0.83168701891 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/Rodrigues2>`__
+
 
 
 .. function:: Rodrigues2(src,dst,jacobian=0)-> None
@@ -2098,7 +2098,7 @@ or
 StereoCalibrate
 ---------------
 
-`id=0.0963893421715 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/StereoCalibrate>`__
+
 
 
 .. function:: StereoCalibrate( objectPoints, imagePoints1, imagePoints2, pointCounts, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, E=NULL, F=NULL, term_crit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6), flags=CV_CALIB_FIX_INTRINSIC)-> None
@@ -2273,7 +2273,7 @@ Similarly to
 StereoRectify
 -------------
 
-`id=0.482375127425 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/StereoRectify>`__
+
 
 
 .. function:: StereoRectify( cameraMatrix1, cameraMatrix2, distCoeffs1, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q=NULL, flags=CV_CALIB_ZERO_DISPARITY, alpha=-1, newImageSize=(0,0))-> (roi1, roi2)
@@ -2431,7 +2431,7 @@ and
 StereoRectifyUncalibrated
 -------------------------
 
-`id=0.234617492311 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/StereoRectifyUncalibrated>`__
+
 
 
 .. function:: StereoRectifyUncalibrated(points1,points2,F,imageSize,H1,H2,threshold=5)-> None
@@ -2493,7 +2493,7 @@ and then the images can be corrected using
 Undistort2
 ----------
 
-`id=0.0228781107726 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/Undistort2>`__
+
 
 
 .. function:: Undistort2(src,dst,cameraMatrix,distCoeffs)-> None
@@ -2563,7 +2563,7 @@ need to be scaled accordingly, while the distortion coefficients remain the same
 UndistortPoints
 ---------------
 
-`id=0.00872451686413 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/calib3d/UndistortPoints>`__
+
 
 
 .. function:: UndistortPoints(src,dst,cameraMatrix,distCoeffs,R=NULL,P=NULL)-> None

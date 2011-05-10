@@ -29,7 +29,7 @@ Feature detection and description
 CvSURFPoint
 -----------
 
-`id=0.785092904945 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/features2d/CvSURFPoint>`__
+
 
 .. class:: CvSURFPoint
 
@@ -99,7 +99,7 @@ A SURF keypoint, represented as a tuple
 ExtractSURF
 -----------
 
-`id=0.999928834286 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/features2d/ExtractSURF>`__
+
 
 
 .. function:: ExtractSURF(image,mask,storage,params)-> (keypoints,descriptors)
@@ -193,7 +193,7 @@ To extract strong SURF features from an image
 GetStarKeypoints
 ----------------
 
-`id=0.373658080009 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/features2d/GetStarKeypoints>`__
+
 
 
 .. function:: GetStarKeypoints(image,storage,params)-> keypoints

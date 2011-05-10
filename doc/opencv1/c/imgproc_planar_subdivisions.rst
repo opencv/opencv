@@ -12,7 +12,7 @@ Planar Subdivisions
 CvSubdiv2D
 ----------
 
-`id=0.0330142359402 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvSubdiv2D>`__
+
 
 .. ctype:: CvSubdiv2D
 
@@ -80,7 +80,7 @@ morphing, fast location of points on the plane, building special graphs
 CvQuadEdge2D
 ------------
 
-`id=0.774421357321 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvQuadEdge2D>`__
+
 
 .. ctype:: CvQuadEdge2D
 
@@ -131,7 +131,7 @@ Quad-edge is a basic element of subdivision containing four edges (e, eRot, reve
 CvSubdiv2DPoint
 ---------------
 
-`id=0.348865048627 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvSubdiv2DPoint>`__
+
 
 .. ctype:: CvSubdiv2DPoint
 
@@ -179,7 +179,7 @@ Point of original or dual subdivision.
 CalcSubdivVoronoi2D
 -------------------
 
-`id=0.780234504298 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcSubdivVoronoi2D>`__
+
 
 
 
@@ -210,7 +210,7 @@ cell at that point.
 ClearSubdivVoronoi2D
 --------------------
 
-`id=0.598833189257 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ClearSubdivVoronoi2D>`__
+
 
 
 
@@ -243,7 +243,7 @@ was modified after previous call to the function.
 CreateSubdivDelaunay2D
 ----------------------
 
-`id=0.740903386025 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CreateSubdivDelaunay2D>`__
+
 
 
 
@@ -282,7 +282,7 @@ Note that the triangulation is a single large triangle that covers the given rec
 FindNearestPoint2D
 ------------------
 
-`id=0.89077983265 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FindNearestPoint2D>`__
+
 
 
 
@@ -319,7 +319,7 @@ point. The function returns a pointer to the found subdivision vertex.
 Subdiv2DEdgeDst
 ---------------
 
-`id=0.475748447952 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Subdiv2DEdgeDst>`__
+
 
 
 
@@ -352,7 +352,7 @@ can be calculated using the function
 Subdiv2DGetEdge
 ---------------
 
-`id=0.128594743275 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Subdiv2DGetEdge>`__
+
 
 
 
@@ -417,7 +417,7 @@ The function returns one of the edges related to the input edge.
 Subdiv2DNextEdge
 ----------------
 
-`id=0.250529497726 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Subdiv2DNextEdge>`__
+
 
 
 
@@ -455,7 +455,7 @@ is the input edge)
 Subdiv2DLocate
 --------------
 
-`id=0.195353110226 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Subdiv2DLocate>`__
+
 
 
 
@@ -536,7 +536,7 @@ The function locates the input point within the subdivision. There are 5 cases:
 Subdiv2DRotateEdge
 ------------------
 
-`id=0.808074440668 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Subdiv2DRotateEdge>`__
+
 
 
 
@@ -587,7 +587,7 @@ The function returns one of the edges of the same quad-edge as the input edge.
 SubdivDelaunay2DInsert
 ----------------------
 
-`id=0.318236209384 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/SubdivDelaunay2DInsert>`__
+
 
 
 

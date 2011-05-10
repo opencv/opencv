@@ -12,7 +12,7 @@ Clustering
 KMeans2
 -------
 
-`id=0.682106387651 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/KMeans2>`__
+
 
 
 .. function:: KMeans2(samples,nclusters,labels,termcrit)-> None

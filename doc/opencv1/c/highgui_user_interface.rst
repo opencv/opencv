@@ -12,7 +12,7 @@ User Interface
 ConvertImage
 ------------
 
-`id=0.770096998899 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/ConvertImage>`__
+
 
 
 
@@ -56,7 +56,7 @@ converts one image to another and flips the result vertically if desired. The fu
 CreateTrackbar
 --------------
 
-`id=0.331453824667 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CreateTrackbar>`__
+
 
 
 
@@ -130,7 +130,7 @@ By clicking on the label of each trackbar, it is possible to edit the trackbar's
 DestroyAllWindows
 -----------------
 
-`id=0.237220691544 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/DestroyAllWindows>`__
+
 
 
 
@@ -153,7 +153,7 @@ destroys all of the opened HighGUI windows.
 DestroyWindow
 -------------
 
-`id=0.224383930532 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/DestroyWindow>`__
+
 
 
 
@@ -183,7 +183,7 @@ destroys the window with the given name.
 GetTrackbarPos
 --------------
 
-`id=0.99562223249 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GetTrackbarPos>`__
+
 
 
 
@@ -226,7 +226,7 @@ qt-specific details:
 GetWindowHandle
 ---------------
 
-`id=0.506913773725 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GetWindowHandle>`__
+
 
 
 
@@ -264,7 +264,7 @@ returns the native window handle inheriting from the Qt class QWidget.
 GetWindowName
 -------------
 
-`id=0.793825437585 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GetWindowName>`__
+
 
 
 
@@ -301,7 +301,7 @@ returns the name of the window given its native handle (QWidget).
 InitSystem
 ----------
 
-`id=0.090225420475 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/InitSystem>`__
+
 
 
 
@@ -349,7 +349,7 @@ is automatically called at the first cvNameWindow call.
 MoveWindow
 ----------
 
-`id=0.601355766212 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/MoveWindow>`__
+
 
 
 
@@ -385,7 +385,7 @@ changes the position of the window.
 NamedWindow
 -----------
 
-`id=0.661605671694 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/NamedWindow>`__
+
 
 
 
@@ -456,7 +456,7 @@ qt-specific details:
 ResizeWindow
 ------------
 
-`id=0.689489754706 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/ResizeWindow>`__
+
 
 
 
@@ -492,7 +492,7 @@ changes the size of the window.
 SetMouseCallback
 ----------------
 
-`id=0.619148465549 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SetMouseCallback>`__
+
 
 
 
@@ -593,7 +593,7 @@ parameter is a combination of :
 SetTrackbarPos
 --------------
 
-`id=0.998171131545 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SetTrackbarPos>`__
+
 
 
 
@@ -639,7 +639,7 @@ qt-specific details:
 ShowImage
 ---------
 
-`id=0.466244635488 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/ShowImage>`__
+
 
 
 
@@ -691,7 +691,7 @@ flag then the image is shown with its original size, otherwise the image is scal
 WaitKey
 -------
 
-`id=0.996058007458 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/WaitKey>`__
+
 
 
 

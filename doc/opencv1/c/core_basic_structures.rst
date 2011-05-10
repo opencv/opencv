@@ -69,7 +69,7 @@ CvPoint
 CvPoint2D32f
 ------------
 
-`id=0.245532424939 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvPoint2D32f>`__
+
 
 .. ctype:: CvPoint2D32f
 
@@ -138,7 +138,7 @@ CvPoint2D32f
 CvPoint3D32f
 ------------
 
-`id=0.0440394368915 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvPoint3D32f>`__
+
 
 .. ctype:: CvPoint3D32f
 
@@ -213,7 +213,7 @@ CvPoint3D32f
 CvPoint2D64f
 ------------
 
-`id=0.709504732939 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvPoint2D64f>`__
+
 
 .. ctype:: CvPoint2D64f
 
@@ -282,7 +282,7 @@ CvPoint2D64f
 CvPoint3D64f
 ------------
 
-`id=0.0506448340848 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvPoint3D64f>`__
+
 
 .. ctype:: CvPoint3D64f
 
@@ -357,7 +357,7 @@ CvPoint3D64f
 CvSize
 ------
 
-`id=0.554248071465 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSize>`__
+
 
 .. ctype:: CvSize
 
@@ -423,7 +423,7 @@ Pixel-accurate size of a rectangle.
 CvSize2D32f
 -----------
 
-`id=0.905432526523 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSize2D32f>`__
+
 
 .. ctype:: CvSize2D32f
 
@@ -489,7 +489,7 @@ Sub-pixel accurate size of a rectangle.
 CvRect
 ------
 
-`id=0.213953446247 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvRect>`__
+
 
 .. ctype:: CvRect
 
@@ -573,7 +573,7 @@ Offset (usually the top-left corner) and size of a rectangle.
 CvScalar
 --------
 
-`id=0.760314360939 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvScalar>`__
+
 
 .. ctype:: CvScalar
 
@@ -630,7 +630,7 @@ A container for 1-,2-,3- or 4-tuples of doubles.
 CvTermCriteria
 --------------
 
-`id=0.267162264997 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvTermCriteria>`__
+
 
 .. ctype:: CvTermCriteria
 
@@ -716,7 +716,7 @@ Termination criteria for iterative algorithms.
 CvMat
 -----
 
-`id=0.465191243774 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvMat>`__
+
 
 .. ctype:: CvMat
 
@@ -830,7 +830,7 @@ Matrices are stored row by row. All of the rows are aligned by 4 bytes.
 CvMatND
 -------
 
-`id=0.322223772253 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvMatND>`__
+
 
 .. ctype:: CvMatND
 
@@ -925,7 +925,7 @@ Multi-dimensional dense multi-channel array.
 CvSparseMat
 -----------
 
-`id=0.451492537542 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvSparseMat>`__
+
 
 .. ctype:: CvSparseMat
 
@@ -1050,7 +1050,7 @@ Multi-dimensional sparse multi-channel array.
 IplImage
 --------
 
-`id=0.99460273838 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/IplImage>`__
+
 
 .. ctype:: IplImage
 
@@ -1341,7 +1341,7 @@ In addition to the above restrictions, OpenCV handles ROIs differently. OpenCV f
 CvArr
 -----
 
-`id=0.322048506688 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvArr>`__
+
 
 .. ctype:: CvArr
 

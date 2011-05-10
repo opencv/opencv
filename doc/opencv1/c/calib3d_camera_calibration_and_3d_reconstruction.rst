@@ -157,7 +157,7 @@ The functions below use the above model to
 CalcImageHomography
 -------------------
 
-`id=0.733621944503 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CalcImageHomography>`__
+
 
 
 
@@ -202,7 +202,7 @@ in the OpenCV Guide 3D Reconstruction Chapter).
 CalibrateCamera2
 ----------------
 
-`id=0.047494999013 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CalibrateCamera2>`__
+
 
 
 
@@ -346,7 +346,7 @@ See also:
 ComputeCorrespondEpilines
 -------------------------
 
-`id=0.245813963965 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ComputeCorrespondEpilines>`__
+
 
 
 
@@ -422,7 +422,7 @@ Line coefficients are defined up to a scale. They are normalized, such that
 ConvertPointsHomogeneous
 ------------------------
 
-`id=0.283238515237 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ConvertPointsHomogeneous>`__
+
 
 
 
@@ -467,7 +467,7 @@ If the output array dimensionality is larger, an extra 1 is appended to each poi
 CreatePOSITObject
 -----------------
 
-`id=0.908065035962 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CreatePOSITObject>`__
+
 
 
 
@@ -512,7 +512,7 @@ must be called to free memory.
 CreateStereoBMState
 -------------------
 
-`id=0.967939258435 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CreateStereoBMState>`__
+
 
 
 
@@ -555,7 +555,7 @@ the calls to
 CreateStereoGCState
 -------------------
 
-`id=0.358252470639 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CreateStereoGCState>`__
+
 
 
 
@@ -588,7 +588,7 @@ The function creates the stereo correspondence structure and initializes it. It 
 CvStereoBMState
 ---------------
 
-`id=0.343226402356 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CvStereoBMState>`__
+
 
 .. ctype:: CvStereoBMState
 
@@ -760,7 +760,7 @@ Note that the algorithm searches for the corresponding blocks in x direction onl
 CvStereoGCState
 ---------------
 
-`id=0.177638065166 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/CvStereoGCState>`__
+
 
 .. ctype:: CvStereoGCState
 
@@ -817,7 +817,7 @@ and then override necessary parameters if needed.
 DecomposeProjectionMatrix
 -------------------------
 
-`id=0.0345049807701 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/DecomposeProjectionMatrix>`__
+
 
 
 
@@ -872,7 +872,7 @@ The function is based on
 DrawChessboardCorners
 ---------------------
 
-`id=0.976073399441 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/DrawChessboardCorners>`__
+
 
 
 
@@ -912,7 +912,7 @@ The function draws the individual chessboard corners detected as red circles if 
 FindChessboardCorners
 ---------------------
 
-`id=0.171470909447 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindChessboardCorners>`__
+
 
 
 
@@ -1010,7 +1010,7 @@ the function requires some white space (like a square-thick border, the wider th
 FindExtrinsicCameraParams2
 --------------------------
 
-`id=0.220088405626 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindExtrinsicCameraParams2>`__
+
 
 
 
@@ -1064,7 +1064,7 @@ The function's counterpart in the C++ API is
 FindFundamentalMat
 ------------------
 
-`id=0.704773042204 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindFundamentalMat>`__
+
 
 
 
@@ -1185,7 +1185,7 @@ to compute the rectification transformation.
 FindHomography
 --------------
 
-`id=0.447400721885 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindHomography>`__
+
 
 
 
@@ -1318,7 +1318,7 @@ See also:
 FindStereoCorrespondenceBM
 --------------------------
 
-`id=0.0255529902071 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindStereoCorrespondenceBM>`__
+
 
 
 
@@ -1359,7 +1359,7 @@ in the case of 16-bit fixed-point disparity map)
 FindStereoCorrespondenceGC
 --------------------------
 
-`id=0.989115762769 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/FindStereoCorrespondenceGC>`__
+
 
 
 
@@ -1487,7 +1487,7 @@ left disparity images are usually negative):
 GetOptimalNewCameraMatrix
 -------------------------
 
-`id=0.809174556358 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/GetOptimalNewCameraMatrix>`__
+
 
 
 
@@ -1546,7 +1546,7 @@ to produce the maps for
 InitIntrinsicParams2D
 ---------------------
 
-`id=0.266047155492 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/InitIntrinsicParams2D>`__
+
 
 
 
@@ -1590,7 +1590,7 @@ Currently, the function only supports planar calibration patterns, i.e. patterns
 InitUndistortMap
 ----------------
 
-`id=0.851817673191 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/InitUndistortMap>`__
+
 
 
 
@@ -1633,7 +1633,7 @@ is identity matrix and
 InitUndistortRectifyMap
 -----------------------
 
-`id=0.249366479773 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/InitUndistortRectifyMap>`__
+
 
 
 
@@ -1742,7 +1742,7 @@ can be chosen arbitrarily.
 POSIT
 -----
 
-`id=0.678024470382 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/POSIT>`__
+
 
 
 
@@ -1789,7 +1789,7 @@ serves to stop the algorithm if the difference is small.
 ProjectPoints2
 --------------
 
-`id=0.0577222169105 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ProjectPoints2>`__
+
 
 
 
@@ -1868,7 +1868,7 @@ to 3x3 identity matrix, or by passing zero distortion coefficients, you can get 
 ReprojectImageTo3D
 ------------------
 
-`id=0.134721984306 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ReprojectImageTo3D>`__
+
 
 
 
@@ -1927,7 +1927,7 @@ matrix, e.g. the one computed by
 RQDecomp3x3
 -----------
 
-`id=0.744854921725 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/RQDecomp3x3>`__
+
 
 
 
@@ -1978,7 +1978,7 @@ that could be used in OpenGL.
 ReleasePOSITObject
 ------------------
 
-`id=0.26823386799 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ReleasePOSITObject>`__
+
 
 
 
@@ -2008,7 +2008,7 @@ The function releases memory previously allocated by the function
 ReleaseStereoBMState
 --------------------
 
-`id=0.746678435544 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ReleaseStereoBMState>`__
+
 
 
 
@@ -2036,7 +2036,7 @@ The function releases the stereo correspondence structure and all the associated
 ReleaseStereoGCState
 --------------------
 
-`id=0.279280186521 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/ReleaseStereoGCState>`__
+
 
 
 
@@ -2064,7 +2064,7 @@ The function releases the stereo correspondence structure and all the associated
 Rodrigues2
 ----------
 
-`id=0.23072370096 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/Rodrigues2>`__
+
 
 
 
@@ -2123,7 +2123,7 @@ or
 StereoCalibrate
 ---------------
 
-`id=0.348893862152 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/StereoCalibrate>`__
+
 
 
 
@@ -2273,7 +2273,7 @@ The function returns the final value of the re-projection error.
 StereoRectify
 -------------
 
-`id=0.753398392404 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/StereoRectify>`__
+
 
 
 
@@ -2419,7 +2419,7 @@ and
 StereoRectifyUncalibrated
 -------------------------
 
-`id=0.622333108977 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/StereoRectifyUncalibrated>`__
+
 
 
 
@@ -2477,7 +2477,7 @@ and then the images can be corrected using
 Undistort2
 ----------
 
-`id=0.329515394146 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/Undistort2>`__
+
 
 
 
@@ -2541,7 +2541,7 @@ need to be scaled accordingly, while the distortion coefficients remain the same
 UndistortPoints
 ---------------
 
-`id=0.111600695455 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/calib3d/UndistortPoints>`__
+
 
 
 

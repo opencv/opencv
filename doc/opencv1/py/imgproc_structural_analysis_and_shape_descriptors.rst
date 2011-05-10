@@ -12,7 +12,7 @@ Structural Analysis and Shape Descriptors
 ApproxChains
 ------------
 
-`id=0.891722904536 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ApproxChains>`__
+
 
 
 .. function:: ApproxChains(src_seq,storage,method=CV_CHAIN_APPROX_SIMPLE,parameter=0,minimal_perimeter=0,recursive=0)-> chains
@@ -73,7 +73,7 @@ fields of the returned structure.
 ApproxPoly
 ----------
 
-`id=0.511872225874 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ApproxPoly>`__
+
 
 
 .. function:: 
@@ -126,7 +126,7 @@ correspondence).
 ArcLength
 ---------
 
-`id=0.00865407229522 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ArcLength>`__
+
 
 
 .. function:: ArcLength(curve,slice=CV_WHOLE_SEQ,isClosed=-1)-> double
@@ -175,7 +175,7 @@ The function calculates the length or curve as the sum of lengths of segments be
 BoundingRect
 ------------
 
-`id=0.0890624819294 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/BoundingRect>`__
+
 
 
 .. function:: BoundingRect(points,update=0)-> CvRect
@@ -223,7 +223,7 @@ Here is the list of possible combination of the flag values and type of
 BoxPoints
 ---------
 
-`id=0.833111863214 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/BoxPoints>`__
+
 
 
 .. function:: BoxPoints(box)-> points
@@ -256,7 +256,7 @@ The function calculates the vertices of the input 2d box.
 CalcPGH
 -------
 
-`id=0.492952101193 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcPGH>`__
+
 
 
 .. function:: CalcPGH(contour,hist)-> None
@@ -299,7 +299,7 @@ definition). The histogram can be used for contour matching.
 CalcEMD2
 --------
 
-`id=0.390300478738 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcEMD2>`__
+
 
 
 .. function:: CalcEMD2(signature1, signature2, distance_type, distance_func = None, cost_matrix=None, flow=None, lower_bound=None, userdata = None) -> float
@@ -374,7 +374,7 @@ so that they cannot relate to the same object.
 CheckContourConvexity
 ---------------------
 
-`id=0.472970769213 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CheckContourConvexity>`__
+
 
 
 .. function:: CheckContourConvexity(contour)-> int
@@ -402,7 +402,7 @@ The function tests whether the input contour is convex or not. The contour must 
 CvConvexityDefect
 -----------------
 
-`id=0.484949869638 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvConvexityDefect>`__
+
 
 .. class:: CvConvexityDefect
 
@@ -462,7 +462,7 @@ A single contour convexity defect, represented by a tuple
 ContourArea
 -----------
 
-`id=0.958766756024 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ContourArea>`__
+
 
 
 .. function:: ContourArea(contour,slice=CV_WHOLE_SEQ)-> double
@@ -510,7 +510,7 @@ function from C runtime to get the absolute value of the area.
 ContourFromContourTree
 ----------------------
 
-`id=0.162786680111 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ContourFromContourTree>`__
+
 
 
 .. function:: ContourFromContourTree(tree,storage,criteria)-> contour
@@ -544,7 +544,7 @@ determines the accuracy and/or the number of tree levels used for reconstruction
 ConvexHull2
 -----------
 
-`id=0.277941655963 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ConvexHull2>`__
+
 
 
 .. function:: ConvexHull2(points,storage,orientation=CV_CLOCKWISE,return_points=0)-> convex_hull
@@ -593,7 +593,7 @@ is a CvMat, the function returns NULL.
 ConvexityDefects
 ----------------
 
-`id=0.819226332619 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ConvexityDefects>`__
+
 
 
 .. function:: ConvexityDefects(contour,convexhull,storage)-> convexity_defects
@@ -631,7 +631,7 @@ The function finds all convexity defects of the input contour and returns a sequ
 CreateContourTree
 -----------------
 
-`id=0.249344062216 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CreateContourTree>`__
+
 
 
 .. function:: CreateContourTree(contour,storage,threshold)-> contour_tree
@@ -671,7 +671,7 @@ is less than or equal to 0, the function creates a full binary tree representati
 FindContours
 ------------
 
-`id=0.577796431347 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FindContours>`__
+
 
 
 .. function:: FindContours(image, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE, offset=(0,0)) -> cvseq
@@ -781,7 +781,7 @@ is modified by this function.
 FitEllipse2
 -----------
 
-`id=0.461296656973 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FitEllipse2>`__
+
 
 
 .. function:: FitEllipse2(points)-> Box2D
@@ -817,7 +817,7 @@ not half-lengths.
 FitLine
 -------
 
-`id=0.681153539505 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FitLine>`__
+
 
 
 .. function:: FitLine(points, dist_type, param, reps, aeps) -> line
@@ -947,7 +947,7 @@ is a distance function, one of:
 GetCentralMoment
 ----------------
 
-`id=0.28222157071 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetCentralMoment>`__
+
 
 
 .. function:: GetCentralMoment(moments, x_order, y_order) -> double
@@ -1003,7 +1003,7 @@ are the coordinates of the gravity center:
 GetHuMoments
 ------------
 
-`id=0.855980556214 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetHuMoments>`__
+
 
 
 .. function:: GetHuMoments(moments) -> hu
@@ -1070,7 +1070,7 @@ These values are proved to be invariant to the image scale, rotation, and reflec
 GetNormalizedCentralMoment
 --------------------------
 
-`id=0.725127020324 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetNormalizedCentralMoment>`__
+
 
 
 .. function:: GetNormalizedCentralMoment(moments, x_order, y_order) -> double
@@ -1115,7 +1115,7 @@ The function retrieves the normalized central moment:
 GetSpatialMoment
 ----------------
 
-`id=0.191749557246 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetSpatialMoment>`__
+
 
 
 .. function:: GetSpatialMoment(moments, x_order, y_order) -> double
@@ -1166,7 +1166,7 @@ is the intensity of the pixel
 MatchContourTrees
 -----------------
 
-`id=0.480547577878 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MatchContourTrees>`__
+
 
 
 .. function:: MatchContourTrees(tree1,tree2,method,threshold)-> double
@@ -1203,7 +1203,7 @@ The function calculates the value of the matching measure for two contour trees.
 MatchShapes
 -----------
 
-`id=0.317335085559 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MatchShapes>`__
+
 
 
 .. function:: MatchShapes(object1,object2,method,parameter=0)-> None
@@ -1312,7 +1312,7 @@ respectively.
 MinAreaRect2
 ------------
 
-`id=0.271581100753 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MinAreaRect2>`__
+
 
 
 .. function:: MinAreaRect2(points,storage=NULL)-> CvBox2D
@@ -1353,7 +1353,7 @@ Picture. Minimal-area bounding rectangle for contour
 MinEnclosingCircle
 ------------------
 
-`id=0.696424733079 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MinEnclosingCircle>`__
+
 
 
 .. function:: MinEnclosingCircle(points)-> (int,center,radius)
@@ -1394,7 +1394,7 @@ if the resultant circle contains all the input points and zero otherwise
 Moments
 -------
 
-`id=0.590982994221 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Moments>`__
+
 
 
 .. function:: Moments(arr, binary = 0) -> moments
@@ -1434,7 +1434,7 @@ The function calculates spatial and central moments up to the third order and wr
 PointPolygonTest
 ----------------
 
-`id=0.315610322671 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/PointPolygonTest>`__
+
 
 
 .. function:: PointPolygonTest(contour,pt,measure_dist)-> double

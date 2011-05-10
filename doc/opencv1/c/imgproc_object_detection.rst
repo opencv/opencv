@@ -12,7 +12,7 @@ Object Detection
 MatchTemplate
 -------------
 
-`id=0.133207508798 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MatchTemplate>`__
+
 
 
 

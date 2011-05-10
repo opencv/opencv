@@ -12,7 +12,7 @@ Reading and Writing Images and Video
 LoadImage
 ---------
 
-`id=0.709113485048 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/LoadImage>`__
+
 
 
 .. function:: LoadImage(filename, iscolor=CV_LOAD_IMAGE_COLOR)->None
@@ -84,7 +84,7 @@ Note that in the current implementation the alpha channel, if any, is stripped f
 LoadImageM
 ----------
 
-`id=0.915605899901 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/LoadImageM>`__
+
 
 
 .. function:: LoadImageM(filename, iscolor=CV_LOAD_IMAGE_COLOR)->None
@@ -157,7 +157,7 @@ Note that in the current implementation the alpha channel, if any, is stripped f
 SaveImage
 ---------
 
-`id=0.496487139898 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/SaveImage>`__
+
 
 
 .. function:: SaveImage(filename,image)-> None
@@ -203,7 +203,7 @@ to save the image to XML or YAML format.
 CvCapture
 ---------
 
-`id=0.364337205432 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/CvCapture>`__
+
 
 .. class:: CvCapture
 
@@ -223,7 +223,7 @@ does not have a public interface and is used only as a parameter for video captu
 CaptureFromCAM
 --------------
 
-`id=0.68934258142 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/CaptureFromCAM>`__
+
 
 
 .. function:: CaptureFromCAM(index) -> CvCapture
@@ -258,7 +258,7 @@ To release the structure, use
 CaptureFromFile
 ---------------
 
-`id=0.627099214181 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/CaptureFromFile>`__
+
 
 
 .. function:: CaptureFromFile(filename) -> CvCapture
@@ -292,7 +292,7 @@ function.
 GetCaptureProperty
 ------------------
 
-`id=0.295657731336 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/GetCaptureProperty>`__
+
 
 
 .. function:: GetCaptureProperty(capture, property_id)->double
@@ -388,7 +388,7 @@ retrieves the specified property of the camera or video file.
 GrabFrame
 ---------
 
-`id=0.664037861142 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/GrabFrame>`__
+
 
 
 .. function:: GrabFrame(capture) -> int
@@ -423,7 +423,7 @@ should be used.
 QueryFrame
 ----------
 
-`id=0.15232451714 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/QueryFrame>`__
+
 
 
 .. function:: QueryFrame(capture) -> iplimage
@@ -457,7 +457,7 @@ and
 RetrieveFrame
 -------------
 
-`id=0.978271497895 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/RetrieveFrame>`__
+
 
 
 .. function:: RetrieveFrame(capture) -> iplimage
@@ -490,7 +490,7 @@ function. The returned image should not be released or modified by the user.  In
 SetCaptureProperty
 ------------------
 
-`id=0.42439239326 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/SetCaptureProperty>`__
+
 
 
 .. function:: SetCaptureProperty(capture, property_id,value)->None
@@ -596,7 +596,7 @@ NB This function currently does nothing when using the latest CVS download on li
 CreateVideoWriter
 -----------------
 
-`id=0.778639527068 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/CreateVideoWriter>`__
+
 
 
 .. function:: CreateVideoWriter(filename, fourcc, fps, frame_size, is_color) -> CvVideoWriter
@@ -650,7 +650,7 @@ Which codecs and file formats are supported depends on the back end library. On 
 WriteFrame
 ----------
 
-`id=0.0385991600269 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/WriteFrame>`__
+
 
 
 .. function:: WriteFrame(writer, image)->int

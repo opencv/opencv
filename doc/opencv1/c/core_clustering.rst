@@ -12,7 +12,7 @@ Clustering
 KMeans2
 -------
 
-`id=0.323145542573 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/KMeans2>`__
+
 
 
 
@@ -176,7 +176,7 @@ matrix.
 SeqPartition
 ------------
 
-`id=0.684667795556 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SeqPartition>`__
+
 
 
 

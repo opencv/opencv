@@ -215,7 +215,7 @@ Example: Use of Error Handling Macros
 GetErrStatus
 ------------
 
-`id=0.158872599983 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetErrStatus>`__
+
 
 
 
@@ -249,7 +249,7 @@ error mode.
 SetErrStatus
 ------------
 
-`id=0.548990286602 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetErrStatus>`__
+
 
 
 
@@ -283,7 +283,7 @@ or
 GetErrMode
 ----------
 
-`id=0.395450807117 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetErrMode>`__
+
 
 
 
@@ -306,7 +306,7 @@ call.
 SetErrMode
 ----------
 
-`id=0.837950474175 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetErrMode>`__
+
 
 
 
@@ -348,7 +348,7 @@ The function sets the specified error mode. For descriptions of different error 
 Error
 -----
 
-`id=0.755789688999 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Error>`__
+
 
 
 
@@ -392,7 +392,7 @@ The function sets the error status to the specified value (via
 ErrorStr
 --------
 
-`id=0.116403749541 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ErrorStr>`__
+
 
 
 
@@ -422,7 +422,7 @@ returns a NULL pointer.
 RedirectError
 -------------
 
-`id=0.0620147644903 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RedirectError>`__
+
 
 
 
@@ -480,7 +480,7 @@ to make a decision.
 cvNulDevReport cvStdErrReport cvGuiBoxReport
 --------------------------------------------
 
-`id=0.940927070556 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/cvNulDevReport%20cvStdErrReport%20cvGuiBoxReport>`__
+
 
 
 
@@ -576,7 +576,7 @@ If the error handler is set to
 Alloc
 -----
 
-`id=0.593055881775 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Alloc>`__
+
 
 
 
@@ -618,7 +618,7 @@ function.
 Free
 ----
 
-`id=0.667310584005 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Free>`__
+
 
 
 
@@ -652,7 +652,7 @@ does nothing.
 GetTickCount
 ------------
 
-`id=0.0577183375288 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetTickCount>`__
+
 
 
 
@@ -675,7 +675,7 @@ The function returns number of the ticks starting from some platform-dependent e
 GetTickFrequency
 ----------------
 
-`id=0.796183003536 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetTickFrequency>`__
+
 
 
 
@@ -700,7 +700,7 @@ will give the number of microseconds starting from the platform-dependent event.
 RegisterModule
 --------------
 
-`id=0.265903415766 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RegisterModule>`__
+
 
 
 
@@ -775,7 +775,7 @@ on how IPP and MKL are connected to the modules.
 GetModuleInfo
 -------------
 
-`id=0.510096912729 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetModuleInfo>`__
+
 
 
 
@@ -812,7 +812,7 @@ text strings.
 UseOptimized
 ------------
 
-`id=0.657951043449 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/UseOptimized>`__
+
 
 
 
@@ -851,7 +851,7 @@ the program (actually, it will only increase the startup time).
 SetMemoryManager
 ----------------
 
-`id=0.591055548987 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetMemoryManager>`__
+
 
 
 
@@ -925,7 +925,7 @@ pointers are
 SetIPLAllocators
 ----------------
 
-`id=0.433242475449 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetIPLAllocators>`__
+
 
 
 

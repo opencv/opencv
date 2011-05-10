@@ -29,7 +29,7 @@ Feature detection and description
 ExtractSURF
 -----------
 
-`id=0.726137466362 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/features2d/ExtractSURF>`__
+
 
 
 
@@ -136,7 +136,7 @@ demo in OpenCV samples directory.
 GetStarKeypoints
 ----------------
 
-`id=0.460873667573 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/features2d/GetStarKeypoints>`__
+
 
 
 

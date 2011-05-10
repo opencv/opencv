@@ -84,7 +84,7 @@ A simple demonstration of face detection, which draws a rectangle around each de
 HaarDetectObjects
 -----------------
 
-`id=0.467753723618 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/objdetect/HaarDetectObjects>`__
+
 
 
 .. function:: HaarDetectObjects(image,cascade,storage,scaleFactor=1.1,minNeighbors=3,flags=0,minSize=(0,0))-> detected_objects

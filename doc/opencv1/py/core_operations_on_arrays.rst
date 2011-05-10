@@ -12,7 +12,7 @@ Operations on Arrays
 AbsDiff
 -------
 
-`id=0.842617662689 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AbsDiff>`__
+
 
 
 .. function:: AbsDiff(src1,src2,dst)-> None
@@ -59,7 +59,7 @@ All the arrays must have the same data type and the same size (or ROI size).
 AbsDiffS
 --------
 
-`id=0.459009306478 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AbsDiffS>`__
+
 
 
 .. function:: AbsDiffS(src,value,dst)-> None
@@ -107,7 +107,7 @@ All the arrays must have the same data type and the same size (or ROI size).
 Add
 ---
 
-`id=0.00692531918124 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Add>`__
+
 
 
 .. function:: Add(src1,src2,dst,mask=NULL)-> None
@@ -165,7 +165,7 @@ For types that have limited range this operation is saturating.
 AddS
 ----
 
-`id=0.243025426724 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AddS>`__
+
 
 
 .. function:: AddS(src,value,dst,mask=NULL)-> None
@@ -230,7 +230,7 @@ All the arrays must have the same type, except the mask, and the same size (or R
 AddWeighted
 -----------
 
-`id=0.0785921846437 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AddWeighted>`__
+
 
 
 .. function:: AddWeighted(src1,alpha,src2,beta,gamma,dst)-> None
@@ -299,7 +299,7 @@ For types that have limited range this operation is saturating.
 And
 ---
 
-`id=0.824628298877 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/And>`__
+
 
 
 .. function:: And(src1,src2,dst,mask=NULL)-> None
@@ -356,7 +356,7 @@ In the case of floating-point arrays their bit representations are used for the 
 AndS
 ----
 
-`id=0.176650125779 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AndS>`__
+
 
 
 .. function:: AndS(src,value,dst,mask=NULL)-> None
@@ -413,7 +413,7 @@ Prior to the actual operation, the scalar is converted to the same type as that 
 Avg
 ---
 
-`id=0.189296163871 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Avg>`__
+
 
 
 .. function:: Avg(arr,mask=NULL)-> CvScalar
@@ -461,7 +461,7 @@ and COI is set, the function processes the selected channel only and stores the 
 AvgSdv
 ------
 
-`id=0.913261855565 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/AvgSdv>`__
+
 
 
 .. function:: AvgSdv(arr,mask=NULL)-> (mean, stdDev)
@@ -519,7 +519,7 @@ and
 CalcCovarMatrix
 ---------------
 
-`id=0.200918462968 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CalcCovarMatrix>`__
+
 
 
 .. function:: CalcCovarMatrix(vects,covMat,avg,flags)-> None
@@ -602,7 +602,7 @@ can be used for PCA, for comparing vectors using Mahalanobis distance and so for
 CartToPolar
 -----------
 
-`id=0.60451777375 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CartToPolar>`__
+
 
 
 .. function:: CartToPolar(x,y,magnitude,angle=NULL,angleInDegrees=0)-> None
@@ -667,7 +667,7 @@ The angles are calculated with 0.1 degree accuracy. For the (0,0) point, the ang
 Cbrt
 ----
 
-`id=0.789355763623 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Cbrt>`__
+
 
 
 .. function:: Cbrt(value)-> float
@@ -699,7 +699,7 @@ The function calculates the cubic root of the argument, and normally it is faste
 ClearND
 -------
 
-`id=0.949651070488 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ClearND>`__
+
 
 
 .. function:: ClearND(arr,idx)-> None
@@ -733,7 +733,7 @@ clears (sets to zero) a specific element of a dense array or deletes the element
 CloneImage
 ----------
 
-`id=0.83896698035 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CloneImage>`__
+
 
 
 .. function:: CloneImage(image)-> copy
@@ -763,7 +763,7 @@ points to the image copy.
 CloneMat
 --------
 
-`id=0.884969658256 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CloneMat>`__
+
 
 
 .. function:: CloneMat(mat)-> copy
@@ -791,7 +791,7 @@ Creates a full copy of a matrix and returns a pointer to the copy.
 CloneMatND
 ----------
 
-`id=0.861258596068 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CloneMatND>`__
+
 
 
 .. function:: CloneMatND(mat)-> copy
@@ -817,7 +817,7 @@ CloneMatND
 Cmp
 ---
 
-`id=0.337716948694 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Cmp>`__
+
 
 
 .. function:: Cmp(src1,src2,dst,cmpOp)-> None
@@ -897,7 +897,7 @@ is set to 0xff (all
 CmpS
 ----
 
-`id=0.875900023936 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CmpS>`__
+
 
 
 .. function:: CmpS(src,value,dst,cmpOp)-> None
@@ -983,7 +983,7 @@ is set to 0xff (all
 Convert
 -------
 
-`id=0.524270158253 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Convert>`__
+
 
 
 .. function:: Convert(src,dst)-> None
@@ -1021,7 +1021,7 @@ All the channels of multi-channel arrays are processed independently.
 ConvertScale
 ------------
 
-`id=0.857019498758 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ConvertScale>`__
+
 
 
 .. function:: ConvertScale(src,dst,scale=1.0,shift=0.0)-> None
@@ -1091,7 +1091,7 @@ and that is caled
 ConvertScaleAbs
 ---------------
 
-`id=0.64930952806 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ConvertScaleAbs>`__
+
 
 
 .. function:: ConvertScaleAbs(src,dst,scale=1.0,shift=0.0)-> None
@@ -1149,7 +1149,7 @@ functions.
 CvtScaleAbs
 -----------
 
-`id=0.286104947471 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvtScaleAbs>`__
+
 
 
 .. function:: CvtScaleAbs(src,dst,scale=1.0,shift=0.0)-> None
@@ -1199,7 +1199,7 @@ functions.
 Copy
 ----
 
-`id=0.66694684788 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Copy>`__
+
 
 
 .. function:: Copy(src,dst,mask=NULL)-> None
@@ -1251,7 +1251,7 @@ arrays (mask is not supported in this case).
 CountNonZero
 ------------
 
-`id=0.620672385302 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CountNonZero>`__
+
 
 
 .. function:: CountNonZero(arr)-> int
@@ -1291,7 +1291,7 @@ both ROI and COI are supported.
 CreateData
 ----------
 
-`id=0.792006117205 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateData>`__
+
 
 
 .. function:: CreateData(arr) -> None
@@ -1325,7 +1325,7 @@ latter case IPL functions are used to allocate the data.
 CreateImage
 -----------
 
-`id=0.451032830099 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateImage>`__
+
 
 
 .. function:: CreateImage(size, depth, channels)->image
@@ -1361,7 +1361,7 @@ CreateImage
 CreateImageHeader
 -----------------
 
-`id=0.150457388362 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateImageHeader>`__
+
 
 
 .. function:: CreateImageHeader(size, depth, channels) -> image
@@ -1397,7 +1397,7 @@ CreateImageHeader
 CreateMat
 ---------
 
-`id=0.0354643580877 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateMat>`__
+
 
 
 .. function:: CreateMat(rows, cols, type) -> mat
@@ -1433,7 +1433,7 @@ CreateMat
 CreateMatHeader
 ---------------
 
-`id=0.824129461737 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateMatHeader>`__
+
 
 
 .. function:: CreateMatHeader(rows, cols, type) -> mat
@@ -1475,7 +1475,7 @@ or set explicitly to user-allocated data via
 CreateMatND
 -----------
 
-`id=0.922219816915 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateMatND>`__
+
 
 
 .. function:: CreateMatND(dims, type) -> None
@@ -1508,7 +1508,7 @@ This is a short form for:
 CreateMatNDHeader
 -----------------
 
-`id=0.014766828695 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateMatNDHeader>`__
+
 
 
 .. function:: CreateMatNDHeader(dims, type) -> None
@@ -1545,7 +1545,7 @@ or set explicitly to user-allocated data via
 CrossProduct
 ------------
 
-`id=0.684733911918 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CrossProduct>`__
+
 
 
 .. function:: CrossProduct(src1,src2,dst)-> None
@@ -1607,7 +1607,7 @@ Synonym for
 DCT
 ---
 
-`id=0.0898469549395 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/DCT>`__
+
 
 
 .. function:: DCT(src,dst,flags)-> None
@@ -1713,7 +1713,7 @@ elements:
 DFT
 ---
 
-`id=0.704021096664 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/DFT>`__
+
 
 
 .. function:: DFT(src,dst,flags,nonzeroRows=0)-> None
@@ -1838,7 +1838,7 @@ Here is the example of how to compute 2D convolution using DFT.
 Det
 ---
 
-`id=0.840983924406 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Det>`__
+
 
 
 .. function:: Det(mat)-> double
@@ -1874,7 +1874,7 @@ and then calculate the determinant as a product of the diagonal elements of
 Div
 ---
 
-`id=0.468578114221 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Div>`__
+
 
 
 .. function:: Div(src1,src2,dst,scale)-> None
@@ -1927,7 +1927,7 @@ All the arrays must have the same type and the same size (or ROI size).
 DotProduct
 ----------
 
-`id=0.530706893973 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/DotProduct>`__
+
 
 
 .. function:: DotProduct(src1,src2)-> double
@@ -1976,7 +1976,7 @@ The function can process multi-dimensional arrays, row by row, layer by layer, a
 EigenVV
 -------
 
-`id=0.633830383615 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/EigenVV>`__
+
 
 
 .. function:: EigenVV(mat,evects,evals,eps,lowindex,highindex)-> None
@@ -2075,7 +2075,7 @@ are not required.
 Exp
 ---
 
-`id=0.838615388235 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Exp>`__
+
 
 
 .. function:: Exp(src,dst)-> None
@@ -2119,7 +2119,7 @@ The maximum relative error is about
 FastArctan
 ----------
 
-`id=0.0156850486125 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/FastArctan>`__
+
 
 
 .. function:: FastArctan(y,x)-> float
@@ -2153,7 +2153,7 @@ measured in degrees and varies from 0 degrees to 360 degrees. The accuracy is ab
 Flip
 ----
 
-`id=0.76537990772 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Flip>`__
+
 
 
 .. function:: Flip(src,dst=NULL,flipMode=0)-> None
@@ -2228,7 +2228,7 @@ The example scenarios of function use are:
 fromarray
 ---------
 
-`id=0.461891381743 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/fromarray>`__
+
 
 
 .. function:: fromarray(object, allowND = False) -> CvMat
@@ -2310,7 +2310,7 @@ arrays support the array interface, so can be converted to OpenCV objects:
 GEMM
 ----
 
-`id=0.226896262418 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GEMM>`__
+
 
 
 .. function:: GEMM(src1,src2,alphs,src3,beta,dst,tABC=0)-> None
@@ -2383,7 +2383,7 @@ All the matrices should have the same data type and coordinated sizes. Real or c
 Get1D
 -----
 
-`id=0.16092985512 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Get1D>`__
+
 
 
 .. function:: Get1D(arr, idx) -> scalar
@@ -2416,7 +2416,7 @@ Return a specific array element.  Array must have dimension 3.
 Get2D
 -----
 
-`id=0.178216782696 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Get2D>`__
+
 
 
 .. function::  Get2D(arr, idx0, idx1) -> scalar 
@@ -2454,7 +2454,7 @@ Return a specific array element.  Array must have dimension 2.
 Get3D
 -----
 
-`id=0.467419402955 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Get3D>`__
+
 
 
 .. function::  Get3D(arr, idx0, idx1, idx2) -> scalar 
@@ -2497,7 +2497,7 @@ Return a specific array element.  Array must have dimension 3.
 GetND
 -----
 
-`id=0.388189389578 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetND>`__
+
 
 
 .. function::  GetND(arr, indices) -> scalar 
@@ -2530,7 +2530,7 @@ Return a specific array element.  The length of array indices must be the same a
 GetCol
 ------
 
-`id=0.0086857000273 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetCol>`__
+
 
 
 .. function:: GetCol(arr,col)-> submat
@@ -2570,7 +2570,7 @@ returns a single column from the input array.
 GetCols
 -------
 
-`id=0.531422054838 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetCols>`__
+
 
 
 .. function:: GetCols(arr,startCol,endCol)-> submat
@@ -2615,7 +2615,7 @@ returns a column span from the input array.
 GetDiag
 -------
 
-`id=0.618051467399 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetDiag>`__
+
 
 
 .. function:: GetDiag(arr,diag=0)-> submat
@@ -2653,7 +2653,7 @@ The function returns the header, corresponding to a specified diagonal of the in
 GetDims
 -------
 
-`id=0.525358080649 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetDims>`__
+
 
 
 .. function:: GetDims(arr)-> list
@@ -2686,7 +2686,7 @@ returns a list of length 2.
 GetElemType
 -----------
 
-`id=0.768019000289 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetElemType>`__
+
 
 
 .. function:: GetElemType(arr)-> int
@@ -2722,7 +2722,7 @@ discussion:
 GetImage
 --------
 
-`id=0.47993624702 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetImage>`__
+
 
 
 .. function:: GetImage(arr) -> iplimage
@@ -2769,7 +2769,7 @@ fail on the resultant image.
 GetImageCOI
 -----------
 
-`id=0.607250682733 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetImageCOI>`__
+
 
 
 .. function:: GetImageCOI(image)-> channel
@@ -2801,7 +2801,7 @@ in
 GetImageROI
 -----------
 
-`id=0.250295311742 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetImageROI>`__
+
 
 
 .. function:: GetImageROI(image)-> CvRect
@@ -2831,7 +2831,7 @@ is returned.
 GetMat
 ------
 
-`id=0.598385813702 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetMat>`__
+
 
 
 .. function:: GetMat(arr, allowND=0) -> cvmat 
@@ -2899,7 +2899,7 @@ with planar data layout and COI set, the function returns the pointer to the sel
 GetOptimalDFTSize
 -----------------
 
-`id=0.579270276542 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetOptimalDFTSize>`__
+
 
 
 .. function:: GetOptimalDFTSize(size0)-> int
@@ -2951,7 +2951,7 @@ is too large
 GetReal1D
 ---------
 
-`id=0.0635428042823 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetReal1D>`__
+
 
 
 .. function:: GetReal1D(arr, idx0)->float
@@ -2990,7 +2990,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetReal2D
 ---------
 
-`id=0.703344141971 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetReal2D>`__
+
 
 
 .. function:: GetReal2D(arr, idx0, idx1)->float
@@ -3034,7 +3034,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetReal3D
 ---------
 
-`id=0.0745073340033 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetReal3D>`__
+
 
 
 .. function:: GetReal3D(arr, idx0, idx1, idx2)->float
@@ -3083,7 +3083,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetRealND
 ---------
 
-`id=0.78364524074 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetRealND>`__
+
 
 
 .. function:: GetRealND(arr, idx)->float
@@ -3123,7 +3123,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetRow
 ------
 
-`id=0.620110164228 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetRow>`__
+
 
 
 .. function:: GetRow(arr,row)-> submat
@@ -3163,7 +3163,7 @@ returns a single row from the input array.
 GetRows
 -------
 
-`id=0.517309680249 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetRows>`__
+
 
 
 .. function:: GetRows(arr,startRow,endRow,deltaRow=1)-> submat
@@ -3213,7 +3213,7 @@ returns a row span from the input array.
 GetSize
 -------
 
-`id=0.506280741239 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetSize>`__
+
 
 
 .. function:: GetSize(arr)-> CvSize
@@ -3242,7 +3242,7 @@ The function returns number of rows (CvSize::height) and number of columns (CvSi
 GetSubRect
 ----------
 
-`id=0.408880599874 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetSubRect>`__
+
 
 
 .. function:: GetSubRect(arr, rect) -> cvmat
@@ -3279,7 +3279,7 @@ ROI is actually extracted.
 InRange
 -------
 
-`id=0.258662288796 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/InRange>`__
+
 
 
 .. function:: InRange(src,lower,upper,dst)-> None
@@ -3345,7 +3345,7 @@ dst(I) is set to 0xff (all
 InRangeS
 --------
 
-`id=0.79237633038 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/InRangeS>`__
+
 
 
 .. function:: InRangeS(src,lower,upper,dst)-> None
@@ -3410,7 +3410,7 @@ For two-channel arrays nd so forth,
 InvSqrt
 -------
 
-`id=0.147001602145 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/InvSqrt>`__
+
 
 
 .. function:: InvSqrt(value)-> float
@@ -3442,7 +3442,7 @@ The function calculates the inverse square root of the argument, and normally it
 Inv
 ---
 
-`id=0.269085828489 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Inv>`__
+
 
 
 :ref:`Invert`
@@ -3454,7 +3454,7 @@ Inv
 
 
 
-`id=0.192046413816 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/>`__
+
 
 
 .. function:: Invert(src,dst,method=CV_LU)-> double
@@ -3520,7 +3520,7 @@ is singular.
 IsInf
 -----
 
-`id=0.525461990241 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/IsInf>`__
+
 
 
 .. function:: IsInf(value)-> int
@@ -3550,7 +3550,7 @@ The function returns 1 if the argument is
 IsNaN
 -----
 
-`id=0.476453204062 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/IsNaN>`__
+
 
 
 .. function:: IsNaN(value)-> int
@@ -3579,7 +3579,7 @@ The function returns 1 if the argument is Not A Number (as defined by IEEE754 st
 LUT
 ---
 
-`id=0.794484999286 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/LUT>`__
+
 
 
 .. function:: LUT(src,dst,lut)-> None
@@ -3635,7 +3635,7 @@ where
 Log
 ---
 
-`id=0.651801543806 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Log>`__
+
 
 
 .. function:: Log(src,dst)-> None
@@ -3679,7 +3679,7 @@ is a large negative number (about -700 in the current implementation).
 Mahalanobis
 -----------
 
-`id=0.523778731752 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Mahalanobis>`__
+
 
 
 .. function:: Mahalonobis(vec1,vec2,mat)-> None
@@ -3727,7 +3727,7 @@ SVD method is the prefered one because the matrix might be singular).
 Max
 ---
 
-`id=0.733148172089 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Max>`__
+
 
 
 .. function:: Max(src1,src2,dst)-> None
@@ -3775,7 +3775,7 @@ All the arrays must have a single channel, the same data type and the same size 
 MaxS
 ----
 
-`id=0.953316700142 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MaxS>`__
+
 
 
 .. function:: MaxS(src,value,dst)-> None
@@ -3823,7 +3823,7 @@ All the arrays must have a single channel, the same data type and the same size 
 Merge
 -----
 
-`id=0.00147544047998 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Merge>`__
+
 
 
 .. function:: Merge(src0,src1,src2,src3,dst)-> None
@@ -3875,7 +3875,7 @@ with COI set can be also used to insert a single channel into the image.
 Min
 ---
 
-`id=0.262439732431 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Min>`__
+
 
 
 .. function:: Min(src1,src2,dst)-> None
@@ -3923,7 +3923,7 @@ All the arrays must have a single channel, the same data type and the same size 
 MinMaxLoc
 ---------
 
-`id=0.173746310408 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MinMaxLoc>`__
+
 
 
 .. function:: MinMaxLoc(arr,mask=NULL)-> (minVal,maxVal,minLoc,maxLoc)
@@ -3995,7 +3995,7 @@ will contain raw (linear) positions of the extremums.
 MinS
 ----
 
-`id=0.607133270067 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MinS>`__
+
 
 
 .. function:: MinS(src,value,dst)-> None
@@ -4052,7 +4052,7 @@ Synonym for
 MixChannels
 -----------
 
-`id=0.433721295926 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MixChannels>`__
+
 
 
 .. function:: MixChannels(src, dst, fromTo) -> None
@@ -4136,7 +4136,7 @@ Synonym for
 Mul
 ---
 
-`id=0.129939418647 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Mul>`__
+
 
 
 .. function:: Mul(src1,src2,dst,scale)-> None
@@ -4189,7 +4189,7 @@ For types that have limited range this operation is saturating.
 MulSpectrums
 ------------
 
-`id=0.811171034483 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MulSpectrums>`__
+
 
 
 .. function:: MulSpectrums(src1,src2,dst,flags)-> None
@@ -4243,7 +4243,7 @@ The function, together with
 MulTransposed
 -------------
 
-`id=0.796123116677 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/MulTransposed>`__
+
 
 
 .. function:: MulTransposed(src,dst,order,delta=NULL,scale)-> None
@@ -4311,7 +4311,7 @@ otherwise.
 Norm
 ----
 
-`id=0.985970461005 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Norm>`__
+
 
 
 .. function:: Norm(arr1,arr2,normType=CV_L2,mask=NULL)-> double
@@ -4389,7 +4389,7 @@ The function returns the calculated norm. A multiple-channel array is treated as
 Not
 ---
 
-`id=0.541517301459 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Not>`__
+
 
 
 .. function:: Not(src,dst)-> None
@@ -4434,7 +4434,7 @@ The function Not inverses every bit of every array element:
 Or
 --
 
-`id=0.0467854422514 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Or>`__
+
 
 
 .. function:: Or(src1,src2,dst,mask=NULL)-> None
@@ -4491,7 +4491,7 @@ In the case of floating-point arrays their bit representations are used for the 
 OrS
 ---
 
-`id=0.33757897546 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/OrS>`__
+
 
 
 .. function:: OrS(src,value,dst,mask=NULL)-> None
@@ -4549,7 +4549,7 @@ Prior to the actual operation, the scalar is converted to the same type as that 
 PerspectiveTransform
 --------------------
 
-`id=0.118343635456 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/PerspectiveTransform>`__
+
 
 
 .. function:: PerspectiveTransform(src,dst,mat)-> None
@@ -4613,7 +4613,7 @@ and
 PolarToCart
 -----------
 
-`id=0.200095825311 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/PolarToCart>`__
+
 
 
 .. function:: PolarToCart(magnitude,angle,x,y,angleInDegrees=0)-> None
@@ -4676,7 +4676,7 @@ The function calculates either the x-coodinate, y-coordinate or both of every ve
 Pow
 ---
 
-`id=0.851609417669 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Pow>`__
+
 
 
 .. function:: Pow(src,dst,power)-> None
@@ -4747,7 +4747,7 @@ For some values of
 RNG
 ---
 
-`id=0.135992872937 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/RNG>`__
+
 
 
 .. function:: RNG(seed=-1LL)-> CvRNG
@@ -4783,7 +4783,7 @@ current implementation a multiply-with-carry generator is used.
 RandArr
 -------
 
-`id=0.371767350984 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/RandArr>`__
+
 
 
 .. function:: RandArr(rng,arr,distType,param1,param2)-> None
@@ -4838,7 +4838,7 @@ or normally distributed random numbers.
 RandInt
 -------
 
-`id=0.279691735983 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/RandInt>`__
+
 
 
 .. function:: RandInt(rng)-> unsigned
@@ -4880,7 +4880,7 @@ can be generated by scaling from 0 to 1 or any other specific range.
 RandReal
 --------
 
-`id=0.391748221323 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/RandReal>`__
+
 
 
 .. function:: RandReal(rng)-> double
@@ -4908,7 +4908,7 @@ The function returns a uniformly-distributed random floating-point number betwee
 Reduce
 ------
 
-`id=0.208464357783 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Reduce>`__
+
 
 
 .. function:: Reduce(src,dst,dim=-1,op=CV_REDUCE_SUM)-> None
@@ -4965,7 +4965,7 @@ the output may have a larger element bit-depth to preserve accuracy. And multi-c
 Repeat
 ------
 
-`id=0.376304633895 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Repeat>`__
+
 
 
 .. function:: Repeat(src,dst)-> None
@@ -5012,7 +5012,7 @@ So the destination array may be as larger as well as smaller than the source arr
 ResetImageROI
 -------------
 
-`id=0.764488576539 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ResetImageROI>`__
+
 
 
 .. function:: ResetImageROI(image)-> None
@@ -5052,7 +5052,7 @@ This produces a similar result to the following
 Reshape
 -------
 
-`id=0.474450183637 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Reshape>`__
+
 
 
 .. function:: Reshape(arr, newCn, newRows=0) -> cvmat
@@ -5090,7 +5090,7 @@ The function initializes the CvMat header so that it points to the same data as 
 ReshapeMatND
 ------------
 
-`id=0.916374204208 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ReshapeMatND>`__
+
 
 
 .. function:: ReshapeMatND(arr, newCn, newDims) -> cvmat
@@ -5153,7 +5153,7 @@ is that the total length of the data is unchanged.
 Round
 -----
 
-`id=0.62786499527 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Round>`__
+
 
 
 .. function:: Round(value) -> int
@@ -5187,7 +5187,7 @@ are not handled.
 Floor
 -----
 
-`id=0.303863189568 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Floor>`__
+
 
 
 .. function:: Floor(value) -> int
@@ -5221,7 +5221,7 @@ are not handled.
 Ceil
 ----
 
-`id=0.936674403829 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Ceil>`__
+
 
 
 .. function:: Ceil(value) -> int
@@ -5255,7 +5255,7 @@ are not handled.
 ScaleAdd
 --------
 
-`id=0.543777958722 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ScaleAdd>`__
+
 
 
 .. function:: ScaleAdd(src1,scale,src2,dst)-> None
@@ -5307,7 +5307,7 @@ All array parameters should have the same type and the same size.
 Set
 ---
 
-`id=0.311911914724 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Set>`__
+
 
 
 .. function:: Set(arr,value,mask=NULL)-> None
@@ -5360,7 +5360,7 @@ type, then is ROI used, but COI must not be set.
 Set1D
 -----
 
-`id=0.373645417692 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Set1D>`__
+
 
 
 .. function::  Set1D(arr, idx, value) -> None 
@@ -5398,7 +5398,7 @@ Sets a specific array element.  Array must have dimension 1.
 Set2D
 -----
 
-`id=0.0250420294549 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Set2D>`__
+
 
 
 .. function::  Set2D(arr, idx0, idx1, value) -> None 
@@ -5441,7 +5441,7 @@ Sets a specific array element.  Array must have dimension 2.
 Set3D
 -----
 
-`id=0.221694881783 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Set3D>`__
+
 
 
 .. function::  Set3D(arr, idx0, idx1, idx2, value) -> None 
@@ -5489,7 +5489,7 @@ Sets a specific array element.  Array must have dimension 3.
 SetND
 -----
 
-`id=0.00427984275033 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetND>`__
+
 
 
 .. function::  SetND(arr, indices, value) -> None 
@@ -5526,7 +5526,7 @@ Sets a specific array element.  The length of array indices must be the same as 
 SetData
 -------
 
-`id=0.678853678425 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetData>`__
+
 
 
 .. function:: SetData(arr, data, step)-> None
@@ -5570,7 +5570,7 @@ or
 SetIdentity
 -----------
 
-`id=0.192253473137 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetIdentity>`__
+
 
 
 .. function:: SetIdentity(mat,value=1)-> None
@@ -5610,7 +5610,7 @@ The function initializes a scaled identity matrix:
 SetImageCOI
 -----------
 
-`id=0.712093321245 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetImageCOI>`__
+
 
 
 .. function:: SetImageCOI(image, coi)-> None
@@ -5661,7 +5661,7 @@ or
 SetImageROI
 -----------
 
-`id=0.669600484476 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetImageROI>`__
+
 
 
 .. function:: SetImageROI(image, rect)-> None
@@ -5700,7 +5700,7 @@ Most OpenCV functions support the use of ROI and treat the image rectangle as a 
 SetReal1D
 ---------
 
-`id=0.588784461383 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetReal1D>`__
+
 
 
 .. function::  SetReal1D(arr, idx, value) -> None 
@@ -5738,7 +5738,7 @@ Sets a specific array element.  Array must have dimension 1.
 SetReal2D
 ---------
 
-`id=0.428584366817 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetReal2D>`__
+
 
 
 .. function::  SetReal2D(arr, idx0, idx1, value) -> None 
@@ -5781,7 +5781,7 @@ Sets a specific array element.  Array must have dimension 2.
 SetReal3D
 ---------
 
-`id=0.634141541403 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetReal3D>`__
+
 
 
 .. function::  SetReal3D(arr, idx0, idx1, idx2, value) -> None 
@@ -5829,7 +5829,7 @@ Sets a specific array element.  Array must have dimension 3.
 SetRealND
 ---------
 
-`id=0.900808330377 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetRealND>`__
+
 
 
 .. function::  SetRealND(arr, indices, value) -> None 
@@ -5866,7 +5866,7 @@ Sets a specific array element.  The length of array indices must be the same as 
 SetZero
 -------
 
-`id=0.110196481513 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SetZero>`__
+
 
 
 .. function:: SetZero(arr)-> None
@@ -5895,7 +5895,7 @@ In the case of sparse arrays all the elements are removed.
 Solve
 -----
 
-`id=0.525692887749 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Solve>`__
+
 
 
 .. function:: Solve(A,B,X,method=CV_LU)-> None
@@ -5964,7 +5964,7 @@ is not valid.
 SolveCubic
 ----------
 
-`id=0.387007589899 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SolveCubic>`__
+
 
 
 .. function:: SolveCubic(coeffs,roots)-> None
@@ -6021,7 +6021,7 @@ only one root.
 Split
 -----
 
-`id=0.314146185721 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Split>`__
+
 
 
 .. function:: Split(src,dst0,dst1,dst2,dst3)-> None
@@ -6080,7 +6080,7 @@ channel from the image.
 Sqrt
 ----
 
-`id=0.461805105559 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Sqrt>`__
+
 
 
 .. function:: Sqrt(value)-> float
@@ -6108,7 +6108,7 @@ The function calculates the square root of the argument. If the argument is nega
 Sub
 ---
 
-`id=0.249321252752 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Sub>`__
+
 
 
 .. function:: Sub(src1,src2,dst,mask=NULL)-> None
@@ -6166,7 +6166,7 @@ For types that have limited range this operation is saturating.
 SubRS
 -----
 
-`id=0.174857582392 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SubRS>`__
+
 
 
 .. function:: SubRS(src,value,dst,mask=NULL)-> None
@@ -6224,7 +6224,7 @@ For types that have limited range this operation is saturating.
 SubS
 ----
 
-`id=0.519664754242 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SubS>`__
+
 
 
 .. function:: SubS(src,value,dst,mask=NULL)-> None
@@ -6283,7 +6283,7 @@ For types that have limited range this operation is saturating.
 Sum
 ---
 
-`id=0.967447366206 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Sum>`__
+
 
 
 .. function:: Sum(arr)-> CvScalar
@@ -6325,7 +6325,7 @@ and COI is set, the function processes the selected channel only and stores the 
 SVBkSb
 ------
 
-`id=0.35592825276 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SVBkSb>`__
+
 
 
 .. function:: SVBkSb(W,U,V,B,X,flags)-> None
@@ -6414,7 +6414,7 @@ the high-level counterparts (inv and solve).
 SVD
 ---
 
-`id=0.337653561571 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SVD>`__
+
 
 
 .. function:: SVD(A,W, U = None, V = None, flags=0)-> None
@@ -6536,7 +6536,7 @@ An SVD algorithm is numerically robust and its typical applications include:
 Trace
 -----
 
-`id=0.336959724198 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Trace>`__
+
 
 
 .. function:: Trace(mat)-> CvScalar
@@ -6573,7 +6573,7 @@ The function returns the sum of the diagonal elements of the matrix
 Transform
 ---------
 
-`id=0.503072283556 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Transform>`__
+
 
 
 .. function:: Transform(src,dst,transmat,shiftvec=NULL)-> None
@@ -6669,7 +6669,7 @@ channels and so forth.
 Transpose
 ---------
 
-`id=0.420471231844 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Transpose>`__
+
 
 
 .. function:: Transpose(src,dst)-> None
@@ -6717,7 +6717,7 @@ for an example.
 Xor
 ---
 
-`id=0.104176616033 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Xor>`__
+
 
 
 .. function:: Xor(src1,src2,dst,mask=NULL)-> None
@@ -6774,7 +6774,7 @@ In the case of floating-point arrays their bit representations are used for the 
 XorS
 ----
 
-`id=0.85429590946 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/XorS>`__
+
 
 
 .. function:: XorS(src,value,dst,mask=NULL)-> None
@@ -6831,7 +6831,7 @@ Prior to the actual operation, the scalar is converted to the same type as that 
 mGet
 ----
 
-`id=0.391829237572 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/mGet>`__
+
 
 
 .. function:: mGet(mat,row,col)-> double
@@ -6873,7 +6873,7 @@ and it checks for the row and column ranges only in debug mode.
 mSet
 ----
 
-`id=0.217865654034 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/mSet>`__
+
 
 
 .. function:: mSet(mat,row,col,value)-> None

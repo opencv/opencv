@@ -12,7 +12,7 @@ XML/YAML Persistence
 Load
 ----
 
-`id=0.778290631419 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Load>`__
+
 
 
 .. function:: Load(filename,storage=NULL,name=NULL)-> generic
@@ -56,7 +56,7 @@ should pass a valid memory storage destination to the function.
 Save
 ----
 
-`id=0.295047298682 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Save>`__
+
 
 
 .. function:: Save(filename,structPtr,name=NULL,comment=NULL)-> None

@@ -12,7 +12,7 @@ Histograms
 CvHistogram
 -----------
 
-`id=0.182438452658 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvHistogram>`__
+
 
 .. class:: CvHistogram
 
@@ -35,7 +35,7 @@ containing the histogram counts.
 CalcBackProject
 ---------------
 
-`id=0.913786988566 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcBackProject>`__
+
 
 
 .. function:: CalcBackProject(image,back_project,hist)-> None
@@ -99,7 +99,7 @@ That is the approximate algorithm of Camshift color object tracker, except for t
 CalcBackProjectPatch
 --------------------
 
-`id=0.817068389137 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcBackProjectPatch>`__
+
 
 
 .. function:: CalcBackProjectPatch(images,dst,patch_size,hist,method,factor)-> None
@@ -194,7 +194,7 @@ Back Project Calculation by Patches
 CalcHist
 --------
 
-`id=0.937336139373 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcHist>`__
+
 
 
 .. function:: CalcHist(image,hist,accumulate=0,mask=NULL)-> None
@@ -244,7 +244,7 @@ input images.
 CalcProbDensity
 ---------------
 
-`id=0.656540136559 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcProbDensity>`__
+
 
 
 .. function:: CalcProbDensity(hist1,hist2,dst_hist,scale=255)-> None
@@ -298,7 +298,7 @@ So the destination histogram bins are within less than
 ClearHist
 ---------
 
-`id=0.0803392460869 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ClearHist>`__
+
 
 
 .. function:: ClearHist(hist)-> None
@@ -326,7 +326,7 @@ The function sets all of the histogram bins to 0 in the case of a dense histogra
 CompareHist
 -----------
 
-`id=0.913670879358 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CompareHist>`__
+
 
 
 .. function:: CompareHist(hist1,hist2,method)->float
@@ -448,7 +448,7 @@ function.
 CreateHist
 ----------
 
-`id=0.716036535258 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CreateHist>`__
+
 
 
 .. function:: CreateHist(dims, type, ranges, uniform = 1) -> hist
@@ -517,7 +517,7 @@ bin ranges, they assume thy are equally spaced in 0 to 255 bins.
 GetMinMaxHistValue
 ------------------
 
-`id=0.698817534292 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetMinMaxHistValue>`__
+
 
 
 .. function:: GetMinMaxHistValue(hist)-> (min_value,max_value,min_idx,max_idx)
@@ -570,7 +570,7 @@ is returned.
 NormalizeHist
 -------------
 
-`id=0.905166705956 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/NormalizeHist>`__
+
 
 
 .. function:: NormalizeHist(hist,factor)-> None
@@ -605,7 +605,7 @@ The function normalizes the histogram bins by scaling them, such that the sum of
 QueryHistValue_1D
 -----------------
 
-`id=0.26842391983 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/QueryHistValue_1D>`__
+
 
 
 .. function:: QueryHistValue_1D(hist, idx0) -> float
@@ -636,7 +636,7 @@ QueryHistValue_1D
 QueryHistValue_2D
 -----------------
 
-`id=0.149356032534 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/QueryHistValue_2D>`__
+
 
 
 .. function:: QueryHistValue_2D(hist, idx0, idx1) -> float
@@ -672,7 +672,7 @@ QueryHistValue_2D
 QueryHistValue_3D
 -----------------
 
-`id=0.846880584809 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/QueryHistValue_3D>`__
+
 
 
 .. function:: QueryHistValue_3D(hist, idx0, idx1, idx2) -> float
@@ -713,7 +713,7 @@ QueryHistValue_3D
 QueryHistValue_nD
 -----------------
 
-`id=0.36909443826 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/QueryHistValue_nD>`__
+
 
 
 .. function:: QueryHistValue_nD(hist, idx) -> float
@@ -744,7 +744,7 @@ QueryHistValue_nD
 ThreshHist
 ----------
 
-`id=0.255496509485 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ThreshHist>`__
+
 
 
 .. function:: ThreshHist(hist,threshold)-> None

@@ -53,7 +53,7 @@ is simply copied to the repainted pixels. Thus, if you want to paint semi-transp
 Circle
 ------
 
-`id=0.533309560434 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Circle>`__
+
 
 
 
@@ -100,7 +100,7 @@ given center and radius.
 ClipLine
 --------
 
-`id=0.773573058754 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClipLine>`__
+
 
 
 
@@ -134,7 +134,7 @@ It returns 0 if the line segment is completely outside the image and 1 otherwise
 DrawContours
 ------------
 
-`id=0.180838715035 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/DrawContours>`__
+
 
 
 
@@ -237,7 +237,7 @@ Example: Connected component detection via contour functions
 Ellipse
 -------
 
-`id=0.702580088492 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Ellipse>`__
+
 
 
 
@@ -304,7 +304,7 @@ Parameters of Elliptic Arc
 EllipseBox
 ----------
 
-`id=0.594855594674 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/EllipseBox>`__
+
 
 
 
@@ -348,7 +348,7 @@ do. The ellipse drawn is clipped by ROI rectangle. A piecewise-linear approximat
 FillConvexPoly
 --------------
 
-`id=0.492328679574 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FillConvexPoly>`__
+
 
 
 
@@ -397,7 +397,7 @@ line) twice at the most.
 FillPoly
 --------
 
-`id=0.225907613807 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FillPoly>`__
+
 
 
 
@@ -445,7 +445,7 @@ areas with holes, contour self-intersection, and so forth.
 GetTextSize
 -----------
 
-`id=0.524127677241 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetTextSize>`__
+
 
 
 
@@ -482,7 +482,7 @@ The function calculates the dimensions of a rectangle to enclose a text string w
 InitFont
 --------
 
-`id=0.0379839040886 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitFont>`__
+
 
 
 
@@ -558,7 +558,7 @@ The function initializes the font structure that can be passed to text rendering
 InitLineIterator
 ----------------
 
-`id=0.82383633716 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitLineIterator>`__
+
 
 
 
@@ -655,7 +655,7 @@ Example: Using line iterator to calculate the sum of pixel values along the colo
 Line
 ----
 
-`id=0.447321958155 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Line>`__
+
 
 
 
@@ -725,7 +725,7 @@ the line color, the user may use the macro
 PolyLine
 --------
 
-`id=0.384796564044 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/PolyLine>`__
+
 
 
 
@@ -779,7 +779,7 @@ The function draws single or multiple polygonal curves.
 PutText
 -------
 
-`id=0.662272934911 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/PutText>`__
+
 
 
 
@@ -822,7 +822,7 @@ replaced with the symbol for a rectangle.
 Rectangle
 ---------
 
-`id=0.025949516421 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Rectangle>`__
+
 
 
 
@@ -872,7 +872,7 @@ and
 CV_RGB
 ------
 
-`id=0.708413350932 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CV_RGB>`__
+
 
 
 

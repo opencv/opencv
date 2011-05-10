@@ -12,7 +12,7 @@ Reading and Writing Images and Video
 LoadImage
 ---------
 
-`id=0.469255746245 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/LoadImage>`__
+
 
 
 
@@ -82,7 +82,7 @@ Note that in the current implementation the alpha channel, if any, is stripped f
 LoadImageM
 ----------
 
-`id=0.563485365507 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/LoadImageM>`__
+
 
 
 
@@ -153,7 +153,7 @@ Note that in the current implementation the alpha channel, if any, is stripped f
 SaveImage
 ---------
 
-`id=0.495970549198 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SaveImage>`__
+
 
 
 
@@ -197,7 +197,7 @@ to save the image to XML or YAML format.
 CvCapture
 ---------
 
-`id=0.279260095238 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CvCapture>`__
+
 
 .. ctype:: CvCapture
 
@@ -224,7 +224,7 @@ does not have a public interface and is used only as a parameter for video captu
 CaptureFromCAM
 --------------
 
-`id=0.051648241367 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CaptureFromCAM>`__
+
 
 
 
@@ -259,7 +259,7 @@ To release the structure, use
 CaptureFromFile
 ---------------
 
-`id=0.832457799312 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CaptureFromFile>`__
+
 
 
 
@@ -293,7 +293,7 @@ function.
 GetCaptureProperty
 ------------------
 
-`id=0.315272026867 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GetCaptureProperty>`__
+
 
 
 
@@ -387,7 +387,7 @@ retrieves the specified property of the camera or video file.
 GrabFrame
 ---------
 
-`id=0.423832304356 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GrabFrame>`__
+
 
 
 
@@ -422,7 +422,7 @@ should be used.
 QueryFrame
 ----------
 
-`id=0.155007724473 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/QueryFrame>`__
+
 
 
 
@@ -456,7 +456,7 @@ and
 ReleaseCapture
 --------------
 
-`id=0.412581622343 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/ReleaseCapture>`__
+
 
 
 
@@ -489,7 +489,7 @@ or
 RetrieveFrame
 -------------
 
-`id=0.780832955331 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/RetrieveFrame>`__
+
 
 
 
@@ -522,7 +522,7 @@ function. The returned image should not be released or modified by the user.  In
 SetCaptureProperty
 ------------------
 
-`id=0.0459451505183 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SetCaptureProperty>`__
+
 
 
 
@@ -624,7 +624,7 @@ NB This function currently does nothing when using the latest CVS download on li
 CreateVideoWriter
 -----------------
 
-`id=0.960560559623 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CreateVideoWriter>`__
+
 
 
 
@@ -670,7 +670,7 @@ Which codecs and file formats are supported depends on the back end library. On 
 ReleaseVideoWriter
 ------------------
 
-`id=0.271528060303 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/ReleaseVideoWriter>`__
+
 
 
 
@@ -699,7 +699,7 @@ finishes writing to the video file and releases the structure.
 WriteFrame
 ----------
 
-`id=0.0551918795805 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/WriteFrame>`__
+
 
 
 

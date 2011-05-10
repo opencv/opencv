@@ -12,7 +12,7 @@ Dynamic Structures
 CvMemStorage
 ------------
 
-`id=0.11586833925 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvMemStorage>`__
+
 
 .. class:: CvMemStorage
 
@@ -51,7 +51,7 @@ to release a CvMemStorage.
 CvSeq
 -----
 
-`id=0.0938210237552 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvSeq>`__
+
 
 .. class:: CvSeq
 
@@ -104,7 +104,7 @@ In this case the methods return the other sequences.  If no relation between seq
 CvSet
 -----
 
-`id=0.165386903844 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvSet>`__
+
 
 .. class:: CvSet
 
@@ -137,7 +137,7 @@ Some OpenCV functions return a CvSet object. The CvSet obect is iterable, for ex
 CloneSeq
 --------
 
-`id=0.893022984961 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CloneSeq>`__
+
 
 
 .. function:: CloneSeq(seq,storage)-> None
@@ -170,7 +170,7 @@ The function makes a complete copy of the input sequence and returns it.
 CreateMemStorage
 ----------------
 
-`id=0.141261875659 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CreateMemStorage>`__
+
 
 
 .. function:: CreateMemStorage(blockSize = 0) -> memstorage
@@ -200,7 +200,7 @@ description.
 SeqInvert
 ---------
 
-`id=0.420185773758 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SeqInvert>`__
+
 
 
 .. function:: SeqInvert(seq)-> None
@@ -228,7 +228,7 @@ The function reverses the sequence in-place - makes the first element go last, t
 SeqRemove
 ---------
 
-`id=0.405976799419 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SeqRemove>`__
+
 
 
 .. function:: SeqRemove(seq,index)-> None
@@ -268,7 +268,7 @@ the sequence elements between the nearest end of the sequence and the
 SeqRemoveSlice
 --------------
 
-`id=0.589674828285 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/SeqRemoveSlice>`__
+
 
 
 .. function:: SeqRemoveSlice(seq,slice)-> None

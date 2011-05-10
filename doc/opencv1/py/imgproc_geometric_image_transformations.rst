@@ -69,7 +69,7 @@ and to the simplest and the fastest
 GetRotationMatrix2D
 -------------------
 
-`id=0.155746043393 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetRotationMatrix2D>`__
+
 
 
 .. function:: GetRotationMatrix2D(center,angle,scale,mapMatrix)-> None
@@ -132,7 +132,7 @@ The transformation maps the rotation center to itself. If this is not the purpos
 GetAffineTransform
 ------------------
 
-`id=0.131853152013 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetAffineTransform>`__
+
 
 
 .. function:: GetAffineTransform(src,dst,mapMatrix)-> None
@@ -188,7 +188,7 @@ where
 GetPerspectiveTransform
 -----------------------
 
-`id=0.411609579387 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetPerspectiveTransform>`__
+
 
 
 .. function:: GetPerspectiveTransform(src,dst,mapMatrix)-> None
@@ -246,7 +246,7 @@ where
 GetQuadrangleSubPix
 -------------------
 
-`id=0.522776327076 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetQuadrangleSubPix>`__
+
 
 
 .. function:: GetQuadrangleSubPix(src,dst,mapMatrix)-> None
@@ -319,7 +319,7 @@ The values of pixels at non-integer coordinates are retrieved using bilinear int
 GetRectSubPix
 -------------
 
-`id=0.947278759693 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/GetRectSubPix>`__
+
 
 
 .. function:: GetRectSubPix(src,dst,center)-> None
@@ -376,7 +376,7 @@ pixel values beyond the image boundaries.
 LogPolar
 --------
 
-`id=0.991629705277 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/LogPolar>`__
+
 
 
 .. function:: LogPolar(src,dst,center,M,flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS)-> None
@@ -468,7 +468,7 @@ The function can not operate in-place.
 Remap
 -----
 
-`id=0.129979785029 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Remap>`__
+
 
 
 .. function:: Remap(src,dst,mapx,mapy,flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS,fillval=(0,0,0,0))-> None
@@ -538,7 +538,7 @@ Note that the function can not operate in-place.
 Resize
 ------
 
-`id=0.923811087592 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Resize>`__
+
 
 
 .. function:: Resize(src,dst,interpolation=CV_INTER_LINEAR)-> None
@@ -593,7 +593,7 @@ so that it fits exactly into
 WarpAffine
 ----------
 
-`id=0.314654704506 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/WarpAffine>`__
+
 
 
 .. function:: WarpAffine(src,dst,mapMatrix,flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS,fillval=(0,0,0,0))-> None
@@ -684,7 +684,7 @@ function from cxcore.
 WarpPerspective
 ---------------
 
-`id=0.554206520217 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/WarpPerspective>`__
+
 
 
 .. function:: WarpPerspective(src,dst,mapMatrix,flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS,fillval=(0,0,0,0))-> None

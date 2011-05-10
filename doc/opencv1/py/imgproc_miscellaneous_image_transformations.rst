@@ -12,7 +12,7 @@ Miscellaneous Image Transformations
 AdaptiveThreshold
 -----------------
 
-`id=0.347945671563 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/AdaptiveThreshold>`__
+
 
 
 .. function:: AdaptiveThreshold(src,dst,maxValue, adaptive_method=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY,blockSize=3,param1=5)-> None
@@ -118,7 +118,7 @@ pixel neighborhood, minus
 CvtColor
 --------
 
-`id=0.514105031816 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvtColor>`__
+
 
 
 .. function:: CvtColor(src,dst,code)-> None
@@ -701,7 +701,7 @@ The function can do the following transformations:
 DistTransform
 -------------
 
-`id=0.403544454308 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/DistTransform>`__
+
 
 
 .. function:: DistTransform(src,dst,distance_type=CV_DIST_L2,mask_size=3,mask=None,labels=NULL)-> None
@@ -858,7 +858,7 @@ Voronoi diagram for the binary image.
 CvConnectedComp
 ---------------
 
-`id=0.582359535464 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvConnectedComp>`__
+
 
 .. class:: CvConnectedComp
 
@@ -879,7 +879,7 @@ as a
 FloodFill
 ---------
 
-`id=0.993822136735 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FloodFill>`__
+
 
 
 .. function:: FloodFill(image,seed_point,new_val,lo_diff=(0,0,0,0),up_diff=(0,0,0,0),flags=4,mask=NULL)-> comp
@@ -1040,7 +1040,7 @@ is the value of one of pixel neighbors. That is, to be added to the connected co
 Inpaint
 -------
 
-`id=0.0263619127935 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Inpaint>`__
+
 
 
 .. function:: Inpaint(src,mask,dst,inpaintRadius,flags) -> None
@@ -1094,7 +1094,7 @@ The function reconstructs the selected image area from the pixel near the area b
 Integral
 --------
 
-`id=0.623787344698 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Integral>`__
+
 
 
 .. function:: Integral(image,sum,sqsum=NULL,tiltedSum=NULL)-> None
@@ -1170,7 +1170,7 @@ It makes possible to do a fast blurring or fast block correlation with variable 
 PyrMeanShiftFiltering
 ---------------------
 
-`id=0.193607300873 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/PyrMeanShiftFiltering>`__
+
 
 
 .. function:: PyrMeanShiftFiltering(src,dst,sp,sr,max_level=1,termcrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1))-> None
@@ -1274,7 +1274,7 @@ running the meanshift procedure on the whole original image (i.e. when
 PyrSegmentation
 ---------------
 
-`id=0.0663769417357 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/PyrSegmentation>`__
+
 
 
 .. function:: PyrSegmentation(src,dst,storage,level,threshold1,threshold2)-> comp
@@ -1364,7 +1364,7 @@ should be 8-bit single-channel or 3-channel images or equal size.
 Threshold
 ---------
 
-`id=0.201828299143 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Threshold>`__
+
 
 
 .. function:: Threshold(src,dst,threshold,maxValue,thresholdType)-> None

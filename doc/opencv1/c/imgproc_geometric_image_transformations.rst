@@ -69,7 +69,7 @@ and to the simplest and the fastest
 GetRotationMatrix2D
 -------------------
 
-`id=0.623450579574 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetRotationMatrix2D>`__
+
 
 
 
@@ -126,7 +126,7 @@ The transformation maps the rotation center to itself. If this is not the purpos
 GetAffineTransform
 ------------------
 
-`id=0.933805421933 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetAffineTransform>`__
+
 
 
 
@@ -178,7 +178,7 @@ where
 GetPerspectiveTransform
 -----------------------
 
-`id=0.709057737517 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetPerspectiveTransform>`__
+
 
 
 
@@ -232,7 +232,7 @@ where
 GetQuadrangleSubPix
 -------------------
 
-`id=0.480550634961 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetQuadrangleSubPix>`__
+
 
 
 
@@ -301,7 +301,7 @@ The values of pixels at non-integer coordinates are retrieved using bilinear int
 GetRectSubPix
 -------------
 
-`id=0.37305758361 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetRectSubPix>`__
+
 
 
 
@@ -354,7 +354,7 @@ pixel values beyond the image boundaries.
 LogPolar
 --------
 
-`id=0.0887380164552 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/LogPolar>`__
+
 
 
 
@@ -487,7 +487,7 @@ is passed to it
 Remap
 -----
 
-`id=0.485916549227 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Remap>`__
+
 
 
 
@@ -547,7 +547,7 @@ Note that the function can not operate in-place.
 Resize
 ------
 
-`id=0.249690626324 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Resize>`__
+
 
 
 
@@ -598,7 +598,7 @@ so that it fits exactly into
 WarpAffine
 ----------
 
-`id=0.0915967317176 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/WarpAffine>`__
+
 
 
 
@@ -681,7 +681,7 @@ function from cxcore.
 WarpPerspective
 ---------------
 
-`id=0.647385091755 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/WarpPerspective>`__
+
 
 
 

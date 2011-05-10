@@ -12,7 +12,7 @@ Operations on Arrays
 AbsDiff
 -------
 
-`id=0.389752508219 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AbsDiff>`__
+
 
 
 
@@ -55,7 +55,7 @@ All the arrays must have the same data type and the same size (or ROI size).
 AbsDiffS
 --------
 
-`id=0.906294304824 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AbsDiffS>`__
+
 
 
 
@@ -111,7 +111,7 @@ All the arrays must have the same data type and the same size (or ROI size).
 Add
 ---
 
-`id=0.857040798932 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Add>`__
+
 
 
 
@@ -163,7 +163,7 @@ For types that have limited range this operation is saturating.
 AddS
 ----
 
-`id=0.475031728547 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AddS>`__
+
 
 
 
@@ -222,7 +222,7 @@ All the arrays must have the same type, except the mask, and the same size (or R
 AddWeighted
 -----------
 
-`id=0.57991333562 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AddWeighted>`__
+
 
 
 
@@ -281,7 +281,7 @@ For types that have limited range this operation is saturating.
 And
 ---
 
-`id=0.185678982065 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/And>`__
+
 
 
 
@@ -332,7 +332,7 @@ In the case of floating-point arrays their bit representations are used for the 
 AndS
 ----
 
-`id=0.18019335221 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AndS>`__
+
 
 
 
@@ -416,7 +416,7 @@ The code should print:
 Avg
 ---
 
-`id=0.150599164969 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Avg>`__
+
 
 
 
@@ -462,7 +462,7 @@ and COI is set, the function processes the selected channel only and stores the 
 AvgSdv
 ------
 
-`id=0.239443049508 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/AvgSdv>`__
+
 
 
 
@@ -514,7 +514,7 @@ and
 CalcCovarMatrix
 ---------------
 
-`id=0.533338739877 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CalcCovarMatrix>`__
+
 
 
 
@@ -594,7 +594,7 @@ can be used for PCA, for comparing vectors using Mahalanobis distance and so for
 CartToPolar
 -----------
 
-`id=0.387301730832 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CartToPolar>`__
+
 
 
 
@@ -651,7 +651,7 @@ The angles are calculated with 0.1 degree accuracy. For the (0,0) point, the ang
 Cbrt
 ----
 
-`id=0.47391511107 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Cbrt>`__
+
 
 
 
@@ -683,7 +683,7 @@ The function calculates the cubic root of the argument, and normally it is faste
 ClearND
 -------
 
-`id=0.433568700573 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ClearND>`__
+
 
 
 
@@ -715,7 +715,7 @@ clears (sets to zero) a specific element of a dense array or deletes the element
 CloneImage
 ----------
 
-`id=0.968680686034 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneImage>`__
+
 
 
 
@@ -745,7 +745,7 @@ points to the image copy.
 CloneMat
 --------
 
-`id=0.975713536969 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneMat>`__
+
 
 
 
@@ -773,7 +773,7 @@ Creates a full copy of a matrix and returns a pointer to the copy.
 CloneMatND
 ----------
 
-`id=0.570248603442 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneMatND>`__
+
 
 
 
@@ -799,7 +799,7 @@ CloneMatND
 CloneSparseMat
 --------------
 
-`id=0.709316686508 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CloneSparseMat>`__
+
 
 
 
@@ -826,7 +826,7 @@ The function creates a copy of the input array and returns pointer to the copy.
 Cmp
 ---
 
-`id=0.802902555491 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Cmp>`__
+
 
 
 
@@ -900,7 +900,7 @@ is set to 0xff (all
 CmpS
 ----
 
-`id=0.590507866573 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CmpS>`__
+
 
 
 
@@ -980,7 +980,7 @@ is set to 0xff (all
 ConvertScale
 ------------
 
-`id=0.634428432556 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ConvertScale>`__
+
 
 
 
@@ -1058,7 +1058,7 @@ and that is caled
 ConvertScaleAbs
 ---------------
 
-`id=0.936176741204 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ConvertScaleAbs>`__
+
 
 
 
@@ -1110,7 +1110,7 @@ functions.
 CvtScaleAbs
 -----------
 
-`id=0.460721939041 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CvtScaleAbs>`__
+
 
 
 
@@ -1162,7 +1162,7 @@ functions.
 Copy
 ----
 
-`id=0.347619260884 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Copy>`__
+
 
 
 
@@ -1210,7 +1210,7 @@ arrays (mask is not supported in this case).
 CountNonZero
 ------------
 
-`id=0.58249377667 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CountNonZero>`__
+
 
 
 
@@ -1250,7 +1250,7 @@ both ROI and COI are supported.
 CreateData
 ----------
 
-`id=0.638669203593 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateData>`__
+
 
 
 
@@ -1284,7 +1284,7 @@ latter case IPL functions are used to allocate the data.
 CreateImage
 -----------
 
-`id=0.0131648371818 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateImage>`__
+
 
 
 
@@ -1330,7 +1330,7 @@ This call is a shortened form of
 CreateImageHeader
 -----------------
 
-`id=0.810135262232 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateImageHeader>`__
+
 
 
 
@@ -1384,7 +1384,7 @@ macro).
 CreateMat
 ---------
 
-`id=0.590155166978 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateMat>`__
+
 
 
 
@@ -1431,7 +1431,7 @@ This is the concise form for:
 CreateMatHeader
 ---------------
 
-`id=0.130473841629 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateMatHeader>`__
+
 
 
 
@@ -1469,7 +1469,7 @@ or set explicitly to user-allocated data via
 CreateMatND
 -----------
 
-`id=0.0659656407287 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateMatND>`__
+
 
 
 
@@ -1516,7 +1516,7 @@ This is a short form for:
 CreateMatNDHeader
 -----------------
 
-`id=0.132772998614 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateMatNDHeader>`__
+
 
 
 
@@ -1554,7 +1554,7 @@ or set explicitly to user-allocated data via
 CreateSparseMat
 ---------------
 
-`id=0.206464913947 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CreateSparseMat>`__
+
 
 
 
@@ -1591,7 +1591,7 @@ returns zero for every index.
 CrossProduct
 ------------
 
-`id=0.63082262592 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/CrossProduct>`__
+
 
 
 
@@ -1649,7 +1649,7 @@ Synonym for
 DCT
 ---
 
-`id=0.811976099826 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/DCT>`__
+
 
 
 
@@ -1751,7 +1751,7 @@ elements:
 DFT
 ---
 
-`id=0.604521057934 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/DFT>`__
+
 
 
 
@@ -1927,7 +1927,7 @@ Here is the example of how to compute 2D convolution using DFT.
 DecRefData
 ----------
 
-`id=0.253923047171 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/DecRefData>`__
+
 
 
 
@@ -1968,7 +1968,7 @@ header is part of a larger matrix or image, or the header was converted from an 
 Det
 ---
 
-`id=0.437350985322 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Det>`__
+
 
 
 
@@ -2004,7 +2004,7 @@ and then calculate the determinant as a product of the diagonal elements of
 Div
 ---
 
-`id=0.781734526018 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Div>`__
+
 
 
 
@@ -2051,7 +2051,7 @@ All the arrays must have the same type and the same size (or ROI size).
 DotProduct
 ----------
 
-`id=0.166249445191 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/DotProduct>`__
+
 
 
 
@@ -2098,7 +2098,7 @@ The function can process multi-dimensional arrays, row by row, layer by layer, a
 EigenVV
 -------
 
-`id=0.843871751283 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/EigenVV>`__
+
 
 
 
@@ -2187,7 +2187,7 @@ are not required.
 Exp
 ---
 
-`id=0.027762297646 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Exp>`__
+
 
 
 
@@ -2229,7 +2229,7 @@ The maximum relative error is about
 FastArctan
 ----------
 
-`id=0.535136484735 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/FastArctan>`__
+
 
 
 
@@ -2261,7 +2261,7 @@ measured in degrees and varies from 0 degrees to 360 degrees. The accuracy is ab
 Flip
 ----
 
-`id=0.83697433441 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Flip>`__
+
 
 
 
@@ -2332,7 +2332,7 @@ The example scenarios of function use are:
 GEMM
 ----
 
-`id=0.183074301558 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GEMM>`__
+
 
 
 
@@ -2401,7 +2401,7 @@ All the matrices should have the same data type and coordinated sizes. Real or c
 Get?D
 -----
 
-`id=0.996029550845 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Get%3FD>`__
+
 
 
 
@@ -2440,7 +2440,7 @@ The functions return a specific array element. In the case of a sparse array the
 GetCol(s)
 ---------
 
-`id=0.311656091229 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetCol%28s%29>`__
+
 
 
 
@@ -2507,7 +2507,7 @@ is a shortcut for
 GetDiag
 -------
 
-`id=0.851887559121 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetDiag>`__
+
 
 
 
@@ -2616,7 +2616,7 @@ total number of array elements in two ways:
 GetElemType
 -----------
 
-`id=0.664874075316 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetElemType>`__
+
 
 
 
@@ -2652,7 +2652,7 @@ discussion:
 GetImage
 --------
 
-`id=0.868367677778 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetImage>`__
+
 
 
 
@@ -2702,7 +2702,7 @@ fail on the resultant image.
 GetImageCOI
 -----------
 
-`id=0.280055789523 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetImageCOI>`__
+
 
 
 
@@ -2734,7 +2734,7 @@ in
 GetImageROI
 -----------
 
-`id=0.762224588004 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetImageROI>`__
+
 
 
 
@@ -2764,7 +2764,7 @@ is returned.
 GetMat
 ------
 
-`id=0.492159925052 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetMat>`__
+
 
 
 
@@ -2836,7 +2836,7 @@ with planar data layout and COI set, the function returns the pointer to the sel
 GetNextSparseNode
 -----------------
 
-`id=0.693142857428 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetNextSparseNode>`__
+
 
 
 
@@ -2901,7 +2901,7 @@ to calculate sum of floating-point sparse array.
 GetOptimalDFTSize
 -----------------
 
-`id=0.773925667267 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetOptimalDFTSize>`__
+
 
 
 
@@ -2953,7 +2953,7 @@ is too large
 GetRawData
 ----------
 
-`id=0.0637610069522 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetRawData>`__
+
 
 
 
@@ -3020,7 +3020,7 @@ The following example shows how to get access to array elements. GetRawData calc
 GetReal1D
 ---------
 
-`id=0.946925134724 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetReal1D>`__
+
 
 
 
@@ -3057,7 +3057,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetReal2D
 ---------
 
-`id=0.949131529933 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetReal2D>`__
+
 
 
 
@@ -3097,7 +3097,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetReal3D
 ---------
 
-`id=0.0143815925526 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetReal3D>`__
+
 
 
 
@@ -3140,7 +3140,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetRealND
 ---------
 
-`id=0.276521262331 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetRealND>`__
+
 
 
 
@@ -3178,7 +3178,7 @@ In the case of a sparse array the functions return 0 if the requested node does 
 GetRow(s)
 ---------
 
-`id=0.355110492705 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetRow%28s%29>`__
+
 
 
 
@@ -3244,7 +3244,7 @@ is a shortcut for
 GetSize
 -------
 
-`id=0.248625107219 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetSize>`__
+
 
 
 
@@ -3273,7 +3273,7 @@ The function returns number of rows (CvSize::height) and number of columns (CvSi
 GetSubRect
 ----------
 
-`id=0.0482029723737 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/GetSubRect>`__
+
 
 
 
@@ -3311,7 +3311,7 @@ ROI is actually extracted.
 InRange
 -------
 
-`id=0.549621347828 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InRange>`__
+
 
 
 
@@ -3371,7 +3371,7 @@ dst(I) is set to 0xff (all
 InRangeS
 --------
 
-`id=0.194953788625 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InRangeS>`__
+
 
 
 
@@ -3430,7 +3430,7 @@ For two-channel arrays nd so forth,
 IncRefData
 ----------
 
-`id=0.0936060506247 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/IncRefData>`__
+
 
 
 
@@ -3463,7 +3463,7 @@ if the reference counter pointer is not NULL, otherwise it returns zero.
 InitImageHeader
 ---------------
 
-`id=0.742068243947 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitImageHeader>`__
+
 
 
 
@@ -3508,7 +3508,7 @@ points to the initialized header.
 InitMatHeader
 -------------
 
-`id=0.656867541884 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitMatHeader>`__
+
 
 
 
@@ -3581,7 +3581,7 @@ This function is often used to process raw data with OpenCV matrix functions. Fo
 InitMatNDHeader
 ---------------
 
-`id=0.422685627081 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitMatNDHeader>`__
+
 
 
 
@@ -3619,7 +3619,7 @@ InitMatNDHeader
 InitSparseMatIterator
 ---------------------
 
-`id=0.201070631416 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InitSparseMatIterator>`__
+
 
 
 
@@ -3652,7 +3652,7 @@ if the array is empty.
 InvSqrt
 -------
 
-`id=0.80254392991 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/InvSqrt>`__
+
 
 
 
@@ -3684,7 +3684,7 @@ The function calculates the inverse square root of the argument, and normally it
 Inv
 ---
 
-`id=0.303857308817 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Inv>`__
+
 
 
 :ref:`Invert`
@@ -3696,7 +3696,7 @@ Inv
 
 
 
-`id=0.780643675122 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/>`__
+
 
 
 
@@ -3764,7 +3764,7 @@ is singular.
 IsInf
 -----
 
-`id=0.308846865611 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/IsInf>`__
+
 
 
 
@@ -3794,7 +3794,7 @@ The function returns 1 if the argument is
 IsNaN
 -----
 
-`id=0.651061735514 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/IsNaN>`__
+
 
 
 
@@ -3823,7 +3823,7 @@ The function returns 1 if the argument is Not A Number (as defined by IEEE754 st
 LUT
 ---
 
-`id=0.987743314885 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/LUT>`__
+
 
 
 
@@ -3875,7 +3875,7 @@ where
 Log
 ---
 
-`id=0.367129782627 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Log>`__
+
 
 
 
@@ -3917,7 +3917,7 @@ is a large negative number (about -700 in the current implementation).
 Mahalanobis
 -----------
 
-`id=0.146686782784 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Mahalanobis>`__
+
 
 
 
@@ -3967,7 +3967,7 @@ SVD method is the prefered one because the matrix might be singular).
 Mat
 ---
 
-`id=0.921640300869 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Mat>`__
+
 
 
 
@@ -4025,7 +4025,7 @@ This function is a fast inline substitution for
 Max
 ---
 
-`id=0.802320083613 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Max>`__
+
 
 
 
@@ -4069,7 +4069,7 @@ All the arrays must have a single channel, the same data type and the same size 
 MaxS
 ----
 
-`id=0.981553315291 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MaxS>`__
+
 
 
 
@@ -4113,7 +4113,7 @@ All the arrays must have a single channel, the same data type and the same size 
 Merge
 -----
 
-`id=0.57803259893 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Merge>`__
+
 
 
 
@@ -4169,7 +4169,7 @@ with COI set can be also used to insert a single channel into the image.
 Min
 ---
 
-`id=0.696669339505 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Min>`__
+
 
 
 
@@ -4213,7 +4213,7 @@ All the arrays must have a single channel, the same data type and the same size 
 MinMaxLoc
 ---------
 
-`id=0.836639641988 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MinMaxLoc>`__
+
 
 
 
@@ -4275,7 +4275,7 @@ will contain raw (linear) positions of the extremums.
 MinS
 ----
 
-`id=0.476843407849 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MinS>`__
+
 
 
 
@@ -4328,7 +4328,7 @@ Synonym for
 MixChannels
 -----------
 
-`id=0.147282411501 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MixChannels>`__
+
 
 
 
@@ -4413,7 +4413,7 @@ Synonym for
 Mul
 ---
 
-`id=0.272808918308 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Mul>`__
+
 
 
 
@@ -4460,7 +4460,7 @@ For types that have limited range this operation is saturating.
 MulSpectrums
 ------------
 
-`id=0.824454753657 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MulSpectrums>`__
+
 
 
 
@@ -4508,7 +4508,7 @@ The function, together with
 MulTransposed
 -------------
 
-`id=0.918985398563 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/MulTransposed>`__
+
 
 
 
@@ -4568,7 +4568,7 @@ otherwise.
 Norm
 ----
 
-`id=0.154207520216 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Norm>`__
+
 
 
 
@@ -4640,7 +4640,7 @@ The function returns the calculated norm. A multiple-channel array is treated as
 Not
 ---
 
-`id=0.826629484119 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Not>`__
+
 
 
 
@@ -4683,7 +4683,7 @@ The function Not inverses every bit of every array element:
 Or
 --
 
-`id=0.507374371267 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Or>`__
+
 
 
 
@@ -4734,7 +4734,7 @@ In the case of floating-point arrays their bit representations are used for the 
 OrS
 ---
 
-`id=0.625318578996 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/OrS>`__
+
 
 
 
@@ -4786,7 +4786,7 @@ Prior to the actual operation, the scalar is converted to the same type as that 
 PerspectiveTransform
 --------------------
 
-`id=0.41652773978 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/PerspectiveTransform>`__
+
 
 
 
@@ -4846,7 +4846,7 @@ and
 PolarToCart
 -----------
 
-`id=0.178570045111 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/PolarToCart>`__
+
 
 
 
@@ -4901,7 +4901,7 @@ The function calculates either the x-coodinate, y-coordinate or both of every ve
 Pow
 ---
 
-`id=0.456179463072 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Pow>`__
+
 
 
 
@@ -4967,7 +4967,7 @@ For some values of
 Ptr?D
 -----
 
-`id=0.355198763108 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Ptr%3FD>`__
+
 
 
 
@@ -5042,7 +5042,7 @@ All these as well as other functions accessing array elements (
 RNG
 ---
 
-`id=0.334224465442 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RNG>`__
+
 
 
 
@@ -5078,7 +5078,7 @@ current implementation a multiply-with-carry generator is used.
 RandArr
 -------
 
-`id=0.617206781965 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RandArr>`__
+
 
 
 
@@ -5172,7 +5172,7 @@ random locations within a 2d array.
 RandInt
 -------
 
-`id=0.580357752305 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RandInt>`__
+
 
 
 
@@ -5262,7 +5262,7 @@ Here is the example from the previous function discussion rewritten using
 RandReal
 --------
 
-`id=0.350180512192 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/RandReal>`__
+
 
 
 
@@ -5290,7 +5290,7 @@ The function returns a uniformly-distributed random floating-point number betwee
 Reduce
 ------
 
-`id=0.0732892550064 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Reduce>`__
+
 
 
 
@@ -5341,7 +5341,7 @@ the output may have a larger element bit-depth to preserve accuracy. And multi-c
 ReleaseData
 -----------
 
-`id=0.193575098708 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseData>`__
+
 
 
 
@@ -5375,7 +5375,7 @@ it simply calls cvDecRefData(), that is the function can not deallocate external
 ReleaseImage
 ------------
 
-`id=0.44586180035 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseImage>`__
+
 
 
 
@@ -5419,7 +5419,7 @@ This call is a shortened form of
 ReleaseImageHeader
 ------------------
 
-`id=0.423555076157 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseImageHeader>`__
+
 
 
 
@@ -5467,7 +5467,7 @@ macro).
 ReleaseMat
 ----------
 
-`id=0.627422807105 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseMat>`__
+
 
 
 
@@ -5509,7 +5509,7 @@ The function decrements the matrix data reference counter and deallocates matrix
 ReleaseMatND
 ------------
 
-`id=0.14075975211 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseMatND>`__
+
 
 
 
@@ -5551,7 +5551,7 @@ The function decrements the array data reference counter and releases the array 
 ReleaseSparseMat
 ----------------
 
-`id=0.140784480973 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReleaseSparseMat>`__
+
 
 
 
@@ -5579,7 +5579,7 @@ The function releases the sparse array and clears the array pointer upon exit.
 Repeat
 ------
 
-`id=0.923112302662 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Repeat>`__
+
 
 
 
@@ -5624,7 +5624,7 @@ So the destination array may be as larger as well as smaller than the source arr
 ResetImageROI
 -------------
 
-`id=0.543905373341 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ResetImageROI>`__
+
 
 
 
@@ -5666,7 +5666,7 @@ This produces a similar result to the following
 Reshape
 -------
 
-`id=0.617983810813 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Reshape>`__
+
 
 
 
@@ -5737,7 +5737,7 @@ And the next example converts a 3x3 matrix to a single 1x9 vector:
 ReshapeMatND
 ------------
 
-`id=0.409528209175 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ReshapeMatND>`__
+
 
 
 
@@ -5827,7 +5827,7 @@ description rewritten using
 cvRound, cvFloor, cvCeil
 ------------------------
 
-`id=0.0596129889144 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/cvRound%2C%20cvFloor%2C%20cvCeil>`__
+
 
 
 
@@ -5872,7 +5872,7 @@ are not handled.
 ScaleAdd
 --------
 
-`id=0.579340191614 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/ScaleAdd>`__
+
 
 
 
@@ -5918,7 +5918,7 @@ All array parameters should have the same type and the same size.
 Set
 ---
 
-`id=0.861577153242 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Set>`__
+
 
 
 
@@ -5967,7 +5967,7 @@ type, then is ROI used, but COI must not be set.
 Set?D
 -----
 
-`id=0.152512661076 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Set%3FD>`__
+
 
 
 
@@ -6022,7 +6022,7 @@ The functions assign the new value to a particular array element. In the case of
 SetData
 -------
 
-`id=0.107211131582 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetData>`__
+
 
 
 
@@ -6062,7 +6062,7 @@ or
 SetIdentity
 -----------
 
-`id=0.77516298162 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetIdentity>`__
+
 
 
 
@@ -6100,7 +6100,7 @@ The function initializes a scaled identity matrix:
 SetImageCOI
 -----------
 
-`id=0.597376489371 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetImageCOI>`__
+
 
 
 
@@ -6149,7 +6149,7 @@ or
 SetImageROI
 -----------
 
-`id=0.699794583761 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetImageROI>`__
+
 
 
 
@@ -6186,7 +6186,7 @@ Most OpenCV functions support the use of ROI and treat the image rectangle as a 
 SetReal?D
 ---------
 
-`id=0.771070365808 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetReal%3FD>`__
+
 
 
 
@@ -6249,7 +6249,7 @@ In the case of a sparse array the functions create the node if it does not yet e
 SetZero
 -------
 
-`id=0.0226075499078 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SetZero>`__
+
 
 
 
@@ -6290,7 +6290,7 @@ In the case of sparse arrays all the elements are removed.
 Solve
 -----
 
-`id=0.516299173545 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Solve>`__
+
 
 
 
@@ -6353,7 +6353,7 @@ is not valid.
 SolveCubic
 ----------
 
-`id=0.317112254405 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SolveCubic>`__
+
 
 
 
@@ -6408,7 +6408,7 @@ only one root.
 Split
 -----
 
-`id=0.404799243335 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Split>`__
+
 
 
 
@@ -6459,7 +6459,7 @@ channel from the image.
 Sqrt
 ----
 
-`id=0.688190940304 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Sqrt>`__
+
 
 
 
@@ -6487,7 +6487,7 @@ The function calculates the square root of the argument. If the argument is nega
 Sub
 ---
 
-`id=0.952315283514 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Sub>`__
+
 
 
 
@@ -6539,7 +6539,7 @@ For types that have limited range this operation is saturating.
 SubRS
 -----
 
-`id=0.239416677071 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SubRS>`__
+
 
 
 
@@ -6591,7 +6591,7 @@ For types that have limited range this operation is saturating.
 SubS
 ----
 
-`id=0.841148312387 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SubS>`__
+
 
 
 
@@ -6644,7 +6644,7 @@ For types that have limited range this operation is saturating.
 Sum
 ---
 
-`id=0.811470558337 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Sum>`__
+
 
 
 
@@ -6686,7 +6686,7 @@ and COI is set, the function processes the selected channel only and stores the 
 SVBkSb
 ------
 
-`id=0.305531304006 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SVBkSb>`__
+
 
 
 
@@ -6765,7 +6765,7 @@ the high-level counterparts (inv and solve).
 SVD
 ---
 
-`id=0.666817969466 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/SVD>`__
+
 
 
 
@@ -6879,7 +6879,7 @@ An SVD algorithm is numerically robust and its typical applications include:
 Trace
 -----
 
-`id=0.173901751057 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Trace>`__
+
 
 
 
@@ -6916,7 +6916,7 @@ The function returns the sum of the diagonal elements of the matrix
 Transform
 ---------
 
-`id=0.132381356501 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Transform>`__
+
 
 
 
@@ -7006,7 +7006,7 @@ channels and so forth.
 Transpose
 ---------
 
-`id=0.402895405287 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Transpose>`__
+
 
 
 
@@ -7052,7 +7052,7 @@ for an example.
 Xor
 ---
 
-`id=0.778881513254 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/Xor>`__
+
 
 
 
@@ -7103,7 +7103,7 @@ In the case of floating-point arrays their bit representations are used for the 
 XorS
 ----
 
-`id=0.0218684678783 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/XorS>`__
+
 
 
 
@@ -7189,7 +7189,7 @@ The code should print:
 mGet
 ----
 
-`id=0.966917154108 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/mGet>`__
+
 
 
 
@@ -7227,7 +7227,7 @@ and it checks for the row and column ranges only in debug mode.
 mSet
 ----
 
-`id=0.367233373522 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/core/mSet>`__
+
 
 
 

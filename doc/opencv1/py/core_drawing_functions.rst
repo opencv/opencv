@@ -42,7 +42,7 @@ is simply copied to the repainted pixels. Thus, if you want to paint semi-transp
 Circle
 ------
 
-`id=0.300689351141 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Circle>`__
+
 
 
 .. function:: Circle(img,center,radius,color,thickness=1,lineType=8,shift=0)-> None
@@ -101,7 +101,7 @@ given center and radius.
 ClipLine
 --------
 
-`id=0.251101842576 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/ClipLine>`__
+
 
 
 .. function:: ClipLine(imgSize, pt1, pt2) -> (clipped_pt1, clipped_pt2)
@@ -139,7 +139,7 @@ If the line segment is outside the image, it returns None. If the line segment i
 DrawContours
 ------------
 
-`id=0.919530584794 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/DrawContours>`__
+
 
 
 .. function:: DrawContours(img,contour,external_color,hole_color,max_level,thickness=1,lineType=8,offset=(0,0))-> None
@@ -207,7 +207,7 @@ or fills the area bounded by the contours if
 Ellipse
 -------
 
-`id=0.149495013833 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Ellipse>`__
+
 
 
 .. function:: Ellipse(img,center,axes,angle,start_angle,end_angle,color,thickness=1,lineType=8,shift=0)-> None
@@ -292,7 +292,7 @@ Parameters of Elliptic Arc
 EllipseBox
 ----------
 
-`id=0.217567751917 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/EllipseBox>`__
+
 
 
 .. function:: EllipseBox(img,box,color,thickness=1,lineType=8,shift=0)-> None
@@ -344,7 +344,7 @@ do. The ellipse drawn is clipped by ROI rectangle. A piecewise-linear approximat
 FillConvexPoly
 --------------
 
-`id=0.27807950676 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/FillConvexPoly>`__
+
 
 
 .. function:: FillConvexPoly(img,pn,color,lineType=8,shift=0)-> None
@@ -398,7 +398,7 @@ line) twice at the most.
 FillPoly
 --------
 
-`id=0.470054743188 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/FillPoly>`__
+
 
 
 .. function:: FillPoly(img,polys,color,lineType=8,shift=0)-> None
@@ -448,7 +448,7 @@ areas with holes, contour self-intersection, and so forth.
 GetTextSize
 -----------
 
-`id=0.723985190989 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetTextSize>`__
+
 
 
 .. function:: GetTextSize(textString,font)-> (textSize,baseline)
@@ -491,7 +491,7 @@ The function calculates the dimensions of a rectangle to enclose a text string w
 InitFont
 --------
 
-`id=0.526488936836 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/InitFont>`__
+
 
 
 .. function:: InitFont(fontFace,hscale,vscale,shear=0,thickness=1,lineType=8)-> font
@@ -579,7 +579,7 @@ The function initializes the font structure that can be passed to text rendering
 InitLineIterator
 ----------------
 
-`id=0.352578115956 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/InitLineIterator>`__
+
 
 
 .. function:: InitLineIterator(image, pt1, pt2, connectivity=8, left_to_right=0) -> line_iterator
@@ -682,7 +682,7 @@ or more concisely using
 Line
 ----
 
-`id=0.32347581651 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Line>`__
+
 
 
 .. function:: Line(img,pt1,pt2,color,thickness=1,lineType=8,shift=0)-> None
@@ -764,7 +764,7 @@ the line color, the user may use the macro
 PolyLine
 --------
 
-`id=0.899614274707 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/PolyLine>`__
+
 
 
 .. function:: PolyLine(img,polys,is_closed,color,thickness=1,lineType=8,shift=0)-> None
@@ -824,7 +824,7 @@ The function draws single or multiple polygonal curves.
 PutText
 -------
 
-`id=0.414755160642 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/PutText>`__
+
 
 
 .. function:: PutText(img,text,org,font,color)-> None
@@ -875,7 +875,7 @@ replaced with the symbol for a rectangle.
 Rectangle
 ---------
 
-`id=0.243634323886 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/Rectangle>`__
+
 
 
 .. function:: Rectangle(img,pt1,pt2,color,thickness=1,lineType=8,shift=0)-> None
@@ -937,7 +937,7 @@ and
 CV_RGB
 ------
 
-`id=0.224041402111 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CV_RGB>`__
+
 
 
 .. function:: CV_RGB(red,grn,blu)->CvScalar

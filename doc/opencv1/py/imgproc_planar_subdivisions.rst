@@ -12,7 +12,7 @@ Planar Subdivisions
 CvSubdiv2D
 ----------
 
-`id=0.403332162742 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvSubdiv2D>`__
+
 
 .. class:: CvSubdiv2D
 
@@ -68,7 +68,7 @@ morphing, fast location of points on the plane, building special graphs
 CvSubdiv2DPoint
 ---------------
 
-`id=0.753986010152 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CvSubdiv2DPoint>`__
+
 
 .. class:: CvSubdiv2DPoint
 
@@ -104,7 +104,7 @@ Point of original or dual subdivision.
 CalcSubdivVoronoi2D
 -------------------
 
-`id=0.119097157929 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CalcSubdivVoronoi2D>`__
+
 
 
 .. function:: CalcSubdivVoronoi2D(subdiv)-> None
@@ -135,7 +135,7 @@ cell at that point.
 ClearSubdivVoronoi2D
 --------------------
 
-`id=0.158437620754 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/ClearSubdivVoronoi2D>`__
+
 
 
 .. function:: ClearSubdivVoronoi2D(subdiv)-> None
@@ -168,7 +168,7 @@ was modified after previous call to the function.
 CreateSubdivDelaunay2D
 ----------------------
 
-`id=0.918020754539 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/CreateSubdivDelaunay2D>`__
+
 
 
 .. function:: CreateSubdivDelaunay2D(rect,storage)-> delaunay_triangulation
@@ -209,7 +209,7 @@ Note that the triangulation is a single large triangle that covers the given rec
 FindNearestPoint2D
 ------------------
 
-`id=0.679601866055 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/FindNearestPoint2D>`__
+
 
 
 .. function:: FindNearestPoint2D(subdiv,pt)-> point
@@ -248,7 +248,7 @@ point. The function returns a pointer to the found subdivision vertex.
 Subdiv2DEdgeDst
 ---------------
 
-`id=0.723258652692 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Subdiv2DEdgeDst>`__
+
 
 
 .. function:: Subdiv2DEdgeDst(edge)-> point
@@ -281,7 +281,7 @@ can be calculated using the function
 Subdiv2DGetEdge
 ---------------
 
-`id=0.506587189348 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Subdiv2DGetEdge>`__
+
 
 
 .. function:: Subdiv2DGetEdge(edge,type)-> CvSubdiv2DEdge
@@ -348,7 +348,7 @@ The function returns one of the edges related to the input edge.
 Subdiv2DNextEdge
 ----------------
 
-`id=0.406592929731 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Subdiv2DNextEdge>`__
+
 
 
 .. function:: Subdiv2DNextEdge(edge)-> CvSubdiv2DEdge
@@ -386,7 +386,7 @@ is the input edge)
 Subdiv2DLocate
 --------------
 
-`id=0.614412184993 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Subdiv2DLocate>`__
+
 
 
 .. function:: Subdiv2DLocate(subdiv, pt) -> (loc, where)
@@ -481,7 +481,7 @@ The function locates the input point within the subdivision. There are 5 cases:
 Subdiv2DRotateEdge
 ------------------
 
-`id=0.775095566923 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/Subdiv2DRotateEdge>`__
+
 
 
 .. function:: Subdiv2DRotateEdge(edge,rotate)-> CvSubdiv2DEdge
@@ -534,7 +534,7 @@ The function returns one of the edges of the same quad-edge as the input edge.
 SubdivDelaunay2DInsert
 ----------------------
 
-`id=0.291010420302 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/SubdivDelaunay2DInsert>`__
+
 
 
 .. function:: SubdivDelaunay2DInsert(subdiv,pt)-> point

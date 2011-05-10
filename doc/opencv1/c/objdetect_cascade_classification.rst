@@ -73,7 +73,7 @@ for details.
 CvHaarFeature, CvHaarClassifier, CvHaarStageClassifier, CvHaarClassifierCascade
 -------------------------------------------------------------------------------
 
-`id=0.970306065104 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/CvHaarFeature%2C%20CvHaarClassifier%2C%20CvHaarStageClassifier%2C%20CvHaarClassifierCascade>`__
+
 
 .. ctype:: CvHaarFeature, CvHaarClassifier, CvHaarStageClassifier, CvHaarClassifierCascade
 
@@ -205,7 +205,7 @@ The whole hierarchy can be constructed manually or loaded from a file or an embe
 LoadHaarClassifierCascade
 -------------------------
 
-`id=0.804773488212 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/LoadHaarClassifierCascade>`__
+
 
 
 
@@ -246,7 +246,7 @@ function.
 HaarDetectObjects
 -----------------
 
-`id=0.264108155188 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/HaarDetectObjects>`__
+
 
 
 
@@ -409,7 +409,7 @@ The function finds rectangular regions in the given image that are likely to con
 SetImagesForHaarClassifierCascade
 ---------------------------------
 
-`id=0.160913357144 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/SetImagesForHaarClassifierCascade>`__
+
 
 
 
@@ -455,7 +455,7 @@ function and reused again. The function is used to prepare cascade for detecting
 ReleaseHaarClassifierCascade
 ----------------------------
 
-`id=0.359777913959 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/ReleaseHaarClassifierCascade>`__
+
 
 
 
@@ -487,7 +487,7 @@ or
 RunHaarClassifierCascade
 ------------------------
 
-`id=0.100465569078 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/objdetect/RunHaarClassifierCascade>`__
+
 
 
 

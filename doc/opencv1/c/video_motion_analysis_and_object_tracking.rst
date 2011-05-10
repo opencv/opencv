@@ -12,7 +12,7 @@ Motion Analysis and Object Tracking
 CalcGlobalOrientation
 ---------------------
 
-`id=0.848432169537 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcGlobalOrientation>`__
+
 
 
 
@@ -59,7 +59,7 @@ a circular sum of the basic orientation and the shift.
 CalcMotionGradient
 ------------------
 
-`id=0.691063668639 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcMotionGradient>`__
+
 
 
 
@@ -143,7 +143,7 @@ neighborhood and assumes the gradient is valid only if
 CalcOpticalFlowBM
 -----------------
 
-`id=0.754519759158 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcOpticalFlowBM>`__
+
 
 
 
@@ -209,7 +209,7 @@ function call (if
 CalcOpticalFlowHS
 -----------------
 
-`id=0.152735471909 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcOpticalFlowHS>`__
+
 
 
 
@@ -257,7 +257,7 @@ Horn81
 CalcOpticalFlowLK
 -----------------
 
-`id=0.853253276574 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcOpticalFlowLK>`__
+
 
 
 
@@ -299,7 +299,7 @@ Lucas81
 CalcOpticalFlowPyrLK
 --------------------
 
-`id=0.47107753089 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CalcOpticalFlowPyrLK>`__
+
 
 
 
@@ -396,7 +396,7 @@ is set).
 CamShift
 --------
 
-`id=0.583105572641 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CamShift>`__
+
 
 
 
@@ -487,7 +487,7 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/ISARD1/condensation.html
 CreateConDensation
 ------------------
 
-`id=0.31878352255 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CreateConDensation>`__
+
 
 
 
@@ -523,7 +523,7 @@ structure and returns a pointer to the structure.
 ConDensInitSampleSet
 --------------------
 
-`id=0.386398764636 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/ConDensInitSampleSet>`__
+
 
 
 
@@ -558,7 +558,7 @@ with values within the specified ranges.
 CvKalman
 --------
 
-`id=0.625509453461 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CvKalman>`__
+
 
 .. ctype:: CvKalman
 
@@ -691,7 +691,7 @@ structure is allocated via
 CreateKalman
 ------------
 
-`id=0.495816671145 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/CreateKalman>`__
+
 
 
 
@@ -728,7 +728,7 @@ and all its matrices and initializes them somehow.
 KalmanCorrect
 -------------
 
-`id=0.247263362016 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/KalmanCorrect>`__
+
 
 
 
@@ -902,7 +902,7 @@ Example. Using Kalman filter to track a rotating point
 KalmanPredict
 -------------
 
-`id=0.406145730558 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/KalmanPredict>`__
+
 
 
 
@@ -972,7 +972,7 @@ Synonym for
 MeanShift
 ---------
 
-`id=0.377464124859 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/MeanShift>`__
+
 
 
 
@@ -1013,7 +1013,7 @@ of iterations. The function returns the number of iterations made.
 ReleaseConDensation
 -------------------
 
-`id=0.860558456819 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/ReleaseConDensation>`__
+
 
 
 
@@ -1043,7 +1043,7 @@ The function releases the structure
 ReleaseKalman
 -------------
 
-`id=0.202454950979 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/ReleaseKalman>`__
+
 
 
 
@@ -1073,7 +1073,7 @@ and all of the underlying matrices.
 SegmentMotion
 -------------
 
-`id=0.604815881374 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/SegmentMotion>`__
+
 
 
 
@@ -1125,7 +1125,7 @@ component
 SnakeImage
 ----------
 
-`id=0.376286588765 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/SnakeImage>`__
+
 
 
 
@@ -1207,7 +1207,7 @@ iterations, the function terminates.
 UpdateMotionHistory
 -------------------
 
-`id=0.131540988983 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/video/UpdateMotionHistory>`__
+
 
 
 

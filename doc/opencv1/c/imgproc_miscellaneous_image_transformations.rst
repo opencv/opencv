@@ -12,7 +12,7 @@ Miscellaneous Image Transformations
 AdaptiveThreshold
 -----------------
 
-`id=0.746186116585 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/AdaptiveThreshold>`__
+
 
 
 
@@ -106,7 +106,7 @@ pixel neighborhood, minus
 CvtColor
 --------
 
-`id=0.233371940793 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvtColor>`__
+
 
 
 
@@ -685,7 +685,7 @@ The function can do the following transformations:
 DistTransform
 -------------
 
-`id=0.370026475978 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/DistTransform>`__
+
 
 
 
@@ -832,7 +832,7 @@ Voronoi diagram for the binary image.
 CvConnectedComp
 ---------------
 
-`id=0.585492926457 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvConnectedComp>`__
+
 
 .. ctype:: CvConnectedComp
 
@@ -866,7 +866,7 @@ CvConnectedComp
 FloodFill
 ---------
 
-`id=0.303812867907 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FloodFill>`__
+
 
 
 
@@ -1014,7 +1014,7 @@ is the value of one of pixel neighbors. That is, to be added to the connected co
 Inpaint
 -------
 
-`id=0.233020618935 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Inpaint>`__
+
 
 
 
@@ -1060,7 +1060,7 @@ The function reconstructs the selected image area from the pixel near the area b
 Integral
 --------
 
-`id=0.247498066723 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Integral>`__
+
 
 
 
@@ -1130,7 +1130,7 @@ It makes possible to do a fast blurring or fast block correlation with variable 
 PyrMeanShiftFiltering
 ---------------------
 
-`id=0.448320960436 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PyrMeanShiftFiltering>`__
+
 
 
 
@@ -1224,7 +1224,7 @@ running the meanshift procedure on the whole original image (i.e. when
 PyrSegmentation
 ---------------
 
-`id=0.0310203817733 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PyrSegmentation>`__
+
 
 
 
@@ -1302,7 +1302,7 @@ should be 8-bit single-channel or 3-channel images or equal size.
 Threshold
 ---------
 
-`id=0.57512876324 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Threshold>`__
+
 
 
 

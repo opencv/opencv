@@ -12,7 +12,7 @@ Feature Detection
 Canny
 -----
 
-`id=0.99528666363 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Canny>`__
+
 
 
 
@@ -60,7 +60,7 @@ is used for edge linking, the largest value is used to find the initial segments
 CornerEigenValsAndVecs
 ----------------------
 
-`id=0.880597486716 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CornerEigenValsAndVecs>`__
+
 
 
 
@@ -131,7 +131,7 @@ where
 CornerHarris
 ------------
 
-`id=0.765194293954 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CornerHarris>`__
+
 
 
 
@@ -190,7 +190,7 @@ to the destination image. Corners in the image can be found as the local maxima 
 CornerMinEigenVal
 -----------------
 
-`id=0.956867089452 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CornerMinEigenVal>`__
+
 
 
 
@@ -231,7 +231,7 @@ in terms of the previous function.
 FindCornerSubPix
 ----------------
 
-`id=0.941466183497 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FindCornerSubPix>`__
+
 
 
 
@@ -336,7 +336,7 @@ and then iterates until the center keeps within a set threshold.
 GoodFeaturesToTrack
 -------------------
 
-`id=0.0876392134647 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GoodFeaturesToTrack>`__
+
 
 
 
@@ -423,7 +423,7 @@ will be the prefix of the output corners array with
 HoughLines2
 -----------
 
-`id=0.689753287363 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/HoughLines2>`__
+
 
 
 
@@ -611,7 +611,7 @@ case):
 PreCornerDetect
 ---------------
 
-`id=0.671562199289 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PreCornerDetect>`__
+
 
 
 
@@ -681,7 +681,7 @@ The corners can be found as local maximums of the function below:
 SampleLine
 ----------
 
-`id=0.852353847021 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/SampleLine>`__
+
 
 
 

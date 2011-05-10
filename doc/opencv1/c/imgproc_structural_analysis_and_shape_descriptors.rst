@@ -12,7 +12,7 @@ Structural Analysis and Shape Descriptors
 ApproxChains
 ------------
 
-`id=0.432936866636 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ApproxChains>`__
+
 
 
 
@@ -63,7 +63,7 @@ fields of the returned structure.
 ApproxPoly
 ----------
 
-`id=0.861831385172 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ApproxPoly>`__
+
 
 
 
@@ -109,7 +109,7 @@ correspondence).
 ArcLength
 ---------
 
-`id=0.382186875357 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ArcLength>`__
+
 
 
 
@@ -154,7 +154,7 @@ The function calculates the length or curve as the sum of lengths of segments be
 BoundingRect
 ------------
 
-`id=0.99193394782 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/BoundingRect>`__
+
 
 
 
@@ -200,7 +200,7 @@ Here is the list of possible combination of the flag values and type of
 BoxPoints
 ---------
 
-`id=0.15348377114 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/BoxPoints>`__
+
 
 
 
@@ -258,7 +258,7 @@ Here is the function code:
 CalcPGH
 -------
 
-`id=0.713512953819 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcPGH>`__
+
 
 
 
@@ -303,7 +303,7 @@ definition). The histogram can be used for contour matching.
 CalcEMD2
 --------
 
-`id=0.642501185958 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcEMD2>`__
+
 
 
 
@@ -364,7 +364,7 @@ so that they cannot relate to the same object.
 CheckContourConvexity
 ---------------------
 
-`id=0.596409711678 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CheckContourConvexity>`__
+
 
 
 
@@ -392,7 +392,7 @@ The function tests whether the input contour is convex or not. The contour must 
 CvConvexityDefect
 -----------------
 
-`id=0.0456666449216 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvConvexityDefect>`__
+
 
 .. ctype:: CvConvexityDefect
 
@@ -432,7 +432,7 @@ Structure describing a single contour convexity defect.
 ContourArea
 -----------
 
-`id=0.579530349862 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ContourArea>`__
+
 
 
 
@@ -478,7 +478,7 @@ function from C runtime to get the absolute value of the area.
 ContourFromContourTree
 ----------------------
 
-`id=0.283577660364 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ContourFromContourTree>`__
+
 
 
 
@@ -514,7 +514,7 @@ determines the accuracy and/or the number of tree levels used for reconstruction
 ConvexHull2
 -----------
 
-`id=0.07365440701 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ConvexHull2>`__
+
 
 
 
@@ -661,7 +661,7 @@ Example. Building convex hull for a sequence or array of points
 ConvexityDefects
 ----------------
 
-`id=0.246826049247 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ConvexityDefects>`__
+
 
 
 
@@ -695,7 +695,7 @@ The function finds all convexity defects of the input contour and returns a sequ
 CreateContourTree
 -----------------
 
-`id=0.116090901246 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CreateContourTree>`__
+
 
 
 
@@ -737,7 +737,7 @@ is less than or equal to 0, the function creates a full binary tree representati
 EndFindContours
 ---------------
 
-`id=0.772927708524 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/EndFindContours>`__
+
 
 
 
@@ -765,7 +765,7 @@ The function finishes the scanning process and returns a pointer to the first co
 FindContours
 ------------
 
-`id=0.804514745402 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FindContours>`__
+
 
 
 
@@ -874,7 +874,7 @@ is modified by this function.
 FindNextContour
 ---------------
 
-`id=0.251954589601 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FindNextContour>`__
+
 
 
 
@@ -902,7 +902,7 @@ The function locates and retrieves the next contour in the image and returns a p
 FitEllipse2
 -----------
 
-`id=0.639828157054 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FitEllipse2>`__
+
 
 
 
@@ -938,7 +938,7 @@ not half-lengths.
 FitLine
 -------
 
-`id=0.0204712084438 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/FitLine>`__
+
 
 
 
@@ -1058,7 +1058,7 @@ is a distance function, one of:
 GetCentralMoment
 ----------------
 
-`id=0.574094648001 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetCentralMoment>`__
+
 
 
 
@@ -1110,7 +1110,7 @@ are the coordinates of the gravity center:
 GetHuMoments
 ------------
 
-`id=0.56722466619 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetHuMoments>`__
+
 
 
 
@@ -1156,7 +1156,7 @@ These values are proved to be invariant to the image scale, rotation, and reflec
 GetNormalizedCentralMoment
 --------------------------
 
-`id=0.460978782732 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetNormalizedCentralMoment>`__
+
 
 
 
@@ -1197,7 +1197,7 @@ The function retrieves the normalized central moment:
 GetSpatialMoment
 ----------------
 
-`id=0.768768789318 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetSpatialMoment>`__
+
 
 
 
@@ -1244,7 +1244,7 @@ is the intensity of the pixel
 MatchContourTrees
 -----------------
 
-`id=0.555027093069 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MatchContourTrees>`__
+
 
 
 
@@ -1283,7 +1283,7 @@ The function calculates the value of the matching measure for two contour trees.
 MatchShapes
 -----------
 
-`id=0.492880753336 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MatchShapes>`__
+
 
 
 
@@ -1386,7 +1386,7 @@ respectively.
 MinAreaRect2
 ------------
 
-`id=0.325416946848 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MinAreaRect2>`__
+
 
 
 
@@ -1425,7 +1425,7 @@ Picture. Minimal-area bounding rectangle for contour
 MinEnclosingCircle
 ------------------
 
-`id=0.232805538989 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MinEnclosingCircle>`__
+
 
 
 
@@ -1462,7 +1462,7 @@ if the resultant circle contains all the input points and zero otherwise
 Moments
 -------
 
-`id=0.145895685877 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/Moments>`__
+
 
 
 
@@ -1498,7 +1498,7 @@ The function calculates spatial and central moments up to the third order and wr
 PointPolygonTest
 ----------------
 
-`id=0.21757803031 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PointPolygonTest>`__
+
 
 
 
@@ -1550,7 +1550,7 @@ Here is the sample output of the function, where each image pixel is tested agai
 PointSeqFromMat
 ---------------
 
-`id=0.728001629164 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/PointSeqFromMat>`__
+
 
 
 
@@ -1635,7 +1635,7 @@ Here is a simple usage example.
 ReadChainPoint
 --------------
 
-`id=0.760176226481 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ReadChainPoint>`__
+
 
 
 
@@ -1663,7 +1663,7 @@ The function returns the current chain point and updates the reader position.
 StartFindContours
 -----------------
 
-`id=0.411171934048 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/StartFindContours>`__
+
 
 
 
@@ -1708,7 +1708,7 @@ to retrieve the rest of the contours.
 StartReadChainPoints
 --------------------
 
-`id=0.532234897641 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/StartReadChainPoints>`__
+
 
 
 
@@ -1729,7 +1729,7 @@ The function initializes a special reader.
 SubstituteContour
 -----------------
 
-`id=0.692706172642 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/SubstituteContour>`__
+
 
 
 

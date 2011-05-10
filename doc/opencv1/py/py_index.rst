@@ -1,6 +1,6 @@
-################
-Python Reference
-################
+###############################
+OpenCV 1.x Python API Reference
+###############################
 
 .. highlight:: python
 

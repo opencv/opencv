@@ -12,7 +12,7 @@ Basic Structures
 CvPoint
 -------
 
-`id=0.407060643954 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvPoint>`__
+
 
 .. class:: CvPoint
 
@@ -31,7 +31,7 @@ CvPoint
 CvPoint2D32f
 ------------
 
-`id=0.638091190655 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvPoint2D32f>`__
+
 
 .. class:: CvPoint2D32f
 
@@ -50,7 +50,7 @@ CvPoint2D32f
 CvPoint3D32f
 ------------
 
-`id=0.334583364495 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvPoint3D32f>`__
+
 
 .. class:: CvPoint3D32f
 
@@ -69,7 +69,7 @@ CvPoint3D32f
 CvPoint2D64f
 ------------
 
-`id=0.352962148614 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvPoint2D64f>`__
+
 
 .. class:: CvPoint2D64f
 
@@ -88,7 +88,7 @@ CvPoint2D64f
 CvPoint3D64f
 ------------
 
-`id=0.00812295344272 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvPoint3D64f>`__
+
 
 .. class:: CvPoint3D64f
 
@@ -107,7 +107,7 @@ CvPoint3D64f
 CvSize
 ------
 
-`id=0.980418044509 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvSize>`__
+
 
 .. class:: CvSize
 
@@ -126,7 +126,7 @@ Size of a rectangle, represented as a tuple
 CvSize2D32f
 -----------
 
-`id=0.623013904609 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvSize2D32f>`__
+
 
 .. class:: CvSize2D32f
 
@@ -145,7 +145,7 @@ Size of a rectangle, represented as a tuple
 CvRect
 ------
 
-`id=0.706717090055 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvRect>`__
+
 
 .. class:: CvRect
 
@@ -164,7 +164,7 @@ Rectangle, represented as a tuple
 CvScalar
 --------
 
-`id=0.733448405451 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvScalar>`__
+
 
 .. class:: CvScalar
 
@@ -202,7 +202,7 @@ CvScalar is always represented as a 4-tuple.
 CvTermCriteria
 --------------
 
-`id=0.996691519996 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvTermCriteria>`__
+
 
 .. class:: CvTermCriteria
 
@@ -264,7 +264,7 @@ Represented by a tuple
 CvMat
 -----
 
-`id=0.619633266675 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvMat>`__
+
 
 .. class:: CvMat
 
@@ -332,7 +332,7 @@ A multi-channel 2D matrix.  Created by
 CvMatND
 -------
 
-`id=0.493284398358 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvMatND>`__
+
 
 .. class:: CvMatND
 
@@ -368,7 +368,7 @@ Multi-dimensional dense multi-channel array.
 IplImage
 --------
 
-`id=0.479556472461 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/IplImage>`__
+
 
 .. class:: IplImage
 
@@ -493,7 +493,7 @@ formats.
 CvArr
 -----
 
-`id=0.249942454209 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/CvArr>`__
+
 
 .. class:: CvArr
 

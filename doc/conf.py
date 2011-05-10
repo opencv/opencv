@@ -41,7 +41,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'opencvrefman'
+project = u'OpenCV'
 copyright = u'2011, opencv dev team'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -101,7 +101,7 @@ html_theme = 'blue'
 #html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ['../_themes']
+html_theme_path = ['_themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -112,7 +112,7 @@ html_theme_path = ['../_themes']
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '../opencv-logo2.png'
+#html_logo = 'opencv-logo2.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -122,7 +122,7 @@ html_logo = '../opencv-logo2.png'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['../_static']
+html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -143,7 +143,7 @@ html_static_path = ['../_static']
 #html_domain_indices = True
 
 # If false, no index is generated.
-#html_use_index = True
+html_use_index = True
 
 # If true, the index is split into individual pages for each letter.
 #html_split_index = False
@@ -168,6 +168,49 @@ html_static_path = ['../_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'opencv'
 
+# OpenCV docs use some custom LaTeX macros in the formulae. Make sure we include the definitions
+pngmath_latex_preamble = r"""
+\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
+\newcommand{\matTT}[9]{
+\[
+\left|\begin{array}{ccc}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{array}\right|
+\]
+}
+
+\newcommand{\fork}[4]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  \end{array} \right.}
+\newcommand{\forkthree}[6]{
+  \left\{
+  \begin{array}{l l}
+  #1 & \mbox{#2}\\
+  #3 & \mbox{#4}\\
+  #5 & \mbox{#6}\\
+  \end{array} \right.}
+
+\newcommand{\vecthree}[3]{
+\begin{bmatrix}
+ #1\\
+ #2\\
+ #3
+\end{bmatrix}
+}
+
+\newcommand{\vecthreethree}[9]{
+\begin{bmatrix}
+ #1 & #2 & #3\\
+ #4 & #5 & #6\\
+ #7 & #8 & #9
+\end{bmatrix}
+}
+"""
 
 # -- Options for LaTeX output --------------------------------------------------
 
@@ -180,8 +223,16 @@ htmlhelp_basename = 'opencv'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'opencv.tex', u'The OpenCV Reference Manual',
+  ('modules/refman', 'opencv2refman.tex', u'The OpenCV Reference Manual',
    u'', 'manual'),
+  ('doc/opencv1/c/c_index', 'opencv1refman_c.tex', u'The OpenCV 1.x C Reference Manual',
+   u'', 'manual'),
+  ('doc/opencv1/py/py_index', 'opencv1refman_py.tex', u'The OpenCV 1.x Python Reference Manual',
+   u'', 'manual'),
+  ('doc/user_guide/user_guide', 'opencv_user.tex', u'The OpenCV User Guide',
+   u'', 'manual'), 
+  ('doc/tutorials/tutorials', 'opencv_tutorials.tex', u'The OpenCV Tutorials',
+   u'', 'manual'), 
 ]
 
 latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}'}
@@ -192,7 +243,7 @@ latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackag
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
-#latex_use_parts = False
+latex_use_parts = False
 
 # If true, show page references after internal links.
 #latex_show_pagerefs = False

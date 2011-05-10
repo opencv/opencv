@@ -12,7 +12,7 @@ Histograms
 CvHistogram
 -----------
 
-`id=0.29416496784 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CvHistogram>`__
+
 
 .. ctype:: CvHistogram
 
@@ -48,7 +48,7 @@ Multi-dimensional histogram.
 CalcBackProject
 ---------------
 
-`id=0.262445080297 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcBackProject>`__
+
 
 
 
@@ -108,7 +108,7 @@ That is the approximate algorithm of Camshift color object tracker, except for t
 CalcBackProjectPatch
 --------------------
 
-`id=0.510320009557 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcBackProjectPatch>`__
+
 
 
 
@@ -193,7 +193,7 @@ Back Project Calculation by Patches
 CalcHist
 --------
 
-`id=0.247250829359 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcHist>`__
+
 
 
 
@@ -301,7 +301,7 @@ input images.
 CalcProbDensity
 ---------------
 
-`id=0.806356307482 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CalcProbDensity>`__
+
 
 
 
@@ -349,7 +349,7 @@ So the destination histogram bins are within less than
 ClearHist
 ---------
 
-`id=0.835401602212 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ClearHist>`__
+
 
 
 
@@ -377,7 +377,7 @@ The function sets all of the histogram bins to 0 in the case of a dense histogra
 CompareHist
 -----------
 
-`id=0.50848857362 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CompareHist>`__
+
 
 
 
@@ -495,7 +495,7 @@ function.
 CopyHist
 --------
 
-`id=0.454990024463 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CopyHist>`__
+
 
 
 
@@ -537,7 +537,7 @@ as in
 CreateHist
 ----------
 
-`id=0.761254826094 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/CreateHist>`__
+
 
 
 
@@ -602,7 +602,7 @@ bin ranges, they assume thy are equally spaced in 0 to 255 bins.
 GetHistValue*D
 --------------
 
-`id=0.909653638644 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetHistValue%2AD>`__
+
 
 
 
@@ -668,7 +668,7 @@ return a pointer to the specified bin of the 1D, 2D, 3D or N-D histogram. In the
 GetMinMaxHistValue
 ------------------
 
-`id=0.649289865958 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/GetMinMaxHistValue>`__
+
 
 
 
@@ -713,7 +713,7 @@ is returned.
 MakeHistHeaderForArray
 ----------------------
 
-`id=0.153593673347 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/MakeHistHeaderForArray>`__
+
 
 
 
@@ -759,7 +759,7 @@ does not need to be called afterwards. Only dense histograms can be initialized 
 NormalizeHist
 -------------
 
-`id=0.494984568711 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/NormalizeHist>`__
+
 
 
 
@@ -792,7 +792,7 @@ The function normalizes the histogram bins by scaling them, such that the sum of
 QueryHistValue*D
 ----------------
 
-`id=0.0495732815752 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/QueryHistValue%2AD>`__
+
 
 
 
@@ -844,7 +844,7 @@ The macros return the value of the specified bin of the 1D, 2D, 3D or N-D histog
 ReleaseHist
 -----------
 
-`id=0.635490375005 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ReleaseHist>`__
+
 
 
 
@@ -876,7 +876,7 @@ pointer is already
 SetHistBinRanges
 ----------------
 
-`id=0.097775620677 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/SetHistBinRanges>`__
+
 
 
 
@@ -916,7 +916,7 @@ function, that can initialize the ranges as well. Ranges for the histogram bins 
 ThreshHist
 ----------
 
-`id=0.2471087134 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/imgproc/ThreshHist>`__
+
 
 
 

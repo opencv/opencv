@@ -12,7 +12,7 @@ User Interface
 CreateTrackbar
 --------------
 
-`id=0.859200002353 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/CreateTrackbar>`__
+
 
 
 .. function:: CreateTrackbar(trackbarName, windowName, value, count, onChange) -> None
@@ -82,7 +82,7 @@ By clicking on the label of each trackbar, it is possible to edit the trackbar's
 DestroyAllWindows
 -----------------
 
-`id=0.386578572057 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/DestroyAllWindows>`__
+
 
 
 .. function:: DestroyAllWindows()-> None
@@ -103,7 +103,7 @@ destroys all of the opened HighGUI windows.
 DestroyWindow
 -------------
 
-`id=0.0256606142145 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/DestroyWindow>`__
+
 
 
 .. function:: DestroyWindow(name)-> None
@@ -133,7 +133,7 @@ destroys the window with the given name.
 GetTrackbarPos
 --------------
 
-`id=0.0119794922165 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/GetTrackbarPos>`__
+
 
 
 .. function:: GetTrackbarPos(trackbarName,windowName)-> None
@@ -178,7 +178,7 @@ qt-specific details:
 MoveWindow
 ----------
 
-`id=0.0432662100889 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/MoveWindow>`__
+
 
 
 .. function:: MoveWindow(name,x,y)-> None
@@ -218,7 +218,7 @@ changes the position of the window.
 NamedWindow
 -----------
 
-`id=0.155885062255 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/NamedWindow>`__
+
 
 
 .. function:: NamedWindow(name,flags=CV_WINDOW_AUTOSIZE)-> None
@@ -291,7 +291,7 @@ qt-specific details:
 ResizeWindow
 ------------
 
-`id=0.266699312987 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/ResizeWindow>`__
+
 
 
 .. function:: ResizeWindow(name,width,height)-> None
@@ -331,7 +331,7 @@ changes the size of the window.
 SetMouseCallback
 ----------------
 
-`id=0.299310906828 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/SetMouseCallback>`__
+
 
 
 .. function:: SetMouseCallback(windowName, onMouse, param) -> None
@@ -436,7 +436,7 @@ parameter is a combination of :
 SetTrackbarPos
 --------------
 
-`id=0.722744232916 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/SetTrackbarPos>`__
+
 
 
 .. function:: SetTrackbarPos(trackbarName,windowName,pos)-> None
@@ -486,7 +486,7 @@ qt-specific details:
 ShowImage
 ---------
 
-`id=0.260802502296 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/ShowImage>`__
+
 
 
 .. function:: ShowImage(name,image)-> None
@@ -540,7 +540,7 @@ flag then the image is shown with its original size, otherwise the image is scal
 WaitKey
 -------
 
-`id=0.742095797983 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/highgui/WaitKey>`__
+
 
 
 .. function:: WaitKey(delay=0)-> int

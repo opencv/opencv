@@ -61,7 +61,7 @@ A function with the
 GetTickCount
 ------------
 
-`id=0.81706194546 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetTickCount>`__
+
 
 
 .. function:: GetTickCount() -> long
@@ -82,7 +82,7 @@ The function returns number of the ticks starting from some platform-dependent e
 GetTickFrequency
 ----------------
 
-`id=0.967317163838 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/core/GetTickFrequency>`__
+
 
 
 .. function:: GetTickFrequency() -> long

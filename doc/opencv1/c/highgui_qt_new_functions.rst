@@ -87,7 +87,7 @@ The following code is an example used to generate the figure.
 SetWindowProperty
 -----------------
 
-`id=0.0287199623208 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SetWindowProperty>`__
+
 
 
 
@@ -158,7 +158,7 @@ allows to change the window's properties.
 GetWindowProperty
 -----------------
 
-`id=0.951341223423 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/GetWindowProperty>`__
+
 
 
 
@@ -209,7 +209,7 @@ return window's properties.
 FontQt
 ------
 
-`id=0.31590502208 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/FontQt>`__
+
 
 
 :ref:`addText`
@@ -304,7 +304,7 @@ A basic usage of this function is:
 AddText
 -------
 
-`id=0.363444830722 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/AddText>`__
+
 
 
 
@@ -352,7 +352,7 @@ using a specific font
 DisplayOverlay
 --------------
 
-`id=0.523794338823 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/DisplayOverlay>`__
+
 
 
 
@@ -391,7 +391,7 @@ aims at displaying useful information/tips on the window for a certain amount of
 DisplayStatusBar
 ----------------
 
-`id=0.240145617982 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/DisplayStatusBar>`__
+
 
 
 
@@ -433,7 +433,7 @@ flags).
 CreateOpenGLCallback
 --------------------
 
-`id=0.0904185033479 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CreateOpenGLCallback>`__
+
 
 
 *_*
@@ -531,7 +531,7 @@ can be used to draw 3D data on the window.  An example of callback could be:
 SaveWindowParameters
 --------------------
 
-`id=0.0271612689206 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/SaveWindowParameters>`__
+
 
 
 *_*
@@ -561,7 +561,7 @@ saves size, location, flags,  trackbars' value, zoom and panning location of the
 LoadWindowParameters
 --------------------
 
-`id=0.700334072235 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/LoadWindowParameters>`__
+
 
 
 *_*
@@ -591,7 +591,7 @@ load size, location, flags,  trackbars' value, zoom and panning location of the 
 CreateButton
 ------------
 
-`id=0.718841096532 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/c/highgui/CreateButton>`__
+
 
 
 *_*

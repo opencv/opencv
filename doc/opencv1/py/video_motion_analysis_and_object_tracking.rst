@@ -12,7 +12,7 @@ Motion Analysis and Object Tracking
 CalcGlobalOrientation
 ---------------------
 
-`id=0.671861796406 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcGlobalOrientation>`__
+
 
 
 .. function:: CalcGlobalOrientation(orientation,mask,mhi,timestamp,duration)-> float
@@ -67,7 +67,7 @@ a circular sum of the basic orientation and the shift.
 CalcMotionGradient
 ------------------
 
-`id=0.734160644258 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcMotionGradient>`__
+
 
 
 .. function:: CalcMotionGradient(mhi,mask,orientation,delta1,delta2,apertureSize=3)-> None
@@ -161,7 +161,7 @@ neighborhood and assumes the gradient is valid only if
 CalcOpticalFlowBM
 -----------------
 
-`id=0.167052327583 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcOpticalFlowBM>`__
+
 
 
 .. function:: CalcOpticalFlowBM(prev,curr,blockSize,shiftSize,max_range,usePrevious,velx,vely)-> None
@@ -241,7 +241,7 @@ function call (if
 CalcOpticalFlowHS
 -----------------
 
-`id=0.932788904949 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcOpticalFlowHS>`__
+
 
 
 .. function:: CalcOpticalFlowHS(prev,curr,usePrevious,velx,vely,lambda,criteria)-> None
@@ -301,7 +301,7 @@ Horn81
 CalcOpticalFlowLK
 -----------------
 
-`id=0.849649850841 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcOpticalFlowLK>`__
+
 
 
 .. function:: CalcOpticalFlowLK(prev,curr,winSize,velx,vely)-> None
@@ -351,7 +351,7 @@ Lucas81
 CalcOpticalFlowPyrLK
 --------------------
 
-`id=0.333066207955 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CalcOpticalFlowPyrLK>`__
+
 
 
 .. function:: CalcOpticalFlowPyrLK(  prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses = None) -> (currFeatures, status, track_error)
@@ -470,7 +470,7 @@ is set).
 CamShift
 --------
 
-`id=0.228709757227 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CamShift>`__
+
 
 
 .. function:: CamShift(prob_image,window,criteria)-> (int, comp, box)
@@ -529,7 +529,7 @@ class declared in cv.hpp implements the color object tracker that uses the funct
 CvKalman
 --------
 
-`id=0.911390647458 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CvKalman>`__
+
 
 .. class:: CvKalman
 
@@ -712,7 +712,7 @@ structure is allocated via
 CreateKalman
 ------------
 
-`id=0.636220879554 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/CreateKalman>`__
+
 
 
 .. function:: CreateKalman(dynam_params, measure_params, control_params=0) -> CvKalman
@@ -753,7 +753,7 @@ and all its matrices and initializes them somehow.
 KalmanCorrect
 -------------
 
-`id=0.175175296579 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/KalmanCorrect>`__
+
 
 
 .. function:: KalmanCorrect(kalman, measurement) -> cvmat
@@ -808,7 +808,7 @@ and returns it on output.
 KalmanPredict
 -------------
 
-`id=0.930945319496 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/KalmanPredict>`__
+
 
 
 .. function:: KalmanPredict(kalman, control=None) -> cvmat
@@ -880,7 +880,7 @@ Synonym for
 MeanShift
 ---------
 
-`id=0.555115149553 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/MeanShift>`__
+
 
 
 .. function:: MeanShift(prob_image,window,criteria)-> comp
@@ -927,7 +927,7 @@ of iterations. The function returns the number of iterations made.
 SegmentMotion
 -------------
 
-`id=0.698315173881 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/SegmentMotion>`__
+
 
 
 .. function:: SegmentMotion(mhi,seg_mask,storage,timestamp,seg_thresh)-> None
@@ -987,7 +987,7 @@ component
 SnakeImage
 ----------
 
-`id=0.218492276516 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/SnakeImage>`__
+
 
 
 .. function:: SnakeImage(image,points,alpha,beta,gamma,win,criteria,calc_gradient=1)-> new_points
@@ -1070,7 +1070,7 @@ The function returns the updated list of points.
 UpdateMotionHistory
 -------------------
 
-`id=0.316306086975 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/video/UpdateMotionHistory>`__
+
 
 
 .. function:: UpdateMotionHistory(silhouette,mhi,timestamp,duration)-> None

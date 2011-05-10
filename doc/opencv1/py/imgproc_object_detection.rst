@@ -12,7 +12,7 @@ Object Detection
 MatchTemplate
 -------------
 
-`id=0.180820664163 Comments from the Wiki <http://opencv.willowgarage.com/wiki/documentation/py/imgproc/MatchTemplate>`__
+
 
 
 .. function:: MatchTemplate(image,templ,result,method)-> None
