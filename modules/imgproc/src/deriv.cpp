@@ -507,6 +507,8 @@ void cv::Scharr( const InputArray& _src, OutputArray _dst, int ddepth, int dx, i
                  double scale, double delta, int borderType )
 {
     Mat src = _src.getMat();
+    if (ddepth < 0)
+        ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
     
@@ -537,7 +539,9 @@ void cv::Scharr( const InputArray& _src, OutputArray _dst, int ddepth, int dx, i
 void cv::Laplacian( const InputArray& _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    Mat src = _src.getMat();    
+    if (ddepth < 0)
+        ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
     
