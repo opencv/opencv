@@ -474,6 +474,8 @@ void cv::Sobel( const InputArray& _src, OutputArray _dst, int ddepth, int dx, in
                 int ksize, double scale, double delta, int borderType )
 {
     Mat src = _src.getMat();
+    if (ddepth < 0)
+        ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
     
