@@ -590,7 +590,7 @@ void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
 bool cv::gpu::CudaMem::canMapHostMemory()
 {
     cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, getDevice());
+    cudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
     return (prop.canMapHostMemory != 0) ? true : false;
 }
 
@@ -625,7 +625,7 @@ void cv::gpu::CudaMem::create(int _rows, int _cols, int _type, int _alloc_type)
         if (_alloc_type == ALLOC_ZEROCOPY)
         {
             cudaDeviceProp prop;
-            cudaGetDeviceProperties(&prop, getDevice());
+            cudaSafeCall( cudaGetDeviceProperties(&prop, getDevice()) );
             step = alignUp(step, prop.textureAlignment);
         }
         int64 _nettosize = (int64)step*rows;

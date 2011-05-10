@@ -930,11 +930,11 @@ namespace cv
 {
 
 template<typename T> static void
-LUT8u_( const uchar* src, const T* lut, T* dst, int len, int cn )
+LUT8u_( const uchar* src, const T* lut, T* dst, int len, int cn, int lutcn )
 {
-    if( cn == 1 )
+    if( lutcn == 1 )
     {
-        for( int i = 0; i < len; i++ )
+        for( int i = 0; i < len*cn; i++ )
             dst[i] = lut[src[i]];
     }
     else
@@ -945,42 +945,42 @@ LUT8u_( const uchar* src, const T* lut, T* dst, int len, int cn )
     }
 }
 
-static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn )
+static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn )
+static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn )
+static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, int cn )
+static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn )
+static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn )
+static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn )
+static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn );
+    LUT8u_( src, lut, dst, len, cn, lutcn );
 }    
     
-typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn );
+typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
     
 static LUTFunc lutTab[] =
 {
@@ -995,8 +995,9 @@ void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, 
     Mat src = _src.getMat(), lut = _lut.getMat();
     CV_Assert( interpolation == 0 );
     int cn = src.channels();
+    int lutcn = lut.channels();
 
-    CV_Assert( (lut.channels() == cn || lut.channels() == 1) &&
+    CV_Assert( (lutcn == cn || lutcn == 1) &&
         lut.total() == 256 && lut.isContinuous() &&
         (src.depth() == CV_8U || src.depth() == CV_8S) );
     _dst.create( src.dims, src.size, CV_MAKETYPE(lut.depth(), cn));
@@ -1011,7 +1012,7 @@ void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, 
     int len = (int)it.size;
     
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], lut.data, ptrs[1], len, cn);
+        func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
 }
 
 
