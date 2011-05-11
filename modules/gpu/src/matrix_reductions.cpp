@@ -66,6 +66,42 @@ int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
 
 #else
 
+namespace
+{
+    class DeviceBuffer
+    {
+    public:
+        explicit DeviceBuffer(int count_ = 1) : count(count_)
+        {
+            cudaSafeCall( cudaMalloc(&pdev, count * sizeof(double)) );
+        }
+        ~DeviceBuffer()
+        {
+            cudaSafeCall( cudaFree(pdev) );
+        }
+
+        operator double*() {return pdev;}
+
+        void download(double* hptr)
+        {
+            double hbuf;
+            cudaSafeCall( cudaMemcpy(&hbuf, pdev, sizeof(double), cudaMemcpyDeviceToHost) );
+            *hptr = hbuf;
+        }
+        void download(double** hptrs)
+        {
+            AutoBuffer<double, 2 * sizeof(double)> hbuf(count);
+            cudaSafeCall( cudaMemcpy((void*)hbuf, pdev, count * sizeof(double), cudaMemcpyDeviceToHost) );
+            for (int i = 0; i < count; ++i)
+                *hptrs[i] = hbuf[i];
+        }
+
+    private:
+        double* pdev;
+        int count;
+    };
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // meanStdDev
@@ -80,18 +116,14 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
 #if NPP_VERSION_MAJOR >= 4
 
-    GpuMat d_buf(1, 2, CV_64F);
+    DeviceBuffer dbuf(2);
 
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, d_buf.ptr<double>(), d_buf.ptr<double>() + 1) );
+    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, dbuf, (double*)dbuf + 1) );
 
     cudaSafeCall( cudaThreadSynchronize() );
-
-    double buf[2];
-
-    Mat _buf(1, 2, CV_64F, buf);
-    d_buf.download(_buf);
-    mean[0] = buf[0];
-    stddev[0] = buf[1];
+    
+    double* ptrs[2] = {mean.val, stddev.val};
+    dbuf.download(ptrs);
 
 #else
     
@@ -150,27 +182,22 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     sz.height = src1.rows;
 
     int funcIdx = normType >> 1;
+    
+    double retVal;
         
 #if NPP_VERSION_MAJOR >= 4
 
-    GpuMat d_buf(1, 1, CV_64F);
+    DeviceBuffer dbuf;
 
-    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step,
-        src2.ptr<Npp8u>(), src2.step,
-        sz, d_buf.ptr<double>()) );
+    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, sz, dbuf) );
 
     cudaSafeCall( cudaThreadSynchronize() );
     
-    double retVal;
-    Mat _buf(1, 1, CV_64F, &retVal);
-    d_buf.download(_buf);
+    dbuf.download(&retVal);
 
 #else
 
-    double retVal;
-    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step,
-        src2.ptr<Npp8u>(), src2.step,
-        sz, &retVal) );
+    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, sz, &retVal) );
 
     cudaSafeCall( cudaThreadSynchronize() );
 
