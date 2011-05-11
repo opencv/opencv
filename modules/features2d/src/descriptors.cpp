@@ -89,6 +89,12 @@ bool DescriptorExtractor::empty() const
     return false;
 }
 
+void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
+                                                 Size imageSize, int borderSize )
+{
+    KeyPointsFilter::runByImageBorder( keypoints, imageSize, borderSize );
+}
+
 Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
 {
     DescriptorExtractor* de = 0;

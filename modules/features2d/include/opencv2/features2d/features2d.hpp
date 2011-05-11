@@ -1248,6 +1248,13 @@ public:
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
+
+    /*
+     * Remove keypoints that are not in the mask.
+     * Helper function, useful when wrapping a library call for keypoint detection that
+     * does not support a mask argument.
+     */
+    static void removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints );
 };
 
 class CV_EXPORTS FastFeatureDetector : public FeatureDetector
@@ -1258,7 +1265,7 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     int threshold;
     bool nonmaxSuppression;
@@ -1291,9 +1298,9 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-	
-	Params params;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
+    Params params;
 };
 
 class CV_EXPORTS MserFeatureDetector : public FeatureDetector
@@ -1306,7 +1313,7 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     MSER mser;
 };
@@ -1321,7 +1328,7 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     StarDetector star;
 };
@@ -1340,7 +1347,7 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     SIFT sift;
 };
@@ -1353,7 +1360,7 @@ public:
     virtual void write( FileStorage& fs ) const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     SURF surf;
 };
@@ -1425,9 +1432,9 @@ public:
 	// TODO implement read/write
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-	Params params;
+    Params params;
 };
 
 /*
@@ -1451,7 +1458,7 @@ public:
     virtual bool empty() const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     Ptr<FeatureDetector> detector;
     int maxTotalKeypoints;
@@ -1472,7 +1479,7 @@ public:
     virtual bool empty() const;
 
 protected:
-	virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     Ptr<FeatureDetector> detector;
     int levels;
@@ -1655,6 +1662,12 @@ public:
 
 protected:
     virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
+
+    /*
+     * Remove keypoints within borderPixels of an image edge.
+     */
+    static void removeBorderKeypoints( vector<KeyPoint>& keypoints,
+                                       Size imageSize, int borderSize );
 };
 
 /*

@@ -82,6 +82,11 @@ bool FeatureDetector::empty() const
     return false;
 }
 
+void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints )
+{
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+}
+
 Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 {
     FeatureDetector* fd = 0;
