@@ -37,6 +37,9 @@ macro(define_opencv_module name)
         SOVERSION ${OPENCV_SOVERSION}
         OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"		
         )	
+	if(SOLUTION_FOLDERS_ENABLED)
+		set_target_properties(${the_target} PROPERTIES FOLDER "modules")
+	endif()	
 		
 	if (OPENCV_BUILD_SHARED_LIB) 
         #add_definitions(-DCVAPI_EXPORTS) 		
@@ -132,6 +135,10 @@ macro(define_opencv_module name)
             DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
             )
+			
+		if(SOLUTION_FOLDERS_ENABLED)
+			set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+		endif()	
 
         add_dependencies(${the_target} ${test_deps})
 

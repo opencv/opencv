@@ -46,6 +46,10 @@ set_target_properties(${the_target} PROPERTIES
                       ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
                       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
                       )
+					  
+if(SOLUTION_FOLDERS_ENABLED)
+	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
+endif()						  
 
 if (MSVC)
     set_target_properties(${the_target} PROPERTIES

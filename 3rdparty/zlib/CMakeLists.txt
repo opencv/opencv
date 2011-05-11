@@ -32,6 +32,10 @@ set_target_properties(${the_target}
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/lib"
     )
 
+if(SOLUTION_FOLDERS_ENABLED)
+	set_target_properties(${the_target} PROPERTIES FOLDER "3rdparty")
+endif()
+	
 if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${the_target}
 	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)

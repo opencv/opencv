@@ -1543,6 +1543,9 @@ protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
 private:
+	DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
+	DynamicAdaptedFeatureDetector(const DynamicAdaptedFeatureDetector&);
+
     int escape_iters_;
     int min_features_, max_features_;
     const Ptr<AdjusterAdapter> adjuster_;

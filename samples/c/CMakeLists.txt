@@ -39,6 +39,10 @@ if (BUILD_EXAMPLES)
     	target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} opencv_core
     	    opencv_flann opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect
     	    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib)
+			
+		if(SOLUTION_FOLDERS_ENABLED)
+			set_target_properties(${the_target} PROPERTIES FOLDER "samples//c")
+		endif()
 
         if(WIN32)
             install(TARGETS ${the_target}

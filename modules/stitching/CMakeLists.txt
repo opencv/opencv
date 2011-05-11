@@ -30,6 +30,10 @@ set_target_properties(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
                       INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
                       OUTPUT_NAME "opencv_stitching")
+					  
+if(SOLUTION_FOLDERS_ENABLED)
+	set_target_properties(${the_target} PROPERTIES FOLDER "applications")
+endif()	
 
 target_link_libraries(${the_target} ${stitching_libs})
 

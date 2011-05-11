@@ -288,6 +288,11 @@ set_target_properties(${the_target} PROPERTIES
 	LINK_INTERFACE_LIBRARIES ""
 	)
 
+if(SOLUTION_FOLDERS_ENABLED)
+	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
+endif()	
+
+
 if(MSVC)
 	set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif(MSVC)
