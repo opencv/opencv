@@ -41,9 +41,12 @@ macro(define_opencv_module name)
 		set_target_properties(${the_target} PROPERTIES FOLDER "modules")
 	endif()	
 		
-	if (OPENCV_BUILD_SHARED_LIB) 
-        #add_definitions(-DCVAPI_EXPORTS) 		
-		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+	if (OPENCV_BUILD_SHARED_LIB)
+		if(MSVC)
+			set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+		else()
+			add_definitions(-DCVAPI_EXPORTS) 		
+		endif()
     endif()
 
     # Additional target properties
