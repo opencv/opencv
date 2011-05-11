@@ -56,124 +56,143 @@ bool DynamicAdaptedFeatureDetector::empty() const
 
 void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-	//for oscillation testing
-	bool down = false;
-	bool up = false;
+    //for oscillation testing
+    bool down = false;
+    bool up = false;
 
-	//flag for whether the correct threshhold has been reached
-	bool thresh_good = false;
+    //flag for whether the correct threshhold has been reached
+    bool thresh_good = false;
 
-	//this is bad but adjuster should persist from detection to detection
-	AdjusterAdapter& adjuster = const_cast<AdjusterAdapter&> (*adjuster_);
+    Ptr<AdjusterAdapter> adjuster = adjuster_->clone();
 
-	//break if the desired number hasn't been reached.
-	int iter_count = escape_iters_;
+    //break if the desired number hasn't been reached.
+    int iter_count = escape_iters_;
 
-    do
+    while( iter_count > 0 && !(down && up) && !thresh_good && adjuster->good() )
     {
-		keypoints.clear();
+        keypoints.clear();
 
-		//the adjuster takes care of calling the detector with updated parameters
-		adjuster.detect(image, keypoints,mask);
+        //the adjuster takes care of calling the detector with updated parameters
+        adjuster->detect(image, keypoints,mask);
 
-        if (int(keypoints.size()) < min_features_)
+        if( int(keypoints.size()) < min_features_ )
         {
-			down = true;
-			adjuster.tooFew(min_features_, (int)keypoints.size());
+            down = true;
+            adjuster->tooFew(min_features_, (int)keypoints.size());
         }
-        else if (int(keypoints.size()) > max_features_)
+        else if( int(keypoints.size()) > max_features_ )
         {
-			up = true;
-			adjuster.tooMany(max_features_, (int)keypoints.size());
+            up = true;
+            adjuster->tooMany(max_features_, (int)keypoints.size());
         }
         else
-			thresh_good = true;
+            thresh_good = true;
+
+        iter_count--;
     }
-    while (--iter_count >= 0 && !(down && up) && !thresh_good && adjuster.good());
+
 }
 
 FastAdjuster::FastAdjuster(int init_thresh, bool nonmax) :
-    thresh_(init_thresh), nonmax_(nonmax)
+    thresh_(init_thresh), nonmax_(nonmax), init_thresh_(init_thresh)
 {}
 
 void FastAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-	FastFeatureDetector(thresh_, nonmax_).detect(image, keypoints, mask);
+    FastFeatureDetector(thresh_, nonmax_).detect(image, keypoints, mask);
 }
 
 void FastAdjuster::tooFew(int, int)
 {
-	//fast is easy to adjust
-	thresh_--;
+    //fast is easy to adjust
+    thresh_--;
 }
 
 void FastAdjuster::tooMany(int, int)
 {
-	//fast is easy to adjust
-	thresh_++;
+    //fast is easy to adjust
+    thresh_++;
 }
 
 //return whether or not the threshhold is beyond
 //a useful point
 bool FastAdjuster::good() const
 {
-	return (thresh_ > 1) && (thresh_ < 200);
+    return (thresh_ > 1) && (thresh_ < 200);
+}
+
+Ptr<AdjusterAdapter> FastAdjuster::clone() const
+{
+    Ptr<AdjusterAdapter> cloned_obj = new FastAdjuster( init_thresh_, nonmax_ );
+    return cloned_obj;
 }
 
 StarAdjuster::StarAdjuster(double initial_thresh) :
-    thresh_(initial_thresh)
+    thresh_(initial_thresh), init_thresh_(initial_thresh)
 {}
 
 void StarAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
 {
-	StarFeatureDetector detector_tmp(16, cvRound(thresh_), 10, 8, 3);
-	detector_tmp.detect(image, keypoints, mask);
+    StarFeatureDetector detector_tmp(16, cvRound(thresh_), 10, 8, 3);
+    detector_tmp.detect(image, keypoints, mask);
 }
 
 void StarAdjuster::tooFew(int, int)
 {
-	thresh_ *= 0.9;
-	if (thresh_ < 1.1)
-		thresh_ = 1.1;
+    thresh_ *= 0.9;
+    if (thresh_ < 1.1)
+            thresh_ = 1.1;
 }
 
 void StarAdjuster::tooMany(int, int)
 {
-	thresh_ *= 1.1;
+    thresh_ *= 1.1;
 }
 
 bool StarAdjuster::good() const
 {
-	return (thresh_ > 2) && (thresh_ < 200);
+    return (thresh_ > 2) && (thresh_ < 200);
 }
 
-SurfAdjuster::SurfAdjuster() :
-    thresh_(400.0)
+Ptr<AdjusterAdapter> StarAdjuster::clone() const
+{
+    Ptr<AdjusterAdapter> cloned_obj = new StarAdjuster( init_thresh_ );
+    return cloned_obj;
+}
+
+SurfAdjuster::SurfAdjuster( double initial_thresh ) :
+    thresh_(initial_thresh), init_thresh_(initial_thresh)
 {}
 
 void SurfAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const cv::Mat& mask) const
 {
-	SurfFeatureDetector detector_tmp(thresh_);
-	detector_tmp.detect(image, keypoints, mask);
+    SurfFeatureDetector detector_tmp(thresh_);
+    detector_tmp.detect(image, keypoints, mask);
 }
 
 void SurfAdjuster::tooFew(int, int)
 {
-	thresh_ *= 0.9;
-	if (thresh_ < 1.1)
-		thresh_ = 1.1;
+    thresh_ *= 0.9;
+    if (thresh_ < 1.1)
+            thresh_ = 1.1;
 }
 
 void SurfAdjuster::tooMany(int, int)
 {
-	thresh_ *= 1.1;
+    thresh_ *= 1.1;
 }
 
 //return whether or not the threshhold is beyond
 //a useful point
 bool SurfAdjuster::good() const
 {
-	return (thresh_ > 2) && (thresh_ < 1000);
+    return (thresh_ > 2) && (thresh_ < 1000);
+}
+
+Ptr<AdjusterAdapter> SurfAdjuster::clone() const
+{
+    Ptr<AdjusterAdapter> cloned_obj = new SurfAdjuster( init_thresh_ );
+    return cloned_obj;
 }
 
 Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )

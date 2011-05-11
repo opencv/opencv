@@ -1487,20 +1487,22 @@ public:
 	/** pure virtual interface
 	 */
     virtual ~AdjusterAdapter() {}
-	/** too few features were detected so, adjust the detector params accordingly
-	 * \param min the minimum number of desired features
-	 * \param n_detected the number previously detected
-	 */
-	virtual void tooFew(int min, int n_detected) = 0;
-	/** too many features were detected so, adjust the detector params accordingly
-	 * \param max the maximum number of desired features
-	 * \param n_detected the number previously detected
-	 */
-	virtual void tooMany(int max, int n_detected) = 0;
-	/** are params maxed out or still valid?
-	 * \return false if the parameters can't be adjusted any more
-	 */
-	virtual bool good() const = 0;
+    /** too few features were detected so, adjust the detector params accordingly
+     * \param min the minimum number of desired features
+     * \param n_detected the number previously detected
+     */
+    virtual void tooFew(int min, int n_detected) = 0;
+    /** too many features were detected so, adjust the detector params accordingly
+     * \param max the maximum number of desired features
+     * \param n_detected the number previously detected
+     */
+    virtual void tooMany(int max, int n_detected) = 0;
+    /** are params maxed out or still valid?
+     * \return false if the parameters can't be adjusted any more
+     */
+    virtual bool good() const = 0;
+
+    virtual Ptr<AdjusterAdapter> clone() const = 0;
 
     static Ptr<AdjusterAdapter> create( const string& detectorType );
 };
@@ -1521,11 +1523,11 @@ class CV_EXPORTS DynamicAdaptedFeatureDetector: public FeatureDetector
 public:
 
     /** \param adjaster an AdjusterAdapter that will do the detection and parameter adjustment
-	 * \param max_features the maximum desired number of features
-	 * \param max_iters the maximum number of times to try to adjust the feature detector params
-	 * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
-     * \param min_features the minimum desired features
-	 */
+     *  \param max_features the maximum desired number of features
+     *  \param max_iters the maximum number of times to try to adjust the feature detector params
+     * 			for the FastAdjuster this can be high, but with Star or Surf this can get time consuming
+     *  \param min_features the minimum desired features
+     */
     DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster, int min_features=400, int max_features=500, int max_iters=5 );
 
     virtual bool empty() const;
@@ -1534,30 +1536,34 @@ protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
 private:
-	int escape_iters_;
-	int min_features_, max_features_;
-	Ptr<AdjusterAdapter> adjuster_;
+    int escape_iters_;
+    int min_features_, max_features_;
+    const Ptr<AdjusterAdapter> adjuster_;
 };
 
 /**\brief an adjust for the FAST detector. This will basically decrement or increment the
- * threshhold by 1
+ * threshold by 1
  */
 class CV_EXPORTS FastAdjuster: public AdjusterAdapter
 {
 public:
-	/**\param init_thresh the initial threshhold to start with, default = 20
-	 * \param nonmax whether to use non max or not for fast feature detection
-	 */
-	FastAdjuster(int init_thresh = 20, bool nonmax = true);
-	virtual void tooFew(int min, int n_detected);
-	virtual void tooMany(int max, int n_detected);
-	virtual bool good() const;
+    /**\param init_thresh the initial threshold to start with, default = 20
+     * \param nonmax whether to use non max or not for fast feature detection
+     */
+    FastAdjuster(int init_thresh = 20, bool nonmax = true);
+
+    virtual void tooFew(int min, int n_detected);
+    virtual void tooMany(int max, int n_detected);
+    virtual bool good() const;
+
+    virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-	int thresh_;
-	bool nonmax_;
+    int thresh_;
+    bool nonmax_;
+    int init_thresh_;
 };
 
 
@@ -1567,30 +1573,36 @@ protected:
 class CV_EXPORTS StarAdjuster: public AdjusterAdapter
 {
 public:
-	StarAdjuster(double initial_thresh = 30.0);
-	virtual void tooFew(int min, int n_detected);
-	virtual void tooMany(int max, int n_detected);
-	virtual bool good() const;
+    StarAdjuster(double initial_thresh = 30.0);
+
+    virtual void tooFew(int min, int n_detected);
+    virtual void tooMany(int max, int n_detected);
+    virtual bool good() const;
+
+    virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-	double thresh_;
-	CvStarDetectorParams params_; //todo use these instead of thresh_
+    double thresh_, init_thresh_;
+    CvStarDetectorParams params_; //todo use these instead of thresh_
 };
 
 class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
 {
 public:
-    SurfAdjuster();
-	virtual void tooFew(int min, int n_detected);
-	virtual void tooMany(int max, int n_detected);
-	virtual bool good() const;
+    SurfAdjuster( double initial_thresh=400.f );
+
+    virtual void tooFew(int min, int n_detected);
+    virtual void tooMany(int max, int n_detected);
+    virtual bool good() const;
+
+    virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-	double thresh_;
+    double thresh_, init_thresh_;
 };
 
 CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
