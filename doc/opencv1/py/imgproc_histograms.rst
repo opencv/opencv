@@ -232,7 +232,7 @@ single-channel images. The elements of a tuple that is used to increment
 a histogram bin are taken at the same location from the corresponding
 input images.
 
-.. include:: /Users/vp/Projects/ocv/opencv/doc/python_fragments/calchist.py
+.. include:: ../../python_fragments/calchist.py
     :literal:
 
 

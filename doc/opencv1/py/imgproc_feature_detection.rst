@@ -622,7 +622,7 @@ denotes a second image derivative.
 
 The corners can be found as local maximums of the function below:
 
-.. include:: /Users/vp/Projects/ocv/opencv/doc/python_fragments/precornerdetect.py
+.. include:: ../../python_fragments/precornerdetect.py
     :literal:
 
 

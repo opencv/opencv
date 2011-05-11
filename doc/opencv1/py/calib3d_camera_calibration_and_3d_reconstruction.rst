@@ -1436,7 +1436,7 @@ as occlusions.
 
 Here is how the function can be used:
 
-.. include:: /Users/vp/Projects/ocv/opencv/doc/python_fragments/findstereocorrespondence.py
+.. include:: ../../python_fragments/findstereocorrespondence.py
     :literal:
 
 
