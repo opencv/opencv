@@ -82,7 +82,7 @@ set_target_properties(opencv_performance PROPERTIES
 install(TARGETS opencv_haartraining RUNTIME DESTINATION bin COMPONENT main)
 install(TARGETS opencv_createsamples RUNTIME DESTINATION bin COMPONENT main)
 install(TARGETS opencv_performance RUNTIME DESTINATION bin COMPONENT main)
-endif()
+
 
 if(SOLUTION_FOLDERS_ENABLED)
 	set_target_properties(opencv_performance PROPERTIES FOLDER "applications")
@@ -90,3 +90,5 @@ if(SOLUTION_FOLDERS_ENABLED)
 	set_target_properties(opencv_haartraining PROPERTIES FOLDER "applications")
 	set_target_properties(opencv_haartraining_engine PROPERTIES FOLDER "applications")
 endif()	
+
+endif()
