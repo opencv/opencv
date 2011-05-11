@@ -1003,7 +1003,7 @@ void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, 
     _dst.create( src.dims, src.size, CV_MAKETYPE(lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-    LUTFunc func = lutTab[src.depth()];
+    LUTFunc func = lutTab[lut.depth()];
     CV_Assert( func != 0 );
     
     const Mat* arrays[] = {&src, &dst, 0};
