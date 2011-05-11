@@ -1,4 +1,5 @@
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include "blenders.hpp"
 #include "util.hpp"
 
@@ -101,64 +102,70 @@ Point MultiBandBlender::blend(const vector<Mat> &src, const vector<Point> &corne
 {
     CV_Assert(src.size() == corners.size() && src.size() == masks.size());
     const int num_images = src.size();
+    const int img_type = src[0].type();
 
     Rect dst_roi = resultRoi(src, corners);
-
-    vector<Mat> src_(num_images);
-    vector<Point> corners_(num_images);
-    vector<Mat> masks_(num_images);
-
-    // TODO avoid creating extra border
-    for (int i = 0; i < num_images; ++i)
-    {
-        copyMakeBorder(src[i], src_[i],
-                       corners[i].y - dst_roi.y, dst_roi.br().y - corners[i].y - src[i].rows,
-                       corners[i].x - dst_roi.x, dst_roi.br().x - corners[i].x - src[i].cols,
-                       BORDER_REFLECT);
-        copyMakeBorder(masks[i], masks_[i],
-                       corners[i].y - dst_roi.y, dst_roi.br().y - corners[i].y - src[i].rows,
-                       corners[i].x - dst_roi.x, dst_roi.br().x - corners[i].x - src[i].cols,
-                       BORDER_CONSTANT);
-        corners_[i] = Point(0, 0);
-    }
-
-    Mat weight_map;
-    vector<Mat> src_pyr_gauss;
-    vector< vector<Mat> > src_pyr_laplace(num_images);
-    vector< vector<Mat> > weight_pyr_gauss(num_images);
-
-    // Compute all pyramids
-    for (int i = 0; i < num_images; ++i)
-    {
-        createGaussPyr(src_[i], num_bands_, src_pyr_gauss);
-        createLaplacePyr(src_pyr_gauss, src_pyr_laplace[i]);
-
-        masks_[i].convertTo(weight_map, CV_32F, 1. / 255.);
-        createGaussPyr(weight_map, num_bands_, weight_pyr_gauss[i]);
-    }
-
     computeResultMask(masks, corners, dst_mask);
 
-    Mat dst_level_weight;
     vector<Mat> dst_pyr_laplace(num_bands_ + 1);
-    vector<Mat> src_pyr_slice(num_images);
-    vector<Mat> weight_pyr_slice(num_images);
+    dst_pyr_laplace[0].create(dst_roi.size(), img_type);
+    dst_pyr_laplace[0].setTo(Scalar::all(0));
 
-    // Blend pyramids
-    for (int level_id = 0; level_id <= num_bands_; ++level_id)
+    vector<Mat> dst_band_weights(num_bands_ + 1);
+    dst_band_weights[0].create(dst_roi.size(), CV_32F);
+    dst_band_weights[0].setTo(0);
+
+    for (int i = 1; i <= num_bands_; ++i)
     {
-        for (int i = 0; i < num_images; ++i)
-        {
-            src_pyr_slice[i] = src_pyr_laplace[i][level_id];
-            weight_pyr_slice[i] = weight_pyr_gauss[i][level_id];
-        }
-        blendLinear(src_pyr_slice, corners_, weight_pyr_slice,
-                    dst_pyr_laplace[level_id], dst_level_weight);
+        dst_pyr_laplace[i].create((dst_pyr_laplace[i - 1].rows + 1) / 2, 
+                                  (dst_pyr_laplace[i - 1].cols + 1) / 2, img_type);
+        dst_pyr_laplace[i].setTo(Scalar::all(0));
+
+        dst_band_weights[i].create((dst_band_weights[i - 1].rows + 1) / 2,
+                                   (dst_band_weights[i - 1].cols + 1) / 2, CV_32F);
+        dst_band_weights[i].setTo(0);
     }
+
+    for (int img_idx = 0; img_idx < num_images; ++img_idx)
+    {
+        int top = corners[img_idx].y - dst_roi.y;
+        int bottom = dst_roi.br().y - corners[img_idx].y - src[img_idx].rows;
+        int left = corners[img_idx].x - dst_roi.x;
+        int right = dst_roi.br().x - corners[img_idx].x - src[img_idx].cols;
+
+        Mat big_src;
+        copyMakeBorder(src[img_idx], big_src, top, bottom, left, right, BORDER_REFLECT);
+        vector<Mat> src_pyr_gauss;
+        vector<Mat> src_pyr_laplace;
+        createGaussPyr(big_src, num_bands_, src_pyr_gauss);
+        createLaplacePyr(src_pyr_gauss, src_pyr_laplace);
+
+        Mat big_mask;
+        copyMakeBorder(masks[img_idx], big_mask, top, bottom, left, right, BORDER_CONSTANT);
+        Mat weight_map;
+        big_mask.convertTo(weight_map, CV_32F, 1./255.);
+        vector<Mat> weight_pyr_gauss;
+        createGaussPyr(weight_map, num_bands_, weight_pyr_gauss);
+
+        for (int band_idx = 0; band_idx <= num_bands_; ++band_idx)
+        {
+            for (int y = 0; y < dst_pyr_laplace[band_idx].rows; ++y)
+            {
+                const Point3f* src_row = src_pyr_laplace[band_idx].ptr<Point3f>(y);
+                const float* weight_row = weight_pyr_gauss[band_idx].ptr<float>(y);
+                Point3f* dst_row = dst_pyr_laplace[band_idx].ptr<Point3f>(y);
+                for (int x = 0; x < dst_pyr_laplace[band_idx].cols; ++x)               
+                    dst_row[x] += src_row[x] * weight_row[x];
+            }
+            dst_band_weights[band_idx] += weight_pyr_gauss[band_idx];
+        }
+    }
+
+    for (int band_idx = 0; band_idx <= num_bands_; ++band_idx)
+        normalize(dst_band_weights[band_idx], dst_pyr_laplace[band_idx]);
 
     restoreImageFromLaplacePyr(dst_pyr_laplace);
     dst = dst_pyr_laplace[0];
-
     return dst_roi.tl();
 }
 
@@ -250,20 +257,24 @@ Point blendLinear(const vector<Mat> &src, const vector<Point> &corners, const ve
         }
     }
 
-    // Normalize sums
-    for (int y = 0; y < dst.rows; ++y)
-    {
-        Point3f *dst_row = dst.ptr<Point3f>(y);
-        float *dst_weight_row = dst_weight.ptr<float>(y);
-
-        for (int x = 0; x < dst.cols; ++x)
-        {
-            dst_weight_row[x] += WEIGHT_EPS;
-            dst_row[x] *= 1.f / dst_weight_row[x];
-        }
-    }
+    normalize(dst_weight, dst);
 
     return dst_roi.tl();
+}
+
+
+void normalize(const Mat& weight, Mat& src)
+{
+    CV_Assert(weight.type() == CV_32F);
+    CV_Assert(src.type() == CV_32FC3);
+    for (int y = 0; y < src.rows; ++y)
+    {
+        Point3f *row = src.ptr<Point3f>(y);
+        const float *weight_row = weight.ptr<float>(y);
+
+        for (int x = 0; x < src.cols; ++x)
+            row[x] *= 1.f / (weight_row[x] + WEIGHT_EPS);
+    }
 }
 
 

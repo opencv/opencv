@@ -59,13 +59,15 @@ cv::Point computeResultMask(const std::vector<cv::Mat> &masks, const std::vector
 cv::Point blendLinear(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &weights,
                       cv::Mat& dst, cv::Mat& dst_weight);
 
+void normalize(const cv::Mat& weight, cv::Mat& src);
+
 void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
 
 void createGaussPyr(const cv::Mat& img, int num_layers, std::vector<cv::Mat>& pyr);
 
 void createLaplacePyr(const std::vector<cv::Mat>& pyr_gauss, std::vector<cv::Mat>& pyr_laplace);
 
-// Restores source image in-place. Result will be in pyr[0].
+// Restores source image in-place. Result will be stored in pyr[0].
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
 
 #endif // __OPENCV_BLENDERS_HPP__
