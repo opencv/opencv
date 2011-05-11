@@ -20,23 +20,18 @@ string ToString(int i)
     return tmp.str();
 }
 
-//===========================================================================
-int get_len(const CvMat* mat)
-{
-    return (mat->cols > mat->rows) ? mat->cols : mat->rows;
-}
 
 //===========================================================================
 //----------------------------- CvGBTreesParams -----------------------------
 //===========================================================================
 
 CvGBTreesParams::CvGBTreesParams() 
-            : CvDTreeParams( 3, 10, 0, true, 10, 0, false, false, 0 )
+            : CvDTreeParams( 3, 10, 0, false, 10, 0, false, false, 0 )
 {
-    weak_count = 50;
+    weak_count = 200;
     loss_function_type = CvGBTrees::SQUARED_LOSS;
-    subsample_portion = 1.0f;
-    shrinkage = 1.0f;
+    subsample_portion = 0.8f;
+    shrinkage = 0.01f;
 }
 
 //===========================================================================
@@ -44,7 +39,7 @@ CvGBTreesParams::CvGBTreesParams()
 CvGBTreesParams::CvGBTreesParams( int _loss_function_type, int _weak_count, 
                          float _shrinkage, float _subsample_portion, 
                          int _max_depth, bool _use_surrogates )
-            : CvDTreeParams( 3, 10, 0, true, 10, 0, false, false, 0 )
+            : CvDTreeParams( 3, 10, 0, false, 10, 0, false, false, 0 )
 {
     loss_function_type = _loss_function_type;
     weak_count = _weak_count;
@@ -75,18 +70,25 @@ CvGBTrees::CvGBTrees()
 
 //===========================================================================
 
+int CvGBTrees::get_len(const CvMat* mat) const
+{
+    return (mat->cols > mat->rows) ? mat->cols : mat->rows;
+}
+
+//===========================================================================
+
 void CvGBTrees::clear()
 {
     if( weak )
     {
         CvSeqReader reader;
         CvSlice slice = CV_WHOLE_SEQ;
-        int weak_count = cvSliceLength( slice, weak[class_count-1] );
         CvDTree* tree;
 
         //data->shared = false;
         for (int i=0; i<class_count; ++i)
         {
+			int weak_count = cvSliceLength( slice, weak[i] );
             if ((weak[i]) && (weak_count))
             {
                 cvStartReadSeq( weak[i], &reader ); 
@@ -192,9 +194,19 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     bool is_regression = problem_type();
 
     clear();
-    int len = get_len(_responses);
+    /*
+      n - count of samples
+      m - count of variables
+    */
+    int n = _train_data->rows;
+    int m = _train_data->cols;
+    if (_tflag != CV_ROW_SAMPLE)
+    {
+        int tmp;
+        CV_SWAP(n,m,tmp);
+    }
 
-    CvMat* new_responses = cvCreateMat( len, 1, CV_32F);
+    CvMat* new_responses = cvCreateMat( n, 1, CV_32F);
     cvZero(new_responses);
 
     data = new CvDTreeTrainData( _train_data, _tflag, new_responses, _var_idx,
@@ -204,88 +216,118 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         missing = cvCreateMat(_missing_mask->rows, _missing_mask->cols,
                               _missing_mask->type);
         cvCopy( _missing_mask, missing);
-    }    
+    }
 
-    orig_response = cvCreateMat( _responses->rows, _responses->cols,
-                                 _responses->type );
-    cvCopy( _responses, orig_response);
-    orig_response->step = CV_ELEM_SIZE(_responses->type);
+    orig_response = cvCreateMat( 1, n, CV_32F );
+	int step = (_responses->cols > _responses->rows) ? 1 : _responses->step / CV_ELEM_SIZE(_responses->type);
+    switch (CV_MAT_TYPE(_responses->type))
+    {
+        case CV_32FC1:
+		{
+			for (int i=0; i<n; ++i)
+                orig_response->data.fl[i] = _responses->data.fl[i*step];
+		}; break;
+        case CV_32SC1:
+        {
+            for (int i=0; i<n; ++i)
+                orig_response->data.fl[i] = (float) _responses->data.i[i*step];
+        }; break;
+        default:
+            CV_Error(CV_StsUnmatchedFormats, "Response should be a 32fC1 or 32sC1 vector.");
+    }
 
-	/*
     if (!is_regression)
     {
-        int max_label = -1;
-        for (int i=0; i<get_len(orig_response); ++i)
-            if (max_label < orig_response->data.fl[i])
-                max_label = int(orig_response->data.fl[i]);
-        max_label++;
-        class_labels = cvCreateMat(1, max_label, CV_32S);
-        cvZero(class_labels);
-        for (int i=0; i<get_len(orig_response); ++i)
-            class_labels->data.i[int(orig_response->data.fl[i])] = 1;
         class_count = 0;
-        for (int i=0; i<max_label; ++i)
-            if (class_labels->data.i[i])
-                class_labels->data.i[i] = ++class_count;
+        unsigned char * mask = new unsigned char[n];
+        memset(mask, 0, n);
+        // compute the count of different output classes
+        for (int i=0; i<n; ++i)
+            if (!mask[i])
+            {
+                class_count++;
+                for (int j=i; j<n; ++j)
+                    if (int(orig_response->data.fl[j]) == int(orig_response->data.fl[i]))
+                        mask[j] = 1;
+            }
+        delete[] mask;
+    
+        class_labels = cvCreateMat(1, class_count, CV_32S);
+        class_labels->data.i[0] = int(orig_response->data.fl[0]);
+        int j = 1;
+        for (int i=1; i<n; ++i)
+        {
+            int k = 0;
+            while ((int(orig_response->data.fl[i]) - class_labels->data.i[k]) && (k<j))
+                k++;
+            if (k == j)
+            {
+                class_labels->data.i[k] = int(orig_response->data.fl[i]);
+                j++;
+            }
+        }
     }
-	*/
-	if (!is_regression)
-	{
-		class_count = 0;
-		unsigned char * mask = new unsigned char[get_len(orig_response)];
-		for (int i=0; i<get_len(orig_response); ++i)
-			mask[i] = 0;
-		for (int i=0; i<get_len(orig_response); ++i)
-			if (!mask[i])
-			{
-				class_count++;
-				for (int j=i; j<get_len(orig_response); ++j)
-					if (int(orig_response->data.fl[j]) == int(orig_response->data.fl[i]))
-						mask[j] = 1;
-			}
-		delete[] mask;
-	
-		class_labels = cvCreateMat(1, class_count, CV_32S);
-		class_labels->data.i[0] = int(orig_response->data.fl[0]);
-		int j = 1;
-		for (int i=1; i<get_len(orig_response); ++i)
-		{
-			int k = 0;
-			while ((int(orig_response->data.fl[i]) - class_labels->data.i[k]) && (k<j))
-				k++;
-			if (k == j)
-			{
-				class_labels->data.i[k] = int(orig_response->data.fl[i]);
-				j++;
-			}
-		}
-	}
 
+    // inside gbt learning proccess only regression decision trees are built
     data->is_classifier = false;
 
+    // preproccessing sample indices
     if (_sample_idx)
     {
-        sample_idx = cvCreateMat( _sample_idx->rows, _sample_idx->cols,
-                                  _sample_idx->type );
-        cvCopy( _sample_idx, sample_idx);
-        icvSortFloat(sample_idx->data.fl, get_len(sample_idx), 0);
+        int sample_idx_len = get_len(_sample_idx);
+        
+        switch (CV_ELEM_SIZE(_sample_idx->type))
+        {
+            case CV_32SC1:
+            {
+                sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
+                for (int i=0; i<sample_idx_len; ++i)
+					sample_idx->data.i[i] = _sample_idx->data.i[i];
+            } break;
+            case CV_8S:
+            case CV_8U:
+            {
+                int active_samples_count = 0;
+                for (int i=0; i<sample_idx_len; ++i)
+                    active_samples_count += int( _sample_idx->data.ptr[i] );
+                sample_idx = cvCreateMat( 1, active_samples_count, CV_32S );
+                active_samples_count = 0;
+                for (int i=0; i<sample_idx_len; ++i)
+                    if (int( _sample_idx->data.ptr[i] ))
+                        sample_idx->data.i[active_samples_count++] = i;
+                    
+            } break;
+            default: CV_Error(CV_StsUnmatchedFormats, "_sample_idx should be a 32sC1, 8sC1 or 8uC1 vector.");
+        }
+        icvSortFloat(sample_idx->data.fl, sample_idx_len, 0);
     }
     else
     {
-        int n = (_tflag == CV_ROW_SAMPLE) ? _train_data->rows
-                                          : _train_data->cols;
         sample_idx = cvCreateMat( 1, n, CV_32S );
         for (int i=0; i<n; ++i)
             sample_idx->data.i[i] = i;
     }
 
-    sum_response = cvCreateMat(class_count, len, CV_32F);
-    sum_response_tmp = cvCreateMat(class_count, len, CV_32F);
+    sum_response = cvCreateMat(class_count, n, CV_32F);
+    sum_response_tmp = cvCreateMat(class_count, n, CV_32F);
     cvZero(sum_response);
 
     delta = 0.0f;
+    /*
+      in the case of a regression problem the initial guess (the zero term
+      in the sum) is set to the mean of all the training responses, that is
+      the best constant model
+    */
     if (is_regression) base_value = find_optimal_value(sample_idx);
+    /*
+      in the case of a classification problem the initial guess (the zero term
+      in the sum) is set to zero for all the trees sequences
+    */
     else base_value = 0.0f;
+    /*
+      current predicition on all training samples is set to be
+      equal to the base_value
+    */
     cvSet( sum_response, cvScalar(base_value) );
 
     weak = new pCvSeq[class_count];
@@ -299,10 +341,8 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     // subsample params and data
     rng = &cv::theRNG();
 
-    int samples_count = get_len(sample_idx);
+	int samples_count = get_len(sample_idx);
 
-    //if ( params.subsample_portion > 1) params.subsample_portion = 1;
-    //if ( params.subsample_portion < 0) params.subsample_portion = 1;
     params.subsample_portion = params.subsample_portion <= FLT_EPSILON || 
         1 - params.subsample_portion <= FLT_EPSILON
         ? 1 : params.subsample_portion;
@@ -319,19 +359,18 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         *subsample_test = cvMat( 1, test_sample_count, CV_32SC1,
                                  idx_data + train_sample_count );
     }
-
-
+    
     // training procedure
 
     for ( int i=0; i < params.weak_count; ++i )
     {
-        for ( int m=0; m < class_count; ++m )
+		do_subsample();
+        for ( int k=0; k < class_count; ++k )
         {
-            do_subsample();
-            find_gradient(m);
+            find_gradient(k);
             CvDTree* tree = new CvDTree;
             tree->train( data, subsample_train );
-            change_values(tree, m);
+            change_values(tree, k);
 
             if (subsample_test)
             {
@@ -343,30 +382,35 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                              : sample_idx->step/CV_ELEM_SIZE(sample_idx->type);
                 for (int j=0; j<get_len(subsample_test); ++j)
                 {
-                    for (int k=0; k<class_count; ++k)
-                    {
-                        int idx = *(sample_data + subsample_data[j]*s_step);
-                        float res = 0.0f;
+                    int idx = *(sample_data + subsample_data[j]*s_step);
+                    float res = 0.0f;
+                    if (_tflag == CV_ROW_SAMPLE)
                         cvGetRow( data->train_data, &x, idx);
-                        if (missing)
-                        {
+                    else
+                        cvGetCol( data->train_data, &x, idx);
+                        
+                    if (missing)
+                    {
+                        if (_tflag == CV_ROW_SAMPLE)
                             cvGetRow( missing, &x_miss, idx);
-                            res = (float)tree->predict(&x, &x_miss)->value;
-                        }
                         else
-                        {
-                            res = (float)tree->predict(&x)->value;
-                        }
-                        sum_response_tmp->data.fl[idx + k*len] = 
-                                        sum_response->data.fl[idx + k*len] +
-                                        params.shrinkage * res;
+                            cvGetCol( missing, &x_miss, idx);
+                        
+                        res = (float)tree->predict(&x, &x_miss)->value;
                     }
+                    else
+                    {
+                        res = (float)tree->predict(&x)->value;
+                    }
+                    sum_response_tmp->data.fl[idx + k*n] = 
+                                    sum_response->data.fl[idx + k*n] +
+                                    params.shrinkage * res;
                 }
             }
 
-            cvSeqPush( weak[m], &tree );
+            cvSeqPush( weak[k], &tree );
             tree = 0;
-        } // m=0..class_count
+        } // k=0..class_count
     CvMat* tmp;
     tmp = sum_response_tmp;
     sum_response_tmp = sum_response;
@@ -377,7 +421,8 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     delete[] idx_data;
     cvReleaseMat(&new_responses);
     data->free_train_data();
-    return true;
+
+	return true;
 
 } // CvGBTrees::train(...)
 
@@ -506,16 +551,25 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
 
     for (int i=0; i<get_len(subsample_train); ++i)
     {
-        int idx = *(sample_data + subsample_data[i]*s_step);
-        cvGetRow( data->train_data, &x, idx);
+		int idx = *(sample_data + subsample_data[i]*s_step);
+		if (data->tflag == CV_ROW_SAMPLE)
+            cvGetRow( data->train_data, &x, idx);
+        else
+            cvGetCol( data->train_data, &x, idx);
+            
         if (missing)
         {
-            cvGetRow( missing, &miss_x, idx);
+            if (data->tflag == CV_ROW_SAMPLE)
+                cvGetRow( missing, &miss_x, idx);
+            else
+                cvGetCol( missing, &miss_x, idx);
+            
             predictions[i] = tree->predict(&x, &miss_x);
         }
-        else 
+        else
             predictions[i] = tree->predict(&x);
     }
+
 
     CvDTreeNode** leaves;
     int leaves_count = 0;
@@ -574,6 +628,7 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
         leaves[i] = 0;
     }
     delete[] leaves;
+
 }
 
 //===========================================================================
@@ -583,6 +638,9 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
     
     CvDTreeNode** leaves;
     int leaves_count = 0;
+	int offset = _k*sum_response_tmp->cols;
+	CvMat leaf_idx;
+	leaf_idx.rows = 1;
     
     leaves = GetLeaves( tree, leaves_count);
 
@@ -591,21 +649,26 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
         int n = leaves[i]->sample_count;
         int* leaf_idx_data = new int[n];
         data->get_sample_indices(leaves[i], leaf_idx_data);
-        CvMat* leaf_idx = 0;
-        cvInitMatHeader(leaf_idx, n, 1, CV_32S, leaf_idx_data);
+        //CvMat* leaf_idx = new CvMat();
+        //cvInitMatHeader(leaf_idx, n, 1, CV_32S, leaf_idx_data);
+		leaf_idx.cols = n;
+		leaf_idx.data.i = leaf_idx_data;
 
-        float value = find_optimal_value(leaf_idx);
+        float value = find_optimal_value(&leaf_idx);
         leaves[i]->value = value;
+		float val = params.shrinkage * value;
 
-        int len = sum_response_tmp->cols;
+        
         for (int j=0; j<n; ++j)
         {
-            int idx = leaf_idx_data[j] + _k*len;
-            sum_response_tmp->data.fl[idx] = sum_response->data.fl[idx] +
-                                             params.shrinkage * value;
+            int idx = leaf_idx_data[j] + offset;
+            sum_response_tmp->data.fl[idx] = sum_response->data.fl[idx] + val;
         }
-        leaf_idx_data = 0;
-        cvReleaseMat(&leaf_idx);
+        //leaf_idx_data = 0;
+        //cvReleaseMat(&leaf_idx);
+		leaf_idx.data.i = 0;
+		//delete leaf_idx;
+		delete[] leaf_idx_data;
     }
 
     // releasing the memory
@@ -614,6 +677,7 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
         leaves[i] = 0;
     }
     delete[] leaves;
+
 }    //change_values(...);
 */
 //===========================================================================

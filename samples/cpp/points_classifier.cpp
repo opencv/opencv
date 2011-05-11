@@ -22,9 +22,9 @@ vector<Scalar> classColors;
 #define NBC 0 // normal Bayessian classifier
 #define KNN 0 // k nearest neighbors classifier
 #define SVM 0 // support vectors machine
-#define DT  1 // decision tree
+#define DT  0 // decision tree
 #define BT  0 // ADA Boost
-#define GBT 0 // gradient boosted trees
+#define GBT 1 // gradient boosted trees
 #define RF  0 // random forest
 #define ERT 0 // extremely randomized trees
 #define ANN 0 // artificial neural networks
@@ -272,7 +272,6 @@ void find_decision_boundary_GBT()
 
     Mat trainSamples, trainClasses;
     prepare_train_data( trainSamples, trainClasses );
-    trainClasses.convertTo( trainClasses, CV_32FC1 );
 
     // learn classifier
     CvGBTrees gbtrees;

@@ -1832,6 +1832,7 @@ protected:
     // RESULT
     */
     virtual void read_params( CvFileStorage* fs, CvFileNode* fnode );
+	int get_len(const CvMat* mat) const;
 
     
     CvDTreeTrainData* data;

@@ -25,6 +25,7 @@ protected:
     
     string model_file_name1;
     string model_file_name2;
+
     string* datasets;
     string data_path;
     
@@ -33,6 +34,8 @@ protected:
     
     vector<float> test_resps1;
     vector<float> test_resps2;
+
+	int64 initSeed;
 };
 
 
@@ -44,6 +47,18 @@ int _get_len(const CvMat* mat)
 
 CV_GBTreesTest::CV_GBTreesTest()
 {
+	int64 seeds[] = { CV_BIG_INT(0x00009fff4f9c8d52),
+                      CV_BIG_INT(0x0000a17166072c7c),
+                      CV_BIG_INT(0x0201b32115cd1f9a),
+                      CV_BIG_INT(0x0513cb37abcd1234),
+                      CV_BIG_INT(0x0001a2b3c4d5f678)
+                    };
+
+    int seedCount = sizeof(seeds)/sizeof(seeds[0]);
+	cv::RNG& rng = cv::theRNG();
+    initSeed = rng.state;
+    rng.state = seeds[rng(seedCount)];
+
     datasets = 0;
     data = 0;
     gtb = 0;
@@ -54,6 +69,7 @@ CV_GBTreesTest::~CV_GBTreesTest()
     if (data)
         delete data;
     delete[] datasets;
+	cv::theRNG().state = initSeed;
 }
 
 
@@ -65,7 +81,7 @@ int CV_GBTreesTest::TestTrainPredict(int test_num)
     float shrinkage = 0.1f;
     float subsample_portion = 0.5f;
     int max_depth = 5;
-    bool use_surrogates = true;
+    bool use_surrogates = false;
     int loss_function_type = 0;
     switch (test_num)
     {
@@ -137,8 +153,10 @@ int CV_GBTreesTest::checkPredictError(int test_num)
     if (!gtb)
         return cvtest::TS::FAIL_GENERIC;
         
-    float mean[] = {5.430247f, 13.5654f, 12.6569f, 13.1661f};
-    float sigma[] = {0.4162694f, 3.21161f, 3.43297f, 3.00624f};
+    //float mean[] = {5.430247f, 13.5654f, 12.6569f, 13.1661f};
+    //float sigma[] = {0.4162694f, 3.21161f, 3.43297f, 3.00624f};
+	float mean[] = {5.80226f, 12.68689f, 13.49095f, 13.19628f};
+    float sigma[] = {0.4764534f, 3.166919f, 3.022405f, 2.868722f};
     
     float current_error = gtb->calc_error(data, CV_TEST_ERROR);
     
