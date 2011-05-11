@@ -109,8 +109,11 @@ if(SOLUTION_FOLDERS_ENABLED)
 endif()	
 	
 if (OPENCV_BUILD_SHARED_LIB) 
-	#add_definitions(-DCVAPI_EXPORTS)	   
-	set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+	if (MSVC)
+		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+	else()
+		add_definitions(-DCVAPI_EXPORTS)	   
+	endif()	
 endif()
 
 # Additional target properties
