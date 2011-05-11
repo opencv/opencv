@@ -13,7 +13,7 @@ descriptor extractors inherit the
 
 DescriptorExtractor
 -------------------
-.. c:type:: DescriptorExtractor
+.. cpp:class:: DescriptorExtractor
 
 Abstract base class for computing descriptors for image keypoints ::
 
@@ -95,9 +95,9 @@ DescriptorExtractor::write
 
 DescriptorExtractor::create
 -------------------------------
-.. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string\& descriptorExtractorType )
+.. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
 
-    Creates a descriptor extractor of a given type with the default parameters (using the default constructor).??
+    Creates a descriptor extractor by name.
 
     :param descriptorExtractorType: Descriptor extractor type.
 
@@ -115,7 +115,7 @@ for example: ``"OpponentSIFT"`` .
 
 SiftDescriptorExtractor
 -----------------------
-.. c:type:: SiftDescriptorExtractor
+.. cpp:class:: SiftDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`SIFT` class ::
@@ -145,7 +145,7 @@ Wrapping class for computing descriptors by using the
 
 SurfDescriptorExtractor
 -----------------------
-.. c:type:: SurfDescriptorExtractor
+.. cpp:class:: SurfDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`SURF` class ::
@@ -169,7 +169,7 @@ Wrapping class for computing descriptors by using the
 
 CalonderDescriptorExtractor
 ---------------------------
-.. c:type:: CalonderDescriptorExtractor
+.. cpp:class:: CalonderDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`RTreeClassifier` class ::
@@ -195,7 +195,7 @@ Wrapping class for computing descriptors by using the
 
 OpponentColorDescriptorExtractor
 --------------------------------
-.. c:type:: OpponentColorDescriptorExtractor
+.. cpp:class:: OpponentColorDescriptorExtractor
 
 Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
 (refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
@@ -223,7 +223,7 @@ them into a single color descriptor. ::
 
 BriefDescriptorExtractor
 ------------------------
-.. c:type:: BriefDescriptorExtractor
+.. cpp:class:: BriefDescriptorExtractor
 
 Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
 Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,

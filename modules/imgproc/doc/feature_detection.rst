@@ -235,9 +235,7 @@ The function finds the most prominent corners in the image or in the specified i
     :func:`cornerHarris` .
     
 #.
-    Function performs a non-maximum?? suppression (the local maximums in
-    :math:`3\times 3`     neighborhood
-    are retained).
+    Function performs a non-maximum suppression (the local maximums in *3 x 3* neighborhood are retained).
 
 #.
     The corners with the minimal eigenvalue less than
@@ -247,10 +245,7 @@ The function finds the most prominent corners in the image or in the specified i
     The remaining corners are sorted by the quality measure in the descending order.
 
 #.
-    Function throws away each corner
-    :math:`pt_j`     if there is a stronger corner
-    :math:`pt_i`     (
-    :math:`i < j`     ) so that the distance between them is less than ``minDistance`` .
+    Then the function throws away each corner for which there is a stronger corner at a distance less than ``maxDistance``.
     
 The function can be used to initialize a point-based tracker of an object.
 
@@ -278,7 +273,7 @@ HoughCircles
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
     
-    :param method: desc required?? Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  Yuen90 .
+    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90].
 
     :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
@@ -286,7 +281,7 @@ HoughCircles
 
     :param param1: The first method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the higher threshold of the two passed to  the :func:`Canny`  edge detector (the lower one is twice smaller).
 
-    :param param2: The second method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the accumulator threshold at the center of ?? detection stage. The smaller it is, the more false circles may be detected. Circles, corresponding to the larger accumulator values, will be returned first
+    :param param2: The second method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected. Circles, corresponding to the larger accumulator values, will be returned first
 
     :param minRadius: Minimum circle radius.
 

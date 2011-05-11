@@ -25,7 +25,7 @@ FAST
 
 MSER
 ----
-.. c:type:: MSER
+.. cpp:class:: MSER
 
 Maximally stable extremal region extractor ::
 
@@ -54,7 +54,7 @@ http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions).
 
 StarDetector
 ------------
-.. c:type:: StarDetector
+.. cpp:class:: StarDetector
 
 Class implementing the Star keypoint detector ::
 
@@ -93,7 +93,7 @@ The class implements a modified version of the ``CenSurE`` keypoint detector des
 
 SIFT
 ----
-.. c:type:: SIFT
+.. cpp:class:: SIFT
 
 Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform (SIFT) approach ::
 
@@ -183,7 +183,7 @@ Class for extracting keypoints and computing descriptors using the Scale Invaria
 
 SURF
 ----
-.. c:type:: SURF
+.. cpp:class:: SURF
 
 Class for extracting Speeded Up Robust Features from an image ::
 
@@ -221,7 +221,7 @@ The algorithm can be used for object tracking and localization, image stitching,
 
 RandomizedTree
 --------------
-.. c:type:: RandomizedTree
+.. cpp:class:: RandomizedTree
 
 Class containing a base structure for ``RTreeClassifier`` ::
 
@@ -361,7 +361,7 @@ RandomizedTree::applyQuantization
 
 RTreeNode
 ---------
-.. c:type:: RTreeNode
+.. cpp:class:: RTreeNode
 
 Class containing a base structure for ``RandomizedTree`` ::
 
@@ -389,7 +389,7 @@ Class containing a base structure for ``RandomizedTree`` ::
 
 RTreeClassifier
 ---------------
-.. c:type:: RTreeClassifier
+.. cpp:class:: RTreeClassifier
 
 Class containing ``RTreeClassifier`` . It represents the Calonder descriptor that was originally introduced by Michael Calonder. ::
 

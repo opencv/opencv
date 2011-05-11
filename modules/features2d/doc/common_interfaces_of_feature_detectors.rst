@@ -14,7 +14,7 @@ inherit the
 
 KeyPoint
 --------
-.. c:type:: KeyPoint
+.. cpp:class:: KeyPoint
 
 Data structure for salient point detectors ::
 
@@ -75,7 +75,7 @@ Data structure for salient point detectors ::
 
 FeatureDetector
 ---------------
-.. c:type:: FeatureDetector
+.. cpp:class:: FeatureDetector
 
 Abstract base class for 2D image feature detectors ::
 
@@ -105,7 +105,7 @@ Abstract base class for 2D image feature detectors ::
 
 FeatureDetector::detect
 ---------------------------
-.. c:function:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
+.. cpp:function:: void FeatureDetector::detect( const Mat& image,                                vector<KeyPoint>& keypoints,                                 const Mat& mask=Mat() ) const
 
     Detects keypoints in an image (first variant) or image set (second variant).
 
@@ -115,7 +115,7 @@ FeatureDetector::detect
 
     :param mask: Mask specifying where to look for keypoints (optional). It must be a char matrix with non-zero values in the region of interest.
 
-.. c:function:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
+.. cpp:function:: void FeatureDetector::detect( const vector<Mat>& images,                                                            vector<vector<KeyPoint> >& keypoints,                                                             const vector<Mat>& masks=vector<Mat>() ) const
 
     :param images: Image set.
 
@@ -127,7 +127,7 @@ FeatureDetector::detect
 
 FeatureDetector::read
 -------------------------
-.. c:function:: void FeatureDetector::read( const FileNode\& fn )
+.. cpp:function:: void FeatureDetector::read( const FileNode& fn )
 
     Reads a feature detector object from a file node.
 
@@ -137,7 +137,7 @@ FeatureDetector::read
 
 FeatureDetector::write
 --------------------------
-.. c:function:: void FeatureDetector::write( FileStorage\& fs ) const
+.. cpp:function:: void FeatureDetector::write( FileStorage& fs ) const
 
     Writes a feature detector object to a file storage.
 
@@ -147,9 +147,9 @@ FeatureDetector::write
 
 FeatureDetector::create
 ---------------------------
-.. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )
+.. cpp:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 
-    Creates a feature detector of a given type with the default parameters (using the default constructor).??
+    Creates a feature detector by its name.
 
     :param detectorType: Feature detector type.
 
@@ -174,7 +174,7 @@ for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 
 FastFeatureDetector
 -------------------
-.. c:type:: FastFeatureDetector
+.. cpp:class:: FastFeatureDetector
 
 Wrapping class for feature detection using the
 :ref:`FAST` method ::
@@ -196,7 +196,7 @@ Wrapping class for feature detection using the
 
 GoodFeaturesToTrackDetector
 ---------------------------
-.. c:type:: GoodFeaturesToTrackDetector
+.. cpp:class:: GoodFeaturesToTrackDetector
 
 Wrapping class for feature detection using the
 :ref:`goodFeaturesToTrack` function ::
@@ -239,7 +239,7 @@ Wrapping class for feature detection using the
 
 MserFeatureDetector
 -------------------
-.. c:type:: MserFeatureDetector
+.. cpp:class:: MserFeatureDetector
 
 Wrapping class for feature detection using the
 :ref:`MSER` class ::
@@ -265,7 +265,7 @@ Wrapping class for feature detection using the
 
 StarFeatureDetector
 -------------------
-.. c:type:: StarFeatureDetector
+.. cpp:class:: StarFeatureDetector
 
 Wrapping class for feature detection using the
 :ref:`StarDetector` class ::
@@ -289,7 +289,7 @@ Wrapping class for feature detection using the
 
 SiftFeatureDetector
 -------------------
-.. c:type:: SiftFeatureDetector
+.. cpp:class:: SiftFeatureDetector
 
 Wrapping class for feature detection using the
 :ref:`SIFT` class ::
@@ -318,7 +318,7 @@ Wrapping class for feature detection using the
 
 SurfFeatureDetector
 -------------------
-.. c:type:: SurfFeatureDetector
+.. cpp:class:: SurfFeatureDetector
 
 Wrapping class for feature detection using the
 :ref:`SURF` class ::
@@ -341,7 +341,7 @@ Wrapping class for feature detection using the
 
 GridAdaptedFeatureDetector
 --------------------------
-.. c:type:: GridAdaptedFeatureDetector
+.. cpp:class:: GridAdaptedFeatureDetector
 
 Class adapting a detector to partition the source image into a grid and detect points in each cell ::
 
@@ -371,7 +371,7 @@ Class adapting a detector to partition the source image into a grid and detect p
 
 PyramidAdaptedFeatureDetector
 -----------------------------
-.. c:type:: PyramidAdaptedFeatureDetector
+.. cpp:class:: PyramidAdaptedFeatureDetector
 
 Class adapting a detector to detect points over multiple levels of a Gaussian pyramid. Consider using this class for detectors that are not inherently scaled. ::
 
@@ -392,14 +392,14 @@ Class adapting a detector to detect points over multiple levels of a Gaussian py
 DynamicAdaptedFeatureDetector
 -----------------------------
 
-.. c:type:: DynamicAdaptedFeatureDetector
+.. cpp:class:: DynamicAdaptedFeatureDetector
 
 Adaptively adjusting detector that iteratively detects features until the desired number is found ::
 
        class DynamicAdaptedFeatureDetector: public FeatureDetector
        {
        public:
-           DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster,
+           DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjuster,
                int min_features=400, int max_features=500, int max_iters=5 );
            ...
        };
@@ -411,7 +411,7 @@ panorama series.
 
 ``DynamicAdaptedFeatureDetector``  uses another detector such as FAST or SURF to do the dirty work,
 with the help of ``AdjusterAdapter`` .
-If the detected number of features is not enough,??
+If the detected number of features is not large enough,
 ``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
 results in bigger or smaller number of features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
@@ -419,8 +419,7 @@ or the parameters are maxed out.
 Adapters can be easily implemented for any detector via the
 ``AdjusterAdapter`` interface.
 
-Beware that this is not thread-safe since the adjustment of parameters breaks the const??
-of the detection routine.
+Beware that this is not thread-safe since the adjustment of parameters requires modification of the feature detector class instance.
 
 Example of creating ``DynamicAdaptedFeatureDetector`` : ::
 
@@ -438,11 +437,11 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
 
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
-.. c:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
+.. cpp:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
 
-``DynamicAdaptedFeatureDetector`` constructor
+    The class constructor
 
-    :param adjaster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.??parameter formatting is broken here
+    :param adjuster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.
 
     :param min_features: Minimum desired number of features.
 
@@ -455,9 +454,9 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 AdjusterAdapter
 ---------------
 
-.. c:type:: AdjusterAdapter
+.. cpp:class:: AdjusterAdapter
 
-Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after detection.?? ::
+Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after feature detection. ::
   
      class AdjusterAdapter: public FeatureDetector
      {
@@ -479,9 +478,9 @@ See
 
 AdjusterAdapter::tooFew
 ---------------------------
-.. c:function:: virtual void tooFew(int min, int n_detected) = 0
+.. cpp:function:: void AdjusterAdapter::tooFew(int min, int n_detected)
 
-	Adjusts the detector parameters to detect more features.
+    Adjusts the detector parameters to detect more features.
 
     :param min: Minimum desired number of features.
 
@@ -499,7 +498,7 @@ Example: ::
 
 AdjusterAdapter::tooMany
 ----------------------------
-.. c:function:: virtual void tooMany(int max, int n_detected) = 0
+.. cpp:function:: void AdjusterAdapter::tooMany(int max, int n_detected)
 
     Adjusts the detector parameters to detect less features.
 
@@ -519,7 +518,7 @@ Example: ::
 
 AdjusterAdapter::good
 -------------------------
-.. c:function:: virtual bool good() const = 0
+.. cpp:function:: bool AdjusterAdapter::good() const
 
     Returns false if the detector parameters cannot be adjusted any more. 
 
@@ -536,9 +535,9 @@ Example: ::
 FastAdjuster
 ------------
 
-.. c:type:: FastAdjuster
+.. cpp:class:: FastAdjuster
 
-:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decrements or increments the threshhold by 1.?? ::
+:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decreases or increases the threshold value by 1 ::
 
         class FastAdjuster FastAdjuster: public AdjusterAdapter
         {
@@ -552,7 +551,7 @@ FastAdjuster
 StarAdjuster
 ------------
 
-.. c:type:: StarAdjuster
+.. cpp:class:: StarAdjuster
 
 :ref:`AdjusterAdapter` for :ref:`StarFeatureDetector` .  This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector`` .  ::
 
@@ -567,7 +566,7 @@ StarAdjuster
 SurfAdjuster
 ------------
 
-.. c:type:: SurfAdjuster
+.. cpp:class:: SurfAdjuster
 
 :ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
 
@@ -581,7 +580,7 @@ SurfAdjuster
 
 FeatureDetector
 ---------------
-.. c:type:: FeatureDetector
+.. cpp:class:: FeatureDetector
 
 Abstract base class for 2D image feature detectors ::
 
@@ -605,462 +604,3 @@ Abstract base class for 2D image feature detectors ::
     protected:
     ...
     };
-
-
-.. index:: FeatureDetector::detect
-
-FeatureDetector::detect
----------------------------
-.. c:function:: void FeatureDetector::detect( const Mat\& image,                                vector<KeyPoint>\& keypoints,                                 const Mat\& mask=Mat() ) const
-
-    Detects keypoints in an image (first variant) or image set (second variant).
-
-    :param image: Image.
-
-    :param keypoints: Detected keypoints.
-
-    :param mask: Mask specifying where to look for keypoints (optional). It must be a char matrix
-                             with non-zero values in the region of interest.
-
-.. c:function:: void FeatureDetector::detect( const vector<Mat>\& images,                                                            vector<vector<KeyPoint> >\& keypoints,                                                             const vector<Mat>\& masks=vector<Mat>() ) const
-
-    :param images: Image set.
-
-    :param keypoints: Collection of keypoints detected in an input image. ``keypoints[i]`` is a set of keypoints detected in ``images[i]`` .
-
-    :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]`` .
-                      Each element of  ``masks``  vector must be a char matrix with non-zero values in the region of interest.
-
-.. index:: FeatureDetector::read
-
-FeatureDetector::read
--------------------------
-.. c:function:: void FeatureDetector::read( const FileNode\& fn )
-
-    Reads a feature detector object from a file node.
-
-    :param fn: File node from which the detector is read.
-
-.. index:: FeatureDetector::write
-
-FeatureDetector::write
---------------------------
-.. c:function:: void FeatureDetector::write( FileStorage\& fs ) const
-
-    Writes a feature detector object to a file storage.
-
-    :param fs: File storage where the detector is written.
-
-.. index:: FeatureDetector::create
-
-FeatureDetector::create
----------------------------
-.. c:function:: Ptr<FeatureDetector> FeatureDetector::create( const string\& detectorType )??
-
-    Creates a feature detector of a given type with the default parameters (using the default constructor).??
-
-    :param detectorType: Feature detector type.
-
-Now the following detector types are supported:
-
- * ``"FAST"`` -- :ref:`FastFeatureDetector`
- * ``"STAR"`` -- :ref:`StarFeatureDetector`
- * ``"SIFT"`` -- :ref:`SiftFeatureDetector`
- * ``"SURF"`` -- :ref:`SurfFeatureDetector`
- * ``"MSER"`` -- :ref:`MserFeatureDetector`
- * ``"GFTT"`` -- :ref:`GfttFeatureDetector`
- * ``"HARRIS"`` -- :ref:`HarrisFeatureDetector`
-
-A combined format is also supported: feature detector adapter name ( ``"Grid"`` --
-:ref:`GridAdaptedFeatureDetector` , ``"Pyramid"`` --
-:ref:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
-for example: ``"GridFAST"`` , ``"PyramidSTAR"`` .
-
-.. index:: FastFeatureDetector
-
-FastFeatureDetector
--------------------
-.. c:type:: FastFeatureDetector
-
-Wrapping class for feature detection using the
-:ref:`FAST` method ::
-
-    class FastFeatureDetector : public FeatureDetector
-    {
-    public:
-        FastFeatureDetector( int threshold=1, bool nonmaxSuppression=true );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: GoodFeaturesToTrackDetector
-
-GoodFeaturesToTrackDetector
----------------------------
-.. c:type:: GoodFeaturesToTrackDetector
-
- Wrapping class for feature detection using the :ref:`goodFeaturesToTrack` function ::
-
-    class GoodFeaturesToTrackDetector : public FeatureDetector
-    {
-    public:
-        class Params
-        {
-        public:
-            Params( int maxCorners=1000, double qualityLevel=0.01,
-                    double minDistance=1., int blockSize=3,
-                    bool useHarrisDetector=false, double k=0.04 );
-            void read( const FileNode& fn );
-            void write( FileStorage& fs ) const;
-
-            int maxCorners;
-            double qualityLevel;
-            double minDistance;
-            int blockSize;
-            bool useHarrisDetector;
-            double k;
-        };
-
-        GoodFeaturesToTrackDetector( const GoodFeaturesToTrackDetector::Params& params=
-                                                GoodFeaturesToTrackDetector::Params() );
-        GoodFeaturesToTrackDetector( int maxCorners, double qualityLevel,
-                                     double minDistance, int blockSize=3,
-                                     bool useHarrisDetector=false, double k=0.04 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: MserFeatureDetector
-
-MserFeatureDetector
--------------------
-.. c:type:: MserFeatureDetector
-
- Wrapping class for feature detection using the :ref:`MSER` class ::
-
-    class MserFeatureDetector : public FeatureDetector
-    {
-    public:
-        MserFeatureDetector( CvMSERParams params=cvMSERParams() );
-        MserFeatureDetector( int delta, int minArea, int maxArea,
-                             double maxVariation, double minDiversity,
-                             int maxEvolution, double areaThreshold,
-                             double minMargin, int edgeBlurSize );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: StarFeatureDetector
-
-StarFeatureDetector
--------------------
-.. c:type:: StarFeatureDetector
-
-Wrapping class for feature detection using the :ref:`StarDetector` class ::
-
-    class StarFeatureDetector : public FeatureDetector
-    {
-    public:
-        StarFeatureDetector( int maxSize=16, int responseThreshold=30,
-                             int lineThresholdProjected = 10,
-                             int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: SiftFeatureDetector
-
-SiftFeatureDetector
--------------------
-.. c:type:: SiftFeatureDetector
-
-Wrapping class for feature detection using the :ref:`SIFT` class ::
-
-    class SiftFeatureDetector : public FeatureDetector
-    {
-    public:
-        SiftFeatureDetector(
-            const SIFT::DetectorParams& detectorParams=SIFT::DetectorParams(),
-            const SIFT::CommonParams& commonParams=SIFT::CommonParams() );
-        SiftFeatureDetector( double threshold, double edgeThreshold,
-                             int nOctaves=SIFT::CommonParams::DEFAULT_NOCTAVES,
-                             int nOctaveLayers=SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS,
-                             int firstOctave=SIFT::CommonParams::DEFAULT_FIRST_OCTAVE,
-                             int angleMode=SIFT::CommonParams::FIRST_ANGLE );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: SurfFeatureDetector
-
-SurfFeatureDetector
--------------------
-.. c:type:: SurfFeatureDetector
-
-Wrapping class for feature detection using the :ref:`SURF` class ::
-
-    class SurfFeatureDetector : public FeatureDetector
-    {
-    public:
-        SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3,
-                             int octaveLayers = 4 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: GridAdaptedFeatureDetector
-
-GridAdaptedFeatureDetector
---------------------------
-.. c:type:: GridAdaptedFeatureDetector
-
-Class adapting a detector to partition the source image into a grid and detect points in each cell ::
-
-    class GridAdaptedFeatureDetector : public FeatureDetector
-    {
-    public:
-        /*
-         * detector            Detector that will be adapted.
-         * maxTotalKeypoints   Maximum count of keypoints detected on the image.
-         *                     Only the strongest keypoints are kept.
-         * gridRows            Grid row count.
-         * gridCols            Grid column count.
-         */
-        GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector,
-                                    int maxTotalKeypoints, int gridRows=4,
-                                    int gridCols=4 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: PyramidAdaptedFeatureDetector
-
-PyramidAdaptedFeatureDetector
------------------------------
-.. c:type:: PyramidAdaptedFeatureDetector
-
-Class adapting a detector to detect points over multiple levels of a Gaussian pyramid. Consider using this class for detectors that are not inherently scaled. ::
-
-    class PyramidAdaptedFeatureDetector : public FeatureDetector
-    {
-    public:
-        PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector,
-                                       int levels=2 );
-        virtual void read( const FileNode& fn );
-        virtual void write( FileStorage& fs ) const;
-    protected:
-        ...
-    };
-
-
-.. index:: DynamicAdaptedFeatureDetector
-
-DynamicAdaptedFeatureDetector
------------------------------
-
-.. c:type:: DynamicAdaptedFeatureDetector
-
-Adaptively adjusting detector that iteratively detects features until the desired number is found. ::
-
-    class DynamicAdaptedFeatureDetector: public FeatureDetector
-    {
-    public:
-        DynamicAdaptedFeatureDetector( const Ptr<AdjusterAdapter>& adjaster,
-            int min_features=400, int max_features=500, int max_iters=5 );
-        ...
-    };
-
-
-If the detector is persisted, it "remembers" the parameters
-used on the last detection. In this case, the detector may be used for consistent numbers
-of keypoints in a set of images that are temporally related, such as video streams or
-panorama series.
-
-``DynamicAdaptedFeatureDetector`` uses another detector such as FAST or SURF to do the dirty work,
-with the help of ``AdjusterAdapter`` .
-If the number of detected features is not enough,
-``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
-results in a bigger or smaller number of features.  This is repeated until either the number of desired features are found
-or the parameters are maxed out.
-
-Adapters can easily be implemented for any detector via the
-``AdjusterAdapter`` interface.
-
-Beware that this is not thread-safe as the adjustment of parameters breaks the const??
-of the detection routine.
-
-Example of creating ``DynamicAdaptedFeatureDetector``: ::
-
-    //sample usage:
-    //will create a detector that attempts to find
-    //100 - 110 FAST Keypoints, and will at most run
-    //FAST feature detection 10 times until that
-    //number of keypoints are found
-    Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector (100, 110, 10,
-                                  new FastAdjuster(20,true)));
-
-.. index:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
-
-DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
-----------------------------------------------------------------
-.. c:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>\& adjaster,       int min_features,   int max_features,   int max_iters )
-
-	Provides the ``DynamicAdaptedFeatureDetector`` constructor.??
-
-    :param adjaster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.??formatting issue again
-
-    :param min_features: Minimum desired number of features.
-
-    :param max_features: Maximum desired number of features.
-
-    :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For  :ref:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-consuming.  At each iteration the detector is rerun. 
-
-.. index:: AdjusterAdapter
-
-AdjusterAdapter
----------------
-
-.. c:type:: AdjusterAdapter
-
-Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after detection. ::
-  
-      class AdjusterAdapter: public FeatureDetector
-      {
-      public:
-          virtual ~AdjusterAdapter() {}
-          virtual void tooFew(int min, int n_detected) = 0;
-          virtual void tooMany(int max, int n_detected) = 0;
-          virtual bool good() const = 0;
-      };  
-
-See
-:ref:`FastAdjuster`,
-:ref:`StarAdjuster`,
-:ref:`SurfAdjuster` for concrete implementations.
-
-.. index:: AdjusterAdapter::tooFew
-
-AdjusterAdapter::tooFew
----------------------------
-.. c:function:: virtual void tooFew(int min, int n_detected) = 0
-
-	Adjusts the detector parameters to detect more features.
-
-    :param min: Minimum desired number of features.
-
-    :param n_detected: Number of features detected during the latest run.
-
-Example: ::
-
-    void FastAdjuster::tooFew(int min, int n_detected)
-    {
-            thresh_--;
-    }
-
-
-.. index:: AdjusterAdapter::tooMany
-
-AdjusterAdapter::tooMany
-----------------------------
-.. c:function:: virtual void tooMany(int max, int n_detected) = 0
-
-    Adjusts the detector parameters to detect less features.
-
-    :param max: Maximum desired number of features.
-
-    :param n_detected: Number of features detected during the latest run.
-
-Example: ::
-
-    void FastAdjuster::tooMany(int min, int n_detected)
-    {
-            thresh_++;
-    }
-
-
-.. index:: AdjusterAdapter::good
-
-AdjusterAdapter::good
--------------------------
-.. c:function:: virtual bool good() const = 0
-
-    Are params maxed out or still valid?? Returns false if the parameters cannot be adjusted any more.
-
-Example: ::
-
-        bool FastAdjuster::good() const
-        {
-            return (thresh > 1) && (thresh < 200);
-        }
-
-.. index:: FastAdjuster
-
-FastAdjuster
-------------
-
-.. c:type:: FastAdjuster
-
-:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decrements or increments the threshhld by 1. ::
-
-    class FastAdjuster FastAdjuster: public AdjusterAdapter
-    {
-    public:
-            FastAdjuster(int init_thresh = 20, bool nonmax = true);
-            ...
-    };
-
-
-.. index:: StarAdjuster
-
-StarAdjuster
-------------
-
-.. c:type:: StarAdjuster
-
-:ref:`AdjusterAdapter` for :ref:`StarFeatureDetector` .  This classadjusts the responseThreshhold of StarFeatureDetector. ::
-
-    class StarAdjuster: public AdjusterAdapter
-    {
-            StarAdjuster(double initial_thresh = 30.0);
-            ...
-    };
-
-
-.. index:: SurfAdjuster
-
-SurfAdjuster
-------------
-
-.. c:type:: SurfAdjuster
-
-:ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
-
-    class SurfAdjuster: public SurfAdjuster
-    {
-            SurfAdjuster();
-            ...
-    };
-
-..
-
