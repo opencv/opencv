@@ -93,8 +93,9 @@ void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, vector<KeyPoint
 
 }
 
-FastAdjuster::FastAdjuster(int init_thresh, bool nonmax) :
-    thresh_(init_thresh), nonmax_(nonmax), init_thresh_(init_thresh)
+FastAdjuster::FastAdjuster( int init_thresh, bool nonmax, int min_thresh, int max_thresh ) :
+    thresh_(init_thresh), nonmax_(nonmax), init_thresh_(init_thresh),
+    min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
 void FastAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
@@ -118,17 +119,18 @@ void FastAdjuster::tooMany(int, int)
 //a useful point
 bool FastAdjuster::good() const
 {
-    return (thresh_ > 1) && (thresh_ < 200);
+    return (thresh_ > min_thresh_) && (thresh_ < max_thresh_);
 }
 
 Ptr<AdjusterAdapter> FastAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new FastAdjuster( init_thresh_, nonmax_ );
+    Ptr<AdjusterAdapter> cloned_obj = new FastAdjuster( init_thresh_, nonmax_, min_thresh_, max_thresh_ );
     return cloned_obj;
 }
 
-StarAdjuster::StarAdjuster(double initial_thresh) :
-    thresh_(initial_thresh), init_thresh_(initial_thresh)
+StarAdjuster::StarAdjuster(double initial_thresh, double min_thresh, double max_thresh) :
+    thresh_(initial_thresh), init_thresh_(initial_thresh),
+    min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
 void StarAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
@@ -151,17 +153,18 @@ void StarAdjuster::tooMany(int, int)
 
 bool StarAdjuster::good() const
 {
-    return (thresh_ > 2) && (thresh_ < 200);
+    return (thresh_ > min_thresh_) && (thresh_ < max_thresh_);
 }
 
 Ptr<AdjusterAdapter> StarAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new StarAdjuster( init_thresh_ );
+    Ptr<AdjusterAdapter> cloned_obj = new StarAdjuster( init_thresh_, min_thresh_, max_thresh_ );
     return cloned_obj;
 }
 
-SurfAdjuster::SurfAdjuster( double initial_thresh ) :
-    thresh_(initial_thresh), init_thresh_(initial_thresh)
+SurfAdjuster::SurfAdjuster( double initial_thresh, double min_thresh, double max_thresh ) :
+    thresh_(initial_thresh), init_thresh_(initial_thresh),
+    min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
 void SurfAdjuster::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const cv::Mat& mask) const
@@ -186,12 +189,12 @@ void SurfAdjuster::tooMany(int, int)
 //a useful point
 bool SurfAdjuster::good() const
 {
-    return (thresh_ > 2) && (thresh_ < 1000);
+    return (thresh_ > min_thresh_) && (thresh_ < max_thresh_);
 }
 
 Ptr<AdjusterAdapter> SurfAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new SurfAdjuster( init_thresh_ );
+    Ptr<AdjusterAdapter> cloned_obj = new SurfAdjuster( init_thresh_, min_thresh_, max_thresh_ );
     return cloned_obj;
 }
 

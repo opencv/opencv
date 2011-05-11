@@ -1550,7 +1550,7 @@ public:
     /**\param init_thresh the initial threshold to start with, default = 20
      * \param nonmax whether to use non max or not for fast feature detection
      */
-    FastAdjuster(int init_thresh = 20, bool nonmax = true);
+    FastAdjuster(int init_thresh=20, bool nonmax=true, int min_thresh=1, int max_thresh=200);
 
     virtual void tooFew(int min, int n_detected);
     virtual void tooMany(int max, int n_detected);
@@ -1563,7 +1563,7 @@ protected:
 
     int thresh_;
     bool nonmax_;
-    int init_thresh_;
+    int init_thresh_, min_thresh_, max_thresh_;
 };
 
 
@@ -1573,7 +1573,7 @@ protected:
 class CV_EXPORTS StarAdjuster: public AdjusterAdapter
 {
 public:
-    StarAdjuster(double initial_thresh = 30.0);
+    StarAdjuster(double initial_thresh=30.0, double min_thresh=2., double max_thresh=200.);
 
     virtual void tooFew(int min, int n_detected);
     virtual void tooMany(int max, int n_detected);
@@ -1584,14 +1584,14 @@ public:
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    double thresh_, init_thresh_;
+    double thresh_, init_thresh_, min_thresh_, max_thresh_;
     CvStarDetectorParams params_; //todo use these instead of thresh_
 };
 
 class CV_EXPORTS SurfAdjuster: public AdjusterAdapter
 {
 public:
-    SurfAdjuster( double initial_thresh=400.f );
+    SurfAdjuster( double initial_thresh=400.f, double min_thresh=2, double max_thresh=1000 );
 
     virtual void tooFew(int min, int n_detected);
     virtual void tooMany(int max, int n_detected);
@@ -1602,7 +1602,7 @@ public:
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
-    double thresh_, init_thresh_;
+    double thresh_, init_thresh_, min_thresh_, max_thresh_;
 };
 
 CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
