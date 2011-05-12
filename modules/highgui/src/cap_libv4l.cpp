@@ -224,7 +224,7 @@ make & enjoy!
 #include "highgui.h"
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_CAMV4L && defined HAVE_CAMV4L2
+#if !defined WIN32 && defined HAVE_LIBV4L
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
@@ -241,8 +241,12 @@ make & enjoy!
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
+#ifdef HAVE_CAMV4L
 #include <linux/videodev.h>
+#endif
+#ifdef HAVE_CAMV4L2
 #include <linux/videodev2.h>
+#endif
 
 #include <libv4l1.h>
 #include <libv4l2.h>

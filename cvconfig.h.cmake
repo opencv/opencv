@@ -19,6 +19,9 @@
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
 
+/* V4L/V4L2 capturing support via libv4l */
+#cmakedefine HAVE_LIBV4L
+
 /* Carbon windowing environment */
 #cmakedefine HAVE_CARBON
 
