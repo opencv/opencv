@@ -971,8 +971,8 @@ void func(int /*i*/, int /*j*/, CvMat *point_params, CvMat* cam_params, CvMat* e
 };
 
 void fjac_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data) {
-  CvMat _point_params = point_params, _cam_params = cam_params, _A = A, _B = B;
-  fjac(i,j, &_point_params, &_cam_params, &_A, &_B, data);
+  CvMat _point_params = point_params, _cam_params = cam_params, _Al = A, _Bl = B;
+  fjac(i,j, &_point_params, &_cam_params, &_Al, &_Bl, data);
 };
 
 void func_new(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data)  {
