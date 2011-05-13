@@ -978,8 +978,7 @@ public:
     typedef value_type channel_type;
     typedef value_type vec_type;
     
-    enum { generic_type = 1, depth = DataDepth<channel_type>::value, channels = 1,
-        fmt=DataDepth<channel_type>::fmt,
+    enum { generic_type = 1, depth = -1, channels = 1, fmt=0,
         type = CV_MAKETYPE(depth, channels) };
 };
 

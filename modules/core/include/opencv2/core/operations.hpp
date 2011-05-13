@@ -2638,7 +2638,7 @@ template<typename _Tp> static inline void write( FileStorage& fs, const vector<_
 template<typename _Tp> static inline FileStorage&
 operator << ( FileStorage& fs, const vector<_Tp>& vec )
 {
-    VecWriterProxy<_Tp, DataType<_Tp>::fmt != 0> w(&fs);
+    VecWriterProxy<_Tp, DataType<_Tp>::generic_type == 0> w(&fs);
     w(vec);
     return fs;
 }
