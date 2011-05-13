@@ -73,7 +73,7 @@ set(cv2_generated_hdrs
 
 add_custom_command(
       OUTPUT ${cv2_generated_hdrs}
-      COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+      COMMAND ${PYTHON_EXECUTABLE} -B "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
       DEPENDS ${opencv_hdrs})
