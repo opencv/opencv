@@ -3,6 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <time.h>
 #include <stdio.h>
+#include <ctype.h>
 
 void help()
 {
