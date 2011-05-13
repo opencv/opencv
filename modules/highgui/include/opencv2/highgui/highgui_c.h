@@ -43,11 +43,6 @@
 #define __OPENCV_HIGHGUI_H__
 
 #include "opencv2/core/core_c.h"
-#if defined WIN32 || defined _WIN32
-   	#include <windows.h>
-	#undef min
-	#undef max
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -462,9 +457,10 @@ CVAPI(void) cvReleaseVideoWriter( CvVideoWriter** writer );
 
 #if defined WIN32 || defined _WIN32
 
-typedef int (CV_CDECL * CvWin32WindowCallback)(HWND, UINT, WPARAM, LPARAM, int*);
-CVAPI(void) cvSetPreprocessFuncWin32( CvWin32WindowCallback on_preprocess );
-CVAPI(void) cvSetPostprocessFuncWin32( CvWin32WindowCallback on_postprocess );
+CVAPI(void) cvSetPreprocessFuncWin32_(const void* callback);
+CVAPI(void) cvSetPostprocessFuncWin32_(const void* callback);
+#define cvSetPreprocessFuncWin32(callback) cvSetPreprocessFuncWin32_((const void*)(callback))
+#define cvSetPostprocessFuncWin32(callback) cvSetPostprocessFuncWin32_((const void*)(callback))
 
 #endif
 

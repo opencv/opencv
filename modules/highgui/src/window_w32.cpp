@@ -1671,23 +1671,18 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
 }
 
 
+typedef int (CV_CDECL * CvWin32WindowCallback)(HWND, UINT, WPARAM, LPARAM, int*);
 
 CV_IMPL void
-cvSetPreprocessFuncWin32(int (__cdecl *on_preprocess)(HWND, UINT, WPARAM, LPARAM, int*))
+cvSetPreprocessFuncWin32_(const void* callback)
 {
-    if(on_preprocess)
-        hg_on_preprocess = on_preprocess;
-    else
-        assert(on_preprocess);
+    hg_on_preprocess = (CvWin32WindowCallback)callback;
 }
 
 CV_IMPL void
-cvSetPostprocessFuncWin32(int (__cdecl *on_postprocess)(HWND, UINT, WPARAM, LPARAM, int*))
+cvSetPostprocessFuncWin32_(const void* callback)
 {
-    if(on_postprocess)
-        hg_on_postprocess = on_postprocess;
-    else
-        assert(on_postprocess);
+    hg_on_postprocess = (CvWin32WindowCallback)callback;
 }
 
 #endif //WIN32
