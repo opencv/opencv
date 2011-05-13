@@ -73,27 +73,7 @@
   #endif
     
 #elif defined WIN32 || defined _WIN32
-
-  #if defined _MSC_VER && defined _M_IX86
-    static inline int CV_XADD( int* addr, int delta )
-    {
-        int tmp;
-        __asm
-        {
-            mov edx, addr
-            mov eax, delta
-            lock xadd [edx], eax
-            mov tmp, eax
-        }
-        return tmp;
-    }
-  #else
-    #include "windows.h"
-    #undef min
-    #undef max
-    #define CV_XADD(addr,delta) InterlockedExchangeAdd((LONG volatile*)(addr), (delta))
-  #endif
-      
+  #define CV_XADD(addr,delta) _InterlockedExchangeAdd((long volatile*)(addr), (delta))
 #else
 
   template<typename _Tp> static inline _Tp CV_XADD(_Tp* addr, _Tp delta)

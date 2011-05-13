@@ -8,6 +8,10 @@
 #include <memory>
 
 #if defined WIN32 || defined _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef min
+#undef max
 #include "sys/types.h"
 #endif
 #include <sys/stat.h>

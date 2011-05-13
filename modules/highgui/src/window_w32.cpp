@@ -179,6 +179,8 @@ static LRESULT CALLBACK MainWindowProc(  HWND hwnd, UINT uMsg, WPARAM wParam, LP
 static void icvUpdateWindowPos( CvWindow* window );
 
 static CvWindow* hg_windows = 0;
+
+typedef int (CV_CDECL * CvWin32WindowCallback)(HWND, UINT, WPARAM, LPARAM, int*);
 static CvWin32WindowCallback hg_on_preprocess = 0, hg_on_postprocess = 0;
 static HINSTANCE hg_hinstance = 0;
 
@@ -1670,8 +1672,6 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
     return window_name;
 }
 
-
-typedef int (CV_CDECL * CvWin32WindowCallback)(HWND, UINT, WPARAM, LPARAM, int*);
 
 CV_IMPL void
 cvSetPreprocessFuncWin32_(const void* callback)
