@@ -210,9 +210,10 @@ Class for extracting Speeded Up Robust Features from an image ::
                         bool useProvidedKeypoints=false) const;
     };
 
-The class implements the Speeded Up Robust Features descriptor [Bay06].
+The class implements the Speeded Up Robust Features descriptor 
+[Bay06].
 There is a fast multi-scale Hessian keypoint detector that can be used to find keypoints
-(which is the default option). But the descriptors can be also computed for the user-specified keypoints.
+(default option). But the descriptors can be also computed for the user-specified keypoints.
 The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in OpenCV samples directory.
 
 .. index:: RandomizedTree
@@ -301,7 +302,7 @@ RandomizedTree::train
 
 .. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
-    :param base_set: Vector of ``BaseKeypoint`` type. Contains image keypoints used for training.
+    :param base_set: Vector of the ``BaseKeypoint`` type. It contains image keypoints used for training.
     
     :param rng: Random-number generator used for training.
     
@@ -391,7 +392,7 @@ RTreeClassifier
 ---------------
 .. cpp:class:: RTreeClassifier
 
-Class containing ``RTreeClassifier`` . It represents the Calonder descriptor that was originally introduced by Michael Calonder. ::
+Class containing ``RTreeClassifier``. It represents the Calonder descriptor that was originally introduced by Michael Calonder. ::
 
     class CV_EXPORTS RTreeClassifier
     {
@@ -465,7 +466,7 @@ RTreeClassifier::train
 
 .. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
-    :param base_set: Vector of ``BaseKeypoint``     type. It contains image keypoints used for training.
+    :param base_set: Vector of the ``BaseKeypoint``  type. It contains image keypoints used for training.
     
     :param rng: Random-number generator used for training.
     
@@ -505,7 +506,7 @@ RTreeClassifier::getSparseSignature
 
     Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
 
-    :param patch: Image patch to calculate the nsignature for.
+    :param patch: Image patch to calculate the signature for.
     
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
     

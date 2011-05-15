@@ -7,10 +7,9 @@ Matchers of keypoint descriptors in OpenCV have wrappers with a common interface
 between different algorithms solving the same problem. This section is devoted to matching descriptors
 that cannot be represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. It does not make any assumptions about descriptor representation.
 Every descriptor with the
-:ref:`DescriptorExtractor` interface has a wrapper with the ``GenericDescriptorMatcher`` interface (see
-:ref:`VectorDescriptorMatcher` ).
-There are descriptors such as the One-way descriptor and Ferns that have the ``GenericDescriptorMatcher`` interface implemented but do not support
-:ref:`DescriptorExtractor` .
+:cpp:class:`DescriptorExtractor` interface has a wrapper with the ``GenericDescriptorMatcher`` interface (see
+:cpp:class:`VectorDescriptorMatcher` ).
+There are descriptors such as the One-way descriptor and Ferns that have the ``GenericDescriptorMatcher`` interface implemented but do not support ``DescriptorExtractor``.
 
 .. index:: GenericDescriptorMatcher
 
@@ -86,7 +85,7 @@ GenericDescriptorMatcher::add
 ---------------------------------
 .. cpp:function:: void GenericDescriptorMatcher::add( const vector<Mat>& images,                        vector<vector<KeyPoint> >& keypoints )
 
-    Adds images and their keypoints to the training collection, stored in the class instance.
+    Adds images and their keypoints to the training collection stored in the class instance.
 
     :param images: Image collection.
 
@@ -140,25 +139,25 @@ GenericDescriptorMatcher::classify
 
 .. cpp:function:: void GenericDescriptorMatcher::classify( const Mat& queryImage,           vector<KeyPoint>& queryKeypoints )
 
-    Classify keypoints from the query set.
+    Classify keypoints from a query set.
 
     :param queryImage: Query image.
 
-    :param queryKeypoints: Keypoints from the query image.
+    :param queryKeypoints: Keypoints from a query image.
 
     :param trainImage: Train image.
 
-    :param trainKeypoints: Keypoints from the train image.
+    :param trainKeypoints: Keypoints from a train image.
 
-    The method classify each keypoint from the query set. The first variant of method takes the training image and its keypoints as an input argument. The second variant uses the internally stored training collection, which can be built using ``GenericDescriptorMatcher::add`` method.
+    The method classifies each keypoint from a query set. The first variant of the method takes a train image and its keypoints as an input argument. The second variant uses the internally stored training collection that can be built using the ``GenericDescriptorMatcher::add`` method.
     
     The methods do the following:
     
     #.
-        They call ``GenericDescriptorMatcher::match`` method to find correspondence between the query set and the training set.
+        Call the ``GenericDescriptorMatcher::match`` method to find correspondence between the query set and the training set.
         
     #.
-        ``class_id`` field of each keypoint from the query set is set to ``class_id`` of the corresponding keypoint from the training set.
+        Sey the ``class_id`` field of each keypoint from the query set to ``class_id`` of the corresponding keypoint from the training set.
 
 .. index:: GenericDescriptorMatcher::match
 
@@ -184,7 +183,7 @@ GenericDescriptorMatcher::match
 
     :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between input query keypoints and stored train keypoints from the i-th image.
 
-The methods find the best match for each query keypoint. In the first variant of the method, a train image and its keypoints are the input arguments. In the second variant, query keypoints are matched to the internally stored training collection, which can be built using ``GenericDescriptorMatcher::add`` method.     Optional mask (or masks) can be passed to specify, which query and training descriptors can be matched. Namely, ``queryKeypoints[i]`` can be matched with ``trainKeypoints[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero.
+The methods find the best match for each query keypoint. In the first variant of the method, a train image and its keypoints are the input arguments. In the second variant, query keypoints are matched to the internally stored training collection that can be built using ``GenericDescriptorMatcher::add`` method.     Optional mask (or masks) can be passed to specify which query and training descriptors can be matched. Namely, ``queryKeypoints[i]`` can be matched with ``trainKeypoints[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero.
 
 .. index:: GenericDescriptorMatcher::knnMatch
 
@@ -196,7 +195,7 @@ GenericDescriptorMatcher::knnMatch
 
     Find the ``k`` best matches for each query keypoint.
     
-The methods are extended variants of ``GenericDescriptorMatch::match``. The parameters are similar, and the  the semantics is similar to ``DescriptorMatcher::knnMatch``, except that this class does not require explicitly computed keypoint descriptors.
+The methods are extended variants of ``GenericDescriptorMatch::match``. The parameters are similar, and the  the semantics is similar to ``DescriptorMatcher::knnMatch``. But this class does not require explicitly computed keypoint descriptors.
 
 .. index:: GenericDescriptorMatcher::radiusMatch
 
@@ -208,7 +207,7 @@ GenericDescriptorMatcher::radiusMatch
 
     For each query keypoint, find the training keypoints not farther than the specified distance.
 
-The methods are similar to ``DescriptorMatcher::radiusMatch``, except that this class does not require explicitly computed keypoint descriptors.
+The methods are similar to ``DescriptorMatcher::radiusM. But this class does not require explicitly computed keypoint descriptors.
 
 .. index:: GenericDescriptorMatcher::read
 

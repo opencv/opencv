@@ -413,7 +413,7 @@ panorama series.
 with the help of ``AdjusterAdapter`` .
 If the detected number of features is not large enough,
 ``AdjusterAdapter`` adjusts the detection parameters so that the next detection 
-results in bigger or smaller number of features.  This is repeated until either the number of desired features are found
+results in a bigger or smaller number of features.  This is repeated until either the number of desired features are found
 or the parameters are maxed out.
 
 Adapters can be easily implemented for any detector via the
@@ -439,7 +439,7 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
 .. cpp:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
 
-    The class constructor
+    Constructs the class.
 
     :param adjuster:  :ref:`AdjusterAdapter`  that detects features and adjusts parameters.
 
@@ -537,7 +537,7 @@ FastAdjuster
 
 .. cpp:class:: FastAdjuster
 
-:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decreases or increases the threshold value by 1 ::
+:ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decreases or increases the threshold value by 1. ::
 
         class FastAdjuster FastAdjuster: public AdjusterAdapter
         {
@@ -553,7 +553,7 @@ StarAdjuster
 
 .. cpp:class:: StarAdjuster
 
-:ref:`AdjusterAdapter` for :ref:`StarFeatureDetector` .  This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector`` .  ::
+:ref:`AdjusterAdapter` for :ref:`StarFeatureDetector`. This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector``.  ::
 
         class StarAdjuster: public AdjusterAdapter
         {
@@ -568,7 +568,7 @@ SurfAdjuster
 
 .. cpp:class:: SurfAdjuster
 
-:ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector` .  This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector`` . ::
+:ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector`. This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector``. ::
 
         class SurfAdjuster: public SurfAdjuster
         {
