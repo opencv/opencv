@@ -536,8 +536,8 @@ void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>&
 /*
  *  PyramidAdaptedFeatureDetector
  */
-PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _levels )
-    : detector(_detector), levels(_levels)
+PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& _detector, int _maxLevel )
+    : detector(_detector), maxLevel(_maxLevel)
 {}
 
 bool PyramidAdaptedFeatureDetector::empty() const
@@ -548,7 +548,7 @@ bool PyramidAdaptedFeatureDetector::empty() const
 void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat src = image;
-    for( int l = 0, multiplier = 1; l <= levels; ++l, multiplier *= 2 )
+    for( int l = 0, multiplier = 1; l <= maxLevel; ++l, multiplier *= 2 )
     {
         // Detect on current level of the pyramid
         vector<KeyPoint> new_pts;
@@ -563,7 +563,7 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
         keypoints.insert( keypoints.end(), new_pts.begin(), new_pts.end() );
 
         // Downsample
-        if( l < levels )
+        if( l < maxLevel )
         {
             Mat dst;
             pyrDown(src, dst);

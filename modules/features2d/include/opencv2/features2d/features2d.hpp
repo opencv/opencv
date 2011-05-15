@@ -1473,7 +1473,8 @@ protected:
 class CV_EXPORTS PyramidAdaptedFeatureDetector : public FeatureDetector
 {
 public:
-    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int levels=2 );
+    // maxLevel - The 0-based index of the last pyramid layer
+    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxLevel=2 );
     
     // TODO implement read/write
     virtual bool empty() const;
@@ -1482,7 +1483,7 @@ protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
     Ptr<FeatureDetector> detector;
-    int levels;
+    int maxLevel;
 };
 
 /** \brief A feature detector parameter adjuster, this is used by the DynamicAdaptedFeatureDetector
