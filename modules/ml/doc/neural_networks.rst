@@ -1,12 +1,12 @@
 Neural Networks
 ===============
 
-ML implements feed-forward artificial neural networks, more particularly, multi-layer perceptrons (MLP), the most commonly used type of neural networks. MLP consists of the input layer, output layer and one or more hidden layers. Each layer of MLP includes one or more neurons that are directionally linked with the neurons from the previous and the next layer. Here is an example of a 3-layer perceptron with 3 inputs, 2 outputs and the hidden layer including 5 neurons:
+ML implements feed-forward artificial neural networks, more particularly, multi-layer perceptrons (MLP), the most commonly used type of neural networks. MLP consists of the input layer, output layer, and one or more hidden layers. Each layer of MLP includes one or more neurons that are directionally linked with the neurons from the previous and the next layer. The example below represents a 3-layer perceptron with three inputs, two outputs, and the hidden layer including five neurons:
 
 .. image:: pics/mlp.png
 
-All the neurons in MLP are similar. Each of them has several input links (i.e. it takes the output values from several neurons in the previous layer on input) and several output links (i.e. it passes the response to several neurons in the next layer). The values retrieved from the previous layer are summed with certain weights, individual for each neuron, plus the bias term, and the sum is transformed using the activation function
-:math:`f` that may be also different for different neurons. Here is the picture:
+All the neurons in MLP are similar. Each of them has several input links (it takes the output values from several neurons in the previous layer as input) and several output links (it passes the response to several neurons in the next layer). The values retrieved from the previous layer are summed up with certain weights, individual for each neuron, plus the bias term. The sum is transformed using the activation function
+:math:`f` that may be also different for different neurons. 
 
 .. image:: pics/neuron_model.png
 
@@ -24,59 +24,64 @@ In other words, given the outputs
 
     y_i = f(u_i)
 
-Different activation functions may be used, ML implements 3 standard ones:
+Different activation functions may be used. ML implements three standard functions:
 
 *
     Identity function ( ``CvANN_MLP::IDENTITY``     ):
     :math:`f(x)=x`
 *
     Symmetrical sigmoid ( ``CvANN_MLP::SIGMOID_SYM``     ):
-    :math:`f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}`     ), the default choice for MLP; the standard sigmoid with
+    :math:`f(x)=\beta*(1-e^{-\alpha x})/(1+e^{-\alpha x}`     ), which is the default choice for MLP. The standard sigmoid with
     :math:`\beta =1, \alpha =1`     is shown below:
 
     .. image:: pics/sigmoid_bipolar.png
 
 *
     Gaussian function ( ``CvANN_MLP::GAUSSIAN``     ):
-    :math:`f(x)=\beta e^{-\alpha x*x}`     , not completely supported by the moment.
+    :math:`f(x)=\beta e^{-\alpha x*x}`     , which is not completely supported at the moment.
 
-In ML all the neurons have the same activation functions, with the same free parameters (
+In ML, all the neurons have the same activation functions, with the same free parameters (
 :math:`\alpha, \beta` ) that are specified by user and are not altered by the training algorithms.
 
-So the whole trained network works as follows: It takes the feature vector on input, the vector size is equal to the size of the input layer, when the values are passed as input to the first hidden layer, the outputs of the hidden layer are computed using the weights and the activation functions and passed further downstream, until we compute the output layer.
+So, the whole trained network works as follows: 
 
-So, in order to compute the network one needs to know all the
+#. It takes the feature vector as input. The vector size is equal to the size of the input layer.
+#. Values are passed as input to the first hidden layer.
+#. Outputs of the hidden layer are computed using the weights and the activation functions.
+#. Outputs are passed further downstream until you compute the output layer.
+
+So, to compute the network, you need to know all the
 weights
 :math:`w^{n+1)}_{i,j}` . The weights are computed by the training
-algorithm. The algorithm takes a training set: multiple input vectors
+algorithm. The algorithm takes a training set, multiple input vectors
 with the corresponding output vectors, and iteratively adjusts the
-weights to try to make the network give the desired response on the
+weights to enable the network to give the desired response to the
 provided input vectors.
 
-The larger the network size (the number of hidden layers and their sizes),
-the more is the potential network flexibility, and the error on the
+The larger the network size (the number of hidden layers and their sizes) is,
+the more the potential network flexibility is. The error on the
 training set could be made arbitrarily small. But at the same time the
-learned network will also "learn" the noise present in the training set,
+learned network also "learns" the noise present in the training set,
 so the error on the test set usually starts increasing after the network
-size reaches some limit. Besides, the larger networks are train much
-longer than the smaller ones, so it is reasonable to preprocess the data
-(using
-:ref:`PCA::operator ()` or similar technique) and train a smaller network
-on only the essential features.
+size reaches a limit. Besides, the larger networks are trained much
+longer than the smaller ones, so it is reasonable to pre-process the data,
+using
+:ref:`PCA::operator ()` or similar technique, and train a smaller network
+on only essential features.
 
-Another feature of the MLP's is their inability to handle categorical
-data as is, however there is a workaround. If a certain feature in the
-input or output (i.e. in the case of ``n`` -class classifier for
+Another feature of MLP's is their inability to handle categorical
+data as is. However, there is a workaround. If a certain feature in the
+input or output (in case of ``n`` -class classifier for
 :math:`n>2` ) layer is categorical and can take
-:math:`M>2` different values, it makes sense to represent it as binary tuple of ``M`` elements, where ``i`` -th element is 1 if and only if the
+:math:`M>2` different values, it makes sense to represent it as a binary tuple of ``M`` elements, where the ``i`` -th element is 1 if and only if the
 feature is equal to the ``i`` -th value out of ``M`` possible. It
-will increase the size of the input/output layer, but will speedup the
-training algorithm convergence and at the same time enable "fuzzy" values
-of such variables, i.e. a tuple of probabilities instead of a fixed value.
+increases the size of the input/output layer but speeds up the
+training algorithm convergence and at the same time enables "fuzzy" values
+of such variables, that is, a tuple of probabilities instead of a fixed value.
 
-ML implements 2 algorithms for training MLP's. The first is the classical
-random sequential back-propagation algorithm
-and the second (default one) is batch RPROP algorithm.
+ML implements two algorithms for training MLP's. The first algorithm is a classical
+random sequential back-propagation algorithm.
+The second (default) one is a batch RPROP algorithm.
 
 References:
 
@@ -85,10 +90,10 @@ References:
     . Wikipedia article about the back-propagation algorithm.
 
 *
-    Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, "Efficient backprop", in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
+    Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, *Efficient backprop*, in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
 
 *
-    M. Riedmiller and H. Braun, "A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm", Proc. ICNN, San Francisco (1993).
+    M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
 
 .. index:: CvANN_MLP_TrainParams
 
@@ -98,7 +103,7 @@ CvANN_MLP_TrainParams
 ---------------------
 .. c:type:: CvANN_MLP_TrainParams
 
-Parameters of the MLP training algorithm. ::
+Parameters of the MLP training algorithm ::
 
     struct CvANN_MLP_TrainParams
     {
@@ -112,7 +117,7 @@ Parameters of the MLP training algorithm. ::
         CvTermCriteria term_crit;
         int train_method;
 
-        // backpropagation parameters
+        // back-propagation parameters
         double bp_dw_scale, bp_moment_scale;
 
         // rprop parameters
@@ -121,7 +126,7 @@ Parameters of the MLP training algorithm. ::
 
 
 
-The structure has default constructor that initializes parameters for ``RPROP`` algorithm. There is also more advanced constructor to customize the parameters and/or choose backpropagation algorithm. Finally, the individual parameters can be adjusted after the structure is created.
+The structure has a default constructor that initializes parameters for the ``RPROP`` algorithm. There is also a more advanced constructor to customize the parameters and/or choose the back-propagation algorithm. Finally, the individual parameters can be adjusted after the structure is created.
 
 .. index:: CvANN_MLP
 
@@ -131,7 +136,7 @@ CvANN_MLP
 ---------
 .. c:type:: CvANN_MLP
 
-MLP model. ::
+MLP model ::
 
     class CvANN_MLP : public CvStatModel
     {
@@ -212,7 +217,7 @@ MLP model. ::
     
 
 
-Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method ``create`` . All the weights are set to zeros. Then the network is trained using the set of input and output vectors. The training procedure can be repeated more than once, i.e. the weights can be adjusted based on the new training data.
+Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method ``create`` . All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
 
 .. index:: CvANN_MLP::create
 
@@ -222,15 +227,15 @@ CvANN_MLP::create
 -----------------
 .. c:function:: void CvANN_MLP::create(  const CvMat* _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
 
-    Constructs the MLP with the specified topology
+    Constructs MLP with the specified topology.
 
-    :param _layer_sizes: The integer vector specifies the number of neurons in each layer including the input and output layers.
+    :param _layer_sizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
 
-    :param _activ_func: Specifies the activation function for each neuron; one of  ``CvANN_MLP::IDENTITY`` ,  ``CvANN_MLP::SIGMOID_SYM``  and  ``CvANN_MLP::GAUSSIAN`` .
+    :param _activ_func: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY`` ,  ``CvANN_MLP::SIGMOID_SYM`` , and  ``CvANN_MLP::GAUSSIAN`` .
 
     :param _f_param1,_f_param2: Free parameters of the activation function,  :math:`\alpha`  and  :math:`\beta` , respectively. See the formulas in the introduction section.
 
-The method creates a MLP network with the specified topology and assigns the same activation function to all the neurons.
+The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
 
 .. index:: CvANN_MLP::train
 
@@ -242,23 +247,23 @@ CvANN_MLP::train
 
     Trains/updates MLP.
 
-    :param _inputs: A floating-point matrix of input vectors, one vector per row.
+    :param _inputs: Floating-point matrix of input vectors, one vector per row.
 
-    :param _outputs: A floating-point matrix of the corresponding output vectors, one vector per row.
+    :param _outputs: Floating-point matrix of the corresponding output vectors, one vector per row.
 
-    :param _sample_weights: (RPROP only) The optional floating-point vector of weights for each sample. Some samples may be more important than others for training, and the user may want to raise the weight of certain classes to find the right balance between hit-rate and false-alarm rate etc.
+    :param _sample_weights: (RPROP only) Optional floating-point vector of weights for each sample. Some samples may be more important than others for training. You may want to raise the weight of certain classes to find the right balance between hit-rate and false-alarm rate, and so on.
 
-    :param _sample_idx: The optional integer vector indicating the samples (i.e. rows of  ``_inputs``  and  ``_outputs`` ) that are taken into account.
+    :param _sample_idx: Optional integer vector indicating the samples (rows of  ``_inputs``  and  ``_outputs`` ) that are taken into account.
 
-    :param _params: The training params. See  ``CvANN_MLP_TrainParams``  description.
+    :param _params: Training parameters. See the ``CvANN_MLP_TrainParams``  description.
 
-    :param _flags: The various parameters to control the training algorithm. May be a combination of the following:
+    :param _flags: Various parameters to control the training algorithm. A combination of the following parameters is possible:
 
-            * **UPDATE_WEIGHTS = 1** algorithm updates the network weights, rather than computes them from scratch (in the latter case the weights are initialized using  *Nguyen-Widrow*  algorithm).
+            * **UPDATE_WEIGHTS = 1** Algorithm updates the network weights, rather than computes them from scratch (in the latter case the weights are initialized using the  Nguyen-Widrow  algorithm).
 
-            * **NO_INPUT_SCALE** algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation =1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case user should take care of proper normalization.
+            * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation =1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
 
-            * **NO_OUTPUT_SCALE** algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output features independently, by transforming it to the certain range depending on the activation function used.
+            * **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output feature independently, by transforming it to the certain range depending on the used activation function.
 
-This method applies the specified training algorithm to compute/adjust the network weights. It returns the number of done iterations.
+This method applies the specified training algorithm to computing/adjusting the network weights. It returns the number of done iterations.
 

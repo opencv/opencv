@@ -1,9 +1,9 @@
 K Nearest Neighbors
 ===================
 
-The algorithm caches all of the training samples, and predicts the response for a new sample by analyzing a certain number (
+The algorithm caches all training samples and predicts the response for a new sample by analyzing a certain number (
 **K**
-) of the nearest neighbors of the sample (using voting, calculating weighted sum etc.) The method is sometimes referred to as "learning by example", because for prediction it looks for the feature vector with a known response that is closest to the given vector.
+) of the nearest neighbors of the sample (using voting, calculating weighted sum, and so on). The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
 
 .. index:: CvKNearest
 
@@ -13,7 +13,7 @@ CvKNearest
 ----------
 .. c:type:: CvKNearest
 
-K Nearest Neighbors model. ::
+K-Nearest Neighbors model ::
 
     class CvKNearest : public CvStatModel
     {
@@ -53,12 +53,16 @@ CvKNearest::train
 
     Trains the model.
 
-The method trains the K-Nearest model. It follows the conventions of generic ``train`` "method" with the following limitations: only CV_ROW_SAMPLE data layout is supported, the input variables are all ordered, the output variables can be either categorical ( ``is_regression=false`` ) or ordered ( ``is_regression=true`` ), variable subsets ( ``var_idx`` ) and missing measurements are not supported.
+The method trains the K-Nearest model. It follows the conventions of the generic ``train`` "method" with the following limitations: 
+* Only ``CV_ROW_SAMPLE`` data layout is supported.
+* Input variables are all ordered.
+* Output variables can be either categorical ( ``is_regression=false`` ) or ordered ( ``is_regression=true`` ).
+* Variable subsets ( ``var_idx`` ) and missing measurements are not supported.
 
 The parameter ``_max_k`` specifies the number of maximum neighbors that may be passed to the method ``find_nearest`` .
 
 The parameter ``_update_base`` specifies whether the model is trained from scratch
-( ``_update_base=false`` ), or it is updated using the new training data ( ``_update_base=true`` ). In the latter case the parameter ``_max_k`` must not be larger than the original value.
+( ``_update_base=false`` ), or it is updated using the new training data ( ``_update_base=true`` ). In the latter case, the parameter ``_max_k`` must not be larger than the original value.
 
 .. index:: CvKNearest::find_nearest
 
@@ -68,18 +72,18 @@ CvKNearest::find_nearest
 ------------------------
 .. c:function:: float CvKNearest::find_nearest(  const CvMat* _samples,  int k, CvMat* results=0,          const float** neighbors=0,  CvMat* neighbor_responses=0,  CvMat* dist=0 ) const
 
-    Finds the neighbors for the input vectors.
+    Finds the neighbors for input vectors.
 
-For each input vector (which are the rows of the matrix ``_samples`` ) the method finds the
+For each input vector (a row of the matrix ``_samples`` ), the method finds the
 :math:`\texttt{k} \le
-\texttt{get\_max\_k()}` nearest neighbor.  In the case of regression,
-the predicted result will be a mean value of the particular vector's
-neighbor responses. In the case of classification the class is determined
+\texttt{get\_max\_k()}` nearest neighbor.  In case of regression,
+the predicted result is a mean value of the particular vector's
+neighbor responses. In case of classification, the class is determined
 by voting.
 
-For custom classification/regression prediction, the method can optionally return pointers to the neighbor vectors themselves ( ``neighbors`` , an array of ``k*_samples->rows`` pointers), their corresponding output values ( ``neighbor_responses`` , a vector of ``k*_samples->rows`` elements) and the distances from the input vectors to the neighbors ( ``dist`` , also a vector of ``k*_samples->rows`` elements).
+For a custom classification/regression prediction, the method can optionally return pointers to the neighbor vectors themselves ( ``neighbors`` , an array of ``k*_samples->rows`` pointers), their corresponding output values ( ``neighbor_responses`` , a vector of ``k*_samples->rows`` elements), and the distances from the input vectors to the neighbors ( ``dist`` , also a vector of ``k*_samples->rows`` elements).
 
-For each input vector the neighbors are sorted by their distances to the vector.
+For each input vector, the neighbors are sorted by their distances to the vector.
 
 If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method. ::
 
@@ -126,7 +130,7 @@ If only a single input vector is passed, all output matrices are optional and th
                 sample.data.fl[0] = (float)j;
                 sample.data.fl[1] = (float)i;
 
-                // estimates the response and get the neighbors' labels
+                // estimate the response and get the neighbors' labels
                 response = knn.find_nearest(&sample,K,0,0,nearests,0);
 
                 // compute the number of neighbors representing the majority

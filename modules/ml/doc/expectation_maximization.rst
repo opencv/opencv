@@ -1,10 +1,10 @@
-Expectation-Maximization
+Expectation Maximization
 ========================
 
-The EM (Expectation-Maximization) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
+The EM (Expectation Maximization) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
 
-Consider the set of the feature vectors
-:math:`x_1, x_2,...,x_{N}` : N vectors from a d-dimensional Euclidean space drawn from a Gaussian mixture:
+Consider the set of the
+:math:`x_1, x_2,...,x_{N}` : N feature vectors?? from a d-dimensional Euclidean space drawn from a Gaussian mixture:
 
 .. math::
 
@@ -19,12 +19,15 @@ where
 :math:`p_k` is the normal distribution
 density with the mean
 :math:`a_k` and covariance matrix
-:math:`S_k`,:math:`\pi_k` is the weight of the k-th mixture. Given the number of mixtures
+:math:`S_k`,
+:math:`\pi_k` is the weight of the k-th mixture. Given the number of mixtures
 :math:`M` and the samples
-:math:`x_i`,:math:`i=1..N` the algorithm finds the
-maximum-likelihood estimates (MLE) of the all the mixture parameters,
-i.e.
-:math:`a_k`,:math:`S_k` and
+:math:`x_i`,
+:math:`i=1..N` the algorithm finds the
+maximum-likelihood estimates (MLE) of all the mixture parameters,
+that is,
+:math:`a_k`,
+:math:`S_k` and
 :math:`\pi_k` :
 
 .. math::
@@ -35,8 +38,8 @@ i.e.
 
     \Theta = \left \{ (a_k,S_k, \pi _k): a_k  \in \mathbbm{R} ^d,S_k=S_k^T>0,S_k  \in \mathbbm{R} ^{d  \times d}, \pi _k \geq 0, \sum _{k=1}^{m} \pi _k=1 \right \} .
 
-EM algorithm is an iterative procedure. Each iteration of it includes
-two steps. At the first step (Expectation-step, or E-step), we find a
+The EM algorithm is an iterative procedure. Each iteration includes
+two steps. At the first step (Expectation step or E-step), you find a
 probability
 :math:`p_{i,k}` (denoted
 :math:`\alpha_{i,k}` in the formula below) of
@@ -47,30 +50,30 @@ available mixture parameter estimates:
 
     \alpha _{ki} =  \frac{\pi_k\varphi(x;a_k,S_k)}{\sum\limits_{j=1}^{m}\pi_j\varphi(x;a_j,S_j)} .
 
-At the second step (Maximization-step, or M-step) the mixture parameter estimates are refined using the computed probabilities:
+At the second step (Maximization step or M-step), the mixture parameter estimates are refined using the computed probabilities:
 
 .. math::
 
-    \pi _k= \frac{1}{N} \sum _{i=1}^{N} \alpha _{ki},  \quad a_k= \frac{\sum\limits_{i=1}^{N}\alpha_{ki}x_i}{\sum\limits_{i=1}^{N}\alpha_{ki}} ,  \quad S_k= \frac{\sum\limits_{i=1}^{N}\alpha_{ki}(x_i-a_k)(x_i-a_k)^T}{\sum\limits_{i=1}^{N}\alpha_{ki}} ,
+    \pi _k= \frac{1}{N} \sum _{i=1}^{N} \alpha _{ki},  \quad a_k= \frac{\sum\limits_{i=1}^{N}\alpha_{ki}x_i}{\sum\limits_{i=1}^{N}\alpha_{ki}} ,  \quad S_k= \frac{\sum\limits_{i=1}^{N}\alpha_{ki}(x_i-a_k)(x_i-a_k)^T}{\sum\limits_{i=1}^{N}\alpha_{ki}} 
 
 Alternatively, the algorithm may start with the M-step when the initial values for
 :math:`p_{i,k}` can be provided. Another alternative when
-:math:`p_{i,k}` are unknown, is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
-:math:`p_{i,k}` . Often (and in ML) the
+:math:`p_{i,k}` are unknown is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
+:math:`p_{i,k}` . Often (including ML) the
 :ref:`kmeans` algorithm is used for that purpose.
 
-One of the main that EM algorithm should deal with is the large number
-of parameters to estimate. The majority of the parameters sits in
+One of the main problems?? the EM algorithm should deal with is a large number
+of parameters to estimate. The majority of the parameters reside in
 covariance matrices, which are
 :math:`d \times d` elements each
-(where
-:math:`d` is the feature space dimensionality). However, in
-many practical problems the covariance matrices are close to diagonal,
+where
+:math:`d` is the feature space dimensionality. However, in
+many practical problems, the covariance matrices are close to diagonal
 or even to
 :math:`\mu_k*I` , where
-:math:`I` is identity matrix and
-:math:`\mu_k` is mixture-dependent "scale" parameter. So a robust computation
-scheme could be to start with the harder constraints on the covariance
+:math:`I` is an identity matrix and
+:math:`\mu_k` is a mixture-dependent "scale" parameter. So, a robust computation
+scheme could start with harder constraints on the covariance
 matrices and then use the estimated parameters as an input for a less
 constrained optimization problem (often a diagonal covariance matrix is
 already a good enough approximation).
@@ -78,7 +81,7 @@ already a good enough approximation).
 **References:**
 
 *
-    Bilmes98 J. A. Bilmes. A Gentle Tutorial of the EM Algorithm and its Application to Parameter Estimation for Gaussian Mixture and Hidden Markov Models. Technical Report TR-97-021, International Computer Science Institute and Computer Science Division, University of California at Berkeley, April 1998.
+    Bilmes98 J. A. Bilmes. *A Gentle Tutorial of the EM Algorithm and its Application to Parameter Estimation for Gaussian Mixture and Hidden Markov Models*. Technical Report TR-97-021, International Computer Science Institute and Computer Science Division, University of California at Berkeley, April 1998.
 
 .. index:: CvEMParams
 
@@ -88,7 +91,7 @@ CvEMParams
 ----------
 .. c:type:: CvEMParams
 
-Parameters of the EM algorithm. ::
+Parameters of the EM algorithm ::
 
     struct CvEMParams
     {
@@ -124,7 +127,7 @@ Parameters of the EM algorithm. ::
     };
 
 
-The structure has 2 constructors, the default one represents a rough rule-of-thumb, with another one it is possible to override a variety of parameters, from a single number of mixtures (the only essential problem-dependent parameter), to the initial values for the mixture parameters.
+The structure has two constructors. The default one represents a rough rule-of-the-thumb. With another one it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
 
 .. index:: CvEM
 
@@ -134,7 +137,7 @@ CvEM
 ----
 .. c:type:: CvEM
 
-EM model. ::
+EM model ::
 
     class CV_EXPORTS CvEM : public CvStatModel
     {
@@ -142,7 +145,7 @@ EM model. ::
         // Type of covariance matrices
         enum { COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2 };
 
-        // The initial step
+        // Initial step
         enum { START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0 };
 
         CvEM();
@@ -194,14 +197,17 @@ CvEM::train
 -----------
 .. c:function:: void CvEM::train(  const CvMat* samples,  const CvMat*  sample_idx=0,                    CvEMParams params=CvEMParams(),  CvMat* labels=0 )
 
-    Estimates the Gaussian mixture parameters from the sample set.
+    Estimates the Gaussian mixture parameters from a sample set.
 
-Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or the function values) on input. Instead, it computes the
-*Maximum Likelihood Estimate* of the Gaussian mixture parameters from the input sample set, stores all the parameters inside the structure:
-:math:`p_{i,k}` in ``probs``,:math:`a_k` in ``means`` :math:`S_k` in ``covs[k]``,:math:`\pi_k` in ``weights`` and optionally computes the output "class label" for each sample:
-:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (i.e. indices of the most-probable mixture for each sample).
+Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or function values) as input. Instead, it computes the
+*Maximum Likelihood Estimate* of the Gaussian mixture parameters from an input sample set, stores all the parameters inside the structure:
+:math:`p_{i,k}` in ``probs``,
+:math:`a_k` in ``means`` ,
+:math:`S_k` in ``covs[k]``,
+:math:`\pi_k` in ``weights`` , and optionally computes the output "class label" for each sample:
+:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture for each sample).
 
-The trained model can be used further for prediction, just like any other classifier. The model trained is similar to the
+The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
 :ref:`Bayes classifier`.
 
 Example: Clustering random samples of multi-Gaussian distribution using EM ::
@@ -244,7 +250,7 @@ Example: Clustering random samples of multi-Gaussian distribution using EM ::
         }
         cvReshape( samples, samples, 1, 0 );
 
-        // initialize model's parameters
+        // initialize model parameters
         params.covs      = NULL;
         params.means     = NULL;
         params.weights   = NULL;
@@ -263,7 +269,7 @@ Example: Clustering random samples of multi-Gaussian distribution using EM ::
         // the piece of code shows how to repeatedly optimize the model
         // with less-constrained parameters
         //(COV_MAT_DIAGONAL instead of COV_MAT_SPHERICAL)
-        // when the output of the first stage is used as input for the second.
+        // when the output of the first stage is used as input for the second one.
         CvEM em_model2;
         params.cov_mat_type = CvEM::COV_MAT_DIAGONAL;
         params.start_step = CvEM::START_E_STEP;

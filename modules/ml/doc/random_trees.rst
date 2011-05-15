@@ -6,24 +6,24 @@ Random Trees
 Random trees have been introduced by Leo Breiman and Adele Cutler:
 http://www.stat.berkeley.edu/users/breiman/RandomForests/
 . The algorithm can deal with both classification and regression problems. Random trees is a collection (ensemble) of tree predictors that is called
-**forest**
-further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that recieved the majority of "votes". In the case of regression the classifier response is the average of the responses over all the trees in the forest.
+*forest*
+further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that recieved the majority of "votes". In case of regression, the classifier response is the average of the responses over all the trees in the forest.
 
-All the trees are trained with the same parameters, but on the different training sets, which are generated from the original training set using the bootstrap procedure: for each training set we randomly select the same number of vectors as in the original set ( ``=N`` ). The vectors are chosen with replacement. That is, some vectors will occur more than once and some will be absent. At each node of each tree trained not all the variables are used to find the best split, rather than a random subset of them. With each node a new subset is generated, however its size is fixed for all the nodes and all the trees. It is a training parameter, set to
-:math:`\sqrt{number\_of\_variables}` by default. None of the trees that are built are pruned.
+All the trees are trained with the same parameters but on different training sets that are generated from the original training set using the bootstrap procedure: for each training set, you randomly select the same number of vectors as in the original set ( ``=N`` ). The vectors are chosen with replacement. That is, some vectors will occur more than once and some will be absent. At each node of each trained tree,  not all the variables are used to find the best split, rather than a random subset of them. With each node a new subset is generated. However, its size is fixed for all the nodes and all the trees. It is a training parameter set to
+:math:`\sqrt{number\_of\_variables}` by default. None of the built trees are pruned.
 
 In random trees there is no need for any accuracy estimation procedures, such as cross-validation or bootstrap, or a separate test set to get an estimate of the training error. The error is estimated internally during the training. When the training set for the current tree is drawn by sampling with replacement, some vectors are left out (so-called
 *oob (out-of-bag) data*
-). The size of oob data is about ``N/3`` . The classification error is estimated by using this oob-data as following:
+). The size of oob data is about ``N/3`` . The classification error is estimated by using this oob-data as follows:
 
-*
-    Get a prediction for each vector, which is oob relatively to the i-th tree, using the very i-th tree.
+#.
+    Get a prediction for each vector, which is oob relative to the i-th tree, using the very i-th tree.
 
-*
-    After all the trees have been trained, for each vector that has ever been oob, find the class-"winner" for it (i.e. the class that has got the majority of votes in the trees, where the vector was oob) and compare it to the ground-truth response.
+#.
+    After all the trees have been trained, for each vector that has ever been oob, find the class-"winner" for it (the class that has got the majority of votes in the trees where the vector was oob) and compare it to the ground-truth response.
 
-*
-    Then the classification error estimate is computed as ratio of number of misclassified oob vectors to all the vectors in the original data. In the case of regression the oob-error is computed as the squared error for oob vectors difference divided by the total number of vectors.
+#.
+    Compute the classification error estimate as ratio of the number of misclassified oob vectors to all the vectors in the original data. In case of regression, the oob-error is computed as the squared error for oob vectors difference divided by the total number of vectors.
 
 **References:**
 
@@ -55,7 +55,7 @@ CvRTParams
 ----------
 .. c:type:: CvRTParams
 
-Training Parameters of Random Trees. ::
+Training parameters of random trees ::
 
     struct CvRTParams : public CvDTreeParams
     {
@@ -78,7 +78,7 @@ Training Parameters of Random Trees. ::
     };
 
 
-The set of training parameters for the forest is the superset of the training parameters for a single tree. However, Random trees do not need all the functionality/features of decision trees, most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
+The set of training parameters for the forest is a superset of the training parameters for a single tree. However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
 
 .. index:: CvRTrees
 
@@ -88,7 +88,7 @@ CvRTrees
 --------
 .. c:type:: CvRTrees
 
-Random Trees. ::
+Random trees ::
 
     class CvRTrees : public CvStatModel
     {
@@ -138,9 +138,9 @@ CvRTrees::train
 ---------------
 .. c:function:: bool CvRTrees::train(  const CvMat* train_data,  int tflag,                      const CvMat* responses,  const CvMat* comp_idx=0,                      const CvMat* sample_idx=0,  const CvMat* var_type=0,                      const CvMat* missing_mask=0,                      CvRTParams params=CvRTParams() )
 
-    Trains the Random Trees model.
+    Trains the Random Tree model.
 
-The method ``CvRTrees::train`` is very similar to the first form of ``CvDTree::train`` () and follows the generic method ``CvStatModel::train`` conventions. All of the specific to the algorithm training parameters are passed as a
+The method ``CvRTrees::train`` is very similar to the first form of ``CvDTree::train`` () and follows the generic method ``CvStatModel::train`` conventions. All the parameters specific to the algorithm training are passed as a
 :ref:`CvRTParams` instance. The estimate of the training error ( ``oob-error`` ) is stored in the protected class member ``oob_error`` .
 
 .. index:: CvRTrees::predict
@@ -151,9 +151,9 @@ CvRTrees::predict
 -----------------
 .. c:function:: double CvRTrees::predict(  const CvMat* sample,  const CvMat* missing=0 ) const
 
-    Predicts the output for the input sample.
+    Predicts the output for an input sample.
 
-The input parameters of the prediction method are the same as in ``CvDTree::predict`` , but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
+The input parameters of the prediction method are the same as in ``CvDTree::predict``  but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
 
 .. index:: CvRTrees::get_var_importance
 
@@ -165,7 +165,7 @@ CvRTrees::get_var_importance
 
     Retrieves the variable importance array.
 
-The method returns the variable importance vector, computed at the training stage when ``:ref:`CvRTParams`::calc_var_importance`` is set. If the training flag is not set, then the ``NULL`` pointer is returned. This is unlike decision trees, where variable importance can be computed anytime after the training.
+The method returns the variable importance vector, computed at the training stage when ``:ref:`CvRTParams`::calc_var_importance`` is set. If the training flag is not set, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
 .. index:: CvRTrees::get_proximity
 
@@ -177,9 +177,9 @@ CvRTrees::get_proximity
 
     Retrieves the proximity measure between two training samples.
 
-The method returns proximity measure between any two samples (the ratio of the those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees).
+The method returns proximity measure between any two samples, which is the ratio of those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees.
 
-Example: Prediction of mushroom goodness using random trees classifier ::
+Example: Prediction of mushroom goodness using the random-tree classifier ::
 
     #include <float.h>
     #include <stdio.h>
