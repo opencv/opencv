@@ -9,7 +9,7 @@ FeatureEvaluator
 ----------------
 .. c:type:: FeatureEvaluator
 
-Base class for computing feature values in cascade classifiers. ::
+Base class for computing feature values in cascade classifiers ::
 
     class CV_EXPORTS FeatureEvaluator
     {
@@ -36,7 +36,7 @@ FeatureEvaluator::read
 --------------------------
 .. c:function:: bool FeatureEvaluator::read(const FileNode\& node)
 
-    Reads parameters of the features from a FileStorage node.
+    Reads parameters of features from the ``FileStorage`` node.
 
     :param node: File node from which the feature parameters are read.
 
@@ -54,7 +54,7 @@ FeatureEvaluator::getFeatureType
 ------------------------------------
 .. c:function:: int FeatureEvaluator::getFeatureType() const
 
-    Returns the feature type (HAAR or LBP for now).
+    Returns the feature type (``HAAR`` or ``LBP`` for now).
 
 .. index:: FeatureEvaluator::setImage
 
@@ -62,9 +62,9 @@ FeatureEvaluator::setImage
 ------------------------------
 .. c:function:: bool FeatureEvaluator::setImage(const Mat\& img, Size origWinSize)
 
-    Sets the image in which to compute the features.
+    Sets an image where the features are computed??.
 
-    :param img: Matrix of type   ``CV_8UC1``  containing the image in which to compute the features.
+    :param img: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
 
     :param origWinSize: Size of training images.
 
@@ -72,12 +72,11 @@ FeatureEvaluator::setImage
 
 FeatureEvaluator::setWindow
 -------------------------------
-:func:`CascadeClassifier::runAt`
 .. c:function:: bool FeatureEvaluator::setWindow(Point p)
 
-    Sets window in the current image in which the features will be computed (called by ).
+    Sets a window in the current image where the features are computed (called by ??).
 
-    :param p: The upper left point of window in which the features will be computed. Size of the window is equal to size of training images.
+    :param p: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
 
 .. index:: FeatureEvaluator::calcOrd
 
@@ -85,11 +84,11 @@ FeatureEvaluator::calcOrd
 -----------------------------
 .. c:function:: double FeatureEvaluator::calcOrd(int featureIdx) const
 
-    Computes value of an ordered (numerical) feature.
+    Computes the value of an ordered (numerical) feature.
 
-    :param featureIdx: Index of feature whose value will be computed.
+    :param featureIdx: Index of the feature whose value is computed.
 
-Returns computed value of ordered feature.
+The function returns the computed value of an ordered feature.
 
 .. index:: FeatureEvaluator::calcCat
 
@@ -97,11 +96,11 @@ FeatureEvaluator::calcCat
 -----------------------------
 .. c:function:: int FeatureEvaluator::calcCat(int featureIdx) const
 
-    Computes value of a categorical feature.
+    Computes the value of a categorical feature.
 
-    :param featureIdx: Index of feature whose value will be computed.
+    :param featureIdx: Index of the feature whose value is computed.
 
-Returns computed label of categorical feature, i.e. value from [0,... (number of categories - 1)].
+The function returns the computed label of a categorical feature, that is, the value from [0,... (number of categories - 1)].
 
 .. index:: FeatureEvaluator::create
 
@@ -109,9 +108,9 @@ FeatureEvaluator::create
 ----------------------------
 .. c:function:: static Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
 
-    Constructs feature evaluator.
+    Constructs the feature evaluator.
 
-    :param type: Type of features evaluated by cascade (HAAR or LBP for now).
+    :param type: Type of features evaluated by cascade (``HAAR`` or ``LBP`` for now).
 
 .. index:: CascadeClassifier
 
@@ -121,32 +120,32 @@ CascadeClassifier
 -----------------
 .. c:type:: CascadeClassifier
 
-The cascade classifier class for object detection. ::
+The cascade classifier class for object detection ::
 
     class CascadeClassifier
     {
     public:
-            // structure for storing tree node
+            // structure for storing a tree node
         struct CV_EXPORTS DTreeNode
         {
-            int featureIdx; // feature index on which is a split
+            int featureIdx; // feature index on which is a split??
             float threshold; // split threshold of ordered features only
             int left; // left child index in the tree nodes array
             int right; // right child index in the tree nodes array
         };
 
-        // structure for storing desision tree
+        // structure for storing a decision tree
         struct CV_EXPORTS DTree
         {
             int nodeCount; // nodes count
         };
 
-        // structure for storing cascade stage (BOOST only for now)
+        // structure for storing a cascade stage (BOOST only for now)
         struct CV_EXPORTS Stage
         {
             int first; // first tree index in tree array
             int ntrees; // number of trees
-            float threshold; // treshold of stage sum
+            float threshold; // threshold of stage sum
         };
 
         enum { BOOST = 0 }; // supported stage types
@@ -196,9 +195,9 @@ CascadeClassifier::CascadeClassifier
 ----------------------------------------
 .. c:function:: CascadeClassifier::CascadeClassifier(const string\& filename)
 
-    Loads the classifier from file.
+    Loads a classifier from a file.
 
-    :param filename: Name of file from which classifier will be load.
+    :param filename: Name of the file from which the classifier is loaded.
 
 .. index:: CascadeClassifier::empty
 
@@ -214,9 +213,9 @@ CascadeClassifier::load
 ---------------------------
 .. c:function:: bool CascadeClassifier::load(const string\& filename)
 
-    Loads the classifier from file. The previous content is destroyed.
+    Loads a classifier from a file. The previous content is destroyed.
 
-    :param filename: Name of file from which classifier will be load. File may contain as old haar classifier (trained by haartraining application) or new cascade classifier (trained traincascade application).
+    :param filename: Name of the file from which the classifier is loaded. The file may contain an old HAAR classifier (trained by the haartraining application) or new cascade classifier trained traincascade application.
 
 .. index:: CascadeClassifier::read
 
@@ -224,7 +223,7 @@ CascadeClassifier::read
 ---------------------------
 .. c:function:: bool CascadeClassifier::read(const FileNode\& node)
 
-    Reads the classifier from a FileStorage node. File may contain a new cascade classifier (trained traincascade application) only.
+    Reads a classifier from a FileStorage node. The file may contain a new cascade classifier (trained traincascade application) only.
 
 .. index:: CascadeClassifier::detectMultiScale
 
@@ -234,17 +233,17 @@ CascadeClassifier::detectMultiScale
 
     Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
-    :param image: Matrix of type   ``CV_8U``  containing the image in which to detect objects.
+    :param image: Matrix of the type   ``CV_8U``  containing an image where objects are detected.
 
-    :param objects: Vector of rectangles such that each rectangle contains the detected object.
+    :param objects: Vector of rectangles where each rectangle contains the detected object.
 
-    :param scaleFactor: Specifies how much the image size is reduced at each image scale.
+    :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 
-    :param minNeighbors: Speficifes how many neighbors should each candiate rectangle have to retain it.
+    :param minNeighbors: Parameter specifying how many neighbors each candiate rectangle should have to retain it.
 
-    :param flags: This parameter is not used for new cascade and have the same meaning for old cascade as in function cvHaarDetectObjects.
+    :param flags: Parameter with the same meaning for an old cascade as in the function ``cvHaarDetectObjects``. It is not used for a new cascade.
 
-    :param minSize: The minimum possible object size. Objects smaller than that are ignored.
+    :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
 .. index:: CascadeClassifier::setImage
 
@@ -252,11 +251,11 @@ CascadeClassifier::setImage
 -------------------------------
 .. c:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>\& feval, const Mat\& image )
 
-    Sets the image for detection (called by detectMultiScale at each image level).
+    Sets an image for detection, which is called by ``detectMultiScale`` at each image level.
 
-    :param feval: Pointer to feature evaluator which is used for computing features.
+    :param feval: Pointer to the feature evaluator that is used for computing features.
 
-    :param image: Matrix of type   ``CV_8UC1``  containing the image in which to compute the features.
+    :param image: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
 
 .. index:: CascadeClassifier::runAt
 
@@ -264,15 +263,14 @@ CascadeClassifier::runAt
 ----------------------------
 .. c:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>\& feval, Point pt )
 
-    Runs the detector at the specified point (the image that the detector is working with should be set by setImage).
+    Runs the detector at the specified point. Use ``setImage`` to set the image that the detector is working with.
 
-    :param feval: Feature evaluator which is used for computing features.
+    :param feval: Feature evaluator that is used for computing features.
 
-    :param pt: The upper left point of window in which the features will be computed. Size of the window is equal to size of training images.
+    :param pt: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
 
-Returns:
-1 - if cascade classifier detects object in the given location.
--si - otherwise. si is an index of stage which first predicted that given window is a background image.
+The function returns 1 if the cascade classifier detects an object in the given location.
+Otherwise, it returns ``si``, which is an index of the stage that first predicted that the given window is a background image.??
 
 .. index:: groupRectangles
 
@@ -280,14 +278,14 @@ groupRectangles
 -------------------
 .. c:function:: void groupRectangles(vector<Rect>\& rectList,                     int groupThreshold, double eps=0.2)
 
-    Groups the object candidate rectangles
+    Groups the object candidate rectangles.
 
-    :param rectList: The input/output vector of rectangles. On output there will be retained and grouped rectangles
+    :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles.??
 
-    :param groupThreshold: The minimum possible number of rectangles, minus 1, in a group of rectangles to retain it.
+    :param groupThreshold: Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.??
 
-    :param eps: The relative difference between sides of the rectangles to merge them into a group
+    :param eps: Relative difference between sides of the rectangles to merge them into a group.
 
-The function is a wrapper for a generic function
-:func:`partition` . It clusters all the input rectangles using the rectangle equivalence criteria, that combines rectangles that have similar sizes and similar locations (the similarity is defined by ``eps`` ). When ``eps=0`` , no clustering is done at all. If
-:math:`\texttt{eps}\rightarrow +\inf` , all the rectangles will be put in one cluster. Then, the small clusters, containing less than or equal to ``groupThreshold`` rectangles, will be rejected. In each other cluster the average rectangle will be computed and put into the output rectangle list.
+The function is a wrapper for the generic function
+:ref:`partition` . It clusters all the input rectangles using the rectangle equivalence criteria that combines rectangles with similar sizes and similar locations (the similarity is defined by ``eps`` ). When ``eps=0`` , no clustering is done at all. If
+:math:`\texttt{eps}\rightarrow +\inf` , all the rectangles are put in one cluster. Then, the small clusters containing less than or equal to ``groupThreshold`` rectangles are rejected. In each other cluster, the average rectangle is computed and put into the output rectangle list.
