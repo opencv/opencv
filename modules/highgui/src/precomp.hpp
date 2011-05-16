@@ -46,6 +46,8 @@
 #pragma warning( disable: 4251 )
 #endif
 
+#include "cvconfig.h"
+
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
@@ -58,7 +60,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "cvconfig.h"
 #if defined WIN32 || defined _WIN32
 
 #define WIN32_LEAN_AND_MEAN
