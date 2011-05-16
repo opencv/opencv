@@ -12,8 +12,9 @@ struct CameraParams
     CameraParams(const CameraParams& other);
     const CameraParams& operator =(const CameraParams& other);
 
-    double focal;
-    cv::Mat M, t;
+    double focal; // Focal length
+    cv::Mat R; // Rotation
+    cv::Mat t; // Translation
 };
 
 

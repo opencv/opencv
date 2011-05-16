@@ -303,14 +303,14 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
     Mat dst_points(1, matches_info.matches.size(), CV_32FC2);
     for (size_t i = 0; i < matches_info.matches.size(); ++i)
     {
-        const DMatch& m = matches_info.matches[i];
+        const DMatch& r = matches_info.matches[i];
 
-        Point2f p = features1.keypoints[m.queryIdx].pt;
+        Point2f p = features1.keypoints[r.queryIdx].pt;
         p.x -= img1.cols * 0.5f;
         p.y -= img1.rows * 0.5f;
         src_points.at<Point2f>(0, i) = p;
 
-        p = features2.keypoints[m.trainIdx].pt;
+        p = features2.keypoints[r.trainIdx].pt;
         p.x -= img2.cols * 0.5f;
         p.y -= img2.rows * 0.5f;
         dst_points.at<Point2f>(0, i) = p;
@@ -338,14 +338,14 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
         if (!matches_info.inliers_mask[i])
             continue;
 
-        const DMatch& m = matches_info.matches[i];
+        const DMatch& r = matches_info.matches[i];
 
-        Point2f p = features1.keypoints[m.queryIdx].pt;
+        Point2f p = features1.keypoints[r.queryIdx].pt;
         p.x -= img1.cols * 0.5f;
         p.y -= img2.rows * 0.5f;
         src_points.at<Point2f>(0, inlier_idx) = p;
 
-        p = features2.keypoints[m.trainIdx].pt;
+        p = features2.keypoints[r.trainIdx].pt;
         p.x -= img2.cols * 0.5f;
         p.y -= img2.rows * 0.5f;
         dst_points.at<Point2f>(0, inlier_idx) = p;

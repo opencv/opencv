@@ -16,25 +16,25 @@ Ptr<Warper> Warper::createByCameraFocal(float focal, int type)
 }
 
 
-void ProjectorBase::setCameraMatrix(const Mat &M)
+void ProjectorBase::setCameraMatrix(const Mat &R)
 {
-    CV_Assert(M.size() == Size(3, 3));
-    CV_Assert(M.type() == CV_32F);
-    m[0] = M.at<float>(0, 0); m[1] = M.at<float>(0, 1); m[2] = M.at<float>(0, 2);
-    m[3] = M.at<float>(1, 0); m[4] = M.at<float>(1, 1); m[5] = M.at<float>(1, 2);
-    m[6] = M.at<float>(2, 0); m[7] = M.at<float>(2, 1); m[8] = M.at<float>(2, 2);
+    CV_Assert(R.size() == Size(3, 3));
+    CV_Assert(R.type() == CV_32F);
+    r[0] = R.at<float>(0, 0); r[1] = R.at<float>(0, 1); r[2] = R.at<float>(0, 2);
+    r[3] = R.at<float>(1, 0); r[4] = R.at<float>(1, 1); r[5] = R.at<float>(1, 2);
+    r[6] = R.at<float>(2, 0); r[7] = R.at<float>(2, 1); r[8] = R.at<float>(2, 2);
 
-    Mat M_inv = M.inv();
-    minv[0] = M_inv.at<float>(0, 0); minv[1] = M_inv.at<float>(0, 1); minv[2] = M_inv.at<float>(0, 2);
-    minv[3] = M_inv.at<float>(1, 0); minv[4] = M_inv.at<float>(1, 1); minv[5] = M_inv.at<float>(1, 2);
-    minv[6] = M_inv.at<float>(2, 0); minv[7] = M_inv.at<float>(2, 1); minv[8] = M_inv.at<float>(2, 2);
+    Mat Rinv = R.inv();
+    rinv[0] = Rinv.at<float>(0, 0); rinv[1] = Rinv.at<float>(0, 1); rinv[2] = Rinv.at<float>(0, 2);
+    rinv[3] = Rinv.at<float>(1, 0); rinv[4] = Rinv.at<float>(1, 1); rinv[5] = Rinv.at<float>(1, 2);
+    rinv[6] = Rinv.at<float>(2, 0); rinv[7] = Rinv.at<float>(2, 1); rinv[8] = Rinv.at<float>(2, 2);
 }
 
 
-Point Warper::operator ()(const Mat &src, float focal, const Mat& M, Mat &dst,
+Point Warper::operator ()(const Mat &src, float focal, const Mat& R, Mat &dst,
                           int interp_mode, int border_mode)
 {
-    return warp(src, focal, M, dst, interp_mode, border_mode);
+    return warp(src, focal, R, dst, interp_mode, border_mode);
 }
 
 
@@ -79,9 +79,9 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     float br_uf = static_cast<float>(dst_br.x);
     float br_vf = static_cast<float>(dst_br.y);
 
-    float x = projector_.minv[1];
-    float y = projector_.minv[4];
-    float z = projector_.minv[7];
+    float x = projector_.rinv[1];
+    float y = projector_.rinv[4];
+    float z = projector_.rinv[7];
     if (y > 0.f)
     {
         x = projector_.focal * x / z + src_size_.width * 0.5f;
@@ -93,9 +93,9 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
         }
     }
 
-    x = projector_.minv[1];
-    y = -projector_.minv[4];
-    z = projector_.minv[7];
+    x = projector_.rinv[1];
+    y = -projector_.rinv[4];
+    z = projector_.rinv[7];
     if (y > 0.f)
     {
         x = projector_.focal * x / z + src_size_.width * 0.5f;

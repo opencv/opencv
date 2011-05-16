@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "opencv2/core/core_c.h"
 #include <opencv2/calib3d/calib3d.hpp>
-#include "focal_estimators.hpp"
+#include "autocalib.hpp"
 #include "motion_estimators.hpp"
 #include "util.hpp"
 
@@ -11,7 +11,7 @@ using namespace cv;
 
 //////////////////////////////////////////////////////////////////////////////
 
-CameraParams::CameraParams() : focal(1), M(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
+CameraParams::CameraParams() : focal(1), R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
 
 
 CameraParams::CameraParams(const CameraParams &other)
@@ -23,7 +23,7 @@ CameraParams::CameraParams(const CameraParams &other)
 const CameraParams& CameraParams::operator =(const CameraParams &other)
 {
     focal = other.focal;
-    M = other.M.clone();
+    R = other.R.clone();
     t = other.t.clone();
     return *this;
 }
@@ -60,7 +60,7 @@ struct CalcRotation
         K_to.at<double>(1, 1) = f_to;
 
         Mat R = K_from.inv() * pairwise_matches[pair_idx].H.inv() * K_to;
-        cameras[edge.to].M = cameras[edge.from].M * R;
+        cameras[edge.to].R = cameras[edge.from].R * R;
     }
 
     int num_images;
@@ -132,7 +132,7 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
     for (int i = 0; i < num_images_; ++i)
     {
         cameras_.at<double>(i * 4, 0) = cameras[i].focal;
-        svd(cameras[i].M, SVD::FULL_UV);
+        svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
         if (determinant(R) < 0) R *= -1;
         Mat rvec;
@@ -207,19 +207,19 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
         rvec.at<double>(0, 0) = cameras_.at<double>(i * 4 + 1, 0);
         rvec.at<double>(1, 0) = cameras_.at<double>(i * 4 + 2, 0);
         rvec.at<double>(2, 0) = cameras_.at<double>(i * 4 + 3, 0);
-        Rodrigues(rvec, cameras[i].M);
+        Rodrigues(rvec, cameras[i].R);
         Mat Mf;
-        cameras[i].M.convertTo(Mf, CV_32F);
-        cameras[i].M = Mf;
+        cameras[i].R.convertTo(Mf, CV_32F);
+        cameras[i].R = Mf;
     }
 
     // Normalize motion to center image
     Graph span_tree;
     vector<int> span_tree_centers;
     findMaxSpanningTree(num_images_, pairwise_matches, span_tree, span_tree_centers);
-    Mat R_inv = cameras[span_tree_centers[0]].M.inv();
+    Mat R_inv = cameras[span_tree_centers[0]].R.inv();
     for (int i = 0; i < num_images_; ++i)
-        cameras[i].M = R_inv * cameras[i].M;
+        cameras[i].R = R_inv * cameras[i].R;
 }
 
 
@@ -255,12 +255,12 @@ void BundleAdjuster::calcError(Mat &err)
             if (!matches_info.inliers_mask[k])
                 continue;
 
-            const DMatch& m = matches_info.matches[k];
+            const DMatch& r = matches_info.matches[k];
 
-            Point2d kp1 = features1.keypoints[m.queryIdx].pt;
+            Point2d kp1 = features1.keypoints[r.queryIdx].pt;
             kp1.x -= 0.5 * images_[i].cols;
             kp1.y -= 0.5 * images_[i].rows;
-            Point2d kp2 = features2.keypoints[m.trainIdx].pt;
+            Point2d kp2 = features2.keypoints[r.trainIdx].pt;
             kp2.x -= 0.5 * images_[j].cols;
             kp2.y -= 0.5 * images_[j].rows;
             double len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);

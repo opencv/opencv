@@ -58,9 +58,9 @@ float normL2(const cv::Point3f& a, const cv::Point3f& b)
 
 
 static inline
-double normL2sq(const cv::Mat &m)
+double normL2sq(const cv::Mat &r)
 {
-    return m.dot(m);
+    return r.dot(r);
 }
 
 

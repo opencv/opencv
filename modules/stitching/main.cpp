@@ -181,8 +181,8 @@ int main(int argc, char* argv[])
     for (size_t i = 0; i < cameras.size(); ++i)
     {
         Mat R;
-        cameras[i].M.convertTo(R, CV_32F);
-        cameras[i].M = R;
+        cameras[i].R.convertTo(R, CV_32F);
+        cameras[i].R = R;
         LOGLN("Initial focal length " << i << ": " << cameras[i].focal);
     }
 
@@ -195,10 +195,10 @@ int main(int argc, char* argv[])
         LOGLN("Wave correcting...");
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
-            rmats.push_back(cameras[i].M);
+            rmats.push_back(cameras[i].R);
         waveCorrect(rmats);
         for (size_t i = 0; i < cameras.size(); ++i)
-            cameras[i].M = rmats[i];
+            cameras[i].R = rmats[i];
     }
 
     // Find median focal length
@@ -226,8 +226,8 @@ int main(int argc, char* argv[])
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].M, images_warped[i]);
-        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].M, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, images_warped[i]);
+        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
     vector<Mat> images_f(num_images);
     for (int i = 0; i < num_images; ++i)

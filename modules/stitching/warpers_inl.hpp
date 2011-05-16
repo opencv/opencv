@@ -4,14 +4,14 @@
 #include "warpers.hpp" // Make your IDE see declarations
 
 template <class P>
-cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &M, cv::Mat &dst,
+cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
                               int interp_mode, int border_mode)
 {
     src_size_ = src.size();
 
     projector_.size = src.size();
     projector_.focal = focal;
-    projector_.setCameraMatrix(M);
+    projector_.setCameraMatrix(R);
 
     cv::Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
@@ -106,9 +106,9 @@ void PlaneProjector::mapForward(float x, float y, float &u, float &v)
     x -= size.width * 0.5f;
     y -= size.height * 0.5f;
 
-    float x_ = m[0] * x + m[1] * y + m[2] * focal;
-    float y_ = m[3] * x + m[4] * y + m[5] * focal;
-    float z_ = m[6] * x + m[7] * y + m[8] * focal;
+    float x_ = r[0] * x + r[1] * y + r[2] * focal;
+    float y_ = r[3] * x + r[4] * y + r[5] * focal;
+    float z_ = r[6] * x + r[7] * y + r[8] * focal;
 
     u = scale * x_ / z_ * plane_dist;
     v = scale * y_ / z_ * plane_dist;
@@ -122,9 +122,9 @@ void PlaneProjector::mapBackward(float u, float v, float &x, float &y)
     float y_ = v / scale;
 
     float z;
-    x = minv[0] * x_ + minv[1] * y_ + minv[2] * plane_dist;
-    y = minv[3] * x_ + minv[4] * y_ + minv[5] * plane_dist;
-    z = minv[6] * x_ + minv[7] * y_ + minv[8] * plane_dist;
+    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * plane_dist;
+    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * plane_dist;
+    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * plane_dist;
 
     x = focal * x / z + size.width * 0.5f;
     y = focal * y / z + size.height * 0.5f;
@@ -137,9 +137,9 @@ void SphericalProjector::mapForward(float x, float y, float &u, float &v)
     x -= size.width * 0.5f;
     y -= size.height * 0.5f;
 
-    float x_ = m[0] * x + m[1] * y + m[2] * focal;
-    float y_ = m[3] * x + m[4] * y + m[5] * focal;
-    float z_ = m[6] * x + m[7] * y + m[8] * focal;
+    float x_ = r[0] * x + r[1] * y + r[2] * focal;
+    float y_ = r[3] * x + r[4] * y + r[5] * focal;
+    float z_ = r[6] * x + r[7] * y + r[8] * focal;
 
     u = scale * atan2f(x_, z_);
     v = scale * (static_cast<float>(CV_PI) - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_)));
@@ -155,9 +155,9 @@ void SphericalProjector::mapBackward(float u, float v, float &x, float &y)
     float z_ = sinv * cosf(u / scale);
 
     float z;
-    x = minv[0] * x_ + minv[1] * y_ + minv[2] * z_;
-    y = minv[3] * x_ + minv[4] * y_ + minv[5] * z_;
-    z = minv[6] * x_ + minv[7] * y_ + minv[8] * z_;
+    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * z_;
+    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * z_;
+    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * z_;
 
     x = focal * x / z + size.width * 0.5f;
     y = focal * y / z + size.height * 0.5f;
@@ -170,9 +170,9 @@ void CylindricalProjector::mapForward(float x, float y, float &u, float &v)
     x -= size.width * 0.5f;
     y -= size.height * 0.5f;
 
-    float x_ = m[0] * x + m[1] * y + m[2] * focal;
-    float y_ = m[3] * x + m[4] * y + m[5] * focal;
-    float z_ = m[6] * x + m[7] * y + m[8] * focal;
+    float x_ = r[0] * x + r[1] * y + r[2] * focal;
+    float y_ = r[3] * x + r[4] * y + r[5] * focal;
+    float z_ = r[6] * x + r[7] * y + r[8] * focal;
 
     u = scale * atan2f(x_, z_);
     v = scale * y_ / sqrtf(x_ * x_ + z_ * z_);
@@ -187,9 +187,9 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     float z_ = cosf(u / scale);
 
     float z;
-    x = minv[0] * x_ + minv[1] * y_ + minv[2] * z_;
-    y = minv[3] * x_ + minv[4] * y_ + minv[5] * z_;
-    z = minv[6] * x_ + minv[7] * y_ + minv[8] * z_;
+    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * z_;
+    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * z_;
+    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * z_;
 
     x = focal * x / z + size.width * 0.5f;
     y = focal * y / z + size.height * 0.5f;
