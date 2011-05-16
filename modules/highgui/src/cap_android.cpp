@@ -525,9 +525,9 @@ bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsig
     unsigned char* uv = y1 + width * height;
 
     if (inRGBorder)
-        cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
-    else
         cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<2>(resmat, width, y1, uv));
+    else
+        cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
 
     return !resmat.empty();
 }
