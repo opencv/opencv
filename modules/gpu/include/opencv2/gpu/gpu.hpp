@@ -1382,7 +1382,7 @@ namespace cv
         class CV_EXPORTS BruteForceMatcher_GPU_base
         {
         public:
-            enum DistType {L1Dist = 0, L2Dist};
+            enum DistType {L1Dist = 0, L2Dist, HammingDist};
 
             explicit BruteForceMatcher_GPU_base(DistType distType = L2Dist);
 
@@ -1521,6 +1521,18 @@ namespace cv
         public:
             explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
             explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
+        };
+        template <> class CV_EXPORTS BruteForceMatcher_GPU< HammingLUT > : public BruteForceMatcher_GPU_base
+        {
+        public:
+            explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(HammingDist) {}
+            explicit BruteForceMatcher_GPU(HammingLUT /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
+        };
+        template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BruteForceMatcher_GPU_base
+        {
+        public:
+            explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(HammingDist) {}
+            explicit BruteForceMatcher_GPU(Hamming /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
         };
 
         ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////

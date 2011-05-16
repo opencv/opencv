@@ -83,14 +83,20 @@ namespace cv { namespace gpu { namespace bfmatcher
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
         bool cc_12);
     template <typename T>
+    void matchSingleHamming_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, 
+        const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
+        bool cc_12);
+    template <typename T>
     void matchCollectionL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection,
-        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
-        const DevMem2Df& distance, 
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
         bool cc_12);
     template <typename T>
     void matchCollectionL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection,
-        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
-        const DevMem2Df& distance, 
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
+        bool cc_12);
+    template <typename T>
+    void matchCollectionHamming_gpu(const DevMem2D& queryDescs, const DevMem2D& trainCollection, 
+        const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
         bool cc_12);
 
     template <typename T>
@@ -99,12 +105,18 @@ namespace cv { namespace gpu { namespace bfmatcher
     template <typename T>
     void knnMatchL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
+    template <typename T>
+    void knnMatchHamming_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn,
+        const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
 
     template <typename T>
     void radiusMatchL1_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
         const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
     template <typename T>
     void radiusMatchL2_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
+        const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
+    template <typename T>
+    void radiusMatchHamming_gpu(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
         const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
 }}}
 
@@ -167,7 +179,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, 
         bool cc_12);
 
-    static const match_caller_t match_callers[2][8] =
+    static const match_caller_t match_callers[3][8] =
     {
         {
             matchSingleL1_gpu<unsigned char>, matchSingleL1_gpu<signed char>, 
@@ -178,6 +190,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
             matchSingleL2_gpu<unsigned char>, matchSingleL2_gpu<signed char>, 
             matchSingleL2_gpu<unsigned short>, matchSingleL2_gpu<short>, 
             matchSingleL2_gpu<int>, matchSingleL2_gpu<float>, 0, 0
+        },
+        {
+            matchSingleHamming_gpu<unsigned char>, matchSingleHamming_gpu<signed char>, 
+            matchSingleHamming_gpu<unsigned short>, matchSingleHamming_gpu<short>, 
+            matchSingleHamming_gpu<int>, 0, 0, 0
         }
     };
 
@@ -295,7 +312,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
         const DevMem2D_<PtrStep>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx,
         const DevMem2Df& distance, bool cc_12);
 
-    static const match_caller_t match_callers[2][8] =
+    static const match_caller_t match_callers[3][8] =
     {
         {
             matchCollectionL1_gpu<unsigned char>, matchCollectionL1_gpu<signed char>,
@@ -306,6 +323,11 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
             matchCollectionL2_gpu<unsigned char>, matchCollectionL2_gpu<signed char>,
             matchCollectionL2_gpu<unsigned short>, matchCollectionL2_gpu<short>,
             matchCollectionL2_gpu<int>, matchCollectionL2_gpu<float>, 0, 0
+        },
+        {
+            matchCollectionHamming_gpu<unsigned char>, matchCollectionHamming_gpu<signed char>,
+            matchCollectionHamming_gpu<unsigned short>, matchCollectionHamming_gpu<short>,
+            matchCollectionHamming_gpu<int>, 0, 0, 0
         }
     };
 
@@ -391,7 +413,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     typedef void (*match_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs, int knn,
         const DevMem2D& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, const DevMem2Df& allDist);
 
-    static const match_caller_t match_callers[2][8] =
+    static const match_caller_t match_callers[3][8] =
     {
         {
             knnMatchL1_gpu<unsigned char>, knnMatchL1_gpu<signed char>, knnMatchL1_gpu<unsigned short>,
@@ -400,6 +422,10 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
         {
             knnMatchL2_gpu<unsigned char>, knnMatchL2_gpu<signed char>, knnMatchL2_gpu<unsigned short>,
             knnMatchL2_gpu<short>, knnMatchL2_gpu<int>, knnMatchL2_gpu<float>, 0, 0
+        },
+        {
+            knnMatchHamming_gpu<unsigned char>, knnMatchHamming_gpu<signed char>, knnMatchHamming_gpu<unsigned short>,
+            knnMatchHamming_gpu<short>, knnMatchHamming_gpu<int>, 0, 0, 0
         }
     };
 
@@ -531,7 +557,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     typedef void (*radiusMatch_caller_t)(const DevMem2D& queryDescs, const DevMem2D& trainDescs, float maxDistance,
         const DevMem2D& mask, const DevMem2Di& trainIdx, unsigned int* nMatches, const DevMem2Df& distance);
 
-    static const radiusMatch_caller_t radiusMatch_callers[2][8] =
+    static const radiusMatch_caller_t radiusMatch_callers[3][8] =
     {
         {
             radiusMatchL1_gpu<unsigned char>, radiusMatchL1_gpu<signed char>, radiusMatchL1_gpu<unsigned short>,
@@ -540,6 +566,10 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
         {
             radiusMatchL2_gpu<unsigned char>, radiusMatchL2_gpu<signed char>, radiusMatchL2_gpu<unsigned short>,
             radiusMatchL2_gpu<short>, radiusMatchL2_gpu<int>, radiusMatchL2_gpu<float>, 0, 0
+        },
+        {
+            radiusMatchHamming_gpu<unsigned char>, radiusMatchHamming_gpu<signed char>, radiusMatchHamming_gpu<unsigned short>,
+            radiusMatchHamming_gpu<short>, radiusMatchHamming_gpu<int>, 0, 0, 0
         }
     };
 
