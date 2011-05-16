@@ -60,6 +60,8 @@ This class is used for extracting Speeded Up Robust Features (SURF) from an imag
         //! max keypoints = keypointsRatio * img.size().area()
         float keypointsRatio;
 
+        bool upright;
+
         GpuMat sum, mask1, maskSum, intBuffer;
 
         GpuMat det, trace;
@@ -76,6 +78,10 @@ The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides 
 :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
 The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
+
+**Note:**
+
+By default for user provided keypoints the class ``SURF_GPU`` recalculates keypoint's orientation and returns reodered/filtered keypoints array and coresponding decriptors array.
 
 See Also: :c:type:`SURF`
 
@@ -170,7 +176,7 @@ This is a brute-force descriptor matcher. For each descriptor in the first set, 
     };
 
 
-The class ``BruteForceMatcher_GPU`` has an interface similar to the class :c:type:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative: save results to the GPU memory or to the CPU memory. ``Distance`` template parameter is kept for CPU/GPU interfaces similarity. ``BruteForceMatcher_GPU`` supports only the ``L1<float>`` and ``L2<float>`` distance types.
+The class ``BruteForceMatcher_GPU`` has an interface similar to the class :c:type:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative: save results to the GPU memory or to the CPU memory. ``Distance`` template parameter is kept for CPU/GPU interfaces similarity. ``BruteForceMatcher_GPU`` supports only the ``L1<float>``, ``L2<float>`` and ``Hamming`` distance types.
 
 See Also: :c:type:`DescriptorMatcher`, :c:type:`BruteForceMatcher`
 
