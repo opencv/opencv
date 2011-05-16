@@ -571,7 +571,7 @@ class FuncInfo(object):
                     parse_arglist = ", ".join(["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]),
                     code_cvt = " &&\n        ".join(code_cvt_list))
             else:
-                code_parse = "if(PyObject_Size(args) == 0 && PyObject_Size(kw) == 0)"
+                code_parse = "if(PyObject_Size(args) == 0 && (kw == NULL || PyObject_Size(kw) == 0))"
 
             if len(v.py_outlist) == 0:
                 code_ret = "Py_RETURN_NONE"

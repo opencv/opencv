@@ -354,7 +354,7 @@ static inline bool pyopencv_to(PyObject* obj, Size& sz, const char* name = "<unk
 {
     if(!obj || obj == Py_None)
         return true;
-    return PyArg_Parse(obj, "ii", &sz.width, &sz.height) > 0;
+    return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
 }
 
 static inline PyObject* pyopencv_from(const Size& sz)
@@ -366,7 +366,7 @@ static inline bool pyopencv_to(PyObject* obj, Rect& r, const char* name = "<unkn
 {
     if(!obj || obj == Py_None)
         return true;
-    return PyArg_Parse(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
+    return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
 }
 
 static inline PyObject* pyopencv_from(const Rect& r)
@@ -383,7 +383,7 @@ static inline bool pyopencv_to(PyObject* obj, Range& r, const char* name = "<unk
         r = Range::all();
         return true;
     }
-    return PyArg_Parse(obj, "ii", &r.start, &r.end) > 0;
+    return PyArg_ParseTuple(obj, "ii", &r.start, &r.end) > 0;
 }
 
 static inline PyObject* pyopencv_from(const Range& r)
@@ -400,7 +400,7 @@ static inline bool pyopencv_to(PyObject* obj, CvSlice& r, const char* name = "<u
         r = CV_WHOLE_SEQ;
         return true;
     }
-    return PyArg_Parse(obj, "ii", &r.start_index, &r.end_index) > 0;
+    return PyArg_ParseTuple(obj, "ii", &r.start_index, &r.end_index) > 0;
 }
                                                 
 static inline PyObject* pyopencv_from(const CvSlice& r)
@@ -419,7 +419,7 @@ static inline bool pyopencv_to(PyObject* obj, Point& p, const char* name = "<unk
         p.y = saturate_cast<int>(c.imag);
         return true;
     }
-    return PyArg_Parse(obj, "ii", &p.x, &p.y) > 0;
+    return PyArg_ParseTuple(obj, "ii", &p.x, &p.y) > 0;
 }
 
 static inline bool pyopencv_to(PyObject* obj, Point2f& p, const char* name = "<unknown>")
@@ -433,7 +433,7 @@ static inline bool pyopencv_to(PyObject* obj, Point2f& p, const char* name = "<u
         p.y = saturate_cast<float>(c.imag);
         return true;
     }
-    return PyArg_Parse(obj, "ff", &p.x, &p.y) > 0;
+    return PyArg_ParseTuple(obj, "ff", &p.x, &p.y) > 0;
 }
 
 static inline PyObject* pyopencv_from(const Point& p)
@@ -450,7 +450,7 @@ static inline bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name = "<unk
 {
     if(!obj)
         return true;
-    return PyArg_Parse(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
+    return PyArg_ParseTuple(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
 }
 
 static inline PyObject* pyopencv_from(const Vec3d& v)
