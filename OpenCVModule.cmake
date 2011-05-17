@@ -37,7 +37,7 @@ macro(define_opencv_module name)
         SOVERSION ${OPENCV_SOVERSION}
         OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"		
         )	
-	if(SOLUTION_FOLDERS_ENABLED)
+	if(ENABLE_SOLUTION_FOLDERS)
 		set_target_properties(${the_target} PROPERTIES FOLDER "modules")
 	endif()	
 		
@@ -139,7 +139,7 @@ macro(define_opencv_module name)
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
             )
 			
-		if(SOLUTION_FOLDERS_ENABLED)
+		if(ENABLE_SOLUTION_FOLDERS)
 			set_target_properties(${the_target} PROPERTIES FOLDER "tests")
 		endif()	
 
