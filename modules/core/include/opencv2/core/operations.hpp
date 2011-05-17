@@ -73,6 +73,7 @@
   #endif
     
 #elif defined WIN32 || defined _WIN32
+  #include <intrin.h>
   #define CV_XADD(addr,delta) _InterlockedExchangeAdd((long volatile*)(addr), (delta))
 #else
 
