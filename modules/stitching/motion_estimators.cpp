@@ -102,7 +102,7 @@ void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<
     for (int i = 0; i < num_images; ++i)
         is_focals_estimated_ = is_focals_estimated_ && is_focal_estimated[i];
 
-    // Find focal medians and use them as true focal length
+    // Find focal median and use it as true focal length
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     cameras.resize(num_images);
     for (int i = 0; i < num_images; ++i)
