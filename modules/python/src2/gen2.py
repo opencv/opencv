@@ -749,8 +749,9 @@ class PythonWrapperGenerator(object):
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 1:
         dstdir = sys.argv[1]
+    if len(sys.argv) > 2:
         srcfiles = sys.argv[2:]
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)
