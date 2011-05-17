@@ -267,7 +267,7 @@ int main(int argc, char** argv)
         if( c == '\x1b' ) // esc
         {
             cout << "Exiting ..." << endl;
-            return 0;
+            break;
         }
         else if( isWarpPerspective )
         {
@@ -276,6 +276,5 @@ int main(int argc, char** argv)
                          ransacReprojThreshold, rng );
         }
     }
-    waitKey(0);
     return 0;
 }
