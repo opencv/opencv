@@ -31,7 +31,7 @@ set_target_properties(${the_target} PROPERTIES
                       INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
                       OUTPUT_NAME "opencv_stitching")
 					  
-if(SOLUTION_FOLDERS_ENABLED)
+if(ENABLE_SOLUTION_FOLDERS)
 	set_target_properties(${the_target} PROPERTIES FOLDER "applications")
 endif()	
 

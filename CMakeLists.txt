@@ -1275,8 +1275,8 @@ endif()
 
 if(${CMAKE_VERSION} VERSION_GREATER "2.8.0")
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-	set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")	
-	set(SOLUTION_FOLDERS_ENABLED 1)
+	set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")		
+	set(ENABLE_SOLUTION_FOLDERS OFF CACHE BOOL "Solution folder in Visual Studio or in other IDEs")
 endif()
 
 #-----------------------------------

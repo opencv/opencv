@@ -104,7 +104,7 @@ set_target_properties(${the_target} PROPERTIES
 	OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
 	)
 
-if(SOLUTION_FOLDERS_ENABLED)
+if(ENABLE_SOLUTION_FOLDERS)
 	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
 endif()	
 	
@@ -221,7 +221,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
         )
 	
-	if(SOLUTION_FOLDERS_ENABLED)
+	if(ENABLE_SOLUTION_FOLDERS)
 		set_target_properties(${the_test_target} PROPERTIES FOLDER "tests")
 	endif()			
     

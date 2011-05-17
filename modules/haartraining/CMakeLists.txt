@@ -84,7 +84,7 @@ install(TARGETS opencv_createsamples RUNTIME DESTINATION bin COMPONENT main)
 install(TARGETS opencv_performance RUNTIME DESTINATION bin COMPONENT main)
 
 
-if(SOLUTION_FOLDERS_ENABLED)
+if(ENABLE_SOLUTION_FOLDERS)
 	set_target_properties(opencv_performance PROPERTIES FOLDER "applications")
 	set_target_properties(opencv_createsamples PROPERTIES FOLDER "applications")
 	set_target_properties(opencv_haartraining PROPERTIES FOLDER "applications")

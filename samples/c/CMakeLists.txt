@@ -40,7 +40,7 @@ if (BUILD_EXAMPLES)
     	    opencv_flann opencv_imgproc opencv_highgui opencv_ml opencv_video opencv_objdetect
     	    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib)
 			
-		if(SOLUTION_FOLDERS_ENABLED)
+		if(ENABLE_SOLUTION_FOLDERS)
 			set_target_properties(${the_target} PROPERTIES FOLDER "samples//c")
 		endif()
 

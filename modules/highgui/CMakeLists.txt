@@ -288,7 +288,7 @@ set_target_properties(${the_target} PROPERTIES
 	LINK_INTERFACE_LIBRARIES ""
 	)
 
-if(SOLUTION_FOLDERS_ENABLED)
+if(ENABLE_SOLUTION_FOLDERS)
 	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
 endif()	
 

@@ -47,7 +47,7 @@ set_target_properties(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
                       )
 					  
-if(SOLUTION_FOLDERS_ENABLED)
+if(ENABLE_SOLUTION_FOLDERS)
 	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
 endif()						  
 
