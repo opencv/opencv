@@ -162,7 +162,7 @@ void DescriptorMatcher::DescriptorCollection::getLocalIdx( int globalDescIdx, in
     CV_Assert( (globalDescIdx>=0) && (globalDescIdx < size()) );
     std::vector<int>::const_iterator img_it = std::upper_bound(startIdxs.begin(), startIdxs.end(), globalDescIdx);
     --img_it;
-    imgIdx = img_it - startIdxs.begin();
+    imgIdx = (int)(img_it - startIdxs.begin());
     localDescIdx = globalDescIdx - (*img_it);
 }
 

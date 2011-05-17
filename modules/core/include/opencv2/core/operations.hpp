@@ -2311,13 +2311,13 @@ inline Point LineIterator::pos() const
 
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer()
 {
-    ptr = alignPtr(buf, 16);
+    ptr = buf;
     size = fixed_size;
 }
 
 template<typename _Tp, size_t fixed_size> inline AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
 {
-    ptr = alignPtr(buf, 16);
+    ptr = buf;
     size = fixed_size;
     allocate(_size);
 }
@@ -2339,11 +2339,10 @@ template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size
 
 template<typename _Tp, size_t fixed_size> inline void AutoBuffer<_Tp, fixed_size>::deallocate()
 {
-    _Tp* buf0 = alignPtr(buf, 16);
-    if( ptr != buf0 )
+    if( ptr != buf )
     {
         cv::deallocate<_Tp>(ptr, size);
-        ptr = buf0;
+        ptr = buf;
         size = fixed_size;
     }
 }

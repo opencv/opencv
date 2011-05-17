@@ -60,7 +60,7 @@ template<typename T> static inline Scalar rawToScalar(const T& v)
 \****************************************************************************************/
 
 template<typename T, typename ST>
-static size_t sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
+static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
     const T* src = src0;
     if( !mask )
@@ -537,7 +537,7 @@ void cv::meanStdDev( const InputArray& _src, OutputArray _mean, OutputArray _sdv
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
     NAryMatIterator it(arrays, ptrs);
-    int total = it.size, blockSize = total, intSumBlockSize = 0;
+    int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0, nz0 = 0;
     AutoBuffer<double> _buf(cn*4);
     double *s = (double*)_buf, *sq = s + cn;
@@ -954,11 +954,11 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
 
 
 #define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
-static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, size_t len, int cn) \
+static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, int len, int cn) \
 { return norm##L##_(src, mask, r, len, cn); } \
 static int normDiff##L##_##suffix(const type* src1, const type* src2, \
-                               const uchar* mask, ntype* r, size_t len, int cn) \
-{ return normDiff##L##_(src1, src2, mask, r, len, cn); }
+                               const uchar* mask, ntype* r, int len, int cn) \
+{ return normDiff##L##_(src1, src2, mask, r, (int)len, cn); }
     
 #define CV_DEF_NORM_ALL(suffix, type, inftype, l1type, l2type) \
 CV_DEF_NORM_FUNC(Inf, suffix, type, inftype) \

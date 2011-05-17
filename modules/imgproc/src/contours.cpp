@@ -1485,14 +1485,14 @@ void cv::findContours( const InputOutputArray _image, OutputArrayOfArrays _conto
         return;
     }
     Seq<CvSeq*> all_contours(cvTreeToNodeSeq( _ccontours, sizeof(CvSeq), storage ));
-    size_t i, total = all_contours.size();
+    int i, total = (int)all_contours.size();
     _contours.create(total, 1, 0, -1, true);
     SeqIterator<CvSeq*> it = all_contours.begin();
     for( i = 0; i < total; i++, ++it )
     {
         CvSeq* c = *it;
         ((CvContour*)c)->color = (int)i;
-        _contours.create(c->total, 1, CV_32SC2, i, true);
+        _contours.create((int)c->total, 1, CV_32SC2, i, true);
         Mat ci = _contours.getMat(i);
         CV_Assert( ci.isContinuous() );
         cvCvtSeqToArray(c, ci.data);
@@ -1583,7 +1583,7 @@ void cv::drawContours( InputOutputArray _image, const InputArrayOfArrays& _conto
     
     for( i = first; i < last; i++ )
     {
-        Mat ci = _contours.getMat(i);
+        Mat ci = _contours.getMat((int)i);
         if( ci.empty() )
             continue;
         int npoints = ci.checkVector(2, CV_32S);
