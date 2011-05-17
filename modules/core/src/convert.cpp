@@ -1134,15 +1134,7 @@ cvMixChannels( const CvArr** src, int src_count,
 
     int i;
     for( i = 0; i < src_count; i++ )
-    {
-        printf("%d. %p ", i, src[i]);
-        if( src[i] )
-        {
-            CvMat m, *pm = cvGetMat(src[i], &m);
-            printf( "%d x %d, type = %d\n", pm->rows, pm->cols, CV_MAT_TYPE(pm->type));
-        }
         buf[i] = cv::cvarrToMat(src[i]);
-    }
     for( i = 0; i < dst_count; i++ )
         buf[i+src_count] = cv::cvarrToMat(dst[i]);
     cv::mixChannels(&buf[0], src_count, &buf[src_count], dst_count, from_to, pair_count);
