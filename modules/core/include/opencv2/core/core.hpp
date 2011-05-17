@@ -4178,7 +4178,7 @@ protected:
    cv::Size size = parser.get<cv::Size>("--size");
    string inputFile = parser.get<string>("--inputFile");
 */
-class CommandLineParser
+class CV_EXPORTS CommandLineParser
 {
 public:
     //! the default constructor
@@ -4257,10 +4257,10 @@ protected:
     }
 };
 
-template<>
+template<> CV_EXPORTS
 std::vector<std::string> CommandLineParser::getVec<std::string>(const std::string& keys);
 
-template<typename _Tp>
+template<typename _Tp> inline
 std::vector<_Tp> CommandLineParser::getVec(const std::string& keys)
 {
     if (!has(keys))
@@ -4277,19 +4277,19 @@ std::vector<_Tp> CommandLineParser::getVec(const std::string& keys)
     return res;
 }
 
-template<>
+template<> CV_EXPORTS
 std::string CommandLineParser::fromString<std::string>(const std::string& str);
 
-template<>
+template<> CV_EXPORTS
 int CommandLineParser::fromString<int>(const std::string& str);
 
-template<>
+template<> CV_EXPORTS
 unsigned int CommandLineParser::fromString<unsigned int>(const std::string& str);
 
-template<>
+template<> CV_EXPORTS
 double CommandLineParser::fromString<double>(const std::string& str);
 
-template<>
+template<> CV_EXPORTS
 cv::Size CommandLineParser::fromStringsVec<cv::Size>(const std::vector<std::string>& str);
 
 }

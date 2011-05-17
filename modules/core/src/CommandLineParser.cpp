@@ -32,7 +32,7 @@ void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
         find_symbol = buffer_string.find('=');
         if (find_symbol == -1)
             buffer_vector.push_back(buffer_string);
-        else if (find_symbol == 0 || find_symbol == (buffer_string.length() - 1))
+        else if (find_symbol == 0 || find_symbol == ((int)buffer_string.length() - 1))
         {
             buffer_string.erase(find_symbol, (find_symbol + 1));
             buffer_vector.push_back(buffer_string);
