@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
     float match_conf = 0.55f;
-    int seam_find_type = SeamFinder::GRAPH_CUT;
+    int seam_find_type = SeamFinder::VORONOI;
     int blend_type = Blender::MULTI_BAND;
 
     if (argc == 1)
