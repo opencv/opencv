@@ -1109,7 +1109,8 @@ void cv::HoughLines( const InputArray& _image, OutputArray _lines,
                      double srn, double stn )
 {
     Ptr<CvMemStorage> storage = cvCreateMemStorage(STORAGE_SIZE);
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat();
+    CvMat c_image = image;
     CvSeq* seq = cvHoughLines2( &c_image, storage, srn == 0 && stn == 0 ?
                     CV_HOUGH_STANDARD : CV_HOUGH_MULTI_SCALE,
                     rho, theta, threshold, srn, stn );
@@ -1121,7 +1122,8 @@ void cv::HoughLinesP( const InputArray& _image, OutputArray _lines,
                       double minLineLength, double maxGap )
 {
     Ptr<CvMemStorage> storage = cvCreateMemStorage(STORAGE_SIZE);
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat();
+    CvMat c_image = image;
     CvSeq* seq = cvHoughLines2( &c_image, storage, CV_HOUGH_PROBABILISTIC,
                     rho, theta, threshold, minLineLength, maxGap );
     seqToMat(seq, _lines);
@@ -1133,7 +1135,8 @@ void cv::HoughCircles( const InputArray& _image, OutputArray _circles,
                        int minRadius, int maxRadius )
 {
     Ptr<CvMemStorage> storage = cvCreateMemStorage(STORAGE_SIZE);
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat();
+    CvMat c_image = image;
     CvSeq* seq = cvHoughCircles( &c_image, storage, method,
                     dp, min_dist, param1, param2, minRadius, maxRadius );
     seqToMat(seq, _circles);

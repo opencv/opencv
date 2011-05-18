@@ -261,7 +261,8 @@ void cv::cornerSubPix( const InputArray& _image, InputOutputArray _corners,
     Mat corners = _corners.getMat();
     int ncorners = corners.checkVector(2);
     CV_Assert( ncorners >= 0 && corners.depth() == CV_32F );
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat();
+    CvMat c_image = image;
     
     cvFindCornerSubPix( &c_image, (CvPoint2D32f*)corners.data, ncorners,
                         winSize, zeroZone, criteria );

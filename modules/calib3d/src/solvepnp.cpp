@@ -53,8 +53,9 @@ void cv::solvePnP( const InputArray& _opoints, const InputArray& _ipoints,
     
     _rvec.create(3, 1, CV_64F);
     _tvec.create(3, 1, CV_64F);
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
-    CvMat c_cameraMatrix = _cameraMatrix.getMat(), c_distCoeffs = _distCoeffs.getMat();
+    CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
     CvMat c_rvec = _rvec.getMat(), c_tvec = _tvec.getMat();
     cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                  c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,

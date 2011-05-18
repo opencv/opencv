@@ -1865,12 +1865,12 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
     return 1;
 }
 
-cv::Mat cv::estimateRigidTransform( const InputArray& A,
-                                    const InputArray& B,
+cv::Mat cv::estimateRigidTransform( const InputArray& src1,
+                                    const InputArray& src2,
                                     bool fullAffine )
 {
-    Mat M(2, 3, CV_64F);
-    CvMat matA = A.getMat(), matB = B.getMat(), matM = M;
+    Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
+    CvMat matA = A, matB = B, matM = M;
     cvEstimateRigidTransform(&matA, &matB, &matM, fullAffine);
     return M;
 }

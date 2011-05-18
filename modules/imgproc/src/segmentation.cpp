@@ -303,9 +303,10 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
 }
 
 
-void cv::watershed( const InputArray& src, InputOutputArray markers )
+void cv::watershed( const InputArray& _src, InputOutputArray markers )
 {
-    CvMat c_src = src.getMat(), c_markers = markers.getMat();
+    Mat src = _src.getMat();
+    CvMat c_src = _src.getMat(), c_markers = markers.getMat();
     cvWatershed( &c_src, &c_markers );
 }
 

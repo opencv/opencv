@@ -1899,7 +1899,7 @@ bool cv::findChessboardCorners( const InputArray& _image, Size patternSize,
 {
     int count = patternSize.area()*2;
     vector<Point2f> tmpcorners(count+1);
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat(); CvMat c_image = image;
     bool ok = cvFindChessboardCorners(&c_image, patternSize,
         (CvPoint2D32f*)&tmpcorners[0], &count, flags ) > 0;
     if( count > 0 )
@@ -1919,7 +1919,7 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
     Mat corners = _corners.getMat();
     if( corners.empty() )
         return;
-    CvMat c_image = _image.getMat();
+    Mat image = _image.getMat(); CvMat c_image = _image.getMat();
     int nelems = corners.checkVector(2, CV_32F, true);
     CV_Assert(nelems >= 0);
     cvDrawChessboardCorners( &c_image, patternSize, (CvPoint2D32f*)corners.data,

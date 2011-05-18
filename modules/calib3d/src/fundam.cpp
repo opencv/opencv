@@ -1106,12 +1106,12 @@ cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _p
 void cv::computeCorrespondEpilines( const InputArray& _points, int whichImage,
                                     const InputArray& _Fmat, OutputArray _lines )
 {
-    Mat points = _points.getMat();
+    Mat points = _points.getMat(), F = _Fmat.getMat();
     int npoints = points.checkVector(2);
     CV_Assert( npoints >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
     
     _lines.create(npoints, 1, CV_32FC3, -1, true);
-    CvMat c_points = points, c_lines = _lines.getMat(), c_F = _Fmat.getMat();
+    CvMat c_points = points, c_lines = _lines.getMat(), c_F = F;
     cvComputeCorrespondEpilines(&c_points, whichImage, &c_F, &c_lines);
 }
 

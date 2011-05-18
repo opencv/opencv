@@ -3294,11 +3294,14 @@ void cv::projectPoints( const InputArray& _opoints,
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;
     
     _ipoints.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
-    CvMat imagePoints = _ipoints.getMat();
-    CvMat objectPoints = opoints;
-    CvMat cameraMatrix = _cameraMatrix.getMat();
-    CvMat rvec = _rvec.getMat(), tvec = _tvec.getMat();
-    CvMat distCoeffs = _distCoeffs.getMat();
+    CvMat c_imagePoints = _ipoints.getMat();
+    CvMat c_objectPoints = opoints;
+    Mat cameraMatrix = _cameraMatrix.getMat();
+    Mat distCoeffs = _distCoeffs.getMat();
+    Mat rvec = _rvec.getMat(), tvec = _tvec.getMat();
+    CvMat c_cameraMatrix = cameraMatrix;
+    CvMat c_rvec = rvec, c_tvec = tvec;
+    CvMat c_distCoeffs = distCoeffs;
     int ndistCoeffs = distCoeffs.rows + distCoeffs.cols - 1;
     
     if( _jacobian.needed() )
@@ -3312,8 +3315,8 @@ void cv::projectPoints( const InputArray& _opoints,
         pdpddist = &(dpddist = jacobian.colRange(10, 10+ndistCoeffs));
     }
         
-    cvProjectPoints2( &objectPoints, &rvec, &tvec, &cameraMatrix, &distCoeffs,
-                      &imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
+    cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
+                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
 
 cv::Mat cv::initCameraMatrix2D( const InputArrayOfArrays& objectPoints,
@@ -3378,7 +3381,8 @@ void cv::calibrationMatrixValues( const InputArray& _cameraMatrix, Size imageSiz
                                   double& fovx, double& fovy, double& focalLength,
                                   Point2d& principalPoint, double& aspectRatio )
 {
-    CvMat c_cameraMatrix = _cameraMatrix.getMat();
+    Mat cameraMatrix = _cameraMatrix.getMat();
+    CvMat c_cameraMatrix = cameraMatrix;
     cvCalibrationMatrixValues( &c_cameraMatrix, imageSize, apertureWidth, apertureHeight,
         &fovx, &fovy, &focalLength, (CvPoint2D64f*)&principalPoint, &aspectRatio );
 }
@@ -3453,11 +3457,14 @@ void cv::stereoRectify( const InputArray& _cameraMatrix1, const InputArray& _dis
                         double alpha, Size newImageSize,
                         Rect* validPixROI1, Rect* validPixROI2 )
 {
-    CvMat c_cameraMatrix1 = _cameraMatrix1.getMat();
-    CvMat c_cameraMatrix2 = _cameraMatrix2.getMat();
-    CvMat c_distCoeffs1 = _distCoeffs1.getMat();
-    CvMat c_distCoeffs2 = _distCoeffs2.getMat();
-    CvMat c_R = _Rmat.getMat(), c_T = _Tmat.getMat();
+    Mat cameraMatrix1 = _cameraMatrix1.getMat(), cameraMatrix2 = _cameraMatrix2.getMat();
+    Mat distCoeffs1 = _distCoeffs1.getMat(), distCoeffs2 = _distCoeffs2.getMat();
+    Mat Rmat = _Rmat.getMat(), Tmat = _Tmat.getMat();
+    CvMat c_cameraMatrix1 = cameraMatrix1;
+    CvMat c_cameraMatrix2 = cameraMatrix2;
+    CvMat c_distCoeffs1 = distCoeffs1;
+    CvMat c_distCoeffs2 = distCoeffs2;
+    CvMat c_R = Rmat, c_T = Tmat;
     
     int rtype = CV_64F;
     _Rmat1.create(3, 3, rtype);
@@ -3486,7 +3493,8 @@ bool cv::stereoRectifyUncalibrated( const InputArray& _points1, const InputArray
     _Hmat1.create(3, 3, rtype);
     _Hmat2.create(3, 3, rtype);
     Mat F = _Fmat.getMat();
-    CvMat c_pt1 = _points1.getMat(), c_pt2 = _points2.getMat();
+    Mat points1 = _points1.getMat(), points2 = _points2.getMat();
+    CvMat c_pt1 = points1, c_pt2 = points2;
     CvMat c_F, *p_F=0, c_H1 = _Hmat1.getMat(), c_H2 = _Hmat2.getMat();
     if( F.size() == Size(3, 3) )
         p_F = &(c_F = F);
@@ -3498,7 +3506,8 @@ cv::Mat cv::getOptimalNewCameraMatrix( const InputArray& _cameraMatrix,
                                        Size imgSize, double alpha, Size newImgSize,
                                        Rect* validPixROI )
 {
-    CvMat c_cameraMatrix = _cameraMatrix.getMat(), c_distCoeffs = _distCoeffs.getMat();
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+    CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
     
     Mat newCameraMatrix(3, 3, CV_MAT_TYPE(c_cameraMatrix.type));
     CvMat c_newCameraMatrix = newCameraMatrix;

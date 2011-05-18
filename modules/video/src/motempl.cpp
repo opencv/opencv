@@ -445,7 +445,8 @@ cvSegmentMotion( const CvArr* mhiimg, CvArr* segmask, CvMemStorage* storage,
 void cv::updateMotionHistory( const InputArray& _silhouette, InputOutputArray _mhi,
                               double timestamp, double duration )
 {
-    CvMat c_silhouette = _silhouette.getMat(), c_mhi = _mhi.getMat();
+    Mat silhouette = _silhouette.getMat();
+    CvMat c_silhouette = silhouette, c_mhi = _mhi.getMat();
     cvUpdateMotionHistory( &c_silhouette, &c_mhi, timestamp, duration );
 }
 
@@ -465,7 +466,8 @@ double cv::calcGlobalOrientation( const InputArray& _orientation, const InputArr
                                   const InputArray& _mhi, double timestamp,
                                   double duration )
 {
-    CvMat c_orientation = _orientation.getMat(), c_mask = _mask.getMat(), c_mhi = _mhi.getMat();
+    Mat orientation = _orientation.getMat(), mask = _mask.getMat(), mhi = _mhi.getMat();
+    CvMat c_orientation = orientation, c_mask = mask, c_mhi = mhi;
     return cvCalcGlobalOrientation(&c_orientation, &c_mask, &c_mhi, timestamp, duration);
 }
 

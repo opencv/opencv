@@ -810,8 +810,8 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
 void cv::inpaint( const InputArray& _src, const InputArray& _mask, OutputArray _dst,
                   double inpaintRange, int flags )
 {
-    Mat src = _src.getMat();
+    Mat src = _src.getMat(), mask = _mask.getMat();
     _dst.create( src.size(), src.type() );
-    CvMat c_src = src, c_mask = _mask.getMat(), c_dst = _dst.getMat();
+    CvMat c_src = src, c_mask = mask, c_dst = _dst.getMat();
     cvInpaint( &c_src, &c_mask, &c_dst, inpaintRange, flags );
 }
