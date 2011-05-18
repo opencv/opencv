@@ -19,7 +19,7 @@ namespace
         inline CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
                                      int num_octaves_descr, int num_layers_descr) 
         {
-            detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
+            detector_ = new /*FastFeatureDetector;*/SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
             extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
         }
 

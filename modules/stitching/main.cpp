@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     int blend_type = Blender::MULTI_BAND;
     string result_name = "result.png";
 
-    double work_scale, compose_scale;
+    double work_scale = -1, compose_scale = -1;
     bool is_work_scale_set = false, is_compose_scale_set = false;
 
     if (argc == 1)
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(trygpu);
     if (user_match_conf)
-        matcher = BestOf2NearestMatcher(true, match_conf);
+        matcher = BestOf2NearestMatcher(trygpu, match_conf);
     matcher(images, features, pairwise_matches);
 
     vector<int> indices = leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
