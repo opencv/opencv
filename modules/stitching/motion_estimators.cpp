@@ -64,46 +64,16 @@ struct CalcRotation
 };
 
 
-void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<ImageFeatures> &/*features*/,
+void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<ImageFeatures> &features,
                                         const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
 {
     const int num_images = static_cast<int>(images.size());
 
-    // Find focals from pair-wise homographies
-    vector<bool> is_focal_estimated(num_images, false);
-    vector<double> focals;
-    for (int i = 0; i < num_images; ++i)
-    {
-        for (int j = 0; j < num_images; ++j)
-        {
-            int pair_idx = i * num_images + j;
-            if (pairwise_matches[pair_idx].H.empty())
-                continue;
-
-            double f_to, f_from;
-            bool f_to_ok, f_from_ok;
-            focalsFromHomography(pairwise_matches[pair_idx].H.inv(), f_to, f_from, f_to_ok, f_from_ok);
-
-            if (f_from_ok) focals.push_back(f_from);
-            if (f_to_ok) focals.push_back(f_to);
-
-            if (f_from_ok && f_to_ok)
-            {
-                is_focal_estimated[i] = true;
-                is_focal_estimated[j] = true;
-            }
-        }
-    }
-
-    is_focals_estimated_ = true;
-    for (int i = 0; i < num_images; ++i)
-        is_focals_estimated_ = is_focals_estimated_ && is_focal_estimated[i];
-
-    // Find focal median and use it as true focal length
-    nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
+    // Estimate focal length and set it for all cameras
+    double focal = estimateFocal(images, features, pairwise_matches);
     cameras.resize(num_images);
     for (int i = 0; i < num_images; ++i)
-        cameras[i].focal = focals[focals.size() / 2];
+        cameras[i].focal = focal;
 
     // Restore global motion
     Graph span_tree;
