@@ -254,12 +254,12 @@ void BundleAdjuster::calcError(Mat &err)
             if (!matches_info.inliers_mask[k])
                 continue;
 
-            const DMatch& r = matches_info.matches[k];
+            const DMatch& m = matches_info.matches[k];
 
-            Point2d kp1 = features1.keypoints[r.queryIdx].pt;
+            Point2d kp1 = features1.keypoints[m.queryIdx].pt;
             kp1.x -= 0.5 * images_[i].cols;
             kp1.y -= 0.5 * images_[i].rows;
-            Point2d kp2 = features2.keypoints[r.trainIdx].pt;
+            Point2d kp2 = features2.keypoints[m.trainIdx].pt;
             kp2.x -= 0.5 * images_[j].cols;
             kp2.y -= 0.5 * images_[j].rows;
             double len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);
