@@ -83,8 +83,8 @@ void waveCorrect(std::vector<cv::Mat> &rmats);
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void leaveBiggestComponent(std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features, 
-                           std::vector<MatchesInfo> &pairwise_matches, float conf_threshold);
+std::vector<int> leaveBiggestComponent(std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features, 
+                                       std::vector<MatchesInfo> &pairwise_matches, float conf_threshold);
 
 void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
                          Graph &span_tree, std::vector<int> &centers);

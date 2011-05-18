@@ -63,8 +63,6 @@ void normalize(const cv::Mat& weight, cv::Mat& src);
 
 void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
 
-void createGaussPyr(const cv::Mat& img, int num_layers, std::vector<cv::Mat>& pyr);
-
 void createLaplacePyr(const std::vector<cv::Mat>& pyr_gauss, std::vector<cv::Mat>& pyr_laplace);
 
 // Restores source image in-place. Result will be stored in pyr[0].

@@ -35,8 +35,8 @@ int main(int argc, char* argv[])
     vector<string> img_names;
     vector<Mat> images;
     bool trygpu = true;
-    double work_megapix = -1;
-    double compose_megapix = -1;
+    double work_megapix = 1;
+    double compose_megapix = 1;
     int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
     float conf_thresh = 1.f;
     bool wave_correct = true;
@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
     int blend_type = Blender::MULTI_BAND;
     string result_name = "result.png";
 
-    double work_scale = 1, compose_scale = 1;
-    bool is_work_scale_set = false, is_compose_scale_set = true;
+    double work_scale, compose_scale;
+    bool is_work_scale_set = false, is_compose_scale_set = false;
 
     if (argc == 1)
     {
@@ -85,7 +85,6 @@ int main(int argc, char* argv[])
         else if (string(argv[i]) == "--compose_megapix") 
         {
             compose_megapix = atof(argv[i + 1]);
-            is_compose_scale_set = false;
             i++; 
         }
         else if (string(argv[i]) == "--result")
@@ -195,7 +194,7 @@ int main(int argc, char* argv[])
             {
                 if (!is_work_scale_set)
                 {
-                    work_scale = min(1.0, sqrt(work_megapix * 1000000 / full_img.size().area()));                    
+                    work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));                    
                     is_work_scale_set = true;
                 }
                 Mat img;
@@ -224,7 +223,11 @@ int main(int argc, char* argv[])
         matcher = BestOf2NearestMatcher(true, match_conf);
     matcher(images, features, pairwise_matches);
 
-    leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
+    vector<int> indices = leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
+    vector<string> img_names_subset;
+    for (size_t i = 0; i < indices.size(); ++i)
+        img_names_subset.push_back(img_names[indices[i]]);
+    img_names = img_names_subset;
 
     num_images = static_cast<int>(images.size());
     if (num_images < 2)
@@ -271,14 +274,15 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
-    if (work_megapix > 0 || compose_megapix > 0)
+    if ((work_megapix > 0 || compose_megapix > 0) 
+        && abs(work_megapix - compose_megapix) > 1e-3)
     {
         for (int i = 0; i < num_images; ++i)
         {
             Mat full_img = imread(img_names[i]);
             if (!is_compose_scale_set)
             {
-                compose_scale = min(1.0, sqrt(compose_megapix * 1000000 / full_img.size().area()));                    
+                compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));                    
                 is_compose_scale_set = true;
             }
             Mat img;

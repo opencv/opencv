@@ -133,19 +133,20 @@ Point MultiBandBlender::blend(const vector<Mat> &src, const vector<Point> &corne
         int left = corners[img_idx].x - dst_roi.x;
         int right = dst_roi.br().x - corners[img_idx].x - src[img_idx].cols;
 
-        Mat big_src;
-        copyMakeBorder(src[img_idx], big_src, top, bottom, left, right, BORDER_REFLECT);
-        vector<Mat> src_pyr_gauss;
+        vector<Mat> src_pyr_gauss(num_bands_ + 1);
+        copyMakeBorder(src[img_idx], src_pyr_gauss[0], top, bottom, left, right, BORDER_REFLECT);
+        for (int i = 0; i < num_bands_; ++i)
+            pyrDown(src_pyr_gauss[i], src_pyr_gauss[i + 1]);
+
         vector<Mat> src_pyr_laplace;
-        createGaussPyr(big_src, num_bands_, src_pyr_gauss);
         createLaplacePyr(src_pyr_gauss, src_pyr_laplace);
 
-        Mat big_mask;
-        copyMakeBorder(masks[img_idx], big_mask, top, bottom, left, right, BORDER_CONSTANT);
-        Mat weight_map;
-        big_mask.convertTo(weight_map, CV_32F, 1./255.);
-        vector<Mat> weight_pyr_gauss;
-        createGaussPyr(weight_map, num_bands_, weight_pyr_gauss);
+        vector<Mat> weight_pyr_gauss(num_bands_ + 1);
+        Mat mask_f;
+        masks[img_idx].convertTo(mask_f, CV_32F, 1./255.);
+        copyMakeBorder(mask_f, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
+        for (int i = 0; i < num_bands_; ++i)
+            pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
 
         for (int band_idx = 0; band_idx <= num_bands_; ++band_idx)
         {
@@ -283,15 +284,6 @@ void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
     CV_Assert(mask.type() == CV_8U);
     distanceTransform(mask, weight, CV_DIST_L1, 3);
     threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
-}
-
-
-void createGaussPyr(const Mat &img, int num_layers, vector<Mat> &pyr)
-{
-    pyr.resize(num_layers + 1);
-    pyr[0] = img.clone();
-    for (int i = 0; i < num_layers; ++i)
-        pyrDown(pyr[i], pyr[i + 1]);
 }
 
 

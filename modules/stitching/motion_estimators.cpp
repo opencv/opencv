@@ -328,8 +328,7 @@ void waveCorrect(vector<Mat> &rmats)
     SVD svd;
     svd(cov, SVD::FULL_UV);
     svd.vt.row(2).copyTo(r1);
-    if (determinant(svd.vt) < 0)
-        r1 *= -1;
+    if (determinant(svd.vt) < 0) r1 *= -1;
 
     Mat avgz = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
@@ -338,8 +337,7 @@ void waveCorrect(vector<Mat> &rmats)
     normalize(r0, r0);
 
     r1.cross(r0).copyTo(r2);
-    if (determinant(R) < 0)
-        R *= -1;
+    if (determinant(R) < 0) R *= -1;
 
     for (size_t i = 0; i < rmats.size(); ++i)
         rmats[i] = R * rmats[i];
@@ -348,8 +346,8 @@ void waveCorrect(vector<Mat> &rmats)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features, 
-                           vector<MatchesInfo> &pairwise_matches, float conf_threshold)
+vector<int> leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features, 
+                                  vector<MatchesInfo> &pairwise_matches, float conf_threshold)
 {
     const int num_images = static_cast<int>(images.size());
 
@@ -393,7 +391,7 @@ void leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features,
     }
 
     if (static_cast<int>(images_subset.size()) == num_images)
-        return;
+        return indices;
 
     LOG("Removed some images, because can't match them: (");
     LOG(indices_removed[0]);
@@ -403,6 +401,8 @@ void leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features,
     images = images_subset;
     features = features_subset;
     pairwise_matches = pairwise_matches_subset;
+
+    return indices;
 }
 
 
