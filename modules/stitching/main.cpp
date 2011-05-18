@@ -13,6 +13,9 @@ void printUsage()
 {
     cout << "Rotation model images stitcher.\n\n";
     cout << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
+        << "\t[--trygpu (yes|no)]\n"
+        << "\t[--work_megapix <float>]\n"
+        << "\t[--compose_megapix <float>]\n"
         << "\t[--matchconf <float>]\n"
         << "\t[--ba (ray|focal_ray)]\n"
         << "\t[--conf_thresh <float>]\n"
@@ -23,16 +26,17 @@ void printUsage()
         << "\t[--output <result_img>]\n\n";
     cout << "--matchconf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
-    cout << "--conf_thresh\n"
-        << "\tGood values are in [0.3, 1.0] range usually.\n";
 }
 
 int main(int argc, char* argv[])
 {
     cv::setBreakOnError(true);
 
+    vector<string> img_names;
     vector<Mat> images;
-    string result_name = "result.png";
+    bool trygpu = true;
+    double work_megapix = -1;
+    double compose_megapix = -1;
     int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
     float conf_thresh = 1.f;
     bool wave_correct = true;
@@ -41,6 +45,10 @@ int main(int argc, char* argv[])
     float match_conf = 0.55f;
     int seam_find_type = SeamFinder::VORONOI;
     int blend_type = Blender::MULTI_BAND;
+    string result_name = "result.png";
+
+    double work_scale = 1, compose_scale = 1;
+    bool is_work_scale_set = false, is_compose_scale_set = true;
 
     if (argc == 1)
     {
@@ -50,7 +58,37 @@ int main(int argc, char* argv[])
 
     for (int i = 1; i < argc; ++i)
     {
-        if (string(argv[i]) == "--result")
+        if (string(argv[i]) == "--work_megapix")
+        {
+            work_megapix = atof(argv[i + 1]);
+            break;
+        }
+    }
+
+    for (int i = 1; i < argc; ++i)
+    {
+        if (string(argv[i]) == "--trygpu")
+        {
+            if (string(argv[i + 1]) == "no")
+                trygpu = false;
+            else if (string(argv[i + 1]) == "yes")
+                trygpu = true;
+            else
+            {
+                cout << "Bad --trygpu flag value\n";
+                return -1;
+            }
+            i++;
+        }
+        else if (string(argv[i]) == "--work_megapix") 
+            i++; 
+        else if (string(argv[i]) == "--compose_megapix") 
+        {
+            compose_megapix = atof(argv[i + 1]);
+            is_compose_scale_set = false;
+            i++; 
+        }
+        else if (string(argv[i]) == "--result")
         {
             result_name = argv[i + 1];
             i++;
@@ -87,7 +125,7 @@ int main(int argc, char* argv[])
                 wave_correct = true;
             else
             {
-                cout << "Bad wave correct flag value\n";
+                cout << "Bad --wavecorrect flag value\n";
                 return -1;
             }
             i++;
@@ -144,13 +182,26 @@ int main(int argc, char* argv[])
         }
         else
         {
-            Mat img = imread(argv[i]);
-            if (img.empty())
+            img_names.push_back(argv[i]);
+            Mat full_img = imread(argv[i]);
+            if (full_img.empty())
             {
                 cout << "Can't open image " << argv[i] << endl;
                 return -1;
             }
-            images.push_back(img);
+            if (work_megapix < 0)
+                images.push_back(full_img);
+            else
+            {
+                if (!is_work_scale_set)
+                {
+                    work_scale = min(1.0, sqrt(work_megapix * 1000000 / full_img.size().area()));                    
+                    is_work_scale_set = true;
+                }
+                Mat img;
+                resize(full_img, img, Size(), work_scale, work_scale);
+                images.push_back(img);
+            }
         }
     }
 
@@ -163,18 +214,24 @@ int main(int argc, char* argv[])
 
     LOGLN("Finding features...");
     vector<ImageFeatures> features;
-    SurfFeaturesFinder finder;
+    SurfFeaturesFinder finder(trygpu);
     finder(images, features);
 
     LOGLN("Pairwise matching...");
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher;
+    BestOf2NearestMatcher matcher(trygpu);
     if (user_match_conf)
         matcher = BestOf2NearestMatcher(true, match_conf);
     matcher(images, features, pairwise_matches);
 
     leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
+
     num_images = static_cast<int>(images.size());
+    if (num_images < 2)
+    {
+        cout << "Need more images\n";
+        return -1;
+    }
 
     LOGLN("Estimating rotations...");
     HomographyBasedEstimator estimator;
@@ -214,6 +271,24 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
+    if (work_megapix > 0 || compose_megapix > 0)
+    {
+        for (int i = 0; i < num_images; ++i)
+        {
+            Mat full_img = imread(img_names[i]);
+            if (!is_compose_scale_set)
+            {
+                compose_scale = min(1.0, sqrt(compose_megapix * 1000000 / full_img.size().area()));                    
+                is_compose_scale_set = true;
+            }
+            Mat img;
+            resize(full_img, img, Size(), compose_scale, compose_scale);
+            images[i] = img;
+            cameras[i].focal *= compose_scale / work_scale;
+        }
+        camera_focal *= static_cast<float>(compose_scale / work_scale);
+    }
+
     vector<Mat> masks(num_images);
     for (int i = 0; i < num_images; ++i)
     {
@@ -250,3 +325,4 @@ int main(int argc, char* argv[])
     LOGLN("Finished");
     return 0;
 }
+

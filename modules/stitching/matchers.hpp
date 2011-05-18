@@ -26,7 +26,7 @@ protected:
 class SurfFeaturesFinder : public FeaturesFinder
 {
 public:
-    explicit SurfFeaturesFinder(bool gpu_hint = true, double hess_thresh = 500.0, 
+    explicit SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 500.0, 
                                 int num_octaves = 3, int num_layers = 4, 
                                 int num_octaves_descr = 4, int num_layers_descr = 2);
 
@@ -70,7 +70,7 @@ protected:
 class BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
-    explicit BestOf2NearestMatcher(bool gpu_hint = true, float match_conf = 0.55f, int num_matches_thresh1 = 5, int num_matches_thresh2 = 5);
+    explicit BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 5, int num_matches_thresh2 = 5);
 
 protected:
     void match(const cv::Mat &img1, const ImageFeatures &features1, const cv::Mat &img2, const ImageFeatures &features2,

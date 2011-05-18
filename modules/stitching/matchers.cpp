@@ -105,10 +105,10 @@ namespace
     }
 }
 
-SurfFeaturesFinder::SurfFeaturesFinder(bool gpu_hint, double hess_thresh, int num_octaves, int num_layers, 
+SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers, 
                                        int num_octaves_descr, int num_layers_descr)
 {
-    if (gpu_hint && getCudaEnabledDeviceCount() > 0)
+    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
     else
         impl_ = new CpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
@@ -274,9 +274,9 @@ namespace
     }
 }
 
-BestOf2NearestMatcher::BestOf2NearestMatcher(bool gpu_hint, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-    if (gpu_hint && getCudaEnabledDeviceCount() > 0)
+    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
     else
         impl_ = new CpuMatcher(match_conf);
