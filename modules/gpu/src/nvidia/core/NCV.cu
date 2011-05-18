@@ -575,7 +575,7 @@ typedef struct _NcvTimeMoment NcvTimeMoment;
         return 1000.0 * 2 * ((t2->moment) - (t1->moment)) / (t1->freq + t2->freq);
     }
 
-#elif defined(__unix__)
+#elif defined(__GNUC__) 
 
     #include <sys/time.h>
 

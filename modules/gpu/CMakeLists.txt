@@ -35,12 +35,12 @@ if (HAVE_CUDA)
 endif()
 
 if (HAVE_CUDA)		
-    get_filename_component(_path_to_findnpp "${CMAKE_CURRENT_LIST_FILE}" PATH)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})
-    find_package(NPP 3.2.16 REQUIRED)
-    message(STATUS "NPP detected: " ${NPP_VERSION})
+    #get_filename_component(_path_to_findnpp "${CMAKE_CURRENT_LIST_FILE}" PATH)
+    #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${_path_to_findnpp})
+    #find_package(NPP 3.2.16 REQUIRED)
+    #message(STATUS "NPP detected: " ${NPP_VERSION})
        
-    include_directories(${CUDA_INCLUDE_DIRS} ${CUDA_NPP_INCLUDES})
+    include_directories(${CUDA_INCLUDE_DIRS})
 
     if (UNIX OR APPLE)
         set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
@@ -128,8 +128,12 @@ set_target_properties(${the_target} PROPERTIES
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
-	target_link_libraries(${the_target} ${CUDA_LIBRARIES} ${CUDA_NPP_LIBRARIES})    
+	target_link_libraries(${the_target} ${CUDA_LIBRARIES})    
     CUDA_ADD_CUFFT_TO_TARGET(${the_target})
+	
+	unset(CUDA_npp_LIBRARY CACHE)
+	find_cuda_helper_libs(npp)
+	target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})    		
 endif()
 
 if(MSVC)
