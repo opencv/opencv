@@ -442,6 +442,22 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
 
     if (mask.empty())
     {
+        if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)
+        {
+            cudaSafeCall( cudaMemset2D(data, step, 0, cols * elemSize(), rows) );
+            return *this;
+        }
+        if (depth() == CV_8U)
+        {
+            int cn = channels();
+
+            if (cn == 1 || (cn == 2 && s[0] == s[1]) || (cn == 3 && s[0] == s[1] && s[0] == s[2]) || (cn == 4 && s[0] == s[1] && s[0] == s[2] && s[0] == s[3]))
+            {
+                int val = saturate_cast<uchar>(s[0]);
+                cudaSafeCall( cudaMemset2D(data, step, val, cols, rows) );
+                return *this;
+            }
+        }
         typedef void (*set_caller_t)(GpuMat& src, const Scalar& s);
         static const set_caller_t set_callers[8][4] =
         {
