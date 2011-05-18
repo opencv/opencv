@@ -1092,7 +1092,7 @@ const int STORAGE_SIZE = 1 << 12;
 
 static void seqToMat(const CvSeq* seq, OutputArray& _arr)
 {
-    if( seq )
+    if( seq && seq->total > 0 )
     {
         _arr.create(1, seq->total, seq->flags, -1, true);
         Mat arr = _arr.getMat();
