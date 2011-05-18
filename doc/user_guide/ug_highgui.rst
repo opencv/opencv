@@ -12,7 +12,7 @@ Kinect sensor is supported through ``VideoCapture`` class. Depth map, RGB image 
 In order to use Kinect with OpenCV you should do the following preliminary steps:
 
 #.
-    Install OpenNI library and PrimeSensor Module for OpenNI from here \url{http://www.openni.org/downloadfiles}. The installation should be done to default folders listed in the instructions of these products:
+    Install OpenNI library (from here \url{http://www.openni.org/downloadfiles}) and PrimeSensor Module for OpenNI (from here https://github.com/avin2/SensorKinect}). The installation should be done to default folders listed in the instructions of these products:
 
     .. code-block:: text
     
