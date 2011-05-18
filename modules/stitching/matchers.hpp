@@ -43,11 +43,12 @@ struct MatchesInfo
     MatchesInfo(const MatchesInfo &other);
     const MatchesInfo& operator =(const MatchesInfo &other);
 
-    int src_img_idx, dst_img_idx; // Optional images indices
+    int src_img_idx, dst_img_idx;       // Images indices (optional)
     std::vector<cv::DMatch> matches;
-    std::vector<uchar> inliers_mask;
-    int num_inliers; // Number of geometrically consistent matches
-    cv::Mat H; // Homography
+    std::vector<uchar> inliers_mask;    // Geometrically consistent matches mask
+    int num_inliers;                    // Number of geometrically consistent matches
+    cv::Mat H;                          // Estimated homography
+    double confidence;                  // Confidence two images are from the same panorama
 };
 
 

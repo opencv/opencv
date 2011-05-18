@@ -13,12 +13,7 @@ using namespace cv;
 
 CameraParams::CameraParams() : focal(1), R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
 
-
-CameraParams::CameraParams(const CameraParams &other)
-{
-    *this = other;
-}
-
+CameraParams::CameraParams(const CameraParams &other) { *this = other; }
 
 const CameraParams& CameraParams::operator =(const CameraParams &other)
 {
@@ -84,13 +79,14 @@ void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<
             int pair_idx = i * num_images + j;
             if (pairwise_matches[pair_idx].H.empty())
                 continue;
+
             double f_to, f_from;
             bool f_to_ok, f_from_ok;
             focalsFromHomography(pairwise_matches[pair_idx].H.inv(), f_to, f_from, f_to_ok, f_from_ok);
-            if (f_from_ok)
-                focals.push_back(f_from);
-            if (f_to_ok)
-                focals.push_back(f_to);
+
+            if (f_from_ok) focals.push_back(f_from);
+            if (f_to_ok) focals.push_back(f_to);
+
             if (f_from_ok && f_to_ok)
             {
                 is_focal_estimated[i] = true;
@@ -98,6 +94,7 @@ void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<
             }
         }
     }
+
     is_focals_estimated_ = true;
     for (int i = 0; i < num_images; ++i)
         is_focals_estimated_ = is_focals_estimated_ && is_focal_estimated[i];
@@ -132,9 +129,12 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
     for (int i = 0; i < num_images_; ++i)
     {
         cameras_.at<double>(i * 4, 0) = cameras[i].focal;
+
         svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
-        if (determinant(R) < 0) R *= -1;
+        if (determinant(R) < 0) 
+            R *= -1;
+
         Mat rvec;
         Rodrigues(R, rvec); CV_Assert(rvec.type() == CV_32F);
         cameras_.at<double>(i * 4 + 1, 0) = rvec.at<float>(0, 0);
@@ -142,20 +142,19 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
         cameras_.at<double>(i * 4 + 3, 0) = rvec.at<float>(2, 0);
     }
 
+    // Select only consistent image pairs for futher adjustment
     edges_.clear();
     for (int i = 0; i < num_images_ - 1; ++i)
     {
         for (int j = i + 1; j < num_images_; ++j)
         {
-            int pair_idx = i * num_images_ + j;
-            const MatchesInfo& mi = pairwise_matches_[pair_idx];
-            float ni = static_cast<float>(mi.num_inliers);
-            float nf = static_cast<float>(mi.matches.size());
-            if (ni / (8.f + 0.3f * nf) > dist_thresh_)
+            const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
+            if (matches_info.confidence > conf_thresh_)
                 edges_.push_back(make_pair(i, j));
         }
     }
 
+    // Compute number of correspondences
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].num_inliers);
@@ -369,7 +368,6 @@ void waveCorrect(vector<Mat> &rmats)
     normalize(r0, r0);
 
     r1.cross(r0).copyTo(r2);
-
     if (determinant(R) < 0)
         R *= -1;
 
@@ -379,6 +377,64 @@ void waveCorrect(vector<Mat> &rmats)
 
 
 //////////////////////////////////////////////////////////////////////////////
+
+void leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features, 
+                           vector<MatchesInfo> &pairwise_matches, float conf_threshold)
+{
+    const int num_images = static_cast<int>(images.size());
+
+    DjSets comps(num_images);
+    for (int i = 0; i < num_images; ++i)
+    {
+        for (int j = 0; j < num_images; ++j)
+        {
+            if (pairwise_matches[i*num_images + j].confidence < conf_threshold)
+                continue;
+            int comp1 = comps.find(i);
+            int comp2 = comps.find(j);
+            if (comp1 != comp2) 
+                comps.merge(comp1, comp2);
+        }
+    }
+
+    int max_comp = max_element(comps.size.begin(), comps.size.end()) - comps.size.begin();
+
+    vector<int> indices;
+    vector<int> indices_removed;
+    for (int i = 0; i < num_images; ++i)
+        if (comps.find(i) == max_comp)
+            indices.push_back(i);    
+        else
+            indices_removed.push_back(i);
+
+    vector<Mat> images_subset;
+    vector<ImageFeatures> features_subset;
+    vector<MatchesInfo> pairwise_matches_subset;
+    for (size_t i = 0; i < indices.size(); ++i)
+    {
+        images_subset.push_back(images[indices[i]]);
+        features_subset.push_back(features[indices[i]]);
+        for (size_t j = 0; j < indices.size(); ++j)
+        {
+            pairwise_matches_subset.push_back(pairwise_matches[indices[i]*num_images + indices[j]]);
+            pairwise_matches_subset.back().src_img_idx = i;
+            pairwise_matches_subset.back().dst_img_idx = j;
+        }
+    }
+
+    if (static_cast<int>(images_subset.size()) == num_images)
+        return;
+
+    LOG("Removed some images, because can't match them: (");
+    LOG(indices_removed[0]);
+    for (size_t i = 1; i < indices_removed.size(); ++i) LOG(", " << indices_removed[i]);
+    LOGLN(")");
+
+    images = images_subset;
+    features = features_subset;
+    pairwise_matches = pairwise_matches_subset;
+}
+
 
 void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_matches,
                          Graph &span_tree, vector<int> &centers)
@@ -391,6 +447,8 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
     {
         for (int j = 0; j < num_images; ++j)
         {
+            if (pairwise_matches[i * num_images + j].H.empty())
+                continue;
             float conf = static_cast<float>(pairwise_matches[i * num_images + j].num_inliers);
             graph.addEdge(i, j, conf);
             edges.push_back(GraphEdge(i, j, conf));

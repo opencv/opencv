@@ -15,7 +15,7 @@ void printUsage()
     cout << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
         << "\t[--matchconf <float>]\n"
         << "\t[--ba (ray|focal_ray)]\n"
-        << "\t[--ba_thresh <float>]\n"
+        << "\t[--conf_thresh <float>]\n"
         << "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--seam (no|voronoi|graphcut)]\n" 
@@ -23,7 +23,7 @@ void printUsage()
         << "\t[--output <result_img>]\n\n";
     cout << "--matchconf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
-    cout << "--ba_thresh\n"
+    cout << "--conf_thresh\n"
         << "\tGood values are in [0.3, 1.0] range usually.\n";
 }
 
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     vector<Mat> images;
     string result_name = "result.png";
     int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
-    float ba_thresh = 1.f;
+    float conf_thresh = 1.f;
     bool wave_correct = true;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
@@ -74,9 +74,9 @@ int main(int argc, char* argv[])
             }
             i++;
         }
-        else if (string(argv[i]) == "--ba_thresh")
+        else if (string(argv[i]) == "--conf_thresh")
         {
-            ba_thresh = static_cast<float>(atof(argv[i + 1]));
+            conf_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--wavecorrect")
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    const int num_images = static_cast<int>(images.size());
+    int num_images = static_cast<int>(images.size());
     if (num_images < 2)
     {
         cout << "Need more images\n";
@@ -173,6 +173,9 @@ int main(int argc, char* argv[])
         matcher = BestOf2NearestMatcher(true, match_conf);
     matcher(images, features, pairwise_matches);
 
+    leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
+    num_images = static_cast<int>(images.size());
+
     LOGLN("Estimating rotations...");
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
@@ -187,7 +190,7 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Bundle adjustment...");
-    BundleAdjuster adjuster(ba_space, ba_thresh);
+    BundleAdjuster adjuster(ba_space, conf_thresh);
     adjuster(images, features, pairwise_matches, cameras);
 
     if (wave_correct)
