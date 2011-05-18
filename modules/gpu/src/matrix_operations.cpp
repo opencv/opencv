@@ -454,7 +454,7 @@ GpuMat& GpuMat::setTo(const Scalar& s, const GpuMat& mask)
             if (cn == 1 || (cn == 2 && s[0] == s[1]) || (cn == 3 && s[0] == s[1] && s[0] == s[2]) || (cn == 4 && s[0] == s[1] && s[0] == s[2] && s[0] == s[3]))
             {
                 int val = saturate_cast<uchar>(s[0]);
-                cudaSafeCall( cudaMemset2D(data, step, val, cols, rows) );
+                cudaSafeCall( cudaMemset2D(data, step, val, cols * elemSize(), rows) );
                 return *this;
             }
         }
