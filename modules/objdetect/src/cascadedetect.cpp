@@ -1236,6 +1236,8 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
 bool CascadeClassifier::Data::read(const FileNode &root)
 {
+    static const float THRESHOLD_EPS = 1e-5f;
+    
     // load stage params
     string stageTypeStr = (string)root[CC_STAGE_TYPE];
     if( stageTypeStr == CC_BOOST )
@@ -1281,7 +1283,7 @@ bool CascadeClassifier::Data::read(const FileNode &root)
     {
         FileNode fns = *it;
         Stage stage;
-        stage.threshold = fns[CC_STAGE_THRESHOLD];
+        stage.threshold = (float)fns[CC_STAGE_THRESHOLD] - THRESHOLD_EPS;
         fns = fns[CC_WEAK_CLASSIFIERS];
         if(fns.empty())
             return false;
