@@ -13,5 +13,7 @@
 // index types
 #include "opencv2/flann/all_indices.h"
 
+#include "opencv2/flann/flann_base.hpp"
+
 #endif
 
