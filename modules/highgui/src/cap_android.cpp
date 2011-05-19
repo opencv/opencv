@@ -48,10 +48,12 @@
 #include <android/log.h>
 #include "camera_activity.h"
 
+#if !defined(LOGD) && !defined(LOGI) && !defined(LOGE)
 #define LOG_TAG "CV_CAP"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#endif
 
 class HighguiAndroidCameraActivity;
 
@@ -457,6 +459,7 @@ bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigne
     return !resmat.empty();
 }
 
+#ifndef HAVE_TEGRA_OPTIMIZATION
 template<int R>
 struct YUV420i2BGR888Invoker
 {
@@ -513,6 +516,7 @@ struct YUV420i2BGR888Invoker
 		}
 	}
 };
+#endif
 
 bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder)
 {
@@ -524,10 +528,14 @@ bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsig
     unsigned char* y1 = (unsigned char*)yuv;
     unsigned char* uv = y1 + width * height;
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    cv::parallel_for(cv::BlockedRange(0, height, 2), tegra::YUV420i2BGR888Invoker(resmat, width, y1, uv, inRGBorder));
+#else
     if (inRGBorder)
         cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<2>(resmat, width, y1, uv));
     else
         cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
+#endif
 
     return !resmat.empty();
 }

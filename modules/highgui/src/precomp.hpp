@@ -60,6 +60,10 @@
 #include <ctype.h>
 #include <assert.h>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/highgui/highgui_tegra.hpp"
+#endif
+
 #if defined WIN32 || defined _WIN32
 
 #define WIN32_LEAN_AND_MEAN
