@@ -165,8 +165,8 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
             cvCopy( &matErr, _err );
         }
     }
-    LOGLN("BA final error: " << sqrt(err_.dot(err_)));
-    LOGLN("BA iterations done: " << count);
+    LOGLN("Bundle adjustment, final error: " << sqrt(err_.dot(err_)));
+    LOGLN("Bundle adjustment, iteration done: " << count);
 
     // Obtain global motion
     for (int i = 0; i < num_images_; ++i)
