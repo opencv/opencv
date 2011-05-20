@@ -13,26 +13,23 @@ using namespace cv::gpu;
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FeaturesFinder::operator ()(const vector<Mat> &images, vector<ImageFeatures> &features) 
+void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features) 
 { 
-    features.resize(images.size());
+    features.img_size = image.size();
 
-    // Calculate histograms
-    for (size_t i = 0; i < images.size(); ++i)
-    {
-        Mat hsv;
-        cvtColor(images[i], hsv, CV_BGR2HSV);
-        int hbins = 30, sbins = 32, vbins = 30;
-        int hist_size[] = { hbins, sbins, vbins };
-        float hranges[] = { 0, 180 };
-        float sranges[] = { 0, 256 };
-        float vranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges, vranges };
-        int channels[] = { 0, 1, 2 };
-        calcHist(&hsv, 1, channels, Mat(), features[i].hist, 3, hist_size, ranges);
-    }
+    // Calculate histogram
+    Mat hsv;
+    cvtColor(image, hsv, CV_BGR2HSV);
+    int hbins = 30, sbins = 32, vbins = 30;
+    int hist_size[] = { hbins, sbins, vbins };
+    float hranges[] = { 0, 180 };
+    float sranges[] = { 0, 256 };
+    float vranges[] = { 0, 256 };
+    const float* ranges[] = { hranges, sranges, vranges };
+    int channels[] = { 0, 1, 2 };
+    calcHist(&hsv, 1, channels, Mat(), features.hist, 3, hist_size, ranges);
 
-    find(images, features);
+    find(image, features);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -50,31 +47,20 @@ namespace
         }
 
     protected:
-        void find(const vector<Mat> &images, vector<ImageFeatures> &features);
+        void find(const Mat &image, ImageFeatures &features);
 
     private:
         Ptr<FeatureDetector> detector_;
         Ptr<DescriptorExtractor> extractor_;
     };
 
-    void CpuSurfFeaturesFinder::find(const vector<Mat> &images, vector<ImageFeatures> &features)
+    void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
-        // Make images gray
-        vector<Mat> gray_images(images.size());
-        for (size_t i = 0; i < images.size(); ++i)
-        {
-            CV_Assert(images[i].depth() == CV_8U);
-            cvtColor(images[i], gray_images[i], CV_BGR2GRAY);
-        }
-
-        features.resize(images.size());
-
-        // Find keypoints in all images
-        for (size_t i = 0; i < images.size(); ++i)
-        {
-            detector_->detect(gray_images[i], features[i].keypoints);
-            extractor_->compute(gray_images[i], features[i].keypoints, features[i].descriptors);
-        }
+        Mat gray_image;
+        CV_Assert(image.depth() == CV_8U);
+        cvtColor(image, gray_image, CV_BGR2GRAY);
+        detector_->detect(gray_image, features.keypoints);
+        extractor_->compute(gray_image, features.keypoints, features.descriptors);
     }
     
     class GpuSurfFeaturesFinder : public FeaturesFinder
@@ -92,7 +78,7 @@ namespace
         }
 
     protected:
-        void find(const vector<Mat> &images, vector<ImageFeatures> &features);
+        void find(const Mat &image, ImageFeatures &features);
 
     private:
         SURF_GPU surf_;
@@ -100,34 +86,24 @@ namespace
         int num_octaves_descr_, num_layers_descr_;
     };
 
-    void GpuSurfFeaturesFinder::find(const vector<Mat> &images, vector<ImageFeatures> &features)
+    void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
-        // Make images gray
-        vector<GpuMat> gray_images(images.size());
-        for (size_t i = 0; i < images.size(); ++i)
-        {
-            CV_Assert(images[i].depth() == CV_8U);
-            cvtColor(GpuMat(images[i]), gray_images[i], CV_BGR2GRAY);
-        }
+        GpuMat gray_image;
+        CV_Assert(image.depth() == CV_8U);
+        cvtColor(GpuMat(image), gray_image, CV_BGR2GRAY);
 
-        features.resize(images.size());
-
-        // Find keypoints in all images
         GpuMat d_keypoints;
         GpuMat d_descriptors;
-        for (size_t i = 0; i < images.size(); ++i)
-        {
-            surf_.nOctaves = num_octaves_;
-            surf_.nOctaveLayers = num_layers_;
-            surf_(gray_images[i], GpuMat(), d_keypoints);
+        surf_.nOctaves = num_octaves_;
+        surf_.nOctaveLayers = num_layers_;
+        surf_(gray_image, GpuMat(), d_keypoints);
 
-            surf_.nOctaves = num_octaves_descr_;
-            surf_.nOctaveLayers = num_layers_descr_;
-            surf_(gray_images[i], GpuMat(), d_keypoints, d_descriptors, true);
+        surf_.nOctaves = num_octaves_descr_;
+        surf_.nOctaveLayers = num_layers_descr_;
+        surf_(gray_image, GpuMat(), d_keypoints, d_descriptors, true);
+        surf_.downloadKeypoints(d_keypoints, features.keypoints);
 
-            surf_.downloadKeypoints(d_keypoints, features[i].keypoints);
-            d_descriptors.download(features[i].descriptors);
-        }
+        d_descriptors.download(features.descriptors);
     }
 }
 
@@ -141,9 +117,9 @@ SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int
 }
 
 
-void SurfFeaturesFinder::find(const vector<Mat> &images, vector<ImageFeatures> &features)
+void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
-    (*impl_)(images, features);
+    (*impl_)(image, features);
 }
 
 
@@ -168,31 +144,29 @@ const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FeaturesMatcher::operator ()(const vector<Mat> &images, const vector<ImageFeatures> &features,
-                                  vector<MatchesInfo> &pairwise_matches)
+void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
-    pairwise_matches.resize(images.size() * images.size());
-    for (size_t i = 0; i < images.size(); ++i)
+    const int num_images = static_cast<int>(features.size());
+
+    pairwise_matches.resize(num_images * num_images);
+    for (int i = 0; i < num_images; ++i)
     {
         LOGLN("Processing image " << i << "... ");
-        for (size_t j = i + 1; j < images.size(); ++j)
+        for (int j = i + 1; j < num_images; ++j)
         {
             // Save time by ignoring poor pairs
             if (compareHist(features[i].hist, features[j].hist, CV_COMP_INTERSECT) 
-                < min(images[i].size().area(), images[j].size().area()) * 0.4)
-            {
-                //LOGLN("Ignoring (" << i << ", " << j << ") pair...");
+                < min(features[i].img_size.area(), features[j].img_size.area()) * 0.4)
                 continue;
-            }
 
-            size_t pair_idx = i * images.size() + j;
+            int pair_idx = i * num_images + j;
 
-            (*this)(images[i], features[i], images[j], features[j], pairwise_matches[pair_idx]);
+            (*this)(features[i], features[j], pairwise_matches[pair_idx]);
             pairwise_matches[pair_idx].src_img_idx = i;
             pairwise_matches[pair_idx].dst_img_idx = j;
 
             // Set up dual pair matches info
-            size_t dual_pair_idx = j * images.size() + i;
+            size_t dual_pair_idx = j * num_images + i;
             pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
             pairwise_matches[dual_pair_idx].src_img_idx = j;
             pairwise_matches[dual_pair_idx].dst_img_idx = i;
@@ -215,13 +189,13 @@ namespace
     public:
         inline CpuMatcher(float match_conf) : match_conf_(match_conf) {}
 
-        void match(const cv::Mat&, const ImageFeatures &features1, const cv::Mat&, const ImageFeatures &features2, MatchesInfo& matches_info);
+        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
         float match_conf_;
     };
 
-    void CpuMatcher::match(const cv::Mat&, const ImageFeatures &features1, const cv::Mat&, const ImageFeatures &features2, MatchesInfo& matches_info)
+    void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
         matches_info.matches.clear();
 
@@ -259,7 +233,7 @@ namespace
     public:
         inline GpuMatcher(float match_conf) : match_conf_(match_conf) {}
 
-        void match(const cv::Mat&, const ImageFeatures &features1, const cv::Mat&, const ImageFeatures &features2, MatchesInfo& matches_info);
+        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
         float match_conf_;
@@ -270,7 +244,7 @@ namespace
         GpuMat trainIdx_, distance_, allDist_;
     };
 
-    void GpuMatcher::match(const cv::Mat&, const ImageFeatures &features1, const cv::Mat&, const ImageFeatures &features2, MatchesInfo& matches_info)
+    void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
         matches_info.matches.clear();
 
@@ -330,10 +304,10 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 }
 
 
-void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features1, const Mat &img2, const ImageFeatures &features2,
+void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
                                   MatchesInfo &matches_info)
 {
-    (*impl_)(img1, features1, img2, features2, matches_info);
+    (*impl_)(features1, features2, matches_info);
 
     // Check if it makes sense to find homography
     if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
@@ -347,13 +321,13 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
         const DMatch& m = matches_info.matches[i];
 
         Point2f p = features1.keypoints[m.queryIdx].pt;
-        p.x -= img1.cols * 0.5f;
-        p.y -= img1.rows * 0.5f;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
         src_points.at<Point2f>(0, i) = p;
 
         p = features2.keypoints[m.trainIdx].pt;
-        p.x -= img2.cols * 0.5f;
-        p.y -= img2.rows * 0.5f;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
         dst_points.at<Point2f>(0, i) = p;
     }
 
@@ -384,13 +358,13 @@ void BestOf2NearestMatcher::match(const Mat &img1, const ImageFeatures &features
         const DMatch& m = matches_info.matches[i];
 
         Point2f p = features1.keypoints[m.queryIdx].pt;
-        p.x -= img1.cols * 0.5f;
-        p.y -= img2.rows * 0.5f;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
         src_points.at<Point2f>(0, inlier_idx) = p;
 
         p = features2.keypoints[m.trainIdx].pt;
-        p.x -= img2.cols * 0.5f;
-        p.y -= img2.rows * 0.5f;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
         dst_points.at<Point2f>(0, inlier_idx) = p;
 
         inlier_idx++;

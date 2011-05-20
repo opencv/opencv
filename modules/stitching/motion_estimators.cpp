@@ -64,13 +64,13 @@ struct CalcRotation
 };
 
 
-void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<ImageFeatures> &features,
-                                        const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
+void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
+                                        vector<CameraParams> &cameras)
 {
-    const int num_images = static_cast<int>(images.size());
+    const int num_images = static_cast<int>(features.size());
 
     // Estimate focal length and set it for all cameras
-    double focal = estimateFocal(images, features, pairwise_matches);
+    double focal = estimateFocal(features, pairwise_matches);
     cameras.resize(num_images);
     for (int i = 0; i < num_images; ++i)
         cameras[i].focal = focal;
@@ -85,11 +85,10 @@ void HomographyBasedEstimator::estimate(const vector<Mat> &images, const vector<
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatures> &features,
-                              const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
+void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
+                              vector<CameraParams> &cameras)
 {
-    num_images_ = static_cast<int>(images.size());
-    images_ = &images[0];
+    num_images_ = static_cast<int>(features.size());
     features_ = &features[0];
     pairwise_matches_ = &pairwise_matches[0];
 
@@ -227,11 +226,11 @@ void BundleAdjuster::calcError(Mat &err)
             const DMatch& m = matches_info.matches[k];
 
             Point2d kp1 = features1.keypoints[m.queryIdx].pt;
-            kp1.x -= 0.5 * images_[i].cols;
-            kp1.y -= 0.5 * images_[i].rows;
+            kp1.x -= 0.5 * features1.img_size.width;
+            kp1.y -= 0.5 * features1.img_size.height;
             Point2d kp2 = features2.keypoints[m.trainIdx].pt;
-            kp2.x -= 0.5 * images_[j].cols;
-            kp2.y -= 0.5 * images_[j].rows;
+            kp2.x -= 0.5 * features2.img_size.width;
+            kp2.y -= 0.5 * features2.img_size.height;
             double len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);
             double len2 = sqrt(kp2.x * kp2.x + kp2.y * kp2.y + f2 * f2);
             Point3d p1(kp1.x / len1, kp1.y / len1, f1 / len1);
@@ -346,10 +345,10 @@ void waveCorrect(vector<Mat> &rmats)
 
 //////////////////////////////////////////////////////////////////////////////
 
-vector<int> leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &features, 
-                                  vector<MatchesInfo> &pairwise_matches, float conf_threshold)
+vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<MatchesInfo> &pairwise_matches, 
+                                  float conf_threshold)
 {
-    const int num_images = static_cast<int>(images.size());
+    const int num_images = static_cast<int>(features.size());
 
     DjSets comps(num_images);
     for (int i = 0; i < num_images; ++i)
@@ -375,12 +374,10 @@ vector<int> leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &fe
         else
             indices_removed.push_back(i);
 
-    vector<Mat> images_subset;
     vector<ImageFeatures> features_subset;
     vector<MatchesInfo> pairwise_matches_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {
-        images_subset.push_back(images[indices[i]]);
         features_subset.push_back(features[indices[i]]);
         for (size_t j = 0; j < indices.size(); ++j)
         {
@@ -390,7 +387,7 @@ vector<int> leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &fe
         }
     }
 
-    if (static_cast<int>(images_subset.size()) == num_images)
+    if (static_cast<int>(features_subset.size()) == num_images)
         return indices;
 
     LOG("Removed some images, because can't match them: (");
@@ -398,7 +395,6 @@ vector<int> leaveBiggestComponent(vector<Mat> &images, vector<ImageFeatures> &fe
     for (size_t i = 1; i < indices_removed.size(); ++i) LOG(", " << indices_removed[i]);
     LOGLN(")");
 
-    images = images_subset;
     features = features_subset;
     pairwise_matches = pairwise_matches_subset;
 

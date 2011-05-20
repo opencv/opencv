@@ -21,15 +21,15 @@ struct CameraParams
 class Estimator
 {
 public:
-    void operator ()(const std::vector<cv::Mat> &images, const std::vector<ImageFeatures> &features,
-                     const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+    void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                     std::vector<CameraParams> &cameras)
     {
-        estimate(images, features, pairwise_matches, cameras);
+        estimate(features, pairwise_matches, cameras);
     }
 
 protected:
-    virtual void estimate(const std::vector<cv::Mat> &images, const std::vector<ImageFeatures> &features,
-                          const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras) = 0;
+    virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                          std::vector<CameraParams> &cameras) = 0;
 };
 
 
@@ -40,8 +40,8 @@ public:
     bool isFocalsEstimated() const { return is_focals_estimated_; }
 
 private:   
-    void estimate(const std::vector<cv::Mat> &images, const std::vector<ImageFeatures> &features,
-                  const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras);
+    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                  std::vector<CameraParams> &cameras);
 
     bool is_focals_estimated_;
 };
@@ -56,15 +56,14 @@ public:
         : cost_space_(cost_space), conf_thresh_(conf_thresh) {}
 
 private:
-    void estimate(const std::vector<cv::Mat> &images, const std::vector<ImageFeatures> &features,
-                  const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras);
+    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                  std::vector<CameraParams> &cameras);
 
     void calcError(cv::Mat &err);
     void calcJacobian();
 
     int num_images_;
     int total_num_matches_;
-    const cv::Mat *images_;
     const ImageFeatures *features_;
     const MatchesInfo *pairwise_matches_;
     cv::Mat cameras_;
@@ -83,8 +82,8 @@ void waveCorrect(std::vector<cv::Mat> &rmats);
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-std::vector<int> leaveBiggestComponent(std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features, 
-                                       std::vector<MatchesInfo> &pairwise_matches, float conf_threshold);
+std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
+                                       float conf_threshold);
 
 void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
                          Graph &span_tree, std::vector<int> &centers);

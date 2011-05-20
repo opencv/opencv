@@ -7,6 +7,7 @@
 
 struct ImageFeatures
 {    
+    cv::Size img_size;
     cv::Mat hist;
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
@@ -17,10 +18,10 @@ class FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
-    void operator ()(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features);
+    void operator ()(const cv::Mat &image, ImageFeatures &features);
 
 protected:
-    virtual void find(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features) = 0;
+    virtual void find(const cv::Mat &image, ImageFeatures &features) = 0;
 };
 
 
@@ -32,7 +33,7 @@ public:
                        int num_octaves_descr = 4, int num_layers_descr = 2);
 
 protected:
-    void find(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features);
+    void find(const cv::Mat &image, ImageFeatures &features);
 
     cv::Ptr<FeaturesFinder> impl_;
 };
@@ -57,14 +58,12 @@ class FeaturesMatcher
 {
 public:
     virtual ~FeaturesMatcher() {}
-    void operator ()(const cv::Mat &img1, const ImageFeatures &features1, const cv::Mat &img2, const ImageFeatures &features2,
-                     MatchesInfo& matches_info) { match(img1, features1, img2, features2, matches_info); }
-    void operator ()(const std::vector<cv::Mat> &images, const std::vector<ImageFeatures> &features,
-                     std::vector<MatchesInfo> &pairwise_matches);
+    void operator ()(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) 
+            { match(features1, features2, matches_info); }
+    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches);
 
 protected:
-    virtual void match(const cv::Mat &img1, const ImageFeatures &features1, const cv::Mat &img2, const ImageFeatures &features2,
-                       MatchesInfo& matches_info) = 0;
+    virtual void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) = 0;
 };
 
 
@@ -74,8 +73,7 @@ public:
     BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
 protected:
-    void match(const cv::Mat &img1, const ImageFeatures &features1, const cv::Mat &img2, const ImageFeatures &features2,
-               MatchesInfo &matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
 
     int num_matches_thresh1_;
     int num_matches_thresh2_;

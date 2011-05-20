@@ -37,7 +37,6 @@ int main(int argc, char* argv[])
     cv::setBreakOnError(true);
 
     vector<string> img_names;
-    vector<Mat> images;
 
     // Default parameters
     bool trygpu = false;
@@ -188,32 +187,11 @@ int main(int argc, char* argv[])
             i++;
         }
         else
-        {
             img_names.push_back(argv[i]);
-            Mat full_img = imread(argv[i]);
-            if (full_img.empty())
-            {
-                cout << "Can't open image " << argv[i] << endl;
-                return -1;
-            }
-            if (work_megapix < 0)
-                images.push_back(full_img);
-            else
-            {
-                if (!is_work_scale_set)
-                {
-                    work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));                    
-                    is_work_scale_set = true;
-                }
-                Mat img;
-                resize(full_img, img, Size(), work_scale, work_scale);
-                images.push_back(img);
-            }
-        }
     }
     LOGLN("Parsing params and reading images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    int num_images = static_cast<int>(images.size());
+    int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
         cout << "Need more images\n";
@@ -222,9 +200,30 @@ int main(int argc, char* argv[])
 
     t = getTickCount();
     LOGLN("Finding features...");
-    vector<ImageFeatures> features;
+    vector<ImageFeatures> features(num_images);
     SurfFeaturesFinder finder(trygpu);
-    finder(images, features);
+    Mat full_img, img;
+    for (int i = 0; i < num_images; ++i)
+    {
+        full_img = imread(img_names[i]);
+        if (full_img.empty())
+        {
+            cout << "Can't open image " << img_names[i] << endl;
+            return -1;
+        }
+        if (work_megapix < 0)
+            img = full_img;
+        else
+        {
+            if (!is_work_scale_set)
+            {
+                work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));                    
+                is_work_scale_set = true;
+            }
+            resize(full_img, img, Size(), work_scale, work_scale);
+        }
+        finder(img, features[i]);
+    }
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     t = getTickCount();
@@ -233,16 +232,16 @@ int main(int argc, char* argv[])
     BestOf2NearestMatcher matcher(trygpu);
     if (user_match_conf)
         matcher = BestOf2NearestMatcher(trygpu, match_conf);
-    matcher(images, features, pairwise_matches);
+    matcher(features, pairwise_matches);
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    vector<int> indices = leaveBiggestComponent(images, features, pairwise_matches, conf_thresh);
+    vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<string> img_names_subset;
     for (size_t i = 0; i < indices.size(); ++i)
         img_names_subset.push_back(img_names[indices[i]]);
     img_names = img_names_subset;
 
-    num_images = static_cast<int>(images.size());
+    num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
         cout << "Need more images\n";
@@ -253,7 +252,7 @@ int main(int argc, char* argv[])
     LOGLN("Estimating rotations...");
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
-    estimator(images, features, pairwise_matches, cameras);
+    estimator(features, pairwise_matches, cameras);
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     for (size_t i = 0; i < cameras.size(); ++i)
@@ -267,7 +266,7 @@ int main(int argc, char* argv[])
     t = getTickCount();
     LOGLN("Bundle adjustment... ");
     BundleAdjuster adjuster(ba_space, conf_thresh);
-    adjuster(images, features, pairwise_matches, cameras);
+    adjuster(features, pairwise_matches, cameras);
     LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     if (wave_correct)
@@ -293,27 +292,24 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
-    if ((work_megapix > 0 || compose_megapix > 0) 
-        && abs(work_megapix - compose_megapix) > 1e-3)
+    t = getTickCount();
+    vector<Mat> images(num_images);
+    LOGLN("Compose scaling...");
+    for (int i = 0; i < num_images; ++i)
     {
-        t = getTickCount();
-        LOGLN("Compose scaling...");
-        for (int i = 0; i < num_images; ++i)
+        Mat full_img = imread(img_names[i]);
+        if (!is_compose_scale_set)
         {
-            Mat full_img = imread(img_names[i]);
-            if (!is_compose_scale_set)
-            {
-                compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));                    
-                is_compose_scale_set = true;
-            }
-            Mat img;
-            resize(full_img, img, Size(), compose_scale, compose_scale);
-            images[i] = img;
-            cameras[i].focal *= compose_scale / work_scale;
+            compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));                    
+            is_compose_scale_set = true;
         }
-        camera_focal *= static_cast<float>(compose_scale / work_scale);
-        LOGLN("Compose scaling, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+        Mat img;
+        resize(full_img, img, Size(), compose_scale, compose_scale);
+        images[i] = img;
+        cameras[i].focal *= compose_scale / work_scale;
     }
+    camera_focal *= static_cast<float>(compose_scale / work_scale);
+    LOGLN("Compose scaling, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     vector<Mat> masks(num_images);
     for (int i = 0; i < num_images; ++i)

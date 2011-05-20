@@ -35,10 +35,9 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
 }
 
 
-double estimateFocal(const vector<Mat> &images, const vector<ImageFeatures> &/*features*/, 
-                     const vector<MatchesInfo> &pairwise_matches)
+double estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches)
 {
-    const int num_images = static_cast<int>(images.size());
+    const int num_images = static_cast<int>(features.size());
 
     vector<double> focals;
     for (int src_idx = 0; src_idx < num_images; ++src_idx)
@@ -65,6 +64,6 @@ double estimateFocal(const vector<Mat> &images, const vector<ImageFeatures> &/*f
     LOGLN("Can't estimate focal length, will use naive approach");
     double focals_sum = 0;
     for (int i = 0; i < num_images; ++i)
-        focals_sum += images[i].rows + images[i].cols;
+        focals_sum += features[i].img_size.width + features[i].img_size.height;
     return focals_sum / num_images;
 }
