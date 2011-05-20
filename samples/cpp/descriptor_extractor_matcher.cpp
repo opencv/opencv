@@ -155,10 +155,11 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         Ptr<GenericDescriptorMatcher> gdm = new VectorDescriptorMatcher( descriptorExtractor, descriptorMatcher );
         evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
 
-        for( float l_p = 0; l_p <= 1; l_p+=0.05f )
+        for( float l_p = 0; l_p <= 1 + FLT_EPSILON; l_p+=0.05f )
         {
             int nearest = getNearestPoint( curve, l_p );
-            cout << "1-precision = " << curve[nearest].x << "; recall = " << curve[nearest].y << endl;
+            if( nearest >= 0 )
+                cout << "1-precision = " << curve[nearest].x << "; recall = " << curve[nearest].y << endl;
         }
         cout << ">" << endl;
     }
