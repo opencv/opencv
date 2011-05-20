@@ -6,7 +6,8 @@
 #include <opencv2/features2d/features2d.hpp>
 
 struct ImageFeatures
-{
+{    
+    cv::Mat hist;
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
 };
@@ -16,7 +17,7 @@ class FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
-    void operator ()(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features) { find(images, features); }
+    void operator ()(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features);
 
 protected:
     virtual void find(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features) = 0;
@@ -26,9 +27,9 @@ protected:
 class SurfFeaturesFinder : public FeaturesFinder
 {
 public:
-    explicit SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 500.0, 
-                                int num_octaves = 3, int num_layers = 4, 
-                                int num_octaves_descr = 4, int num_layers_descr = 2);
+    SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 300.0, 
+                       int num_octaves = 3, int num_layers = 4, 
+                       int num_octaves_descr = 4, int num_layers_descr = 2);
 
 protected:
     void find(const std::vector<cv::Mat> &images, std::vector<ImageFeatures> &features);
@@ -70,7 +71,7 @@ protected:
 class BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
-    explicit BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 5, int num_matches_thresh2 = 5);
+    BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
 protected:
     void match(const cv::Mat &img1, const ImageFeatures &features1, const cv::Mat &img2, const ImageFeatures &features2,

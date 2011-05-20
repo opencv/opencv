@@ -130,7 +130,7 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].num_inliers);
 
     CvLevMarq solver(num_images_ * 4, total_num_matches_ * 3,
-                     cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 100, DBL_EPSILON));
+                     cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
 
     CvMat matParams = cameras_;
     cvCopy(&matParams, solver.param);
@@ -142,7 +142,7 @@ void BundleAdjuster::estimate(const vector<Mat> &images, const vector<ImageFeatu
         CvMat* _J = 0;
         CvMat* _err = 0;
 
-        bool proceed = solver.update( _param, _J, _err );
+        bool proceed = solver.update(_param, _J, _err);
 
         cvCopy( _param, &matParams );
 

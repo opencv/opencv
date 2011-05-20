@@ -26,6 +26,9 @@ void printUsage()
         << "\t[--output <result_img>]\n\n";
     cout << "--matchconf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
+    cout << "HINT:\n"  
+        << "\tDefault parameters are for '--trygpu no' configuration.\n"
+        << "\tTry bigger values for --work_megapix if something is wrong.\n\n";
 }
 
 int main(int argc, char* argv[])
@@ -35,15 +38,17 @@ int main(int argc, char* argv[])
 
     vector<string> img_names;
     vector<Mat> images;
-    bool trygpu = true;
-    double work_megapix = 1;
+
+    // Default parameters
+    bool trygpu = false;
+    double work_megapix = 0.2;
     double compose_megapix = 1;
     int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
     float conf_thresh = 1.f;
     bool wave_correct = true;
     int warp_type = Warper::SPHERICAL;
     bool user_match_conf = false;
-    float match_conf = 0.55f;
+    float match_conf = 0.6f;
     int seam_find_type = SeamFinder::VORONOI;
     int blend_type = Blender::MULTI_BAND;
     string result_name = "result.png";

@@ -56,7 +56,7 @@ double estimateFocal(const vector<Mat> &images, const vector<ImageFeatures> &/*f
         }
     }
 
-    if (focals.size() >= 2 * (num_images - 1))
+    if (static_cast<int>(focals.size()) >= 2 * (num_images - 1))
     {
         nth_element(focals.begin(), focals.end(), focals.begin() + focals.size()/2);
         return focals[focals.size()/2];

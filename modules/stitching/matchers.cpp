@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <functional>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include "matchers.hpp"
@@ -8,6 +9,31 @@
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FeaturesFinder::operator ()(const vector<Mat> &images, vector<ImageFeatures> &features) 
+{ 
+    features.resize(images.size());
+
+    // Calculate histograms
+    for (size_t i = 0; i < images.size(); ++i)
+    {
+        Mat hsv;
+        cvtColor(images[i], hsv, CV_BGR2HSV);
+        int hbins = 30, sbins = 32, vbins = 30;
+        int hist_size[] = { hbins, sbins, vbins };
+        float hranges[] = { 0, 180 };
+        float sranges[] = { 0, 256 };
+        float vranges[] = { 0, 256 };
+        const float* ranges[] = { hranges, sranges, vranges };
+        int channels[] = { 0, 1, 2 };
+        calcHist(&hsv, 1, channels, Mat(), features[i].hist, 3, hist_size, ranges);
+    }
+
+    find(images, features);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -19,7 +45,7 @@ namespace
         inline CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
                                      int num_octaves_descr, int num_layers_descr) 
         {
-            detector_ = new /*FastFeatureDetector;*/SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
+            detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
             extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
         }
 
@@ -149,14 +175,32 @@ void FeaturesMatcher::operator ()(const vector<Mat> &images, const vector<ImageF
     for (size_t i = 0; i < images.size(); ++i)
     {
         LOGLN("Processing image " << i << "... ");
-        for (size_t j = 0; j < images.size(); ++j)
+        for (size_t j = i + 1; j < images.size(); ++j)
         {
-            if (i == j)
+            // Save time by ignoring poor pairs
+            if (compareHist(features[i].hist, features[j].hist, CV_COMP_INTERSECT) 
+                < min(images[i].size().area(), images[j].size().area()) * 0.4)
+            {
+                //LOGLN("Ignoring (" << i << ", " << j << ") pair...");
                 continue;
+            }
+
             size_t pair_idx = i * images.size() + j;
+
             (*this)(images[i], features[i], images[j], features[j], pairwise_matches[pair_idx]);
             pairwise_matches[pair_idx].src_img_idx = i;
             pairwise_matches[pair_idx].dst_img_idx = j;
+
+            // Set up dual pair matches info
+            size_t dual_pair_idx = j * images.size() + i;
+            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
+            pairwise_matches[dual_pair_idx].src_img_idx = j;
+            pairwise_matches[dual_pair_idx].dst_img_idx = i;
+            if (!pairwise_matches[pair_idx].H.empty())
+                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
+            for (size_t i = 0; i < pairwise_matches[dual_pair_idx].matches.size(); ++i)
+                swap(pairwise_matches[dual_pair_idx].matches[i].queryIdx,
+                     pairwise_matches[dual_pair_idx].matches[i].trainIdx);
         }
     }
 }
