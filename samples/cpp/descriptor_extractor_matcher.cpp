@@ -13,17 +13,16 @@ void help(char** argv)
     cout << "\nThis program demonstrats keypoint finding and matching between 2 images using features2d framework.\n"
      << "   In one case, the 2nd image is synthesized by homography from the first, in the second case, there are 2 images\n"
      << "\n"
-     << "case1: second image is obtained from the first (given) image using random generated homography matrix\n"
+     << "Case1: second image is obtained from the first (given) image using random generated homography matrix\n"
      << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image] [evaluate(0 or 1)]\n"
      << "Example of case1:\n"
      << "./descriptor_extractor_matcher SURF SURF FlannBased NoneFilter cola.jpg 0\n"
      << "\n"
-     << "case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated\n"
-     << "Example of case2:\n"
+     << "Case2: both images are given. If ransacReprojThreshold>=0 then homography matrix are calculated\n"
      << argv[0] << " [detectorType] [descriptorType] [matcherType] [matcherFilterType] [image1] [image2] [ransacReprojThreshold]\n"
      << "\n"
      << "Matches are filtered using homography matrix in case1 and case2 (if ransacReprojThreshold>=0)\n"
-     << "Example:\n"
+     << "Example of case2:\n"
      << "./descriptor_extractor_matcher SURF SURF BruteForce CrossCheckFilter cola1.jpg cola2.jpg 3\n"
      << "\n"
      << "Possible detectorType values: see in documentation on createFeatureDetector().\n"
@@ -151,12 +150,16 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
 
     if( !H12.empty() && eval )
     {
-        cout << "< Evaluate descriptor match..." << endl;
+        cout << "< Evaluate descriptor matcher..." << endl;
         vector<Point2f> curve;
         Ptr<GenericDescriptorMatcher> gdm = new VectorDescriptorMatcher( descriptorExtractor, descriptorMatcher );
         evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
-        for( float l_p = 0; l_p < 1 - FLT_EPSILON; l_p+=0.1f )
-            cout << "1-precision = " << l_p << "; recall = " << getRecall( curve, l_p ) << endl;
+
+        for( float l_p = 0; l_p <= 1; l_p+=0.05f )
+        {
+            int nearest = getNearestPoint( curve, l_p );
+            cout << "1-precision = " << curve[nearest].x << "; recall = " << curve[nearest].y << endl;
+        }
         cout << ">" << endl;
     }
 

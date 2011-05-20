@@ -2720,7 +2720,9 @@ CV_EXPORTS void evaluateFeatureDetector( const Mat& img1, const Mat& img2, const
 CV_EXPORTS void computeRecallPrecisionCurve( const vector<vector<DMatch> >& matches1to2,
                                              const vector<vector<uchar> >& correctMatches1to2Mask,
                                              vector<Point2f>& recallPrecisionCurve );
+
 CV_EXPORTS float getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precision );
+CV_EXPORTS int getNearestPoint( const vector<Point2f>& recallPrecisionCurve, float l_precision );
 
 CV_EXPORTS void evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
                                                   vector<KeyPoint>& keypoints1, vector<KeyPoint>& keypoints2,

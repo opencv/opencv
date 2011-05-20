@@ -491,26 +491,35 @@ void cv::computeRecallPrecisionCurve( const vector<vector<DMatch> >& matches1to2
 
 float cv::getRecall( const vector<Point2f>& recallPrecisionCurve, float l_precision )
 {
-    float recall = -1;
+    int nearestPointIndex = getNearestPoint( recallPrecisionCurve, l_precision );
+
+    float recall = -1.f;
+
+    if( nearestPointIndex >= 0 )
+        recall = recallPrecisionCurve[nearestPointIndex].y;
+
+    return recall;
+}
+
+int cv::getNearestPoint( const vector<Point2f>& recallPrecisionCurve, float l_precision )
+{
+    int nearestPointIndex = -1;
 
     if( l_precision >= 0 && l_precision <= 1 )
     {
-        int bestIdx = -1;
         float minDiff = FLT_MAX;
         for( size_t i = 0; i < recallPrecisionCurve.size(); i++ )
         {
             float curDiff = std::fabs(l_precision - recallPrecisionCurve[i].x);
             if( curDiff <= minDiff )
             {
-                bestIdx = (int)i;
+                nearestPointIndex = (int)i;
                 minDiff = curDiff;
             }
         }
-
-        recall = recallPrecisionCurve[bestIdx].y;
     }
 
-    return recall;
+    return nearestPointIndex;
 }
 
 void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, const Mat& H1to2,
