@@ -459,7 +459,6 @@ bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigne
     return !resmat.empty();
 }
 
-#ifndef HAVE_TEGRA_OPTIMIZATION
 template<int R>
 struct YUV420i2BGR888Invoker
 {
@@ -516,7 +515,6 @@ struct YUV420i2BGR888Invoker
 		}
 	}
 };
-#endif
 
 bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder)
 {
@@ -529,13 +527,15 @@ bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsig
     unsigned char* uv = y1 + width * height;
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    cv::parallel_for(cv::BlockedRange(0, height, 2), tegra::YUV420i2BGR888Invoker(resmat, width, y1, uv, inRGBorder));
-#else
-    if (inRGBorder)
-        cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<2>(resmat, width, y1, uv));
-    else
-        cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
+#warning "TEGRA OPTIMIZED YUV420i TO RGB888 CONVERSION IS USED"
+    if (!tegra::YUV420i2BGR888(width, height, y1, uv, resmat, inRGBorder))
 #endif
+    {
+        if (inRGBorder)
+            cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<2>(resmat, width, y1, uv));
+        else
+            cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
+    }
 
     return !resmat.empty();
 }

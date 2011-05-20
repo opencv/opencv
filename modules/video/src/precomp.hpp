@@ -56,4 +56,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/video/video_tegra.hpp"
+#endif
+
 #endif
