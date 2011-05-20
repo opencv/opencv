@@ -49,8 +49,8 @@
 *                            Common macros and type definitions                          *
 \****************************************************************************************/
 
-#define cv_isprint(c)     ((signed char)(c) >= (signed char)' ')
-#define cv_isprint_or_tab(c)  ((signed char)(c) >= (signed char)' ' || (c) == '\t')
+#define cv_isprint(c)     ((uchar)(c) >= (uchar)' ')
+#define cv_isprint_or_tab(c)  ((uchar)(c) >= (uchar)' ' || (c) == '\t')
 
 static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
@@ -1905,11 +1905,16 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                         }
                         else if( c == '&' )
                         {
-                            if( *ptr == '#' )
+                            if( *++ptr == '#' )
                             {
-                                int val;
+                                int val, base = 10;
                                 ptr++;
-                                val = (int)strtol( ptr, &endptr, 0 );
+                                if( *ptr == 'x' )
+                                {
+                                    base = 16;
+                                    ptr++;
+                                }
+                                val = (int)strtol( ptr, &endptr, base );
                                 if( (unsigned)val > (unsigned)255 ||
                                     !endptr || *endptr != ';' )
                                     CV_PARSE_ERROR( "Invalid numeric value in the string" );
@@ -1917,7 +1922,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                             }
                             else
                             {
-                                endptr = ptr++;
+                                endptr = ptr;
                                 do c = *++endptr;
                                 while( isalnum(c) );
                                 if( c != ';' )
@@ -2427,8 +2432,12 @@ icvXMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quot
         {
             char c = str[i];
 
-            if( !isalnum(c) && (!cv_isprint(c) || c == '<' || c == '>' ||
-                c == '&' || c == '\'' || c == '\"') )
+            if( (uchar)c >= 128 || c == ' ' )
+            {
+                *data++ = c;
+                need_quote = 1;
+            }
+            else if( !cv_isprint(c) || c == '<' || c == '>' || c == '&' || c == '\'' || c == '\"' )
             {
                 *data++ = '&';
                 if( c == '<' )
@@ -2458,17 +2467,14 @@ icvXMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quot
                 }
                 else
                 {
-                    sprintf( data, "#x%02x", c );
+                    sprintf( data, "#x%02x", (uchar)c );
                     data += 4;
                 }
                 *data++ = ';';
+                need_quote = 1;
             }
             else
-            {
-                if( c == ' ' )
-                    need_quote = 1;
                 *data++ = c;
-            }
         }
         if( !need_quote && (isdigit(str[0]) ||
             str[0] == '+' || str[0] == '-' || str[0] == '.' ))
