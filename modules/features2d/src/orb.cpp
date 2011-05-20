@@ -195,40 +195,6 @@ void HarrisResponse::operator()(std::vector<cv::KeyPoint>& kpts) const
   }
 }
 
-namespace
-{
-struct RoiPredicate
-{
-  RoiPredicate(const cv::Rect& r) :
-    r(r)
-  {
-  }
-
-  bool operator()(const cv::KeyPoint& keyPt) const
-  {
-    return !r.contains(keyPt.pt);
-  }
-
-  cv::Rect r;
-};
-
-void runByImageBorder(std::vector<cv::KeyPoint>& keypoints, cv::Size imageSize, int borderSize)
-{
-  if (borderSize > 0)
-  {
-    keypoints.erase(
-                    std::remove_if(
-                                   keypoints.begin(),
-                                   keypoints.end(),
-                                   RoiPredicate(
-                                                cv::Rect(
-                                                         cv::Point(borderSize, borderSize),
-                                                         cv::Point(imageSize.width - borderSize,
-                                                                   imageSize.height - borderSize)))), keypoints.end());
-  }
-}
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 inline bool keypointResponseGreater(const cv::KeyPoint& lhs, const cv::KeyPoint& rhs)
@@ -669,11 +635,7 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
     // Remove keypoints very close to the border
     // half_patch_size_ for orientation, 4 for Harris
     unsigned int border_safety = std::max(half_patch_size_, 4);
-#if ((CV_MAJOR_VERSION >= 2) && ((CV_MINOR_VERSION >2) || ((CV_MINOR_VERSION == 2) && (CV_SUBMINOR_VERSION>=9))))
     cv::KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), border_safety);
-#else
-    ::runByImageBorder(keypoints, image_pyramid[level].size(), border_safety);
-#endif
 
     // Keep more points than necessary as FAST does not give amazing corners
     if (keypoints.size() > 2 * n_features_per_level_[level])
@@ -843,7 +805,7 @@ void ORB::computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image
   cv::KeyPointsFilter::runByImageBorder(keypoints, image.size(), border_safety);
 
   // Get the patterns to apply
-  cv::Ptr<OrbPatterns> patterns = patterns_[level];
+  OrbPatterns* patterns = patterns_[level];
 
   //create the descriptor mat, keypoints.size() rows, BYTES cols
   descriptors = cv::Mat::zeros(keypoints.size(), kBytes, CV_8UC1);

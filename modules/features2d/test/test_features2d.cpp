@@ -398,7 +398,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computiting one descriptor = %g ms (previous time = %g ms).\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms (previous time = %g ms).\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -1009,6 +1009,12 @@ TEST( Features2d_Detector_SURF, regression )
     test.safe_run();
 }
 
+TEST( Features2d_Detector_ORB, regression )
+{
+    CV_FeatureDetectorTest test( "detector-orb", FeatureDetector::create("ORB") );
+    test.safe_run();
+}
+
 TEST( Features2d_Detector_GridFAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-grid-fast", FeatureDetector::create("GridFAST") );
@@ -1035,6 +1041,14 @@ TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.035f,
                                                  DescriptorExtractor::create("SURF"), 0.147372f );
+    test.safe_run();
+}
+
+TEST( Features2d_DescriptorExtractor_ORB, regression )
+{
+    // TODO adjust the parameters below
+    CV_DescriptorExtractorTest<L2<float> > test( "descriptor-orb",  0.035f,
+                                                 DescriptorExtractor::create("ORB"), 0.147372f );
     test.safe_run();
 }
 
