@@ -41,6 +41,9 @@ class MultiBandBlender : public Blender
 public:
     MultiBandBlender(int num_bands = 7) : num_bands_(num_bands) {}
 
+    int numBands() const { return num_bands_; }
+    void setNumBands(int val) { num_bands_ = val; }
+
 private:
     cv::Point blend(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
                     cv::Mat& dst, cv::Mat& dst_mask);

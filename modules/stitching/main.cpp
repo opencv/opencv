@@ -347,8 +347,13 @@ int main(int argc, char* argv[])
 
     t = getTickCount();
     LOGLN("Blending images...");
-    Mat result, result_mask;
     Ptr<Blender> blender = Blender::createDefault(blend_type);
+    if (blend_type == Blender::MULTI_BAND)
+        // Ensure last pyramid layer area is about 1 pix 
+        dynamic_cast<MultiBandBlender*>((Blender*)(blender))
+            ->setNumBands(static_cast<int>(ceil(log(static_cast<double>(images_f[0].size().area())) 
+                                                / log(4.0))));
+    Mat result, result_mask;
     (*blender)(images_f, corners, masks_warped, result, result_mask);
     LOGLN("Blending images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
