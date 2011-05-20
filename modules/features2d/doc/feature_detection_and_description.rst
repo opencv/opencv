@@ -216,6 +216,73 @@ There is a fast multi-scale Hessian keypoint detector that can be used to find k
 (default option). But the descriptors can be also computed for the user-specified keypoints.
 The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in OpenCV samples directory.
 
+
+.. index:: ORB
+
+.. _ORB:
+
+ORB
+----
+.. cpp:class:: ORB
+
+Class for extracting ORB features and descriptors from an image ::
+
+    class ORB
+    {
+    public:
+        /** The patch sizes that can be used (only one right now) */
+        enum PatchSize
+        {
+            PATCH_LEARNED_31 = 31
+        };
+
+        struct CommonParams
+        {
+            static const unsigned int DEFAULT_N_LEVELS = 3;
+            static const float DEFAULT_SCALE_FACTOR = 1.2;
+            static const unsigned int DEFAULT_FIRST_LEVEL = 0;
+            static const PatchSize DEFAULT_PATCH_SIZE = PATCH_LEARNED_31;
+
+            /** default constructor */
+            CommonParams(float scale_factor = DEFAULT_SCALE_FACTOR, unsigned int n_levels = DEFAULT_N_LEVELS,
+                 unsigned int first_level = DEFAULT_FIRST_LEVEL, PatchSize patch_size = DEFAULT_PATCH_SIZE);
+            void read(const FileNode& fn);
+            void write(FileStorage& fs) const;
+
+            /** Coefficient by which we divide the dimensions from one scale pyramid level to the next */
+            float scale_factor_;
+            /** The number of levels in the scale pyramid */
+            unsigned int n_levels_;
+            /** The level at which the image is given
+             * if 1, that means we will also look at the image scale_factor_ times bigger
+             */
+            unsigned int first_level_;
+            /** The size of the patch that will be used for orientation and comparisons */
+            PatchSize patch_size_;
+        };
+
+        // c:function::default constructor
+        ORB();
+        // constructor that initializes all the algorithm parameters
+        ORB( const CommonParams detector_params );
+        // returns the number of elements in each descriptor (32 bytes)
+        int descriptorSize() const;
+        // detects keypoints using ORB
+        void operator()(const Mat& img, const Mat& mask,
+                        vector<KeyPoint>& keypoints) const;
+        // detects ORB keypoints and computes the ORB descriptors for them;
+        // output vector "descriptors" stores elements of descriptors and has size
+        // equal descriptorSize()*keypoints.size() as each descriptor is
+        // descriptorSize() elements of this vector.
+        void operator()(const Mat& img, const Mat& mask,
+                        vector<KeyPoint>& keypoints,
+                        cv::Mat& descriptors,
+                        bool useProvidedKeypoints=false) const;
+    };
+
+The class implements ORB
+
+
 .. index:: RandomizedTree
 
 .. _RandomizedTree:

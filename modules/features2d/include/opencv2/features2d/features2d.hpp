@@ -399,6 +399,161 @@ public:
 };
 
 /*!
+ ORB implementation.
+*/
+class CV_EXPORTS ORB
+{
+public:
+  enum PatchSize
+  {
+    PATCH_LEARNED_31 = 31
+  };
+
+  /** the size of the signature in bytes */
+  static const int kBytes = 32;
+
+  struct CommonParams
+  {
+    static const unsigned int DEFAULT_N_LEVELS = 3;
+    static const float DEFAULT_SCALE_FACTOR = 1.2;
+    static const unsigned int DEFAULT_FIRST_LEVEL = 0;
+    static const PatchSize DEFAULT_PATCH_SIZE = PATCH_LEARNED_31;
+
+    /** default constructor */
+    CommonParams(float scale_factor = DEFAULT_SCALE_FACTOR, unsigned int n_levels = DEFAULT_N_LEVELS,
+                 unsigned int first_level = DEFAULT_FIRST_LEVEL, PatchSize patch_size = DEFAULT_PATCH_SIZE) :
+      scale_factor_(scale_factor), n_levels_(n_levels), first_level_(first_level >= n_levels ? 0 : first_level),
+          patch_size_(patch_size)
+    {
+    }
+    void read(const FileNode& fn);
+    void write(FileStorage& fs) const;
+
+    /** Coefficient by which we divide the dimensions from one scale pyramid level to the next */
+    float scale_factor_;
+    /** The number of levels in the scale pyramid */
+    unsigned int n_levels_;
+    /** The level at which the image is given
+     * if 1, that means we will also look at the image scale_factor_ times bigger
+     */
+    unsigned int first_level_;
+    /** The size of the patch that will be used for orientation and comparisons */
+    PatchSize patch_size_;
+  };
+
+  /** Default Constructor */
+  ORB()
+  {
+  }
+
+  /** Constructor
+   * @param n_features the number of desired features
+   * @param detector_params parameters to use
+   */
+  ORB(size_t n_features, const CommonParams & detector_params = CommonParams());
+
+  /** returns the descriptor size in bytes */
+  int descriptorSize() const;
+
+  /** Compute the ORB features and descriptors on an image
+   * @param img the image to compute the features and descriptors on
+   * @param mask the mask to apply
+   * @param keypoints the resulting keypoints
+   */
+  void
+  operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints);
+
+  /** Compute the ORB features and descriptors on an image
+   * @param img the image to compute the features and descriptors on
+   * @param mask the mask to apply
+   * @param keypoints the resulting keypoints
+   * @param descriptors the resulting descriptors
+   * @param useProvidedKeypoints if true, the keypoints are used as an input
+   */
+  void
+  operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors,
+             bool useProvidedKeypoints = false);
+
+private:
+  /** The size of the patch used when comparing regions in the patterns */
+  static const int kKernelWidth = 5;
+
+  /** Compute the ORB features and descriptors on an image
+   * @param image the image to compute the features and descriptors on
+   * @param mask the mask to apply
+   * @param keypoints the resulting keypoints
+   * @param descriptors the resulting descriptors
+   * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
+   * @param do_descriptors if true, also computes the descriptors
+   */
+  void
+  operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints, cv::Mat & descriptors,
+             bool do_keypoints, bool do_descriptors);
+
+  /** Compute the ORB keypoints on an image
+   * @param image_pyramid the image pyramid to compute the features and descriptors on
+   * @param mask_pyramid the masks to apply at every level
+   * @param keypoints the resulting keypoints, clustered per level
+   */
+  void computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std::vector<cv::Mat>& mask_pyramid,
+                        std::vector<std::vector<cv::KeyPoint> >& keypoints) const;
+
+  /** Compute the ORB keypoint orientations
+   * @param image the image to compute the features and descriptors on
+   * @param integral_image the integral image of the image (can be empty, but the computation will be slower)
+   * @param level the scale at which we compute the orientation
+   * @param keypoints the resulting keypoints
+   */
+  void
+  computeOrientation(const cv::Mat& image, const cv::Mat& integral_image, unsigned int level,
+                     std::vector<cv::KeyPoint>& keypoints) const;
+
+  /** Compute the ORB descriptors
+   * @param image the image to compute the features and descriptors on
+   * @param integral_image the integral image of the image (can be empty, but the computation will be slower)
+   * @param level the scale at which we compute the orientation
+   * @param keypoints the keypoints to use
+   * @param descriptors the resulting descriptors
+   */
+  void
+  computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image, unsigned int level,
+                     std::vector<cv::KeyPoint>& keypoints, cv::Mat & descriptors) const;
+
+  /** Compute the integral image and upadte the cached values
+   * @param image the image to compute the features and descriptors on
+   * @param level the scale at which we compute the orientation
+   * @param descriptors the resulting descriptors
+   */
+  void computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Mat &integral_image);
+
+  /** Parameters tuning ORB */
+  CommonParams params_;
+
+  /** size of the half patch used for orientation computation, see Rosin - 1999 - Measuring Corner Properties */
+  int half_patch_size_;
+
+  /** pre-computed offsets used for the Harris verification, one vector per scale */
+  std::vector<std::vector<int> > orientation_horizontal_offsets_;
+  std::vector<std::vector<int> > orientation_vertical_offsets_;
+
+  /** The steps of the integral images for each scale */
+  std::vector<size_t> integral_image_steps_;
+
+  /** The number of desired features per scale */
+  std::vector<size_t> n_features_per_level_;
+
+  /** The overall number of desired features */
+  size_t n_features_;
+
+  /** the end of a row in a circular patch */
+  std::vector<int> u_max_;
+
+  /** The patterns for each level (the patterns are the same, but not their offset */
+  class OrbPatterns;
+  std::vector<OrbPatterns*> patterns_;
+};
+
+/*!
  Maximal Stable Extremal Regions class.
  
  The class implements MSER algorithm introduced by J. Matas.
@@ -1365,6 +1520,33 @@ protected:
     SURF surf;
 };
 
+/** Feature detector for the ORB feature
+ * Basically fast followed by a Harris check
+ */
+class CV_EXPORTS OrbFeatureDetector : public cv::FeatureDetector
+{
+public:
+  /** Default constructor
+   * @param n_features the number of desired features
+   * @param params parameters to use
+   */
+  OrbFeatureDetector(size_t n_features = 700, ORB::CommonParams params = ORB::CommonParams());
+
+  virtual void read(const cv::FileNode&);
+  virtual void write(cv::FileStorage&) const;
+
+protected:
+  virtual void
+  detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask = cv::Mat()) const;
+private:
+  /** the ORB object we use for the computations */
+  mutable ORB orb_;
+  /** The parameters used */
+  ORB::CommonParams params_;
+  /** the number of features that need to be retrieved */
+  unsigned int n_features_;
+};
+
 class CV_EXPORTS SimpleBlobDetector : public cv::FeatureDetector
 {
 public:
@@ -1718,6 +1900,40 @@ protected:
 	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     SURF surf;
+};
+
+/** The descriptor extractor for the ORB descriptor
+ * There are two ways to speed up its computation:
+ * - if you know the step size of the integral image, use setStepSize so that offsets are precomputed and cached
+ * - if you know the integral image, use setIntegralImage so that it is not recomputed. This calls
+ * setStepSize automatically
+ */
+class OrbDescriptorExtractor : public cv::DescriptorExtractor
+{
+public:
+  /** default constructor
+   * @param params parameters to use
+   */
+  OrbDescriptorExtractor(ORB::CommonParams params = ORB::CommonParams());
+
+  /** destructor */
+  ~OrbDescriptorExtractor()
+  {
+  }
+
+  virtual int descriptorSize() const;
+  virtual int descriptorType() const;
+
+  virtual void read(const cv::FileNode&);
+  virtual void write(cv::FileStorage&) const;
+
+protected:
+  void computeImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) const;
+private:
+  /** the ORB object we use for the computations */
+  mutable ORB orb_;
+  /** The parameters used */
+  ORB::CommonParams params_;
 };
 
 /*

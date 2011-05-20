@@ -103,15 +103,18 @@ DescriptorExtractor::create
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :ref:`SiftFeatureDetector`
- * ``"SURF"`` -- :ref:`SurfFeatureDetector`
- * ``"BRIEF"`` -- :ref:`BriefFeatureDetector` 
+ * ``"SIFT"`` -- :ref:`SiftDescriptorExtractor`
+ * ``"SURF"`` -- :ref:`SurfDescriptorExtractor`
+ * ``"ORB"`` -- :ref:`OrbDescriptorExtractor`
+ * ``"BRIEF"`` -- :ref:`BriefDescriptorExtractor`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
 :ref:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
 for example: ``"OpponentSIFT"`` .
 
 .. index:: SiftDescriptorExtractor
+
+.. _SiftDescriptorExtractor:
 
 SiftDescriptorExtractor
 -----------------------
@@ -143,6 +146,8 @@ Wrapping class for computing descriptors by using the
 
 .. index:: SurfDescriptorExtractor
 
+.. _SurfDescriptorExtractor:
+
 SurfDescriptorExtractor
 -----------------------
 .. cpp:class:: SurfDescriptorExtractor
@@ -158,6 +163,32 @@ Wrapping class for computing descriptors by using the
 
         virtual void read (const FileNode &fn);
         virtual void write (FileStorage &fs) const;
+        virtual int descriptorSize() const;
+        virtual int descriptorType() const;
+    protected:
+        ...
+    }
+
+
+.. index:: OrbDescriptorExtractor
+
+.. _OrbDescriptorExtractor:
+
+OrbDescriptorExtractor
+---------------------------
+.. cpp:class:: OrbDescriptorExtractor
+
+Wrapping class for computing descriptors by using the
+:ref:`ORB` class ::
+
+    template<typename T>
+    class ORbDescriptorExtractor : public DescriptorExtractor
+    {
+    public:
+        OrbDescriptorExtractor( ORB::PatchSize patch_size );
+
+        virtual void read( const FileNode &fn );
+        virtual void write( FileStorage &fs ) const;
         virtual int descriptorSize() const;
         virtual int descriptorType() const;
     protected:

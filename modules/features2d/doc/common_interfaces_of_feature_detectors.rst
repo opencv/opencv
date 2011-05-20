@@ -159,6 +159,7 @@ The following detector types are supported:
 * ``"STAR"`` -- :ref:`StarFeatureDetector`
 * ``"SIFT"`` -- :ref:`SiftFeatureDetector`
 * ``"SURF"`` -- :ref:`SurfFeatureDetector`
+* ``"ORB"`` -- :ref:`OrbFeatureDetector`
 * ``"MSER"`` -- :ref:`MserFeatureDetector`
 * ``"GFTT"`` -- :ref:`GfttFeatureDetector`
 * ``"HARRIS"`` -- :ref:`HarrisFeatureDetector`
@@ -328,6 +329,28 @@ Wrapping class for feature detection using the
     public:
         SurfFeatureDetector( double hessianThreshold = 400., int octaves = 3,
                              int octaveLayers = 4 );
+        virtual void read( const FileNode& fn );
+        virtual void write( FileStorage& fs ) const;
+    protected:
+        ...
+    };
+
+
+.. index:: OrbFeatureDetector
+
+.. _OrbFeatureDetector:
+
+OrbFeatureDetector
+-------------------
+.. cpp:class:: OrbFeatureDetector
+
+Wrapping class for feature detection using the
+:ref:`ORB` class ::
+
+    class OrbFeatureDetector : public FeatureDetector
+    {
+    public:
+        OrbFeatureDetector( size_t n_features );
         virtual void read( const FileNode& fn );
         virtual void write( FileStorage& fs ) const;
     protected:

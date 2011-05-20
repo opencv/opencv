@@ -108,6 +108,10 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExt
     {
         de = new SurfDescriptorExtractor();
     }
+    else if (!descriptorExtractorType.compare("ORB"))
+    {
+        de = new OrbDescriptorExtractor();
+    }
     else if (!descriptorExtractorType.compare("BRIEF"))
     {
         de = new BriefDescriptorExtractor();
@@ -236,6 +240,40 @@ int SurfDescriptorExtractor::descriptorType() const
 {
     return CV_32FC1;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/** Default constructor */
+OrbDescriptorExtractor::OrbDescriptorExtractor(ORB::CommonParams params) :
+  params_(params)
+{
+  orb_ = ORB(0, params);
+}
+void OrbDescriptorExtractor::computeImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,
+                                         cv::Mat& descriptors) const
+{
+  cv::Mat empty_mask;
+  orb_(image, empty_mask, keypoints, descriptors, true);
+}
+void OrbDescriptorExtractor::read(const cv::FileNode& fn)
+{
+  params_.read(fn);
+}
+void OrbDescriptorExtractor::write(cv::FileStorage& fs) const
+{
+  params_.write(fs);
+}
+int OrbDescriptorExtractor::descriptorSize() const
+{
+  return ORB::kBytes;
+}
+int OrbDescriptorExtractor::descriptorType() const
+{
+  return CV_8UC1;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /****************************************************************************************\
 *                             OpponentColorDescriptorExtractor                           *
