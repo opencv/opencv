@@ -2,7 +2,7 @@
 #define __OPENCV_MOTION_ESTIMATORS_HPP__
 
 #include <vector>
-#include <opencv2/core/core.hpp>
+#include "opencv2/core/core.hpp"
 #include "matchers.hpp"
 #include "util.hpp"
 

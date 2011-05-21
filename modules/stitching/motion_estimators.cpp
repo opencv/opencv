@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "opencv2/core/core_c.h"
-#include <opencv2/calib3d/calib3d.hpp>
+#include "opencv2/calib3d/calib3d.hpp"
 #include "autocalib.hpp"
 #include "motion_estimators.hpp"
 #include "util.hpp"

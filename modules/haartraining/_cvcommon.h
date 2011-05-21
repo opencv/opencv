@@ -42,9 +42,9 @@
 #ifndef __CVCOMMON_H_
 #define __CVCOMMON_H_
 
-#include <cxcore.h>
-#include <cv.h>
-#include <cxmisc.h>
+#include "cxcore.h"
+#include "cv.h"
+#include "cxmisc.h"
 
 #define __BEGIN__ __CV_BEGIN__
 #define __END__  __CV_END__

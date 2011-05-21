@@ -44,7 +44,7 @@
 //#define DEBUG_CIRCLES
 
 #ifdef DEBUG_CIRCLES
-#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/highgui/highgui.hpp"
 #endif
 
 using namespace cv;

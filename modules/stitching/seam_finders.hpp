@@ -2,7 +2,7 @@
 #define __OPENCV_SEAM_FINDERS_HPP__
 
 #include <vector>
-#include <opencv2/core/core.hpp>
+#include "opencv2/core/core.hpp"
 
 class SeamFinder
 {

@@ -7,7 +7,7 @@
 * A starter sample for using opencv, get a video stream and display the images
 * easy as CV_PI right?
 */
-#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 #include <vector>
 #include <stdio.h>

@@ -2,7 +2,7 @@
 #define __OPENCV_AUTOCALIB_HPP__
 
 #include <vector>
-#include <opencv2/core/core.hpp>
+#include "opencv2/core/core.hpp"
 #include "matchers.hpp"
 
 // See "Construction of Panoramic Image Mosaics with Global and Local Alignment"

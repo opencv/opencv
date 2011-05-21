@@ -1,7 +1,7 @@
 #ifndef _OPENCV_IMAGESTORAGE_H_
 #define _OPENCV_IMAGESTORAGE_H_
 
-#include <highgui.h>
+#include "highgui.h"
 
 using namespace cv;
 

@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #ifdef HAVE_CONFIG_H 
-#include <cvconfig.h> 
+#include "cvconfig.h"
 #endif
 #ifdef HAVE_TBB
 #include "tbb/task_scheduler_init.h"

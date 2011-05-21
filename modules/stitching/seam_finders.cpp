@@ -1,4 +1,4 @@
-#include <opencv2/imgproc/imgproc.hpp>
+#include "opencv2/imgproc/imgproc.hpp"
 #include <gcgraph.hpp>
 #include "seam_finders.hpp"
 #include "util.hpp"

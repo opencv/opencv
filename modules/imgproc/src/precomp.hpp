@@ -49,7 +49,7 @@
 #endif
 
 #ifdef HAVE_CONFIG_H 
-#include <cvconfig.h> 
+#include "cvconfig.h"
 #endif
 
 #include "opencv2/imgproc/imgproc.hpp"

@@ -44,8 +44,8 @@
  *
  * Measure performance of classifier
  */
-#include <cv.h>
-#include <highgui.h>
+#include "cv.h"
+#include "highgui.h"
 
 #include <cstdio>
 #include <cmath>

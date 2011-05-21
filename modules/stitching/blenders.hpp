@@ -2,7 +2,7 @@
 #define __OPENCV_BLENDERS_HPP__
 
 #include <vector>
-#include <opencv2/core/core.hpp>
+#include "opencv2/core/core.hpp"
 
 // Simple blender which puts one image over another
 class Blender

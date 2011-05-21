@@ -3,8 +3,8 @@
 #include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
-#include <opencv2/opencv.hpp>
-#include <opencv2/gpu/gpu.hpp>
+#include "opencv2/opencv.hpp"
+#include "opencv2/gpu/gpu.hpp"
 
 #ifdef HAVE_CUDA
 #include "NCVHaarObjectDetection.hpp"

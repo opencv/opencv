@@ -7,9 +7,9 @@
 #endif
 
 #include <iostream>
-#include <cvconfig.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/gpu/gpu.hpp>
+#include "cvconfig.h"
+#include "opencv2/core/core.hpp"
+#include "opencv2/gpu/gpu.hpp"
 
 #if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
 

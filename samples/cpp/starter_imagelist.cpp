@@ -8,7 +8,7 @@
  * that was generated with imagelist_creator.cpp
  * easy as CV_PI right?
  */
-#include <opencv2/highgui/highgui.hpp>
+#include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 #include <vector>
 

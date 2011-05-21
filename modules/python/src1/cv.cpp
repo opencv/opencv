@@ -2,11 +2,11 @@
 
 #include <assert.h>
 
-#include <opencv/cxcore.h>
-#include <opencv/cv.h>
-#include <opencv/cvaux.h>
-#include <opencv/cvwimage.h>
-#include <opencv/highgui.h>
+#include "opencv/cxcore.h"
+#include "opencv/cv.h"
+#include "opencv/cvaux.h"
+#include "opencv/cvwimage.h"
+#include "opencv/highgui.h"
 
 #define MODULESTR "cv"
 

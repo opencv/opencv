@@ -53,7 +53,7 @@
 #include <cmath>
 #include <climits>
 
-#include <highgui.h>
+#include "highgui.h"
 
 #ifdef CV_VERBOSE
 #include <ctime>
