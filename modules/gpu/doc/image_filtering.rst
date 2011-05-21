@@ -310,7 +310,7 @@ gpu::erode
 
     :param dst: Destination image with the same size and type as  ``src`` .
 
-    :param kernel: Structuring element used for dilation. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
+    :param kernel: Structuring element used for erosion. If  ``kernel=Mat()``, a  3x3 rectangular structuring element is used.
 
     :param anchor: Position of an anchor within the element. The default value  ``(-1, -1)``  means that the anchor is at the element center.
 

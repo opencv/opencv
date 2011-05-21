@@ -315,18 +315,17 @@ createButton
 
     :param on_change: Pointer to the function to be called every time the button changes its state. This function should be prototyped as  ``void Foo(int state,*void);`` .  *state*  is the current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 
-    :param userdata: Pointer passed to the callback function.  *(Optional)*
+    :param userdata: Pointer passed to the callback function.
 
-The ``button_type`` parameter can be any of the following:
-    * (Optional -- Will be a push button by default.)??
+    :param button_type: The optional type of the button.
 
-    * **CV_PUSH_BUTTON** Push button
+        * **CV_PUSH_BUTTON** Push button
 
-    * **CV_CHECKBOX** Checkbox button
+        * **CV_CHECKBOX** Checkbox button
 
-    * **CV_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are exclusive, that is only one can be selected at a time.
+        * **CV_RADIOBOX** Radiobox button. The radiobox on the same buttonbar (same line) are exclusive, that is only one can be selected at a time.
 
-    * **initial_button_state** Default state of the button. Use for checkbox and radiobox. Its value could be 0 or 1.  *(Optional)*
+    :param initial_button_state: Default state of the button. Use for checkbox and radiobox. Its value could be 0 or 1.  *(Optional)*
 
 The function ``createButton`` attaches a button to the control panel. Each button is added to a buttonbar to the right of the last button.
 A new buttonbar is created if nothing was attached to the control panel before, or if the last element attached to the control panel was a trackbar.

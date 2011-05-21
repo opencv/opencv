@@ -9,7 +9,8 @@ drawMatches
 .. cpp:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,          const Mat& img2, const vector<KeyPoint>& keypoints2,          const vector<DMatch>& matches1to2, Mat& outImg,          const Scalar& matchColor=Scalar::all(-1),           const Scalar& singlePointColor=Scalar::all(-1),          const vector<char>& matchesMask=vector<char>(),          int flags=DrawMatchesFlags::DEFAULT )
 
 .. cpp:function:: void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,           const Mat& img2, const vector<KeyPoint>& keypoints2,           const vector<vector<DMatch> >& matches1to2, Mat& outImg,           const Scalar& matchColor=Scalar::all(-1),            const Scalar& singlePointColor=Scalar::all(-1),           const vector<vector<char>>& matchesMask=           vector<vector<char> >(),           int flags=DrawMatchesFlags::DEFAULT )
-	??Description??
+    
+    Draw the found matches of keypoints from two images
 
     :param img1: The first source image.
 

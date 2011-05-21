@@ -172,7 +172,7 @@ DescriptorMatcher::match
 
     :param mask: Mask specifying permissible matches between an input query and train matrices of descriptors.
 
-    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
+    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between the input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
 
 In the first variant of this method, the train descriptors are passed as an input argument. In the second variant of the method, train descriptors collection that was set by ``DescriptorMatcher::add`` is used. Optional mask (or masks) can be passed to specify which query and training descriptors can be matched. Namely, ``queryDescriptors[i]`` can be matched with ``trainDescriptors[j]`` only if ``mask.at<uchar>(i,j)`` is non-zero. 
 
@@ -186,7 +186,13 @@ DescriptorMatcher::knnMatch
 
     Finds the k best matches for each descriptor from a query set.
 
-    :param queryDescriptors, trainDescriptors, mask, masks: See  :ref:`DescriptorMatcher::match` .
+    :param queryDescriptors: Query set of descriptors.
+
+    :param trainDescriptors: Train set of descriptors. This set is not added to the train descriptors collection stored in the class object.
+
+    :param mask: Mask specifying permissible matches between an input query and train matrices of descriptors.
+
+    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between the input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
 
     :param matches: Matches. Each  ``matches[i]``  is k or less matches for the same query descriptor.
 
@@ -206,9 +212,17 @@ DescriptorMatcher::radiusMatch
 
     For each query descriptor, finds the training descriptors not farther than the specified distance.
 
-    :param queryDescriptors, trainDescriptors, mask, masks: See :cpp:func:`DescriptorMatcher::match`.??look at the output - the 1st paarm is omitted
+    :param queryDescriptors: Query set of descriptors.
 
-    :param matches, compactResult: See :cpp:func:`DescriptorMatcher::knnMatch`.??look at the output - the 1st paarm is omitted
+    :param trainDescriptors: Train set of descriptors. This set is not added to the train descriptors collection stored in the class object.
+
+    :param mask: Mask specifying permissible matches between an input query and train matrices of descriptors.
+
+    :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between the input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
+
+    :param matches: The found matches.
+
+    :param compactResult: Parameter that is used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
     :param maxDistance: Threshold for the distance between matched descriptors.
     
@@ -222,9 +236,7 @@ DescriptorMatcher::clone
 
     Clones the matcher.
 
-    :param emptyTrainData: If ``emptyTrainData`` is false, the method creates a deep copy of the object, that is, copies
-             both parameters and train data. If ``emptyTrainData`` is true, the method creates an object copy with the current parameters
-             but with empty train data.
+    :param emptyTrainData: If ``emptyTrainData`` is false, the method creates a deep copy of the object, that is, copies both parameters and train data. If ``emptyTrainData`` is true, the method creates an object copy with the current parameters but with empty train data.
 
 .. index:: DescriptorMatcher::create
 
@@ -235,17 +247,17 @@ DescriptorMatcher::create
     Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
     :param descriptorMatcherType: Descriptor matcher type. Now the following matcher types are supported:
-	
+
         * 
-		  ``BruteForce`` (it uses ``L2`` )
+            ``BruteForce`` (it uses ``L2`` )
         * 
-		  ``BruteForce-L1``
+            ``BruteForce-L1``
         * 
-		  ``BruteForce-Hamming``
+            ``BruteForce-Hamming``
         * 
-		  ``BruteForce-HammingLUT``
+            ``BruteForce-HammingLUT``
         * 
-		  ``FlannBased``
+            ``FlannBased``
 
 .. index:: BruteForceMatcher
 
@@ -310,7 +322,7 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
     };
 
     /*
-     * Hamming distance (city block distance) functor
+     * Hamming distance functor
      */
     struct HammingLUT
     {

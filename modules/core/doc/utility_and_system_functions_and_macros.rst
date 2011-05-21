@@ -57,7 +57,7 @@ deallocate
 --------------
 .. c:function:: template<typename _Tp> void deallocate(_Tp* ptr, size_t n)
 
-    Allocates an array of elements.
+    Deallocates an array of elements.
 
     :param ptr: Pointer to the deallocated buffer.
 

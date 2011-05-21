@@ -339,7 +339,7 @@ may be used to customize a look of HighGUI windows and controls.
 qt-specific details:
 The function 
 ``cvInitSystem``
-is automatically called at the first cvNameWindow call. 
+is automatically called at the first cvNamedWindow call. 
 
 
 .. index:: MoveWindow

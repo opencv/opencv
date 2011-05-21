@@ -82,13 +82,10 @@ Higher-order coefficients are not considered in OpenCV. In the functions below t
 
 vector. That is, if the vector contains four elements, it means that
 :math:`k_3=0` .
-The distortion coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera parameters.
-*And they remain the same regardless of the captured image resolution.*??why italics??
+The distortion coefficients do not depend on the scene viewed. Thus, they also belong to the intrinsic camera parameters. And they remain the same regardless of the captured image resolution.
 If, for example, a camera has been calibrated on images of
-:math:`320
-\times 240` resolution, absolutely the same distortion coefficients can
-be used for images of
-:math:`640 \times 480` resolution from the same camera while
+``320 x 240`` resolution, absolutely the same distortion coefficients can
+be used for ``640 x 480`` images from the same camera while
 :math:`f_x`,
 :math:`f_y`,
 :math:`c_x`, and
@@ -115,9 +112,9 @@ calibrateCamera
 
     Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
-    :param objectPoints: Vector that belongs to?? vectors of points on the calibration pattern in its coordinate system, one vector per view. If the same calibration pattern is shown in each view and it is fully visible, all the vectors will be the same. Although, it is possible to use partially occluded patterns, or even different patterns in different views. Then, the vectors will be different. The points are 3D, but since they are in a pattern coordinate system, then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that Z-coordinate of each input object point is 0.
+    :param objectPoints: Vector of vectors of calibration pattern points in the calibration pattern coordinate space. The outer vector contains as many elements as the number of the pattern views. If the same calibration pattern is shown in each view and it is fully visible, all the vectors will be the same. Although, it is possible to use partially occluded patterns, or even different patterns in different views. Then, the vectors will be different. The points are 3D, but since they are in a pattern coordinate system, then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that Z-coordinate of each input object point is 0.
 
-    :param imagePoints: Vector that belongs to vectors of the object point projections on the calibration pattern views, one vector per a view. The projections must be in the same order as the corresponding object points.
+    :param imagePoints: Vector of vectors of the projections of calibration pattern points. ``imagePoints.size()`` and ``objectPoints.size()`` and ``imagePoints[i].size()`` must be equal to ``objectPoints[i].size()`` for each ``i``.
 
     :param imageSize: Size of the image used only to initialize the intrinsic camera matrix.
 
@@ -241,7 +238,7 @@ composeRT
 
     :param tvec3: Output translation vector of the superposition.
 
-    :param d*d*: Optional output derivatives of  ``rvec3``  or  ``tvec3``  with regard to  ``rvec?``  or  ``tvec?`` .
+    :param d*d*: Optional output derivatives of  ``rvec3``  or  ``tvec3``  with regard to  ``rvec1``, ``rvec2``, ``tvec1`` and ``tvec2``, respectively.
 
 The functions compute:
 
@@ -312,7 +309,7 @@ convertPointsHomogeneous
 
     :param src: Input array or vector of 2D, 3D, or 4D points.
 
-    :param dst: Output vector of 2D or 2D points.?? double 2D
+    :param dst: Output vector of 2D or 3D points.
 
 The functions convert 2D or 3D points from/to homogeneous coordinates, or simply copy or transpose
 the array. If the input array dimensionality is larger than the output, each coordinate is divided by the last coordinate:
@@ -461,8 +458,7 @@ findCirclesGrid
             * **CALIB_CB_ASYMMETRIC_GRID** Use asymmetric pattern of circles.
 
 The function attempts to determine
-whether the input image is a grid pattern view of circles and
-locate the centers of circles.?? The function returns a
+whether the input image is a grid of circles. If it is, the function locates centers of the circles. The function returns a
 non-zero value if all of the centers have been found and they have been placed
 in a certain order (row by row, left to right in every row). Otherwise, if the function fails to find all the corners or reorder
 them, it returns 0.
@@ -517,7 +513,7 @@ solvePnPRansac
 
 .. c:function:: void solvePnPRansac( const Mat& objectPoints, const Mat& imagePoints, const Mat& cameraMatrix, const Mat& distCoeffs, Mat& rvec, Mat& tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, vector<int>* inliers = NULL  )
 
-    Finds an object pose from 3D-2D point correspondences.??do you want to emphasize diff with the previous one?
+    Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
     :param objectPoints: Array of object points in the object coordinate space, 3xN/Nx3 1-channel or 1xN/Nx1 3-channel, where N is the number of points.   ``vector<Point3f>``  can be also passed here.
 
@@ -535,7 +531,7 @@ solvePnPRansac
 
     :param iterationsCount: Number of iterations. 
     
-    :param reprojectionError: If the distance between an image point and an object point projected by using the found ``rvec`` and ``tvec`` values is less than ``reprojectionError`` , it is an inlier.?? don't understand this
+    :param reprojectionError: The inlier threshold value used by the RANSAC procedure. That is, the parameter value is the maximum allowed distance between the observed and computed point projections to consider it an inlier.
    
     :param minInliersCount: If the algorithm at some stage finds more inliers than ``minInliersCount`` , it finishs.
     
@@ -678,12 +674,8 @@ re-projection error even more.
 The method ``RANSAC`` can handle practically any ratio of outliers
 but it needs a threshold to distinguish inliers from outliers.
 The method ``LMeDS`` does not need any threshold but it works
-correctly only when there are more than 50
-%
-of inliers. Finally,
-if you are sure the computed features have only a
-small noise present but no outliers, the default method could be the best
-choice.??
+correctly only when there are more than 50% of inliers. Finally,
+if there are no outliers and the noise is rather small, use the default method (``method=0``).
 
 The function is used to find initial intrinsic and extrinsic matrices.
 Homography matrix is determined up to a scale. Thus, it is normalized so that
@@ -771,9 +763,9 @@ initCameraMatrix2D
 
     Finds an initial camera matrix from 3D-2D point correspondences.
 
-    :param objectPoints: Vector that belongs to vectors of the object points. See  :ref:`calibrateCamera` for details.
+    :param objectPoints: Vector of vectors of the calibration pattern points in the calibration pattern coordinate space. See  :ref:`calibrateCamera` for details.
     
-    :param imagePoints: Vector that belongs to vectors of the corresponding image points. See  :ref:`calibrateCamera` for details.
+    :param imagePoints: Vector of vectors of the projections of the calibration pattern points.
     
     :param imageSize: Image size in pixels used to initialize the principal point.
 
@@ -930,7 +922,7 @@ reprojectImageTo3D
 
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ref:`StereoRectify` .
     
-    :param handleMissingValues: If true, pixels with the minimal disparity that corresponds to the outliers (see  :ref:`StereoBM::operator ()` ) are transformed to 3D points with a very large Z value (currently set to 10000).??
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ref:`StereoBM::operator ()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
 The function transforms a single-channel disparity map to a 3-channel image representing a 3D surface. That is, for each pixel ``(x,y)`` andthe  corresponding disparity ``d=disparity(x,y)`` , it computes:
 
@@ -990,7 +982,7 @@ Rodrigues
 
     :param dst: Output rotation matrix (3x3) or rotation vector (3x1 or 1x3), respectively.
 
-    :param jacobian: Optional output Jacobian matrix, 3x9 or 9x3, whichs is a partial derivative of the output array components with respect to the input array components.??
+    :param jacobian: Optional output Jacobian matrix, 3x9 or 9x3, which is a matrix of partial derivatives of the output array components with respect to the input array components.
 
 .. math::
 
@@ -1053,7 +1045,7 @@ The class is a C++ wrapper for the associated functions. In particular, ``Stereo
 StereoBM::operator ()
 -----------------------
 
-.. c:function:: void StereoBM::operator()(const Mat& left, const Mat& right, Mat& disp, , int disptype=CV_16S )
+.. c:function:: void StereoBM::operator()(const Mat& left, const Mat& right, Mat& disp, int disptype=CV_16S )
 
     Computes disparity using the BM algorithm for a rectified stereo pair.
 
@@ -1061,7 +1053,7 @@ StereoBM::operator ()
 
     :param right: Right image of the same size and the same type as the left one.
 
-    :param disp: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the floating-point disparity map, you need to divide each  ``disp``  element by 16. Otherwise, it is a floating-point disparity map.??
+    :param disp: Output disparity map. It has the same size as the input images. When ``disptype==CV_16S``, the map is a 16-bit signed single-channel image, containing disparity values scaled by 16. To get the true disparity values from such fixed-point representation, you will need to divide each  ``disp`` element by 16. If ``disptype==CV_32F``, the disparity map will already contain the real disparity values on output.
     
     :param disptype: Type of the output disparity map, ``CV_16S`` (default) or ``CV_32F``.
 
@@ -1125,7 +1117,7 @@ StereoSGBM::StereoSGBM
 
 .. c:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
 
-    Constructs ``StereoSGBM`` .??
+    The constructor.
 
     :param minDisparity: Minimum possible disparity value. Normally, it is zero but sometimes rectification algorithms can shift images, so this parameter needs to be adjusted accordingly.
 
@@ -1182,16 +1174,16 @@ stereoCalibrate
 
     Calibrates the stereo camera.
 
-    :param objectPoints: Vector that belongs to vectors of points on the calibration pattern in its coordinate system, one vector per view. If the same calibration pattern is shown in each view and it is fully visible, all the vectors will be the same. Although, it is possible to use partially occluded patterns or even different patterns in different views to make the vectors different. The points are 3D but they are in the pattern coordinate system. So, if the rig is planar, you may locate the model to the XY coordinate plane so that the Z-coordinate of each input object point is 0.??
+    :param objectPoints: Vector of vectors of the calibration pattern points.
 
-    :param imagePoints1: Vector that belongs to vectors of the object point projections on the calibration pattern views from the 1st camera, one vector per view. The projections must be in the same order as the corresponding object points.
+    :param imagePoints1: Vector of vectors of the projections of the calibration pattern points, observed by the first camera.
 
-    :param imagePoints2: Vector that belongs to vectors of the object point projections on the calibration pattern views from the 2nd camera, one vector per view. The projections must be in the same order as the corresponding object points.
+    :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
 
     :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , 
 	:math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
 
-    :param distCoeffs: Input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. The output vector length depends on the flags.
+    :param distCoeffs1: Input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. The output vector length depends on the flags.
 
     :param cameraMatrix2: Input/output second camera matrix. The parameter is similar to ``cameraMatrix1`` .
 
@@ -1272,9 +1264,13 @@ stereoRectify
 
     Computes rectification transforms for each head of a calibrated stereo camera.
 
-    :param cameraMatrix1, cameraMatrix2: Camera matrices  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` .
+    :param cameraMatrix1: The first camera matrix.
+    
+    :param cameraMatrix2: The second camera matrix.
 
-    :param distCoeffs: Input vectors of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements each. If the vectors are NULL/empty, the zero distortion coefficients are assumed.
+    :param distCoeffs1: The first camera distortion parameters.
+    
+    :param distCoeffs2: The second camera distortion parameters.
 
     :param imageSize: Size of the image used for stereo calibration.
 

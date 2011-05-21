@@ -1116,7 +1116,7 @@ namespace cv
             void operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream & stream);
 
             //! Some heuristics that tries to estmate
-            // if current GPU will be faster then CPU in this algorithm.
+            // if current GPU will be faster than CPU in this algorithm.
             // It queries current active device.
             static bool checkIfGpuCallReasonable();
 

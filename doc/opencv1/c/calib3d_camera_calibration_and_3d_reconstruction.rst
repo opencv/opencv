@@ -2152,7 +2152,7 @@ StereoCalibrate
     :param cameraMatrix1: The input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` ,  :math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` ,    ``CV_CALIB_FIX_ASPECT_RATIO`` ,  ``CV_CALIB_FIX_INTRINSIC``  or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrices' components must be initialized; see the flags description 
     
     
-    :param distCoeffs: The input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements.  
+    :param distCoeffs1: The input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements.  
     
     
     :param cameraMatrix2: The input/output second camera matrix, as cameraMatrix1. 
@@ -2282,25 +2282,20 @@ StereoRectify
 
     Computes rectification transforms for each head of a calibrated stereo camera.
 
-
-
-
-
     
-    :param cameraMatrix1, cameraMatrix2: The camera matrices  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` . 
+    :param cameraMatrix1: The first camera matrix.
     
+    :param cameraMatrix2: The second camera matrix.
     
-    :param distCoeffs: The input vectors of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements each. If the vectors are NULL/empty, the zero distortion coefficients are assumed. 
+    :param distCoeffs1: The first camera distortion parameters.
     
+    :param distCoeffs2: The second camera distortion parameters.
     
-    :param imageSize: Size of the image used for stereo calibration. 
-    
+    :param imageSize: Size of the image used for stereo calibration.
     
     :param R: The rotation matrix between the 1st and the 2nd cameras' coordinate systems. 
     
-    
-    :param T: The translation vector between the cameras' coordinate systems. 
-    
+    :param T: The translation vector between the cameras' coordinate systems.
     
     :param R1, R2: The output  :math:`3 \times 3`  rectification transforms (rotation matrices) for the first and the second cameras, respectively. 
     

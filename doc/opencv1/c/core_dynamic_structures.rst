@@ -2751,28 +2751,15 @@ content there if the pointer is not NULL. The function returns a pointer to the 
 SeqInsertSlice
 --------------
 
-
-
-
-
-
 .. cfunction:: void cvSeqInsertSlice(  CvSeq* seq, int beforeIndex, const CvArr* fromArr )
 
     Inserts an array in the middle of a sequence.
 
-
-
-
-
-    
     :param seq: Sequence 
     
-    
-    :param slice: The part of the sequence to remove 
-    
+    :param beforeIndex: Index before which the array is inserted
     
     :param fromArr: The array to take elements from 
-    
     
     
 The function inserts all 
@@ -2789,26 +2776,13 @@ can be a matrix or another sequence.
 SeqInvert
 ---------
 
-
-
-
-
-
 .. cfunction:: void cvSeqInvert( CvSeq* seq )
 
     Reverses the order of sequence elements.
-
-
-
-
-
     
     :param seq: Sequence 
     
-    
-    
-The function reverses the sequence in-place - makes the first element go last, the last element go first and so forth.
-
+The function reverses the sequence in-place - the first element becomes the last one, the last element becomes the first one and so forth.
 
 .. index:: SeqPop
 
@@ -2817,26 +2791,13 @@ The function reverses the sequence in-place - makes the first element go last, t
 SeqPop
 ------
 
-
-
-
-
-
 .. cfunction:: void cvSeqPop(  CvSeq* seq, void* element=NULL )
 
     Removes an element from the end of a sequence.
-
-
-
-
-
     
     :param seq: Sequence 
     
-    
     :param element: Optional parameter . If the pointer is not zero, the function copies the removed element to this location. 
-    
-    
     
 The function removes an element from a sequence. The function reports an error if the sequence is already empty. The function has O(1) complexity.
 
@@ -2847,11 +2808,6 @@ The function removes an element from a sequence. The function reports an error i
 
 SeqPopFront
 -----------
-
-
-
-
-
 
 .. cfunction:: void cvSeqPopFront(   CvSeq* seq, void* element=NULL )
 

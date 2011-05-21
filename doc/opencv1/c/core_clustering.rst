@@ -59,7 +59,7 @@ KMeans2
         corresponding labels are returned by the function. Basically, the
         user can use only the core of the function, set the number of
         attempts to 1, initialize labels each time using a custom algorithm
-        ( ``flags=CV_KMEAN_USE_INITIAL_LABELS`` ) and, based on the output compactness
+        ( ``flags=CV_KMEANS_USE_INITIAL_LABELS`` ) and, based on the output compactness
         or any other criteria, choose the best clustering. 
     
     
@@ -199,7 +199,7 @@ SeqPartition
     :param labels: Ouput parameter. Double pointer to the sequence of 0-based labels of input sequence elements 
     
     
-    :param is_equal: The relation function that should return non-zero if the two particular sequence elements are from the same class, and zero otherwise. The partitioning algorithm uses transitive closure of the relation function as an equivalency critria 
+    :param is_equal: The relation function that should return non-zero if the two particular sequence elements are from the same class, and zero otherwise. The partitioning algorithm uses transitive closure of the relation function as an equivalency criteria 
     
     
     :param userdata: Pointer that is transparently passed to the  ``is_equal``  function 

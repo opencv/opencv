@@ -251,7 +251,7 @@ public:
     static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
     CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
-    CV_PROP_RW float size; //!< diameter of the meaningfull keypoint neighborhood
+    CV_PROP_RW float size; //!< diameter of the meaningful keypoint neighborhood
     CV_PROP_RW float angle; //!< computed orientation of the keypoint (-1 if not applicable)
     CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
     CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
@@ -2215,7 +2215,7 @@ public:
      * Train matcher (e.g. train flann index).
      * In all methods to match the method train() is run every time before matching.
      * Some descriptor matchers (e.g. BruteForceMatcher) have empty implementation
-     * of this method, other matchers realy train their inner structures
+     * of this method, other matchers really train their inner structures
      * (e.g. FlannBasedMatcher trains flann::Index). So nonempty implementation
      * of train() should check the class object state and do traing/retraining
      * only if the state requires that (e.g. FlannBasedMatcher trains flann::Index
