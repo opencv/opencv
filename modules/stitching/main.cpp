@@ -198,6 +198,7 @@ int main(int argc, char* argv[])
 
     LOGLN("Reading images and finding features...");
     t = getTickCount();
+    vector<Mat> images(num_images);
     vector<ImageFeatures> features(num_images);
     SurfFeaturesFinder finder(trygpu);
     Mat full_img, img;
@@ -220,8 +221,11 @@ int main(int argc, char* argv[])
             }
             resize(full_img, img, Size(), work_scale, work_scale);
         }
+        images[i] = img.clone();
         finder(img, features[i]);
     }
+    full_img.release();
+    img.release();
     LOGLN("Reading images and finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Pairwise matching... ");
@@ -234,9 +238,14 @@ int main(int argc, char* argv[])
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
+    vector<Mat> img_subset;
     vector<string> img_names_subset;
     for (size_t i = 0; i < indices.size(); ++i)
+    {
+        img_subset.push_back(images[indices[i]]);
         img_names_subset.push_back(img_names[indices[i]]);
+    }
+    images = img_subset;
     img_names = img_names_subset;
 
     num_images = static_cast<int>(img_names.size());
@@ -290,40 +299,20 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
-    vector<Mat> images(num_images);
-
-    LOGLN("Compose scaling...");
+    LOGLN("Warping images (auxiliary)... ");
     t = getTickCount();
-    for (int i = 0; i < num_images; ++i)
-    {
-        Mat full_img = imread(img_names[i]);
-        if (!is_compose_scale_set)
-        {
-            compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));                    
-            is_compose_scale_set = true;
-        }
-        Mat img;
-        resize(full_img, img, Size(), compose_scale, compose_scale);
-        images[i] = img;
-        cameras[i].focal *= compose_scale / work_scale;
-    }
-    camera_focal *= static_cast<float>(compose_scale / work_scale);
-    LOGLN("Compose scaling, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
+    vector<Point> corners(num_images);
+    vector<Mat> masks_warped(num_images);
+    vector<Mat> images_warped(num_images);
+    vector<Size> sizes(num_images);
     vector<Mat> masks(num_images);
+
     for (int i = 0; i < num_images; ++i)
     {
         masks[i].create(images[i].size(), CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
-
-    vector<Point> corners(num_images);
-    vector<Size> sizes(num_images);
-    vector<Mat> masks_warped(num_images);
-    vector<Mat> images_warped(num_images);
-
-    LOGLN("Warping images... ");
-    t = getTickCount();
 
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
@@ -335,42 +324,110 @@ int main(int argc, char* argv[])
                      INTER_NEAREST, BORDER_CONSTANT);
     }
 
-    vector<Mat> images_f(num_images);
+    vector<Mat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
-        images_warped[i].convertTo(images_f[i], CV_32F);
+        images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Finding seams...");
     t = getTickCount();
+
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
-    seam_finder->find(images_f, corners, masks_warped);
+    seam_finder->find(images_warped_f, corners, masks_warped);
+
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOGLN("Blending images...");
+    // Release unused memory
+    images.clear();
+    images_warped.clear();
+    images_warped_f.clear();
+    masks.clear();
+
+    LOGLN("Compositing...");
     t = getTickCount();
 
-    Ptr<Blender> blender = Blender::createDefault(blend_type);
+    Mat img_warped, img_warped_f;
+    Mat dilated_mask, seam_mask, mask, mask_warped;
+    Ptr<Blender> blender;
+    double compose_aspect = 1;
 
-    if (blend_type == Blender::MULTI_BAND)
+    for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
-        // Ensure last pyramid layer area is about 1 pix 
-        MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>((Blender*)(blender));
-        mb->setNumBands(static_cast<int>(ceil(log(static_cast<double>(images_f[0].size().area())) / log(4.0))));
-        LOGLN("Multi-band blending num. bands: " << mb->numBands());
-    }
+        LOGLN("Compositing image #" << img_idx);
 
-    blender->prepare(corners, sizes);
-    for (int i = 0; i < num_images; ++i)
-        blender->feed(images_f[i], masks_warped[i], corners[i]);
+        // Read image and resize it if necessary
+        full_img = imread(img_names[img_idx]);
+        if (!is_compose_scale_set)
+        {
+            if (compose_megapix > 0)
+                compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));
+            is_compose_scale_set = true;
+            compose_aspect = compose_scale / work_scale;
+            camera_focal *= static_cast<float>(compose_aspect);
+            warper = Warper::createByCameraFocal(camera_focal, warp_type);
+        }
+        if (abs(compose_scale - 1) > 1e-1)
+            resize(full_img, img, Size(), compose_scale, compose_scale);
+        else
+            img = full_img;
+        full_img.release();
+
+        // Update cameras paramters
+        cameras[img_idx].focal *= compose_aspect;
+
+        // Warp the current image
+        warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
+                     img_warped);
+        img_warped.convertTo(img_warped_f, CV_32F);
+        img_warped.release();
+
+        // Warp current image mask
+        mask.create(img.size(), CV_8U);
+        mask.setTo(Scalar::all(255));    
+        warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
+                     INTER_NEAREST, BORDER_CONSTANT);
+        mask.release();
+        dilate(masks_warped[img_idx], dilated_mask, Mat());
+        resize(dilated_mask, seam_mask, mask_warped.size());
+        mask_warped = seam_mask & mask_warped;
+
+        if (static_cast<Blender*>(blender) == 0)
+        {
+            // Create blender 
+
+            blender = Blender::createDefault(blend_type);
+            if (blend_type == Blender::MULTI_BAND)
+            {
+                // Ensure last pyramid layer area is about 1 pix 
+                MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
+                mb->setNumBands(static_cast<int>(ceil(log(static_cast<double>(img_warped_f.size().area())) / log(4.0))));
+            }
+
+            // Determine the final image size
+            Rect dst_roi = resultRoi(corners, sizes);
+            for (int i = 0; i < num_images; ++i)
+            {
+                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_aspect;
+                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_aspect), 
+                                static_cast<int>((sizes[i].height + 1) * compose_aspect));
+            }
+            blender->prepare(corners, sizes);
+        }
+
+        // Blend the current image
+        blender->feed(img_warped_f, mask_warped, corners[img_idx]);
+    }
+   
     Mat result, result_mask;
     blender->blend(result, result_mask);
 
-    LOGLN("Blending images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     imwrite(result_name, result);
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 }
+
 
