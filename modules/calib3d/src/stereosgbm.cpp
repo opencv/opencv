@@ -984,7 +984,7 @@ void cv::validateDisparity( InputOutputArray _disp, const InputArray& _cost, int
         
         for( x = 0; x < cols; x++ )
         {
-            disp2buf[x] = INVALID_DISP;
+            disp2buf[x] = INVALID_DISP_SCALED;
             disp2cost[x] = INT_MAX;
         }
         
@@ -1032,8 +1032,8 @@ void cv::validateDisparity( InputOutputArray _disp, const InputArray& _cost, int
             int d0 = d >> DISP_SHIFT;
             int d1 = (d + DISP_SCALE-1) >> DISP_SHIFT;
             int x0 = x - d0, x1 = x - d1;
-            if( (0 <= x0 && x0 < cols && disp2buf[x0] > INVALID_DISP && std::abs(disp2buf[x0] - d) > disp12MaxDiff) &&
-                (0 <= x1 && x1 < cols && disp2buf[x1] > INVALID_DISP && std::abs(disp2buf[x1] - d) > disp12MaxDiff) )
+            if( (0 <= x0 && x0 < cols && disp2buf[x0] > INVALID_DISP_SCALED && std::abs(disp2buf[x0] - d) > disp12MaxDiff) &&
+                (0 <= x1 && x1 < cols && disp2buf[x1] > INVALID_DISP_SCALED && std::abs(disp2buf[x1] - d) > disp12MaxDiff) )
                 dptr[x] = (short)INVALID_DISP_SCALED;
         }
     }
