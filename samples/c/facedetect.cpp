@@ -34,17 +34,16 @@ int main( int argc, const char** argv )
 
     CommandLineParser parser(argc, argv);
 
-    string cascadeName = parser.get<string>("--cascade", "../../data/haarcascades/haarcascade_frontalface_alt.xml");
+    string cascadeName = parser.get<string>("cascade", "../../data/haarcascades/haarcascade_frontalface_alt.xml");
+    string nestedCascadeName = parser.get<string>("nested-cascade", "../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml");
+    double scale = parser.get<double>("scale", 1.0);
+    string inputName = parser.get<string>("input", "0"); //read from camera by default
+
     if (!cascadeName.empty())
         cout << "  from which we have cascadeName= " << cascadeName << endl;
 
-    string nestedCascadeName = parser.get<string>("--nested-cascade", "../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml");
     if (!nestedCascadeName.empty())
         cout << "  from which we have nestedCascadeName= " << nestedCascadeName << endl;
-
-    double scale = parser.get<double>("--scale", 1.0);
-
-    string inputName = parser.get<string>("--input", "0"); //read from camera by default
 
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;

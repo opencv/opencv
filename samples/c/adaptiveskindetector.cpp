@@ -35,27 +35,17 @@
 //M*/
 
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/contrib/contrib.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <iostream>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <opencv2/contrib/contrib.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
-void help(char **argv)
-{
-	std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
-			<< "Usage: " << std::endl <<
-		argv[0] << " fileMask firstFrame lastFrame" << std::endl << std::endl <<
-		"Example: " << std::endl <<
-		argv[0] << " C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  0  1000" << std::endl <<
-		"	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
-		"If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
-		"Please note: Background should not contain large surfaces with skin tone." <<
-		"\n\n ESC will stop\n"
-		"Using OpenCV version %s\n" << CV_VERSION << "\n"
-		<< std::endl;
-}
+using namespace std;
+using namespace cv;
 
 class ASDFrameHolder
 {
@@ -159,7 +149,6 @@ void ASDFrameHolder::setImage(IplImage *sourceImage)
 
 
 //-------------------- ASDFrameSequencer -----------------------//
-
 ASDFrameSequencer::~ASDFrameSequencer()
 {
 	close();
@@ -215,7 +204,6 @@ bool ASDCVFrameSequencer::isOpen()
 
 
 //-------------------- ASDFrameSequencerWebCam -----------------------//
-
 bool ASDFrameSequencerWebCam::open(int cameraIndex)
 {
 	close();
@@ -335,19 +323,41 @@ void displayBuffer(IplImage *rgbDestImage, IplImage *buffer, int rValue, int gVa
 	}
 };
 
-int main(int argc, char** argv )
+void help(const char *exe_name)
 {
+    std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
+            << "Usage: " << std::endl <<
+                exe_name << " --fileMask --firstFrame --lastFrame" << std::endl << std::endl <<
+        "Example: " << std::endl <<
+                exe_name << " --fileMask=C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  --firstFrame=0  --lastFrame=1000" << std::endl <<
+        "	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
+        "If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
+        "Please note: Background should not contain large surfaces with skin tone." <<
+        "\n\n ESC will stop\n"
+        "Using OpenCV version %s\n" << CV_VERSION << "\n"
+        << std::endl;
+}
+
+int main(int argc, const char** argv )
+{
+    help(argv[0]);
+
+    CommandLineParser parser(argc, argv);
+
+    string fileMask = parser.get<string>("fileMask");
+    int firstFrame = parser.get<int>("firstFrame", 0);
+    int lastFrame = parser.get<int>("lastFrame", 0);
+
 	IplImage *img, *filterMask = NULL;
 	CvAdaptiveSkinDetector filter(1, CvAdaptiveSkinDetector::MORPHING_METHOD_ERODE_DILATE);
 	ASDFrameSequencer *sequencer;
 	CvFont base_font;
 	char caption[2048], s[256], windowName[256];
 	long int clockTotal = 0, numFrames = 0;
-	std::clock_t clock;
+    std::clock_t clock;
 
 	if (argc < 4)
 	{
-		help(argv);
 		sequencer = new ASDFrameSequencerWebCam();
 		(dynamic_cast<ASDFrameSequencerWebCam*>(sequencer))->open(-1);
 
@@ -358,8 +368,9 @@ int main(int argc, char** argv )
 	}
 	else
 	{
+        // A sequence of images captured from video source, is stored here
 		sequencer = new ASDFrameSequencerImageFile();
-		(dynamic_cast<ASDFrameSequencerImageFile*>(sequencer))->open(argv[1], std::atoi(argv[2]), std::atoi(argv[3]) ); // A sequence of images captured from video source, is stored here
+                (dynamic_cast<ASDFrameSequencerImageFile*>(sequencer))->open(fileMask.c_str(), firstFrame, lastFrame );
 
 	}
 	std::sprintf(windowName, "%s", "Adaptive Skin Detection Algorithm for Video Sequences");
@@ -367,10 +378,6 @@ int main(int argc, char** argv )
 	cvNamedWindow(windowName, CV_WINDOW_AUTOSIZE);
 	cvInitFont( &base_font, CV_FONT_VECTOR0, 0.5, 0.5);
 
-	// Usage:
-	//		c:\>CvASDSample "C:\VideoSequences\sample1\right_view\temp_%05d.jpg" 0 1000
-
-	std::cout << "Press ESC to stop." << std::endl << std::endl;
 	while ((img = sequencer->getNextImage()) != 0)
 	{
 		numFrames++;

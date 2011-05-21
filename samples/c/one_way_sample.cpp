@@ -7,18 +7,20 @@
  *
  */
 
+#include <opencv2/core/core.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
 #include <string>
+
 void help()
 {
-	printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
-			"Correspondences are drawn\n");
-    printf("Format: \n./one_way_sample [path_to_samples] [image1] [image2]\n");
-    printf("For example: ./one_way_sample ../../../opencv/samples/c scene_l.bmp scene_r.bmp\n");
+    printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
+           "Correspondences are drawn\n");
+    printf("Format: \n./one_way_sample <path_to_samples> <image1> <image2>\n");
+    printf("For example: ./one_way_sample --path=../../../opencv/samples/c --first_image=scene_l.bmp --second_image=scene_r.bmp\n");
 }
 
 using namespace cv;
@@ -26,21 +28,19 @@ using namespace cv;
 IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
                               const vector<KeyPoint>& features2, const vector<int>& desc_idx);
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
+    help();
+
+    CommandLineParser parser(argc, argv);
+
+    std::string path_name = parser.get<string>("path", "../../../opencv/samples/c");
+    std::string img1_name = path_name + "/" + parser.get<string>("first_image", "scene_l.bmp");
+    std::string img2_name = path_name + "/" + parser.get<string>("second_image", "scene_r.bmp");
+
     const char images_list[] = "one_way_train_images.txt";
     const CvSize patch_size = cvSize(24, 24);
-    const int pose_count = 50;
-
-    if (argc != 3 && argc != 4)
-    {
-    	help();
-        return 0;
-    }
-
-    std::string path_name = argv[1];
-    std::string img1_name = path_name + "/" + std::string(argv[2]);
-    std::string img2_name = path_name + "/" + std::string(argv[3]);
+    const int pose_count = 1; //50
 
     printf("Reading the images...\n");
     IplImage* img1 = cvLoadImage(img1_name.c_str(), CV_LOAD_IMAGE_GRAYSCALE);

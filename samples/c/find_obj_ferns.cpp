@@ -9,30 +9,35 @@
 #include <vector>
 
 using namespace cv;
+
 void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"
-    		"descriptor classifier"
-    		"Usage:\n"
-    		"./find_obj_ferns [<object_filename default: box.png> <scene_filename default:box_in_scene.png>]\n"
-    		"\n");
+            "descriptor classifier"
+            "Usage:\n"
+            "./find_obj_ferns [--object_filename]=<object_filename, box.png as default> \n"
+            "[--scene_filename]=<scene_filename box_in_scene.png as default>]\n\n");
 }
-int main(int argc, char** argv)
+
+int main(int argc, const char** argv)
 {
-    const char* object_filename = argc > 1 ? argv[1] : "box.png";
-    const char* scene_filename = argc > 2 ? argv[2] : "box_in_scene.png";
-    int i;
     help();
+
+    CommandLineParser parser(argc, argv);
+
+    string objectFileName = parser.get<string>("object_filename", "box.png");
+    string sceneFileName = parser.get<string>("scene_filename", "box_in_scene.png");
+
     cvNamedWindow("Object", 1);
     cvNamedWindow("Image", 1);
     cvNamedWindow("Object Correspondence", 1);
     
-    Mat object = imread( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    Mat object = imread( objectFileName.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
     Mat image;
     
     double imgscale = 1;
 
-    Mat _image = imread( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    Mat _image = imread( sceneFileName.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
     resize(_image, image, Size(), 1./imgscale, 1./imgscale, INTER_CUBIC);
 
 
@@ -40,7 +45,7 @@ int main(int argc, char** argv)
     {
         fprintf( stderr, "Can not load %s and/or %s\n"
                 "Usage: find_obj_ferns [<object_filename> <scene_filename>]\n",
-                object_filename, scene_filename );
+                objectFileName.c_str(), sceneFileName.c_str() );
         exit(-1);
     }
 
@@ -60,7 +65,7 @@ int main(int argc, char** argv)
     vector<KeyPoint> objKeypoints, imgKeypoints;
 	PatchGenerator gen(0,256,5,true,0.8,1.2,-CV_PI/2,CV_PI/2,-CV_PI/2,CV_PI/2);
     
-    string model_filename = format("%s_model.xml.gz", object_filename);
+    string model_filename = format("%s_model.xml.gz", objectFileName.c_str());
     printf("Trying to load %s ...\n", model_filename.c_str());
     FileStorage fs(model_filename, FileStorage::READ);
     if( fs.isOpened() )
@@ -106,6 +111,7 @@ int main(int argc, char** argv)
     t = (double)getTickCount() - t;
     printf("%gms\n", t*1000/getTickFrequency());
     
+    int i = 0;
     if( found )
     {
         for( i = 0; i < 4; i++ )
