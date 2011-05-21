@@ -43,7 +43,7 @@ private:
 class MultiBandBlender : public Blender
 {
 public:
-    MultiBandBlender(int num_bands = 7) { setNumBands(num_bands); }
+    MultiBandBlender(int num_bands = 5) { setNumBands(num_bands); }
     int numBands() const { return num_bands_; }
     void setNumBands(int val) { num_bands_ = val; }
 

@@ -23,6 +23,7 @@ void printUsage()
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--seam (no|voronoi|graphcut)]\n" 
         << "\t[--blend (no|feather|multiband)]\n"
+        << "\t[--numbands <int>]\n"
         << "\t[--output <result_img>]\n\n";
     cout << "--matchconf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
@@ -45,6 +46,7 @@ bool user_match_conf = false;
 float match_conf = 0.6f;
 int seam_find_type = SeamFinder::VORONOI;
 int blend_type = Blender::MULTI_BAND;
+int numbands = 5;
 string result_name = "result.png";
 
 int parseCmdArgs(int argc, char** argv)
@@ -171,6 +173,11 @@ int parseCmdArgs(int argc, char** argv)
                 cout << "Bad blending method\n";
                 return -1;
             }
+            i++;
+        }
+        else if (string(argv[i]) == "--numbands")
+        {
+            numbands = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--output")
@@ -410,14 +417,12 @@ int main(int argc, char* argv[])
 
         if (static_cast<Blender*>(blender) == 0)
         {
-            // Create blender 
-
             blender = Blender::createDefault(blend_type);
+
             if (blend_type == Blender::MULTI_BAND)
             {
-                // Ensure last pyramid layer area is about 1 pix 
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
-                mb->setNumBands(static_cast<int>(ceil(log(static_cast<double>(img_warped_f.size().area())) / log(4.0))));
+                mb->setNumBands(numbands);
             }
 
             // Determine the final image size
