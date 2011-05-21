@@ -454,7 +454,7 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   params_(detector_params), n_features_(n_features)
 {
   // fill the extractors and descriptors for the corresponding scales
-  int n_desired_features_per_scale = n_features / ((1.0 / std::pow(params_.scale_factor_, 2 * params_.n_levels_) - 1)
+  int n_desired_features_per_scale = n_features / ((1.0 / std::pow(params_.scale_factor_, 2.f * params_.n_levels_) - 1)
       / (1.0 / std::pow(params_.scale_factor_, 2) - 1));
   n_features_per_level_.resize(detector_params.n_levels_);
   for (unsigned int level = 0; level < detector_params.n_levels_; level++)
@@ -466,11 +466,11 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   // pre-compute the end of a row in a circular patch
   half_patch_size_ = params_.patch_size_ / 2;
   u_max_.resize(half_patch_size_ + 1);
-  for (int v = 0; v <= half_patch_size_ * sqrt(2) / 2 + 1; ++v)
-    u_max_[v] = std::floor(sqrt(half_patch_size_ * half_patch_size_ - v * v) + 0.5);
+  for (int v = 0; v <= half_patch_size_ * sqrt(2.f) / 2 + 1; ++v)
+    u_max_[v] = std::floor(sqrt(float(half_patch_size_ * half_patch_size_ - v * v)) + 0.5);
 
   // Make sure we are symmetric
-  for (int v = half_patch_size_, v_0 = 0; v >= half_patch_size_ * sqrt(2) / 2; --v)
+  for (int v = half_patch_size_, v_0 = 0; v >= half_patch_size_ * sqrt(2.f) / 2; --v)
   {
     while (u_max_[v_0] == u_max_[v_0 + 1])
       ++v_0;
@@ -534,7 +534,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
     // Compute the resized image
     if (level != params_.first_level_)
     {
-      float scale = 1 / std::pow(params_.scale_factor_, level - params_.first_level_);
+      float scale = 1 / std::pow(params_.scale_factor_, float(level - params_.first_level_));
       cv::resize(image, image_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
       if (!mask.empty())
         cv::resize(mask, mask_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
@@ -589,7 +589,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
         // Rescale the coordinates
         if (level != params_.first_level_)
         {
-          float scale = std::pow(params_.scale_factor_, level - params_.first_level_);
+          float scale = std::pow(params_.scale_factor_, float(level - params_.first_level_));
           for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
               != keypoint_end; ++keypoint)
             keypoint->pt *= scale;
