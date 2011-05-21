@@ -2149,7 +2149,9 @@ icvXMLParse( CvFileStorage* fs )
     }*/
     {
         const char* encoding = cvAttrValue( list, "encoding" );
-        if( encoding && strcmp( encoding, "ASCII" ) != 0 && strcmp( encoding, "UTF-8" ) != 0 )
+        if( encoding && strcmp( encoding, "ASCII" ) != 0 &&
+            strcmp( encoding, "UTF-8" ) != 0 &&
+            strcmp( encoding, "utf-8" ) != 0 )
             CV_PARSE_ERROR( "Unsupported encoding" );
     }
 
