@@ -144,6 +144,14 @@ const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct DistIdxPair
+{
+    bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
+    double dist;
+    int idx;
+};
+
+
 void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
     const int num_images = static_cast<int>(features.size());
@@ -152,11 +160,28 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
     for (int i = 0; i < num_images; ++i)
     {
         LOGLN("Processing image " << i << "... ");
+
+        vector<DistIdxPair> dists(num_images);
+        for (int j = 0; j < num_images; ++j)
+        {
+            dists[j].dist = 1 - compareHist(features[i].hist, features[j].hist, CV_COMP_INTERSECT) 
+                                / min(features[i].img_size.area(), features[j].img_size.area());
+            dists[j].idx = j;
+        }
+
+        vector<bool> is_near(num_images, false);
+        for (int j = 0; j < num_images; ++j)
+            if (dists[j].dist < 0.6)
+                is_near[dists[j].idx] = true;
+
+        int k = min(4, num_images);
+        nth_element(dists.begin(), dists.end(), dists.begin() + k);
+        for (int j = 0; j < k; ++j)
+            is_near[dists[j].idx] = true;
+
         for (int j = i + 1; j < num_images; ++j)
         {
-            // Save time by ignoring poor pairs
-            if (compareHist(features[i].hist, features[j].hist, CV_COMP_INTERSECT) 
-                < min(features[i].img_size.area(), features[j].img_size.area()) * 0.4)
+            if (!is_near[j])
                 continue;
 
             int pair_idx = i * num_images + j;
