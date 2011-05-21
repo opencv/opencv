@@ -71,7 +71,6 @@ int main(int argc, char* argv[])
     }
 
     int64 t = getTickCount();
-    LOGLN("Parsing params and reading images...");
     for (int i = 1; i < argc; ++i)
     {
         if (string(argv[i]) == "--trygpu")
@@ -189,7 +188,6 @@ int main(int argc, char* argv[])
         else
             img_names.push_back(argv[i]);
     }
-    LOGLN("Parsing params and reading images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
@@ -198,8 +196,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    LOGLN("Reading images and finding features...");
     t = getTickCount();
-    LOGLN("Finding features...");
     vector<ImageFeatures> features(num_images);
     SurfFeaturesFinder finder(trygpu);
     Mat full_img, img;
@@ -224,10 +222,10 @@ int main(int argc, char* argv[])
         }
         finder(img, features[i]);
     }
-    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    LOGLN("Reading images and finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    t = getTickCount();
     LOGLN("Pairwise matching... ");
+    t = getTickCount();
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(trygpu);
     if (user_match_conf)
@@ -248,8 +246,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    t = getTickCount();
     LOGLN("Estimating rotations...");
+    t = getTickCount();
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
     estimator(features, pairwise_matches, cameras);
@@ -263,16 +261,16 @@ int main(int argc, char* argv[])
         LOGLN("Initial focal length " << i << ": " << cameras[i].focal);
     }
 
-    t = getTickCount();
     LOGLN("Bundle adjustment... ");
+    t = getTickCount();
     BundleAdjuster adjuster(ba_space, conf_thresh);
     adjuster(features, pairwise_matches, cameras);
     LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     if (wave_correct)
     {
-        t = getTickCount();
         LOGLN("Wave correcting...");
+        t = getTickCount();
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
@@ -292,9 +290,10 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
     float camera_focal = static_cast<float>(focals[focals.size() / 2]);
 
-    t = getTickCount();
     vector<Mat> images(num_images);
+
     LOGLN("Compose scaling...");
+    t = getTickCount();
     for (int i = 0; i < num_images; ++i)
     {
         Mat full_img = imread(img_names[i]);
@@ -319,38 +318,54 @@ int main(int argc, char* argv[])
     }
 
     vector<Point> corners(num_images);
+    vector<Size> sizes(num_images);
     vector<Mat> masks_warped(num_images);
     vector<Mat> images_warped(num_images);
 
-    t = getTickCount();
     LOGLN("Warping images... ");
+    t = getTickCount();
+
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, images_warped[i]);
-        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, 
+                               images_warped[i]);
+        sizes[i] = images_warped[i].size();
+        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], 
+                  INTER_NEAREST, BORDER_CONSTANT);
     }
+
     vector<Mat> images_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_f[i], CV_32F);
+
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    t = getTickCount();
     LOGLN("Finding seams...");
+    t = getTickCount();
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
     (*seam_finder)(images_f, corners, masks_warped);
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    t = getTickCount();
     LOGLN("Blending images...");
+    t = getTickCount();
+
     Ptr<Blender> blender = Blender::createDefault(blend_type);
+
     if (blend_type == Blender::MULTI_BAND)
+    {
         // Ensure last pyramid layer area is about 1 pix 
-        dynamic_cast<MultiBandBlender*>((Blender*)(blender))
-            ->setNumBands(static_cast<int>(ceil(log(static_cast<double>(images_f[0].size().area())) 
-                                                / log(4.0))));
+        MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>((Blender*)(blender));
+        mb->setNumBands(static_cast<int>(ceil(log(static_cast<double>(images_f[0].size().area())) / log(4.0))));
+        LOGLN("Multi-band blending num. bands: " << mb->numBands());
+    }
+
+    blender->prepare(corners, sizes);
+    for (int i = 0; i < num_images; ++i)
+        blender->feed(images_f[i], masks_warped[i], corners[i]);
     Mat result, result_mask;
-    (*blender)(images_f, corners, masks_warped, result, result_mask);
+    blender->blend(result, result_mask);
+
     LOGLN("Blending images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     imwrite(result_name, result);

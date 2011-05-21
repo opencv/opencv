@@ -21,246 +21,206 @@ Ptr<Blender> Blender::createDefault(int type)
 }
 
 
-Point Blender::operator ()(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &masks,
-                           Mat& dst)
+void Blender::prepare(const vector<Point> &corners, const vector<Size> &sizes)
 {
-    Mat dst_mask;
-    return (*this)(src, corners, masks, dst, dst_mask);
+    prepare(resultRoi(corners, sizes));
 }
 
 
-Point Blender::operator ()(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &masks,
-                           Mat &dst, Mat &dst_mask)
+void Blender::prepare(Rect dst_roi)
 {
-    Point dst_tl = blend(src, corners, masks, dst, dst_mask);
-    dst.setTo(Scalar::all(0), dst_mask == 0);
-    return dst_tl;
+    dst_.create(dst_roi.size(), CV_32FC3);
+    dst_.setTo(Scalar::all(0));
+    dst_mask_.create(dst_roi.size(), CV_8U);
+    dst_mask_.setTo(Scalar::all(0));
+    dst_roi_ = dst_roi;
 }
 
 
-Point Blender::blend(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &masks,
-                     Mat &dst, Mat &dst_mask)
+void Blender::feed(const Mat &img, const Mat &mask, Point tl) 
 {
-    for (size_t i = 0; i < src.size(); ++i)
+    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(mask.type() == CV_8U);
+
+    int dx = tl.x - dst_roi_.x;
+    int dy = tl.y - dst_roi_.y;
+
+    for (int y = 0; y < img.rows; ++y)
     {
-        CV_Assert(src[i].type() == CV_32FC3);
-        CV_Assert(masks[i].type() == CV_8U);
-    }
-    const int image_type = src[0].type();
+        const Point3f *src_row = img.ptr<Point3f>(y);
+        Point3f *dst_row = dst_.ptr<Point3f>(dy + y);
 
-    Rect dst_roi = resultRoi(src, corners);
+        const uchar *mask_row = mask.ptr<uchar>(y);
+        uchar *dst_mask_row = dst_mask_.ptr<uchar>(dy + y);
 
-    dst.create(dst_roi.size(), image_type);
-    dst.setTo(Scalar::all(0));
-
-    dst_mask.create(dst_roi.size(), CV_8U);
-    dst_mask.setTo(Scalar::all(0));
-
-    for (size_t i = 0; i < src.size(); ++i)
-    {
-        int dx = corners[i].x - dst_roi.x;
-        int dy = corners[i].y - dst_roi.y;
-
-        for (int y = 0; y < src[i].rows; ++y)
+        for (int x = 0; x < img.cols; ++x)
         {
-            const Point3f *src_row = src[i].ptr<Point3f>(y);
-            Point3f *dst_row = dst.ptr<Point3f>(dy + y);
-
-            const uchar *mask_row = masks[i].ptr<uchar>(y);
-            uchar *dst_mask_row = dst_mask.ptr<uchar>(dy + y);
-
-            for (int x = 0; x < src[i].cols; ++x)
-            {
-                if (mask_row[x])
-                    dst_row[dx + x] = src_row[x];
-                dst_mask_row[dx + x] |= mask_row[x];
-            }
+            if (mask_row[x]) 
+                dst_row[dx + x] = src_row[x];
+            dst_mask_row[dx + x] |= mask_row[x];
         }
     }
-
-    return dst_roi.tl();
 }
 
 
-Point FeatherBlender::blend(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &masks,
-                            Mat &dst, Mat &dst_mask)
+void Blender::blend(Mat &dst, Mat &dst_mask)
 {
-    vector<Mat> weights(masks.size());
-    for (size_t i = 0; i < weights.size(); ++i)
-        createWeightMap(masks[i], sharpness_, weights[i]);
-
-    Mat dst_weight;
-    Point dst_tl = blendLinear(src, corners, weights, dst, dst_weight);
-    dst_mask = dst_weight > WEIGHT_EPS;
-
-    return dst_tl;
+    dst_.setTo(Scalar::all(0), dst_mask_ == 0);
+    dst = dst_;
+    dst_mask = dst_mask_;
+    dst_.release();
+    dst_mask_.release();
 }
 
 
-Point MultiBandBlender::blend(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &masks,
-                             Mat &dst, Mat &dst_mask)
+void FeatherBlender::prepare(Rect dst_roi)
 {
-    CV_Assert(src.size() == corners.size() && src.size() == masks.size());
-    const int num_images = src.size();
-    const int img_type = src[0].type();
+    Blender::prepare(dst_roi);
+    dst_weight_map_.create(dst_roi.size(), CV_32F);
+    dst_weight_map_.setTo(0);
+}
 
-    Rect dst_roi = resultRoi(src, corners);
-    computeResultMask(masks, corners, dst_mask);
 
-    vector<Mat> dst_pyr_laplace(num_bands_ + 1);
-    dst_pyr_laplace[0].create(dst_roi.size(), img_type);
-    dst_pyr_laplace[0].setTo(Scalar::all(0));
+void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
+{
+    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(mask.type() == CV_8U);
 
-    vector<Mat> dst_band_weights(num_bands_ + 1);
-    dst_band_weights[0].create(dst_roi.size(), CV_32F);
-    dst_band_weights[0].setTo(0);
+    int dx = tl.x - dst_roi_.x;
+    int dy = tl.y - dst_roi_.y;
+
+    createWeightMap(mask, sharpness_, weight_map_);
+
+    for (int y = 0; y < img.rows; ++y)
+    {
+        const Point3f* src_row = img.ptr<Point3f>(y);
+        Point3f* dst_row = dst_.ptr<Point3f>(dy + y);
+
+        const float* weight_row = weight_map_.ptr<float>(y);
+        float* dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
+
+        for (int x = 0; x < img.cols; ++x)               
+        {
+            dst_row[dx + x] += src_row[x] * weight_row[x];
+            dst_weight_row[dx + x] += weight_row[x];
+        }
+    }
+}
+
+
+void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
+{
+    normalize(dst_weight_map_, dst_);
+    dst_mask_ = dst_weight_map_ > WEIGHT_EPS;
+    Blender::blend(dst, dst_mask);
+}
+
+
+void MultiBandBlender::prepare(Rect dst_roi)
+{
+    Blender::prepare(dst_roi);
+
+    dst_pyr_laplace_.resize(num_bands_ + 1);
+    dst_pyr_laplace_[0].create(dst_roi.size(), CV_32FC3);
+    dst_pyr_laplace_[0].setTo(Scalar::all(0));
+
+    dst_band_weights_.resize(num_bands_ + 1);
+    dst_band_weights_[0].create(dst_roi.size(), CV_32F);
+    dst_band_weights_[0].setTo(0);
 
     for (int i = 1; i <= num_bands_; ++i)
     {
-        dst_pyr_laplace[i].create((dst_pyr_laplace[i - 1].rows + 1) / 2, 
-                                  (dst_pyr_laplace[i - 1].cols + 1) / 2, img_type);
-        dst_pyr_laplace[i].setTo(Scalar::all(0));
-
-        dst_band_weights[i].create((dst_band_weights[i - 1].rows + 1) / 2,
-                                   (dst_band_weights[i - 1].cols + 1) / 2, CV_32F);
-        dst_band_weights[i].setTo(0);
+        dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2, 
+                                   (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_32FC3);
+        dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
+                                    (dst_band_weights_[i - 1].cols + 1) / 2, CV_32F);
+        dst_pyr_laplace_[i].setTo(Scalar::all(0));
+        dst_band_weights_[i].setTo(0);
     }
+}
 
-    for (int img_idx = 0; img_idx < num_images; ++img_idx)
+
+void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
+{
+    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(mask.type() == CV_8U);
+
+    int top = tl.y - dst_roi_.y;
+    int left = tl.x - dst_roi_.x;
+    int bottom = dst_roi_.br().y - tl.y - img.rows;
+    int right = dst_roi_.br().x - tl.x - img.cols;
+
+    // Create the source image Laplacian pyramid
+    vector<Mat> src_pyr_gauss(num_bands_ + 1);
+    copyMakeBorder(img, src_pyr_gauss[0], top, bottom, left, right, 
+                   BORDER_REFLECT);
+    for (int i = 0; i < num_bands_; ++i)
+        pyrDown(src_pyr_gauss[i], src_pyr_gauss[i + 1]);
+    vector<Mat> src_pyr_laplace;
+    createLaplacePyr(src_pyr_gauss, src_pyr_laplace);
+    src_pyr_gauss.clear();
+
+    // Create the weight map Gaussian pyramid
+    Mat weight_map;
+    mask.convertTo(weight_map, CV_32F, 1./255.);
+    vector<Mat> weight_pyr_gauss(num_bands_ + 1);
+    copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, 
+                   BORDER_CONSTANT);
+    for (int i = 0; i < num_bands_; ++i)
+        pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
+
+    // Add weighted layer of the source image to the final Laplacian pyramid layer
+    for (int i = 0; i <= num_bands_; ++i)
     {
-        int top = corners[img_idx].y - dst_roi.y;
-        int bottom = dst_roi.br().y - corners[img_idx].y - src[img_idx].rows;
-        int left = corners[img_idx].x - dst_roi.x;
-        int right = dst_roi.br().x - corners[img_idx].x - src[img_idx].cols;
-
-        vector<Mat> src_pyr_gauss(num_bands_ + 1);
-        copyMakeBorder(src[img_idx], src_pyr_gauss[0], top, bottom, left, right, BORDER_REFLECT);
-        for (int i = 0; i < num_bands_; ++i)
-            pyrDown(src_pyr_gauss[i], src_pyr_gauss[i + 1]);
-
-        vector<Mat> src_pyr_laplace;
-        createLaplacePyr(src_pyr_gauss, src_pyr_laplace);
-
-        vector<Mat> weight_pyr_gauss(num_bands_ + 1);
-        Mat mask_f;
-        masks[img_idx].convertTo(mask_f, CV_32F, 1./255.);
-        copyMakeBorder(mask_f, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
-        for (int i = 0; i < num_bands_; ++i)
-            pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
-
-        for (int band_idx = 0; band_idx <= num_bands_; ++band_idx)
+        for (int y = 0; y < dst_pyr_laplace_[i].rows; ++y)
         {
-            for (int y = 0; y < dst_pyr_laplace[band_idx].rows; ++y)
-            {
-                const Point3f* src_row = src_pyr_laplace[band_idx].ptr<Point3f>(y);
-                const float* weight_row = weight_pyr_gauss[band_idx].ptr<float>(y);
-                Point3f* dst_row = dst_pyr_laplace[band_idx].ptr<Point3f>(y);
-                for (int x = 0; x < dst_pyr_laplace[band_idx].cols; ++x)               
-                    dst_row[x] += src_row[x] * weight_row[x];
-            }
-            dst_band_weights[band_idx] += weight_pyr_gauss[band_idx];
+            const Point3f* src_row = src_pyr_laplace[i].ptr<Point3f>(y);
+            Point3f* dst_row = dst_pyr_laplace_[i].ptr<Point3f>(y);
+
+            const float* weight_row = weight_pyr_gauss[i].ptr<float>(y);
+
+            for (int x = 0; x < dst_pyr_laplace_[i].cols; ++x)               
+                dst_row[x] += src_row[x] * weight_row[x];
         }
-    }
+        dst_band_weights_[i] += weight_pyr_gauss[i];
+    }    
+}
 
-    for (int band_idx = 0; band_idx <= num_bands_; ++band_idx)
-        normalize(dst_band_weights[band_idx], dst_pyr_laplace[band_idx]);
 
-    restoreImageFromLaplacePyr(dst_pyr_laplace);
-    dst = dst_pyr_laplace[0];
-    return dst_roi.tl();
+void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
+{
+    for (int i = 0; i <= num_bands_; ++i)
+        normalize(dst_band_weights_[i], dst_pyr_laplace_[i]);
+
+    restoreImageFromLaplacePyr(dst_pyr_laplace_);
+
+    dst_ = dst_pyr_laplace_[0];
+    dst_mask_ = dst_band_weights_[0] > WEIGHT_EPS;
+    dst_pyr_laplace_.clear();
+    dst_band_weights_.clear();
+
+    Blender::blend(dst, dst_mask);
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-Rect resultRoi(const vector<Mat> &src, const vector<Point> &corners)
+Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
 {
     Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
     Point br(numeric_limits<int>::min(), numeric_limits<int>::min());
 
-    CV_Assert(src.size() == corners.size());
-    for (size_t i = 0; i < src.size(); ++i)
+    CV_Assert(sizes.size() == corners.size());
+    for (size_t i = 0; i < corners.size(); ++i)
     {
         tl.x = min(tl.x, corners[i].x);
         tl.y = min(tl.y, corners[i].y);
-        br.x = max(br.x, corners[i].x + src[i].cols);
-        br.y = max(br.y, corners[i].y + src[i].rows);
+        br.x = max(br.x, corners[i].x + sizes[i].width);
+        br.y = max(br.y, corners[i].y + sizes[i].height);
     }
 
     return Rect(tl, br);
-}
-
-
-Point computeResultMask(const vector<Mat> &masks, const vector<Point> &corners, Mat &dst_mask)
-{
-    Rect dst_roi = resultRoi(masks, corners);
-
-    dst_mask.create(dst_roi.size(), CV_8U);
-    dst_mask.setTo(Scalar::all(0));
-
-    for (size_t i = 0; i < masks.size(); ++i)
-    {
-        int dx = corners[i].x - dst_roi.x;
-        int dy = corners[i].y - dst_roi.y;
-
-        for (int y = 0; y < masks[i].rows; ++y)
-        {
-            const uchar *mask_row = masks[i].ptr<uchar>(y);
-            uchar *dst_mask_row = dst_mask.ptr<uchar>(dy + y);
-
-            for (int x = 0; x < masks[i].cols; ++x)
-                dst_mask_row[dx + x] |= mask_row[x];
-        }
-    }
-
-    return dst_roi.tl();
-}
-
-
-Point blendLinear(const vector<Mat> &src, const vector<Point> &corners, const vector<Mat> &weights,
-                  Mat &dst, Mat& dst_weight)
-{
-    for (size_t i = 0; i < src.size(); ++i)
-    {
-        CV_Assert(src[i].type() == CV_32FC3);
-        CV_Assert(weights[i].type() == CV_32F);
-    }
-    const int image_type = src[0].type();
-
-    Rect dst_roi = resultRoi(src, corners);
-
-    dst.create(dst_roi.size(), image_type);
-    dst.setTo(Scalar::all(0));
-
-    dst_weight.create(dst_roi.size(), CV_32F);
-    dst_weight.setTo(Scalar::all(0));
-
-    // Compute colors sums and weights
-    for (size_t i = 0; i < src.size(); ++i)
-    {
-        int dx = corners[i].x - dst_roi.x;
-        int dy = corners[i].y - dst_roi.y;
-
-        for (int y = 0; y < src[i].rows; ++y)
-        {
-            const Point3f *src_row = src[i].ptr<Point3f>(y);
-            Point3f *dst_row = dst.ptr<Point3f>(dy + y);
-
-            const float *weight_row = weights[i].ptr<float>(y);
-            float *dst_weight_row = dst_weight.ptr<float>(dy + y);
-
-            for (int x = 0; x < src[i].cols; ++x)
-            {
-                dst_row[dx + x] += src_row[x] * weight_row[x];
-                dst_weight_row[dx + x] += weight_row[x];
-            }
-        }
-    }
-
-    normalize(dst_weight, dst);
-
-    return dst_roi.tl();
 }
 
 

@@ -9,58 +9,59 @@ class Blender
 {
 public:
     enum { NO, FEATHER, MULTI_BAND };
-
     static cv::Ptr<Blender> createDefault(int type);
 
-    cv::Point operator ()(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
-                          cv::Mat& dst);
-    cv::Point operator ()(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
-                          cv::Mat& dst, cv::Mat& dst_mask);
+    void prepare(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
+    virtual void prepare(cv::Rect dst_roi);
+    virtual void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
+    virtual void blend(cv::Mat &dst, cv::Mat &dst_mask);
 
 protected:
-    virtual cv::Point blend(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
-                            cv::Mat& dst, cv::Mat& dst_mask);
+    cv::Mat dst_, dst_mask_;
+    cv::Rect dst_roi_;
 };
 
 
 class FeatherBlender : public Blender
 {
 public:
-    FeatherBlender(float sharpness = 0.02f) : sharpness_(sharpness) {}
+    FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
+    float sharpness() const { return sharpness_; }
+    void setSharpness(float val) { sharpness_ = val; }
+
+    void prepare(cv::Rect dst_roi);
+    void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
+    void blend(cv::Mat &dst, cv::Mat &dst_mask);
 
 private:
-    cv::Point blend(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
-                    cv::Mat &dst, cv::Mat &dst_mask);
-
     float sharpness_;
+    cv::Mat weight_map_;
+    cv::Mat dst_weight_map_;
 };
 
 
 class MultiBandBlender : public Blender
 {
 public:
-    MultiBandBlender(int num_bands = 7) : num_bands_(num_bands) {}
-
+    MultiBandBlender(int num_bands = 7) { setNumBands(num_bands); }
     int numBands() const { return num_bands_; }
     void setNumBands(int val) { num_bands_ = val; }
 
-private:
-    cv::Point blend(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &masks,
-                    cv::Mat& dst, cv::Mat& dst_mask);
+    void prepare(cv::Rect dst_roi);
+    void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
+    void blend(cv::Mat &dst, cv::Mat &dst_mask);
 
+private:
     int num_bands_;
+    std::vector<cv::Mat> dst_pyr_laplace_;
+    std::vector<cv::Mat> dst_band_weights_;
 };
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-cv::Rect resultRoi(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners);
-
-cv::Point computeResultMask(const std::vector<cv::Mat> &masks, const std::vector<cv::Point> &corners, cv::Mat &mask);
-
-cv::Point blendLinear(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &weights,
-                      cv::Mat& dst, cv::Mat& dst_weight);
+cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
 
 void normalize(const cv::Mat& weight, cv::Mat& src);
 
