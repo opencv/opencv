@@ -8,15 +8,9 @@ class SeamFinder
 {
 public:
     enum { NO, VORONOI, GRAPH_CUT };
-
     static cv::Ptr<SeamFinder> createDefault(int type);
 
     virtual ~SeamFinder() {}
-
-    void operator ()(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
-                     std::vector<cv::Mat> &masks);
-
-protected:
     virtual void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
                       std::vector<cv::Mat> &masks) = 0;
 };
@@ -24,17 +18,17 @@ protected:
 
 class NoSeamFinder : public SeamFinder
 {
-protected:
+public:
     void find(const std::vector<cv::Mat>&, const std::vector<cv::Point>&, std::vector<cv::Mat>&) {}
 };
 
 
 class PairwiseSeamFinder : public SeamFinder
 {
-protected:
+public:
     void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
               std::vector<cv::Mat> &masks);
-
+protected:
     virtual void findInPair(const cv::Mat &img1, const cv::Mat &img2, cv::Point tl1, cv::Point tl2,
                             cv::Rect roi, cv::Mat &mask1, cv::Mat &mask2) = 0;
 };
@@ -53,7 +47,6 @@ class GraphCutSeamFinder : public PairwiseSeamFinder
 public:
     // TODO add COST_COLOR_GRAD support
     enum { COST_COLOR };
-
     GraphCutSeamFinder(int cost_type = COST_COLOR, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
 

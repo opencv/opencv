@@ -8,23 +8,17 @@ class Warper
 {
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
-
     static cv::Ptr<Warper> createByCameraFocal(float focal, int type);
 
     virtual ~Warper() {}
-
-    cv::Point operator ()(const cv::Mat &src, float focal, const cv::Mat& R, cv::Mat &dst,
-                          int interp_mode = cv::INTER_LINEAR, int border_mode = cv::BORDER_REFLECT);
-
-protected:
     virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat& R, cv::Mat &dst,
-                           int interp_mode, int border_mode) = 0;
+                           int interp_mode = cv::INTER_LINEAR, int border_mode = cv::BORDER_REFLECT) = 0;
 };
 
 
 struct ProjectorBase
 {
-    void setCameraMatrix(const cv::Mat& R);
+    void setTransformation(const cv::Mat& R);
 
     cv::Size size;
     float focal;
@@ -37,10 +31,11 @@ struct ProjectorBase
 template <class P>
 class WarperBase : public Warper
 {   
-protected:
+public:
     cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
                    int interp_mode, int border_mode);
 
+protected:
     // Detects ROI of the destination image. It's correct for any projection.
     virtual void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
 

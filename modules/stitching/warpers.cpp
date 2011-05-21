@@ -16,7 +16,7 @@ Ptr<Warper> Warper::createByCameraFocal(float focal, int type)
 }
 
 
-void ProjectorBase::setCameraMatrix(const Mat &R)
+void ProjectorBase::setTransformation(const Mat &R)
 {
     CV_Assert(R.size() == Size(3, 3));
     CV_Assert(R.type() == CV_32F);
@@ -28,13 +28,6 @@ void ProjectorBase::setCameraMatrix(const Mat &R)
     rinv[0] = Rinv.at<float>(0, 0); rinv[1] = Rinv.at<float>(0, 1); rinv[2] = Rinv.at<float>(0, 2);
     rinv[3] = Rinv.at<float>(1, 0); rinv[4] = Rinv.at<float>(1, 1); rinv[5] = Rinv.at<float>(1, 2);
     rinv[6] = Rinv.at<float>(2, 0); rinv[7] = Rinv.at<float>(2, 1); rinv[8] = Rinv.at<float>(2, 2);
-}
-
-
-Point Warper::operator ()(const Mat &src, float focal, const Mat& R, Mat &dst,
-                          int interp_mode, int border_mode)
-{
-    return warp(src, focal, R, dst, interp_mode, border_mode);
 }
 
 

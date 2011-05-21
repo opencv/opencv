@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     int blend_type = Blender::MULTI_BAND;
     string result_name = "result.png";
 
-    double work_scale = -1, compose_scale = -1;
+    double work_scale = 1, compose_scale = 1;
     bool is_work_scale_set = false, is_compose_scale_set = false;
 
     if (argc == 1)
@@ -328,11 +328,11 @@ int main(int argc, char* argv[])
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = (*warper)(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, 
-                               images_warped[i]);
+        corners[i] = warper->warp(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, 
+                                  images_warped[i]);
         sizes[i] = images_warped[i].size();
-        (*warper)(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], 
-                  INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], 
+                     INTER_NEAREST, BORDER_CONSTANT);
     }
 
     vector<Mat> images_f(num_images);
@@ -344,7 +344,7 @@ int main(int argc, char* argv[])
     LOGLN("Finding seams...");
     t = getTickCount();
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
-    (*seam_finder)(images_f, corners, masks_warped);
+    seam_finder->find(images_f, corners, masks_warped);
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Blending images...");

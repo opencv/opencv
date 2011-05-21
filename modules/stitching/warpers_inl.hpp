@@ -11,7 +11,7 @@ cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R,
 
     projector_.size = src.size();
     projector_.focal = focal;
-    projector_.setCameraMatrix(R);
+    projector_.setTransformation(R);
 
     cv::Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);

@@ -20,13 +20,6 @@ Ptr<SeamFinder> SeamFinder::createDefault(int type)
 }
 
 
-void SeamFinder::operator ()(const vector<Mat> &src, const vector<Point> &corners,
-                             vector<Mat> &masks)
-{
-    find(src, corners, masks);
-}
-
-
 void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
                               vector<Mat> &masks)
 {
