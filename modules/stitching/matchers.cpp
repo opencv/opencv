@@ -169,11 +169,13 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
             dists[j].idx = j;
         }
 
+        // Leave near images
         vector<bool> is_near(num_images, false);
         for (int j = 0; j < num_images; ++j)
             if (dists[j].dist < 0.6)
                 is_near[dists[j].idx] = true;
 
+        // Leave k-nearest images
         int k = min(4, num_images);
         nth_element(dists.begin(), dists.end(), dists.begin() + k);
         for (int j = 0; j < k; ++j)
@@ -181,6 +183,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
         for (int j = i + 1; j < num_images; ++j)
         {
+            // Ignore poor image pairs
             if (!is_near[j])
                 continue;
 
@@ -213,7 +216,6 @@ namespace
     {
     public:
         inline CpuMatcher(float match_conf) : match_conf_(match_conf) {}
-
         void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
@@ -257,15 +259,12 @@ namespace
     {
     public:
         inline GpuMatcher(float match_conf) : match_conf_(match_conf) {}
-
         void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
         float match_conf_;
-
         GpuMat descriptors1_;
         GpuMat descriptors2_;
-
         GpuMat trainIdx_, distance_, allDist_;
     };
 

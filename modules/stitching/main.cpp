@@ -31,34 +31,28 @@ void printUsage()
         << "\tTry bigger values for --work_megapix if something is wrong.\n\n";
 }
 
-int main(int argc, char* argv[])
+
+// Command line args
+vector<string> img_names;
+bool trygpu = false;
+double work_megapix = 0.2;
+double compose_megapix = 1;
+int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
+float conf_thresh = 1.f;
+bool wave_correct = true;
+int warp_type = Warper::SPHERICAL;
+bool user_match_conf = false;
+float match_conf = 0.6f;
+int seam_find_type = SeamFinder::VORONOI;
+int blend_type = Blender::MULTI_BAND;
+string result_name = "result.png";
+
+int parseCmdArgs(int argc, char** argv)
 {
-    int64 app_start_time = getTickCount();
-    cv::setBreakOnError(true);
-
-    vector<string> img_names;
-
-    // Default parameters
-    bool trygpu = false;
-    double work_megapix = 0.2;
-    double compose_megapix = 1;
-    int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
-    float conf_thresh = 1.f;
-    bool wave_correct = true;
-    int warp_type = Warper::SPHERICAL;
-    bool user_match_conf = false;
-    float match_conf = 0.6f;
-    int seam_find_type = SeamFinder::VORONOI;
-    int blend_type = Blender::MULTI_BAND;
-    string result_name = "result.png";
-
-    double work_scale = 1, compose_scale = 1;
-    bool is_work_scale_set = false, is_compose_scale_set = false;
-
     if (argc == 1)
     {
         printUsage();
-        return 0;
+        return -1;
     }
 
     for (int i = 1; i < argc; ++i)
@@ -70,7 +64,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    int64 t = getTickCount();
     for (int i = 1; i < argc; ++i)
     {
         if (string(argv[i]) == "--trygpu")
@@ -188,7 +181,20 @@ int main(int argc, char* argv[])
         else
             img_names.push_back(argv[i]);
     }
+    return 0;
+}
 
+
+int main(int argc, char* argv[])
+{
+    int64 app_start_time = getTickCount();
+    cv::setBreakOnError(true);
+
+    int retval = parseCmdArgs(argc, argv);
+    if (retval)
+        return retval;
+
+    // Check if have enough images
     int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
@@ -196,8 +202,12 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    // We do all matching in work_scale sclae, and compositing in compose_scale scale
+    double work_scale = 1, compose_scale = 1;
+    bool is_work_scale_set = false, is_compose_scale_set = false;
+
     LOGLN("Reading images and finding features...");
-    t = getTickCount();
+    int64 t = getTickCount();
     vector<Mat> images(num_images);
     vector<ImageFeatures> features(num_images);
     SurfFeaturesFinder finder(trygpu);
@@ -237,6 +247,7 @@ int main(int argc, char* argv[])
     matcher(features, pairwise_matches);
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
+    // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
     vector<string> img_names_subset;
@@ -248,6 +259,7 @@ int main(int argc, char* argv[])
     images = img_subset;
     img_names = img_names_subset;
 
+    // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
@@ -308,12 +320,14 @@ int main(int argc, char* argv[])
     vector<Size> sizes(num_images);
     vector<Mat> masks(num_images);
 
+    // Preapre original images masks
     for (int i = 0; i < num_images; ++i)
     {
         masks[i].create(images[i].size(), CV_8U);
         masks[i].setTo(Scalar::all(255));
     }
 
+    // Warp images and their masks
     Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
     for (int i = 0; i < num_images; ++i)
     {
@@ -324,6 +338,7 @@ int main(int argc, char* argv[])
                      INTER_NEAREST, BORDER_CONSTANT);
     }
 
+    // Convert to float for blending
     vector<Mat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
@@ -333,6 +348,7 @@ int main(int argc, char* argv[])
     LOGLN("Finding seams...");
     t = getTickCount();
 
+    // Find seams
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
     seam_finder->find(images_warped_f, corners, masks_warped);
 
