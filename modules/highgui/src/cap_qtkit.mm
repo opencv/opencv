@@ -338,11 +338,10 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 	}
 	
 	if (cameraNum >= 0) {
-		camNum = cameraNum % [devices count]; 
-		if (camNum != cameraNum) {
-			cout << "Warning: Max Camera Num is " << [devices count]-1 << "; Using camera " << camNum << endl; 
-		}
-		device = [devices objectAtIndex:camNum] ;
+		int nCameras = [devices count];
+        if( cameraNum < 0 || cameraNum >= nCameras )
+            return 0;
+		device = [devices objectAtIndex:cameraNum] ;
 	} else {
 		device = [QTCaptureDevice defaultInputDeviceWithMediaType:QTMediaTypeVideo]  ;
 	}
