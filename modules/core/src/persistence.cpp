@@ -2149,7 +2149,7 @@ icvXMLParse( CvFileStorage* fs )
     }*/
     {
         const char* encoding = cvAttrValue( list, "encoding" );
-        if( encoding && strcmp( encoding, "ASCII" ) != 0 )
+        if( encoding && strcmp( encoding, "ASCII" ) != 0 && strcmp( encoding, "UTF-8" ) != 0 )
             CV_PARSE_ERROR( "Unsupported encoding" );
     }
 
@@ -2651,7 +2651,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags )
             fs->strstorage = cvCreateChildMemStorage( fs->memstorage );
             if( !append || file_size == 0 )
             {
-                icvPuts( fs, "<?xml version=\"1.0\"?>\n" );
+                icvPuts( fs, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" );
                 icvPuts( fs, "<opencv_storage>\n" );
             }
             else
