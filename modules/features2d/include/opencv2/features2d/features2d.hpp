@@ -415,9 +415,9 @@ public:
   struct CommonParams
   {
     static const unsigned int DEFAULT_N_LEVELS = 3;
-    static const float DEFAULT_SCALE_FACTOR = 1.2;
+    static const float DEFAULT_SCALE_FACTOR;
     static const unsigned int DEFAULT_FIRST_LEVEL = 0;
-    static const PatchSize DEFAULT_PATCH_SIZE = PATCH_LEARNED_31;
+    static const PatchSize DEFAULT_PATCH_SIZE;
 
     /** default constructor */
     CommonParams(float scale_factor = DEFAULT_SCALE_FACTOR, unsigned int n_levels = DEFAULT_N_LEVELS,

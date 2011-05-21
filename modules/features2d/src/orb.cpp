@@ -447,6 +447,9 @@ std::vector<cv::Mat> ORB::OrbPatterns::rotated_patterns_ = OrbPatterns::generate
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const float ORB::CommonParams::DEFAULT_SCALE_FACTOR = 1.2;
+const ORB::PatchSize ORB::CommonParams::DEFAULT_PATCH_SIZE = ORB::PATCH_LEARNED_31;
+
 /** Constructor
  * @param detector_params parameters to use
  */
