@@ -153,35 +153,28 @@ public class NativePreviewer extends SurfaceView implements
 		Log.d("NativePreviewer", "Supported params: "
 				+ mCamera.getParameters().flatten());
 
-		
-		// this is available in 8+
-		// parameters.setExposureCompensation(0);
-		if (parameters.getSupportedWhiteBalance().contains(whitebalance_mode)) {
+		List<String> whiteBalanceModes = parameters.getSupportedWhiteBalance();
+		if (whiteBalanceModes != null
+		 && whiteBalanceModes.contains(whitebalance_mode) ) {
 			parameters.setWhiteBalance(whitebalance_mode);
 		}
-//		if (parameters.getSupportedAntibanding().contains(
-//				Camera.Parameters.ANTIBANDING_OFF)) {
-//			parameters.setAntibanding(Camera.Parameters.ANTIBANDING_OFF);
-//		}
-
-		List<String> fmodes = mCamera.getParameters().getSupportedFocusModes();
-		// for(String x: fmodes){
-
-		// }
-		
-	
 
 		if (parameters.get("meter-mode") != null)
 			parameters.set("meter-mode", "meter-average");
-		int idx = fmodes.indexOf(Camera.Parameters.FOCUS_MODE_INFINITY);
-		if (idx != -1) {
-			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
-		} else if (fmodes.indexOf(Camera.Parameters.FOCUS_MODE_FIXED) != -1) {
-			parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
-		}
 
-		if (fmodes.indexOf(Camera.Parameters.FOCUS_MODE_AUTO) != -1) {
-			hasAutoFocus = true;
+		List<String> fmodes = mCamera.getParameters().getSupportedFocusModes();
+		if(fmodes != null)
+		{
+		  int idx = fmodes.indexOf(Camera.Parameters.FOCUS_MODE_INFINITY);
+		  if (idx != -1) {
+			  parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+		  } else if (fmodes.indexOf(Camera.Parameters.FOCUS_MODE_FIXED) != -1) {
+			  parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
+		  }
+
+		  if (fmodes.indexOf(Camera.Parameters.FOCUS_MODE_AUTO) != -1) {
+			  hasAutoFocus = true;
+		  }
 		}
 
 		List<String> scenemodes = mCamera.getParameters()
@@ -211,7 +204,7 @@ public class NativePreviewer extends SurfaceView implements
 		initForACB();
 		initForPCWB();
 
-		// Use only one buffer, so that we don't preview to many frames and bog
+		// Use only one buffer, so that we don't preview too many frames and bog
 		// down system
 		byte[] buffer = new byte[bufSize];
 		addCallbackBuffer(buffer);
@@ -480,3 +473,4 @@ public class NativePreviewer extends SurfaceView implements
 	}
 
 }
+
