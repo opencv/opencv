@@ -4,16 +4,16 @@ Introduction
 
 .. highlight:: cpp
 
-OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is an open-source BSD-licensed library that includes several hundreds computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
+OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki/) is an open-source BSD-licensed library that includes several hundreds of computer vision algorithms. The document describes the so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API. The latter is described in opencv1x.pdf.
 
-OpenCV has a modular structure, which means that the package includes several shared or static libraries. The modules are:
+OpenCV has a modular structure, which means that the package includes several shared or static libraries. The following modules are available:
 
- * **core** - a compact module defining basic data structures, including the dense multi-dimensional array ``Mat``, and basic functions used by all other modules.
- * **imgproc** - an image processing module that includes linear and non-linear image filtering, geometrical image transformations (resize, affine and perspective warping, generic table-based remap), color space conversion, histograms, and so on.
+ * **core** - a compact module defining basic data structures, including the dense multi-dimensional array ``Mat`` and basic functions used by all other modules.
+ * **imgproc** - an image processing module that includes linear and non-linear image filtering, geometrical image transformations (resize, affine and perspective wraping, generic table-based remapping), color space conversion, histograms, and so on.
  * **video** - a video analysis module that includes motion estimation, background subtraction, and object tracking algorithms.
  * **calib3d** - basic multiple-view geometry algorithms, single and stereo camera calibration, object pose estimation, stereo correspondence algorithms, and elements of 3D reconstruction.
  * **features2d** - salient feature detectors, descriptors, and descriptor matchers.
- * **objdetect** - detection of objects and instances of the predefined classes (for example, faces, eyes, mugs, people, cars, and so on)
+ * **objdetect** - detection of objects and instances of the predefined classes (for example, faces, eyes, mugs, people, cars, and so on).
  * **highgui** - an easy-to-use interface to video capturing, image and video codecs APIs, as well as simple UI capabilities.
  * **gpu** - GPU-accelerated algorithms from different OpenCV modules.
  * ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and others.
@@ -43,7 +43,7 @@ or ::
     Mat H = findHomography(points1, points2, CV_RANSAC, 5 );
     ...
 
-It is possible that some of the current or future OpenCV external names conflict with STL
+Some of the current or future OpenCV external names may conflict with STL
 or other libraries. In this case, use explicit namespace specifiers to resolve the name conflicts: ::
 
     Mat a(100, 100, CV_32F);
@@ -56,7 +56,7 @@ Automatic Memory Management
 
 OpenCV handles all the memory automatically.
 
-First of all, ``std::vector``, ``Mat``, and other data structures used by the functions and methods have destructors that deallocate the underlying memory buffers when needed. This means that the destructors do not always deallocate the buffers, like in the case of ``Mat``. They take into account possible data sharing. A destructor decrements the reference counter, associated with the matrix data buffer, and the buffer is deallocated if and only if the reference counter reaches zero, which means - when no other structures refer to the same buffer. Similarly, when a ``Mat`` instance is copied, no actual data is really copied. Instead, the counter associated with its reference is incremented to memorize that there is another owner of the same data. There is also the ``Mat::clone`` method that creates a full copy of the matrix data. Here is the example ::
+First of all, ``std::vector``, ``Mat``, and other data structures used by the functions and methods have destructors that deallocate the underlying memory buffers when needed. This means that the destructors do not always deallocate the buffers as in case of ``Mat``. They take into account possible data sharing. A destructor decrements the reference counter associated with the matrix data buffer. The buffer is deallocated if and only if the reference counter reaches zero, that is, when no other structures refer to the same buffer. Similarly, when a ``Mat`` instance is copied, no actual data is really copied. Instead, the counter associated with its reference is incremented to memorize that there is another owner of the same data. There is also the ``Mat::clone`` method that creates a full copy of the matrix data. See the example below: ::
 
     // create a big 8Mb matrix
     Mat A(1000, 1000, CV_64F);
@@ -83,7 +83,7 @@ First of all, ``std::vector``, ``Mat``, and other data structures used by the fu
     // matrix will be deallocated, since it is not referenced by anyone
     C = C.clone();
 
-Therefore, the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user data types created without taking automatic memory management into account? For them OpenCV offers the ``Ptr<>`` template class that is similar to ``std::shared_ptr`` from C++ TR1. So, instead of using plain pointers::
+You see that the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user data types created without taking automatic memory management into account? For them, OpenCV offers the ``Ptr<>`` template class that is similar to ``std::shared_ptr`` from C++ TR1. So, instead of using plain pointers::
 
    T* ptr = new T(...);
 
@@ -91,7 +91,9 @@ you can use::
 
    Ptr<T> ptr = new T(...);
 
-That is, ``Ptr<T> ptr`` incapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See ``Ptr`` description for details.
+That is, ``Ptr<T> ptr`` incapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the 
+:ref:`Ptr` 
+description for details.
 
 .. _AutomaticAllocation:
 
