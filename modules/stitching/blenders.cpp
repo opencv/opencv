@@ -185,13 +185,16 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
-    int top = tl.y - dst_roi_.y;
-    int left = tl.x - dst_roi_.x;
-    int bottom = dst_roi_.br().y - tl.y - img.rows;
-    int right = dst_roi_.br().x - tl.x - img.cols;
+    Point tl_new(dst_roi_.tl());
+    Point br_new(dst_roi_.br());
+    int top = tl.y - tl_new.y;
+    int left = tl.x - tl_new.x;
+    int bottom = br_new.y - tl.y - img.rows;
+    int right = br_new.x - tl.x - img.cols;
 
     // Create the source image Laplacian pyramid
     vector<Mat> src_pyr_gauss(num_bands_ + 1);
+    src_pyr_gauss[0] = img;
     copyMakeBorder(img, src_pyr_gauss[0], top, bottom, left, right, 
                    BORDER_REFLECT);
     for (int i = 0; i < num_bands_; ++i)
@@ -212,21 +215,25 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     // Add weighted layer of the source image to the final Laplacian pyramid layer
     for (int i = 0; i <= num_bands_; ++i)
     {
-        for (int y = 0; y < dst_pyr_laplace_[i].rows; ++y)
+        int dx = 0;//(tl_new.x >> i) - (dst_roi_.x >> i);
+        int dy = 0;//(tl_new.y >> i) - (dst_roi_.y >> i);
+
+        for (int y = 0; y < src_pyr_laplace[i].rows; ++y)
         {
             const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y);
-            Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y);
+            Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y + dy);
 
             const float* weight_row = weight_pyr_gauss[i].ptr<float>(y);
+            float* dst_weight_row = dst_band_weights_[i].ptr<float>(y + dy);
 
-            for (int x = 0; x < dst_pyr_laplace_[i].cols; ++x)               
+            for (int x = 0; x < src_pyr_laplace[i].cols; ++x)               
             {
-                dst_row[x].x += static_cast<short>(src_row[x].x * weight_row[x]);
-                dst_row[x].y += static_cast<short>(src_row[x].y * weight_row[x]);
-                dst_row[x].z += static_cast<short>(src_row[x].z * weight_row[x]);
+                dst_row[x + dx].x += static_cast<short>(src_row[x].x * weight_row[x]);
+                dst_row[x + dx].y += static_cast<short>(src_row[x].y * weight_row[x]);
+                dst_row[x + dx].z += static_cast<short>(src_row[x].z * weight_row[x]);
+                dst_weight_row[x + dx] += weight_row[x];
             }
         }
-        dst_band_weights_[i] += weight_pyr_gauss[i];
     }    
 }
 
