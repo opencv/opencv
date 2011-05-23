@@ -68,7 +68,7 @@ void Blender::prepare(const vector<Point> &corners, const vector<Size> &sizes)
 
 void Blender::prepare(Rect dst_roi)
 {
-    dst_.create(dst_roi.size(), CV_32FC3);
+    dst_.create(dst_roi.size(), CV_16SC3);
     dst_.setTo(Scalar::all(0));
     dst_mask_.create(dst_roi.size(), CV_8U);
     dst_mask_.setTo(Scalar::all(0));
@@ -78,7 +78,7 @@ void Blender::prepare(Rect dst_roi)
 
 void Blender::feed(const Mat &img, const Mat &mask, Point tl) 
 {
-    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
     int dx = tl.x - dst_roi_.x;
@@ -86,8 +86,8 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
 
     for (int y = 0; y < img.rows; ++y)
     {
-        const Point3f *src_row = img.ptr<Point3f>(y);
-        Point3f *dst_row = dst_.ptr<Point3f>(dy + y);
+        const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
+        Point3_<short> *dst_row = dst_.ptr<Point3_<short> >(dy + y);
 
         const uchar *mask_row = mask.ptr<uchar>(y);
         uchar *dst_mask_row = dst_mask_.ptr<uchar>(dy + y);
@@ -122,7 +122,7 @@ void FeatherBlender::prepare(Rect dst_roi)
 
 void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 {
-    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
     int dx = tl.x - dst_roi_.x;
@@ -132,15 +132,17 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
     for (int y = 0; y < img.rows; ++y)
     {
-        const Point3f* src_row = img.ptr<Point3f>(y);
-        Point3f* dst_row = dst_.ptr<Point3f>(dy + y);
+        const Point3_<short>* src_row = img.ptr<Point3_<short> >(y);
+        Point3_<short>* dst_row = dst_.ptr<Point3_<short> >(dy + y);
 
         const float* weight_row = weight_map_.ptr<float>(y);
         float* dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
 
         for (int x = 0; x < img.cols; ++x)               
         {
-            dst_row[dx + x] += src_row[x] * weight_row[x];
+            dst_row[dx + x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+            dst_row[dx + x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+            dst_row[dx + x].z += static_cast<short>(src_row[x].z * weight_row[x]);
             dst_weight_row[dx + x] += weight_row[x];
         }
     }
@@ -169,7 +171,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
     for (int i = 1; i <= num_bands_; ++i)
     {
         dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2, 
-                                   (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_32FC3);
+                                   (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
         dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
                                     (dst_band_weights_[i - 1].cols + 1) / 2, CV_32F);
         dst_pyr_laplace_[i].setTo(Scalar::all(0));
@@ -180,7 +182,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
 
 void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 {
-    CV_Assert(img.type() == CV_32FC3);
+    CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
     int top = tl.y - dst_roi_.y;
@@ -212,13 +214,17 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     {
         for (int y = 0; y < dst_pyr_laplace_[i].rows; ++y)
         {
-            const Point3f* src_row = src_pyr_laplace[i].ptr<Point3f>(y);
-            Point3f* dst_row = dst_pyr_laplace_[i].ptr<Point3f>(y);
+            const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y);
+            Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y);
 
             const float* weight_row = weight_pyr_gauss[i].ptr<float>(y);
 
             for (int x = 0; x < dst_pyr_laplace_[i].cols; ++x)               
-                dst_row[x] += src_row[x] * weight_row[x];
+            {
+                dst_row[x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+                dst_row[x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+                dst_row[x].z += static_cast<short>(src_row[x].z * weight_row[x]);
+            }
         }
         dst_band_weights_[i] += weight_pyr_gauss[i];
     }    
@@ -265,14 +271,18 @@ Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
 void normalize(const Mat& weight, Mat& src)
 {
     CV_Assert(weight.type() == CV_32F);
-    CV_Assert(src.type() == CV_32FC3);
+    CV_Assert(src.type() == CV_16SC3);
     for (int y = 0; y < src.rows; ++y)
     {
-        Point3f *row = src.ptr<Point3f>(y);
+        Point3_<short> *row = src.ptr<Point3_<short> >(y);
         const float *weight_row = weight.ptr<float>(y);
 
         for (int x = 0; x < src.cols; ++x)
-            row[x] *= 1.f / (weight_row[x] + WEIGHT_EPS);
+        {
+            row[x].x = static_cast<short>(row[x].x / (weight_row[x] + WEIGHT_EPS));
+            row[x].y = static_cast<short>(row[x].y / (weight_row[x] + WEIGHT_EPS));
+            row[x].z = static_cast<short>(row[x].z / (weight_row[x] + WEIGHT_EPS));
+        }
     }
 }
 
@@ -296,7 +306,7 @@ void createLaplacePyr(const vector<Mat> &pyr_gauss, vector<Mat> &pyr_laplace)
     for (size_t i = 0; i < pyr_laplace.size() - 1; ++i)
     {
         pyrUp(pyr_gauss[i + 1], tmp, pyr_gauss[i].size());
-        pyr_laplace[i] = pyr_gauss[i] - tmp;
+        subtract(pyr_gauss[i], tmp, pyr_laplace[i]);
     }
     pyr_laplace[pyr_laplace.size() - 1] = pyr_gauss[pyr_laplace.size() - 1].clone();
 }
@@ -311,6 +321,7 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
     for (size_t i = pyr.size() - 1; i > 0; --i)
     {
         pyrUp(pyr[i], tmp, pyr[i - 1].size());
-        pyr[i - 1] += tmp;
+        add(tmp, pyr[i - 1], pyr[i - 1]);
     }
 }
+

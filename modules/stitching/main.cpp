@@ -401,7 +401,6 @@ int main(int argc, char* argv[])
                      cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
 
-    // Convert to float for blending
     vector<Mat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
@@ -426,7 +425,7 @@ int main(int argc, char* argv[])
     LOGLN("Compositing...");
     t = getTickCount();
 
-    Mat img_warped, img_warped_f;
+    Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
     double compose_seam_aspect = 1;
@@ -461,7 +460,7 @@ int main(int argc, char* argv[])
         // Warp the current image
         warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
                      img_warped);
-        img_warped.convertTo(img_warped_f, CV_32F);
+        img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
         img.release();
 
@@ -497,7 +496,7 @@ int main(int argc, char* argv[])
         }
 
         // Blend the current image
-        blender->feed(img_warped_f, mask_warped, corners[img_idx]);
+        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
     }
    
     Mat result, result_mask;

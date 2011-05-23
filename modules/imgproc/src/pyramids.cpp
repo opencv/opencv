@@ -411,6 +411,8 @@ void cv::pyrDown( const InputArray& _src, OutputArray _dst, const Size& _dsz )
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrDown_<FixPtCast<uchar, 8>, PyrDownVec_32s8u>;
+    else if( depth == CV_16S )
+        func = pyrDown_<FixPtCast<short, 8>, NoVec<int, short> >;
     else if( depth == CV_16U )
         func = pyrDown_<FixPtCast<ushort, 8>, NoVec<int, ushort> >;
     else if( depth == CV_32F )
@@ -433,6 +435,8 @@ void cv::pyrUp( const InputArray& _src, OutputArray _dst, const Size& _dsz )
     PyrFunc func = 0;
     if( depth == CV_8U )
         func = pyrUp_<FixPtCast<uchar, 6>, NoVec<int, uchar> >;
+    else if( depth == CV_16S )
+        func = pyrUp_<FixPtCast<short, 6>, NoVec<int, short> >;
     else if( depth == CV_16U )
         func = pyrUp_<FixPtCast<ushort, 6>, NoVec<int, ushort> >;
     else if( depth == CV_32F )
