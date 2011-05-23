@@ -232,9 +232,15 @@ void GraphCutSeamFinder::Impl::findInPair(const Mat &img1, const Mat &img2, Poin
         for (int x = 0; x < roi.width; ++x)
         {
             if (graph.inSourceSegment((y + gap) * (roi.width + 2 * gap) + x + gap))
-                mask2.at<uchar>(roi.y - tl2.y + y, roi.x - tl2.x + x) = 0;
+            {
+                if (mask1.at<uchar>(roi.y - tl1.y + y, roi.x - tl1.x + x))
+                    mask2.at<uchar>(roi.y - tl2.y + y, roi.x - tl2.x + x) = 0;
+            }
             else
-                mask1.at<uchar>(roi.y - tl1.y + y, roi.x - tl1.x + x) = 0;
+            {
+                if (mask2.at<uchar>(roi.y - tl2.y + y, roi.x - tl2.x + x))
+                    mask1.at<uchar>(roi.y - tl1.y + y, roi.x - tl1.x + x) = 0;
+            }
         }
     }
 }

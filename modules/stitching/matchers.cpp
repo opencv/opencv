@@ -69,6 +69,7 @@ namespace
         inline GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
                                      int num_octaves_descr, int num_layers_descr) 
         {
+            surf_.keypointsRatio = 0.1f;
             surf_.hessianThreshold = hess_thresh;
             surf_.extended = false;
             num_octaves_ = num_octaves;
