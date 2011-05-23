@@ -388,7 +388,8 @@ public:
 private:
   static inline int angle2Wedge(float angle)
   {
-    return cvRound((angle / 360) * kNumAngles);
+    static float scale = float(kNumAngles) / 360.0f;
+    return std::min(int(std::floor(angle * scale)), kNumAngles - 1);
   }
 
   void generateRelativePattern(int angle_idx, int /*sz*/, cv::Mat & relative_pattern)
