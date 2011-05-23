@@ -78,7 +78,7 @@ vector<string> img_names;
 bool trygpu = false;
 double work_megapix = 0.3;
 double seam_megapix = 0.1;
-double compose_megapix = 1;
+double compose_megapix = 6;
 int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
@@ -453,6 +453,7 @@ int main(int argc, char* argv[])
         else
             img = full_img;
         full_img.release();
+        Size img_size = img.size();
 
         // Update cameras paramters
         cameras[img_idx].focal *= compose_work_aspect;
@@ -462,9 +463,10 @@ int main(int argc, char* argv[])
                      img_warped);
         img_warped.convertTo(img_warped_f, CV_32F);
         img_warped.release();
+        img.release();
 
         // Warp current image mask
-        mask.create(img.size(), CV_8U);
+        mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));    
         warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
                      INTER_NEAREST, BORDER_CONSTANT);

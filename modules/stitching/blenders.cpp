@@ -160,8 +160,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
     Blender::prepare(dst_roi);
 
     dst_pyr_laplace_.resize(num_bands_ + 1);
-    dst_pyr_laplace_[0].create(dst_roi.size(), CV_32FC3);
-    dst_pyr_laplace_[0].setTo(Scalar::all(0));
+    dst_pyr_laplace_[0] = dst_;
 
     dst_band_weights_.resize(num_bands_ + 1);
     dst_band_weights_[0].create(dst_roi.size(), CV_32F);
