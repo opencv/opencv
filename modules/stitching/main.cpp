@@ -29,7 +29,6 @@ void printUsage()
     cout << "--match_conf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
     cout << "HINT:\n"  
-        << "\tDefault parameters are for '--trygpu no' configuration.\n"
         << "\tTry bigger values for --work_megapix if something is wrong.\n\n";
 }
 
