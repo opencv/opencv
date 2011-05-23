@@ -261,7 +261,7 @@ static void process8uC3( BackgroundSubtractorMOG& obj, const Mat& image, Mat& fg
     int K = obj.nmixtures;
     
     const float w0 = (float)CV_BGFG_MOG_WEIGHT_INIT;
-    const float sk0 = (float)(w0/CV_BGFG_MOG_SIGMA_INIT*sqrt(3.));
+    const float sk0 = (float)(w0/(CV_BGFG_MOG_SIGMA_INIT*sqrt(3.)));
     const float var0 = (float)(CV_BGFG_MOG_SIGMA_INIT*CV_BGFG_MOG_SIGMA_INIT);
     const float minVar = (float)(obj.noiseSigma*obj.noiseSigma);
     MixData<Vec3f>* mptr = (MixData<Vec3f>*)obj.bgmodel.data;
@@ -442,7 +442,7 @@ icvUpdateGaussianBGModel( IplImage* curr_frame, CvGaussBGModel*  bg_model, doubl
     mog.nframes = bg_model->countFrames;
     mog.history = bg_model->params.win_size;
     mog.nmixtures = bg_model->params.n_gauss;
-    mog.varThreshold = bg_model->params.std_threshold;
+    mog.varThreshold = bg_model->params.std_threshold*bg_model->params.std_threshold;
     mog.backgroundRatio = bg_model->params.bg_threshold;
     
     mog(image, mask, learningRate);
