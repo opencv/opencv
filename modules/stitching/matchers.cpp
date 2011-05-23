@@ -1,8 +1,46 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 #include <algorithm>
 #include <functional>
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/gpu/gpu.hpp"
 #include "matchers.hpp"
 #include "util.hpp"
 
@@ -153,15 +191,65 @@ struct DistIdxPair
 };
 
 
+struct MatchPairsBody
+{
+    MatchPairsBody(const MatchPairsBody& other)
+            : matcher(other.matcher), features(other.features), 
+              pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
+
+    MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features, 
+                   vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
+            : matcher(matcher), features(features), 
+              pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
+
+    void operator ()(const BlockedRange &r) const 
+    {
+        const int num_images = static_cast<int>(features.size());
+        for (int i = r.begin(); i < r.end(); ++i)
+        {
+            int from = near_pairs[i].first;
+            int to = near_pairs[i].second;
+            int pair_idx = from*num_images + to;
+
+            matcher(features[from], features[to], pairwise_matches[pair_idx]);
+            pairwise_matches[pair_idx].src_img_idx = from;
+            pairwise_matches[pair_idx].dst_img_idx = to;
+
+            size_t dual_pair_idx = to*num_images + from;
+
+            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
+            pairwise_matches[dual_pair_idx].src_img_idx = to;
+            pairwise_matches[dual_pair_idx].dst_img_idx = from;
+
+            if (!pairwise_matches[pair_idx].H.empty())
+                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
+
+            for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
+                swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
+                     pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+        }
+    }
+
+    FeaturesMatcher &matcher;
+    const vector<ImageFeatures> &features;
+    vector<MatchesInfo> &pairwise_matches;
+    vector<pair<int,int> > &near_pairs;
+
+private:
+    void operator =(const MatchPairsBody&);
+};
+
+
 void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
     const int num_images = static_cast<int>(features.size());
 
-    pairwise_matches.resize(num_images * num_images);
+    Mat_<uchar> is_near(num_images, num_images);
+    is_near.setTo(0);
+
+    // Find good image pairs
     for (int i = 0; i < num_images; ++i)
     {
-        LOGLN("Processing image " << i << "... ");
-
         vector<DistIdxPair> dists(num_images);
         for (int j = 0; j < num_images; ++j)
         {
@@ -171,41 +259,30 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
         }
 
         // Leave near images
-        vector<bool> is_near(num_images, false);
         for (int j = 0; j < num_images; ++j)
             if (dists[j].dist < 0.6)
-                is_near[dists[j].idx] = true;
+                is_near(i, dists[j].idx) = 1;
 
         // Leave k-nearest images
         int k = min(4, num_images);
         nth_element(dists.begin(), dists.end(), dists.begin() + k);
         for (int j = 0; j < k; ++j)
-            is_near[dists[j].idx] = true;
-
-        for (int j = i + 1; j < num_images; ++j)
-        {
-            // Ignore poor image pairs
-            if (!is_near[j])
-                continue;
-
-            int pair_idx = i * num_images + j;
-
-            (*this)(features[i], features[j], pairwise_matches[pair_idx]);
-            pairwise_matches[pair_idx].src_img_idx = i;
-            pairwise_matches[pair_idx].dst_img_idx = j;
-
-            // Set up dual pair matches info
-            size_t dual_pair_idx = j * num_images + i;
-            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
-            pairwise_matches[dual_pair_idx].src_img_idx = j;
-            pairwise_matches[dual_pair_idx].dst_img_idx = i;
-            if (!pairwise_matches[pair_idx].H.empty())
-                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
-            for (size_t i = 0; i < pairwise_matches[dual_pair_idx].matches.size(); ++i)
-                swap(pairwise_matches[dual_pair_idx].matches[i].queryIdx,
-                     pairwise_matches[dual_pair_idx].matches[i].trainIdx);
-        }
+            is_near(i, dists[j].idx) = 1;
     }
+
+    vector<pair<int,int> > near_pairs;
+    for (int i = 0; i < num_images - 1; ++i)
+        for (int j = i + 1; j < num_images; ++j)
+            if (is_near(i, j))
+                near_pairs.push_back(make_pair(i, j));
+
+    pairwise_matches.resize(num_images * num_images);
+    MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
+
+    if (is_thread_safe_)
+        parallel_for(BlockedRange(0, static_cast<int>(near_pairs.size())), body);
+    else
+        body(BlockedRange(0, static_cast<int>(near_pairs.size())));
 }
 
 
@@ -216,7 +293,7 @@ namespace
     class CpuMatcher : public FeaturesMatcher
     {
     public:
-        inline CpuMatcher(float match_conf) : match_conf_(match_conf) {}
+        CpuMatcher(float match_conf) : FeaturesMatcher(true), match_conf_(match_conf) {}
         void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
@@ -259,7 +336,7 @@ namespace
     class GpuMatcher : public FeaturesMatcher
     {
     public:
-        inline GpuMatcher(float match_conf) : match_conf_(match_conf) {}
+        GpuMatcher(float match_conf) : match_conf_(match_conf) {}
         void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
     private:
@@ -324,6 +401,7 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
     else
         impl_ = new CpuMatcher(match_conf);
 
+    is_thread_safe_ = impl_->isThreadSafe();
     num_matches_thresh1_ = num_matches_thresh1;
     num_matches_thresh2_ = num_matches_thresh2;
 }
@@ -337,7 +415,6 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     // Check if it makes sense to find homography
     if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
         return;
-
     // Construct point-point correspondences for homography estimation
     Mat src_points(1, matches_info.matches.size(), CV_32FC2);
     Mat dst_points(1, matches_info.matches.size(), CV_32FC2);
