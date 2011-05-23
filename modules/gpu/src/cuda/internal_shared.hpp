@@ -105,28 +105,7 @@ namespace cv
             const textureReference* tex; 
             cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
             cudaSafeCall( cudaUnbindTexture(tex) );
-        }    
-
-        struct KeyPoint_GPU
-        {
-            float x;
-            float y;
-            float laplacian;
-            float size;
-            float dir;
-            float hessian;
-        };
-
-        enum KeypointLayout 
-        {
-            SF_X,
-            SF_Y,
-            SF_LAPLACIAN,
-            SF_SIZE,
-            SF_DIR,
-            SF_HESSIAN,
-            SF_FEATURE_STRIDE
-        };
+        }
     }
 }
 

@@ -15,6 +15,17 @@ This class is used for extracting Speeded Up Robust Features (SURF) from an imag
     class SURF_GPU : public CvSURFParams
     {
     public:
+        enum KeypointLayout 
+        {
+            SF_X = 0,
+            SF_Y,
+            SF_LAPLACIAN,
+            SF_SIZE,
+            SF_DIR,
+            SF_HESSIAN,
+            SF_FEATURE_STRIDE
+        };
+
         //! the default constructor
         SURF_GPU();
         //! the full constructor taking all the necessary parameters
@@ -67,21 +78,14 @@ This class is used for extracting Speeded Up Robust Features (SURF) from an imag
         GpuMat det, trace;
 
         GpuMat maxPosBuffer;
-        GpuMat featuresBuffer;
-        GpuMat keypointsBuffer;
     };
 
 
 The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8 bit grayscale images are supported.
 
-The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in  ``GpuMat`` . The ``keypoints`` matrix is a one-row matrix of the ``CV_32FC6`` type. It contains 6 float values per feature: ``x, y, laplacian, size, dir, hessian`` .  The ``descriptors`` matrix is
-:math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
+The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in  ``GpuMat`` . The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 6` matrix with the ``CV_32FC1`` type. keypoints.ptr<float>(SF_X)[i] will contain x coordinate of i'th feature. keypoints.ptr<float>(SF_Y)[i] will contain y coordinate of i'th feature. keypoints.ptr<float>(SF_LAPLACIAN)[i] will contain laplacian sign of i'th feature. keypoints.ptr<float>(SF_SIZE)[i] will contain size of i'th feature. keypoints.ptr<float>(SF_DIR)[i] will contain orientation of i'th feature. keypoints.ptr<float>(SF_HESSIAN)[i] will contain response of i'th feature. The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
 The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
-
-**Note:**
-
-By default for user provided keypoints the class ``SURF_GPU`` recalculates keypoint's orientation and returns reodered/filtered keypoints array and coresponding decriptors array.
 
 See Also: :c:type:`SURF`
 

@@ -63,8 +63,6 @@ namespace cv { namespace gpu { namespace surf
     __constant__ int c_max_candidates;
     // The maximum number of features that memory is reserved for.
     __constant__ int c_max_features;
-    // The maximum number of keypoints that memory is reserved for.
-    __constant__ int c_max_keypoints;
     // The image size.
     __constant__ int c_img_rows;
     __constant__ int c_img_cols;
@@ -346,7 +344,9 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // INTERPOLATION
     
-    __global__ void icvInterpolateKeypoint(PtrStepf det, const int4* maxPosBuffer, KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
+    __global__ void icvInterpolateKeypoint(PtrStepf det, const int4* maxPosBuffer,
+        float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian,
+        unsigned int* featureCounter)
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
@@ -357,7 +357,6 @@ namespace cv { namespace gpu { namespace surf
         const int layer = maxPos.z - 1 + threadIdx.z;
 
         __shared__ float N9[3][3][3];
-        __shared__ KeyPoint_GPU p;
 
         N9[threadIdx.z][threadIdx.y][threadIdx.x] = det.ptr(c_layer_rows * layer + i)[j];
         __syncthreads();
@@ -422,33 +421,46 @@ namespace cv { namespace gpu { namespace surf
                 if (fabs(x[0]) <= 1.f && fabs(x[1]) <= 1.f && fabs(x[2]) <= 1.f)
                 {
                     // if the step is within the interpolation region, perform it
+                    
+                    const int size = calcSize(c_octave, maxPos.z);
 
-                    // Get a new feature index.
-                    unsigned int ind = atomicInc(featureCounter, (unsigned int)-1);
+                    const int sum_i = (maxPos.y - ((size >> 1) >> c_octave)) << c_octave;
+                    const int sum_j = (maxPos.x - ((size >> 1) >> c_octave)) << c_octave;
+                    
+                    const float center_i = sum_i + (float)(size - 1) / 2;
+                    const float center_j = sum_j + (float)(size - 1) / 2;
 
-                    if (ind < c_max_features)
+                    const float px = center_j + x[0] * (1 << c_octave);
+                    const float py = center_i + x[1] * (1 << c_octave);
+
+                    const int ds = size - calcSize(c_octave, maxPos.z - 1);
+                    const float psize = roundf(size + x[2] * ds);
+
+                    /* The sampling intervals and wavelet sized for selecting an orientation
+                     and building the keypoint descriptor are defined relative to 's' */
+                    const float s = psize * 1.2f / 9.0f;
+
+                    /* To find the dominant orientation, the gradients in x and y are
+                     sampled in a circle of radius 6s using wavelets of size 4s.
+                     We ensure the gradient wavelet size is even to ensure the
+                     wavelet pattern is balanced and symmetric around its center */
+                    const int grad_wav_size = 2 * __float2int_rn(2.0f * s);
+
+                    // check when grad_wav_size is too big
+                    if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
                     {
-                        const int size = calcSize(c_octave, maxPos.z);
+                        // Get a new feature index.
+                        unsigned int ind = atomicInc(featureCounter, (unsigned int)-1);
 
-                        const int sum_i = (maxPos.y - ((size >> 1) >> c_octave)) << c_octave;
-                        const int sum_j = (maxPos.x - ((size >> 1) >> c_octave)) << c_octave;
-                        
-                        const float center_i = sum_i + (float)(size - 1) / 2;
-                        const float center_j = sum_j + (float)(size - 1) / 2;
-
-                        p.x = center_j + x[0] * (1 << c_octave);
-                        p.y = center_i + x[1] * (1 << c_octave);
-
-                        int ds = size - calcSize(c_octave, maxPos.z - 1);
-                        p.size = roundf(size + x[2] * ds);
-
-                        p.laplacian = maxPos.w;
-                        p.dir = 0.0f;
-                        p.hessian = N9[1][1][1];
-
-                        // Should we split up this transfer over many threads?
-                        featuresBuffer[ind] = p;
-                    }
+                        if (ind < c_max_features)
+                        {
+                            featureX[ind] = px;
+                            featureY[ind] = py;
+                            featureLaplacian[ind] = maxPos.w;
+                            featureSize[ind] = psize;
+                            featureHessian[ind] = N9[1][1][1];
+                        }
+                    } // grad_wav_size check
                 } // If the subpixel interpolation worked
             }
         } // If this is thread 0.
@@ -456,7 +468,9 @@ namespace cv { namespace gpu { namespace surf
         #endif
     }
 
-    void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, KeyPoint_GPU* featuresBuffer, unsigned int* featureCounter)
+    void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter, 
+        float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian, 
+        unsigned int* featureCounter)
     {
         dim3 threads;
         threads.x = 3;
@@ -466,7 +480,7 @@ namespace cv { namespace gpu { namespace surf
         dim3 grid;
         grid.x = maxCounter;
 
-        icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featuresBuffer, featureCounter);
+        icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featureX, featureY, featureLaplacian, featureSize, featureHessian, featureCounter);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -486,7 +500,7 @@ namespace cv { namespace gpu { namespace surf
     __constant__ float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
     __constant__ float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
-    __global__ void icvCalcOrientation(const KeyPoint_GPU* featureBuffer, KeyPoint_GPU* keypoints, unsigned int* keypointCounter)
+    __global__ void icvCalcOrientation(const float* featureX, const float* featureY, const float* featureSize, float* featureDir)
     {        
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
@@ -497,16 +511,9 @@ namespace cv { namespace gpu { namespace surf
         __shared__ float s_sumx[64 * 4];
         __shared__ float s_sumy[64 * 4];
 
-        __shared__ float s_feature[6];
-
-        if (threadIdx.x < 6 && threadIdx.y == 0)
-            s_feature[threadIdx.x] = ((float*)(&featureBuffer[blockIdx.x]))[threadIdx.x];
-        __syncthreads();
-
-
         /* The sampling intervals and wavelet sized for selecting an orientation
          and building the keypoint descriptor are defined relative to 's' */
-        const float s = s_feature[SF_SIZE] * 1.2f / 9.0f;
+        const float s = featureSize[blockIdx.x] * 1.2f / 9.0f;
 
         /* To find the dominant orientation, the gradients in x and y are
          sampled in a circle of radius 6s using wavelets of size 4s.
@@ -526,8 +533,8 @@ namespace cv { namespace gpu { namespace surf
                 if (tid < ORI_SAMPLES)
                 {
                     const float margin = (float)(grad_wav_size - 1) / 2.0f;
-                    const int x = __float2int_rn(s_feature[SF_X] + c_aptX[tid] * s - margin);
-                    const int y = __float2int_rn(s_feature[SF_Y] + c_aptY[tid] * s - margin);
+                    const int x = __float2int_rn(featureX[blockIdx.x] + c_aptX[tid] * s - margin);
+                    const int y = __float2int_rn(featureY[blockIdx.x] + c_aptY[tid] * s - margin);
 
                     if ((unsigned)y < (unsigned)((c_img_rows + 1) - grad_wav_size) && (unsigned)x < (unsigned)((c_img_cols + 1) - grad_wav_size))
                     {
@@ -646,26 +653,12 @@ namespace cv { namespace gpu { namespace surf
 
             if (threadIdx.x == 0 && threadIdx.y == 0 && best_mod != 0)
             {
-                // Get a new feature index.
-                unsigned int ind = atomicInc(keypointCounter, (unsigned int)-1);
+                float kp_dir = atan2f(besty, bestx);
+                if (kp_dir < 0)
+                    kp_dir += 2.0f * CV_PI;
+                kp_dir *= 180.0f / CV_PI;
 
-                if (ind < c_max_keypoints)
-                {
-                    float kp_dir = atan2f(besty, bestx);
-                    if (kp_dir < 0)
-                        kp_dir += 2.0f * CV_PI;
-                    kp_dir *= 180.0f / CV_PI;
-                    __shared__ KeyPoint_GPU kp;
-
-                    kp.x = s_feature[SF_X];
-                    kp.y = s_feature[SF_Y];
-                    kp.laplacian = s_feature[SF_LAPLACIAN];
-                    kp.size = s_feature[SF_SIZE];
-                    kp.dir = kp_dir;
-                    kp.hessian = s_feature[SF_HESSIAN];
-
-                    keypoints[ind] = kp;
-                }
+                featureDir[blockIdx.x] = kp_dir;
             }
         }
 
@@ -676,7 +669,7 @@ namespace cv { namespace gpu { namespace surf
     #undef ORI_WIN
     #undef ORI_SAMPLES
 
-    void icvCalcOrientation_gpu(const KeyPoint_GPU* featureBuffer, int nFeatures, KeyPoint_GPU* keypoints, unsigned int* keypointCounter) 
+    void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures) 
     {
         dim3 threads;
         threads.x = 64;
@@ -685,7 +678,7 @@ namespace cv { namespace gpu { namespace surf
         dim3 grid;
         grid.x = nFeatures;
 
-        icvCalcOrientation<<<grid, threads>>>(featureBuffer, keypoints, keypointCounter);
+        icvCalcOrientation<<<grid, threads>>>(featureX, featureY, featureSize, featureDir);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaThreadSynchronize() );
@@ -748,20 +741,16 @@ namespace cv { namespace gpu { namespace surf
         return saturate_cast<unsigned char>(res);
     }  
 
-    __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25], const KeyPoint_GPU* keypoints, int tid)
+    __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25], 
+        const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, 
+        int tid)
     {
         __shared__ float s_PATCH[6][6];
 
-        // get the interest point parameters (x, y, size, response, angle)
-        __shared__ float s_pt[5];
-        if (threadIdx.y == 0)
-            s_pt[threadIdx.x] = ((float*)(&keypoints[blockIdx.x]))[threadIdx.x];
-        __syncthreads();
-
-        const float centerX = s_pt[SF_X];
-        const float centerY = s_pt[SF_Y];
-        const float size = s_pt[SF_SIZE];
-        const float descriptor_dir = s_pt[SF_DIR] * (float)(CV_PI / 180);
+        const float centerX = featureX[blockIdx.x];
+        const float centerY = featureY[blockIdx.x];
+        const float size = featureSize[blockIdx.x];
+        const float descriptor_dir = featureDir[blockIdx.x] * (float)(CV_PI / 180);
 
         /* The sampling intervals and wavelet sized for selecting an orientation
          and building the keypoint descriptor are defined relative to 's' */
@@ -838,7 +827,7 @@ namespace cv { namespace gpu { namespace surf
         }
     }
 
-	__global__ void compute_descriptors64(PtrStepf descriptors, const KeyPoint_GPU* features)
+	__global__ void compute_descriptors64(PtrStepf descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
     {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
         __shared__ float sdx[25];
@@ -848,7 +837,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy(sdx, sdy, features, tid);
+        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir, tid);
         __syncthreads();
 
         sdxabs[tid] = fabs(sdx[tid]); // |dx| array
@@ -870,7 +859,7 @@ namespace cv { namespace gpu { namespace surf
         }
     }
 
-	__global__ void compute_descriptors128(PtrStepf descriptors, const KeyPoint_GPU* features)
+	__global__ void compute_descriptors128(PtrStepf descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
     {
         // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
         __shared__ float sdx[25];
@@ -884,7 +873,7 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        calc_dx_dy(sdx, sdy, features, tid);
+        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir, tid);
         __syncthreads();
 
         if (sdy[tid] >= 0)
@@ -990,13 +979,14 @@ namespace cv { namespace gpu { namespace surf
         descriptor_base[threadIdx.x] = lookup / len;
     }
 
-    void compute_descriptors_gpu(const DevMem2Df& descriptors, const KeyPoint_GPU* features, int nFeatures)
+    void compute_descriptors_gpu(const DevMem2Df& descriptors, 
+        const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures)
     {
         // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
         
         if (descriptors.cols == 64)
         {
-            compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);
+            compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
@@ -1008,7 +998,7 @@ namespace cv { namespace gpu { namespace surf
         }
         else
         {
-            compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, features);            
+            compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);            
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );

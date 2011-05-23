@@ -1566,6 +1566,17 @@ namespace cv
         class CV_EXPORTS SURF_GPU : public CvSURFParams
         {
         public:
+            enum KeypointLayout 
+            {
+                SF_X = 0,
+                SF_Y,
+                SF_LAPLACIAN,
+                SF_SIZE,
+                SF_DIR,
+                SF_HESSIAN,
+                SF_FEATURE_STRIDE
+            };
+
             //! the default constructor
             SURF_GPU();
             //! the full constructor taking all the necessary parameters
@@ -1585,9 +1596,13 @@ namespace cv
             
             //! finds the keypoints using fast hessian detector used in SURF
             //! supports CV_8UC1 images
-            //! keypoints will have 1 row and type CV_32FC(6)
-            //! keypoints.at<float[6]>(1, i) contains i'th keypoint
-            //! format: (x, y, laplacian, size, dir, hessian)
+            //! keypoints will have nFeature cols and 6 rows
+            //! keypoints.ptr<float>(SF_X)[i] will contain x coordinate of i'th feature
+            //! keypoints.ptr<float>(SF_Y)[i] will contain y coordinate of i'th feature
+            //! keypoints.ptr<float>(SF_LAPLACIAN)[i] will contain laplacian sign of i'th feature
+            //! keypoints.ptr<float>(SF_SIZE)[i] will contain size of i'th feature
+            //! keypoints.ptr<float>(SF_DIR)[i] will contain orientation of i'th feature
+            //! keypoints.ptr<float>(SF_HESSIAN)[i] will contain response of i'th feature
             void operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints);
             //! finds the keypoints and computes their descriptors. 
             //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
@@ -1611,8 +1626,6 @@ namespace cv
             GpuMat det, trace;
 
             GpuMat maxPosBuffer;
-            GpuMat featuresBuffer;
-            GpuMat keypointsBuffer;
         };
 
     }
