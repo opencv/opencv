@@ -15,8 +15,9 @@ void printUsage()
     cout << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
         << "\t[--trygpu (yes|no)]\n"
         << "\t[--work_megapix <float>]\n"
+        << "\t[--seam_megapix <float>]\n"
         << "\t[--compose_megapix <float>]\n"
-        << "\t[--matchconf <float>]\n"
+        << "\t[--match_conf <float>]\n"
         << "\t[--ba (ray|focal_ray)]\n"
         << "\t[--conf_thresh <float>]\n"
         << "\t[--wavecorrect (no|yes)]\n"
@@ -25,7 +26,7 @@ void printUsage()
         << "\t[--blend (no|feather|multiband)]\n"
         << "\t[--numbands <int>]\n"
         << "\t[--output <result_img>]\n\n";
-    cout << "--matchconf\n"
+    cout << "--match_conf\n"
         << "\tGood values are in [0.2, 0.8] range usually.\n\n";
     cout << "HINT:\n"  
         << "\tDefault parameters are for '--trygpu no' configuration.\n"
@@ -33,10 +34,11 @@ void printUsage()
 }
 
 
-// Command line args
+// Default command line args
 vector<string> img_names;
 bool trygpu = false;
-double work_megapix = 0.2;
+double work_megapix = 0.3;
+double seam_megapix = 0.1;
 double compose_megapix = 1;
 int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
@@ -59,15 +61,6 @@ int parseCmdArgs(int argc, char** argv)
 
     for (int i = 1; i < argc; ++i)
     {
-        if (string(argv[i]) == "--work_megapix")
-        {
-            work_megapix = atof(argv[i + 1]);
-            break;
-        }
-    }
-
-    for (int i = 1; i < argc; ++i)
-    {
         if (string(argv[i]) == "--trygpu")
         {
             if (string(argv[i + 1]) == "no")
@@ -82,7 +75,15 @@ int parseCmdArgs(int argc, char** argv)
             i++;
         }
         else if (string(argv[i]) == "--work_megapix") 
+        {
+            work_megapix = atof(argv[i + 1]);
             i++; 
+        }
+        else if (string(argv[i]) == "--seam_megapix") 
+        {
+            seam_megapix = atof(argv[i + 1]);
+            i++; 
+        }
         else if (string(argv[i]) == "--compose_megapix") 
         {
             compose_megapix = atof(argv[i + 1]);
@@ -93,7 +94,7 @@ int parseCmdArgs(int argc, char** argv)
             result_name = argv[i + 1];
             i++;
         }
-        else if (string(argv[i]) == "--matchconf")
+        else if (string(argv[i]) == "--match_conf")
         {
             user_match_conf = true;
             match_conf = static_cast<float>(atof(argv[i + 1]));
@@ -205,30 +206,37 @@ int main(int argc, char* argv[])
     int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
-        cout << "Need more images\n";
+        LOGLN("Need more images");
         return -1;
     }
 
-    // We do all matching in work_scale sclae, and compositing in compose_scale scale
-    double work_scale = 1, compose_scale = 1;
-    bool is_work_scale_set = false, is_compose_scale_set = false;
+    double work_scale = 1, seam_scale = 1, compose_scale = 1;
+    bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
     LOGLN("Reading images and finding features...");
     int64 t = getTickCount();
-    vector<Mat> images(num_images);
+
     vector<ImageFeatures> features(num_images);
     SurfFeaturesFinder finder(trygpu);
     Mat full_img, img;
+
+    vector<Mat> images(num_images);
+    double seam_work_aspect = 1;
+
     for (int i = 0; i < num_images; ++i)
     {
         full_img = imread(img_names[i]);
         if (full_img.empty())
         {
-            cout << "Can't open image " << img_names[i] << endl;
+            LOGLN("Can't open image " << img_names[i]);
             return -1;
         }
         if (work_megapix < 0)
+        {
             img = full_img;
+            work_scale = 1;
+            is_work_scale_set = true;
+        }
         else
         {
             if (!is_work_scale_set)
@@ -238,11 +246,23 @@ int main(int argc, char* argv[])
             }
             resize(full_img, img, Size(), work_scale, work_scale);
         }
-        images[i] = img.clone();
+        if (!is_seam_scale_set)
+        {
+            seam_scale = min(1.0, sqrt(seam_megapix * 1e6 / full_img.size().area()));                    
+            seam_work_aspect = seam_scale / work_scale;
+            is_seam_scale_set = true;
+        }
+
         finder(img, features[i]);
+        LOGLN("Features in image #" << i << ": " << features[i].keypoints.size());
+
+        resize(full_img, img, Size(), seam_scale, seam_scale);
+        images[i] = img.clone();
     }
+
     full_img.release();
     img.release();
+
     LOGLN("Reading images and finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Pairwise matching... ");
@@ -259,18 +279,14 @@ int main(int argc, char* argv[])
     vector<Mat> img_subset;
     vector<string> img_names_subset;
     for (size_t i = 0; i < indices.size(); ++i)
-    {
-        img_subset.push_back(images[indices[i]]);
         img_names_subset.push_back(img_names[indices[i]]);
-    }
-    images = img_subset;
     img_names = img_names_subset;
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
     {
-        cout << "Need more images\n";
+        LOGLN("Need more images");
         return -1;
     }
 
@@ -327,7 +343,7 @@ int main(int argc, char* argv[])
     vector<Size> sizes(num_images);
     vector<Mat> masks(num_images);
 
-    // Preapre original images masks
+    // Preapre images masks
     for (int i = 0; i < num_images; ++i)
     {
         masks[i].create(images[i].size(), CV_8U);
@@ -335,14 +351,15 @@ int main(int argc, char* argv[])
     }
 
     // Warp images and their masks
-    Ptr<Warper> warper = Warper::createByCameraFocal(camera_focal, warp_type);
+    Ptr<Warper> warper = Warper::createByCameraFocal(static_cast<float>(camera_focal * seam_work_aspect), 
+                                                     warp_type);
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = warper->warp(images[i], static_cast<float>(cameras[i].focal), cameras[i].R, 
-                                  images_warped[i]);
+        corners[i] = warper->warp(images[i], static_cast<float>(cameras[i].focal * seam_work_aspect), 
+                                  cameras[i].R, images_warped[i]);
         sizes[i] = images_warped[i].size();
-        warper->warp(masks[i], static_cast<float>(cameras[i].focal), cameras[i].R, masks_warped[i], 
-                     INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(masks[i], static_cast<float>(cameras[i].focal * seam_work_aspect), 
+                     cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
 
     // Convert to float for blending
@@ -373,7 +390,8 @@ int main(int argc, char* argv[])
     Mat img_warped, img_warped_f;
     Mat dilated_mask, seam_mask, mask, mask_warped;
     Ptr<Blender> blender;
-    double compose_aspect = 1;
+    double compose_seam_aspect = 1;
+    double compose_work_aspect = 1;
 
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
@@ -386,8 +404,9 @@ int main(int argc, char* argv[])
             if (compose_megapix > 0)
                 compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));
             is_compose_scale_set = true;
-            compose_aspect = compose_scale / work_scale;
-            camera_focal *= static_cast<float>(compose_aspect);
+            compose_seam_aspect = compose_scale / seam_scale;
+            compose_work_aspect = compose_scale / work_scale;
+            camera_focal *= static_cast<float>(compose_work_aspect);
             warper = Warper::createByCameraFocal(camera_focal, warp_type);
         }
         if (abs(compose_scale - 1) > 1e-1)
@@ -397,7 +416,7 @@ int main(int argc, char* argv[])
         full_img.release();
 
         // Update cameras paramters
-        cameras[img_idx].focal *= compose_aspect;
+        cameras[img_idx].focal *= compose_work_aspect;
 
         // Warp the current image
         warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
@@ -429,9 +448,9 @@ int main(int argc, char* argv[])
             Rect dst_roi = resultRoi(corners, sizes);
             for (int i = 0; i < num_images; ++i)
             {
-                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_aspect;
-                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_aspect), 
-                                static_cast<int>((sizes[i].height + 1) * compose_aspect));
+                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_seam_aspect;
+                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_seam_aspect), 
+                                static_cast<int>((sizes[i].height + 1) * compose_seam_aspect));
             }
             blender->prepare(corners, sizes);
         }
