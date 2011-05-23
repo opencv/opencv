@@ -75,8 +75,8 @@ template<typename PatchType, typename SumType>
       for (size_t u = 0; u <= 6; u++, ++dX_data, ++dY_data)
       {
         // 1, 2 for Sobel, 3 and 10 for Scharr
-        float Ix = 1 * (*dX_data + *(dX_data + 14)) + 2 * (*(dX_data + 7));
-        float Iy = 1 * (*dY_data + *(dY_data + 2)) + 2 * (*(dY_data + 1));
+        float Ix = (float)(1 * (*dX_data + *(dX_data + 14)) + 2 * (*(dX_data + 7)));
+        float Iy = (float)(1 * (*dY_data + *(dY_data + 2)) + 2 * (*(dY_data + 1)));
 
         a += Ix * Ix;
         b += Iy * Iy;
@@ -154,8 +154,8 @@ HarrisResponse::HarrisResponse(const cv::Mat& image, double k) :
 void HarrisResponse::operator()(std::vector<cv::KeyPoint>& kpts) const
 {
   // Those parameters are used to match the OpenCV computation of Harris corners
-  float scale = (1 << 2) * 7.0 * 255.0;
-  scale = 1.0 / scale;
+  float scale = (1 << 2) * 7.0f * 255.0f;
+  scale = 1.0f / scale;
   float scale_sq_sq = scale * scale * scale * scale;
 
   // define it to 1 if you want to compare to what OpenCV computes
@@ -166,10 +166,10 @@ void HarrisResponse::operator()(std::vector<cv::KeyPoint>& kpts) const
 #endif
   for (std::vector<cv::KeyPoint>::iterator kpt = kpts.begin(), kpt_end = kpts.end(); kpt != kpt_end; ++kpt)
   {
-    cv::Mat patch = image_(cv::Rect(kpt->pt.x - 4, kpt->pt.y - 4, 9, 9));
+    cv::Mat patch = image_(cv::Rect(cvRound(kpt->pt.x) - 4, cvRound(kpt->pt.y) - 4, 9, 9));
 
     // Compute the response
-    kpt->response = harris<uchar, int> (patch, k_, dX_offsets_, dY_offsets_) * scale_sq_sq;
+    kpt->response = harris<uchar, int> (patch, (float)k_, dX_offsets_, dY_offsets_) * scale_sq_sq;
 
 #if HARRIS_TEST
     cv::Mat_<float> Ix(9, 9), Iy(9, 9);
@@ -225,7 +225,7 @@ template<typename SumType>
     // Go line by line in the circular patch
     std::vector<int>::const_iterator horizontal_iterator = horizontal_offsets.begin(), vertical_iterator =
         vertical_offsets.begin();
-    const SumType* val_ptr = &(integral_image.at<SumType> (kpt.pt.y, kpt.pt.x));
+    const SumType* val_ptr = &(integral_image.at<SumType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x)));
     for (int uv = 1; uv <= half_k; ++uv)
     {
       // Do the horizontal lines
@@ -239,8 +239,8 @@ template<typename SumType>
       vertical_iterator += 8;
     }
 
-    float x = m_10;
-    float y = m_01;
+    float x = (float)m_10;
+    float y = (float)m_01;
     kpt.angle = cv::fastAtan2(y, x);
   }
 
@@ -249,7 +249,7 @@ template<typename PatchType, typename SumType>
   {
     SumType m_01 = 0, m_10 = 0/*, m_00 = 0*/;
 
-    const PatchType* val_center_ptr_plus = &(image.at<PatchType> (kpt.pt.y, kpt.pt.x)), *val_center_ptr_minus;
+    const PatchType* val_center_ptr_plus = &(image.at<PatchType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x))), *val_center_ptr_minus;
 
     // Treat the center line differently, v=0
 
@@ -279,8 +279,8 @@ template<typename PatchType, typename SumType>
       m_01 += v * v_sum;
     }
 
-    float x = m_10;// / float(m_00);// / m_00;
-    float y = m_01;// / float(m_00);// / m_00;
+    float x = (float)m_10;// / float(m_00);// / m_00;
+    float y = (float)m_01;// / float(m_00);// / m_00;
     kpt.angle = cv::fastAtan2(y, x);
   }
 
@@ -291,9 +291,9 @@ inline int smoothedSum(const int *center, const int* int_diff)
   return *(center + int_diff[2]) - *(center + int_diff[3]) - *(center + int_diff[1]) + *(center + int_diff[0]);
 }
 
-inline char smoothed_comparison(const int * center, const int* diff, int l, int m)
+inline uchar smoothed_comparison(const int * center, const int* diff, int l, int m)
 {
-  static const char score[] = {1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7};
+  static const uchar score[] = {1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5, 1 << 6, 1 << 7};
   return (smoothedSum(center, diff + l) < smoothedSum(center, diff + l + 4)) ? score[m] : 0;
 }
 }
@@ -388,21 +388,21 @@ public:
 private:
   static inline int angle2Wedge(float angle)
   {
-    return (angle / 360) * kNumAngles;
+    return cvRound((angle / 360) * kNumAngles);
   }
 
-  void generateRelativePattern(int angle_idx, int sz, cv::Mat & relative_pattern)
+  void generateRelativePattern(int angle_idx, int /*sz*/, cv::Mat & relative_pattern)
   {
     // Create the relative pattern
     relative_pattern.create(512, 4, CV_32SC1);
     int * relative_pattern_data = reinterpret_cast<int*> (relative_pattern.data);
     // Get the original rotated pattern
     const int * pattern_data;
-    switch (sz)
+    //switch (sz)
     {
-      default:
+      //default:
         pattern_data = reinterpret_cast<int*> (rotated_patterns_[angle_idx].data);
-        break;
+        //break;
     }
 
     int half_kernel = ORB::kKernelWidth / 2;
@@ -421,7 +421,7 @@ private:
 
   static cv::Mat getRotationMat(int angle_idx)
   {
-    float a = float(angle_idx) / kNumAngles * CV_PI * 2;
+    float a = float(float(angle_idx) / kNumAngles * CV_PI * 2);
     return (cv::Mat_<float>(2, 2) << cos(a), -sin(a), sin(a), cos(a));
   }
 
@@ -443,12 +443,9 @@ private:
 std::vector<cv::Mat> ORB::OrbPatterns::rotated_patterns_ = OrbPatterns::generateRotatedPatterns();
 
 //this is the definition for BIT_PATTERN
-#include "orb_pattern.i"
+#include "orb_pattern.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-const float ORB::CommonParams::DEFAULT_SCALE_FACTOR = 1.2;
-const ORB::PatchSize ORB::CommonParams::DEFAULT_PATCH_SIZE = ORB::PATCH_LEARNED_31;
 
 /** Constructor
  * @param detector_params parameters to use
@@ -457,12 +454,12 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   params_(detector_params), n_features_(n_features)
 {
   // fill the extractors and descriptors for the corresponding scales
-  int n_desired_features_per_scale = n_features / ((1.0 / std::pow(params_.scale_factor_, 2.f * params_.n_levels_) - 1)
-      / (1.0 / std::pow(params_.scale_factor_, 2) - 1));
+  int n_desired_features_per_scale = cvRound(n_features / ((1.0 / std::pow(params_.scale_factor_, 2.f * params_.n_levels_) - 1)
+      / (1.0 / std::pow(params_.scale_factor_, 2) - 1)));
   n_features_per_level_.resize(detector_params.n_levels_);
   for (unsigned int level = 0; level < detector_params.n_levels_; level++)
   {
-    n_desired_features_per_scale /= std::pow(params_.scale_factor_, 2);
+    n_desired_features_per_scale = cvRound(n_desired_features_per_scale / std::pow(params_.scale_factor_, 2));
     n_features_per_level_[level] = n_desired_features_per_scale;
   }
 
@@ -470,7 +467,7 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   half_patch_size_ = params_.patch_size_ / 2;
   u_max_.resize(half_patch_size_ + 1);
   for (int v = 0; v <= half_patch_size_ * sqrt(2.f) / 2 + 1; ++v)
-    u_max_[v] = std::floor(sqrt(float(half_patch_size_ * half_patch_size_ - v * v)) + 0.5);
+    u_max_[v] = cvRound(sqrt(float(half_patch_size_ * half_patch_size_ - v * v)));
 
   // Make sure we are symmetric
   for (int v = half_patch_size_, v_0 = 0; v >= half_patch_size_ * sqrt(2.f) / 2; --v)

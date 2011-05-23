@@ -404,24 +404,17 @@ public:
 class CV_EXPORTS ORB
 {
 public:
-  enum PatchSize
-  {
-    PATCH_LEARNED_31 = 31
-  };
 
   /** the size of the signature in bytes */
-  static const int kBytes = 32;
+  enum { kBytes = 32 };
 
-  struct CommonParams
+  struct CV_EXPORTS CommonParams
   {
-    static const unsigned int DEFAULT_N_LEVELS = 3;
-    static const float DEFAULT_SCALE_FACTOR;
-    static const unsigned int DEFAULT_FIRST_LEVEL = 0;
-    static const PatchSize DEFAULT_PATCH_SIZE;
+    enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0, DEFAULT_PATCH_SIZE = 31 };
 
     /** default constructor */
-    CommonParams(float scale_factor = DEFAULT_SCALE_FACTOR, unsigned int n_levels = DEFAULT_N_LEVELS,
-                 unsigned int first_level = DEFAULT_FIRST_LEVEL, PatchSize patch_size = DEFAULT_PATCH_SIZE) :
+    CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS,
+                 unsigned int first_level = DEFAULT_FIRST_LEVEL, int patch_size = DEFAULT_PATCH_SIZE) :
       scale_factor_(scale_factor), n_levels_(n_levels), first_level_(first_level >= n_levels ? 0 : first_level),
           patch_size_(patch_size)
     {
@@ -438,7 +431,7 @@ public:
      */
     unsigned int first_level_;
     /** The size of the patch that will be used for orientation and comparisons */
-    PatchSize patch_size_;
+    int patch_size_;
   };
 
   /** Default Constructor */

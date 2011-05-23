@@ -444,8 +444,7 @@ void ORB::CommonParams::read(const FileNode& fn)
   scale_factor_ = fn["scaleFactor"];
   n_levels_ = int(fn["nLevels"]);
   first_level_ = int(fn["firsLevel"]);
-  int patch_size = fn["patchSize"];
-  patch_size_ = PatchSize(patch_size);
+  patch_size_ = fn["patchSize"];
 }
 
 void ORB::CommonParams::write(FileStorage& fs) const

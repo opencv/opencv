@@ -1496,7 +1496,7 @@ size_t CirclesGridFinder::getFirstCorner(vector<Point> &largeCornerIndices, vect
   int cornerIdx = 0;
   bool waitOutsider = true;
 
-  while (true)
+  for(;;)
   {
     if (waitOutsider)
     {
