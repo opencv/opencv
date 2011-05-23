@@ -322,8 +322,8 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 {
     const int cn = 3;
     const int MAX_LEVELS = 8;
-    cv::Mat src_pyramid[MAX_LEVELS+1];
-    cv::Mat dst_pyramid[MAX_LEVELS+1];
+    cv::Mat* src_pyramid = new cv::Mat[MAX_LEVELS+1];
+    cv::Mat* dst_pyramid = new cv::Mat[MAX_LEVELS+1];
     cv::Mat mask0;
     int i, j, level;
     //uchar* submask = 0;
@@ -369,7 +369,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                         (src_pyramid[level-1].cols+1)/2, src_pyramid[level-1].type() );
         dst_pyramid[level].create( src_pyramid[level].rows,
                         src_pyramid[level].cols, src_pyramid[level].type() );
-        cv::pyrDown( src_pyramid[level-1], src_pyramid[level] );
+        cv::pyrDown( src_pyramid[level-1], src_pyramid[level], src_pyramid[level].size() );
         //CV_CALL( cvResize( src_pyramid[level-1], src_pyramid[level], CV_INTER_AREA ));
     }
 
@@ -399,7 +399,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
             mstep = (int)m.step;
             mask = m.data + mstep;
             //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
-            cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level] );
+            cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level], dst_pyramid[level].size() );
             m.setTo(cv::Scalar::all(0));
 
             for( i = 1; i < size1.height-1; i++, dptr += dstep - (size1.width-2)*3, mask += mstep*2 )
@@ -522,6 +522,8 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
             }
         }
     }
+    delete[] src_pyramid;
+    delete[] dst_pyramid;
 }
 
 void cv::pyrMeanShiftFiltering( const InputArray& _src, OutputArray _dst,
