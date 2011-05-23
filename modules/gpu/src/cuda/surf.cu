@@ -770,25 +770,24 @@ namespace cv { namespace gpu { namespace surf
         // since grids are 2D, need to compute xBlock and yBlock indices
         const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
         const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
-        const int xIndex = xBlock * blockDim.x + threadIdx.x;
-        const int yIndex = yBlock * blockDim.y + threadIdx.y;
+        const int xIndex = xBlock * 5 + threadIdx.x;
+        const int yIndex = yBlock * 5 + threadIdx.y;
 
         s_PATCH[threadIdx.y][threadIdx.x] = calcPATCH(yIndex, xIndex, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
-        if (threadIdx.x == 0)
-            s_PATCH[threadIdx.y][5] = calcPATCH(yIndex, xBlock * blockDim.x + 5, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
-        if (threadIdx.y == 0)
-            s_PATCH[5][threadIdx.x] = calcPATCH(yBlock * blockDim.y + 5, xIndex, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
-        if (threadIdx.x == 0 && threadIdx.y == 0)
-            s_PATCH[5][5] = calcPATCH(yBlock * blockDim.y + 5, xBlock * blockDim.x + 5, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
         __syncthreads();
 
-        const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
+        if (threadIdx.x < 5 && threadIdx.y < 5)
+        {
+            tid = threadIdx.y * 5 + threadIdx.x;
 
-        const float vx = (s_PATCH[threadIdx.y    ][threadIdx.x + 1] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y + 1][threadIdx.x    ]) * dw;
-        const float vy = (s_PATCH[threadIdx.y + 1][threadIdx.x    ] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y    ][threadIdx.x + 1]) * dw;
+            const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
 
-        s_dx_bin[tid] = vx;
-        s_dy_bin[tid] = vy;
+            const float vx = (s_PATCH[threadIdx.y    ][threadIdx.x + 1] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y + 1][threadIdx.x    ]) * dw;
+            const float vy = (s_PATCH[threadIdx.y + 1][threadIdx.x    ] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y    ][threadIdx.x + 1]) * dw;
+
+            s_dx_bin[tid] = vx;
+            s_dy_bin[tid] = vy;
+        }
     }
 
     __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2, volatile float* sdata3, volatile float* sdata4, int tid)
@@ -986,7 +985,7 @@ namespace cv { namespace gpu { namespace surf
         
         if (descriptors.cols == 64)
         {
-            compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
+            compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
@@ -998,7 +997,7 @@ namespace cv { namespace gpu { namespace surf
         }
         else
         {
-            compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(5, 5, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);            
+            compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);            
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaThreadSynchronize() );
