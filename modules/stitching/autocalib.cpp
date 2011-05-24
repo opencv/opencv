@@ -82,7 +82,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
     const int num_images = static_cast<int>(features.size());
     focals.resize(num_images);
 
-    vector<vector<double> > all_focals(num_images);
+    vector<double> all_focals;
 
     for (int i = 0; i < num_images; ++i)
     {        
@@ -91,31 +91,26 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
             const MatchesInfo &m = pairwise_matches[i*num_images + j];
             if (m.H.empty())
                 continue;
-
             double f0, f1;
             bool f0ok, f1ok;
             focalsFromHomography(m.H, f0, f1, f0ok, f1ok);
             if (f0ok && f1ok) 
-            {
-                all_focals[i].push_back(f0);
-                all_focals[j].push_back(f1);
-            }
+                all_focals.push_back(sqrt(f0 * f1));
         }
     }
 
-    for (int i = 0; i < num_images; ++i)
+    if (all_focals.size() > 0)
     {
-        if (all_focals[i].size() > 0)
-        {
-            nth_element(all_focals[i].begin(), all_focals[i].end(), 
-                        all_focals[i].begin() + all_focals[i].size()/2);
-            focals[i] = all_focals[i][all_focals[i].size()/2];
-        }
-        else
-        {
-            LOGLN("Can't estimate focal length #" << i << ", will use naive approach");
-            focals[i] = features[i].img_size.width + features[i].img_size.height;
-        }
-
+        nth_element(all_focals.begin(), all_focals.end(), all_focals.begin() + all_focals.size()/2);
+        for (int i = 0; i < num_images; ++i)
+            focals[i] = all_focals[all_focals.size()/2];
+    }
+    else
+    {
+        double focals_sum = 0;
+        for (int i = 0; i < num_images; ++i)
+            focals_sum += features[i].img_size.width + features[i].img_size.height;
+        for (int i = 0; i < num_images; ++i)
+            focals[i] = focals_sum / num_images;
     }
 }
