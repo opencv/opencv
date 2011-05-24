@@ -3,11 +3,6 @@
 # ----------------------------------------------------------------------------
 project(opencv_python)
 
-option(MAKE_BOOST_PYTHON_BINDINGS Off)
-if(MAKE_BOOST_PYTHON_BINDINGS)
-add_subdirectory(boost)
-endif()
-
 include_directories(${PYTHON_INCLUDE_PATH})
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src1"
