@@ -652,6 +652,8 @@ public:
 
         cv::Mat quantizedImage;
         float texturelessRatio;
+        int area;
+
         std::vector<int> objectClassIDs;
         std::vector<TrainData> trainData;
     };
@@ -680,8 +682,8 @@ public:
 protected:
     void detectQuantized( const Mat& queryQuantizedImage, float minRatio,
                           vector<vector<Rect> >& rects,
-                          vector<vector<float> >& ratios,
-                          vector<vector<int> >& dotTemplateIndices ) const;
+                          vector<vector<float> >* ratios,
+                          vector<vector<int> >* dotTemplateIndices ) const;
 
     TrainParams trainParams;
 

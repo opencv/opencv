@@ -70,7 +70,7 @@ static void readDirContent( const string& descrFilename, vector<string>& names )
     file.close();
 }
 
-static void computeGradients( const Mat& image, Mat& magnitudes, Mat& angles )
+inline void computeGradients( const Mat& image, Mat& magnitudes, Mat& angles )
 {
     Mat dx, dy;
     cv::Sobel( image, dx, CV_32F, 1, 0, 3 );
@@ -171,28 +171,113 @@ inline int countNonZeroBits( uchar val )
     return (v & 0x0f) + ((v >> 4) & 0x0f);
 }
 
+const uchar texturelessValue = 1 << DOTDetector::TrainParams::BIN_COUNT;
+
 inline void countNonZeroAndTexturelessBits( const Mat& mat, int& nonZeroBitsCount, int& texturelessBitsCount )
 {
-    CV_Assert( mat.type() == CV_8UC1 );
+    CV_DbgAssert( mat.type() == CV_8UC1 );
 
     nonZeroBitsCount = 0;
     texturelessBitsCount = 0;
 
-    const uchar texturelessValue = 1 << DOTDetector::TrainParams::BIN_COUNT;
+    int step = mat.step1();
     for( int y = 0; y < mat.rows; y++ )
     {
+        const uchar* rowPtr = mat.data + y*step;
         for( int x = 0; x < mat.cols; x++ )
         {
-            int curCount = countNonZeroBits( mat.at<uchar>(y,x) );
+            int curCount = countNonZeroBits( rowPtr[x] );
             if( curCount )
             {
                 nonZeroBitsCount += curCount;
-                if( mat.at<uchar>(y,x) == texturelessValue )
+                if( rowPtr[x] == texturelessValue )
                     texturelessBitsCount++;
             }
         }
     }
 }
+
+struct TrainImageQuantizer
+{
+    TrainImageQuantizer( const DOTDetector::TrainParams& _params, const Mat& _magnitudesExt, const Mat& _anglesExt, Mat& _quantizedImage ) :
+        params(_params), verticalRegionCount(_params.winSize.height/_params.regionSize), horizontalRegionCount(_params.winSize.width/_params.regionSize),
+        regionSize_2(params.regionSize/2), magnitudesExt(_magnitudesExt), anglesExt(_anglesExt), quantizedImage(&_quantizedImage)
+    {
+        quantizedImage->create(verticalRegionCount, horizontalRegionCount, CV_8UC1 );
+        quantizedImage->setTo( Scalar::all(0) );
+    }
+
+    void operator()( const cv::BlockedRange& range) const
+    {
+        Rect curRect( regionSize_2, regionSize_2 + params.regionSize*range.begin(), params.regionSize, params.regionSize );
+
+        for( int vRegIdx = range.begin(); vRegIdx < range.end(); vRegIdx++)
+        {
+            for( int hRegIdx = 0; hRegIdx < horizontalRegionCount; hRegIdx++ )
+            {
+                uchar curRectBits = 0;
+
+                for( int yShift = -regionSize_2; yShift <= regionSize_2; yShift++ ) // TODO yShift += regionSize/2
+                {
+                    Rect shiftedRect = curRect;
+
+                    shiftedRect.y = curRect.y + yShift;
+
+                    for( int xShift = -regionSize_2; xShift <= regionSize_2; xShift++ ) // TODO xShift += regionSize/2
+                    {
+                        shiftedRect.x = curRect.x + xShift;
+
+                        Mat subMagnitudes( magnitudesExt, shiftedRect ), subMagnitudesCopy;
+                        subMagnitudes.copyTo( subMagnitudesCopy );
+                        Mat subAngles( anglesExt, shiftedRect );
+
+                        double maxMagnitude = 0;
+                        int strongestCount = 0;
+                        for( ; strongestCount < params.maxStrongestCount; strongestCount++ )
+                        {
+                            Point maxLoc;
+                            cv::minMaxLoc( subMagnitudesCopy, 0, &maxMagnitude, 0, &maxLoc );
+
+                            if( maxMagnitude < params.minMagnitude )
+                                break;
+
+                            subMagnitudesCopy.at<float>( maxLoc ) = -1;
+
+                            double angle = subAngles.at<float>( maxLoc );
+                            int orientationBin = getBin( angle );
+
+                            curRectBits |= 1 << orientationBin;
+                        }
+                        if( strongestCount == 0 && maxMagnitude > 0 )
+                            curRectBits |= 1 << DOTDetector::TrainParams::BIN_COUNT;
+                    }
+                }
+
+                if( !( curRectBits == (1 << DOTDetector::TrainParams::BIN_COUNT) && cv::countNonZero(magnitudesExt(curRect) == -1) ) )
+                {
+                    if( countNonZeroBits( curRectBits ) <= params.maxNonzeroBits )
+                        quantizedImage->at<uchar>(vRegIdx, hRegIdx) = curRectBits;
+                }
+
+                curRect.x += params.regionSize;
+            }
+
+            curRect.x = regionSize_2;
+            curRect.y += params.regionSize;
+        }
+    }
+
+    const DOTDetector::TrainParams& params;
+    const int verticalRegionCount;
+    const int horizontalRegionCount;
+    const int regionSize_2;
+
+    const Mat& magnitudesExt;
+    const Mat& anglesExt;
+
+    // Result matrix
+    Mat* quantizedImage;
+};
 
 static void quantizeToTrain( const Mat& _magnitudesExt, const Mat& _anglesExt, const Mat& maskExt,
                              Mat& quantizedImage, const DOTDetector::TrainParams& params )
@@ -201,133 +286,102 @@ static void quantizeToTrain( const Mat& _magnitudesExt, const Mat& _anglesExt, c
     CV_DbgAssert( params.winSize.width % params.regionSize == 0 );
     CV_DbgAssert( params.regionSize % 2 == 1 );
 
-    const int regionSize_2 = params.regionSize / 2;
-
     Mat magnitudesExt, anglesExt;
     copyTrainData( _magnitudesExt, _anglesExt, maskExt, magnitudesExt, anglesExt );
 
     const int verticalRegionCount = params.winSize.height / params.regionSize;
-    const int horizontalRegionCount = params.winSize.width / params.regionSize;
+    TrainImageQuantizer quantizer( params, magnitudesExt, anglesExt, quantizedImage );
 
-    quantizedImage = Mat( verticalRegionCount, horizontalRegionCount, CV_8UC1, Scalar::all(0) );
-
-    Rect curRect( regionSize_2, regionSize_2, params.regionSize, params.regionSize );
-
-    for( int vRegIdx = 0; vRegIdx < verticalRegionCount; vRegIdx++ )
-    {
-        for( int hRegIdx = 0; hRegIdx < horizontalRegionCount; hRegIdx++ )
-        {
-            uchar curRectBits = 0;
-
-            for( int yShift = -regionSize_2; yShift <= regionSize_2; yShift++ ) // TODO yShift += regionSize/2
-            {
-                Rect shiftedRect = curRect;
-
-                shiftedRect.y = curRect.y + yShift;
-
-                for( int xShift = -regionSize_2; xShift <= regionSize_2; xShift++ ) // TODO xShift += regionSize/2
-                {
-                    shiftedRect.x = curRect.x + xShift;
-
-                    Mat subMagnitudes( magnitudesExt, shiftedRect ), subMagnitudesCopy;
-                    subMagnitudes.copyTo( subMagnitudesCopy );
-                    Mat subAngles( anglesExt, shiftedRect );
-
-                    double maxMagnitude = 0;
-                    int strongestCount = 0;
-                    for( ; strongestCount < params.maxStrongestCount; strongestCount++ )
-                    {
-                        Point maxLoc;
-                        cv::minMaxLoc( subMagnitudesCopy, 0, &maxMagnitude, 0, &maxLoc );
-
-                        if( maxMagnitude < params.minMagnitude )
-                            break;
-
-                        subMagnitudesCopy.at<float>( maxLoc ) = -1;
-
-                        double angle = subAngles.at<float>( maxLoc );
-                        int orientationBin = getBin( angle );
-
-                        curRectBits |= 1 << orientationBin;
-                    }
-                    if( strongestCount == 0 && maxMagnitude > 0 )
-                        curRectBits |= 1 << DOTDetector::TrainParams::BIN_COUNT;
-                }
-            }
-
-            if( !( curRectBits == (1 << DOTDetector::TrainParams::BIN_COUNT) && cv::countNonZero(magnitudesExt(curRect) == -1) ) )
-            {
-                if( countNonZeroBits( curRectBits ) <= params.maxNonzeroBits )
-                    quantizedImage.at<uchar>(vRegIdx, hRegIdx) = curRectBits;
-            }
-
-            curRect.x += params.regionSize;
-        }
-        curRect.x = regionSize_2;
-        curRect.y += params.regionSize;
-    }
+    parallel_for( cv::BlockedRange(0, verticalRegionCount), quantizer );
 }
+
+struct DetectImageQuantizer
+{
+    DetectImageQuantizer( const DOTDetector::TrainParams& _params, int _regionSize, const Mat& _magnitudes, const Mat& _angles, Mat& _quantizedImage ) :
+        params(_params), verticalRegionCount(_magnitudes.rows/_regionSize), horizontalRegionCount(_magnitudes.cols/_regionSize),
+        regionSize(_regionSize), regionSize_2(_regionSize/2), magnitudes(_magnitudes), angles(_angles), quantizedImage(&_quantizedImage)
+    {
+        quantizedImage->create(verticalRegionCount, horizontalRegionCount, CV_8UC1 );
+        quantizedImage->setTo( Scalar::all(0) );
+    }
+
+    void operator()( const cv::BlockedRange& range) const
+    {
+        Rect curRect( 0, regionSize*range.begin(), regionSize, regionSize );
+
+        const int maxStrongestCount = 1;
+        for( int vRegIdx = range.begin(); vRegIdx < range.end(); vRegIdx++)
+        {
+            for( int hRegIdx = 0; hRegIdx < horizontalRegionCount; hRegIdx++ )
+            {
+                uchar curRectBits = 0;
+
+                Mat subMagnitudes( magnitudes, curRect ), subMagnitudesCopy;
+                subMagnitudes.copyTo( subMagnitudesCopy );
+                Mat subAngles( angles, curRect );
+
+                double maxMagnitude = -1;
+                int strongestCount = 0;
+
+                for( ; strongestCount < maxStrongestCount; strongestCount++ )
+                {
+                    Point maxLoc;
+                    cv::minMaxLoc( subMagnitudesCopy, 0, &maxMagnitude, 0, &maxLoc );
+
+                    if( maxMagnitude < params.minMagnitude )
+                        break;
+
+                    subMagnitudesCopy.at<float>( maxLoc ) = -1;
+
+                    double angle = subAngles.at<float>( maxLoc );
+                    int orientationBin = getBin( angle );
+
+                    curRectBits |= 1 << orientationBin;
+                }
+                if( strongestCount == 0 && maxMagnitude > 0 )
+                    curRectBits |= 1 << DOTDetector::TrainParams::BIN_COUNT;
+
+                quantizedImage->at<uchar>(vRegIdx, hRegIdx) = curRectBits;
+                curRect.x += regionSize;
+            }
+            curRect.x = 0;
+            curRect.y += regionSize;
+        }
+    }
+
+    const DOTDetector::TrainParams& params;
+    const int verticalRegionCount;
+    const int horizontalRegionCount;
+    const int regionSize;
+    const int regionSize_2;
+
+    const Mat& magnitudes;
+    const Mat& angles;
+
+    // Result matrix
+    Mat* quantizedImage;
+};
 
 static void quantizeToDetect( const Mat& _magnitudes, const Mat& angles,
                               Mat& quantizedImage, int regionSize, const DOTDetector::TrainParams& params )
 {
     Mat magnitudes; _magnitudes.copyTo( magnitudes );
-
     const int verticalRegionCount = magnitudes.rows / regionSize;
-    const int horizontalRegionCount = magnitudes.cols / regionSize;
+    DetectImageQuantizer quantizer( params, regionSize, magnitudes, angles, quantizedImage );
 
-    quantizedImage = Mat( verticalRegionCount, horizontalRegionCount, CV_8UC1, Scalar::all(0) );
+    parallel_for( cv::BlockedRange(0, verticalRegionCount), quantizer );
 
-    Rect curRect(0, 0, regionSize, regionSize);
-    const int maxStrongestCount = 1;
-    for( int vRegIdx = 0; vRegIdx < verticalRegionCount; vRegIdx++ )
-    {
-        for( int hRegIdx = 0; hRegIdx < horizontalRegionCount; hRegIdx++ )
-        {
-            uchar curRectBits = 0;
 
-            Mat subMagnitudes( magnitudes, curRect ), subMagnitudesCopy;
-            subMagnitudes.copyTo( subMagnitudesCopy );
-            Mat subAngles( angles, curRect );
-
-            double maxMagnitude = -1;
-            int strongestCount = 0;
-
-            for( ; strongestCount < maxStrongestCount; strongestCount++ )
-            {
-                Point maxLoc;
-                cv::minMaxLoc( subMagnitudesCopy, 0, &maxMagnitude, 0, &maxLoc );
-
-                if( maxMagnitude < params.minMagnitude )
-                    break;
-
-                subMagnitudesCopy.at<float>( maxLoc ) = -1;
-
-                double angle = subAngles.at<float>( maxLoc );
-                int orientationBin = getBin( angle );
-
-                curRectBits |= 1 << orientationBin;
-            }
-            if( strongestCount == 0 && maxMagnitude > 0 )
-                curRectBits |= 1 << DOTDetector::TrainParams::BIN_COUNT;
-
-            quantizedImage.at<uchar>(vRegIdx, hRegIdx) = curRectBits;
-            curRect.x += regionSize;
-        }
-        curRect.x = 0;
-        curRect.y += regionSize;
-    }
 }
 
-inline void andQuantizedImages( const Mat& queryQuantizedImage, const Mat& trainQuantizedImage, float& ratio, float& texturelessRatio )
+inline void andQuantizedImages( const Mat& queryQuantizedImage, const DOTDetector::DOTTemplate& trainTemplate, float& ratio, float& texturelessRatio )
 {
     int nonZeroCount = 0, texturelessCount = 0;
-    countNonZeroAndTexturelessBits( trainQuantizedImage & queryQuantizedImage, nonZeroCount, texturelessCount );
+    countNonZeroAndTexturelessBits( trainTemplate.quantizedImage & queryQuantizedImage, nonZeroCount, texturelessCount );
 
     CV_Assert( nonZeroCount > 0 );
-    int area = cv::countNonZero( trainQuantizedImage );
 
-    ratio = (float)nonZeroCount / area;
+    ratio = (float)nonZeroCount / trainTemplate.area;
     texturelessRatio = (float)texturelessCount / nonZeroCount;
 }
 
@@ -493,10 +547,10 @@ DOTDetector::DOTTemplate::TrainData::TrainData( const Mat& _maskedImage, const c
 {
 }
 
-DOTDetector::DOTTemplate::DOTTemplate() : texturelessRatio(-1.f) {}
+DOTDetector::DOTTemplate::DOTTemplate() : texturelessRatio(-1.f), area(0) {}
 
 DOTDetector::DOTTemplate::DOTTemplate( const cv::Mat& _quantizedImage, int _objectClassID, const cv::Mat& _maskedImage, const cv::Mat& _strongestGradientsMask ) :
-        quantizedImage(_quantizedImage), texturelessRatio(computeTexturelessRatio(_quantizedImage))
+        quantizedImage(_quantizedImage), texturelessRatio(computeTexturelessRatio(_quantizedImage)), area(cv::countNonZero(_quantizedImage))
 {
     addObjectClassID( _objectClassID, _maskedImage, _strongestGradientsMask );
 }
@@ -751,7 +805,7 @@ void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainPa
             vector<vector<float> > ratios;
             vector<vector<int> > dotTemplateIndices;
 
-            detectQuantized( queryQuantizedImage, trainParams.minRatio, rects, ratios, dotTemplateIndices );
+            detectQuantized( queryQuantizedImage, trainParams.minRatio, rects, &ratios, &dotTemplateIndices );
 
             Mat trainMaskedImage, trainStrongestGradientMask;
             if( isAddImageAndGradientMask )
@@ -791,43 +845,117 @@ void DOTDetector::train( const string& _baseDirName, const TrainParams& _trainPa
     }
 }
 
+#ifdef HAVE_TBB
+typedef tbb::concurrent_vector<float> ConcurrentFloatVector;
+typedef tbb::concurrent_vector<int> ConcurrentIntVector;
+#else
+typedef std::vector<float> ConcurrentFloatVector;
+typedef std::vector<int> ConcurrentIntVector;
+#endif
+
+struct TemplateComparator
+{
+    TemplateComparator( const Mat& _queryQuantizedImage, const vector<DOTDetector::DOTTemplate>& _dotTemplates,
+                        float _minRatio,
+                        vector<ConcurrentRectVector>& _concurrRects,
+                        vector<ConcurrentFloatVector>* _concurrRatiosPtr, vector<ConcurrentIntVector>* _concurrTemplateIndicesPtr )
+        : regionsPerRow(_dotTemplates[0].quantizedImage.rows), regionsPerCol(_dotTemplates[0].quantizedImage.cols), minRatio(_minRatio),
+          queryQuantizedImage(_queryQuantizedImage), dotTemplates(_dotTemplates), concurrRectsPtr(&_concurrRects),
+          concurrRatiosPtr(_concurrRatiosPtr), concurrTemplateIndicesPtr(_concurrTemplateIndicesPtr)
+    {};
+
+    void operator()( const cv::BlockedRange& range ) const
+    {
+        for( int tIdx = range.begin(); tIdx < range.end(); tIdx++ )
+        {
+            Rect r( 0, 0, regionsPerCol, regionsPerRow );
+            for( r.y = 0; r.y <= queryQuantizedImage.rows-r.height; r.y++ )
+            {
+                for( r.x = 0; r.x <= queryQuantizedImage.cols-r.width; r.x++ )
+                {
+                    float ratio, texturelessRatio;
+                    andQuantizedImages( queryQuantizedImage(r), dotTemplates[tIdx], ratio, texturelessRatio );
+                    if( ratio > minRatio && texturelessRatio < dotTemplates[tIdx].texturelessRatio )
+                    {
+                        for( size_t cIdx = 0; cIdx < dotTemplates[tIdx].objectClassIDs.size(); cIdx++ )
+                        {
+                            int objectClassID =  dotTemplates[tIdx].objectClassIDs[cIdx];
+                            (*concurrRectsPtr)[objectClassID].push_back( r );
+                            if( concurrRatiosPtr )
+                                (*concurrRatiosPtr)[objectClassID].push_back( ratio );
+                            if( concurrTemplateIndicesPtr )
+                                (*concurrTemplateIndicesPtr)[objectClassID].push_back( tIdx );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    const int regionsPerRow;
+    const int regionsPerCol;
+    const float minRatio;
+
+    const Mat& queryQuantizedImage;
+    const vector<DOTDetector::DOTTemplate>& dotTemplates;
+
+    vector<ConcurrentRectVector>* concurrRectsPtr;
+    vector<ConcurrentFloatVector>* concurrRatiosPtr;
+    vector<ConcurrentIntVector>* concurrTemplateIndicesPtr;
+};
+
 void DOTDetector::detectQuantized( const Mat& queryQuantizedImage, float minRatio,
                                    vector<vector<Rect> >& rects,
-                                   vector<vector<float> >& ratios,
-                                   vector<vector<int> >& dotTemplateIndices ) const
+                                   vector<vector<float> >* ratios,
+                                   vector<vector<int> >* dotTemplateIndices ) const
 {
     if( dotTemplates.empty() )
         return;
 
-    const int regionsPerRow = dotTemplates[0].quantizedImage.rows;
-    const int regionsPerCol = dotTemplates[0].quantizedImage.cols;
-
     int objectClassCount = objectClassNames.size();
 
-    rects.resize( objectClassCount );
-    ratios.resize( objectClassCount );
-    dotTemplateIndices.resize( objectClassCount );
+    vector<ConcurrentRectVector> concurrRects( objectClassCount );
+    vector<ConcurrentFloatVector> concurrRatios;
+    vector<ConcurrentIntVector> concurrTemplateIndices;
 
-    for( size_t tIdx = 0; tIdx < dotTemplates.size(); tIdx++ )
+    vector<ConcurrentFloatVector>* concurrRatiosPtr = 0;
+    vector<ConcurrentIntVector>* concurrTemplateIndicesPtr = 0;
+
+    if( ratios )
     {
-        Rect r( 0, 0, regionsPerCol, regionsPerRow );
-        for( r.y = 0; r.y <= queryQuantizedImage.rows-r.height; r.y++ )
+        concurrRatios.resize( objectClassCount );
+        concurrRatiosPtr = &concurrRatios;
+    }
+    if( dotTemplateIndices )
+    {
+        concurrTemplateIndices.resize( objectClassCount );
+        concurrTemplateIndicesPtr = &concurrTemplateIndices;
+    }
+
+    TemplateComparator templatesComparator( queryQuantizedImage, dotTemplates, minRatio, concurrRects, concurrRatiosPtr, concurrTemplateIndicesPtr );
+    parallel_for( cv::BlockedRange(0, dotTemplates.size()), templatesComparator );
+
+    // copy to the output vectors
+    rects.resize( objectClassCount );
+    if( ratios )
+        ratios->resize( objectClassCount );
+    if( dotTemplateIndices )
+        dotTemplateIndices->resize( objectClassCount );
+
+    for( int i = 0; i < objectClassCount; i++ )
+    {
+        rects[i].clear();
+        rects[i].insert( rects[i].end(), concurrRects[i].begin(), concurrRects[i].end() );
+
+        if( ratios )
         {
-            for( r.x = 0; r.x <= queryQuantizedImage.cols-r.width; r.x++ )
-            {
-                float ratio, texturelessRatio;
-                andQuantizedImages( queryQuantizedImage(r), dotTemplates[tIdx].quantizedImage, ratio, texturelessRatio );
-                if( ratio > minRatio && texturelessRatio < dotTemplates[tIdx].texturelessRatio )
-                {
-                    for( size_t cIdx = 0; cIdx < dotTemplates[tIdx].objectClassIDs.size(); cIdx++ )
-                    {
-                        int objectClassID =  dotTemplates[tIdx].objectClassIDs[cIdx];
-                        rects[objectClassID].push_back( r );
-                        ratios[objectClassID].push_back( ratio );
-                        dotTemplateIndices[objectClassID].push_back( tIdx );
-                    }
-                }
-            }
+            (*ratios)[i].clear();
+            (*ratios)[i].insert( (*ratios)[i].end(), (*concurrRatiosPtr)[i].begin(), (*concurrRatiosPtr)[i].end() );
+        }
+        if( dotTemplateIndices )
+        {
+            (*dotTemplateIndices)[i].clear();
+            (*dotTemplateIndices)[i].insert( (*dotTemplateIndices)[i].end(), (*concurrTemplateIndicesPtr)[i].begin(), (*concurrTemplateIndicesPtr)[i].end() );
         }
     }
 }
@@ -852,16 +980,20 @@ void DOTDetector::detectMultiScale( const Mat& image, vector<vector<Rect> >& rec
             dotTemplateIndices->resize( objectClassCount );
     }
 
+    vector<vector<Rect> > curRects;
+    vector<vector<float> > curRatios;
+    vector<vector<int> > curDotTemlateIndices;
+
     Mat magnitudes, angles;
     computeGradients( image, magnitudes, angles );
     for( int regionSize = detectParams.minRegionSize; regionSize <= detectParams.maxRegionSize; regionSize += detectParams.regionSizeStep )
     {
         Mat quantizedImage;
-        vector<vector<Rect> > curRects;
-        vector<vector<float> > curRatios;
-        vector<vector<int> > curDotTemlateIndices;
+
         quantizeToDetect( magnitudes, angles, quantizedImage, regionSize, trainParams );
-        detectQuantized( quantizedImage, detectParams.minRatio, curRects, curRatios, curDotTemlateIndices );
+
+        detectQuantized( quantizedImage, detectParams.minRatio, curRects,
+                         ratios ? &curRatios : 0, dotTemplateIndices ? &curDotTemlateIndices : 0 );
 
         for( int ci = 0; ci < objectClassCount; ci++ )
         {
