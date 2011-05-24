@@ -490,6 +490,7 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
         step*=2;
     }
 
+#ifdef HAVE_TBB
     /* Calculate hessian determinant and trace samples in each layer*/
     cv::parallel_for( cv::BlockedRange(0, nTotalLayers),
                       cv::SURFBuildInvoker(sum,sizes,sampleSteps,dets,traces) );
@@ -498,6 +499,13 @@ static CvSeq* icvFastHessianDetector( const CvMat* sum, const CvMat* mask_sum,
     cv::parallel_for( cv::BlockedRange(0, nMiddleLayers),
                       cv::SURFFindInvoker(sum,mask_sum,params,dets,traces,sizes,
                                           sampleSteps,middleIndices,points) );
+#else
+    cv::SURFBuildInvoker(sum,sizes,sampleSteps,dets,traces)
+	    (cv::BlockedRange(0, nTotalLayers));
+
+    cv::SURFFindInvoker(sum,mask_sum,params,dets,traces,sizes, sampleSteps,middleIndices,points)
+	    ( cv::BlockedRange(0, nMiddleLayers) );
+#endif
 
     /* Clean-up */
     for( layer = 0; layer < nTotalLayers; layer++ )
@@ -873,8 +881,15 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
 
 
     if ( N > 0 )
+    {
+#ifdef HAVE_TBB
         cv::parallel_for(cv::BlockedRange(0, N),
                      cv::SURFInvoker(&params, keypoints, descriptors, img, sum) );
+#else
+	cv::SURFInvoker invoker(&params, keypoints, descriptors, img, sum);
+	invoker(cv::BlockedRange(0, N));
+#endif
+    }
 
 
     /* remove keypoints that were marked for deletion */
