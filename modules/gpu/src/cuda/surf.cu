@@ -500,6 +500,20 @@ namespace cv { namespace gpu { namespace surf
     __constant__ float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
     __constant__ float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
+    __device__ void reduceSum32(volatile float* v_sum, float& sum)
+    {
+        v_sum[threadIdx.x] = sum;
+
+        if (threadIdx.x < 16)
+        {
+            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 16];
+            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 8];
+            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 4];
+            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 2];
+            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 1];
+        }
+    }
+
     __global__ void icvCalcOrientation(const float* featureX, const float* featureY, const float* featureSize, float* featureDir)
     {        
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
@@ -508,8 +522,7 @@ namespace cv { namespace gpu { namespace surf
         __shared__ float s_Y[128];
         __shared__ float s_angle[128];
 
-        __shared__ float s_sumx[64 * 4];
-        __shared__ float s_sumy[64 * 4];
+        __shared__ float s_sum[32 * 4];
 
         /* The sampling intervals and wavelet sized for selecting an orientation
          and building the keypoint descriptor are defined relative to 's' */
@@ -525,35 +538,30 @@ namespace cv { namespace gpu { namespace surf
         if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
         {
             // Calc X, Y, angle and store it to shared memory
+            const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+            float X = 0.0f, Y = 0.0f, angle = 0.0f;
+
+            if (tid < ORI_SAMPLES)
             {
-                const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+                const float margin = (float)(grad_wav_size - 1) / 2.0f;
+                const int x = __float2int_rn(featureX[blockIdx.x] + c_aptX[tid] * s - margin);
+                const int y = __float2int_rn(featureY[blockIdx.x] + c_aptY[tid] * s - margin);
 
-                float X = 0.0f, Y = 0.0f, angle = 0.0f;
-
-                if (tid < ORI_SAMPLES)
+                if ((unsigned)y < (unsigned)((c_img_rows + 1) - grad_wav_size) && (unsigned)x < (unsigned)((c_img_cols + 1) - grad_wav_size))
                 {
-                    const float margin = (float)(grad_wav_size - 1) / 2.0f;
-                    const int x = __float2int_rn(featureX[blockIdx.x] + c_aptX[tid] * s - margin);
-                    const int y = __float2int_rn(featureY[blockIdx.x] + c_aptY[tid] * s - margin);
-
-                    if ((unsigned)y < (unsigned)((c_img_rows + 1) - grad_wav_size) && (unsigned)x < (unsigned)((c_img_cols + 1) - grad_wav_size))
-                    {
-                        X = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NX, 4, grad_wav_size, y, x);
-                        Y = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NY, 4, grad_wav_size, y, x);
-                    
-                        angle = atan2f(Y, X);
-                        if (angle < 0)
-                            angle += 2.0f * CV_PI;
-                        angle *= 180.0f / CV_PI;
-                    }
-                }
-                if (tid < 128)
-                {
-                    s_X[tid] = X;
-                    s_Y[tid] = Y;
-                    s_angle[tid] = angle;
+                    X = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NX, 4, grad_wav_size, y, x);
+                    Y = c_aptW[tid] * icvCalcHaarPatternSum<2>(c_NY, 4, grad_wav_size, y, x);
+                
+                    angle = atan2f(Y, X);
+                    if (angle < 0)
+                        angle += 2.0f * CV_PI;
+                    angle *= 180.0f / CV_PI;
                 }
             }
+            s_X[tid] = X;
+            s_Y[tid] = Y;
+            s_angle[tid] = angle;
             __syncthreads();
 
             float bestx = 0, besty = 0, best_mod = 0;
@@ -570,43 +578,29 @@ namespace cv { namespace gpu { namespace surf
                     sumx = s_X[threadIdx.x];
                     sumy = s_Y[threadIdx.x];
                 }
+                d = abs(__float2int_rn(s_angle[threadIdx.x + 32]) - dir);
+                if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
+                {
+                    sumx += s_X[threadIdx.x + 32];
+                    sumy += s_Y[threadIdx.x + 32];
+                }
                 d = abs(__float2int_rn(s_angle[threadIdx.x + 64]) - dir);
                 if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
                 {
                     sumx += s_X[threadIdx.x + 64];
                     sumy += s_Y[threadIdx.x + 64];
                 }
-
-                float* s_sumx_row = s_sumx + threadIdx.y * 64;
-                float* s_sumy_row = s_sumy + threadIdx.y * 64;
-
-                s_sumx_row[threadIdx.x] = sumx;
-                s_sumy_row[threadIdx.x] = sumy;
-                __syncthreads();
-
-                if (threadIdx.x < 32)
+                d = abs(__float2int_rn(s_angle[threadIdx.x + 96]) - dir);
+                if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
                 {
-                    volatile float* v_sumx_row = s_sumx_row;
-                    volatile float* v_sumy_row = s_sumy_row;
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 32];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 32];
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 16];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 16];
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 8];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 8];
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 4];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 4];
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 2];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 2];
-
-                    v_sumx_row[threadIdx.x] = sumx += v_sumx_row[threadIdx.x + 1];
-                    v_sumy_row[threadIdx.x] = sumy += v_sumy_row[threadIdx.x + 1];
+                    sumx += s_X[threadIdx.x + 96];
+                    sumy += s_Y[threadIdx.x + 96];
                 }
+
+                float* s_sum_row = s_sum + threadIdx.y * 32;
+
+                reduceSum32(s_sum_row, sumx);
+                reduceSum32(s_sum_row, sumy);
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
                 if (temp_mod > best_mod)
@@ -615,7 +609,6 @@ namespace cv { namespace gpu { namespace surf
                     bestx = sumx;
                     besty = sumy;
                 }
-                __syncthreads();
             }
 
             if (threadIdx.x == 0)
@@ -672,7 +665,7 @@ namespace cv { namespace gpu { namespace surf
     void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures) 
     {
         dim3 threads;
-        threads.x = 64;
+        threads.x = 32;
         threads.y = 4;
 
         dim3 grid;
@@ -742,8 +735,7 @@ namespace cv { namespace gpu { namespace surf
     }  
 
     __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25], 
-        const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, 
-        int tid)
+        const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
     {
         __shared__ float s_PATCH[6][6];
 
@@ -778,7 +770,7 @@ namespace cv { namespace gpu { namespace surf
 
         if (threadIdx.x < 5 && threadIdx.y < 5)
         {
-            tid = threadIdx.y * 5 + threadIdx.x;
+            const int tid = threadIdx.y * 5 + threadIdx.x;
 
             const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
 
@@ -834,10 +826,10 @@ namespace cv { namespace gpu { namespace surf
         __shared__ float sdxabs[25];
         __shared__ float sdyabs[25];
 
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir, tid);
+        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir);
         __syncthreads();
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         sdxabs[tid] = fabs(sdx[tid]); // |dx| array
         sdyabs[tid] = fabs(sdy[tid]); // |dy| array
@@ -870,10 +862,10 @@ namespace cv { namespace gpu { namespace surf
         __shared__ float sdabs1[25];
         __shared__ float sdabs2[25];
 
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir, tid);
+        calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir);
         __syncthreads();
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
         if (sdy[tid] >= 0)
         {
