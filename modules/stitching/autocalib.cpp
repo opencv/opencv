@@ -76,35 +76,46 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
 }
 
 
-double estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches)
+void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
+                   vector<double> &focals)
 {
     const int num_images = static_cast<int>(features.size());
+    focals.resize(num_images);
 
-    vector<double> focals;
-    for (int src_idx = 0; src_idx < num_images; ++src_idx)
-    {
-        for (int dst_idx = 0; dst_idx < num_images; ++dst_idx)
+    vector<vector<double> > all_focals(num_images);
+
+    for (int i = 0; i < num_images; ++i)
+    {        
+        for (int j = 0; j < num_images; ++j)
         {
-            const MatchesInfo &m = pairwise_matches[src_idx*num_images + dst_idx];
+            const MatchesInfo &m = pairwise_matches[i*num_images + j];
             if (m.H.empty())
                 continue;
 
             double f0, f1;
             bool f0ok, f1ok;
             focalsFromHomography(m.H, f0, f1, f0ok, f1ok);
-            if (f0ok && f1ok) focals.push_back(sqrt(f0*f1));
+            if (f0ok && f1ok) 
+            {
+                all_focals[i].push_back(f0);
+                all_focals[j].push_back(f1);
+            }
         }
     }
 
-    if (static_cast<int>(focals.size()) >= num_images * (num_images - 1) / 2)
-    {
-        nth_element(focals.begin(), focals.end(), focals.begin() + focals.size()/2);
-        return focals[focals.size()/2];
-    }
-
-    LOGLN("Can't estimate focal length, will use naive approach");
-    double focals_sum = 0;
     for (int i = 0; i < num_images; ++i)
-        focals_sum += features[i].img_size.width + features[i].img_size.height;
-    return focals_sum / num_images;
+    {
+        if (all_focals[i].size() > 0)
+        {
+            nth_element(all_focals[i].begin(), all_focals[i].end(), 
+                        all_focals[i].begin() + all_focals[i].size()/2);
+            focals[i] = all_focals[i][all_focals[i].size()/2];
+        }
+        else
+        {
+            LOGLN("Can't estimate focal length #" << i << ", will use naive approach");
+            focals[i] = features[i].img_size.width + features[i].img_size.height;
+        }
+
+    }
 }

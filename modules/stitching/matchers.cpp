@@ -288,8 +288,11 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 //////////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace 
 {
+    // These two classes are aimed to find features matches only, not to 
+    // estimate homography
+
     class CpuMatcher : public FeaturesMatcher
     {
     public:
@@ -300,10 +303,24 @@ namespace
         float match_conf_;
     };
 
+
+    class GpuMatcher : public FeaturesMatcher
+    {
+    public:
+        GpuMatcher(float match_conf) : match_conf_(match_conf) {}
+        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+
+    private:
+        float match_conf_;
+        GpuMat descriptors1_;
+        GpuMat descriptors2_;
+        GpuMat train_idx_, distance_, all_dist_;
+    };
+
+
     void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
         matches_info.matches.clear();
-
         BruteForceMatcher< L2<float> > matcher;
         vector< vector<DMatch> > pair_matches;
 
@@ -332,34 +349,19 @@ namespace
                 matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }
-        
-    class GpuMatcher : public FeaturesMatcher
-    {
-    public:
-        GpuMatcher(float match_conf) : match_conf_(match_conf) {}
-        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
-
-    private:
-        float match_conf_;
-        GpuMat descriptors1_;
-        GpuMat descriptors2_;
-        GpuMat trainIdx_, distance_, allDist_;
-    };
+       
 
     void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
-        matches_info.matches.clear();
-
-        BruteForceMatcher_GPU< L2<float> > matcher;
-        
+        matches_info.matches.clear();       
         descriptors1_.upload(features1.descriptors);
         descriptors2_.upload(features2.descriptors);
-
+        BruteForceMatcher_GPU< L2<float> > matcher;
         vector< vector<DMatch> > pair_matches;
 
         // Find 1->2 matches
-        matcher.knnMatch(descriptors1_, descriptors2_, trainIdx_, distance_, allDist_, 2);
-        matcher.knnMatchDownload(trainIdx_, distance_, pair_matches);
+        matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
+        matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
         for (size_t i = 0; i < pair_matches.size(); ++i)
         {
             if (pair_matches[i].size() < 2)
@@ -376,8 +378,8 @@ namespace
 
         // Find 2->1 matches
         pair_matches.clear();
-        matcher.knnMatch(descriptors2_, descriptors1_, trainIdx_, distance_, allDist_, 2);
-        matcher.knnMatchDownload(trainIdx_, distance_, pair_matches);
+        matcher.knnMatch(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
+        matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
         for (size_t i = 0; i < pair_matches.size(); ++i)
         {
             if (pair_matches[i].size() < 2)
@@ -392,7 +394,9 @@ namespace
                 matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }
-}
+
+} // anonymous namespace
+
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {

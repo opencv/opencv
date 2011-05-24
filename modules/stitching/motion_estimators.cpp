@@ -109,10 +109,11 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     const int num_images = static_cast<int>(features.size());
 
     // Estimate focal length and set it for all cameras
-    double focal = estimateFocal(features, pairwise_matches);
+    vector<double> focals;
+    estimateFocal(features, pairwise_matches, focals);
     cameras.resize(num_images);
     for (int i = 0; i < num_images; ++i)
-        cameras[i].focal = focal;
+        cameras[i].focal = focals[i];
 
     // Restore global motion
     Graph span_tree;

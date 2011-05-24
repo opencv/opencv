@@ -97,16 +97,18 @@ class FeaturesMatcher
 {
 public:
     virtual ~FeaturesMatcher() {}
-    void operator ()(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) 
-    { 
-        match(features1, features2, matches_info);     
-    }
+
+    void operator ()(const ImageFeatures &features1, const ImageFeatures &features2, 
+                     MatchesInfo& matches_info) { match(features1, features2, matches_info); }
     void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches);
+
     bool isThreadSafe() const { return is_thread_safe_; }
 
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
-    virtual void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) = 0;
+
+    virtual void match(const ImageFeatures &features1, const ImageFeatures &features2, 
+                       MatchesInfo& matches_info) = 0;
 
     bool is_thread_safe_;
 };
@@ -115,14 +117,14 @@ protected:
 class BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
-    BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
+    BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, 
+                          int num_matches_thresh2 = 6);
 
 protected:
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
 
     int num_matches_thresh1_;
     int num_matches_thresh2_;
-
     cv::Ptr<FeaturesMatcher> impl_;
 };
 

@@ -49,6 +49,7 @@
 // by Heung-Yeung Shum and Richard Szeliski.
 void focalsFromHomography(const cv::Mat &H, double &f0, double &f1, bool &f0_ok, bool &f1_ok);
 
-double estimateFocal(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches);
+void estimateFocal(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                   std::vector<double> &focals);
 
 #endif // __OPENCV_AUTOCALIB_HPP__

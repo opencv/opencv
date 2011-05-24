@@ -185,6 +185,11 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
+    //int gap = 10 * (1 << num_bands_);
+    //Point tl_new(max(dst_roi_.x, tl.x - gap), 
+    //             max(dst_roi_.y, tl.y - gap));
+    //Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
+    //             min(dst_roi_.br().y, tl.y + img.rows + gap));
     Point tl_new(dst_roi_.tl());
     Point br_new(dst_roi_.br());
     int top = tl.y - tl_new.y;
@@ -215,8 +220,10 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     // Add weighted layer of the source image to the final Laplacian pyramid layer
     for (int i = 0; i <= num_bands_; ++i)
     {
-        int dx = 0;//(tl_new.x >> i) - (dst_roi_.x >> i);
-        int dy = 0;//(tl_new.y >> i) - (dst_roi_.y >> i);
+        int dx = 0;
+        int dy = 0;
+        //int dx = (tl_new.x >> i) - (dst_roi_.x >> i);
+        //int dy = (tl_new.y >> i) - (dst_roi_.y >> i);
 
         for (int y = 0; y < src_pyr_laplace[i].rows; ++y)
         {
