@@ -173,30 +173,21 @@ Dilate
     Dilates an image by using a specific structuring element.
 
 
-
-
-
-    
     :param src: Source image 
     
     :type src: :class:`CvArr`
-    
     
     :param dst: Destination image 
     
     :type dst: :class:`CvArr`
     
-    
-    :param element: Structuring element used for dilation. If it is ``None`` ,  
-        a  :math:`3\times 3`  rectangular structuring element is used 
+    :param element: Structuring element used for dilation. If it is ``None`` ,  a  ``3 x 3``  rectangular structuring element is used 
     
     :type element: :class:`IplConvKernel`
-    
     
     :param iterations: Number of times dilation is applied 
     
     :type iterations: int
-    
     
     
 The function dilates the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the maximum is taken:
@@ -208,9 +199,7 @@ The function dilates the source image using the specified structuring element th
     \max _{(x',y')  \, in  \, \texttt{element} }src(x+x',y+y') 
 
 
-The function supports the in-place mode. Dilation can be applied several (
-``iterations``
-) times. For color images, each channel is processed independently.
+The function supports the in-place mode. Dilation can be applied several (``iterations``) times. For color images, each channel is processed independently.
 
 
 .. index:: Erode
@@ -227,23 +216,16 @@ Erode
 
     Erodes an image by using a specific structuring element.
 
-
-
-
-
     
     :param src: Source image 
     
     :type src: :class:`CvArr`
     
-    
     :param dst: Destination image 
     
     :type dst: :class:`CvArr`
     
-    
-    :param element: Structuring element used for erosion. If it is ``None`` ,  
-        a  :math:`3\times 3`  rectangular structuring element is used 
+    :param element: Structuring element used for erosion. If it is ``None`` , a  ``3 x 3`` rectangular structuring element is used 
     
     :type element: :class:`IplConvKernel`
     

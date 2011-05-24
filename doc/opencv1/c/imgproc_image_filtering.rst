@@ -148,35 +148,20 @@ Dilate
 ------
 
 
-
-
-
-
 .. cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
 
     Dilates an image by using a specific structuring element.
-
-
-
-
-
     
     :param src: Source image 
     
-    
     :param dst: Destination image 
     
-    
-    :param element: Structuring element used for dilation. If it is ``NULL`` ,  
-        a  :math:`3\times 3`  rectangular structuring element is used 
-    
+    :param element: Structuring element used for dilation. If it is ``NULL``,  a ``3 x 3``  rectangular structuring element is used 
     
     :param iterations: Number of times dilation is applied 
     
     
-    
 The function dilates the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the maximum is taken:
-
 
 
 .. math::
@@ -184,9 +169,7 @@ The function dilates the source image using the specified structuring element th
     \max _{(x',y')  \, in  \, \texttt{element} }src(x+x',y+y') 
 
 
-The function supports the in-place mode. Dilation can be applied several (
-``iterations``
-) times. For color images, each channel is processed independently.
+The function supports the in-place mode. Dilation can be applied several (``iterations``) times. For color images, each channel is processed independently.
 
 
 .. index:: Erode
@@ -205,27 +188,16 @@ Erode
 
     Erodes an image by using a specific structuring element.
 
-
-
-
-
     
     :param src: Source image 
     
-    
     :param dst: Destination image 
     
+    :param element: Structuring element used for erosion. If it is ``NULL`` , a  ``3 x 3`` rectangular structuring element is used 
     
-    :param element: Structuring element used for erosion. If it is ``NULL`` ,  
-        a  :math:`3\times 3`  rectangular structuring element is used 
-    
-    
-    :param iterations: Number of times erosion is applied 
-    
-    
+    :param iterations: Number of times erosion is applied
     
 The function erodes the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the minimum is taken:
-
 
 
 .. math::
@@ -233,9 +205,7 @@ The function erodes the source image using the specified structuring element tha
     \min _{(x',y')  \, in  \, \texttt{element} }src(x+x',y+y') 
 
 
-The function supports the in-place mode. Erosion can be applied several (
-``iterations``
-) times. For color images, each channel is processed independently.
+The function supports the in-place mode. Erosion can be applied several (``iterations``) times. For color images, each channel is processed independently.
 
 
 .. index:: Filter2D

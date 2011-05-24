@@ -380,7 +380,7 @@ See Also:
 
 bilateralFilter
 -------------------
-.. c:function:: void bilateralFilter( const Mat\& src, Mat\& dst, int d,                      double sigmaColor, double sigmaSpace,                      int borderType=BORDER_DEFAULT )
+.. c:function:: void bilateralFilter( const Mat& src, Mat& dst, int d,                      double sigmaColor, double sigmaSpace,                      int borderType=BORDER_DEFAULT )
 
     Applies the bilateral filter to an image.
 
@@ -401,7 +401,7 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.ht
 
 blur
 --------
-.. c:function:: void blur( const Mat\& src, Mat\& dst,           Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
+.. c:function:: void blur( const Mat& src, Mat& dst,           Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
 
     Smoothes an image using the normalized box filter.
 
@@ -461,7 +461,7 @@ See Also:
 
 boxFilter
 -------------
-.. c:function:: void boxFilter( const Mat\& src, Mat\& dst, int ddepth,                Size ksize, Point anchor=Point(-1,-1),                bool normalize=true,                int borderType=BORDER_DEFAULT )
+.. c:function:: void boxFilter( const Mat& src, Mat& dst, int ddepth,                Size ksize, Point anchor=Point(-1,-1),                bool normalize=true,                int borderType=BORDER_DEFAULT )
 
     Smoothes an image using the box filter.
 
@@ -504,7 +504,7 @@ See Also:
 
 buildPyramid
 ----------------
-.. c:function:: void buildPyramid( const Mat\& src, vector<Mat>\& dst, int maxlevel )
+.. c:function:: void buildPyramid( const Mat& src, vector<Mat>& dst, int maxlevel )
 
     Constructs the Gaussian pyramid for an image.
 
@@ -522,7 +522,7 @@ The function constructs a vector of images and builds the Gaussian pyramid by re
 
 copyMakeBorder
 ------------------
-.. c:function:: void copyMakeBorder( const Mat\& src, Mat\& dst,                    int top, int bottom, int left, int right,                    int borderType, const Scalar\& value=Scalar() )
+.. c:function:: void copyMakeBorder( const Mat& src, Mat& dst,                    int top, int bottom, int left, int right,                    int borderType, const Scalar& value=Scalar() )
 
     Forms a border around an image.
 
@@ -664,9 +664,9 @@ See Also:
 
 createLinearFilter
 ----------------------
-.. c:function:: Ptr<FilterEngine> createLinearFilter(int srcType, int dstType,               const Mat\& kernel, Point _anchor=Point(-1,-1),               double delta=0, int rowBorderType=BORDER_DEFAULT,               int columnBorderType=-1, const Scalar\& borderValue=Scalar())
+.. c:function:: Ptr<FilterEngine> createLinearFilter(int srcType, int dstType,               const Mat& kernel, Point _anchor=Point(-1,-1),               double delta=0, int rowBorderType=BORDER_DEFAULT,               int columnBorderType=-1, const Scalar& borderValue=Scalar())
 
-.. c:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,                               const Mat\& kernel,                               Point anchor=Point(-1,-1),                               double delta=0, int bits=0)
+.. c:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,                               const Mat& kernel,                               Point anchor=Point(-1,-1),                               double delta=0, int bits=0)
 
     Creates a non-separable linear filter engine.
 
@@ -697,9 +697,9 @@ See Also:
 
 createMorphologyFilter
 --------------------------
-.. c:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    const Mat\& element, Point anchor=Point(-1,-1),    int rowBorderType=BORDER_CONSTANT,    int columnBorderType=-1,    const Scalar\& borderValue=morphologyDefaultBorderValue())
+.. c:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    const Mat& element, Point anchor=Point(-1,-1),    int rowBorderType=BORDER_CONSTANT,    int columnBorderType=-1,    const Scalar& borderValue=morphologyDefaultBorderValue())
 
-.. c:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat\& element,                                    Point anchor=Point(-1,-1))
+.. c:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& element,                                    Point anchor=Point(-1,-1))
 
 .. c:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type,                                          int esize, int anchor=-1)
 
@@ -740,11 +740,11 @@ See Also:
 
 createSeparableLinearFilter
 -------------------------------
-.. c:function:: Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,                         const Mat\& rowKernel, const Mat\& columnKernel,                         Point anchor=Point(-1,-1), double delta=0,                         int rowBorderType=BORDER_DEFAULT,                         int columnBorderType=-1,                         const Scalar\& borderValue=Scalar())
+.. c:function:: Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,                         const Mat& rowKernel, const Mat& columnKernel,                         Point anchor=Point(-1,-1), double delta=0,                         int rowBorderType=BORDER_DEFAULT,                         int columnBorderType=-1,                         const Scalar& borderValue=Scalar())
 
-.. c:function:: Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,                         const Mat\& columnKernel, int anchor,                         int symmetryType, double delta=0,                         int bits=0)
+.. c:function:: Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,                         const Mat& columnKernel, int anchor,                         int symmetryType, double delta=0,                         int bits=0)
 
-.. c:function:: Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,                         const Mat\& rowKernel, int anchor,                         int symmetryType)
+.. c:function:: Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,                         const Mat& rowKernel, int anchor,                         int symmetryType)
 
     Creates an engine for a separable linear filter.
 
@@ -785,7 +785,7 @@ See Also:
 
 dilate
 ----------
-.. c:function:: void dilate( const Mat\& src, Mat\& dst, const Mat\& element,             Point anchor=Point(-1,-1), int iterations=1,             int borderType=BORDER_CONSTANT,             const Scalar\& borderValue=morphologyDefaultBorderValue() )
+.. c:function:: void dilate( const Mat& src, Mat& dst, const Mat& element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Dilates an image by using a specific structuring element.
 
@@ -793,9 +793,9 @@ dilate
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
-    :param element: Structuring element used for dilation. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used.
+    :param element: Structuring element used for dilation. If  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the element center.
+    :param anchor: Position of the anchor within the element. The default value ``(-1, -1)`` means that the anchor is at the element center.
 
     :param iterations: Number of times dilation is applied.
 
@@ -819,7 +819,7 @@ See Also:
 
 erode
 ---------
-.. c:function:: void erode( const Mat\& src, Mat\& dst, const Mat\& element,            Point anchor=Point(-1,-1), int iterations=1,            int borderType=BORDER_CONSTANT,            const Scalar\& borderValue=morphologyDefaultBorderValue() )
+.. c:function:: void erode( const Mat& src, Mat& dst, const Mat& element,            Point anchor=Point(-1,-1), int iterations=1,            int borderType=BORDER_CONSTANT,            const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Erodes an image by using a specific structuring element.
 
@@ -827,9 +827,9 @@ erode
 
     :param dst: Destination image of the same size and type as  ``src`` .
     
-    :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  :math:`3\times 3`  rectangular structuring element is used.
+    :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the element center.
+    :param anchor: Position of the anchor within the element. The default value  ``(-1, -1)``  means that the anchor is at the element center.
 
     :param iterations: Number of times erosion is applied.
 
@@ -854,7 +854,7 @@ See Also:
 
 filter2D
 ------------
-.. c:function:: void filter2D( const Mat\& src, Mat\& dst, int ddepth,               const Mat\& kernel, Point anchor=Point(-1,-1),               double delta=0, int borderType=BORDER_DEFAULT )
+.. c:function:: void filter2D( const Mat& src, Mat& dst, int ddepth,               const Mat& kernel, Point anchor=Point(-1,-1),               double delta=0, int borderType=BORDER_DEFAULT )
 
     Convolves an image with the kernel.
 
@@ -895,7 +895,7 @@ See Also:
 
 GaussianBlur
 ----------------
-.. c:function:: void GaussianBlur( const Mat\& src, Mat\& dst, Size ksize,                   double sigmaX, double sigmaY=0,                   int borderType=BORDER_DEFAULT )
+.. c:function:: void GaussianBlur( const Mat& src, Mat& dst, Size ksize,                   double sigmaX, double sigmaY=0,                   int borderType=BORDER_DEFAULT )
 
     Smoothes an image using a Gaussian filter.
 
@@ -922,7 +922,7 @@ See Also:
 
 getDerivKernels
 -------------------
-.. c:function:: void getDerivKernels( Mat\& kx, Mat\& ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
+.. c:function:: void getDerivKernels( Mat& kx, Mat& ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
 
     Returns filter coefficients for computing spatial image derivatives.
 
@@ -988,7 +988,7 @@ See Also:
 
 getKernelType
 -----------------
-.. c:function:: int getKernelType(const Mat\& kernel, Point anchor)
+.. c:function:: int getKernelType(const Mat& kernel, Point anchor)
 
     Returns the kernel type.
 
@@ -1045,7 +1045,7 @@ The function constructs and returns the structuring element that can be then pas
 
 medianBlur
 --------------
-.. c:function:: void medianBlur( const Mat\& src, Mat\& dst, int ksize )
+.. c:function:: void medianBlur( const Mat& src, Mat& dst, int ksize )
 
     Smoothes an image using the median filter.
 
@@ -1068,7 +1068,7 @@ See Also:
 
 morphologyEx
 ----------------
-.. c:function:: void morphologyEx( const Mat\& src, Mat\& dst,                    int op, const Mat\& element,                   Point anchor=Point(-1,-1), int iterations=1,                   int borderType=BORDER_CONSTANT,                   const Scalar\& borderValue=morphologyDefaultBorderValue() )
+.. c:function:: void morphologyEx( const Mat& src, Mat& dst,                    int op, const Mat& element,                   Point anchor=Point(-1,-1), int iterations=1,                   int borderType=BORDER_CONSTANT,                   const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Performs advanced morphological transformations.
 
@@ -1139,7 +1139,7 @@ See Also:
 
 Laplacian
 -------------
-.. c:function:: void Laplacian( const Mat\& src, Mat\& dst, int ddepth,               int ksize=1, double scale=1, double delta=0,               int borderType=BORDER_DEFAULT )
+.. c:function:: void Laplacian( const Mat& src, Mat& dst, int ddepth,               int ksize=1, double scale=1, double delta=0,               int borderType=BORDER_DEFAULT )
 
     Calculates the Laplacian of an image.
 
@@ -1178,7 +1178,7 @@ See Also:
 
 pyrDown
 -----------
-.. c:function:: void pyrDown( const Mat\& src, Mat\& dst, const Size\& dstsize=Size())
+.. c:function:: void pyrDown( const Mat& src, Mat& dst, const Size& dstsize=Size())
 
     Smoothes an image and downsamples it.
 
@@ -1205,7 +1205,7 @@ Then, it downsamples the image by rejecting even rows and columns.
 
 pyrUp
 ---------
-.. c:function:: void pyrUp( const Mat\& src, Mat\& dst, const Size\& dstsize=Size())
+.. c:function:: void pyrUp( const Mat& src, Mat& dst, const Size& dstsize=Size())
 
     Upsamples an image and then smoothes it.
 
@@ -1227,7 +1227,7 @@ The function performs the upsampling step of the Gaussian pyramid construction  
 
 sepFilter2D
 ---------------
-.. c:function:: void sepFilter2D( const Mat\& src, Mat\& dst, int ddepth,                  const Mat\& rowKernel, const Mat\& columnKernel,                  Point anchor=Point(-1,-1),                  double delta=0, int borderType=BORDER_DEFAULT )
+.. c:function:: void sepFilter2D( const Mat& src, Mat& dst, int ddepth,                  const Mat& rowKernel, const Mat& columnKernel,                  Point anchor=Point(-1,-1),                  double delta=0, int borderType=BORDER_DEFAULT )
 
     Applies a separable linear filter to an image.
 
@@ -1261,7 +1261,7 @@ See Also:
 
 Sobel
 ---------
-.. c:function:: void Sobel( const Mat\& src, Mat\& dst, int ddepth,            int xorder, int yorder, int ksize=3,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
+.. c:function:: void Sobel( const Mat& src, Mat& dst, int ddepth,            int xorder, int yorder, int ksize=3,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
 
     Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -1334,7 +1334,7 @@ See Also:
 
 Scharr
 ----------
-.. c:function:: void Scharr( const Mat\& src, Mat\& dst, int ddepth,            int xorder, int yorder,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
+.. c:function:: void Scharr( const Mat& src, Mat& dst, int ddepth,            int xorder, int yorder,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
 
     Calculates the first x- or y- image derivative using Scharr operator.
 
