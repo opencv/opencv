@@ -95,6 +95,7 @@ private:
     int num_bands_;
     std::vector<cv::Mat> dst_pyr_laplace_;
     std::vector<cv::Mat> dst_band_weights_;
+    cv::Rect dst_roi_final_;
 };
 
 
@@ -109,7 +110,7 @@ void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
 
 void createLaplacePyr(const std::vector<cv::Mat>& pyr_gauss, std::vector<cv::Mat>& pyr_laplace);
 
-// Restores source image in-place. Result will be stored in pyr[0].
+// Restores source image in-place (result will be stored in pyr[0])
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
 
 #endif // __OPENCV_BLENDERS_HPP__

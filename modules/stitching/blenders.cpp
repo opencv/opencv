@@ -125,16 +125,14 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
+    createWeightMap(mask, sharpness_, weight_map_);
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
-
-    createWeightMap(mask, sharpness_, weight_map_);
 
     for (int y = 0; y < img.rows; ++y)
     {
         const Point3_<short>* src_row = img.ptr<Point3_<short> >(y);
         Point3_<short>* dst_row = dst_.ptr<Point3_<short> >(dy + y);
-
         const float* weight_row = weight_map_.ptr<float>(y);
         float* dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
 
@@ -159,6 +157,9 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 
 void MultiBandBlender::prepare(Rect dst_roi)
 {
+    dst_roi_final_ = dst_roi;
+    dst_roi.width += ((1 << num_bands_) - dst_roi.width % (1 << num_bands_)) % (1 << num_bands_);
+    dst_roi.height += ((1 << num_bands_) - dst_roi.height % (1 << num_bands_)) % (1 << num_bands_);
     Blender::prepare(dst_roi);
 
     dst_pyr_laplace_.resize(num_bands_ + 1);
@@ -185,13 +186,25 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
-    //int gap = 10 * (1 << num_bands_);
-    //Point tl_new(max(dst_roi_.x, tl.x - gap), 
-    //             max(dst_roi_.y, tl.y - gap));
-    //Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
-    //             min(dst_roi_.br().y, tl.y + img.rows + gap));
-    Point tl_new(dst_roi_.tl());
-    Point br_new(dst_roi_.br());
+    int gap = 3 * (1 << num_bands_);
+    Point tl_new(max(dst_roi_.x, tl.x - gap), 
+                 max(dst_roi_.y, tl.y - gap));
+    Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
+                 min(dst_roi_.br().y, tl.y + img.rows + gap));
+
+    tl_new.x = dst_roi_.x + (((tl_new.x - dst_roi_.x) >> num_bands_) << num_bands_);
+    tl_new.y = dst_roi_.y + (((tl_new.y - dst_roi_.y) >> num_bands_) << num_bands_);
+    int width = br_new.x - tl_new.x;
+    int height = br_new.y - tl_new.y;
+    width += ((1 << num_bands_) - width % (1 << num_bands_)) % (1 << num_bands_);
+    height += ((1 << num_bands_) - height % (1 << num_bands_)) % (1 << num_bands_);
+    br_new.x = tl_new.x + width;
+    br_new.y = tl_new.y + height;
+    int dy = max(br_new.y - dst_roi_.br().y, 0);
+    int dx = max(br_new.x - dst_roi_.br().x, 0);
+    tl_new.x -= dx; br_new.x -= dx;
+    tl_new.y -= dy; br_new.y -= dy;
+
     int top = tl.y - tl_new.y;
     int left = tl.x - tl_new.x;
     int bottom = br_new.y - tl.y - img.rows;
@@ -217,30 +230,33 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     for (int i = 0; i < num_bands_; ++i)
         pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
 
+    int y_tl = tl_new.y - dst_roi_.y;
+    int y_br = br_new.y - dst_roi_.y;
+    int x_tl = tl_new.x - dst_roi_.x;
+    int x_br = br_new.x - dst_roi_.x;
+
     // Add weighted layer of the source image to the final Laplacian pyramid layer
     for (int i = 0; i <= num_bands_; ++i)
     {
-        int dx = 0;
-        int dy = 0;
-        //int dx = (tl_new.x >> i) - (dst_roi_.x >> i);
-        //int dy = (tl_new.y >> i) - (dst_roi_.y >> i);
-
-        for (int y = 0; y < src_pyr_laplace[i].rows; ++y)
+        for (int y = y_tl; y < y_br; ++y)
         {
-            const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y);
-            Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y + dy);
+            int y_ = y - y_tl;
+            const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y_);
+            Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y);
+            const float* weight_row = weight_pyr_gauss[i].ptr<float>(y_);
+            float* dst_weight_row = dst_band_weights_[i].ptr<float>(y);
 
-            const float* weight_row = weight_pyr_gauss[i].ptr<float>(y);
-            float* dst_weight_row = dst_band_weights_[i].ptr<float>(y + dy);
-
-            for (int x = 0; x < src_pyr_laplace[i].cols; ++x)               
+            for (int x = x_tl; x < x_br; ++x)               
             {
-                dst_row[x + dx].x += static_cast<short>(src_row[x].x * weight_row[x]);
-                dst_row[x + dx].y += static_cast<short>(src_row[x].y * weight_row[x]);
-                dst_row[x + dx].z += static_cast<short>(src_row[x].z * weight_row[x]);
-                dst_weight_row[x + dx] += weight_row[x];
+                int x_ = x - x_tl;
+                dst_row[x].x += static_cast<short>(src_row[x_].x * weight_row[x_]);
+                dst_row[x].y += static_cast<short>(src_row[x_].y * weight_row[x_]);
+                dst_row[x].z += static_cast<short>(src_row[x_].z * weight_row[x_]);
+                dst_weight_row[x] += weight_row[x_];
             }
         }
+        x_tl /= 2; y_tl /= 2; 
+        x_br /= 2; y_br /= 2;
     }    
 }
 
@@ -253,7 +269,9 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
     restoreImageFromLaplacePyr(dst_pyr_laplace_);
 
     dst_ = dst_pyr_laplace_[0];
+    dst_ = dst_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
     dst_mask_ = dst_band_weights_[0] > WEIGHT_EPS;
+    dst_mask_ = dst_mask_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
     dst_pyr_laplace_.clear();
     dst_band_weights_.clear();
 
@@ -313,9 +331,7 @@ void createLaplacePyr(const vector<Mat> &pyr_gauss, vector<Mat> &pyr_laplace)
 {
     if (pyr_gauss.size() == 0)
         return;
-
     pyr_laplace.resize(pyr_gauss.size());
-
     Mat tmp;
     for (size_t i = 0; i < pyr_laplace.size() - 1; ++i)
     {
@@ -330,7 +346,6 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 {
     if (pyr.size() == 0)
         return;
-
     Mat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
     {
@@ -338,4 +353,5 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
         add(tmp, pyr[i - 1], pyr[i - 1]);
     }
 }
+
 
