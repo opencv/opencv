@@ -592,7 +592,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
                     delta = (_Tp)(p*p*0.5/(gamma + beta));
                 }
                 
-                if( iter % 4 )
+                if( iter % 2 )
                 {
                     W[i] = (_Tp)(W[i] + delta);
                     W[j] = (_Tp)(W[j] - delta);
