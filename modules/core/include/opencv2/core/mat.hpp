@@ -466,6 +466,22 @@ inline const uchar* Mat::ptr(int i0, int i1) const
     return data + i0*step.p[0] + i1*step.p[1];
 }
 
+template<typename _Tp> inline _Tp* Mat::ptr(int i0, int i1)
+{
+    CV_DbgAssert( dims >= 2 && data &&
+                  (unsigned)i0 < (unsigned)size.p[0] &&
+                  (unsigned)i1 < (unsigned)size.p[1] );
+    return (_Tp*)(data + i0*step.p[0] + i1*step.p[1]);
+}
+
+template<typename _Tp> inline const _Tp* Mat::ptr(int i0, int i1) const
+{
+    CV_DbgAssert( dims >= 2 && data &&
+                  (unsigned)i0 < (unsigned)size.p[0] &&
+                  (unsigned)i1 < (unsigned)size.p[1] );
+    return (const _Tp*)(data + i0*step.p[0] + i1*step.p[1]);
+}
+
 inline uchar* Mat::ptr(int i0, int i1, int i2)
 {
     CV_DbgAssert( dims >= 3 && data &&
@@ -482,6 +498,24 @@ inline const uchar* Mat::ptr(int i0, int i1, int i2) const
                   (unsigned)i1 < (unsigned)size.p[1] &&
                   (unsigned)i2 < (unsigned)size.p[2] );
     return data + i0*step.p[0] + i1*step.p[1] + i2*step.p[2];
+}
+
+template<typename _Tp> inline _Tp* Mat::ptr(int i0, int i1, int i2)
+{
+    CV_DbgAssert( dims >= 3 && data &&
+                  (unsigned)i0 < (unsigned)size.p[0] &&
+                  (unsigned)i1 < (unsigned)size.p[1] &&
+                  (unsigned)i2 < (unsigned)size.p[2] );
+    return (_Tp*)(data + i0*step.p[0] + i1*step.p[1] + i2*step.p[2]);
+}
+
+template<typename _Tp> inline const _Tp* Mat::ptr(int i0, int i1, int i2) const
+{
+    CV_DbgAssert( dims >= 3 && data &&
+                  (unsigned)i0 < (unsigned)size.p[0] &&
+                  (unsigned)i1 < (unsigned)size.p[1] &&
+                  (unsigned)i2 < (unsigned)size.p[2] );
+    return (const _Tp*)(data + i0*step.p[0] + i1*step.p[1] + i2*step.p[2]);
 }
 
 inline uchar* Mat::ptr(const int* idx)
