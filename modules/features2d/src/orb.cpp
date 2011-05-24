@@ -554,7 +554,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
   else
   {
     // Cluster the input keypoints
-    all_keypoints.reserve(params_.n_levels_);
+    all_keypoints.resize(params_.n_levels_);
     for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints_in_out.begin(), keypoint_end = keypoints_in_out.end(); keypoint
         != keypoint_end; ++keypoint)
       all_keypoints[keypoint->octave].push_back(*keypoint);
