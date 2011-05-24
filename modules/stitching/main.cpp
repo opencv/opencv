@@ -45,6 +45,7 @@
 #include "blenders.hpp"
 #include "seam_finders.hpp"
 #include "motion_estimators.hpp"
+#include "exposure_compensate.hpp"
 
 using namespace std;
 using namespace cv;
@@ -407,13 +408,16 @@ int main(int argc, char* argv[])
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
+    LOGLN("Exposure compensation (feed)...");
+    t = getTickCount();
+    Ptr<ExposureCompensator> compensator = new NoExposureCompensator();
+    compensator->feed(images_warped, masks_warped);
+    LOGLN("Exposure compensation (feed), time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
     LOGLN("Finding seams...");
     t = getTickCount();
-
-    // Find seams
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
     seam_finder->find(images_warped_f, corners, masks_warped);
-
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Release unused memory
@@ -460,16 +464,21 @@ int main(int argc, char* argv[])
         // Warp the current image
         warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
                      img_warped);
-        img_warped.convertTo(img_warped_s, CV_16S);
-        img_warped.release();
-        img.release();
 
         // Warp current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));    
         warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
                      INTER_NEAREST, BORDER_CONSTANT);
+
+        // Compensate exposure
+        compensator->apply(img_idx, img_warped, mask_warped);
+
+        img_warped.convertTo(img_warped_s, CV_16S);
+        img_warped.release();
+        img.release();
         mask.release();
+
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size());
         mask_warped = seam_mask & mask_warped;
