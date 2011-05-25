@@ -110,7 +110,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
     }
     else
     {
-        nth_element(all_focals.begin(), all_focals.end(), all_focals.begin() + all_focals.size()/2);
+        nth_element(all_focals.begin(), all_focals.begin() + all_focals.size()/2, all_focals.end());
         for (int i = 0; i < num_images; ++i)
             focals[i] = all_focals[all_focals.size()/2];
     }

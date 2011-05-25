@@ -341,8 +341,13 @@ int main(int argc, char* argv[])
     vector<Mat> img_subset;
     vector<string> img_names_subset;
     for (size_t i = 0; i < indices.size(); ++i)
+    {
         img_names_subset.push_back(img_names[indices[i]]);
+        img_subset.push_back(images[indices[i]]);
+    }
+
     img_names = img_names_subset;
+    images = img_subset;
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
@@ -393,7 +398,7 @@ int main(int argc, char* argv[])
         LOGLN("Camera #" << i << " focal length: " << cameras[i].focal);
         focals.push_back(cameras[i].focal);
     }
-    nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
+    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
     float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 
     LOGLN("Warping images (auxiliary)... ");

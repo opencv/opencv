@@ -62,7 +62,7 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
                                       const vector<Mat> &masks)
 {
     const int num_images = static_cast<int>(images.size());
-    Mat_<double> N(num_images, num_images); N.setTo(0);
+    Mat_<int> N(num_images, num_images); N.setTo(0);
     Mat_<double> I(num_images, num_images); I.setTo(0);
 
     Rect dst_roi = resultRoi(corners, images);
@@ -99,8 +99,8 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
                         }
                     }
                 }
-                I(i, j) = Isum1 / N(i, j);
-                I(j, i) = Isum2 / N(i, j);
+                I(i, j) = Isum1 / max(N(i, j), 1);
+                I(j, i) = Isum2 / max(N(i, j), 1);
             }
         }
     }
