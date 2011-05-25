@@ -831,22 +831,25 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        sdxabs[tid] = fabs(sdx[tid]); // |dx| array
-        sdyabs[tid] = fabs(sdy[tid]); // |dy| array
-        __syncthreads();
-
-        reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
-        __syncthreads();
-
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
-
-        // write dx, dy, |dx|, |dy|
-        if (tid == 0)
+        if (tid < 25)
         {
-            descriptors_block[0] = sdx[0];
-            descriptors_block[1] = sdy[0];
-            descriptors_block[2] = sdxabs[0];
-            descriptors_block[3] = sdyabs[0];
+            sdxabs[tid] = fabs(sdx[tid]); // |dx| array
+            sdyabs[tid] = fabs(sdy[tid]); // |dy| array
+            __syncthreads();
+
+            reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
+            __syncthreads();
+
+            float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
+
+            // write dx, dy, |dx|, |dy|
+            if (tid == 0)
+            {
+                descriptors_block[0] = sdx[0];
+                descriptors_block[1] = sdy[0];
+                descriptors_block[2] = sdxabs[0];
+                descriptors_block[3] = sdyabs[0];
+            }
         }
     }
 
@@ -867,63 +870,66 @@ namespace cv { namespace gpu { namespace surf
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        if (sdy[tid] >= 0)
+        if (tid < 25)
         {
-            sd1[tid] = sdx[tid];
-            sdabs1[tid] = fabs(sdx[tid]);
-            sd2[tid] = 0;
-            sdabs2[tid] = 0;
-        }
-        else
-        {
-            sd1[tid] = 0;
-            sdabs1[tid] = 0;
-            sd2[tid] = sdx[tid];
-            sdabs2[tid] = fabs(sdx[tid]);
-        }
-        __syncthreads();
+            if (sdy[tid] >= 0)
+            {
+                sd1[tid] = sdx[tid];
+                sdabs1[tid] = fabs(sdx[tid]);
+                sd2[tid] = 0;
+                sdabs2[tid] = 0;
+            }
+            else
+            {
+                sd1[tid] = 0;
+                sdabs1[tid] = 0;
+                sd2[tid] = sdx[tid];
+                sdabs2[tid] = fabs(sdx[tid]);
+            }
+            __syncthreads();
 
-        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-        __syncthreads();
+            reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
+            __syncthreads();
 
-        float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
+            float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
 
-        // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
-        if (tid == 0)
-        {
-            descriptors_block[0] = sd1[0];
-            descriptors_block[1] = sdabs1[0];
-            descriptors_block[2] = sd2[0];
-            descriptors_block[3] = sdabs2[0];
-        }
-        __syncthreads();
+            // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
+            if (tid == 0)
+            {
+                descriptors_block[0] = sd1[0];
+                descriptors_block[1] = sdabs1[0];
+                descriptors_block[2] = sd2[0];
+                descriptors_block[3] = sdabs2[0];
+            }
+            __syncthreads();
 
-        if (sdx[tid] >= 0)
-        {
-            sd1[tid] = sdy[tid];
-            sdabs1[tid] = fabs(sdy[tid]);
-            sd2[tid] = 0;
-            sdabs2[tid] = 0;
-        }
-        else
-        {
-            sd1[tid] = 0;
-            sdabs1[tid] = 0;
-            sd2[tid] = sdy[tid];
-            sdabs2[tid] = fabs(sdy[tid]);
-        }
-        __syncthreads();
+            if (sdx[tid] >= 0)
+            {
+                sd1[tid] = sdy[tid];
+                sdabs1[tid] = fabs(sdy[tid]);
+                sd2[tid] = 0;
+                sdabs2[tid] = 0;
+            }
+            else
+            {
+                sd1[tid] = 0;
+                sdabs1[tid] = 0;
+                sd2[tid] = sdy[tid];
+                sdabs2[tid] = fabs(sdy[tid]);
+            }
+            __syncthreads();
 
-        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-        __syncthreads();
+            reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
+            __syncthreads();
 
-        // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
-        if (tid == 0)
-        {
-            descriptors_block[4] = sd1[0];
-            descriptors_block[5] = sdabs1[0];
-            descriptors_block[6] = sd2[0];
-            descriptors_block[7] = sdabs2[0];
+            // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
+            if (tid == 0)
+            {
+                descriptors_block[4] = sd1[0];
+                descriptors_block[5] = sdabs1[0];
+                descriptors_block[6] = sd2[0];
+                descriptors_block[7] = sdabs2[0];
+            }
         }
     }
 
