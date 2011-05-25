@@ -697,14 +697,12 @@ struct CV_EXPORTS DataMatrixCode {
 };
 
 CV_EXPORTS void findDataMatrix(const Mat& image, std::vector<DataMatrixCode>& codes);
-void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage);
+CV_EXPORTS  void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage);
 }
 
 /****************************************************************************************\
 *                                Datamatrix                                              *
 \****************************************************************************************/
-
-typedef unsigned char uint8;
 
 struct CV_EXPORTS CvDataMatrixCode {
   char msg[4];

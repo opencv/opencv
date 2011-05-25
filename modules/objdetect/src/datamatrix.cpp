@@ -12,8 +12,6 @@ using namespace std;
 #undef NDEBUG
 #include <assert.h>
 
-
-
 class Sampler {
 public:
   CvMat *im;
@@ -23,7 +21,7 @@ public:
   CvPoint fcoord(float fx, float fy);
   CvPoint coord(int ix, int iy);
   Sampler(CvMat *_im, CvPoint _o, CvPoint _c, CvPoint _cc);
-  uint8 getpixel(int ix, int iy);
+  uchar getpixel(int ix, int iy);
   int isinside(int x, int y);
   int overlap(Sampler &other);
   int hasbars();
@@ -58,7 +56,7 @@ static const CvPoint pickup[64] = { {7,6},{8,6},{7,5},{8,5},{1,5},{7,4},{8,4},{1
     {1,6},{2,6},{3,6},{3,2},{4,2},{3,1},{4,1},{5,1},{3,8},{4,8},{5,8},{6,1},{7,1},{6,8},{7,8},{8,8},{6,7},{7,7},{8,7},
     {4,7},{5,7},{4,6},{5,6},{6,6},{4,5},{5,5},{6,5},{2,5},{3,5},{2,4},{3,4},{4,4},{2,3},{3,3},{4,3},{8,3},{1,3},{8,2},
     {1,2},{2,2},{8,1},{1,1},{2,1},{5,4},{6,4},{5,3},{6,3},{7,3},{5,2},{6,2},{7,2} };
-static const uint8 Alog[256] = { 1,2,4,8,16,32,64,128,45,90,180,69,138,57,114,228,229,231,227,235,251,219,155,27,
+static const uchar Alog[256] = { 1,2,4,8,16,32,64,128,45,90,180,69,138,57,114,228,229,231,227,235,251,219,155,27,
     54,108,216,157,23,46,92,184,93,186,89,178,73,146,9,18,36,72,144,13,26,52,104,208,141,55,110,220,149,7,14,28,
     56,112,224,237,247,195,171,123,246,193,175,115,230,225,239,243,203,187,91,182,65,130,41,82,164,101,202,185,95,
     190,81,162,105,210,137,63,126,252,213,135,35,70,140,53,106,212,133,39,78,156,21,42,84,168,125,250,217,159,19,
@@ -67,7 +65,7 @@ static const uint8 Alog[256] = { 1,2,4,8,16,32,64,128,45,90,180,69,138,57,114,22
     169,127,254,209,143,51,102,204,181,71,142,49,98,196,165,103,206,177,79,158,17,34,68,136,61,122,244,197,167,99,
     198,161,111,222,145,15,30,60,120,240,205,183,67,134,33,66,132,37,74,148,5,10,20,40,80,160,109,218,153,31,62,
     124,248,221,151,3,6,12,24,48,96,192,173,119,238,241,207,179,75,150,1 };
-static const uint8 Log[256] = { (uchar)-255,255,1,240,2,225,241,53,3,38,226,133,242,43,54,210,4,195,39,
+static const uchar Log[256] = { (uchar)-255,255,1,240,2,225,241,53,3,38,226,133,242,43,54,210,4,195,39,
     114,227,106,134,28,243,140,44,23,55,118,211,234,5,219,196,96,40,222,115,103,228,78,107,125,
     135,8,29,162,244,186,141,180,45,99,24,49,56,13,119,153,212,199,235,91,6,76,220,217,197,11,97,
     184,41,36,223,253,116,138,104,193,229,86,79,171,108,165,126,145,136,34,9,74,30,32,163,84,245,
@@ -130,7 +128,7 @@ CvPoint Sampler::coord(int ix, int iy)
   return fcoord(0.05f + 0.1f * ix, 0.05f + 0.1f * iy);
 }
 
-uint8 Sampler::getpixel(int ix, int iy)
+uchar Sampler::getpixel(int ix, int iy)
 {
   CvPoint pt = coord(ix, iy);
   if ((0 <= pt.x) && (pt.x < im->cols) && (0 <= pt.y) && (pt.y < im->rows))
@@ -171,7 +169,7 @@ int Sampler::hasbars()
 
 void Sampler::timing()
 {
-  uint8 light, dark = getpixel(9, 0);
+  uchar light, dark = getpixel(9, 0);
   for (int i = 1; i < 3; i += 2) {
     light = getpixel(9, i);
     // if (light <= dark)
@@ -214,7 +212,7 @@ static void apron(CvMat *v)
 static void cfollow(CvMat *src, CvMat *dst)
 {
   int sx, sy;
-  uint8 *vpd = cvPtr2D(src, 0, 0);
+  uchar *vpd = cvPtr2D(src, 0, 0);
   for (sy = 0; sy < src->rows; sy++) {
     short *wr = (short*)cvPtr2D(dst, sy, 0);
     for (sx = 0; sx < src->cols; sx++) {
@@ -248,22 +246,22 @@ static void cfollow(CvMat *src, CvMat *dst)
   }
 }
 
-static uint8 gf256mul(uint8 a, uint8 b)
+static uchar gf256mul(uchar a, uchar b)
 {
     return Alog[(Log[a] + Log[b]) % 255];
 }
 
 static int decode(Sampler &sa, code &cc)
 {
-  uint8 binary[8] = {0,0,0,0,0,0,0,0};
-  uint8 b = 0;
+  uchar binary[8] = {0,0,0,0,0,0,0,0};
+  uchar b = 0;
   int i, sum;
 
   sum = 0;
 
   for (i = 0; i < 64; i++)
     sum += sa.getpixel(1 + (i & 7), 1 + (i >> 3));
-  uint8 mean = (uint8)(sum / 64);
+  uchar mean = (uchar)(sum / 64);
   for (i = 0; i < 64; i++) {
     b = (b << 1) + (sa.getpixel(pickup[i].x, pickup[i].y) <= mean);
     if ((i & 7) == 7) {
@@ -274,13 +272,13 @@ static int decode(Sampler &sa, code &cc)
 
   // Compute the 5 RS codewords for the 3 datawords
 
-  uint8 c[5] = {0,0,0,0,0};
+  uchar c[5] = {0,0,0,0,0};
   {
     int i, j;
-    uint8 a[5] = {228, 48, 15, 111, 62};
+    uchar a[5] = {228, 48, 15, 111, 62};
     int k = 5;
     for (i = 0; i < 3; i++) {
-      uint8 t = binary[i] ^ c[4];
+      uchar t = binary[i] ^ c[4];
       for (j = k - 1; j != -1; j--) {
         if (t == 0)
             c[j] = 0;
@@ -297,9 +295,9 @@ static int decode(Sampler &sa, code &cc)
       (c[2] == binary[5]) &&
       (c[1] == binary[6]) &&
       (c[0] == binary[7])) {
-    uint8 x = 0xff & (binary[0] - 1);
-    uint8 y = 0xff & (binary[1] - 1);
-    uint8 z = 0xff & (binary[2] - 1);
+    uchar x = 0xff & (binary[0] - 1);
+    uchar y = 0xff & (binary[1] - 1);
+    uchar z = 0xff & (binary[2] - 1);
     cc.msg[0] = x;
     cc.msg[1] = y;
     cc.msg[2] = z;
@@ -360,12 +358,12 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
     int sstride = thresh->step;
     int sw = thresh->cols; // source width
     for (y = 2; y < thresh->rows - 2; y++) {
-      uint8 *ps = cvPtr2D(thresh, y, 0);
-      uint8 *pd = cvPtr2D(vecpic, y, 0);
-      uint8 *pvc = cvPtr2D(vc, y, 0);
-      uint8 *pvcc = cvPtr2D(vcc, y, 0);
+      uchar *ps = cvPtr2D(thresh, y, 0);
+      uchar *pd = cvPtr2D(vecpic, y, 0);
+      uchar *pvc = cvPtr2D(vc, y, 0);
+      uchar *pvcc = cvPtr2D(vcc, y, 0);
       for (x = 0; x < sw; x++) {
-        uint8 v =
+        uchar v =
             (0x01 & ps[-2 * sstride]) |
             (0x02 & ps[-sstride + 1]) |
             (0x04 & ps[2]) |
