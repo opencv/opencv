@@ -84,15 +84,15 @@ class MultiBandBlender : public Blender
 {
 public:
     MultiBandBlender(int num_bands = 5) { setNumBands(num_bands); }
-    int numBands() const { return num_bands_; }
-    void setNumBands(int val) { num_bands_ = val; }
+    int numBands() const { return actual_num_bands_; }
+    void setNumBands(int val) { actual_num_bands_ = val; }
 
     void prepare(cv::Rect dst_roi);
     void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
     void blend(cv::Mat &dst, cv::Mat &dst_mask);
 
 private:
-    int num_bands_;
+    int actual_num_bands_, num_bands_;
     std::vector<cv::Mat> dst_pyr_laplace_;
     std::vector<cv::Mat> dst_band_weights_;
     cv::Rect dst_roi_final_;

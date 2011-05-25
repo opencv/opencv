@@ -158,8 +158,15 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 void MultiBandBlender::prepare(Rect dst_roi)
 {
     dst_roi_final_ = dst_roi;
+
+    // Crop unnecessary bands
+    double max_len = static_cast<double>(max(dst_roi.width, dst_roi.height));
+    num_bands_ = min(actual_num_bands_, static_cast<int>(ceil(log(max_len) / log(2.0))));
+
+    // Add border to the final image, to ensure sizes are divided by (1 << num_bands_)
     dst_roi.width += ((1 << num_bands_) - dst_roi.width % (1 << num_bands_)) % (1 << num_bands_);
     dst_roi.height += ((1 << num_bands_) - dst_roi.height % (1 << num_bands_)) % (1 << num_bands_);
+
     Blender::prepare(dst_roi);
 
     dst_pyr_laplace_.resize(num_bands_ + 1);
@@ -186,12 +193,14 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
+    // Keep source image in memory with small border
     int gap = 3 * (1 << num_bands_);
     Point tl_new(max(dst_roi_.x, tl.x - gap), 
                  max(dst_roi_.y, tl.y - gap));
     Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
                  min(dst_roi_.br().y, tl.y + img.rows + gap));
 
+    // Ensure coordinates of top-left, bootom-right corners are divided by (1 << num_bands_)
     tl_new.x = dst_roi_.x + (((tl_new.x - dst_roi_.x) >> num_bands_) << num_bands_);
     tl_new.y = dst_roi_.y + (((tl_new.y - dst_roi_.y) >> num_bands_) << num_bands_);
     int width = br_new.x - tl_new.x;
