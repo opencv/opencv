@@ -794,7 +794,7 @@ namespace cv { namespace gpu { namespace surf
         }
 
         // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
-        if (tid < 16)
+        if (tid < 8)
         {
             sdata1[tid] += sdata1[tid + 8];
             sdata1[tid] += sdata1[tid + 4];
