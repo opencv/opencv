@@ -5,10 +5,14 @@
 #endif
 
 #include <deque>
+#include <algorithm>
+
 using namespace std;
 
 #undef NDEBUG
 #include <assert.h>
+
+
 
 class Sampler {
 public:
@@ -18,7 +22,6 @@ public:
   CvMat *perim;
   CvPoint fcoord(float fx, float fy);
   CvPoint coord(int ix, int iy);
-  Sampler() {}
   Sampler(CvMat *_im, CvPoint _o, CvPoint _c, CvPoint _cc);
   uint8 getpixel(int ix, int iy);
   int isinside(int x, int y);
@@ -26,6 +29,8 @@ public:
   int hasbars();
   void timing();
   CvMat *extract();
+  Sampler():im(0),perim(0){}
+  ~Sampler(){}
 };
 
 class code {    // used in this file only
@@ -128,16 +133,21 @@ CvPoint Sampler::coord(int ix, int iy)
 uint8 Sampler::getpixel(int ix, int iy)
 {
   CvPoint pt = coord(ix, iy);
-  // printf("%d,%d\n", pt.x, pt.y);
-  return *cvPtr2D(im, pt.y, pt.x);
+  if ((0 <= pt.x) && (pt.x < im->cols) && (0 <= pt.y) && (pt.y < im->rows))
+    return *cvPtr2D(im, pt.y, pt.x);
+  else
+    return 0;
 }
 
 int Sampler::isinside(int x, int y)
 {
-  CvPoint2D32f fp;
-  fp.x = (float)x;
-  fp.y = (float)y;
-  return cvPointPolygonTest(perim, fp, 0) < 0;
+  CvPoint2D32f pt;
+  pt.x = (float)x;
+  pt.y = (float)y;
+  if ((0 <= pt.x) && (pt.x < im->cols) && (0 <= pt.y) && (pt.y < im->rows))
+    return cvPointPolygonTest(perim, pt, 0) < 0;
+  else
+    return 0;
 }
 
 int Sampler::overlap(Sampler &other)
@@ -329,7 +339,7 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
   return r;
 }
 
-deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
+deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
 {
 #if CV_SSE2
   int r = im->rows;
@@ -411,7 +421,7 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
         __m128 iscand = _mm_and_ps(_mm_cmpgt_ps(cmag, Kf(30)), _mm_cmpgt_ps(ccmag, Kf(30)));
 
         iscand = _mm_and_ps(iscand, _mm_cmpgt_ps(_mm_mul_ps(_mm_min_ps(cmag, ccmag), Kf(1.1f)), _mm_max_ps(cmag, ccmag)));
-	    iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_abs_ps(dot),  Kf(0.25f)));
+        iscand = _mm_and_ps(iscand, _mm_cmplt_ps(_mm_abs_ps(dot),  Kf(0.25f)));
 
         unsigned int CV_DECL_ALIGNED(16) result[4];
         _mm_store_ps((float*)result, iscand);
@@ -441,7 +451,10 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
         Sampler sa(im, o, ptc[j], ptcc[k]);
         for (i = 0; i < codes.size(); i++) {
           if (sa.overlap(codes[i].sa))
+          {
+            cvReleaseMat(&sa.perim);
             goto endo;
+          }
         }
         if (codes.size() > 0) {
           printf("searching for more\n");
@@ -450,21 +463,23 @@ deque <DataMatrixCode> cvFindDataMatrix(CvMat *im)
           codes.push_back(cc);
           goto endo;
         }
+
+        cvReleaseMat(&sa.perim);
       }
     }
 endo: ; // end search for this o
   }
 
-  cvFree(&thresh);
-  cvFree(&vecpic);
-  cvFree(&vc);
-  cvFree(&vcc);
-  cvFree(&cxy);
-  cvFree(&ccxy);
+  cvReleaseMat(&thresh);
+  cvReleaseMat(&vecpic);
+  cvReleaseMat(&vc);
+  cvReleaseMat(&vcc);
+  cvReleaseMat(&cxy);
+  cvReleaseMat(&ccxy);
 
-  deque <DataMatrixCode> rc;
+  deque <CvDataMatrixCode> rc;
   for (i = 0; i < codes.size(); i++) {
-    DataMatrixCode cc;
+    CvDataMatrixCode cc;
     strcpy(cc.msg, codes[i].msg);
     cc.original = codes[i].original;
     cc.corners = codes[i].sa.perim;
@@ -472,7 +487,68 @@ endo: ; // end search for this o
   }
   return rc;
 #else
-  deque <DataMatrixCode> rc;
+  deque <CvDataMatrixCode> rc;
   return rc;
 #endif
+}
+
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+namespace cv
+{
+namespace
+{
+  struct CvDM2DM_transform
+  {
+    DataMatrixCode operator()(CvDataMatrixCode& cvdm)
+    {
+      DataMatrixCode dm;
+      std::memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
+      dm.original = cv::Mat(cvdm.original,true);
+      cvReleaseMat(&cvdm.original);
+      cv::Mat c(cvdm.corners,true);
+      dm.corners[0] = c.at<Point>(0,0);
+      dm.corners[1] = c.at<Point>(1,0);
+      dm.corners[2] = c.at<Point>(2,0);
+      dm.corners[3] = c.at<Point>(3,0);
+      cvReleaseMat(&cvdm.corners);
+      return dm;
+    }
+  };
+  
+  struct DrawDataMatrixCode
+  {
+    DrawDataMatrixCode(cv::Mat& image):image(image){}
+    void operator()(const DataMatrixCode& code)
+    {
+      Scalar c(0, 255, 0);
+      Scalar c2(255, 0,0);
+      line(image, code.corners[0], code.corners[1], c);
+      line(image, code.corners[1], code.corners[2], c);
+      line(image, code.corners[2], code.corners[3], c);
+      line(image, code.corners[3], code.corners[0], c);
+      string code_text(code.msg,4);
+      int baseline = 0;
+      Size sz = getTextSize(code_text, CV_FONT_HERSHEY_SIMPLEX, 1, 1, &baseline);
+      putText(image, code_text, code.corners[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
+    }
+    cv::Mat& image;
+  };
+}
+
+void findDataMatrix(const cv::Mat& image, std::vector<DataMatrixCode>& codes)
+{
+  CvMat m(image);
+  deque <CvDataMatrixCode> rc = cvFindDataMatrix(&m);
+  codes.clear();
+  codes.resize(rc.size());
+  std::transform(rc.begin(),rc.end(),codes.begin(),CvDM2DM_transform());  
+}
+
+void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage)
+{
+  std::for_each(codes.begin(),codes.end(),DrawDataMatrixCode(drawImage));
+}
+
 }

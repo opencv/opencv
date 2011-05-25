@@ -690,7 +690,14 @@ protected:
     std::vector<std::string> objectClassNames;
     std::vector<DOTTemplate> dotTemplates;
 };
+struct CV_EXPORTS DataMatrixCode {
+  char msg[4]; //TODO std::string
+  Mat original;
+  Point corners[4]; //TODO vector
+};
 
+CV_EXPORTS void findDataMatrix(const Mat& image, std::vector<DataMatrixCode>& codes);
+void drawDataMatrixCodes(const std::vector<DataMatrixCode>& codes, Mat& drawImage);
 }
 
 /****************************************************************************************\
@@ -699,15 +706,14 @@ protected:
 
 typedef unsigned char uint8;
 
-class CV_EXPORTS DataMatrixCode {
-public:
+struct CV_EXPORTS CvDataMatrixCode {
   char msg[4];
   CvMat *original;
   CvMat *corners;
 };
-#include <deque>
-CV_EXPORTS std::deque<DataMatrixCode> cvFindDataMatrix(CvMat *im);
 
+#include <deque>
+CV_EXPORTS std::deque<CvDataMatrixCode> cvFindDataMatrix(CvMat *im);
 #endif
 
 #endif

@@ -3686,12 +3686,12 @@ static PyObject *pyfinddatamatrix(PyObject *self, PyObject *args)
   CvMat *image;
   if (!convert_to_CvMat(pyim, &image, "image")) return NULL;
 
-  std::deque <DataMatrixCode> codes;
+  std::deque <CvDataMatrixCode> codes;
   ERRWRAP(codes = cvFindDataMatrix(image));
 
   PyObject *pycodes = PyList_New(codes.size());
   for (size_t i = 0; i < codes.size(); i++) {
-    DataMatrixCode *pc = &codes[i];
+    CvDataMatrixCode *pc = &codes[i];
     PyList_SetItem(pycodes, i, Py_BuildValue("(sOO)", pc->msg, FROM_CvMat(pc->corners), FROM_CvMat(pc->original)));
   }
 
