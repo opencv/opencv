@@ -523,8 +523,6 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
   if ((!do_keypoints) && (!do_descriptors))
     return;
 
-  if (do_keypoints)
-    keypoints_in_out.clear();
   if (do_descriptors)
     descriptors.release();
 
@@ -560,6 +558,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
       all_keypoints[keypoint->octave].push_back(*keypoint);
   }
 
+  keypoints_in_out.clear();
   for (unsigned int level = 0; level < params_.n_levels_; ++level)
   {
     // Compute the resized image
@@ -583,29 +582,22 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
       computeDescriptors(working_mat, integral_image, level, keypoints, desc);
 
     // Copy to the output data
-    if (!desc.empty())
+    if (level != params_.first_level_)
     {
-      if (do_keypoints)
-      {
-        // Rescale the coordinates
-        if (level != params_.first_level_)
-        {
-          float scale = std::pow(params_.scale_factor_, float(level - params_.first_level_));
-          for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
-              != keypoint_end; ++keypoint)
-            keypoint->pt *= scale;
-        }
-        // And add the keypoints to the output
-        keypoints_in_out.insert(keypoints_in_out.end(), keypoints.begin(), keypoints.end());
-      }
+      float scale = std::pow(params_.scale_factor_, float(level - params_.first_level_));
+      for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
+          != keypoint_end; ++keypoint)
+        keypoint->pt *= scale;
+    }
+    // And add the keypoints to the output
+    keypoints_in_out.insert(keypoints_in_out.end(), keypoints.begin(), keypoints.end());
 
-      if (do_descriptors)
-      {
-        if (descriptors.empty())
-          desc.copyTo(descriptors);
-        else
-          descriptors.push_back(desc);
-      }
+    if (do_descriptors)
+    {
+      if (descriptors.empty())
+        desc.copyTo(descriptors);
+      else
+        descriptors.push_back(desc);
     }
   }
 }
