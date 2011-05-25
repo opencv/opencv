@@ -39,6 +39,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
+// We follow to methods described in these two papers:
+// - Heung-Yeung Shum and Richard Szeliski. 
+//   Construction of panoramic mosaics with global and local alignment. 2000.
+// - Matthew Brown and David G. Lowe. 
+//   Automatic Panoramic Image Stitching using Invariant Features. 2007.
+
 #include "precomp.hpp"
 #include "util.hpp"
 #include "warpers.hpp"
@@ -63,6 +70,7 @@ void printUsage()
         << "\t[--conf_thresh <float>]\n"
         << "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
+        << "\t[--exposcomp (no|overlap)]\n"
         << "\t[--seam (no|voronoi|graphcut)]\n" 
         << "\t[--blend (no|feather|multiband)]\n"
         << "\t[--numbands <int>]\n"
@@ -84,6 +92,7 @@ int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
 int warp_type = Warper::SPHERICAL;
+int expos_comp_type = ExposureCompensator::OVERLAP;
 bool user_match_conf = false;
 float match_conf = 0.6f;
 int seam_find_type = SeamFinder::GRAPH_CUT;
@@ -186,6 +195,19 @@ int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
+        else if (string(argv[i]) == "--exposcomp")
+        {
+            if (string(argv[i + 1]) == "no")
+                expos_comp_type = ExposureCompensator::NO;
+            else if (string(argv[i + 1]) == "overlap")
+                expos_comp_type = ExposureCompensator::OVERLAP;
+            else
+            {
+                cout << "Bad exposure compensation method\n";
+                return -1;
+            }
+            i++;
+        }        
         else if (string(argv[i]) == "--seam")
         {
             if (string(argv[i + 1]) == "no")
@@ -372,7 +394,7 @@ int main(int argc, char* argv[])
         focals.push_back(cameras[i].focal);
     }
     nth_element(focals.begin(), focals.end(), focals.begin() + focals.size() / 2);
-    float camera_focal = static_cast<float>(focals[focals.size() / 2]);
+    float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 
     LOGLN("Warping images (auxiliary)... ");
     t = getTickCount();
@@ -391,7 +413,7 @@ int main(int argc, char* argv[])
     }
 
     // Warp images and their masks
-    Ptr<Warper> warper = Warper::createByCameraFocal(static_cast<float>(camera_focal * seam_work_aspect), 
+    Ptr<Warper> warper = Warper::createByCameraFocal(static_cast<float>(warped_image_scale * seam_work_aspect), 
                                                      warp_type);
     for (int i = 0; i < num_images; ++i)
     {
@@ -410,8 +432,8 @@ int main(int argc, char* argv[])
 
     LOGLN("Exposure compensation (feed)...");
     t = getTickCount();
-    Ptr<ExposureCompensator> compensator = new NoExposureCompensator();
-    compensator->feed(images_warped, masks_warped);
+    Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
+    compensator->feed(corners, images_warped, masks_warped);
     LOGLN("Exposure compensation (feed), time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOGLN("Finding seams...");
@@ -446,10 +468,27 @@ int main(int argc, char* argv[])
             if (compose_megapix > 0)
                 compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / full_img.size().area()));
             is_compose_scale_set = true;
+
+            // Compute relative scales
             compose_seam_aspect = compose_scale / seam_scale;
             compose_work_aspect = compose_scale / work_scale;
-            camera_focal *= static_cast<float>(compose_work_aspect);
-            warper = Warper::createByCameraFocal(camera_focal, warp_type);
+
+            // Update warped image scale
+            warped_image_scale *= static_cast<float>(compose_work_aspect);
+            warper = Warper::createByCameraFocal(warped_image_scale, warp_type);
+
+            // Update corners and sizes
+            Rect dst_roi = resultRoi(corners, sizes);
+            for (int i = 0; i < num_images; ++i)
+            {
+                // Update camera focal
+                cameras[i].focal *= compose_work_aspect;
+
+                // Update corner and size
+                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_seam_aspect;
+                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_seam_aspect), 
+                                static_cast<int>((sizes[i].height + 1) * compose_seam_aspect));
+            }
         }
         if (abs(compose_scale - 1) > 1e-1)
             resize(full_img, img, Size(), compose_scale, compose_scale);
@@ -458,21 +497,18 @@ int main(int argc, char* argv[])
         full_img.release();
         Size img_size = img.size();
 
-        // Update cameras paramters
-        cameras[img_idx].focal *= compose_work_aspect;
-
         // Warp the current image
         warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
                      img_warped);
 
-        // Warp current image mask
+        // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));    
         warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
                      INTER_NEAREST, BORDER_CONSTANT);
 
         // Compensate exposure
-        compensator->apply(img_idx, img_warped, mask_warped);
+        compensator->apply(img_idx, corners[img_idx], img_warped, mask_warped);
 
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
@@ -486,20 +522,10 @@ int main(int argc, char* argv[])
         if (static_cast<Blender*>(blender) == 0)
         {
             blender = Blender::createDefault(blend_type);
-
             if (blend_type == Blender::MULTI_BAND)
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
                 mb->setNumBands(numbands);
-            }
-
-            // Determine the final image size
-            Rect dst_roi = resultRoi(corners, sizes);
-            for (int i = 0; i < num_images; ++i)
-            {
-                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_seam_aspect;
-                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_seam_aspect), 
-                                static_cast<int>((sizes[i].height + 1) * compose_seam_aspect));
             }
             blender->prepare(corners, sizes);
         }

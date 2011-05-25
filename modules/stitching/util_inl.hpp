@@ -105,11 +105,8 @@ double normL2sq(const cv::Mat &r)
 }
 
 
-template <typename T>
-static inline
-T sqr(T x)
-{
-    return x * x;
-}
+static inline int sqr(int x) { return x * x; }
+static inline float sqr(float x) { return x * x; }
+static inline double sqr(double x) { return x * x; }
 
 #endif // __OPENCV_STITCHING_UTIL_INL_HPP__

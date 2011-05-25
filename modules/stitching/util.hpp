@@ -90,22 +90,25 @@ class Graph
 {
 public:
     Graph(int num_vertices = 0) { create(num_vertices); }
-
     void create(int num_vertices) { edges_.assign(num_vertices, std::list<GraphEdge>()); }
-
     int numVertices() const { return static_cast<int>(edges_.size()); }
-
     void addEdge(int from, int to, float weight);
-
-    template <typename B>
-    B forEach(B body) const;
-
-    template <typename B> 
-    B walkBreadthFirst(int from, B body) const;
+    template <typename B> B forEach(B body) const;
+    template <typename B> B walkBreadthFirst(int from, B body) const;
     
 private:
     std::vector< std::list<GraphEdge> > edges_;
 };
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Auxiliary functions
+
+bool overlapRoi(cv::Point tl1, cv::Point tl2, cv::Size sz1, cv::Size sz2, cv::Rect &roi);
+cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images);
+cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
+cv::Point resultTl(const std::vector<cv::Point> &corners);
+
 
 #include "util_inl.hpp"
 

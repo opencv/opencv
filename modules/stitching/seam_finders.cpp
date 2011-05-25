@@ -64,20 +64,13 @@ void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
 {
     if (src.size() == 0)
         return;
-
     for (size_t i = 0; i < src.size() - 1; ++i)
     {
         for (size_t j = i + 1; j < src.size(); ++j)
         {
-            int x_min = max(corners[i].x, corners[j].x);
-            int x_max = min(corners[i].x + src[i].cols - 1, corners[j].x + src[j].cols - 1);
-            int y_min = max(corners[i].y, corners[j].y);
-            int y_max = min(corners[i].y + src[i].rows - 1, corners[j].y + src[j].rows - 1);
-
-            if (x_max >= x_min && y_max >= y_min)
-                findInPair(src[i], src[j], corners[i], corners[j],
-                           Rect(x_min, y_min, x_max - x_min + 1, y_max - y_min + 1),
-                           masks[i], masks[j]);
+            Rect roi;
+            if (overlapRoi(corners[i], corners[j], src[i].size(), src[j].size(), roi))
+                findInPair(src[i], src[j], corners[i], corners[j], roi, masks[i], masks[j]);
         }
     }
 }
@@ -87,7 +80,6 @@ void VoronoiSeamFinder::findInPair(const Mat &img1, const Mat &img2, Point tl1, 
                                    Rect roi, Mat &mask1, Mat &mask2)
 {
     const int gap = 10;
-
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 

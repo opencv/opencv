@@ -102,8 +102,6 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
-
 void normalize(const cv::Mat& weight, cv::Mat& src);
 
 void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);

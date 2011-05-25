@@ -282,24 +282,6 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
-{
-    Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
-    Point br(numeric_limits<int>::min(), numeric_limits<int>::min());
-
-    CV_Assert(sizes.size() == corners.size());
-    for (size_t i = 0; i < corners.size(); ++i)
-    {
-        tl.x = min(tl.x, corners[i].x);
-        tl.y = min(tl.y, corners[i].y);
-        br.x = max(br.x, corners[i].x + sizes[i].width);
-        br.y = max(br.y, corners[i].y + sizes[i].height);
-    }
-
-    return Rect(tl, br);
-}
-
-
 void normalize(const Mat& weight, Mat& src)
 {
     CV_Assert(weight.type() == CV_32F);

@@ -45,3 +45,88 @@
 
 using namespace std;
 using namespace cv;
+
+
+Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
+{
+    if (type == NO)
+        return new NoExposureCompensator();
+    if (type == OVERLAP)
+        return new OverlapExposureCompensator();
+    CV_Error(CV_StsBadArg, "unsupported exposure compensation method");
+    return NULL;
+}
+
+
+void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
+                                      const vector<Mat> &masks)
+{
+    const int num_images = static_cast<int>(images.size());
+    Mat_<double> N(num_images, num_images); N.setTo(0);
+    Mat_<double> I(num_images, num_images); I.setTo(0);
+
+    Rect dst_roi = resultRoi(corners, images);
+    Mat subimg1, subimg2;
+    Mat_<uchar> submask1, submask2, overlap;
+
+    for (int i = 0; i < num_images; ++i)
+    {
+        for (int j = i; j < num_images; ++j)
+        {
+            Rect roi;
+            if (overlapRoi(corners[i], corners[j], images[i].size(), images[j].size(), roi))
+            {
+                subimg1 = images[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
+                subimg2 = images[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+
+                submask1 = masks[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
+                submask2 = masks[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+                overlap = submask1 & submask2;
+
+                N(i, j) = N(j, i) = countNonZero(overlap);
+
+                double Isum1 = 0, Isum2 = 0;
+                for (int y = 0; y < roi.height; ++y)
+                {
+                    const Point3_<uchar>* r1 = subimg1.ptr<Point3_<uchar> >(y);
+                    const Point3_<uchar>* r2 = subimg2.ptr<Point3_<uchar> >(y);
+                    for (int x = 0; x < roi.width; ++x)
+                    {
+                        if (overlap(y, x))
+                        {
+                            Isum1 += sqrt(static_cast<double>(sqr(r1[x].x) + sqr(r1[x].y) + sqr(r1[x].z)));
+                            Isum2 += sqrt(static_cast<double>(sqr(r2[x].x) + sqr(r2[x].y) + sqr(r2[x].z)));
+                        }
+                    }
+                }
+                I(i, j) = Isum1 / N(i, j);
+                I(j, i) = Isum2 / N(i, j);
+            }
+        }
+    }
+
+    double alpha = 0.01;
+    double beta = 100;
+
+    Mat_<double> A(num_images, num_images); A.setTo(0);
+    Mat_<double> b(num_images, 1); b.setTo(0);
+    for (int i = 0; i < num_images; ++i)
+    {
+        for (int j = 0; j < num_images; ++j)
+        {
+            b(i, 0) += beta * N(i, j);
+            A(i, i) += beta * N(i, j);
+            if (j == i) continue;
+            A(i, i) += 2 * alpha * I(i, j) * I(i, j) * N(i, j);
+            A(i, j) -= 2 * alpha * I(i, j) * I(j, i) * N(i, j);
+        }
+    }
+
+    solve(A, b, gains_, DECOMP_SVD);
+}
+
+
+void OverlapExposureCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+{
+    image *= gains_(index, 0);
+}
