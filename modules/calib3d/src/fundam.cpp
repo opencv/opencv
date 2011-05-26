@@ -247,9 +247,8 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
         CV_Assert( CV_IS_MASK_ARR(mask) && CV_IS_MAT_CONT(mask->type) &&
             (mask->rows == 1 || mask->cols == 1) &&
             mask->rows*mask->cols == count );
-        tempMask = cvCloneMat(mask);
     }
-    else if( count > 4 )
+    if( mask || count > 4 )
         tempMask = cvCreateMat( 1, count, CV_8U );
     if( !tempMask.empty() )
         cvSet( tempMask, cvScalarAll(1.) );
@@ -278,7 +277,12 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
         cvConvert( &matH, __H );
     
     if( mask && tempMask )
-        cvCopy( tempMask, mask );
+    {
+        if( CV_ARE_SIZES_EQ(mask, tempMask) )
+           cvCopy( tempMask, mask );
+        else
+           cvTranspose( tempMask, mask );
+    }
 
     return (int)result;
 }
@@ -611,9 +615,8 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
         CV_Assert( CV_IS_MASK_ARR(mask) && CV_IS_MAT_CONT(mask->type) &&
             (mask->rows == 1 || mask->cols == 1) &&
             mask->rows*mask->cols == count );
-        tempMask = cvCloneMat(mask);
     }
-    else if( count > 8 )
+    if( mask || count > 8 )
         tempMask = cvCreateMat( 1, count, CV_8U );
     if( !tempMask.empty() )
         cvSet( tempMask, cvScalarAll(1.) );
@@ -647,7 +650,12 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
         cvConvert( fmatrix->rows == 3 ? &_F3x3 : &_F9x3, fmatrix );
     
     if( mask && tempMask )
-        cvCopy( tempMask, mask );
+    {
+        if( CV_ARE_SIZES_EQ(mask, tempMask) )
+            cvCopy( tempMask, mask );
+        else
+            cvTranspose( tempMask, mask );
+    }
 
     return result;
 }
