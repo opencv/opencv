@@ -53,21 +53,9 @@ using namespace cv::gpu;
 
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features) 
 { 
-    features.img_size = image.size();
-
-    // Calculate histogram
-    Mat hsv;
-    cvtColor(image, hsv, CV_BGR2HSV);
-    int hbins = 30, sbins = 32, vbins = 30;
-    int hist_size[] = { hbins, sbins, vbins };
-    float hranges[] = { 0, 180 };
-    float sranges[] = { 0, 256 };
-    float vranges[] = { 0, 256 };
-    const float* ranges[] = { hranges, sranges, vranges };
-    int channels[] = { 0, 1, 2 };
-    calcHist(&hsv, 1, channels, Mat(), features.hist, 3, hist_size, ranges);
-
     find(image, features);
+    features.img_size = image.size();
+    //features.img = image.clone();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -293,7 +281,7 @@ namespace
     void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
         matches_info.matches.clear();
-        BruteForceMatcher< L2<float> > matcher;
+        FlannBasedMatcher matcher;
         vector< vector<DMatch> > pair_matches;
 
         // Find 1->2 matches
@@ -340,10 +328,6 @@ namespace
                 continue;
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
-
-            CV_Assert(m0.queryIdx < static_cast<int>(features1.keypoints.size()));
-            CV_Assert(m0.trainIdx < static_cast<int>(features2.keypoints.size()));
-
             if (m0.distance < (1.f - match_conf_) * m1.distance)
                 matches_info.matches.push_back(m0);
         }
@@ -358,10 +342,6 @@ namespace
                 continue;
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
-
-            CV_Assert(m0.trainIdx < static_cast<int>(features1.keypoints.size()));
-            CV_Assert(m0.queryIdx < static_cast<int>(features2.keypoints.size()));
-
             if (m0.distance < (1.f - match_conf_) * m1.distance)
                 matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
@@ -388,9 +368,16 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 {
     (*impl_)(features1, features2, matches_info);
 
+    //Mat out;
+    //drawMatches(features1.img, features1.keypoints, features2.img, features2.keypoints, matches_info.matches, out);
+    //stringstream ss;
+    //ss << features1.img_idx << features2.img_idx << ".png";
+    //imwrite(ss.str(), out);
+
     // Check if it makes sense to find homography
     if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
         return;
+
     // Construct point-point correspondences for homography estimation
     Mat src_points(1, matches_info.matches.size(), CV_32FC2);
     Mat dst_points(1, matches_info.matches.size(), CV_32FC2);

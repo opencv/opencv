@@ -48,7 +48,6 @@ struct ImageFeatures
 {    
     int img_idx;
     cv::Size img_size;
-    cv::Mat hist;
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
 };
