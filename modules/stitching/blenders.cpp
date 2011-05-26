@@ -200,7 +200,11 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
                  min(dst_roi_.br().y, tl.y + img.rows + gap));
 
-    // Ensure coordinates of top-left, bootom-right corners are divided by (1 << num_bands_)
+    // Ensure coordinates of top-left, bootom-right corners are divided by (1 << num_bands_). 
+    // After that scale between layers is exactly 2.
+    //
+    // We do it to avoid interpolation problems when keeping sub-images only. There is no such problem when 
+    // image is bordered to have size equal to the final image size, but this is too memory hungry approach.
     tl_new.x = dst_roi_.x + (((tl_new.x - dst_roi_.x) >> num_bands_) << num_bands_);
     tl_new.y = dst_roi_.y + (((tl_new.y - dst_roi_.y) >> num_bands_) << num_bands_);
     int width = br_new.x - tl_new.x;
