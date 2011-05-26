@@ -85,7 +85,7 @@ void printUsage()
 // Default command line args
 vector<string> img_names;
 bool trygpu = false;
-double work_megapix = 0.3;
+double work_megapix = 0.5;
 double seam_megapix = 0.1;
 double compose_megapix = 1;
 int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
