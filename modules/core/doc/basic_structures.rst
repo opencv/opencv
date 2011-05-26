@@ -3,6 +3,8 @@ Basic Structures
 
 .. highlight:: cpp
 
+.. index:: _DataType
+
 .. _DataType:
 
 DataType
@@ -35,8 +37,7 @@ Template "trait" class for other OpenCV primitive data types ::
     };
 
 The template class ``DataType`` is a descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
-:ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``, ``Mat``, ``Mat_``, ``SparseMat``, ``SparseMat_``, or any other container that is able to store
-:ref:`Vec` instances.
+:ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``, ``Mat``, ``Mat_``, ``SparseMat``, ``SparseMat_``, or any other container that is able to store ``Vec`` instances.
 
 The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used but its specialized versions, such as: ::
 
@@ -71,6 +72,8 @@ The main purpose of this class is to convert compilation-time type information t
 
 
 So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV. For example, the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` . This mechanism is also useful (and used in OpenCV this way) for generic algorithms implementations.
+
+.. index:: Point\_
 
 Point\_
 -------
@@ -135,6 +138,7 @@ Example: ::
     Point pt = (a + b)*10.f;
     cout << pt.x << ", " << pt.y << endl;
 
+.. index:: Point3\_
 
 Point3\_
 --------
@@ -170,12 +174,13 @@ The class represents a 3D point specified by its coordinates
 :math:`z` .
 An instance of the class is interchangeable with the C structure ``CvPoint2D32f`` . Similarly to ``Point_`` , the coordinates of 3D points can be converted to another type. The vector arithmetic and comparison operations are also supported.
 
-The following types of aliases are available: ::
+The following types of?? aliases are available: ::
 
     typedef Point3_<int> Point3i;
     typedef Point3_<float> Point3f;
     typedef Point3_<double> Point3d;
 
+.. index:: Size\_
 
 Size\_
 ------
@@ -209,12 +214,13 @@ Template class for specfying an image or rectangle size ::
 The class ``Size_`` is similar to ``Point_``  except that the two members are called ``width`` and ``height`` instead of ``x`` and ``y`` . The structure can be converted to and from the old OpenCV structures
 ``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
-OpenCV defines the following type aliases: ::
+OpenCV defines the following types of?? aliases: ::
 
     typedef Size_<int> Size2i;
     typedef Size2i Size;
     typedef Size_<float> Size2f;
 
+.. index:: Rect\_
 
 Rect\_
 ------
@@ -258,16 +264,19 @@ Template class for 2D rectangles ::
     };
 
 
-The rectangle is described by the coordinates of the top-left corner (which is the default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV; though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner), the rectangle width and height.
+The rectangle is described with the following parameters:
 
-Another assumption OpenCV usually makes is that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not. For example, the method ``Rect_::contains`` returns ``true`` if
+* Coordinates of the top-left corner. This is a default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV. Though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner. 
+* Rectangle width and height.
+
+OpenCV typically assumes that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not. For example, the method ``Rect_::contains`` returns ``true`` if
 
 .. math::
 
     x  \leq pt.x < x+width,
           y  \leq pt.y < y+height
 
-And virtually every loop over an image
+Virtually every loop over an image
 ROI in OpenCV (where ROI is specified by ``Rect_<int>`` ) is implemented as: ::
 
     for(int y = roi.y; y < roi.y + rect.height; y++)
@@ -305,11 +314,12 @@ This is an example how the partial ordering on rectangles can be established (re
     }
 
 
-For your convenience, the following type alias is available: ::
+For your convenience, the following type of aliases?? is available: ::
 
     typedef Rect_<int> Rect;
 
-
+.. index:: _RotatedRect
+	
 .. _RotatedRect:
 
 RotatedRect
@@ -340,6 +350,8 @@ Template class for rotated rectangles ::
 
 
 The class ``RotatedRect`` replaces the old ``CvBox2D`` and is fully compatible with it.
+
+.. index:: TermCriteria
 
 TermCriteria
 ------------
@@ -373,6 +385,8 @@ Template class defining termination criteria for iterative algorithms ::
 
 
 The class ``TermCriteria`` replaces the old ``CvTermCriteria`` and is fully compatible with it.
+
+.. index:: Matx
 
 .. _Matx:
 
@@ -413,9 +427,9 @@ Template class for small matrices ::
     typedef Matx<double, 6, 6> Matx66d;
 
 
-The class represents small matrices, whose type and size are known at compilation time. If you need a more flexible type, use
-:ref:`Mat` . The elements of the matrix ``M`` are accessible using the ``M(i,j)`` notation, and most of the common matrix operations (see also
-:ref:`MatrixExpressions` ) are available. If you need to do an operation on ``Matx`` that is not implemented, it is easy to convert the matrix to
+The class represents small matrices whose type and size are known at compilation time. If you need a more flexible type, use
+:ref:`Mat` . The elements of the matrix ``M`` are accessible using the ``M(i,j)`` notation. Most of the common matrix operations (see also
+:ref:`MatrixExpressions` ) are available. To do an operation on ``Matx`` that is not implemented, you can easily convert the matrix to
 :ref:`Mat` and backwards. ::
 
     Matx33f m(1, 2, 3,
@@ -423,7 +437,8 @@ The class represents small matrices, whose type and size are known at compilatio
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
 
-
+.. index:: Vec
+	
 .. _Vec:
 
 Vec
@@ -463,15 +478,18 @@ Template class for short numerical vectors ::
     typedef Vec<double, 4> Vec4d;
     typedef Vec<double, 6> Vec6d;
 
-``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``,``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
+``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``, ``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
 
 *
-    :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     (plus the corresponding augmenting operations; note that these operations apply
-    to each computed vector component)
+    :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     in addition to the corresponding augmenting operations. Note that these operations apply
+    to each computed vector component.
 
 * ``v1 == v2, v1 != v2`` * ``norm(v1)``     (:math:`L_2`-norm)
 
-The ``Vec`` class is commonly used to describe pixel types of multi-channel arrays. See ``Mat_`` for details.
+The ``Vec`` class is commonly used to describe pixel types of multi-channel arrays. See 
+:ref:`Mat_`?? for details.
+
+.. index:: Scalar
 
 .. _Scalar:
 
@@ -499,15 +517,17 @@ Template class for a 4-element vector ::
     typedef Scalar_<double> Scalar;
 
 
-The template class ``Scalar_`` and its double-precision instantiation ``Scalar`` represent a 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors, but in addition they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values and it is a drop-in replacement for
+The template class ``Scalar_`` and its double-precision instantiation ``Scalar`` represent a 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors. In addition, they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values. It is a drop-in replacement for
 ``CvScalar`` that was used for the same purpose in the earlier versions of OpenCV.
+
+.. index:: Range
 
 .. _Range:
 
 Range
 -----
 
-Template class specifying a continuous subsequence (a.k.a. slice) of a sequence. ::
+Template class specifying a continuous subsequence (slice) of a sequence ::
 
     class Range
     {
@@ -524,7 +544,7 @@ Template class specifying a continuous subsequence (a.k.a. slice) of a sequence.
     };
 
 
-The class is used to specify a row or column span in a matrix (
+The class is used to specify a row or a column span in a matrix (
 :ref:`Mat` ) and for many other purposes. ``Range(a,b)`` is basically the same as ``a:b`` in Matlab or ``a..b`` in Python. As in Python, ``start`` is an inclusive left boundary of the range and ``end`` is an exclusive right boundary of the range. Such a half-opened interval is usually denoted as
 :math:`[start,end)` .
 
@@ -540,6 +560,8 @@ The static method ``Range::all()`` returns a special variable that means "the wh
         }
     }
 
+
+.. index:: Ptr
 
 .. _Ptr:
 
