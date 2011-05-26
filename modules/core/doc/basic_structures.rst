@@ -34,11 +34,11 @@ Template "trait" class for other OpenCV primitive data types ::
         };
     };
 
-The template class ``DataType`` is a descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure, which is able to store a single instance of such a primitive data type, is
-:ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``,``Mat``,``Mat_``,``SparseMat``,``SparseMat_``, or any other container that is able to store
+The template class ``DataType`` is a descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C<number_of_channels>``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
+:ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``, ``Mat``, ``Mat_``, ``SparseMat``, ``SparseMat_``, or any other container that is able to store
 :ref:`Vec` instances.
 
-The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used, but its specialized versions, such as: ::
+The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used but its specialized versions, such as: ::
 
     template<> class DataType<uchar>
     {
@@ -70,7 +70,7 @@ The main purpose of this class is to convert compilation-time type information t
     cout << B.depth() << ", " << B.channels() << endl;
 
 
-So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV (the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` ). Also, this mechanism is useful (and used in OpenCV this way) for generic algorithms implementations.
+So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV. For example, the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` . This mechanism is also useful (and used in OpenCV this way) for generic algorithms implementations.
 
 Point\_
 -------
@@ -105,11 +105,11 @@ Template class for 2D points ::
         _Tp x, y;
     };
 
-The class represents a 2D point, specified by its coordinates
+The class represents a 2D point specified by its coordinates
 :math:`x` and
 :math:`y` .
-Instance of the class is interchangeable with C structures, ``CvPoint`` and ``CvPoint2D32f`` . There is also a cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding. Commonly, the conversion uses this
-operation on each of the coordinates. Besides the class members listed in the declaration above, the following operations on points are implemented: ::
+An instance of the class is interchangeable with C structures, ``CvPoint`` and ``CvPoint2D32f`` . There is also a cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding. Commonly, the conversion uses this
+operation for each of the coordinates. Besides the class members listed in the declaration above, the following operations on points are implemented: ::
 
         pt1 = pt2 + pt3;
         pt1 = pt2 - pt3;
@@ -129,7 +129,7 @@ For your convenience, the following type aliases are defined: ::
     typedef Point_<float> Point2f;
     typedef Point_<double> Point2d;
 
-Here is a short example: ::
+Example: ::
 
     Point2f a(0.3f, 0.f), b(0.f, 0.4f);
     Point pt = (a + b)*10.f;
@@ -165,11 +165,12 @@ Template class for 3D points ::
 
 
 The class represents a 3D point specified by its coordinates
-:math:`x`,:math:`y` and
+:math:`x`,
+:math:`y` and
 :math:`z` .
-Instance of the class is interchangeable with the C structure ``CvPoint2D32f`` . Similarly to ``Point_`` , the 3D points' coordinates can be converted to another type. The vector arithmetic and comparison operations are also supported.
+An instance of the class is interchangeable with the C structure ``CvPoint2D32f`` . Similarly to ``Point_`` , the coordinates of 3D points can be converted to another type. The vector arithmetic and comparison operations are also supported.
 
-The following type aliases are available: ::
+The following types of aliases are available: ::
 
     typedef Point3_<int> Point3i;
     typedef Point3_<float> Point3f;
@@ -179,7 +180,7 @@ The following type aliases are available: ::
 Size\_
 ------
 
-Template class for specfying an image or rectangle size. ::
+Template class for specfying an image or rectangle size ::
 
     template<typename _Tp> class Size_
     {
