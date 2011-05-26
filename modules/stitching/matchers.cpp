@@ -244,37 +244,10 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 {
     const int num_images = static_cast<int>(features.size());
 
-    Mat_<uchar> is_near(num_images, num_images);
-    is_near.setTo(0);
-
-    // Find good image pairs
-    for (int i = 0; i < num_images; ++i)
-    {
-        vector<DistIdxPair> dists(num_images);
-        for (int j = 0; j < num_images; ++j)
-        {
-            dists[j].dist = 1 - compareHist(features[i].hist, features[j].hist, CV_COMP_INTERSECT) 
-                                / min(features[i].img_size.area(), features[j].img_size.area());
-            dists[j].idx = j;
-        }
-
-        // Leave near images
-        for (int j = 0; j < num_images; ++j)
-            if (dists[j].dist < 0.6)
-                is_near(i, dists[j].idx) = 1;
-
-        // Leave k-nearest images
-        int k = min(4, num_images);
-        nth_element(dists.begin(), dists.begin() + k, dists.end());
-        for (int j = 0; j < k; ++j)
-            is_near(i, dists[j].idx) = 1;
-    }
-
     vector<pair<int,int> > near_pairs;
     for (int i = 0; i < num_images - 1; ++i)
         for (int j = i + 1; j < num_images; ++j)
-            if (is_near(i, j) || is_near(j, i))
-                near_pairs.push_back(make_pair(i, j));
+            near_pairs.push_back(make_pair(i, j));
 
     pairwise_matches.resize(num_images * num_images);
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
@@ -312,8 +285,7 @@ namespace
 
     private:
         float match_conf_;
-        GpuMat descriptors1_;
-        GpuMat descriptors2_;
+        GpuMat descriptors1_, descriptors2_;
         GpuMat train_idx_, distance_, all_dist_;
     };
 

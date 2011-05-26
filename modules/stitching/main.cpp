@@ -316,6 +316,7 @@ int main(int argc, char* argv[])
         }
 
         finder(img, features[i]);
+        features[i].img_idx = i;
         LOGLN("Features in image #" << i << ": " << features[i].keypoints.size());
 
         resize(full_img, img, Size(), seam_scale, seam_scale);
@@ -346,8 +347,8 @@ int main(int argc, char* argv[])
         img_subset.push_back(images[indices[i]]);
     }
 
-    img_names = img_names_subset;
     images = img_subset;
+    img_names = img_names_subset;
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
