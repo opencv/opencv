@@ -80,7 +80,6 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
 {
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
-
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
 
@@ -88,7 +87,6 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
     {
         const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
         Point3_<short> *dst_row = dst_.ptr<Point3_<short> >(dy + y);
-
         const uchar *mask_row = mask.ptr<uchar>(y);
         uchar *dst_mask_row = dst_mask_.ptr<uchar>(dy + y);
 
@@ -200,7 +198,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap), 
                  min(dst_roi_.br().y, tl.y + img.rows + gap));
 
-    // Ensure coordinates of top-left, bootom-right corners are divided by (1 << num_bands_). 
+    // Ensure coordinates of top-left, bottom-right corners are divided by (1 << num_bands_). 
     // After that scale between layers is exactly 2.
     //
     // We do it to avoid interpolation problems when keeping sub-images only. There is no such problem when 
@@ -225,7 +223,6 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
     // Create the source image Laplacian pyramid
     vector<Mat> src_pyr_gauss(num_bands_ + 1);
-    src_pyr_gauss[0] = img;
     copyMakeBorder(img, src_pyr_gauss[0], top, bottom, left, right, 
                    BORDER_REFLECT);
     for (int i = 0; i < num_bands_; ++i)
