@@ -52,8 +52,10 @@ Ptr<SeamFinder> SeamFinder::createDefault(int type)
         return new NoSeamFinder();
     if (type == VORONOI)
         return new VoronoiSeamFinder();
-    if (type == GRAPH_CUT)
-        return new GraphCutSeamFinder();
+    if (type == GC_COLOR)
+        return new GraphCutSeamFinder(GraphCutSeamFinder::COST_COLOR);
+    if (type == GC_COLOR_GRAD)
+        return new GraphCutSeamFinder(GraphCutSeamFinder::COST_COLOR_GRAD);
     CV_Error(CV_StsBadArg, "unsupported seam finding method");
     return NULL;
 }
@@ -64,24 +66,32 @@ void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
 {
     if (src.size() == 0)
         return;
+
+    images_ = src;
+    corners_ = corners;
+    masks_ = masks;
+
     for (size_t i = 0; i < src.size() - 1; ++i)
     {
         for (size_t j = i + 1; j < src.size(); ++j)
         {
             Rect roi;
             if (overlapRoi(corners[i], corners[j], src[i].size(), src[j].size(), roi))
-                findInPair(src[i], src[j], corners[i], corners[j], roi, masks[i], masks[j]);
+                findInPair(i, j, roi);
         }
     }
 }
 
 
-void VoronoiSeamFinder::findInPair(const Mat &img1, const Mat &img2, Point tl1, Point tl2,
-                                   Rect roi, Mat &mask1, Mat &mask2)
+void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 {
     const int gap = 10;
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
+
+    Mat img1 = images_[first], img2 = images_[second];
+    Mat mask1 = masks_[first], mask2 = masks_[second];
+    Point tl1 = corners_[first], tl2 = corners_[second];
 
     // Cut submasks with some gap
     for (int y = -gap; y < roi.height + gap; ++y)
@@ -127,27 +137,62 @@ void VoronoiSeamFinder::findInPair(const Mat &img1, const Mat &img2, Point tl1, 
 }
 
 
-class GraphCutSeamFinder::Impl
+class GraphCutSeamFinder::Impl : public PairwiseSeamFinder
 {
 public:
     Impl(int cost_type, float terminal_cost, float bad_region_penalty)
         : cost_type_(cost_type), terminal_cost_(terminal_cost), bad_region_penalty_(bad_region_penalty) {}
 
-    void findInPair(const Mat &img1, const Mat &img2, Point tl1, Point tl2,
-                    Rect roi, Mat &mask1, Mat &mask2);
+    void find(const vector<Mat> &src, const vector<Point> &corners, vector<Mat> &masks);
+    void findInPair(size_t first, size_t second, Rect roi);
 
 private:
-    void setGraphWeightsColor(const Mat &img1, const Mat &img2, const Mat &mask1, const Mat &mask2,
-                              GCGraph<float> &graph);
+    void setGraphWeightsColor(const Mat &img1, const Mat &img2, 
+                              const Mat &mask1, const Mat &mask2, GCGraph<float> &graph);
+    void setGraphWeightsColorGrad(const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2, 
+                                  const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
+                                  GCGraph<float> &graph);
 
+    vector<Mat> dx_, dy_;
     int cost_type_;
     float terminal_cost_;
     float bad_region_penalty_;
 };
 
 
-void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &img2, const Mat &mask1, const Mat &mask2,
-                                                    GCGraph<float> &graph)
+void GraphCutSeamFinder::Impl::find(const vector<Mat> &src, const vector<Point> &corners, 
+                                    vector<Mat> &masks)
+{
+    // Compute gradients
+    dx_.resize(src.size());
+    dy_.resize(src.size());
+    Mat dx, dy;
+    for (size_t i = 0; i < src.size(); ++i)
+    {
+        CV_Assert(src[i].channels() == 3);
+        Sobel(src[i], dx, CV_32F, 1, 0);
+        Sobel(src[i], dy, CV_32F, 0, 1);
+        dx_[i].create(src[i].size(), CV_32F);
+        dy_[i].create(src[i].size(), CV_32F);
+        for (int y = 0; y < src[i].rows; ++y)
+        {
+            const Point3f* dx_row = dx.ptr<Point3f>(y);
+            const Point3f* dy_row = dy.ptr<Point3f>(y);
+            float* dx_row_ = dx_[i].ptr<float>(y);
+            float* dy_row_ = dy_[i].ptr<float>(y);
+            for (int x = 0; x < src[i].cols; ++x)
+            {
+                dx_row_[x] = normL2(dx_row[x]);
+                dy_row_[x] = normL2(dy_row[x]);
+            }
+        }
+    }
+    PairwiseSeamFinder::find(src, corners, masks);
+}
+
+
+void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &img2, 
+                                                    const Mat &mask1, const Mat &mask2, GCGraph<float> &graph)
 {
     const Size img_size = img1.size();
 
@@ -162,9 +207,8 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
         }
     }
 
-    const float weight_eps = 1e-3f;
-
     // Set regular edge weights
+    const float weight_eps = 1e-3f;
     for (int y = 0; y < img_size.height; ++y)
     {
         for (int x = 0; x < img_size.width; ++x)
@@ -175,11 +219,9 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
                 float weight = normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) +
                                normL2(img1.at<Point3f>(y, x + 1), img2.at<Point3f>(y, x + 1)) +
                                weight_eps;
-
                 if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y, x + 1) ||
                     !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y, x + 1))
                     weight += bad_region_penalty_;
-
                 graph.addEdges(v, v + 1, weight, weight);
             }
             if (y < img_size.height - 1)
@@ -187,11 +229,9 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
                 float weight = normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) +
                                normL2(img1.at<Point3f>(y + 1, x), img2.at<Point3f>(y + 1, x)) +
                                weight_eps;
-
                 if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y + 1, x) ||
                     !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y + 1, x))
                     weight += bad_region_penalty_;
-
                 graph.addEdges(v, v + img_size.width, weight, weight);
             }
         }
@@ -199,15 +239,77 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
 }
 
 
-void GraphCutSeamFinder::Impl::findInPair(const Mat &img1, const Mat &img2, Point tl1, Point tl2,
-                                          Rect roi, Mat &mask1, Mat &mask2)
+void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
+        const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2, 
+        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
+        GCGraph<float> &graph)
 {
-    const int gap = 10;
+    const Size img_size = img1.size();
 
+    // Set terminal weights
+    for (int y = 0; y < img_size.height; ++y)
+    {
+        for (int x = 0; x < img_size.width; ++x)
+        {
+            int v = graph.addVtx();
+            graph.addTermWeights(v, mask1.at<uchar>(y, x) ? terminal_cost_ : 0.f,
+                                    mask2.at<uchar>(y, x) ? terminal_cost_ : 0.f);
+        }
+    }
+
+    // Set regular edge weights
+    const float weight_eps = 1e-3f;
+    for (int y = 0; y < img_size.height; ++y)
+    {
+        for (int x = 0; x < img_size.width; ++x)
+        {
+            int v = y * img_size.width + x;
+            if (x < img_size.width - 1)
+            {
+                float grad = dx1.at<float>(y, x) + dx1.at<float>(y, x + 1) +
+                             dx2.at<float>(y, x) + dx2.at<float>(y, x + 1) + weight_eps;
+                float weight = (normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) +
+                                normL2(img1.at<Point3f>(y, x + 1), img2.at<Point3f>(y, x + 1))) / grad + 
+                               weight_eps;
+                if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y, x + 1) ||
+                    !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y, x + 1))
+                    weight += bad_region_penalty_;
+                graph.addEdges(v, v + 1, weight, weight);
+            }
+            if (y < img_size.height - 1)
+            {
+                float grad = dy1.at<float>(y, x) + dy1.at<float>(y + 1, x) + 
+                             dy2.at<float>(y, x) + dy2.at<float>(y + 1, x) + weight_eps;
+                float weight = (normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) + 
+                                normL2(img1.at<Point3f>(y + 1, x), img2.at<Point3f>(y + 1, x))) / grad + 
+                               weight_eps;
+                if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y + 1, x) ||
+                    !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y + 1, x))
+                    weight += bad_region_penalty_;
+                graph.addEdges(v, v + img_size.width, weight, weight);
+            }
+        }
+    }
+}
+
+
+void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
+{
+    Mat img1 = images_[first], img2 = images_[second];
+    Mat dx1 = dx_[first], dx2 = dx_[second];
+    Mat dy1 = dy_[first], dy2 = dy_[second];
+    Mat mask1 = masks_[first], mask2 = masks_[second];
+    Point tl1 = corners_[first], tl2 = corners_[second];
+
+    const int gap = 10;
     Mat subimg1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
     Mat subimg2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
+    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
 
     // Cut subimages and submasks with some gap
     for (int y = -gap; y < roi.height + gap; ++y)
@@ -220,11 +322,15 @@ void GraphCutSeamFinder::Impl::findInPair(const Mat &img1, const Mat &img2, Poin
             {
                 subimg1.at<Point3f>(y + gap, x + gap) = img1.at<Point3f>(y1, x1);
                 submask1.at<uchar>(y + gap, x + gap) = mask1.at<uchar>(y1, x1);
+                subdx1.at<float>(y + gap, x + gap) = dx1.at<float>(y1, x1);
+                subdy1.at<float>(y + gap, x + gap) = dy1.at<float>(y1, x1);
             }
             else
             {
                 subimg1.at<Point3f>(y + gap, x + gap) = Point3f(0, 0, 0);
                 submask1.at<uchar>(y + gap, x + gap) = 0;
+                subdx1.at<float>(y + gap, x + gap) = 0.f;
+                subdy1.at<float>(y + gap, x + gap) = 0.f;
             }
 
             int y2 = roi.y - tl2.y + y;
@@ -233,11 +339,15 @@ void GraphCutSeamFinder::Impl::findInPair(const Mat &img1, const Mat &img2, Poin
             {
                 subimg2.at<Point3f>(y + gap, x + gap) = img2.at<Point3f>(y2, x2);
                 submask2.at<uchar>(y + gap, x + gap) = mask2.at<uchar>(y2, x2);
+                subdx2.at<float>(y + gap, x + gap) = dx2.at<float>(y2, x2);
+                subdy2.at<float>(y + gap, x + gap) = dy2.at<float>(y2, x2);
             }
             else
             {
                 subimg2.at<Point3f>(y + gap, x + gap) = Point3f(0, 0, 0);
                 submask2.at<uchar>(y + gap, x + gap) = 0;
+                subdx2.at<float>(y + gap, x + gap) = 0.f;
+                subdy2.at<float>(y + gap, x + gap) = 0.f;
             }
         }
     }
@@ -251,6 +361,10 @@ void GraphCutSeamFinder::Impl::findInPair(const Mat &img1, const Mat &img2, Poin
     {
     case GraphCutSeamFinder::COST_COLOR:
         setGraphWeightsColor(subimg1, subimg2, submask1, submask2, graph);
+        break;
+    case GraphCutSeamFinder::COST_COLOR_GRAD:
+        setGraphWeightsColorGrad(subimg1, subimg2, subdx1, subdx2, subdy1, subdy2, 
+                                 submask1, submask2, graph);
         break;
     default:
         CV_Error(CV_StsBadArg, "unsupported pixel similarity measure");
@@ -281,8 +395,8 @@ GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float
     : impl_(new Impl(cost_type, terminal_cost, bad_region_penalty)) {}
 
 
-void GraphCutSeamFinder::findInPair(const Mat &img1, const Mat &img2, Point tl1, Point tl2,
-                                    Rect roi, Mat &mask1, Mat &mask2)
+void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
+                              vector<Mat> &masks)
 {
-    impl_->findInPair(img1, img2, tl1, tl2, roi, mask1, mask2);
+    impl_->find(src, corners, masks);
 }

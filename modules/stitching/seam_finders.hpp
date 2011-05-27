@@ -47,7 +47,7 @@
 class SeamFinder
 {
 public:
-    enum { NO, VORONOI, GRAPH_CUT };
+    enum { NO, VORONOI, GC_COLOR, GC_COLOR_GRAD };
     static cv::Ptr<SeamFinder> createDefault(int type);
 
     virtual ~SeamFinder() {}
@@ -66,34 +66,36 @@ public:
 class PairwiseSeamFinder : public SeamFinder
 {
 public:
-    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
-              std::vector<cv::Mat> &masks);
+    virtual void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
+                      std::vector<cv::Mat> &masks);
+
 protected:
-    virtual void findInPair(const cv::Mat &img1, const cv::Mat &img2, cv::Point tl1, cv::Point tl2,
-                            cv::Rect roi, cv::Mat &mask1, cv::Mat &mask2) = 0;
+    virtual void findInPair(size_t first, size_t second, cv::Rect roi) = 0;
+
+    std::vector<cv::Mat> images_;
+    std::vector<cv::Point> corners_;
+    std::vector<cv::Mat> masks_;
 };
 
 
 class VoronoiSeamFinder : public PairwiseSeamFinder
 {
 private:
-    void findInPair(const cv::Mat &img1, const cv::Mat &img2, cv::Point tl1, cv::Point tl2,
-                    cv::Rect roi, cv::Mat &mask1, cv::Mat &mask2);
+    void findInPair(size_t first, size_t second, cv::Rect roi);
 };
 
 
-class GraphCutSeamFinder : public PairwiseSeamFinder
+class GraphCutSeamFinder : public SeamFinder
 {
 public:
-    // TODO add COST_COLOR_GRAD support
-    enum { COST_COLOR };
-    GraphCutSeamFinder(int cost_type = COST_COLOR, float terminal_cost = 10000.f,
+    enum { COST_COLOR, COST_COLOR_GRAD };
+    GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
 
-private:
-    void findInPair(const cv::Mat &img1, const cv::Mat &img2, cv::Point tl1, cv::Point tl2,
-                    cv::Rect roi, cv::Mat &mask1, cv::Mat &mask2);
+    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
+              std::vector<cv::Mat> &masks);
 
+private:
     class Impl;
     cv::Ptr<Impl> impl_;
 };

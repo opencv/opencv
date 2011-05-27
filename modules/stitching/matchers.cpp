@@ -65,8 +65,8 @@ namespace
     class CpuSurfFeaturesFinder : public FeaturesFinder
     {
     public:
-        inline CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
-                                     int num_octaves_descr, int num_layers_descr) 
+        CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
+                              int num_octaves_descr, int num_layers_descr) 
         {
             detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
             extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
@@ -80,20 +80,12 @@ namespace
         Ptr<DescriptorExtractor> extractor_;
     };
 
-    void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
-    {
-        Mat gray_image;
-        CV_Assert(image.depth() == CV_8U);
-        cvtColor(image, gray_image, CV_BGR2GRAY);
-        detector_->detect(gray_image, features.keypoints);
-        extractor_->compute(gray_image, features.keypoints, features.descriptors);
-    }
-    
+
     class GpuSurfFeaturesFinder : public FeaturesFinder
     {
     public:
-        inline GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
-                                     int num_octaves_descr, int num_layers_descr) 
+        GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
+                              int num_octaves_descr, int num_layers_descr) 
         {
             surf_.keypointsRatio = 0.1f;
             surf_.hessianThreshold = hess_thresh;
@@ -112,6 +104,17 @@ namespace
         int num_octaves_, num_layers_;
         int num_octaves_descr_, num_layers_descr_;
     };
+
+
+    void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+    {
+        Mat gray_image;
+        CV_Assert(image.depth() == CV_8U);
+        cvtColor(image, gray_image, CV_BGR2GRAY);
+        detector_->detect(gray_image, features.keypoints);
+        extractor_->compute(gray_image, features.keypoints, features.descriptors);
+    }
+  
 
     void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
@@ -132,7 +135,8 @@ namespace
 
         d_descriptors.download(features.descriptors);
     }
-}
+} // anonymous namespace
+
 
 SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers, 
                                        int num_octaves_descr, int num_layers_descr)

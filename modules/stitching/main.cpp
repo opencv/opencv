@@ -71,7 +71,7 @@ void printUsage()
         << "\t[--wavecorrect (no|yes)]\n"
         << "\t[--warp (plane|cylindrical|spherical)]\n" 
         << "\t[--exposcomp (no|overlap)]\n"
-        << "\t[--seam (no|voronoi|graphcut)]\n" 
+        << "\t[--seam (no|voronoi|gc_color|gc_colorgrad)]\n" 
         << "\t[--blend (no|feather|multiband)]\n"
         << "\t[--numbands <int>]\n"
         << "\t[--output <result_img>]\n\n";
@@ -95,7 +95,7 @@ int warp_type = Warper::SPHERICAL;
 int expos_comp_type = ExposureCompensator::OVERLAP;
 bool user_match_conf = false;
 float match_conf = 0.6f;
-int seam_find_type = SeamFinder::GRAPH_CUT;
+int seam_find_type = SeamFinder::GC_COLOR;
 int blend_type = Blender::MULTI_BAND;
 int numbands = 5;
 string result_name = "result.png";
@@ -201,6 +201,8 @@ int parseCmdArgs(int argc, char** argv)
                 expos_comp_type = ExposureCompensator::NO;
             else if (string(argv[i + 1]) == "overlap")
                 expos_comp_type = ExposureCompensator::OVERLAP;
+            else if (string(argv[i + 1]) == "segment")
+                expos_comp_type = ExposureCompensator::SEGMENT;
             else
             {
                 cout << "Bad exposure compensation method\n";
@@ -214,8 +216,10 @@ int parseCmdArgs(int argc, char** argv)
                 seam_find_type = SeamFinder::NO;
             else if (string(argv[i + 1]) == "voronoi")
                 seam_find_type = SeamFinder::VORONOI;
-            else if (string(argv[i + 1]) == "graphcut")
-                seam_find_type = SeamFinder::GRAPH_CUT;
+            else if (string(argv[i + 1]) == "gc_color")
+                seam_find_type = SeamFinder::GC_COLOR;
+            else if (string(argv[i + 1]) == "gc_colorgrad")
+                seam_find_type = SeamFinder::GC_COLOR_GRAD;
             else
             {
                 cout << "Bad seam finding method\n";

@@ -92,9 +92,16 @@ B Graph::walkBreadthFirst(int from, B body) const
 // Some auxiliary math functions
 
 static inline
+float normL2(const cv::Point3f& a)
+{
+    return a.x * a.x + a.y * a.y + a.z * a.z;
+}
+
+
+static inline
 float normL2(const cv::Point3f& a, const cv::Point3f& b)
 {
-    return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z);
+    return normL2(a - b);
 }
 
 
