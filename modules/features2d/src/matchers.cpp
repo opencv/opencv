@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_EIGEN2
+#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif
 
@@ -351,9 +351,18 @@ template<>
 void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                               const vector<Mat>& masks, bool compactResult )
 {
-#ifndef HAVE_EIGEN2
+#ifndef HAVE_EIGEN
     commonKnnMatchImpl( *this, queryDescriptors, matches, knn, masks, compactResult );
 #else
+
+#if EIGEN_WORLD_VERSION == 2
+    printf("EIGEN VERSION = 2 ");
+#endif
+
+#if EIGEN_WORLD_VERSION == 3
+    printf("EIGEN VERSION = 3 ");
+#endif
+
     CV_Assert( queryDescriptors.type() == CV_32FC1 ||  queryDescriptors.empty() );
     CV_Assert( masks.empty() || masks.size() == trainDescCollection.size() );
 
@@ -439,7 +448,7 @@ template<>
 void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                                                      const vector<Mat>& masks, bool compactResult )
 {
-#ifndef HAVE_EIGEN2
+#ifndef HAVE_EIGEN
     commonRadiusMatchImpl( *this, queryDescriptors, matches, maxDistance, masks, compactResult );
 #else
     CV_Assert( queryDescriptors.type() == CV_32FC1 ||  queryDescriptors.empty() );
