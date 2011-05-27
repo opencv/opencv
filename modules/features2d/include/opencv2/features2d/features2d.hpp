@@ -434,16 +434,11 @@ public:
     int patch_size_;
   };
 
-  /** Default Constructor */
-  ORB()
-  {
-  }
-
   /** Constructor
    * @param n_features the number of desired features
    * @param detector_params parameters to use
    */
-  ORB(size_t n_features, const CommonParams & detector_params = CommonParams());
+  ORB(size_t n_features = 500, const CommonParams & detector_params = CommonParams());
 
   /** returns the descriptor size in bytes */
   int descriptorSize() const;
