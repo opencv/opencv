@@ -579,16 +579,20 @@ void Mat::push_back(const Mat& elems)
     int r = size.p[0], delta = elems.size.p[0];
     if( delta == 0 )
         return;
-    if( this != &elems )
+    if( this == &elems )
     {
-        size.p[0] = elems.size.p[0];
-        bool eq = size == elems.size;
-        size.p[0] = r;
-        if( !eq )
-            CV_Error(CV_StsUnmatchedSizes, "");
-        if( type() != elems.type() )
-            CV_Error(CV_StsUnmatchedFormats, "");
+        Mat tmp = elems;
+        push_back(tmp);
+        return;
     }
+
+    size.p[0] = elems.size.p[0];
+    bool eq = size == elems.size;
+    size.p[0] = r;
+    if( !eq )
+        CV_Error(CV_StsUnmatchedSizes, "");
+    if( type() != elems.type() )
+        CV_Error(CV_StsUnmatchedFormats, "");
     
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
