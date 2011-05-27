@@ -18,53 +18,53 @@ if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
 endif()
 
 if(WITH_JPEG)
-	add_definitions(-DHAVE_JPEG)
-	if(JPEG_FOUND)
+    add_definitions(-DHAVE_JPEG)
+    if(JPEG_FOUND)
         include_directories(${JPEG_INCLUDE_DIR})
         set(GRFMT_LIBS ${GRFMT_LIBS} ${JPEG_LIBRARIES})
     else()
         include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/libjpeg")
         set(GRFMT_LIBS ${GRFMT_LIBS} libjpeg)
-	endif()
+    endif()
 endif()
 
 if(WITH_PNG)
-	add_definitions(-DHAVE_PNG)
-	if(PNG_FOUND)
+    add_definitions(-DHAVE_PNG)
+    if(PNG_FOUND)
         add_definitions(${PNG_DEFINITIONS})
         include_directories(${PNG_INCLUDE_DIR})
         set(GRFMT_LIBS ${GRFMT_LIBS} ${PNG_LIBRARIES})
     else()
         include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/libpng")
         set(GRFMT_LIBS ${GRFMT_LIBS} libpng)
-	endif()
+    endif()
 endif()
 
 if(WITH_TIFF)
-	add_definitions(-DHAVE_TIFF)
-	if(TIFF_FOUND)
+    add_definitions(-DHAVE_TIFF)
+    if(TIFF_FOUND)
         include_directories(${TIFF_INCLUDE_DIR})
         set(GRFMT_LIBS ${GRFMT_LIBS} ${TIFF_LIBRARIES})
     else()
         include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/libtiff")
         set(GRFMT_LIBS ${GRFMT_LIBS} libtiff)
-	endif()
+    endif()
 endif()
 
 if(WITH_JASPER)
-	add_definitions(-DHAVE_JASPER)
-	if(JPEG_FOUND)
+    add_definitions(-DHAVE_JASPER)
+    if(JASPER_FOUND)
         include_directories(${JASPER_INCLUDE_DIR})
         set(GRFMT_LIBS ${GRFMT_LIBS} ${JASPER_LIBRARIES})
     else()
         include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/libjasper")
         set(GRFMT_LIBS ${GRFMT_LIBS} libjasper)
-	endif()
+    endif()
 endif()
 
 if(WITH_OPENEXR AND OPENEXR_FOUND)
-	add_definitions(-DHAVE_OPENEXR)
-	include_directories(${OPENEXR_INCLUDE_PATHS})
+    add_definitions(-DHAVE_OPENEXR)
+    include_directories(${OPENEXR_INCLUDE_PATHS})
     set(GRFMT_LIBS ${GRFMT_LIBS} ${OPENEXR_LIBRARIES})
 endif()
 
@@ -105,7 +105,7 @@ if (HAVE_QT)
     INCLUDE(${QT_USE_FILE})
     
     SET(_RCCS_FILES src/window_QT.qrc)
-	QT4_ADD_RESOURCES(_RCC_OUTFILES ${_RCCS_FILES})
+    QT4_ADD_RESOURCES(_RCC_OUTFILES ${_RCCS_FILES})
 
     SET(_MOC_HEADERS src/window_QT.h )
     QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
@@ -126,9 +126,9 @@ endif()
 
 if(UNIX)
     if(NOT HAVE_QT)        
-    	if(HAVE_GTK)
+        if(HAVE_GTK)
             set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
-    	endif()
+        endif()
     endif()
 
     if(HAVE_XINE)
@@ -164,13 +164,13 @@ if(UNIX)
         set(highgui_srcs ${highgui_srcs} src/cap_unicap.cpp)
     endif()
 
-	if(HAVE_LIBV4L)
-		set(highgui_srcs ${highgui_srcs} src/cap_libv4l.cpp)
-	else()
-		if(HAVE_CAMV4L OR HAVE_CAMV4L2)
-			set(highgui_srcs ${highgui_srcs} src/cap_v4l.cpp)
-		endif()
-	endif()
+    if(HAVE_LIBV4L)
+        set(highgui_srcs ${highgui_srcs} src/cap_libv4l.cpp)
+    else()
+        if(HAVE_CAMV4L OR HAVE_CAMV4L2)
+            set(highgui_srcs ${highgui_srcs} src/cap_v4l.cpp)
+        endif()
+    endif()
 
     foreach(P ${HIGHGUI_INCLUDE_DIRS})
         include_directories(${P})
@@ -204,11 +204,11 @@ if(APPLE)
         endif()
     endif()
     
-	if(WITH_QUICKTIME)
-		set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
-	else()
-		set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
-	endif()
+    if(WITH_QUICKTIME)
+        set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
+    else()
+        set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+    endif()
 endif(APPLE)
 
 if(HAVE_ANDROID_NATIVE_CAMERA)
@@ -240,7 +240,7 @@ endif()
 set(lib_srcs ${highgui_srcs} ${grfmt_srcs})
 
 # ----------------------------------------------------------------------------------
-# 				Define the library target:
+#               Define the library target:
 # ----------------------------------------------------------------------------------
 set(the_target "opencv_highgui")
 
@@ -249,8 +249,8 @@ if (OPENCV_BUILD_SHARED_LIB)
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/../core/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/../imgproc/include"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/../core/include"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/../imgproc/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/src"
                     "${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -281,20 +281,20 @@ set_target_properties(${the_target} PROPERTIES
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
-	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
-	INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-	LINK_INTERFACE_LIBRARIES ""
-	)
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+    INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    LINK_INTERFACE_LIBRARIES ""
+    )
 
 if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-endif()	
+    set_target_properties(${the_target} PROPERTIES FOLDER "modules")
+endif() 
 
 
 if(MSVC)
-	set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
 endif(MSVC)
 
 # Dependencies of this target:
@@ -303,19 +303,19 @@ add_dependencies(${the_target} opencv_core opencv_imgproc)
 # Add the required libraries for linking:
 
 if(WITH_JASPER AND NOT JASPER_FOUND)
-	add_dependencies(${the_target} libjasper)
+    add_dependencies(${the_target} libjasper)
 endif()
 
 if(WITH_JPEG AND NOT JPEG_FOUND)
-	add_dependencies(${the_target} libjpeg)
+    add_dependencies(${the_target} libjpeg)
 endif()
 
 if(WITH_PNG AND NOT PNG_FOUND)
-	add_dependencies(${the_target} libpng)
+    add_dependencies(${the_target} libpng)
 endif()
 
 if(WITH_TIFF AND NOT TIFF_FOUND)
-	add_dependencies(${the_target} libtiff)
+    add_dependencies(${the_target} libtiff)
 endif()
 
 if(NOT ZLIB_FOUND)
@@ -333,22 +333,22 @@ if( OPENNI_LIBRARY )
 endif()
 
 if(APPLE)
-	target_link_libraries(${the_target} "-lbz2 -framework Cocoa -framework QuartzCore")
-	if(WITH_CARBON)
-		target_link_libraries(${the_target} "-framework Carbon")
-	endif()
-	if(NOT WITH_QUICKTIME)
-		target_link_libraries(${the_target} "-framework QTKit")
+    target_link_libraries(${the_target} "-lbz2 -framework Cocoa -framework QuartzCore")
+    if(WITH_CARBON)
+        target_link_libraries(${the_target} "-framework Carbon")
     endif()
-	if(WITH_CARBON OR WITH_QUICKTIME)
+    if(NOT WITH_QUICKTIME)
+        target_link_libraries(${the_target} "-framework QTKit")
+    endif()
+    if(WITH_CARBON OR WITH_QUICKTIME)
         target_link_libraries(${the_target} "-framework QuickTime -framework CoreFoundation")
-	endif()
+    endif()
 endif()
 
 install(TARGETS ${the_target}
-	RUNTIME DESTINATION bin COMPONENT main
-	LIBRARY DESTINATION lib COMPONENT main
-	ARCHIVE DESTINATION lib COMPONENT main)
+    RUNTIME DESTINATION bin COMPONENT main
+    LIBRARY DESTINATION lib COMPONENT main
+    ARCHIVE DESTINATION lib COMPONENT main)
 
 install(FILES ${highgui_ext_hdrs}
         DESTINATION include/opencv2/highgui
