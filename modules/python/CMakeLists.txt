@@ -47,7 +47,7 @@ add_custom_command(
 
 
 set(cv_target "opencv_python")
-add_library(${cv_target} src1/cv.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i)
+add_library(${cv_target} SHARED src1/cv.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i)
 target_link_libraries(${cv_target} ${PYTHON_LIBRARIES} opencv_core opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
     
 set_target_properties(${cv_target} PROPERTIES PREFIX "")
