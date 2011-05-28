@@ -48,7 +48,7 @@
 class ExposureCompensator
 {
 public:
-    enum { NO, OVERLAP, SEGMENT };
+    enum { NO, GAIN, GAIN_BLOCKS };
     static cv::Ptr<ExposureCompensator> createDefault(int type);
 
     void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
@@ -68,14 +68,31 @@ public:
 };
 
 
-class OverlapExposureCompensator : public ExposureCompensator
+class GainCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
               const std::vector<std::pair<cv::Mat,uchar> > &masks);
     void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
+    std::vector<double> gains() const;
 
-    cv::Mat_<double> gains;
+private:
+    cv::Mat_<double> gains_;
+};
+
+
+class BlocksGainCompensator : public ExposureCompensator
+{
+public:
+    BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 
+            : bl_width_(bl_width), bl_height_(bl_height) {}
+    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
+              const std::vector<std::pair<cv::Mat,uchar> > &masks);
+    void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
+
+private:
+    int bl_width_, bl_height_;
+    std::vector<cv::Mat_<float> > gain_maps_;
 };
 
 #endif // __OPENCV_EXPOSURE_COMPENSATE_HPP__

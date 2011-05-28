@@ -41,10 +41,12 @@
 //M*/
 
 // We follow to methods described in these two papers:
-// - Heung-Yeung Shum and Richard Szeliski. 
-//   Construction of panoramic mosaics with global and local alignment. 2000.
-// - Matthew Brown and David G. Lowe. 
-//   Automatic Panoramic Image Stitching using Invariant Features. 2007.
+// 1) Construction of panoramic mosaics with global and local alignment. 
+//    Heung-Yeung Shum and Richard Szeliski. 2000.
+// 2) Eliminating Ghosting and Exposure Artifacts in Image Mosaics. 
+//    Matthew Uyttendaele, Ashley Eden and Richard Szeliski. 2001.
+// 3) Automatic Panoramic Image Stitching using Invariant Features. 
+//    Matthew Brown and David G. Lowe. 2007.
 
 #include "precomp.hpp"
 #include "util.hpp"
@@ -59,45 +61,63 @@ using namespace cv;
 
 void printUsage()
 {
-    cout << "Rotation model images stitcher.\n\n";
-    cout << "Usage: opencv_stitching img1 img2 [...imgN]\n" 
-        << "\t[--trygpu (yes|no)]\n"
-        << "\t[--work_megapix <float>]\n"
-        << "\t[--seam_megapix <float>]\n"
-        << "\t[--compose_megapix <float>]\n"
-        << "\t[--match_conf <float>]\n"
-        << "\t[--ba (ray|focal_ray)]\n"
-        << "\t[--conf_thresh <float>]\n"
-        << "\t[--wavecorrect (no|yes)]\n"
-        << "\t[--warp (plane|cylindrical|spherical)]\n" 
-        << "\t[--exposcomp (no|overlap)]\n"
-        << "\t[--seam (no|voronoi|gc_color|gc_colorgrad)]\n" 
-        << "\t[--blend (no|feather|multiband)]\n"
-        << "\t[--numbands <int>]\n"
-        << "\t[--output <result_img>]\n\n";
-    cout << "--match_conf\n"
-        << "\tGood values are in [0.2, 0.8] range usually.\n\n";
-    cout << "HINT:\n"  
-        << "\tTry bigger values for --work_megapix if something is wrong.\n\n";
+    cout << 
+        "Rotation model images stitcher.\n\n"
+        "opencv_stitching img1 img2 [...imgN] [flags]\n\n" 
+        "Flags:\n"
+        "  --preview\n"
+        "      Run stitching in the preview mode. Works faster than usual mode,\n"
+        "      but output image will have lower resolution.\n"
+        "  --try_gpu (yes|no)\n"
+        "      Try to use GPU. The default value is 'no'. All default values\n"
+        "      are for CPU mode.\n"
+        "  --work_megapix <float>\n"
+        "      Resolution for image registration step. The default is 0.6.\n"
+        "  --seam_megapix <float>\n"
+        "      Resolution for seam estimation step. The default is 0.1.\n"
+        "  --compose_megapix <float>\n"
+        "      Resolution for compositing step. Use -1 for original resolution.\n"
+        "      The default is -1.\n"
+        "  --match_conf <float>\n"
+        "      Confidence for feature matching step. The default is 0.6.\n"
+        "  --ba (ray|focal_ray)\n"
+        "      Bundle adjustment cost function. The default is 'focal_ray'.\n"
+        "  --conf_thresh <float>\n"
+        "      Threshold for two images are from the same panorama confidence.\n"
+        "      The default is 'focal_ray'.\n"
+        "  --wave_correct (no|yes)\n"
+        "      Perform wave effect correction. The default is 'yes'.\n"
+        "  --warp (plane|cylindrical|spherical)\n" 
+        "      Warp surface type. The default is 'spherical'.\n"
+        "  --expos_comp (no|gain|gain_blocks)\n"
+        "      Exposure compensation method. The default is 'gain'.\n"
+        "  --seam (no|voronoi|gc_color|gc_colorgrad)\n" 
+        "      Seam estimation method. The default is 'gc_color'.\n"
+        "  --blend (no|feather|multiband)\n"
+        "      Blending method. The default is 'multiband'.\n"
+        "  --num_bands <int>\n"
+        "      Number of bands for multi-band blending method. The default is 5.\n"
+        "  --output <result_img>\n";
 }
 
 
 // Default command line args
 vector<string> img_names;
-bool trygpu = false;
+bool preview = false;
+bool try_gpu = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
-double compose_megapix = 1;
+double compose_megapix = -1;
 int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
 int warp_type = Warper::SPHERICAL;
-int expos_comp_type = ExposureCompensator::OVERLAP;
+int expos_comp_type = ExposureCompensator::GAIN;
 bool user_match_conf = false;
 float match_conf = 0.6f;
 int seam_find_type = SeamFinder::GC_COLOR;
 int blend_type = Blender::MULTI_BAND;
-int numbands = 5;
+int num_bands = 5;
 string result_name = "result.png";
 
 int parseCmdArgs(int argc, char** argv)
@@ -107,18 +127,21 @@ int parseCmdArgs(int argc, char** argv)
         printUsage();
         return -1;
     }
-
     for (int i = 1; i < argc; ++i)
     {
-        if (string(argv[i]) == "--trygpu")
+        if (string(argv[i]) == "--preview")
+        {
+            preview = true;
+        }
+        else if (string(argv[i]) == "--try_gpu")
         {
             if (string(argv[i + 1]) == "no")
-                trygpu = false;
+                try_gpu = false;
             else if (string(argv[i + 1]) == "yes")
-                trygpu = true;
+                try_gpu = true;
             else
             {
-                cout << "Bad --trygpu flag value\n";
+                cout << "Bad --try_gpu flag value\n";
                 return -1;
             }
             i++;
@@ -167,7 +190,7 @@ int parseCmdArgs(int argc, char** argv)
             conf_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
-        else if (string(argv[i]) == "--wavecorrect")
+        else if (string(argv[i]) == "--wave_correct")
         {
             if (string(argv[i + 1]) == "no")
                 wave_correct = false;
@@ -175,7 +198,7 @@ int parseCmdArgs(int argc, char** argv)
                 wave_correct = true;
             else
             {
-                cout << "Bad --wavecorrect flag value\n";
+                cout << "Bad --wave_correct flag value\n";
                 return -1;
             }
             i++;
@@ -195,12 +218,14 @@ int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
-        else if (string(argv[i]) == "--exposcomp")
+        else if (string(argv[i]) == "--expos_comp")
         {
             if (string(argv[i + 1]) == "no")
                 expos_comp_type = ExposureCompensator::NO;
-            else if (string(argv[i + 1]) == "overlap")
-                expos_comp_type = ExposureCompensator::OVERLAP;
+            else if (string(argv[i + 1]) == "gain")
+                expos_comp_type = ExposureCompensator::GAIN;
+            else if (string(argv[i + 1]) == "gain_blocks")
+                expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
             else
             {
                 cout << "Bad exposure compensation method\n";
@@ -240,9 +265,9 @@ int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
-        else if (string(argv[i]) == "--numbands")
+        else if (string(argv[i]) == "--num_bands")
         {
-            numbands = atoi(argv[i + 1]);
+            num_bands = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--output")
@@ -252,6 +277,10 @@ int parseCmdArgs(int argc, char** argv)
         }
         else
             img_names.push_back(argv[i]);
+    }
+    if (preview)
+    {
+        compose_megapix = work_megapix;
     }
     return 0;
 }
@@ -281,7 +310,7 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 
     vector<ImageFeatures> features(num_images);
-    SurfFeaturesFinder finder(trygpu);
+    SurfFeaturesFinder finder(try_gpu);
     Mat full_img, img;
 
     vector<Mat> images(num_images);
@@ -333,9 +362,9 @@ int main(int argc, char* argv[])
     LOGLN("Pairwise matching... ");
     t = getTickCount();
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher(trygpu);
+    BestOf2NearestMatcher matcher(try_gpu);
     if (user_match_conf)
-        matcher = BestOf2NearestMatcher(trygpu, match_conf);
+        matcher = BestOf2NearestMatcher(try_gpu, match_conf);
     matcher(features, pairwise_matches);
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -533,7 +562,7 @@ int main(int argc, char* argv[])
             if (blend_type == Blender::MULTI_BAND)
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
-                mb->setNumBands(numbands);
+                mb->setNumBands(num_bands);
             }
             blender->prepare(corners, sizes);
         }

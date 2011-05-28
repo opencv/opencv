@@ -52,8 +52,10 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
 {
     if (type == NO)
         return new NoExposureCompensator();
-    if (type == OVERLAP)
-        return new OverlapExposureCompensator();
+    if (type == GAIN)
+        return new GainCompensator();
+    if (type == GAIN_BLOCKS)
+        return new BlocksGainCompensator();
     CV_Error(CV_StsBadArg, "unsupported exposure compensation method");
     return NULL;
 }
@@ -69,8 +71,8 @@ void ExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &
 }
 
 
-void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
-                                      const vector<pair<Mat,uchar> > &masks)
+void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
+                           const vector<pair<Mat,uchar> > &masks)
 {
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
@@ -96,7 +98,7 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
                 submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j]));
                 intersect = (submask1 == masks[i].second) & (submask2 == masks[j].second);
 
-                N(i, j) = N(j, i) = countNonZero(intersect);
+                N(i, j) = N(j, i) = max(1, countNonZero(intersect));
 
                 double Isum1 = 0, Isum2 = 0;
                 for (int y = 0; y < roi.height; ++y)
@@ -112,8 +114,8 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
                         }
                     }
                 }
-                I(i, j) = Isum1 / max(N(i, j), 1);
-                I(j, i) = Isum2 / max(N(i, j), 1);
+                I(i, j) = Isum1 / N(i, j);
+                I(j, i) = Isum2 / N(i, j);
             }
         }
     }
@@ -135,11 +137,103 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
         }
     }
 
-    solve(A, b, gains);
+    solve(A, b, gains_);
 }
 
 
-void OverlapExposureCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+void GainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
 {
-    image *= gains(index, 0);
+    image *= gains_(index, 0);
+}
+
+
+vector<double> GainCompensator::gains() const
+{
+    vector<double> gains_vec(gains_.rows);
+    for (int i = 0; i < gains_.rows; ++i)
+        gains_vec[i] = gains_(i, 0);
+    return gains_vec;
+}
+
+
+void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
+                                const vector<pair<Mat,uchar> > &masks)
+{
+    CV_Assert(corners.size() == images.size() && images.size() == masks.size());
+
+    const int num_images = static_cast<int>(images.size());
+
+    vector<Size> bl_per_imgs(num_images);
+    vector<Point> block_corners;
+    vector<Mat> block_images;
+    vector<pair<Mat,uchar> > block_masks;
+
+    // Construct blocks for gain compensator
+    for (int img_idx = 0; img_idx < num_images; ++img_idx)
+    {
+        Size bl_per_img((images[img_idx].cols + bl_width_ - 1) / bl_width_,
+                        (images[img_idx].rows + bl_height_ - 1) / bl_height_);
+        int bl_width = (images[img_idx].cols + bl_per_img.width - 1) / bl_per_img.width;
+        int bl_height = (images[img_idx].rows + bl_per_img.height - 1) / bl_per_img.height;
+        bl_per_imgs[img_idx] = bl_per_img;
+        for (int by = 0; by < bl_per_img.height; ++by)
+        {
+            for (int bx = 0; bx < bl_per_img.width; ++bx)
+            {
+                Point bl_tl(bx * bl_width, by * bl_height);
+                Point bl_br(min(bl_tl.x + bl_width, images[img_idx].cols),
+                            min(bl_tl.y + bl_height, images[img_idx].rows));
+
+                block_corners.push_back(corners[img_idx] + bl_tl);
+                block_images.push_back(images[img_idx](Rect(bl_tl, bl_br)));
+                block_masks.push_back(make_pair(masks[img_idx].first(Rect(bl_tl, bl_br)), 
+                                                masks[img_idx].second));
+            }
+        }
+    }
+
+    GainCompensator compensator;
+    compensator.feed(block_corners, block_images, block_masks);
+    vector<double> gains = compensator.gains();
+    gain_maps_.resize(num_images);
+
+    int bl_idx = 0;
+    for (int img_idx = 0; img_idx < num_images; ++img_idx)
+    {
+        Size bl_per_img = bl_per_imgs[img_idx];
+        gain_maps_[img_idx].create(bl_per_img);
+
+        for (int by = 0; by < bl_per_img.height; ++by)
+            for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
+                gain_maps_[img_idx](by, bx) = static_cast<float>(gains[bl_idx]);
+        
+        Mat_<float> ker(1, 3); 
+        ker(0,0) = 0.25; ker(0,1) = 0.5; ker(0,2) = 0.25;
+        sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
+        sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
+    }
+}
+
+
+void BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+{
+    CV_Assert(image.type() == CV_8UC3);
+
+    Mat_<float> gain_map;
+    if (gain_maps_[index].size() == image.size())
+        gain_map = gain_maps_[index];
+    else
+        resize(gain_maps_[index], gain_map, image.size(), 0, 0, INTER_LINEAR);
+
+    for (int y = 0; y < image.rows; ++y)
+    {
+        const float* gain_row = gain_map.ptr<float>(y);
+        Point3_<uchar>* row = image.ptr<Point3_<uchar> >(y);
+        for (int x = 0; x < image.cols; ++x)
+        {
+            row[x].x = saturate_cast<uchar>(row[x].x * gain_row[x]);
+            row[x].y = saturate_cast<uchar>(row[x].y * gain_row[x]);
+            row[x].z = saturate_cast<uchar>(row[x].z * gain_row[x]);
+        }
+    }
 }
