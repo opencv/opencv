@@ -198,14 +198,15 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
         if (_err)
         {
             calcError(err_);
-            LOGLN("Error: " << sqrt(err_.dot(err_)));
+            LOG(".");
             count++;
             CvMat matErr = err_;
             cvCopy( &matErr, _err );
         }
     }
+    LOGLN("");
     LOGLN("Bundle adjustment, final error: " << sqrt(err_.dot(err_)));
-    LOGLN("Bundle adjustment, iteration done: " << count);
+    LOGLN("Bundle adjustment, iterations done: " << count);
 
     // Obtain global motion
     for (int i = 0; i < num_images_; ++i)
@@ -432,7 +433,8 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
 
     LOG("Removed some images, because can't match them: (");
     LOG(indices_removed[0]);
-    for (size_t i = 1; i < indices_removed.size(); ++i) LOG(", " << indices_removed[i]);
+    for (size_t i = 1; i < indices_removed.size(); ++i) 
+        LOG(", " << indices_removed[i]+1);
     LOGLN(")");
 
     features = features_subset;

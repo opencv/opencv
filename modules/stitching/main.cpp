@@ -79,7 +79,7 @@ void printUsage()
         "      Resolution for compositing step. Use -1 for original resolution.\n"
         "      The default is -1.\n"
         "  --match_conf <float>\n"
-        "      Confidence for feature matching step. The default is 0.6.\n"
+        "      Confidence for feature matching step. The default is 0.7.\n"
         "  --ba (ray|focal_ray)\n"
         "      Bundle adjustment cost function. The default is 'focal_ray'.\n"
         "  --conf_thresh <float>\n"
@@ -113,8 +113,7 @@ float conf_thresh = 1.f;
 bool wave_correct = true;
 int warp_type = Warper::SPHERICAL;
 int expos_comp_type = ExposureCompensator::GAIN;
-bool user_match_conf = false;
-float match_conf = 0.6f;
+float match_conf = 0.7f;
 int seam_find_type = SeamFinder::GC_COLOR;
 int blend_type = Blender::MULTI_BAND;
 int num_bands = 5;
@@ -129,7 +128,12 @@ int parseCmdArgs(int argc, char** argv)
     }
     for (int i = 1; i < argc; ++i)
     {
-        if (string(argv[i]) == "--preview")
+        if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
+        {
+            printUsage();
+            return -1;
+        }
+        else if (string(argv[i]) == "--preview")
         {
             preview = true;
         }
@@ -168,7 +172,6 @@ int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--match_conf")
         {
-            user_match_conf = true;
             match_conf = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
@@ -348,7 +351,7 @@ int main(int argc, char* argv[])
 
         finder(img, features[i]);
         features[i].img_idx = i;
-        LOGLN("Features in image #" << i << ": " << features[i].keypoints.size());
+        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
         resize(full_img, img, Size(), seam_scale, seam_scale);
         images[i] = img.clone();
@@ -359,12 +362,10 @@ int main(int argc, char* argv[])
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOGLN("Pairwise matching... ");
+    LOG("Pairwise matching");
     t = getTickCount();
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher(try_gpu);
-    if (user_match_conf)
-        matcher = BestOf2NearestMatcher(try_gpu, match_conf);
+    BestOf2NearestMatcher matcher(try_gpu, match_conf);
     matcher(features, pairwise_matches);
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -401,14 +402,24 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial focal length #" << i << ": " << cameras[i].focal);
+        LOGLN("Initial focal length #" << indices[i]+1 << ": " << cameras[i].focal);
     }
 
-    LOGLN("Bundle adjustment... ");
+    LOG("Bundle adjustment");
     t = getTickCount();
     BundleAdjuster adjuster(ba_space, conf_thresh);
     adjuster(features, pairwise_matches, cameras);
     LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    // Find median focal length
+    vector<double> focals;
+    for (size_t i = 0; i < cameras.size(); ++i)
+    {
+        LOGLN("Camera #" << indices[i]+1 << " focal length: " << cameras[i].focal);
+        focals.push_back(cameras[i].focal);
+    }
+    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
+    float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 
     if (wave_correct)
     {
@@ -422,16 +433,6 @@ int main(int argc, char* argv[])
             cameras[i].R = rmats[i];
         LOGLN("Wave correcting, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
     }
-
-    // Find median focal length
-    vector<double> focals;
-    for (size_t i = 0; i < cameras.size(); ++i)
-    {
-        LOGLN("Camera #" << i << " focal length: " << cameras[i].focal);
-        focals.push_back(cameras[i].focal);
-    }
-    nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
-    float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 
     LOGLN("Warping images (auxiliary)... ");
     t = getTickCount();
@@ -496,7 +497,7 @@ int main(int argc, char* argv[])
 
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
-        LOGLN("Compositing image #" << img_idx);
+        LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
         full_img = imread(img_names[img_idx]);

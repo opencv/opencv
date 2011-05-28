@@ -219,6 +219,7 @@ struct MatchPairsBody
             for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
                 swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
                      pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+            LOG(".");
         }
     }
 
@@ -248,6 +249,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
         parallel_for(BlockedRange(0, static_cast<int>(near_pairs.size())), body);
     else
         body(BlockedRange(0, static_cast<int>(near_pairs.size())));
+    LOGLN("");
 }
 
 
