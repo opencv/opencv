@@ -32,7 +32,7 @@ void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
         find_symbol = buffer_string.find('=');
         if (find_symbol == -1)
             buffer_vector.push_back(buffer_string);
-        else if (find_symbol == 0 || find_symbol == ((int)buffer_string.length() - 1))
+        else if (find_symbol == 0 || find_symbol == (buffer_string.length() - 1))
         {
             buffer_string.erase(find_symbol, (find_symbol + 1));
             if(!buffer_string.empty())
@@ -45,6 +45,7 @@ void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
             buffer_vector.push_back(buffer_string);
             buffer2_string.erase(0, find_symbol + 1);
             buffer_vector.push_back(buffer2_string);
+
         }
     }
 
@@ -57,78 +58,70 @@ void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
     }
 }
 
+
 CommandLineParser::CommandLineParser(int _argc, const char* _argv[])
 {
     std::string cur_name;
     bool was_pushed=false;
     int argc;
     char** argv;
-
     PreprocessArgs(_argc, _argv, argc, argv);
 
-    for(int i=1; i < argc; i++)
-    {
-        if(!argv[i])
-            break;
+    for(int i=1; i < argc; i++) {
 
-        if( (argv[i][0]== '-') && (strlen(argv[i]) > 1) &&
-            ((argv[i][1] < '0') || (argv[i][1] > '9'))   )
-        {
-            if (!cur_name.empty() && !was_pushed)
+            if(!argv[i])
+                    break;
+
+            if( (argv[i][0]== '-') && (strlen(argv[i]) > 1)
+                    &&
+                    ( (argv[i][1] < '0') || (argv[i][1] > '9'))   )
             {
-                data[cur_name].push_back("");
+                    if (!cur_name.empty() && !was_pushed) {
+                            data[cur_name].push_back("");
+                    }
+                    cur_name=argv[i];
+                    while (cur_name.find('-') == 0)
+                    {
+                        cur_name.erase(0,1);
+                    }
+                    was_pushed=false;
+
+                    if (data.find(cur_name) != data.end()) {
+                            string str_exception="dublicating parameters for name='" + cur_name + "'";
+                            CV_Error(CV_StsParseError, str_exception);
+                    }
+                    continue;
             }
 
-            cur_name=argv[i];
-
-            while (cur_name.find('-') == 0)
-            {
-                cur_name.erase(0,1);
-            }
-
-            was_pushed=false;
-
-            if (data.find(cur_name) != data.end())
-            {
-                string str_exception = "dublicating parameters for name='" + cur_name + "'";
-                CV_Error(CV_StsParseError, str_exception);
-            }
-            continue;
-        }
-
-        data[cur_name].push_back(argv[i]);
-        was_pushed=true;
+            data[cur_name].push_back(argv[i]);
+            was_pushed=true;
     }
     if (!cur_name.empty() && !was_pushed)
-        data[cur_name].push_back("");
+            data[cur_name].push_back("");
 }
 
 bool CommandLineParser::has(const std::string& keys) const
 {
     vector<string> names=split_string(keys, " |");
-    for(size_t j=0; j < names.size(); j++)
-    {
+    for(size_t j=0; j < names.size(); j++) {
         if (data.find(names[j])!=data.end())
             return true;
     }
     return false;
 }
 
-template<>
-std::vector<std::string> CommandLineParser::getVec<std::string>(const std::string& keys)
+std::string CommandLineParser::getString(const std::string& keys) const
 {
     vector<string> names=split_string(keys, " |");
 
     int found_index=-1;
-    for(size_t j=0; j < names.size(); j++)
-    {
+    for(size_t j=0; j < names.size(); j++) {
         const string& cur_name=names[j];
         bool is_cur_found=has(cur_name);
 
-        if (is_cur_found && (found_index >= 0))
-        {
-            string str_exception = "dublicating parameters for "
-                                   "name='" + names[found_index] + "' and name='"+cur_name+"'";
+        if (is_cur_found && (found_index >= 0)) {
+            string str_exception="dublicating parameters for "
+                "name='" + names[found_index] + "' and name='"+cur_name+"'";
             CV_Error(CV_StsParseError, str_exception);
         }
 
@@ -137,45 +130,38 @@ std::vector<std::string> CommandLineParser::getVec<std::string>(const std::strin
     }
 
     if (found_index<0)
-        return vector<string>();
-
-    return data.find(names[found_index])->second;
+        return string();
+    return data.find(names[found_index])->second[0];
 }
 
+
 template<>
-std::string CommandLineParser::fromString<std::string>(const std::string& str)
+std::string CommandLineParser::analizeValue<std::string>(const std::string& str)
 {
     return str;
 }
 
 template<>
-int CommandLineParser::fromString<int>(const std::string& str)
+int CommandLineParser::analizeValue<int>(const std::string& str)
 {
     return fromStringNumber<int>(str);
 }
 
 template<>
-unsigned int CommandLineParser::fromString<unsigned int>(const std::string& str)
+unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str)
 {
     return fromStringNumber<unsigned int>(str);
 }
 
 template<>
-double CommandLineParser::fromString<double>(const std::string& str)
+float CommandLineParser::analizeValue<float>(const std::string& str)
 {
-    return fromStringNumber<double>(str);
+    return fromStringNumber<float>(str);
 }
 
 template<>
-cv::Size CommandLineParser::fromStringsVec<cv::Size>(const std::vector<std::string>& vec_str)
+double CommandLineParser::analizeValue<double>(const std::string& str)
 {
-    if (vec_str.size() < 2)
-        CV_Error(CV_StsParseError, "Cannot convert vector of string to cv::Size : less than two strings");
-
-    cv::Size res;
-    res.width=fromString<int>(vec_str[0]);
-    res.height=fromString<int>(vec_str[1]);
-
-    return res;
+    return fromStringNumber<double>(str);
 }
 

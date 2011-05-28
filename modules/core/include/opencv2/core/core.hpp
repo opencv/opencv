@@ -4171,126 +4171,85 @@ protected:
 
  The class is used for reading command arguments.
  Supports the following syntax:
-   //-k 10 1 2 --x 0.001 --size 640 480 --inputFile lena.jpg
+   //-k=10  --x 0.001 --inputFile lena.jpg
    int k = parser.get<int>("--k | -k", -1);
-   vector<int> kValues=parser.getVec<int>("--k | -k");
    double x = parser.get<double>("--x");
-   cv::Size size = parser.get<cv::Size>("--size");
    string inputFile = parser.get<string>("--inputFile");
 */
 class CV_EXPORTS CommandLineParser
 {
-public:
-    //! the default constructor
-    CommandLineParser(int argc, const char* argv[]);
+    public:
 
-    //! allows to check if parameter is given
-    bool has(const std::string& keys) const;
+        //! the default constructor
+        CommandLineParser(int argc, const char* argv[]);
 
-    //! get parameter
-    template<typename _Tp>
-    _Tp get(const std::string& name)
-    {
-        return fromStringsVec<_Tp>(getVec<std::string>(name));
-    }
+        //! allows to check if parameter is given
+        bool has(const std::string& keys) const;
 
-    //! get parameter with default value
-    template<typename _Tp>
-    _Tp get(const std::string& name, const _Tp& default_value)
-    {
-        if (!has(name))
-            return default_value;
-
-        return get<_Tp>(name);
-    }
-
-    //! get a vector of values for specified key
-    template<typename _Tp>
-    std::vector<_Tp> getVec(const std::string& keys);
-
-protected:
-    std::map<std::string, std::vector<std::string> > data;
-
-    template<typename _Tp>
-    static _Tp fromStringSimple(const std::string& str)//the default conversion function
-    {
-        _Tp res;
-        std::stringstream s1(str);
-        s1 >> res;
-        return res;
-    }
-
-    template<typename _Tp>
-    static _Tp fromString(const std::string& str)
-    {
-        return fromStringSimple<_Tp>(str);
-    }
-
-    template<typename _Tp>
-    static _Tp fromStringNumber(const std::string& str)//the default conversion function for numbers
-    {
-        _Tp dummy_val=0; dummy_val+=1;
-
-        if (str.empty())
-            CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
-
-        const char* c_str=str.c_str();
-        if((!isdigit(c_str[0]))
-            &&
-            (
-                (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
-            )
-        )
+        //! get parameter, if parameter is not given get default parameter
+        template<typename _Tp>
+        _Tp get(const std::string& name, const _Tp& default_value = _Tp())
         {
-            CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
+            std::string str = getString(name);
+            if (!has(name))
+                return default_value;
+            return analizeValue<_Tp>(str);
         }
 
-        return fromStringSimple<_Tp>(str);
-    }
+    protected:
+        std::map<std::string, std::vector<std::string> > data;
+        std::string getString(const std::string& name) const;
 
-    template<typename _Tp>
-    static _Tp fromStringsVec(const std::vector<std::string>& vec_str)
-    {
-        if (vec_str.empty())
-            CV_Error(CV_StsParseError, "Cannot convert from an empty vector");
-        return fromString<_Tp>(vec_str[0]);
-    }
-};
+        template<typename _Tp>
+        _Tp analizeValue(const std::string& str);
 
-template<> CV_EXPORTS
-std::vector<std::string> CommandLineParser::getVec<std::string>(const std::string& keys);
+        template<typename _Tp>
+        static _Tp getData(const std::string& str)
+        {
+            _Tp res;
+            std::stringstream s1(str);
+            s1 >> res;
+            return res;
+        }
 
-template<typename _Tp> inline
-std::vector<_Tp> CommandLineParser::getVec(const std::string& keys)
-{
-    if (!has(keys))
-        return std::vector<_Tp>();
+        template<typename _Tp>
+        static _Tp fromStringNumber(const std::string& str)//the default conversion function for numbers
+        {
 
-    std::vector<std::string> v=getVec<std::string>(keys);
+            if (str.empty())
+                CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
 
-    std::vector<_Tp> res;
-    for(size_t i=0; i < v.size(); i++)
-    {
-        _Tp val=fromString<_Tp>(v[i]);
-        res.push_back(val);
-    }
-    return res;
-}
+            const char* c_str=str.c_str();
+            if((!isdigit(c_str[0]))
+                &&
+                (
+                    (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
+                )
+            )
 
-template<> CV_EXPORTS
-std::string CommandLineParser::fromString<std::string>(const std::string& str);
+            {
+                CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
+            }
 
-template<> CV_EXPORTS
-int CommandLineParser::fromString<int>(const std::string& str);
+            return  getData<_Tp>(str);
+        }
 
-template<> CV_EXPORTS
-unsigned int CommandLineParser::fromString<unsigned int>(const std::string& str);
+    };
 
-template<> CV_EXPORTS
-double CommandLineParser::fromString<double>(const std::string& str);
+    template<> CV_EXPORTS
+    std::string CommandLineParser::analizeValue<std::string>(const std::string& str);
 
-template<> CV_EXPORTS
-cv::Size CommandLineParser::fromStringsVec<cv::Size>(const std::vector<std::string>& str);
+    template<> CV_EXPORTS
+    int CommandLineParser::analizeValue<int>(const std::string& str);
+
+    template<> CV_EXPORTS
+    unsigned CommandLineParser::analizeValue<unsigned int>(const std::string& str);
+
+    template<> CV_EXPORTS
+    float CommandLineParser::analizeValue<float>(const std::string& str);
+
+    template<> CV_EXPORTS
+    double CommandLineParser::analizeValue<double>(const std::string& str);
 
 }
 
