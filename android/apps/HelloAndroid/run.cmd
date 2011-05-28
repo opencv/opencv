@@ -14,7 +14,10 @@ VERIFY BADVALUE 2>NUL
 SETLOCAL ENABLEEXTENSIONS || (ECHO Unable to enable command extensions. & EXIT \B)
 
 PUSHD %~dp0
+:: project specific settings
 SET PROJECT_NAME=HelloAndroid
+SET BUILD_DIR=build_armeabi
+SET ARM_TARGET=armeabi
 
 :: try to load config file
 SET CFG_PATH=..\..\scripts\wincfg.cmd
