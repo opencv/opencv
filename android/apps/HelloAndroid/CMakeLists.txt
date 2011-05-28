@@ -1,5 +1,9 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 
+#########################################################
+# Set project name
+#########################################################
+
 IF( NOT PROJECT_NAME )
   IF ( NOT "x$ENV{PROJECT_NAME}" STREQUAL "x" )
     SET( PROJECT_NAME $ENV{PROJECT_NAME} )
@@ -43,3 +47,21 @@ FILE( GLOB srcs "*.cpp" )
 
 ADD_EXECUTABLE( ${PROJECT_NAME} ${srcs} )
 TARGET_LINK_LIBRARIES( ${PROJECT_NAME} ${LIBRARY_DEPS} )
+
+#########################################################
+# Summary report
+#########################################################
+message( STATUS "")
+message( STATUS "General configuration for ${PROJECT_NAME} =====================================")
+message( STATUS "")
+message( STATUS "    OpenCV path:                ${OpenCV_DIR}")
+message( STATUS "    Compiler:                   ${CMAKE_COMPILER}")
+message( STATUS "    C++ flags (Release):        ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+message( STATUS "    C++ flags (Debug):          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+if(WIN32)
+message( STATUS "    Linker flags (Release):     ${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+message( STATUS "    Linker flags (Debug):       ${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+else()
+message( STATUS "    Linker flags (Release):     ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
+message( STATUS "    Linker flags (Debug):       ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+endif()
