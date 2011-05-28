@@ -54,15 +54,23 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
         return new NoExposureCompensator();
     if (type == OVERLAP)
         return new OverlapExposureCompensator();
-    if (type == SEGMENT)
-        return new SegmentExposureCompensator();
     CV_Error(CV_StsBadArg, "unsupported exposure compensation method");
     return NULL;
 }
 
 
+void ExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
+                               const vector<Mat> &masks)
+{
+    vector<pair<Mat,uchar> > level_masks;
+    for (size_t i = 0; i < masks.size(); ++i)
+        level_masks.push_back(make_pair(masks[i], 255));
+    feed(corners, images, level_masks);
+}
+
+
 void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
-                                      const vector<Mat> &masks)
+                                      const vector<pair<Mat,uchar> > &masks)
 {
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
@@ -84,9 +92,9 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
                 subimg1 = images[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
                 subimg2 = images[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
 
-                submask1 = masks[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
-                submask2 = masks[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
-                intersect = submask1 & submask2;
+                submask1 = masks[i].first(Rect(roi.tl() - corners[i], roi.br() - corners[i]));
+                submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+                intersect = (submask1 == masks[i].second) & (submask2 == masks[j].second);
 
                 N(i, j) = N(j, i) = countNonZero(intersect);
 
@@ -127,22 +135,11 @@ void OverlapExposureCompensator::feed(const vector<Point> &corners, const vector
         }
     }
 
-    solve(A, b, gains_);
+    solve(A, b, gains);
 }
 
 
 void OverlapExposureCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
 {
-    image *= gains_(index, 0);
-}
-
-
-void SegmentExposureCompensator::feed(const vector<Point> &/*corners*/, const vector<Mat> &/*images*/, 
-                                      const vector<Mat> &/*masks*/)
-{
-}
-
-
-void SegmentExposureCompensator::apply(int /*index*/, Point /*corner*/, Mat &/*image*/, const Mat &/*mask*/)
-{
+    image *= gains(index, 0);
 }

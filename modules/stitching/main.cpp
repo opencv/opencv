@@ -201,8 +201,6 @@ int parseCmdArgs(int argc, char** argv)
                 expos_comp_type = ExposureCompensator::NO;
             else if (string(argv[i + 1]) == "overlap")
                 expos_comp_type = ExposureCompensator::OVERLAP;
-            else if (string(argv[i + 1]) == "segment")
-                expos_comp_type = ExposureCompensator::SEGMENT;
             else
             {
                 cout << "Bad exposure compensation method\n";

@@ -51,8 +51,10 @@ public:
     enum { NO, OVERLAP, SEGMENT };
     static cv::Ptr<ExposureCompensator> createDefault(int type);
 
+    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
+              const std::vector<cv::Mat> &masks);
     virtual void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-                      const std::vector<cv::Mat> &masks) = 0;
+                      const std::vector<std::pair<cv::Mat,uchar> > &masks) = 0;
     virtual void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask) = 0;
 };
 
@@ -61,7 +63,7 @@ class NoExposureCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<cv::Point> &/*corners*/, const std::vector<cv::Mat> &/*images*/, 
-              const std::vector<cv::Mat> &/*masks*/) {};
+              const std::vector<std::pair<cv::Mat,uchar> > &/*masks*/) {};
     void apply(int /*index*/, cv::Point /*corner*/, cv::Mat &/*image*/, const cv::Mat &/*mask*/) {};
 };
 
@@ -70,20 +72,10 @@ class OverlapExposureCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-              const std::vector<cv::Mat> &masks);
+              const std::vector<std::pair<cv::Mat,uchar> > &masks);
     void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
 
-private:
-    cv::Mat_<double> gains_;
-};
-
-
-class SegmentExposureCompensator : public ExposureCompensator
-{
-public:
-    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-              const std::vector<cv::Mat> &masks);
-    void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
+    cv::Mat_<double> gains;
 };
 
 #endif // __OPENCV_EXPOSURE_COMPENSATE_HPP__
