@@ -323,24 +323,22 @@ void displayBuffer(IplImage *rgbDestImage, IplImage *buffer, int rValue, int gVa
 	}
 };
 
-void help(const char *exe_name)
+void help()
 {
-    std::cout << "\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector which can be found in contrib.cpp\n"
-            << "Usage: " << std::endl <<
-                exe_name << " --fileMask --firstFrame --lastFrame" << std::endl << std::endl <<
-        "Example: " << std::endl <<
-                exe_name << " --fileMask=C:\\VideoSequences\\sample1\\right_view\\temp_%05d.jpg  --firstFrame=0  --lastFrame=1000" << std::endl <<
-        "	iterates through temp_00000.jpg  to  temp_01000.jpg" << std::endl << std::endl <<
-        "If no parameter specified, this application will try to capture from the default Webcam." << std::endl <<
-        "Please note: Background should not contain large surfaces with skin tone." <<
-        "\n\n ESC will stop\n"
-        "Using OpenCV version %s\n" << CV_VERSION << "\n"
-        << std::endl;
+     printf("\nThis program demonstrates the contributed flesh detector CvAdaptiveSkinDetector \n"
+            "which can be found in contrib.cpp \n"
+            "Usage: \n"
+            "./adaptiveskindetector [--fileMask]=<path to file, which are used in mask \n"
+            "                       [--firstFrame]=<first frame number \n"
+            "                       [--lastFrame]=<last frame number> \n"
+            "                       if at least one parameter doesn't specified, it will try to use default webcam \n"
+            "Expample: \n"
+            "         --fileMask = /home/user_home_directory/work/opencv/samples/c/temp_%%05d.jpg --firstFrame=0  --lastFrame=1000 \n");
 }
 
 int main(int argc, const char** argv )
 {
-    help(argv[0]);
+    help();
 
     CommandLineParser parser(argc, argv);
 

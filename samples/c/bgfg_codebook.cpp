@@ -42,9 +42,9 @@ void help(void)
 {
     printf("\nLearn background and find foreground using simple average and average difference learning method:\n"
     		"Originally from the book: Learning OpenCV by O'Reilly press\n"
-            "\nUSAGE:\n"
-            "./bgfg_codebook [--nframes=300] \n"
-            "   [--input = movie filename or camera index]\n"
+            "\nUsage:\n"
+            "./bgfg_codebook [--nframes]=<frames number, 300 as default> \n"
+            "                [--input]=<movie filename or camera index, zero camera index as default>\n"
             "***Keep the focus on the video windows, NOT the consol***\n\n"
             "INTERACTIVE PARAMETERS:\n"
             "\tESC,q,Q  - quit the program\n"
