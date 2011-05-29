@@ -99,7 +99,6 @@ public:
 	~CvCaptureCAM(); 
 	virtual bool grabFrame(); 
 	virtual IplImage* retrieveFrame(int);
-	virtual IplImage* queryFrame(); 
 	virtual double getProperty(int property_id); 
 	virtual bool setProperty(int property_id, double value); 
 	virtual int didStart(); 
@@ -142,7 +141,6 @@ public:
 	~CvCaptureFile(); 
 	virtual bool grabFrame(); 
 	virtual IplImage* retrieveFrame(int);
-	virtual IplImage* queryFrame(); 
 	virtual double getProperty(int property_id); 
 	virtual bool setProperty(int property_id, double value); 
 	virtual int didStart(); 
@@ -293,18 +291,6 @@ bool CvCaptureCAM::grabFrame(double timeOut) {
 IplImage* CvCaptureCAM::retrieveFrame(int) {
 	return [capture getOutput]; 
 }
-
-IplImage* CvCaptureCAM::queryFrame() {
-	while (!grabFrame()) {
-		cout << "WARNING: Couldn't grab new frame from camera!!!" << endl; 
-		/*
-		cout << "Attempting to restart camera; set capture property DISABLE_AUTO_RESTART to disable." << endl; 		
-		stopCaptureDevice(); 
-		startCaptureDevice(camNum); 
-		 */
-	}
-	return retrieveFrame(0); 
-}	
 
 void CvCaptureCAM::stopCaptureDevice() {
 	NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
@@ -780,11 +766,6 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 IplImage* CvCaptureFile::retrieveFrame(int) {
 	return retrieveFramePixelBuffer(); 
 }
-
-IplImage* CvCaptureFile::queryFrame() {
-	grabFrame(); 
-	return retrieveFrame(0); 
-}	
 
 double CvCaptureFile::getFPS() {
 	if (mCaptureSession == nil) return 0; 

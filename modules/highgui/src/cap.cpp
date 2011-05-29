@@ -73,7 +73,11 @@ CV_IMPL void cvReleaseCapture( CvCapture** pcapture )
 
 CV_IMPL IplImage* cvQueryFrame( CvCapture* capture )
 {
-    return capture ? capture->queryFrame() : 0;
+    if(!capture)
+        return 0;
+    if(!capture->grabFrame())
+        return 0;
+    return capture->retrieveFrame(0);
 }
 
 
