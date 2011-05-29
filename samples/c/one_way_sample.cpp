@@ -18,9 +18,13 @@
 void help()
 {
     printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
-           "Correspondences are drawn\n");
-    printf("Format: \n./one_way_sample <path_to_samples> <image1> <image2>\n");
-    printf("For example: ./one_way_sample --path=../../../opencv/samples/c --first_image=scene_l.bmp --second_image=scene_r.bmp\n");
+           "Correspondences are drawn\n"
+           "Usage: \n"
+           "./one_way_sample [--path]=<path_to_samples, '../../../opencv/samples/c' as default> \n"
+           "        [--first_image]=<first image file, scene_l.bmp as default> \n"
+           "        [--second_image]=<second image file, scene_r.bmp as default>\n"
+           "For example: \n"
+           "    ./one_way_sample --path=../../../opencv/samples/c --first_image=scene_l.bmp --second_image=scene_r.bmp \n");
 }
 
 using namespace cv;

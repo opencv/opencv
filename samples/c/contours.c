@@ -8,7 +8,7 @@ void help()
 			"functions cvCreateMemStorage() and cvDrawContours().\n"
 			"It also shows the use of a trackbar to control contour retrieval.\n"
 			"\n"
-			"Call:\n"
+            "Usage :\n"
 			"./contours\n");
 }
 

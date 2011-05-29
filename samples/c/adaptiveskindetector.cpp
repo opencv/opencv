@@ -329,9 +329,9 @@ void help()
             "which can be found in contrib.cpp \n"
             "Usage: \n"
             "./adaptiveskindetector [--fileMask]=<path to file, which are used in mask \n"
-            "                       [--firstFrame]=<first frame number \n"
-            "                       [--lastFrame]=<last frame number> \n"
-            "                       if at least one parameter doesn't specified, it will try to use default webcam \n"
+            "           [--firstFrame]=<first frame number \n"
+            "           [--lastFrame]=<last frame number> \n"
+            "if at least one parameter doesn't specified, it will try to use default webcam \n"
             "Expample: \n"
             "         --fileMask = /home/user_home_directory/work/opencv/samples/c/temp_%%05d.jpg --firstFrame=0  --lastFrame=1000 \n");
 }

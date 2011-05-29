@@ -17,11 +17,10 @@ void help()
 {
     printf( "This program demonstrated the use of the latentSVM detector.\n"
             "It reads in a trained object model and then uses that to detect the object in an image\n"
-            "Call:\n"
+            "Usage: \n"
             "./latentsvmdetect [--image_filename]=<image_filename, cat.jpg as default> \n"
             "       [--model_filename] = <model_filename, cat.xml as default> \n"
             "       [--threads_number] = <number of threads, -1 as default>\n"
-            "  The defaults for image_filename and model_filename are cat.jpg and cat.xml respectively\n"
             "  Press any key to quit.\n");
 }
 

@@ -44,7 +44,7 @@ void help(void)
     		"Originally from the book: Learning OpenCV by O'Reilly press\n"
             "\nUsage:\n"
             "./bgfg_codebook [--nframes]=<frames number, 300 as default> \n"
-            "                [--input]=<movie filename or camera index, zero camera index as default>\n"
+            "       [--input]=<movie filename or camera index, zero camera index as default>\n"
             "***Keep the focus on the video windows, NOT the consol***\n\n"
             "INTERACTIVE PARAMETERS:\n"
             "\tESC,q,Q  - quit the program\n"

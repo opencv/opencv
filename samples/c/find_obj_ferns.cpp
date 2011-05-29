@@ -16,7 +16,7 @@ void help()
             "descriptor classifier"
             "Usage:\n"
             "./find_obj_ferns [--object_filename]=<object_filename, box.png as default> \n"
-            "[--scene_filename]=<scene_filename box_in_scene.png as default>]\n\n");
+            "           [--scene_filename]=<scene_filename box_in_scene.png as default>] \n");
 }
 
 int main(int argc, const char** argv)
