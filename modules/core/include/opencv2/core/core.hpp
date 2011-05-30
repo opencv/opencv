@@ -3804,14 +3804,14 @@ public:
     //! the default constructor
     CV_WRAP FileStorage();
     //! the full constructor that opens file storage for reading or writing
-    CV_WRAP FileStorage(const string& filename, int flags);
+    CV_WRAP FileStorage(const string& filename, int flags, const string& encoding=string());
     //! the constructor that takes pointer to the C FileStorage structure 
     FileStorage(CvFileStorage* fs);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
     //! opens file storage for reading or writing. The previous storage is closed with release()
-    CV_WRAP virtual bool open(const string& filename, int flags);
+    CV_WRAP virtual bool open(const string& filename, int flags, const string& encoding=string());
     //! returns true if the object is associated with currently opened file.
     CV_WRAP virtual bool isOpened() const;
     //! closes the file and releases all the memory buffers
@@ -4193,7 +4193,7 @@ class CV_EXPORTS CommandLineParser
             std::string str = getString(name);
             if (!has(name))
                 return default_value;
-            return analizeValue<_Tp>(str);
+            return analyzeValue<_Tp>(str);
         }
 
     protected:
@@ -4201,55 +4201,23 @@ class CV_EXPORTS CommandLineParser
         std::string getString(const std::string& name) const;
 
         template<typename _Tp>
-        _Tp analizeValue(const std::string& str);
-
-        template<typename _Tp>
-        static _Tp getData(const std::string& str)
-        {
-            _Tp res;
-            std::stringstream s1(str);
-            s1 >> res;
-            return res;
-        }
-
-        template<typename _Tp>
-        static _Tp fromStringNumber(const std::string& str)//the default conversion function for numbers
-        {
-
-            if (str.empty())
-                CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
-
-            const char* c_str=str.c_str();
-            if((!isdigit(c_str[0]))
-                &&
-                (
-                    (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
-                )
-            )
-
-            {
-                CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
-            }
-
-            return  getData<_Tp>(str);
-        }
-
+        _Tp analyzeValue(const std::string& str);
     };
 
     template<> CV_EXPORTS
-    std::string CommandLineParser::analizeValue<std::string>(const std::string& str);
+    std::string CommandLineParser::analyzeValue<std::string>(const std::string& str);
 
     template<> CV_EXPORTS
-    int CommandLineParser::analizeValue<int>(const std::string& str);
+    int CommandLineParser::analyzeValue<int>(const std::string& str);
 
     template<> CV_EXPORTS
-    unsigned CommandLineParser::analizeValue<unsigned int>(const std::string& str);
+    unsigned CommandLineParser::analyzeValue<unsigned int>(const std::string& str);
 
     template<> CV_EXPORTS
-    float CommandLineParser::analizeValue<float>(const std::string& str);
+    float CommandLineParser::analyzeValue<float>(const std::string& str);
 
     template<> CV_EXPORTS
-    double CommandLineParser::analizeValue<double>(const std::string& str);
+    double CommandLineParser::analyzeValue<double>(const std::string& str);
 
 }
 

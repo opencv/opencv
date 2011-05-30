@@ -1525,9 +1525,8 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 /********************************** High-level functions ********************************/
 
 /* opens existing or creates new file storage */
-CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename,
-                                          CvMemStorage* memstorage,
-                                          int flags );
+CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename, CvMemStorage* memstorage,
+                                          int flags, const char* encoding CV_DEFAULT(NULL) );
 
 /* closes file storage and deallocates buffers */
 CVAPI(void) cvReleaseFileStorage( CvFileStorage** fs );

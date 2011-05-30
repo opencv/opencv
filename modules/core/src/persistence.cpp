@@ -2167,13 +2167,15 @@ icvXMLParse( CvFileStorage* fs )
         if( version && strncmp( version, "1.", 2 ) != 0 )
             CV_Error( CV_StsParseError, "Unsupported version of XML" );
     }*/
-    {
+    // we support any 8-bit encoding, so we do not need to check the actual encoding.
+    // we do not support utf-16, but in the case of utf-16 we will not get here anyway.
+    /*{
         const char* encoding = cvAttrValue( list, "encoding" );
         if( encoding && strcmp( encoding, "ASCII" ) != 0 &&
             strcmp( encoding, "UTF-8" ) != 0 &&
             strcmp( encoding, "utf-8" ) != 0 )
             CV_PARSE_ERROR( "Unsupported encoding" );
-    }
+    }*/
 
     while( *ptr != '\0' )
     {
@@ -2587,7 +2589,7 @@ icvXMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment )
 \****************************************************************************************/
 
 CV_IMPL CvFileStorage*
-cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags )
+cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, const char* encoding )
 {
     CvFileStorage* fs = 0;
     char* xml_buf = 0;
@@ -2673,7 +2675,20 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags )
             fs->strstorage = cvCreateChildMemStorage( fs->memstorage );
             if( !append || file_size == 0 )
             {
-                icvPuts( fs, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" );
+                if( encoding )
+                {
+                    if( strcmp( encoding, "UTF-16" ) == 0 ||
+                        strcmp( encoding, "utf-16" ) == 0 ||
+                        strcmp( encoding, "Utf-16" ) == 0 )
+                        CV_Error( CV_StsBadArg, "UTF-16 XML encoding is not supported! Use 8-bit encoding\n");
+                
+                    CV_Assert( strlen(encoding) < 1000 );
+                    char buf[1100];
+                    sprintf(buf, "<?xml version=\"1.0\" encoding=\"%s\"?>\n", encoding);
+                    icvPuts( fs, buf );
+                }
+                else
+                    icvPuts( fs, "<?xml version=\"1.0\"?>\n" );
                 icvPuts( fs, "<opencv_storage>\n" );
             }
             else
@@ -4995,10 +5010,10 @@ FileStorage::FileStorage()
     state = UNDEFINED;
 }
 
-FileStorage::FileStorage(const string& filename, int flags)
+FileStorage::FileStorage(const string& filename, int flags, const string& encoding)
 {
     state = UNDEFINED;
-    open( filename, flags );
+    open( filename, flags, encoding );
 }
 
 FileStorage::FileStorage(CvFileStorage* _fs)
@@ -5016,10 +5031,11 @@ FileStorage::~FileStorage()
     }
 }
 
-bool FileStorage::open(const string& filename, int flags)
+bool FileStorage::open(const string& filename, int flags, const string& encoding)
 {
     release();
-    fs = Ptr<CvFileStorage>(cvOpenFileStorage( filename.c_str(), 0, flags ));
+    fs = Ptr<CvFileStorage>(cvOpenFileStorage( filename.c_str(), 0, flags,
+                                               !encoding.empty() ? encoding.c_str() : 0));
     bool ok = isOpened();
     state = ok ? NAME_EXPECTED + INSIDE_MAP : UNDEFINED;
     return ok;

@@ -32,7 +32,7 @@ void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
         find_symbol = buffer_string.find('=');
         if (find_symbol == -1)
             buffer_vector.push_back(buffer_string);
-        else if (find_symbol == 0 || find_symbol == (buffer_string.length() - 1))
+        else if (find_symbol == 0 || find_symbol == (int)(buffer_string.length() - 1))
         {
             buffer_string.erase(find_symbol, (find_symbol + 1));
             if(!buffer_string.empty())
@@ -135,32 +135,56 @@ std::string CommandLineParser::getString(const std::string& keys) const
 }
 
 
+template<typename _Tp>
+static _Tp getData(const std::string& str)
+{
+    _Tp res;
+    std::stringstream s1(str);
+    s1 >> res;
+    return res;
+}
+
+template<typename _Tp>
+static _Tp fromStringNumber(const std::string& str)//the default conversion function for numbers
+{
+    
+    if (str.empty())
+        CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
+    
+    const char* c_str=str.c_str();
+    if( !isdigit(c_str[0]) &&
+       (c_str[0] != '-' || strlen(c_str) <= 1 || !isdigit(c_str[1]) ))
+        CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
+    
+    return  getData<_Tp>(str);
+}
+
 template<>
-std::string CommandLineParser::analizeValue<std::string>(const std::string& str)
+std::string CommandLineParser::analyzeValue<std::string>(const std::string& str)
 {
     return str;
 }
 
 template<>
-int CommandLineParser::analizeValue<int>(const std::string& str)
+int CommandLineParser::analyzeValue<int>(const std::string& str)
 {
     return fromStringNumber<int>(str);
 }
 
 template<>
-unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str)
+unsigned int CommandLineParser::analyzeValue<unsigned int>(const std::string& str)
 {
     return fromStringNumber<unsigned int>(str);
 }
 
 template<>
-float CommandLineParser::analizeValue<float>(const std::string& str)
+float CommandLineParser::analyzeValue<float>(const std::string& str)
 {
     return fromStringNumber<float>(str);
 }
 
 template<>
-double CommandLineParser::analizeValue<double>(const std::string& str)
+double CommandLineParser::analyzeValue<double>(const std::string& str)
 {
     return fromStringNumber<double>(str);
 }
