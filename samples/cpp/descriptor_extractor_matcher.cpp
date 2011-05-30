@@ -201,7 +201,7 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
         for( size_t i1 = 0; i1 < points1.size(); i1++ )
         {
-            if( norm(points2[i1] - points1t.at<Point2f>((int)i1,0)) < 4 ) // inlier
+            if( norm(points2[i1] - points1t.at<Point2f>((int)i1,0)) < ransacReprojThreshold ) // inlier
                 matchesMask[i1] = 1;
         }
         // draw inliers
