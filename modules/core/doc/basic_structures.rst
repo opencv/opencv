@@ -617,22 +617,22 @@ http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm
 ) and also part of the `C++0x <http://en.wikipedia.org/wiki/C++0x>`_
 standard.
 
-By using this class you can get the following capabilities:
+This class provides the following options:
 
 *
-    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets, and others, copy constructor or assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may have been written in C. However, copy constructors and default constructors can simplify programming a lot; besides, they are often required (for example, by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>`` , you will automatically get all of the necessary constructors and the assignment operator.
+    Default constructor, copy constructor, and assignment operator for an arbitrary C++ class or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy constructor or an assignment operator are difficult to define. For some other objects, like complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally, some of complex OpenCV and your own data structures may be written in C. However, copy constructors and default constructors can simplify programming a lot. Besides, they are often required (for example, by STL containers). By wrapping a pointer to such a complex object ``TObj``     to ``Ptr<TObj>`` , you automatically get all of the necessary constructors and the assignment operator.
 
 *
-    All the above-mentioned operations running very fast, regardless of the data size, that is like "O(1)" operations. Indeed, while some structures, like ``std::vector`` ,   provide a copy constructor and an assignment operator, the operations may take a considerable amount of time if the data structures are big. But if the structures are put into ``Ptr<>``     , the overhead becomes small and independent of the data size.
+    Speed-up for the above-mentioned operations regardless of the data size, similar to "O(1)" operations.?? Indeed, while some structures, like ``std::vector`` ,   provide a copy constructor and an assignment operator, the operations may take a considerable amount of time if the data structures are large. But if the structures are put into ``Ptr<>``     , the overhead is small and independent of the data size.
 
 *
     Automatic destruction, even for C structures. See the example below with ``FILE*``     .
 
 *
-    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can only store objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but when you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
+    Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers can store only objects of the same type and the same size. The classical solution to store objects of different types in the same container is to store pointers to the base class ``base_class_t*``     instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``     instead of the raw pointers, you can solve the problem.
 
 The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and managed separately. The only thing the pointer class needs to know about the object is how to deallocate it. This knowledge is incapsulated in the ``Ptr::delete_obj()`` method that is called when the reference counter becomes 0. If the object is a C++ class instance, no additional coding is needed, because the default implementation of this method calls ``delete obj;`` .
-However, if the object is deallocated in a different way, then the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
+However, if the object is deallocated in a different way, the specialized method should be created. For example, if you want to wrap ``FILE`` , the ``delete_obj`` may be implemented as follows: ::
 
     template<> inline void Ptr<FILE>::delete_obj()
     {
@@ -650,10 +650,9 @@ However, if the object is deallocated in a different way, then the specialized m
     // the file will be closed automatically by the Ptr<FILE> destructor.
 
 
-**Note**
+.. note:: The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for :ref:`Mat` and other C++ OpenCV classes that operate on the reference counters.
 
-The reference increment/decrement operations are implemented as atomic operations, and therefore it is normally safe to use the classes in multi-threaded applications. The same is true for
-:ref:`Mat` and other C++ OpenCV classes that operate on the reference counters.
+.. index:: Mat
 
 .. _Mat:
 
@@ -662,7 +661,7 @@ Mat
 
 .. c:type:: Mat
 
-OpenCV C++ n-dimensional dense array class. ::
+OpenCV C++ n-dimensional dense array class ::
 
     class CV_EXPORTS Mat
     {
@@ -693,32 +692,31 @@ OpenCV C++ n-dimensional dense array class. ::
     };
 
 
-The class ``Mat`` represents an n-dimensional dense numerical single-channel or multi-channel array. It can be used to store real or complex-valued vectors and matrices, grayscale or color images, voxel volumes, vector fields, point clouds, tensors, histograms (though, very high-dimensional histograms may be better stored in a ``SparseMat`` ). The data layout of array
+The class ``Mat`` represents an n-dimensional dense numerical single-channel or multi-channel array. It can be used to store real or complex-valued vectors and matrices, grayscale or color images, voxel volumes, vector fields, point clouds, tensors, histograms (though, very high-dimensional histograms may be better stored in a ``SparseMat`` ). The data layout of the array
 :math:`M` is defined by the array ``M.step[]`` , so that the address of element
 :math:`(i_0,...,i_{M.dims-1})` , where
-:math:`0\leq i_k<M.size[k]` is computed as:
+:math:`0\leq i_k<M.size[k]` , is computed as:
 
 .. math::
 
     addr(M_{i_0,...,i_{M.dims-1}}) = M.data + M.step[0]*i_0 + M.step[1]*i_1 + ... + M.step[M.dims-1]*i_{M.dims-1}
 
-In the case of 2-dimensional array, the above formula is reduced to:
+In case of a 2-dimensional array, the above formula is reduced to:
 
 .. math::
 
     addr(M_{i,j}) = M.data + M.step[0]*i + M.step[1]*j
 
-Note that ``M.step[i] >= M.step[i+1]`` (in fact, ``M.step[i] >= M.step[i+1]*M.size[i+1]`` ), that is, 2-dimensional matrices are stored row-by-row, 3-dimensional matrices are stored plane-by-plane, and so on. ``M.step[M.dims-1]`` is minimal and always equal to the element size ``M.elemSize()`` .
+Note that ``M.step[i] >= M.step[i+1]`` (in fact, ``M.step[i] >= M.step[i+1]*M.size[i+1]`` ). This means that 2-dimensional matrices are stored row-by-row, 3-dimensional matrices are stored plane-by-plane, and so on. ``M.step[M.dims-1]`` is minimal and always equal to the element size ``M.elemSize()`` .
 
-So, the data layout in ``Mat`` is fully compatible with ``CvMat``,``IplImage`` and ``CvMatND`` types from OpenCV 1.x, as well as with the majority of dense array types from the standard toolkits and SDKs, such as Numpy (ndarray), Win32 (independent device bitmaps), and others, that is any other array that uses "steps", a.k.a. "strides", to compute the position of a pixel. Due to this compatibility, it is possible to make a ``Mat`` header for user-allocated data and process it in-place using OpenCV functions.
+So, the data layout in ``Mat`` is fully compatible with ``CvMat``, ``IplImage``, and ``CvMatND`` types from OpenCV 1.x. It is also compatible with the majority of dense array types from the standard toolkits and SDKs, such as Numpy (ndarray), Win32 (independent device bitmaps), and others, that is, with any array that uses *steps* (or *strides*) to compute the position of a pixel. Due to this compatibility, it is possible to make a ``Mat`` header for user-allocated data and process it in-place using OpenCV functions.
 
-There are many different ways to create a ``Mat`` object. Here are some popular ones:
+There are many different ways to create a ``Mat`` object. The most popular options are listed below:
 
 *
     
-    Use the ``create(nrows, ncols, type)``   method or the similar ``Mat(nrows, ncols, type[, fillValue])``     constructor. A new array of the specified size and specifed type is allocated. ``type``     has the same meaning as in
-    :func:`cvCreateMat`     method.
-    For example, ``CV_8UC1``     means a 8-bit single-channel array, ``CV_32FC2``     means a 2-channel (complex) floating-point array, and so on:
+    Use the ``create(nrows, ncols, type)``   method or the similar ``Mat(nrows, ncols, type[, fillValue])``     constructor. A new array of the specified size and type is allocated. ``type``     has the same meaning as in the ``cvCreateMat``     method.
+    For example, ``CV_8UC1``     means a 8-bit single-channel array, ``CV_32FC2``     means a 2-channel (complex) floating-point array, and so on.
 
     ::
 
@@ -730,11 +728,11 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    As noted in the introduction to this chapter, ``create()``      allocates only a new array when the current array shape or type are different from the specified ones.
+    As noted in the introduction to this chapter, ``create()``      allocates only  a new array when the shape or type of the current array are different from the specified ones.
 
 *
     
-    Similarly to above, create a multi-dimensional array:
+    Create a multi-dimensional array:
 
     ::
 
@@ -744,29 +742,29 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    Note that it passes the number of dimensions =1 to the ``Mat``     constructor but the created array will be 2-dimensional with the number of columns set to 1. That is why ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
+    It passes the number of dimensions =1 to the ``Mat``     constructor but the created array will be 2-dimensional with the number of columns set to 1. So, ``Mat::dims``     is always >= 2 (can also be 0 when the array is empty).
 
 *
     
-    Use a copy constructor or assignment operator, where on the right side it can be an array or expression (see below). Again, as noted in the introduction, array assignment is O(1) operation because it only copies the header and increases the reference counter. ``Mat::clone()``     method can be used to get a full (a.k.a. deep) copy of the array when you need it.
+    Use a copy constructor or assignment operator where there can be an array or expression on the right side (see below). As noted in the introduction, the array assignment is an O(1) operation because it only copies the header and increases the reference counter. The ``Mat::clone()``     method can be used to get a full (deep) copy of the array when you need it.
 
 *
     
-    Construct a header for a part of another array. It can be a single row, single column, several rows, several columns, rectangular region in the array (called a minor in algebra) or a diagonal. Such operations are also O(1), because the new header will reference the same data. You can actually modify a part of the array using this feature, for example:
+    Construct a header for a part of another array. It can be a single row, single column, several rows, several columns, rectangular region in the array (called a *minor* in algebra) or a diagonal. Such operations are also O(1) because the new header references the same data. You can actually modify a part of the array using this feature, for example:
 
     ::
 
-        // add 5-th row, multiplied by 3 to the 3rd row
+        // add the 5-th row, multiplied by 3 to the 3rd row
         M.row(3) = M.row(3) + M.row(5)*3;
 
-        // now copy 7-th column to the 1-st column
+        // now copy the 7-th column to the 1-st column
         // M.col(1) = M.col(7); // this will not work
         Mat M1 = M.col(1);
         M.col(7).copyTo(M1);
 
-        // create new 320x240 image
+        // create a new 320x240 image
         Mat img(Size(320,240),CV_8UC3);
-        // select a roi
+        // select a ROI
         Mat roi(img, Rect(10,10,100,100));
         // fill the ROI with (0,255,0) (which is green in RGB space);
         // the original 320x240 image will be modified
@@ -774,7 +772,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    Thanks to the additional ``datastart``     and ``dataend``     members, it is possible to compute a relative sub-array position in the main *"container"* array using ``locateROI()``:
+    Due to the additional ``datastart``     and ``dataend``     members, it is possible to compute a relative sub-array position in the main *container* array using ``locateROI()``:
 
     ::
 
@@ -790,7 +788,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    As in the case of whole matrices, if you need a deep copy, use the ``clone()``     method of the extracted sub-matrices.
+    As in case of whole matrices, if you need a deep copy, use the ``clone()``     method of the extracted sub-matrices.
 
 *
     
@@ -820,7 +818,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
         ..
 
-        Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+        ??is the indent required here? does it apply to step 2 but not to the whole bulleted item??Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
         Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` and ``Mat::operator IplImage()``. The operators do NOT copy the data.
 
@@ -836,7 +834,7 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
 *
     
-    Use MATLAB-style array initializers, ``zeros(), ones(), eye()``     , for example:
+    Use MATLAB-style array initializers, ``zeros(), ones(), eye()``, for example:
 
     ::
 
@@ -856,12 +854,12 @@ There are many different ways to create a ``Mat`` object. Here are some popular 
 
     ..
 
-    Here you first call a constructor of the ``Mat_``     class (that will be described further) with the proper parameters, and then you just put ``<<``     operator followed by comma-separated values that can be constants, variables, expressions, and so on. Also, note the extra parentheses required to avoid compilation errors.
+    With this approach, you first call a constructor of the :ref:`Mat_`  class with the proper parameters, and then you just put ``<<``     operator followed by comma-separated values that can be constants, variables, expressions, and so on. Also, note the extra parentheses required to avoid compilation errors.
 
 Once the array is created, it is automatically managed via a reference-counting mechanism. If the array header is built on top of user-allocated data, you should handle the data by yourself.
 The array data is deallocated when no one points to it. If you want to release the data pointed by a array header before the array destructor is called, use ``Mat::release()`` .
 
-The next important thing to learn about the array class is element access. This manual already described how to compute an address of each array element. Normally, it is not needed to use the formula directly in your code. If you know the array element type (which can be retrieved using the method ``Mat::type()`` ), you can access the element
+The next important thing to learn about the array class is element access. This manual already described how to compute an address of each array element. Normally, you are not required to use the formula directly in the code. If you know the array element type (which can be retrieved using the method ``Mat::type()`` ), you can access the element
 :math:`M_{ij}` of a 2-dimensional array as: ::
 
     M.at<double>(i,j) += 1.f;
@@ -869,7 +867,7 @@ The next important thing to learn about the array class is element access. This 
 
 assuming that M is a double-precision floating-point array. There are several variants of the method ``at`` for a different number of dimensions.
 
-If you need to process a whole row of a 2D array, the most efficient way is to get the pointer to the row first, and then just use plain C operator ``[]`` : ::
+If you need to process a whole row of a 2D array, the most efficient way is to get the pointer to the row first, and then just use the plain C operator ``[]`` : ::
 
     // compute sum of positive matrix elements
     // (assuming that M isa double-precision matrix)
@@ -882,9 +880,9 @@ If you need to process a whole row of a 2D array, the most efficient way is to g
     }
 
 
-Some operations, like the one above, do not actually depend on the array shape. They just process elements of an array one by one (or elements from multiple arrays that have the same coordinates, for example, array addition). Such operations are called element-wise. It makes sense to check whether all the input/output arrays are continuous, that is, have no gaps in the end of each row. If yes, process them as a single long row: ::
+Some operations, like the one above, do not actually depend on the array shape. They just process elements of an array one by one (or elements from multiple arrays that have the same coordinates, for example, array addition). Such operations are called *element-wise*. It makes sense to check whether all the input/output arrays are continuous, namely, have no gaps at the end of each row. If yes, process them as a long single row: ::
 
-    // compute sum of positive matrix elements, optimized variant
+    // compute the sum of positive matrix elements, optimized variant
     double sum=0;
     int cols = M.cols, rows = M.rows;
     if(M.isContinuous())
@@ -913,6 +911,8 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including ``std::sort()`` .
 
+.. index:: matrix expressions
+
 .. _MatrixExpressions:
 
 Matrix Expressions
@@ -927,7 +927,7 @@ for a scalar ( ``Scalar`` ),
 :math:`\alpha` for a real-valued scalar ( ``double`` )):
 
 *
-    addition, subtraction, negation:
+    Addition, subtraction, negation:
     :math:`A \pm B,\;A \pm s,\;s \pm A,\;-A` *
     scaling:
     :math:`A*\alpha`,    :math:`A*\alpha` *
@@ -942,29 +942,26 @@ for a scalar ( ``Scalar`` ),
     :math:`A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B`
     
 *
-    comparison:
+    Comparison:
     :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
 
 *
-    bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
+    Bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
     element-wise minimum and maximum:
     :math:`min(A, B), min(A, \alpha), max(A, B), max(A, \alpha)` *
     element-wise absolute value:
     :math:`abs(A)` *
     cross-product, dot-product:
     :math:`A.cross(B), A.dot(B)` *
-    any function of matrix or matrices and scalars that returns a matrix or a scalar, such as
-
-    :func:`norm`,    :func:`mean`,    :func:`sum`,    :func:`countNonZero`,    :func:`trace`,
-    :func:`determinant`,    :func:`repeat`  , and others.
+    any function of matrix or matrices and scalars that returns a matrix or a scalar, such as ``norm``, ``mean``, ``sum``, ``countNonZero``, ``trace``, ``determinant``, ``repeat``, and others.
 
 *
-    matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ref:`Mat`     description).
+    Matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ref:`Mat`     description).
 
 *
     ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
-Note, however, that comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
+.. note:: However, comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
 
 Below is the formal description of the ``Mat`` methods.
 
@@ -1018,11 +1015,11 @@ Mat::Mat
 
     :param ndims: Array dimensionality.
 
-    :param rows: The number of rows in a 2D array.
+    :param rows: Number of rows in a 2D array.
 
-    :param cols: The number of columns in a 2D array.
+    :param cols: Number of columns in a 2D array.
 
-    :param size: 2D array size:  ``Size(cols, rows)`` . Note that in the  ``Size()``  constructor, the number of rows and the number of columns go in the reverse order.
+    :param size: 2D array size:  ``Size(cols, rows)`` . In the  ``Size()``  constructor, the number of rows and the number of columns go in the reverse order.
 
     :param sizes: Array of integers specifying an n-dimensional array shape.
 
@@ -1032,11 +1029,11 @@ Mat::Mat
 
     :param data: Pointer to the user data. Matrix constructors that take  ``data``  and  ``step``  parameters do not allocate matrix data. Instead, they just initialize the matrix header that points to the specified data, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
 
-    :param step: The number of bytes each matrix row occupies. The value should include the padding bytes in the end of each row, if any. If the parameter is missing (set to  ``AUTO_STEP`` ), no padding is assumed and the actual step is calculated as  ``cols*elemSize()`` . See  :ref:`Mat::elemSize` ().
+    :param step: Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to  ``AUTO_STEP`` ), no padding is assumed and the actual step is calculated as  ``cols*elemSize()`` . See  :ref:`Mat::elemSize` ().
 
-    :param steps: The array of  ``ndims-1``  steps in case of a multi-dimensional array (the last step is always set to the element size). If not specified, the matrix is assumed to be continuous.
+    :param steps: Array of  ``ndims-1``  steps in case of a multi-dimensional array (the last step is always set to the element size). If not specified, the matrix is assumed to be continuous.
 
-    :param m: The array that (in whole or partly) is assigned to the constructed matrix. No data is copied by these constructors. Instead, the header pointing to  ``m``  data, or its sub-array, is constructed and associated with it. The reference counter, if any, is incremented. That is, when you modify the matrix formed using such a constructor, you also modify the corresponding elements of  ``m`` . If you want to have an independent copy of the sub-array, use  ``Mat::clone()`` .
+    :param m: Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied by these constructors. Instead, the header pointing to  ``m``  data or its sub-array is constructed and associated with it. The reference counter, if any, is incremented. So, when you modify the matrix formed using such a constructor, you also modify the corresponding elements of  ``m`` . If you want to have an independent copy of the sub-array, use  ``Mat::clone()`` .
 
     :param img: Pointer to the old-style  ``IplImage``  image structure. By default, the data is shared between the original image and the new matrix. But when  ``copyData``  is set, the full copy of the image data is created.
 
