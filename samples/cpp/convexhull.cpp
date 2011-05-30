@@ -37,7 +37,7 @@ int main( int /*argc*/, char** /*argv*/ )
         }
         
         vector<int> hull;
-        convexHull(Mat(points), hull, CV_CLOCKWISE);
+        convexHull(Mat(points), hull, true);
         
         img = Scalar::all(0);
         for( i = 0; i < count; i++ )
