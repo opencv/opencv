@@ -197,6 +197,9 @@ void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat>
     vector<double> gains = compensator.gains();
     gain_maps_.resize(num_images);
 
+    Mat_<float> ker(1, 3); 
+    ker(0,0) = 0.25; ker(0,1) = 0.5; ker(0,2) = 0.25;
+
     int bl_idx = 0;
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
@@ -207,8 +210,6 @@ void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat>
             for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
                 gain_maps_[img_idx](by, bx) = static_cast<float>(gains[bl_idx]);
         
-        Mat_<float> ker(1, 3); 
-        ker(0,0) = 0.25; ker(0,1) = 0.5; ker(0,2) = 0.25;
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
     }

@@ -432,7 +432,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
         return indices;
 
     LOG("Removed some images, because can't match them: (");
-    LOG(indices_removed[0]);
+    LOG(indices_removed[0]+1);
     for (size_t i = 1; i < indices_removed.size(); ++i) 
         LOG(", " << indices_removed[i]+1);
     LOGLN(")");

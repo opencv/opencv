@@ -94,11 +94,11 @@ void printUsage()
         "      Resolution for compositing step. Use -1 for original resolution.\n"
         "      The default is -1.\n"
         "  --expos_comp (no|gain|gain_blocks)\n"
-        "      Exposure compensation method. The default is 'gain'.\n"
+        "      Exposure compensation method. The default is 'gain_blocks'.\n"
         "  --blend (no|feather|multiband)\n"
         "      Blending method. The default is 'multiband'.\n"
-        "  --num_bands <int>\n"
-        "      Number of bands for multi-band blending method. The default is 5.\n"
+        "  --blend_strength <float>\n"
+        "      Blend strength from [0,100] range. The default is 5.\n"
         "  --output <result_img>\n";
 }
 
@@ -114,11 +114,11 @@ int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
 int warp_type = Warper::SPHERICAL;
-int expos_comp_type = ExposureCompensator::GAIN;
-float match_conf = 0.7f;
+int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
+float match_conf = 0.65f;
 int seam_find_type = SeamFinder::GC_COLOR;
 int blend_type = Blender::MULTI_BAND;
-int num_bands = 5;
+float blend_strength = 5;
 string result_name = "result.png";
 
 int parseCmdArgs(int argc, char** argv)
@@ -270,9 +270,9 @@ int parseCmdArgs(int argc, char** argv)
             }
             i++;
         }
-        else if (string(argv[i]) == "--num_bands")
+        else if (string(argv[i]) == "--blend_strength")
         {
-            num_bands = atoi(argv[i + 1]);
+            blend_strength = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--output")
@@ -562,10 +562,21 @@ int main(int argc, char* argv[])
         if (static_cast<Blender*>(blender) == 0)
         {
             blender = Blender::createDefault(blend_type);
-            if (blend_type == Blender::MULTI_BAND)
+            Size dst_sz = resultRoi(corners, sizes).size();
+            float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength / 100.f;
+            if (blend_width < 1.f)
+                blender = Blender::createDefault(Blender::NO);
+            else if (blend_type == Blender::MULTI_BAND)
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
-                mb->setNumBands(num_bands);
+                mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
+                LOGLN("Multi-band blender, number of bands: " << mb->numBands());
+            }
+            else if (blend_type == Blender::FEATHER)
+            {
+                FeatherBlender* fb = dynamic_cast<FeatherBlender*>(static_cast<Blender*>(blender));
+                fb->setSharpness(1.f/blend_width);
+                LOGLN("Feather blender, number of bands: " << fb->sharpness());
             }
             blender->prepare(corners, sizes);
         }
