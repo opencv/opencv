@@ -60,11 +60,24 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-#warning "TEGRA OPTIMIZED BINARY THRESHOLD (maxval == 255)"
-    if (type == THRESH_BINARY && maxval == 255)
+#warning TEGRA OPTIMIZED THRESHOLD IS USED
+    switch( type )
     {
-	if(tegra::thresh_8u_binary_256(_src, _dst, roi, thresh))
-            return;
+    case THRESH_BINARY:
+        if(tegra::thresh_8u_binary(_src, _dst, roi.width, roi.height, thresh, maxval)) return;
+        break;
+    case THRESH_BINARY_INV:
+        if(tegra::thresh_8u_binary_inv(_src, _dst, roi.width, roi.height, thresh, maxval)) return;
+        break;
+    case THRESH_TRUNC:
+        if(tegra::thresh_8u_trunc(_src, _dst, roi.width, roi.height, thresh)) return;
+        break;
+    case THRESH_TOZERO:
+        if(tegra::thresh_8u_tozero(_src, _dst, roi.width, roi.height, thresh)) return;
+        break;
+    case THRESH_TOZERO_INV:
+        if(tegra::thresh_8u_tozero_inv(_src, _dst, roi.width, roi.height, thresh)) return;
+        break;
     }
 #endif
   
