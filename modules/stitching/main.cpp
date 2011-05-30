@@ -285,7 +285,7 @@ int parseCmdArgs(int argc, char** argv)
     }
     if (preview)
     {
-        compose_megapix = work_megapix;
+        compose_megapix = 0.6;
     }
     return 0;
 }
