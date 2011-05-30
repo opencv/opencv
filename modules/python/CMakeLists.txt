@@ -90,6 +90,10 @@ set_target_properties(${cv2_target} PROPERTIES PREFIX "")
 set_target_properties(${cv2_target} PROPERTIES OUTPUT_NAME "cv2")
 set_target_properties(${cv2_target} PROPERTIES SUFFIX ${CVPY_SUFFIX})
 
+if (MSVC AND NOT BUILD_SHARED_LIBS)
+    set_target_properties(${cv2_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+endif()
+
 set(cvpymodules ${cvpymodules} ${cv2_target})
 
 endif()
