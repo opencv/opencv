@@ -4201,6 +4201,21 @@ class CV_EXPORTS CommandLineParser
         std::string getString(const std::string& name) const;
 
         template<typename _Tp>
+        _Tp analizeValue(const std::string& str);
+
+        template<typename _Tp>
+        static _Tp getData(const std::string& str)
+        {
+            _Tp res;
+            std::stringstream s1(str);
+            s1 >> res;
+            return res;
+        }
+
+        template<typename _Tp>
+        _Tp fromStringNumber(const std::string& str);//the default conversion function for numbers
+
+        template<typename _Tp>
         _Tp analyzeValue(const std::string& str);
     };
 

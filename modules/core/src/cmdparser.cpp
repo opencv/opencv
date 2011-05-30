@@ -134,6 +134,26 @@ std::string CommandLineParser::getString(const std::string& keys) const
     return data.find(names[found_index])->second[0];
 }
 
+template<typename _Tp>
+ _Tp CommandLineParser::fromStringNumber(const std::string& str) //the default conversion function for numbers
+{
+    if (str.empty())
+        CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
+
+    const char* c_str=str.c_str();
+    if((!isdigit(c_str[0]))
+        &&
+        (
+            (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
+        )
+    )
+
+    {
+        CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
+    }
+
+    return  getData<_Tp>(str);
+}
 
 template<typename _Tp>
 static _Tp getData(const std::string& str)
