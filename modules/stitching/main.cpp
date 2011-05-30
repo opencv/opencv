@@ -98,7 +98,7 @@ void printUsage()
         "  --blend (no|feather|multiband)\n"
         "      Blending method. The default is 'multiband'.\n"
         "  --blend_strength <float>\n"
-        "      Blend strength from [0,100] range. The default is 5.\n"
+        "      Blending strength from [0,100] range. The default is 5.\n"
         "  --output <result_img>\n";
 }
 
