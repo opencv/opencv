@@ -302,4 +302,16 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
     KeyPoint kpt(sumPoint, (float)params.defaultKeypointSize);
     keypoints.push_back(kpt);
   }
+
+#ifdef DEBUG_BLOB_DETECTOR
+  namedWindow("keypoints", CV_WINDOW_NORMAL);
+  Mat outImg = image.clone();
+  for(size_t i=0; i<keypoints.size(); i++)
+  {
+    circle(outImg, keypoints[i].pt, 2, Scalar(255, 0, 255), -1);
+  }
+  //drawKeypoints(image, keypoints, outImg);
+  imshow("keypoints", outImg);
+  waitKey();
+#endif
 }
