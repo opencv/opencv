@@ -119,9 +119,9 @@ endif()
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
-	INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
+    RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+    INSTALL_NAME_DIR lib
 	)
 
 # Add the required libraries for linking:
@@ -218,7 +218,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     # Additional target properties
     set_target_properties(${the_test_target} PROPERTIES
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+        RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
         )
 	
 	if(ENABLE_SOLUTION_FOLDERS)

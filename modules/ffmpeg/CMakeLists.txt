@@ -43,8 +43,8 @@ set_target_properties(${the_target} PROPERTIES
                       VERSION ${OPENCV_VERSION}
                       OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
                       DEFINE_SYMBOL "CVAPI_EXPORTS"
-                      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/"
-                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/"
+                      ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
+                      RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       )
 					  
 if(ENABLE_SOLUTION_FOLDERS)

@@ -1152,7 +1152,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINA
 
 if(UNIX)
     # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/FOO/FOOConfig.cmake, so:
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION ${CMAKE_INSTALL_PREFIX}/share/opencv/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/opencv/)
 endif()
 
 # --------------------------------------------------------------------------------------------
@@ -1271,9 +1271,9 @@ if(BUILD_PACKAGE)
 
         if(CMAKE_INSTALL_DEBUG_LIBRARIES)
             foreach(m calib3d core contrib features2d ffmpeg flann gpu highgui imgproc legacy ml objdetect video)
-                install(FILES ${CMAKE_BINARY_DIR}/bin/Debug/opencv_${m}${OPENCV_DLLVERSION}d.dll
+                install(FILES  ${EXECUTABLE_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.dll
             DESTINATION bin COMPONENT main)
-                install(FILES ${CMAKE_BINARY_DIR}/lib/Debug/opencv_${m}${OPENCV_DLLVERSION}d.lib
+                install(FILES  ${LIBRARY_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.lib
             DESTINATION lib COMPONENT main)
             endforeach()
         endif()
