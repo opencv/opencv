@@ -199,9 +199,11 @@ void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         vector<Point2f> points1; KeyPoint::convert(keypoints1, points1, queryIdxs);
         vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, trainIdxs);
         Mat points1t; perspectiveTransform(Mat(points1), points1t, H12);
+
+        double maxInlierDist = ransacReprojThreshold < 0 ? 3 : ransacReprojThreshold;
         for( size_t i1 = 0; i1 < points1.size(); i1++ )
         {
-            if( norm(points2[i1] - points1t.at<Point2f>((int)i1,0)) < ransacReprojThreshold ) // inlier
+            if( norm(points2[i1] - points1t.at<Point2f>((int)i1,0)) <= maxInlierDist ) // inlier
                 matchesMask[i1] = 1;
         }
         // draw inliers
