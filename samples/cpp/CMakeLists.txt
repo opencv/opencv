@@ -45,6 +45,9 @@ if (BUILD_EXAMPLES)
 		endif()
 
         if(WIN32)
+	    if (MSVC AND NOT BUILD_SHARED_LIBS)
+	        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+	    endif()
             install(TARGETS ${the_target}
                 RUNTIME DESTINATION "samples/cpp" COMPONENT main)
         endif()

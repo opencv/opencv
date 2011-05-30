@@ -139,6 +139,12 @@ else()
     set(OPENCV_SVNVERSION "")
 endif()
 
+# ----------------------------------------------------------------------------
+# Detect Microsoft compiler:
+# ----------------------------------------------------------------------------
+if(CMAKE_CL_64)
+    set(MSVC64 1)
+endif()
 
 # ----------------------------------------------------------------------------
 # Detect GNU version:
@@ -805,6 +811,17 @@ if(WIN32)
     
     if (MSVC)
         set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
+		if (NOT BUILD_SHARED_LIBS)
+	            if (MSVC64)
+	                if(HAVE_VIDEOINPUT)
+	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${CMAKE_SOURCE_DIR}/3rdparty/lib/videoInput64.lib strmiids)
+	                endif()
+	            elseif (MSVC)
+	                if(HAVE_VIDEOINPUT)
+	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${CMAKE_SOURCE_DIR}/3rdparty/lib/videoInput.lib strmiids)
+	                endif()
+	            endif()
+		endif()
     endif()
 
     if(MINGW)

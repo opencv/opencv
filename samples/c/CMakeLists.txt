@@ -43,8 +43,10 @@ if (BUILD_EXAMPLES)
 		if(ENABLE_SOLUTION_FOLDERS)
 			set_target_properties(${the_target} PROPERTIES FOLDER "samples//c")
 		endif()
-
         if(WIN32)
+	    if (MSVC AND NOT BUILD_SHARED_LIBS)
+	        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+	    endif()
             install(TARGETS ${the_target}
                 RUNTIME DESTINATION "samples/c" COMPONENT main)
         endif()

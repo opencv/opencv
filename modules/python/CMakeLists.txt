@@ -60,6 +60,10 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; pri
 
 set_target_properties(${cv_target} PROPERTIES SUFFIX ${CVPY_SUFFIX})
 
+if (MSVC AND NOT BUILD_SHARED_LIBS)
+    set_target_properties(${cv_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
+endif()
+
 set(cvpymodules ${cv_target})
 
 if(PYTHON_USE_NUMPY)
