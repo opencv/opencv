@@ -315,7 +315,12 @@ static IplImage*** build_gauss_pyr( IplImage* base, int octvs,
 {
   IplImage*** gauss_pyr;
   const int _intvls = intvls;
-  double sig[_intvls+3], sig_total, sig_prev, k;
+#if defined WIN32 || defined _WIN32 || defined WINCE
+  double *sig = new double[_intvls+3];
+#else
+  double sig[_intvls+3];
+#endif
+  double sig_total, sig_prev, k;
   int i, o;
 
   gauss_pyr = (IplImage***)calloc( octvs, sizeof( IplImage** ) );
@@ -342,7 +347,7 @@ static IplImage*** build_gauss_pyr( IplImage* base, int octvs,
         if( o == 0  &&  i == 0 )
           gauss_pyr[o][i] = cvCloneImage(base);
 
-        /* base of new octvave is halved image from end of previous octave */
+        /* base of new octave is halved image from end of previous octave */
         else if( i == 0 )
           gauss_pyr[o][i] = downsample( gauss_pyr[o-1][intvls] );
 
@@ -355,6 +360,10 @@ static IplImage*** build_gauss_pyr( IplImage* base, int octvs,
                       CV_GAUSSIAN, 0, 0, sig[i], sig[i] );
           }
       }
+
+#if defined WIN32 || defined _WIN32 || defined WINCE
+	delete[] sig;
+#endif
 
   return gauss_pyr;
 }
@@ -1102,7 +1111,7 @@ static double*** descr_hist( IplImage* img, int r, int c, double ori,
   bins_per_rad = n / PI2;
   exp_denom = d * d * 0.5;
   hist_width = SIFT_DESCR_SCL_FCTR * scl;
-  radius = hist_width * sqrt(2) * ( d + 1.0 ) * 0.5 + 0.5;
+  radius = hist_width * sqrt(2.0) * ( d + 1.0 ) * 0.5 + 0.5;
   for( i = -radius; i <= radius; i++ )
     for( j = -radius; j <= radius; j++ )
       {
@@ -1291,7 +1300,7 @@ struct ImagePyrData
         /* build scale space pyramid; smallest dimension of top level is ~4 pixels */
         init_img = create_init_img( img, img_dbl, _sigma );
 
-        int max_octvs = log( MIN( init_img->width, init_img->height ) ) / log(2) - 2;
+        int max_octvs = static_cast<int>( log( static_cast<double>(MIN( init_img->width, init_img->height ))) / log(2.0) - 2.0);
         octvs = std::max( std::min( octvs, max_octvs ), 1 );
 
         gauss_pyr = build_gauss_pyr( init_img, octvs, intvls, _sigma );
@@ -1537,7 +1546,7 @@ static void fillFeatureData( feature& feat, const SiftParams& params )
   int o, ix, iy, is;
   float s, phi;
 
-  phi = log2( sigma / params.sigma0 ) ;
+  phi = static_cast<float>(log( sigma / params.sigma0 ) / log(2.0));
   o = std::floor( phi -  (float(params.smin)+.5)/params.S );
   o = std::min(o, params.omin+params.O-1);
   o = std::max(o, params.omin);
