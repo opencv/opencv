@@ -1561,7 +1561,7 @@ static void fillFeatureData( feature& feat, const SiftParams& params )
   ddata->intvl = is + 1;
 
   ddata->subintvl = s - is;
-  ddata->scl_octv = params.sigma0 * pow(2.0, s / params.S);
+  ddata->scl_octv = params.sigma0 * pow(2.0, static_cast<double>(s / params.S));
 }
 
 inline void keyPointToFeature( const KeyPoint& keypoint, feature& feat, const SiftParams& params )
