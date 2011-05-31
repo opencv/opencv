@@ -269,7 +269,7 @@ CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
 /*
  * A class filters a vector of keypoints.
  * Because now it is difficult to provide a convenient interface for all usage scenarios of the keypoints filter class,
- * it has only 3 needed by now static methods.
+ * it has only 4 needed by now static methods.
  */
 class CV_EXPORTS KeyPointsFilter
 {
@@ -288,6 +288,10 @@ public:
      * Remove keypoints from some image by mask for pixels of this image.
      */
     static void runByPixelsMask( vector<KeyPoint>& keypoints, const Mat& mask );
+    /*
+     * Remove duplicated keypoints.
+     */
+    static void removeDuplicated( vector<KeyPoint>& keypoints );
 };
 
 /*!
@@ -295,6 +299,7 @@ public:
  
  The class implements SIFT algorithm by D. Lowe.
 */
+
 class CV_EXPORTS SIFT
 {
 public:
@@ -306,14 +311,15 @@ public:
         enum { FIRST_ANGLE = 0, AVERAGE_ANGLE = 1 };
 
         CommonParams();
-        CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode );
-        int nOctaves, nOctaveLayers, firstOctave;
-        int angleMode;
+        CommonParams( int _nOctaves, int _nOctaveLayers, int /*_firstOctave*/, int /*_angleMode*/ );
+        int nOctaves, nOctaveLayers;
+        int firstOctave; // it is not used now (firstOctave == 0 always)
+        int angleMode;   // it is not used now
     };
 
     struct CV_EXPORTS DetectorParams
     {
-        static double GET_DEFAULT_THRESHOLD() { return 0.04 / SIFT::CommonParams::DEFAULT_NOCTAVE_LAYERS / 2.0; }
+        static double GET_DEFAULT_THRESHOLD() { return 0.04; }
         static double GET_DEFAULT_EDGE_THRESHOLD() { return 10.0; }
 
         DetectorParams();
@@ -328,9 +334,10 @@ public:
         static const int DESCRIPTOR_SIZE = 128;
 
         DescriptorParams();
-        DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles );
+        DescriptorParams( double _magnification, bool /*_isNormalize*/, bool _recalculateAngles );
+        DescriptorParams( bool _recalculateAngles );
         double magnification;
-        bool isNormalize;
+        bool isNormalize; // it is not used now (true always)
         bool recalculateAngles;
     };
 

@@ -1,1121 +1,1476 @@
-/* 
- * Here:
- * 1.) SIFT imlementation of Andrea Vedaldi
- * 2.) wrapper of Vedaldi`s SIFT
- */
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                        Intel License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of Intel Corporation may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 /****************************************************************************************\
-  1.) Implementation of SIFT taken from http://www.vlfeat.org/~vedaldi/code/siftpp.html 
+     Implementation of SIFT taken from http://blogs.oregonstate.edu/hess/code/sift/
 \****************************************************************************************/
 
-// AUTORIGHTS
-// Copyright (c) 2006 The Regents of the University of California
-// All Rights Reserved.
-//
-// Created by Andrea Vedaldi (UCLA VisionLab)
-//
-// Permission to use, copy, modify, and distribute this software and its
-// documentation for educational, research and non-profit purposes,
-// without fee, and without a written agreement is hereby granted,
-// provided that the above copyright notice, this paragraph and the
-// following three paragraphs appear in all copies.
-//
-// This software program and documentation are copyrighted by The Regents
-// of the University of California. The software program and
-// documentation are supplied "as is", without any accompanying services
-// from The Regents. The Regents does not warrant that the operation of
-// the program will be uninterrupted or error-free. The end-user
-// understands that the program was developed for research purposes and
-// is advised not to rely exclusively on the program for any reason.
-//
-// This software embodies a method for which the following patent has
-// been issued: "Method and apparatus for identifying scale invariant
-// features in an image and use of same for locating an object in an
-// image," David G. Lowe, US Patent 6,711,293 (March 23,
-// 2004). Provisional application filed March 8, 1999. Asignee: The
-// University of British Columbia.
-//
-// IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY
-// FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES,
-// INCLUDING LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND
-// ITS DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN
-// ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. THE UNIVERSITY OF
-// CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
-// BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE
-// MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+//    Copyright (c) 2006-2010, Rob Hess <hess@eecs.oregonstate.edu>
+//    All rights reserved.
+
+//    The following patent has been issued for methods embodied in this
+//    software: "Method and apparatus for identifying scale invariant features
+//    in an image and use of same for locating an object in an image," David
+//    G. Lowe, US Patent 6,711,293 (March 23, 2004). Provisional application
+//    filed March 8, 1999. Asignee: The University of British Columbia. For
+//    further details, contact David Lowe (lowe@cs.ubc.ca) or the
+//    University-Industry Liaison Office of the University of British
+//    Columbia.
+
+//    Note that restrictions imposed by this patent (and possibly others)
+//    exist independently of and may be in conflict with the freedoms granted
+//    in this license, which refers to copyright of the program, not patents
+//    for any methods that it implements.  Both copyright and patent law must
+//    be obeyed to legally use and redistribute this program and it is not the
+//    purpose of this license to induce you to infringe any patents or other
+//    property right claims or to contest validity of any such claims.  If you
+//    redistribute or use the program, then this license merely protects you
+//    from committing copyright infringement.  It does not protect you from
+//    committing patent infringement.  So, before you do anything with this
+//    program, make sure that you have permission to do so not merely in terms
+//    of copyright, but also in terms of patent law.
+
+//    Please note that this license is not to be understood as a guarantee
+//    either.  If you use the program according to this license, but in
+//    conflict with patent law, it does not mean that the licensor will refund
+//    you for any losses that you incur if you are sued for your patent
+//    infringement.
+
+//    Redistribution and use in source and binary forms, with or without
+//    modification, are permitted provided that the following conditions are
+//    met:
+//        * Redistributions of source code must retain the above copyright and
+//          patent notices, this list of conditions and the following
+//          disclaimer.
+//        * Redistributions in binary form must reproduce the above copyright
+//          notice, this list of conditions and the following disclaimer in
+//          the documentation and/or other materials provided with the
+//          distribution.
+//        * Neither the name of Oregon State University nor the names of its
+//          contributors may be used to endorse or promote products derived
+//          from this software without specific prior written permission.
+
+//    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+//    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+//    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+//    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//    HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+//    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+//    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+//    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+//    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+//    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "precomp.hpp"
 
-//#ifdef __arm__
-//#define ARM_NO_SIFT
-//#endif
+const double a_180divPI = 180./CV_PI;
+const double a_PIdiv180 = CV_PI/180.;
 
-//#ifdef ANDROID
-//#undef  ARM_NO_SIFT
-//#endif //ANDROID
-
-#undef ARM_NO_SIFT
-#ifdef ARM_NO_SIFT
-
-static inline void throw_nosift() { CV_Error(CV_StsBadFunc, "The library is compiled under ARM without SIFT support"); }
-
-cv::SIFT::CommonParams::CommonParams() { }
-cv::SIFT::CommonParams::CommonParams( int, int, int, int ) { throw_nosift(); }
-cv::SIFT::DetectorParams::DetectorParams() { throw_nosift(); }
-cv::SIFT::DetectorParams::DetectorParams( double, double ) { throw_nosift(); }
-cv::SIFT::DescriptorParams::DescriptorParams() { throw_nosift(); }
-cv::SIFT::DescriptorParams::DescriptorParams( double, bool, bool ) { throw_nosift(); }
-cv::SIFT::SIFT() { throw_nosift(); }
-cv::SIFT::SIFT( double, double, int, int, int, int ) { throw_nosift(); }
-cv::SIFT::SIFT( double, bool, bool, int, int, int, int ) { throw_nosift(); }
-cv::SIFT::SIFT( const CommonParams&, const DetectorParams&, const DescriptorParams& ) { throw_nosift(); }
-int cv::SIFT::descriptorSize() const {  throw_nosift(); return 0; }
-void cv::SIFT::operator()( const Mat&, const Mat&, vector<KeyPoint>& ) const { throw_nosift(); }
-void cv::SIFT::operator()( const Mat&, const Mat&, vector<KeyPoint>&, Mat&, bool ) const { throw_nosift(); }
-cv::SIFT::CommonParams cv::SIFT::getCommonParams() const {  throw_nosift(); return cv::SIFT::CommonParams(); }
-cv::SIFT::DetectorParams cv::SIFT::getDetectorParams() const {  throw_nosift(); return cv::SIFT::DetectorParams(); }
-cv::SIFT::DescriptorParams cv::SIFT::getDescriptorParams() const {  throw_nosift(); return cv::SIFT::DescriptorParams(); }
-
-#else // with SIFT
-
-#include <iostream>
-#include <limits>
-
-#define log2(a) (log((a))/CV_LOG2)
-
-#if defined _MSC_VER && _MSC_VER >= 1400
-#pragma warning(disable: 4100 4244 4267 4305)
-#endif
-
-/*
- * from sift.hpp of original code
- */
-#if defined (VL_USEFASTMATH)
-#if defined (VL_MAC)
-#define VL_FASTFLOAT float
-#else
-#define VL_FASTFLOAT double
-#endif
-#else
-#define VL_FASTFLOAT float
-#endif
-
-/** @brief VisionLab namespace */
-namespace VL {
-
-/** @brief Pixel data type */
-typedef float pixel_t ;
-
-/** @brief Floating point data type
- **
- ** Although floats are precise enough for this applicatgion, on Intel
- ** based architecture using doubles for floating point computations
- ** turns out to be much faster.
- **/
-typedef VL_FASTFLOAT float_t ;
-
-/** @brief 32-bit floating data type */
-typedef float float32_t ;
-
-/** @brief 64-bit floating data type */
-typedef double float64_t ;
-
-/** @brief 32-bit integer data type */
-typedef int int32_t ;
-
-/** @brief 64-bit integer data type */
-typedef long long int int64_t ;
-
-/** @brief 32-bit unsigned integer data type */
-typedef int uint32_t ;
-
-/** @brief 8-bit unsigned integer data type */
-typedef char unsigned uint8_t ;
-
-/** @name Fast math
- **
- ** We provide approximate mathematical functions. These are usually
- ** rather faster than the corresponding standard library functions.
- **/
-/*@{*/
-float   fast_resqrt(float x) ;
-double  fast_resqrt(double x) ;
-float_t fast_expn(float_t x) ;
-float_t fast_abs(float_t x) ;
-float_t fast_mod_2pi(float_t x) ;
-float_t fast_atan2(float_t y, float_t x) ;
-float_t fast_sqrt(float_t x) ;
-int32_t fast_floor(float_t x) ;
-/*@}*/
-
-/** @brief PGM buffer descriptor
- **
- ** The structure describes a gray scale image and it is used by the
- ** PGM input/output functions. The fileds are self-explanatory.
- **/
-/*@{*/
-struct PgmBuffer
-{
-  int width ;     ///< Image width
-  int height ;    ///< Image hegith
-  pixel_t* data ; ///< Image data
-} ;
-/*@}*/
-
-/** @brief SIFT filter
- **
- ** This class is a filter computing the Scale Invariant Feature
- ** Transform (SIFT).
- **/
-class Sift
-{
-
-public:
-
-  /** @brief SIFT keypoint
-   **
-   ** A SIFT keypoint is charactedized by a location x,y and a scale
-   ** @c sigma. The scale is obtained from the level index @c s and
-   ** the octave index @c o through a simple formula (see the PDF
-   ** documentation).
-   **
-   ** In addition to the location, scale indexes and scale, we also
-   ** store the integer location and level. The integer location is
-   ** unnormalized, i.e. relative to the resolution of the octave
-   ** containing the keypoint (octaves are downsampled).
-   **/
-  struct Keypoint
-  {
-    int o ;    ///< Keypoint octave index
-
-    int ix ;   ///< Keypoint integer X coordinate (unnormalized)
-    int iy ;   ///< Keypoint integer Y coordinate (unnormalized)
-    int is ;   ///< Keypoint integer scale indiex
-
-    float_t x  ;  ///< Keypoint fractional X coordinate
-    float_t y  ;  ///< Keypoint fractional Y coordinate
-    float_t s ;   ///< Keypoint fractional scale index
-
-    float_t sigma ;  ///< Keypoint scale
-  } ;
-
-  typedef std::vector<Keypoint>     Keypoints ;          ///< Keypoint list datatype
-  typedef Keypoints::iterator       KeypointsIter ;      ///< Keypoint list iter datatype
-  typedef Keypoints::const_iterator KeypointsConstIter ; ///< Keypoint list const iter datatype
-
-#undef _S
-  /** @brief Constructors and destructors */
-  /*@{*/
-  Sift(const pixel_t* _im_pt, int _width, int _height,
-       float_t _sigman,
-       float_t _sigma0,
-       int _O, int _S,
-       int _omin, int _smin, int _smax) ;
-  ~Sift() ;
-  /*@}*/
-
-  void process(const pixel_t* _im_pt, int _width, int _height) ;
-
-  /** @brief Querying the Gaussian scale space */
-  /*@{*/
-  VL::pixel_t* getOctave(int o) ;
-  VL::pixel_t* getLevel(int o, int s) ;
-  int          getWidth() const ;
-  int          getHeight() const ;
-  int          getOctaveWidth(int o) const ;
-  int          getOctaveHeight(int o) const ;
-  VL::float_t  getOctaveSamplingPeriod(int o) const ;
-  VL::float_t  getScaleFromIndex(VL::float_t o, VL::float_t s) const ;
-  Keypoint     getKeypoint(VL::float_t x, VL::float_t y, VL::float_t s) const ;
-  /*@}*/
-
-  /** @brief Descriptor parameters */
-  /*@{*/
-  bool getNormalizeDescriptor() const ;
-  void setNormalizeDescriptor(bool) ;
-  void setMagnification(VL::float_t) ;
-  VL::float_t getMagnification() const ;
-  /*@}*/
-
-  /** @brief Detector and descriptor */
-  /*@{*/
-  void detectKeypoints(VL::float_t threshold, VL::float_t edgeThreshold) ;
-  int computeKeypointOrientations(VL::float_t angles [4], Keypoint keypoint) ;
-  void computeKeypointDescriptor(VL::float_t* descr_pt, Keypoint keypoint, VL::float_t angle) ;
-  KeypointsIter keypointsBegin() ;
-  KeypointsIter keypointsEnd() ;
-  /*@}*/
-
-private:
-  void prepareBuffers() ;
-  void freeBuffers() ;
-  void smooth(VL::pixel_t       * dst,
-              VL::pixel_t       * temp,
-              VL::pixel_t const * src, int width, int height,
-              VL::float_t s) ;
-
-  void prepareGrad(int o) ;
-
-  // scale space parameters
-  VL::float_t sigman ;
-  VL::float_t sigma0 ;
-  VL::float_t sigmak ;
-
-  int O ;
-  int S ;
-  int omin ;
-  int smin ;
-  int smax ;
-
-  int width ;
-  int height ;
-
-  // descriptor parameters
-  VL::float_t magnif ;
-  bool        normalizeDescriptor ;
-
-  // buffers
-  VL::pixel_t*  temp ;
-  int           tempReserved ;
-  bool          tempIsGrad  ;
-  int           tempOctave ;
-  VL::pixel_t** octaves ;
-
-  VL::pixel_t*  filter ;
-  int           filterReserved ;
-
-  Keypoints keypoints ;
-} ;
-
-}
-
-/*
- * from sift.ipp of original code
- */
-namespace VL
-{
-
-namespace Detail
-{
-extern int const expnTableSize ;
-extern VL::float_t const expnTableMax ;
-extern VL::float_t expnTable [] ;
-}
-
-/** @brief Get width of source image
- ** @result width.
- **/
-inline
-int
-Sift::getWidth() const
-{
-  return width ;
-}
-
-/** @brief Get height of source image
- ** @result height.
- **/
-inline
-int
-Sift::getHeight() const
-{
-  return height ;
-}
-
-/** @brief Get width of an octave
- ** @param o octave index.
- ** @result width of octave @a o.
- **/
-inline
-int
-Sift::getOctaveWidth(int o) const
-{
-  assert( omin <= o && o < omin + O ) ;
-  return (o >= 0) ? (width >> o) : (width << -o) ;
-}
-
-/** @brief Get height of an octave
- ** @param o octave index.
- ** @result height of octave @a o.
- **/
-inline
-int
-Sift::getOctaveHeight(int o) const
-{
-  assert( omin <= o && o < omin + O ) ;
-  return (o >= 0) ? (height >> o) : (height << -o) ;
-}
-
-/** @brief Get octave
- ** @param o octave index.
- ** @return pointer to octave @a o.
- **/
-inline
-VL::pixel_t *
-Sift::getOctave(int o)
-{
-  assert( omin <= o && o < omin + O ) ;
-  return octaves[o-omin] ;
-}
-
-/** @brief Get level
- ** @param o octave index.
- ** @param s level index.
- ** @result pointer to level @c (o,s).
- **/
-inline
-VL::pixel_t *
-Sift::getLevel(int o, int s)
-{
-  assert( omin <= o && o <  omin + O ) ;
-  assert( smin <= s && s <= smax     ) ;
-  return octaves[o - omin] +
-    getOctaveWidth(o)*getOctaveHeight(o) * (s-smin) ;
-}
-
-/** @brief Get octave sampling period
- ** @param o octave index.
- ** @result Octave sampling period (in pixels).
- **/
-inline
-VL::float_t
-Sift::getOctaveSamplingPeriod(int o) const
+static inline float getOctaveSamplingPeriod( int o )
 {
   return (o >= 0) ? (1 << o) : 1.0f / (1 << -o) ;
 }
 
-/** @brief Convert index into scale
- ** @param o octave index.
- ** @param s scale index.
- ** @return scale.
- **/
-inline
-VL::float_t
-Sift::getScaleFromIndex(VL::float_t o, VL::float_t s) const
+/*
+  Interpolates a histogram peak from left, center, and right values
+*/
+#define interp_hist_peak( l, c, r ) ( 0.5 * ((l)-(r)) / ((l) - 2.0*(c) + (r)) )
+
+
+// utils.h
+/**
+   A function to get a pixel value from a 32-bit floating-point image.
+
+   @param img an image
+   @param r row
+   @param c column
+   @return Returns the value of the pixel at (\a r, \a c) in \a img
+*/
+static inline float pixval32f( IplImage* img, int r, int c )
 {
-  return sigma0 * powf( 2.0f, o + s / S ) ;
+  return ( (float*)(img->imageData + img->widthStep*r) )[c];
 }
 
-/** @brief Get keypoint list begin
- ** @return iterator to the beginning.
- **/
-inline
-Sift::KeypointsIter
-Sift::keypointsBegin()
+
+// imgfeatures.h
+
+/** holds feature data relevant to detection */
+struct detection_data
 {
-  return keypoints.begin() ;
+    int r; // row
+    int c; // col
+    int octv;
+    int intvl;
+    double subintvl;
+    double scl_octv;
+};
+
+/** max feature descriptor length */
+#define FEATURE_MAX_D 128
+
+/**
+   Structure to represent an affine invariant image feature.  The fields
+   x, y, a, b, c represent the affine region around the feature:
+
+   a(x-u)(x-u) + 2b(x-u)(y-v) + c(y-v)(y-v) = 1
+*/
+struct feature
+{
+    double x;                      /**< x coord */
+    double y;                      /**< y coord */
+
+    double scl;                    /**< scale of a Lowe-style feature */
+    double ori;                    /**< orientation of a Lowe-style feature */
+
+    int d;                         /**< descriptor length */
+    double descr[FEATURE_MAX_D];   /**< descriptor */
+
+    detection_data* feature_data;            /**< user-definable data */
+};
+
+/******************************* Defs and macros *****************************/
+
+/** default number of sampled intervals per octave */
+#define SIFT_INTVLS 3
+
+/** default sigma for initial gaussian smoothing */
+#define SIFT_SIGMA 1.6
+
+/** default threshold on keypoint contrast |D(x)| */
+#define SIFT_CONTR_THR 0.04
+
+/** default threshold on keypoint ratio of principle curvatures */
+#define SIFT_CURV_THR 10
+
+/** double image size before pyramid construction? */
+#define SIFT_IMG_DBL 1
+
+/** default width of descriptor histogram array */
+#define SIFT_DESCR_WIDTH 4
+
+/** default number of bins per histogram in descriptor array */
+#define SIFT_DESCR_HIST_BINS 8
+
+/* assumed gaussian blur for input image */
+#define SIFT_INIT_SIGMA 0.5
+
+/* width of border in which to ignore keypoints */
+#define SIFT_IMG_BORDER 5
+
+/* maximum steps of keypoint interpolation before failure */
+#define SIFT_MAX_INTERP_STEPS 5
+
+/* default number of bins in histogram for orientation assignment */
+#define SIFT_ORI_HIST_BINS 36
+
+/* determines gaussian sigma for orientation assignment */
+#define SIFT_ORI_SIG_FCTR 1.5
+
+/* determines the radius of the region used in orientation assignment */
+#define SIFT_ORI_RADIUS 3.0 * SIFT_ORI_SIG_FCTR
+
+/* number of passes of orientation histogram smoothing */
+#define SIFT_ORI_SMOOTH_PASSES 2
+
+/* orientation magnitude relative to max that results in new feature */
+#define SIFT_ORI_PEAK_RATIO 0.8
+
+/* determines the size of a single descriptor orientation histogram */
+#define SIFT_DESCR_SCL_FCTR 3.0
+
+/* threshold on magnitude of elements of descriptor vector */
+#define SIFT_DESCR_MAG_THR 0.2
+
+/* factor used to convert floating-point descriptor to unsigned char */
+#define SIFT_INT_DESCR_FCTR 512.0
+
+/**************************************************************************/
+
+/*
+  Converts an image to 32-bit grayscale
+
+  @param img a 3-channel 8-bit color (BGR) or 8-bit gray image
+
+  @return Returns a 32-bit grayscale image
+*/
+static IplImage* convert_to_gray32( IplImage* img )
+{
+  IplImage* gray8, * gray32;
+
+  gray32 = cvCreateImage( cvGetSize(img), IPL_DEPTH_32F, 1 );
+  if( img->nChannels == 1 )
+    gray8 = (IplImage*)cvClone( img );
+  else
+    {
+      gray8 = cvCreateImage( cvGetSize(img), IPL_DEPTH_8U, 1 );
+      cvCvtColor( img, gray8, CV_BGR2GRAY );
+    }
+  cvConvertScale( gray8, gray32, 1.0 / 255.0, 0 );
+
+  cvReleaseImage( &gray8 );
+  return gray32;
 }
 
-/** @brief Get keypoint list end
- ** @return iterator to the end.
- **/
-inline
-Sift::KeypointsIter
-Sift::keypointsEnd()
+/*
+  Converts an image to 8-bit grayscale and Gaussian-smooths it.  The image is
+  optionally doubled in size prior to smoothing.
+
+  @param img input image
+  @param img_dbl if true, image is doubled in size prior to smoothing
+  @param sigma total std of Gaussian smoothing
+*/
+static IplImage* create_init_img( IplImage* img, int img_dbl, double sigma )
 {
-  return keypoints.end() ;
+  IplImage* gray, * dbl;
+  double sig_diff;
+
+  gray = convert_to_gray32( img );
+  if( img_dbl )
+    {
+      sig_diff = sqrt( sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4 );
+      dbl = cvCreateImage( cvSize( img->width*2, img->height*2 ),
+                           IPL_DEPTH_32F, 1 );
+      cvResize( gray, dbl, CV_INTER_CUBIC );
+      cvSmooth( dbl, dbl, CV_GAUSSIAN, 0, 0, sig_diff, sig_diff );
+      cvReleaseImage( &gray );
+      return dbl;
+    }
+  else
+    {
+      sig_diff = sqrt( sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA );
+      cvSmooth( gray, gray, CV_GAUSSIAN, 0, 0, sig_diff, sig_diff );
+      return gray;
+    }
 }
 
-/** @brief Set normalize descriptor flag */
-inline
-void
-Sift::setNormalizeDescriptor(bool flag)
+/*
+  Downsamples an image to a quarter of its size (half in each dimension)
+  using nearest-neighbor interpolation
+
+  @param img an image
+
+  @return Returns an image whose dimensions are half those of img
+*/
+static IplImage* downsample( IplImage* img )
 {
-  normalizeDescriptor = flag ;
+  IplImage* smaller = cvCreateImage( cvSize(img->width / 2, img->height / 2),
+                                     img->depth, img->nChannels );
+  cvResize( img, smaller, CV_INTER_NN );
+
+  return smaller;
 }
 
-/** @brief Get normalize descriptor flag */
-inline
-bool
-Sift::getNormalizeDescriptor() const
-{
-  return normalizeDescriptor ;
-}
+/*
+  Builds Gaussian scale space pyramid from an image
 
-/** @brief Set descriptor magnification */
-inline
-void
-Sift::setMagnification(VL::float_t _magnif)
-{
-  magnif = _magnif ;
-}
+  @param base base image of the pyramid
+  @param octvs number of octaves of scale space
+  @param intvls number of intervals per octave
+  @param sigma amount of Gaussian smoothing per octave
 
-/** @brief Get descriptor magnification */
-inline
-VL::float_t
-Sift::getMagnification() const
+  @return Returns a Gaussian scale space pyramid as an octvs x (intvls + 3)
+    array
+*/
+static IplImage*** build_gauss_pyr( IplImage* base, int octvs,
+                             int intvls, double sigma )
 {
-  return magnif ;
-}
+  IplImage*** gauss_pyr;
+  const int _intvls = intvls;
+  double sig[_intvls+3], sig_total, sig_prev, k;
+  int i, o;
 
-/** @brief Fast @ exp(-x)
- **
- ** The argument must be in the range 0-25.0 (bigger arguments may be
- ** truncated to zero).
- **
- ** @param x argument.
- ** @return @c exp(-x)
- **/
-inline
-VL::float_t
-fast_expn(VL::float_t x)
-{
-  assert(VL::float_t(0) <= x && x <= Detail::expnTableMax) ;
-#ifdef VL_USEFASTMATH
-  x *= Detail::expnTableSize / Detail::expnTableMax ;
-  VL::int32_t i = fast_floor(x) ;
-  VL::float_t r = x - i ;
-  VL::float_t a = VL::Detail::expnTable[i] ;
-  VL::float_t b = VL::Detail::expnTable[i+1] ;
-  return a + r * (b - a) ;
-#else
-  return exp(-x) ;
-#endif
-}
-
-/** @brief Fast @c mod(x,2pi)
- **
- ** The function quickly computes the value @c mod(x,2pi).
- **
- ** @remark The computation is fast only for arguments @a x which are
- ** small in modulus.
- **
- ** @remark For negative arguments, the semantic of the function is
- ** not equivalent to the standard library @c fmod function.
- **
- ** @param x function argument.
- ** @return @c mod(x,2pi)
- **/
-inline
-VL::float_t
-fast_mod_2pi(VL::float_t x)
-{
-#ifdef VL_USEFASTMATH
-  while(x < VL::float_t(0)      ) x += VL::float_t(2*CV_PI) ;
-  while(x > VL::float_t(2*CV_PI) ) x -= VL::float_t(2*CV_PI) ;
-  return x ;
-#else
-  return (x>=0) ? std::fmod(x, VL::float_t(2*CV_PI))
-    : 2*CV_PI + std::fmod(x, VL::float_t(2*CV_PI)) ;
-#endif
-}
-
-/** @brief Fast @c (int) floor(x)
- ** @param x argument.
- ** @return @c float(x)
- **/
-inline
-int32_t
-fast_floor(VL::float_t x)
-{
-#ifdef VL_USEFASTMATH
-  return (x>=0)? int32_t(x) : std::floor(x) ;
-  //  return int32_t( x - ((x>=0)?0:1) ) ;
-#else
-  return int32_t( std::floor(x) ) ;
-#endif
-}
-
-/** @brief Fast @c abs(x)
- ** @param x argument.
- ** @return @c abs(x)
- **/
-inline
-VL::float_t
-fast_abs(VL::float_t x)
-{
-#ifdef VL_USEFASTMATH
-  return (x >= 0) ? x : -x ;
-#else
-  return std::fabs(x) ;
-#endif
-}
-
-/** @brief Fast @c atan2
- ** @param x argument.
- ** @param y argument.
- ** @return Approximation of @c atan2(x).
- **/
-inline
-VL::float_t
-fast_atan2(VL::float_t y, VL::float_t x)
-{
-#ifdef VL_USEFASTMATH
+  gauss_pyr = (IplImage***)calloc( octvs, sizeof( IplImage** ) );
+  for( i = 0; i < octvs; i++ )
+    gauss_pyr[i] = (IplImage**)calloc( intvls + 3, sizeof( IplImage *) );
 
   /*
-    The function f(r)=atan((1-r)/(1+r)) for r in [-1,1] is easier to
-    approximate than atan(z) for z in [0,inf]. To approximate f(r) to
-    the third degree we may solve the system
+    precompute Gaussian sigmas using the following formula:
 
-     f(+1) = c0 + c1 + c2 + c3 = atan(0) = 0
-     f(-1) = c0 - c1 + c2 - c3 = atan(inf) = pi/2
-     f(0)  = c0                = atan(1) = pi/4
-
-    which constrains the polynomial to go through the end points and
-    the middle point.
-
-    We still miss a constrain, which might be simply a constarint on
-    the derivative in 0. Instead we minimize the Linf error in the
-    range [0,1] by searching for an optimal value of the free
-    parameter. This turns out to correspond to the solution
-
-     c0=pi/4, c1=-0.9675, c2=0, c3=0.1821
-
-    which has maxerr = 0.0061 rad = 0.35 grad.
+    \sigma_{total}^2 = \sigma_{i}^2 + \sigma_{i-1}^2
   */
+  sig[0] = sigma;
+  k = pow( 2.0, 1.0 / intvls );
+  for( i = 1; i < intvls + 3; i++ )
+    {
+      sig_prev = pow( k, i - 1 ) * sigma;
+      sig_total = sig_prev * k;
+      sig[i] = sqrt( sig_total * sig_total - sig_prev * sig_prev );
+    }
 
-  VL::float_t angle, r ;
-  VL::float_t const c3 = 0.1821 ;
-  VL::float_t const c1 = 0.9675 ;
-  VL::float_t abs_y    = fast_abs(y) + VL::float_t(1e-10) ;
+  for( o = 0; o < octvs; o++ )
+    for( i = 0; i < intvls + 3; i++ )
+      {
+        if( o == 0  &&  i == 0 )
+          gauss_pyr[o][i] = cvCloneImage(base);
 
-  if (x >= 0) {
-    r = (x - abs_y) / (x + abs_y) ;
-    angle = VL::float_t(CV_PI/4.0) ;
-  } else {
-    r = (x + abs_y) / (abs_y - x) ;
-    angle = VL::float_t(3*CV_PI/4.0) ;
-  }
-  angle += (c3*r*r - c1) * r ;
-  return (y < 0) ? -angle : angle ;
-#else
-  return std::atan2(y,x) ;
-#endif
-}
+        /* base of new octvave is halved image from end of previous octave */
+        else if( i == 0 )
+          gauss_pyr[o][i] = downsample( gauss_pyr[o-1][intvls] );
 
-/** @brief Fast @c resqrt
- ** @param x argument.
- ** @return Approximation to @c resqrt(x).
- **/
-inline
-float
-fast_resqrt(float x)
-{
-#ifdef VL_USEFASTMATH
-  // Works if VL::float_t is 32 bit ...
-  union {
-    float x ;
-    VL::int32_t i ;
-  } u ;
-  float xhalf = float(0.5) * x ;
-  u.x = x ;                               // get bits for floating value
-  u.i = 0x5f3759df - (u.i>>1);            // gives initial guess y0
-  //u.i = 0xdf59375f - (u.i>>1);          // gives initial guess y0
-  u.x = u.x*(float(1.5) - xhalf*u.x*u.x); // Newton step (may repeat)
-  u.x = u.x*(float(1.5) - xhalf*u.x*u.x); // Newton step (may repeat)
-  return u.x ;
-#else
-  return float(1.0) / std::sqrt(x) ;
-#endif
-}
+        /* blur the current octave's last image to create the next one */
+        else
+          {
+            gauss_pyr[o][i] = cvCreateImage( cvGetSize(gauss_pyr[o][i-1]),
+                                             IPL_DEPTH_32F, 1 );
+            cvSmooth( gauss_pyr[o][i-1], gauss_pyr[o][i],
+                      CV_GAUSSIAN, 0, 0, sig[i], sig[i] );
+          }
+      }
 
-/** @brief Fast @c resqrt
- ** @param x argument.
- ** @return Approximation to @c resqrt(x).
- **/
-inline
-double
-fast_resqrt(double x)
-{
-#ifdef VL_USEFASTMATH
-  // Works if double is 64 bit ...
-  union {
-    double x ;
-    VL::int64_t i ;
-  } u ;
-  double xhalf = double(0.5) * x ;
-  u.x = x ;                                // get bits for floating value
-  u.i = 0x5fe6ec85e7de30daLL - (u.i>>1);   // gives initial guess y0
-  u.x = u.x*(double(1.5) - xhalf*u.x*u.x); // Newton step (may repeat)
-  u.x = u.x*(double(1.5) - xhalf*u.x*u.x); // Newton step (may repeat)
-  return u.x ;
-#else
-  return double(1.0) / std::sqrt(x) ;
-#endif
-}
-
-/** @brief Fast @c sqrt
- ** @param x argument.
- ** @return Approximation to @c sqrt(x).
- **/
-inline
-VL::float_t
-fast_sqrt(VL::float_t x)
-{
-#ifdef VL_USEFASTMATH
-  return (x < 1e-8) ? 0 : x * fast_resqrt(x) ;
-#else
-  return std::sqrt(x) ;
-#endif
-}
-
+  return gauss_pyr;
 }
 
 /*
- * from sift.tpp of original code
- */
+  Builds a difference of Gaussians scale space pyramid by subtracting adjacent
+  intervals of a Gaussian pyramid
 
-template<typename T>
-void
-normalize(T* filter, int W)
+  @param gauss_pyr Gaussian scale-space pyramid
+  @param octvs number of octaves of scale space
+  @param intvls number of intervals per octave
+
+  @return Returns a difference of Gaussians scale space pyramid as an
+    octvs x (intvls + 2) array
+*/
+static IplImage*** build_dog_pyr( IplImage*** gauss_pyr, int octvs, int intvls )
 {
-  T  acc  = 0 ;
-  T* iter = filter ;
-  T* end  = filter + 2*W+1 ;
-  while(iter != end) acc += *iter++ ;
+  IplImage*** dog_pyr;
+  int i, o;
 
-  iter = filter ;
-  while(iter != end) *iter++ /= acc ;
-}
+  dog_pyr = (IplImage***)calloc( octvs, sizeof( IplImage** ) );
+  for( i = 0; i < octvs; i++ )
+    dog_pyr[i] = (IplImage**)calloc( intvls + 2, sizeof(IplImage*) );
 
-template<typename T>
-void
-convolve(T*       dst_pt,
-         const T* src_pt, int M, int N,
-         const T* filter_pt, int W)
-{
-  typedef T const TC ;
-  // convolve along columns, save transpose
-  // image is M by N
-  // buffer is N by M
-  // filter is (2*W+1) by 1
-  for(int j = 0 ; j < N ; ++j) {
+  for( o = 0; o < octvs; o++ )
+    for( i = 0; i < intvls + 2; i++ )
+      {
+        dog_pyr[o][i] = cvCreateImage( cvGetSize(gauss_pyr[o][i]),
+                                       IPL_DEPTH_32F, 1 );
+        cvSub( gauss_pyr[o][i+1], gauss_pyr[o][i], dog_pyr[o][i], NULL );
+      }
 
-    int i = 0 ;
-
-    // top
-    for(; i <= std::min(W-1, M-1) ; ++i) {
-      TC* start = src_pt ;
-      TC* stop  = src_pt    + std::min(i+W, M-1) + 1 ;
-      TC* g     = filter_pt + W-i ;
-      T   acc = 0.0 ;
-      while(stop != start) acc += (*g++) * (*start++) ;
-      *dst_pt = acc ;
-      dst_pt += N ;
-    }
-
-    // middle
-    // run this for W <= i <= M-1-W, only if M >= 2*W+1
-    for(; i <= M-1-W ; ++i) {
-      TC* start = src_pt    + i-W ;
-      TC* stop  = src_pt    + i+W + 1 ;
-      TC* g     = filter_pt ;
-      T   acc = 0.0 ;
-      while(stop != start) acc += (*g++) * (*start++) ;
-      *dst_pt = acc ;
-      dst_pt += N ;
-    }
-
-    // bottom
-    // run this for M-W <= i <= M-1, only if M >= 2*W+1
-    for(; i <= M-1 ; ++i) {
-      TC* start = src_pt    + i-W ;
-      TC* stop  = src_pt    + std::min(i+W, M-1) + 1 ;
-      TC* g     = filter_pt ;
-      T   acc   = 0.0 ;
-      while(stop != start) acc += (*g++) * (*start++) ;
-      *dst_pt = acc ;
-      dst_pt += N ;
-    }
-
-    // next column
-    src_pt += M ;
-    dst_pt -= M*N - 1 ;
-  }
-}
-
-// works with symmetric filters only
-template<typename T>
-void
-nconvolve(T*       dst_pt,
-          const T* src_pt, int M, int N,
-          const T* filter_pt, int W,
-          T*       scratch_pt )
-{
-  typedef T const TC ;
-
-  for(int i = 0 ; i <= W ; ++i) {
-    T   acc = 0.0 ;
-    TC* iter = filter_pt + std::max(W-i,  0) ;
-    TC* stop = filter_pt + std::min(M-1-i,W) + W + 1 ;
-    while(iter != stop) acc += *iter++ ;
-    scratch_pt [i] = acc ;
-  }
-
- for(int j = 0 ; j < N ; ++j) {
-
-   int i = 0 ;
-   // top margin
-   for(; i <= std::min(W, M-1) ; ++i) {
-     TC* start = src_pt ;
-     TC* stop  = src_pt    + std::min(i+W, M-1) + 1 ;
-     TC* g     = filter_pt + W-i ;
-     T   acc = 0.0 ;
-     while(stop != start) acc += (*g++) * (*start++) ;
-     *dst_pt = acc / scratch_pt [i] ;
-     dst_pt += N ;
-   }
-
-   // middle
-   for(; i <= M-1-W ; ++i) {
-     TC* start = src_pt    + i-W ;
-     TC* stop  = src_pt    + i+W + 1 ;
-     TC* g     = filter_pt ;
-     T   acc = 0.0 ;
-     while(stop != start) acc += (*g++) * (*start++) ;
-     *dst_pt = acc ;
-     dst_pt += N ;
-   }
-
-   // bottom
-   for(; i <= M-1 ; ++i) {
-     TC* start = src_pt    + i-W ;
-     TC* stop  = src_pt    + std::min(i+W, M-1) + 1 ;
-     TC* g     = filter_pt ;
-     T   acc   = 0.0 ;
-     while(stop != start) acc += (*g++) * (*start++) ;
-     *dst_pt = acc / scratch_pt [M-1-i];
-     dst_pt += N ;
-   }
-
-   // next column
-   src_pt += M ;
-   dst_pt -= M*N - 1 ;
- }
-}
-
-template<typename T>
-void
-econvolve(T*       dst_pt,
-      const T* src_pt,    int M, int N,
-      const T* filter_pt, int W)
-{
-  typedef T const TC ;
-  // convolve along columns, save transpose
-  // image is M by N
-  // buffer is N by M
-  // filter is (2*W+1) by 1
-  for(int j = 0 ; j < N ; ++j) {
-    for(int i = 0 ; i < M ; ++i) {
-      T   acc = 0.0 ;
-      TC* g = filter_pt ;
-      TC* start = src_pt + (i-W) ;
-      TC* stop  ;
-      T   x ;
-
-      // beginning
-      stop = src_pt + std::max(0, i-W) ;
-      x    = *stop ;
-      while( start <= stop ) { acc += (*g++) * x ; start++ ; }
-
-      // middle
-      stop =  src_pt + std::min(M-1, i+W) ;
-      while( start <  stop ) acc += (*g++) * (*start++) ;
-
-      // end
-      x  = *start ;
-      stop = src_pt + (i+W) ;
-      while( start <= stop ) { acc += (*g++) * x ; start++ ; }
-
-      // save
-      *dst_pt = acc ;
-      dst_pt += N ;
-
-      assert( g - filter_pt == 2*W+1 ) ;
-
-    }
-    // next column
-    src_pt += M ;
-    dst_pt -= M*N - 1 ;
-  }
+  return dog_pyr;
 }
 
 /*
- * from sift.cpp of original code
- */
+  Determines whether a pixel is a scale-space extremum by comparing it to it's
+  3x3x3 pixel neighborhood.
 
-extern "C" {
-#if defined (VL_MAC)
-#include<libgen.h>
-#else
-#include<string.h>
-}
-#endif
+  @param dog_pyr DoG scale space pyramid
+  @param octv pixel's scale space octave
+  @param intvl pixel's within-octave interval
+  @param r pixel's image row
+  @param c pixel's image col
 
-// on startup, pre-compute expn(x) = exp(-x)
-namespace VL {
-namespace Detail {
-
-int const         expnTableSize = 256 ;
-VL::float_t const expnTableMax  = VL::float_t(25.0) ;
-VL::float_t       expnTable [ expnTableSize + 1 ] ;
-
-struct buildExpnTable
+  @return Returns 1 if the specified pixel is an extremum (max or min) among
+    it's 3x3x3 pixel neighborhood.
+*/
+static int is_extremum( IplImage*** dog_pyr, int octv, int intvl, int r, int c )
 {
-  buildExpnTable() {
-    for(int k = 0 ; k < expnTableSize + 1 ; ++k) {
-      expnTable[k] = exp( - VL::float_t(k) / expnTableSize * expnTableMax ) ;
+  double val = pixval32f( dog_pyr[octv][intvl], r, c );
+  int i, j, k;
+
+  /* check for maximum */
+  if( val > 0 )
+    {
+      for( i = -1; i <= 1; i++ )
+        for( j = -1; j <= 1; j++ )
+          for( k = -1; k <= 1; k++ )
+            if( val < pixval32f( dog_pyr[octv][intvl+i], r + j, c + k ) )
+              return 0;
     }
-  }
-} _buildExpnTable ;
 
-} }
-
-
-namespace VL {
-
-    // ===================================================================
-//                                          Low level image operations
-// -------------------------------------------------------------------
-
-namespace Detail {
-
-/** @brief Copy an image
- ** @param dst    output imgage buffer.
- ** @param src    input image buffer.
- ** @param width  input image width.
- ** @param height input image height.
- **/
-void
-copy(pixel_t* dst, pixel_t const* src, int width, int height)
-{
-  memcpy(dst, src, sizeof(pixel_t)*width*height)  ;
-}
-
-/** @brief Copy an image upsampling two times
- **
- ** The destination buffer must be at least as big as two times the
- ** input buffer. Bilinear interpolation is used.
- **
- ** @param dst     output imgage buffer.
- ** @param src     input image buffer.
- ** @param width   input image width.
- ** @param height  input image height.
- **/
-void
-copyAndUpsampleRows
-(pixel_t* dst, pixel_t const* src, int width, int height)
-{
-  for(int y = 0 ; y < height ; ++y) {
-    pixel_t b, a ;
-    b = a = *src++ ;
-    for(int x = 0 ; x < width-1 ; ++x) {
-      b = *src++ ;
-      *dst = a ;         dst += height ;
-      *dst = 0.5*(a+b) ; dst += height ;
-      a = b ;
+  /* check for minimum */
+  else
+    {
+      for( i = -1; i <= 1; i++ )
+        for( j = -1; j <= 1; j++ )
+          for( k = -1; k <= 1; k++ )
+            if( val > pixval32f( dog_pyr[octv][intvl+i], r + j, c + k ) )
+              return 0;
     }
-    *dst = b ; dst += height ;
-    *dst = b ; dst += height ;
-    dst += 1 - width * 2 * height ;
-  }
+
+  return 1;
 }
 
-/** @brief Copy and downasample an image
- **
- ** The image is downsampled @a d times, i.e. reduced to @c 1/2^d of
- ** its original size. The parameters @a width and @a height are the
- ** size of the input image. The destination image is assumed to be @c
- ** floor(width/2^d) pixels wide and @c floor(height/2^d) pixels high.
- **
- ** @param dst output imgage buffer.
- ** @param src input image buffer.
- ** @param width input image width.
- ** @param height input image height.
- ** @param d downsampling factor.
- **/
-void
-copyAndDownsample(pixel_t* dst, pixel_t const* src,
-                  int width, int height, int d)
+/*
+  Computes the partial derivatives in x, y, and scale of a pixel in the DoG
+  scale space pyramid.
+
+  @param dog_pyr DoG scale space pyramid
+  @param octv pixel's octave in dog_pyr
+  @param intvl pixel's interval in octv
+  @param r pixel's image row
+  @param c pixel's image col
+
+  @return Returns the vector of partial derivatives for pixel I
+    { dI/dx, dI/dy, dI/ds }^T as a CvMat*
+*/
+static CvMat* deriv_3D( IplImage*** dog_pyr, int octv, int intvl, int r, int c )
 {
-  for(int y = 0 ; y < height ; y+=d) {
-    pixel_t const * srcrowp = src + y * width ;
-    for(int x = 0 ; x < width - (d-1) ; x+=d) {
-      *dst++ = *srcrowp ;
-      srcrowp += d ;
+  CvMat* dI;
+  double dx, dy, ds;
+
+  dx = ( pixval32f( dog_pyr[octv][intvl], r, c+1 ) -
+         pixval32f( dog_pyr[octv][intvl], r, c-1 ) ) / 2.0;
+  dy = ( pixval32f( dog_pyr[octv][intvl], r+1, c ) -
+         pixval32f( dog_pyr[octv][intvl], r-1, c ) ) / 2.0;
+  ds = ( pixval32f( dog_pyr[octv][intvl+1], r, c ) -
+         pixval32f( dog_pyr[octv][intvl-1], r, c ) ) / 2.0;
+
+  dI = cvCreateMat( 3, 1, CV_64FC1 );
+  cvmSet( dI, 0, 0, dx );
+  cvmSet( dI, 1, 0, dy );
+  cvmSet( dI, 2, 0, ds );
+
+  return dI;
+}
+
+/*
+  Computes the 3D Hessian matrix for a pixel in the DoG scale space pyramid.
+
+  @param dog_pyr DoG scale space pyramid
+  @param octv pixel's octave in dog_pyr
+  @param intvl pixel's interval in octv
+  @param r pixel's image row
+  @param c pixel's image col
+
+  @return Returns the Hessian matrix (below) for pixel I as a CvMat*
+
+  / Ixx  Ixy  Ixs \ <BR>
+  | Ixy  Iyy  Iys | <BR>
+  \ Ixs  Iys  Iss /
+*/
+static CvMat* hessian_3D( IplImage*** dog_pyr, int octv, int intvl, int r,
+                          int c )
+{
+  CvMat* H;
+  double v, dxx, dyy, dss, dxy, dxs, dys;
+
+  v = pixval32f( dog_pyr[octv][intvl], r, c );
+  dxx = ( pixval32f( dog_pyr[octv][intvl], r, c+1 ) +
+          pixval32f( dog_pyr[octv][intvl], r, c-1 ) - 2 * v );
+  dyy = ( pixval32f( dog_pyr[octv][intvl], r+1, c ) +
+          pixval32f( dog_pyr[octv][intvl], r-1, c ) - 2 * v );
+  dss = ( pixval32f( dog_pyr[octv][intvl+1], r, c ) +
+          pixval32f( dog_pyr[octv][intvl-1], r, c ) - 2 * v );
+  dxy = ( pixval32f( dog_pyr[octv][intvl], r+1, c+1 ) -
+          pixval32f( dog_pyr[octv][intvl], r+1, c-1 ) -
+          pixval32f( dog_pyr[octv][intvl], r-1, c+1 ) +
+          pixval32f( dog_pyr[octv][intvl], r-1, c-1 ) ) / 4.0;
+  dxs = ( pixval32f( dog_pyr[octv][intvl+1], r, c+1 ) -
+          pixval32f( dog_pyr[octv][intvl+1], r, c-1 ) -
+          pixval32f( dog_pyr[octv][intvl-1], r, c+1 ) +
+          pixval32f( dog_pyr[octv][intvl-1], r, c-1 ) ) / 4.0;
+  dys = ( pixval32f( dog_pyr[octv][intvl+1], r+1, c ) -
+          pixval32f( dog_pyr[octv][intvl+1], r-1, c ) -
+          pixval32f( dog_pyr[octv][intvl-1], r+1, c ) +
+          pixval32f( dog_pyr[octv][intvl-1], r-1, c ) ) / 4.0;
+
+  H = cvCreateMat( 3, 3, CV_64FC1 );
+  cvmSet( H, 0, 0, dxx );
+  cvmSet( H, 0, 1, dxy );
+  cvmSet( H, 0, 2, dxs );
+  cvmSet( H, 1, 0, dxy );
+  cvmSet( H, 1, 1, dyy );
+  cvmSet( H, 1, 2, dys );
+  cvmSet( H, 2, 0, dxs );
+  cvmSet( H, 2, 1, dys );
+  cvmSet( H, 2, 2, dss );
+
+  return H;
+}
+
+/*
+  Performs one step of extremum interpolation.  Based on Eqn. (3) in Lowe's
+  paper.
+
+  @param dog_pyr difference of Gaussians scale space pyramid
+  @param octv octave of scale space
+  @param intvl interval being interpolated
+  @param r row being interpolated
+  @param c column being interpolated
+  @param xi output as interpolated subpixel increment to interval
+  @param xr output as interpolated subpixel increment to row
+  @param xc output as interpolated subpixel increment to col
+*/
+
+static void interp_step( IplImage*** dog_pyr, int octv, int intvl, int r, int c,
+                         double* xi, double* xr, double* xc )
+{
+  CvMat* dD, * H, * H_inv, X;
+  double x[3] = { 0 };
+
+  dD = deriv_3D( dog_pyr, octv, intvl, r, c );
+  H = hessian_3D( dog_pyr, octv, intvl, r, c );
+  H_inv = cvCreateMat( 3, 3, CV_64FC1 );
+  cvInvert( H, H_inv, CV_SVD );
+  cvInitMatHeader( &X, 3, 1, CV_64FC1, x, CV_AUTOSTEP );
+  cvGEMM( H_inv, dD, -1, NULL, 0, &X, 0 );
+
+  cvReleaseMat( &dD );
+  cvReleaseMat( &H );
+  cvReleaseMat( &H_inv );
+
+  *xi = x[2];
+  *xr = x[1];
+  *xc = x[0];
+}
+
+/*
+  Calculates interpolated pixel contrast.  Based on Eqn. (3) in Lowe's
+  paper.
+
+  @param dog_pyr difference of Gaussians scale space pyramid
+  @param octv octave of scale space
+  @param intvl within-octave interval
+  @param r pixel row
+  @param c pixel column
+  @param xi interpolated subpixel increment to interval
+  @param xr interpolated subpixel increment to row
+  @param xc interpolated subpixel increment to col
+
+  @param Returns interpolated contrast.
+*/
+static double interp_contr( IplImage*** dog_pyr, int octv, int intvl, int r,
+                            int c, double xi, double xr, double xc )
+{
+  CvMat* dD, X, T;
+  double t[1], x[3] = { xc, xr, xi };
+
+  cvInitMatHeader( &X, 3, 1, CV_64FC1, x, CV_AUTOSTEP );
+  cvInitMatHeader( &T, 1, 1, CV_64FC1, t, CV_AUTOSTEP );
+  dD = deriv_3D( dog_pyr, octv, intvl, r, c );
+  cvGEMM( dD, &X, 1, NULL, 0, &T,  CV_GEMM_A_T );
+  cvReleaseMat( &dD );
+
+  return pixval32f( dog_pyr[octv][intvl], r, c ) + t[0] * 0.5;
+}
+
+/*
+  Allocates and initializes a new feature
+
+  @return Returns a pointer to the new feature
+*/
+static struct feature* new_feature( void )
+{
+  struct feature* feat;
+  struct detection_data* ddata;
+
+  feat = (feature*) malloc( sizeof( struct feature ) );
+  memset( feat, 0, sizeof( struct feature ) );
+  ddata = (detection_data*) malloc( sizeof( struct detection_data ) );
+  memset( ddata, 0, sizeof( struct detection_data ) );
+  feat->feature_data = ddata;
+
+  return feat;
+}
+
+/*
+  Interpolates a scale-space extremum's location and scale to subpixel
+  accuracy to form an image feature.  Rejects features with low contrast.
+  Based on Section 4 of Lowe's paper.
+
+  @param dog_pyr DoG scale space pyramid
+  @param octv feature's octave of scale space
+  @param intvl feature's within-octave interval
+  @param r feature's image row
+  @param c feature's image column
+  @param intvls total intervals per octave
+  @param contr_thr threshold on feature contrast
+
+  @return Returns the feature resulting from interpolation of the given
+    parameters or NULL if the given location could not be interpolated or
+    if contrast at the interpolated loation was too low.  If a feature is
+    returned, its scale, orientation, and descriptor are yet to be determined.
+*/
+static struct feature* interp_extremum( IplImage*** dog_pyr, int octv,
+                                        int intvl, int r, int c, int intvls,
+                                        double contr_thr )
+{
+  struct feature* feat;
+  struct detection_data* ddata;
+  double xi, xr, xc, contr;
+  int i = 0;
+
+  while( i < SIFT_MAX_INTERP_STEPS )
+    {
+      interp_step( dog_pyr, octv, intvl, r, c, &xi, &xr, &xc );
+      if( std::abs( xi ) < 0.5  &&  std::abs( xr ) < 0.5  &&  std::abs( xc ) < 0.5 )
+        break;
+
+      c += cvRound( xc );
+      r += cvRound( xr );
+      intvl += cvRound( xi );
+
+      if( intvl < 1  ||
+          intvl > intvls  ||
+          c < SIFT_IMG_BORDER  ||
+          r < SIFT_IMG_BORDER  ||
+          c >= dog_pyr[octv][0]->width - SIFT_IMG_BORDER  ||
+          r >= dog_pyr[octv][0]->height - SIFT_IMG_BORDER )
+        {
+          return NULL;
+        }
+
+      i++;
     }
-  }
+
+  /* ensure convergence of interpolation */
+  if( i >= SIFT_MAX_INTERP_STEPS )
+    return NULL;
+
+  contr = interp_contr( dog_pyr, octv, intvl, r, c, xi, xr, xc );
+  if( std::abs( contr ) < contr_thr / intvls )
+    return NULL;
+
+  feat = new_feature();
+  ddata = feat->feature_data;
+  feat->x = ( c + xc ) * pow( 2.0, octv );
+  feat->y = ( r + xr ) * pow( 2.0, octv );
+  ddata->r = r;
+  ddata->c = c;
+  ddata->octv = octv;
+  ddata->intvl = intvl;
+  ddata->subintvl = xi;
+
+  return feat;
 }
 
-}
+/*
+  Determines whether a feature is too edge like to be stable by computing the
+  ratio of principal curvatures at that feature.  Based on Section 4.1 of
+  Lowe's paper.
 
-/** @brief Smooth an image
- **
- ** The function convolves the image @a src by a Gaussian kernel of
- ** variance @a s and writes the result to @a dst. The function also
- ** needs a scratch buffer @a dst of the same size of @a src and @a
- ** dst.
- **
- ** @param dst output image buffer.
- ** @param temp scratch image buffer.
- ** @param src input image buffer.
- ** @param width width of the buffers.
- ** @param height height of the buffers.
- ** @param s standard deviation of the Gaussian kernel.
- **/
-void
-Sift::smooth
-(pixel_t* dst, pixel_t* temp,
- pixel_t const* src, int width, int height,
- VL::float_t s)
+  @param dog_img image from the DoG pyramid in which feature was detected
+  @param r feature row
+  @param c feature col
+  @param curv_thr high threshold on ratio of principal curvatures
+
+  @return Returns 0 if the feature at (r,c) in dog_img is sufficiently
+    corner-like or 1 otherwise.
+*/
+static int is_too_edge_like( IplImage* dog_img, int r, int c, int curv_thr )
 {
-  // make sure a buffer larege enough has been allocated
-  // to hold the filter
-  int W = int( ceil( VL::float_t(4.0) * s ) ) ;
-  if( ! filter ) {
-    filterReserved = 0 ;
-  }
+  double d, dxx, dyy, dxy, tr, det;
 
-  if( filterReserved < W ) {
-    filterReserved = W ;
-    if( filter ) delete [] filter ;
-    filter = new pixel_t [ 2* filterReserved + 1 ] ;
-  }
+  /* principal curvatures are computed using the trace and det of Hessian */
+  d = pixval32f(dog_img, r, c);
+  dxx = pixval32f( dog_img, r, c+1 ) + pixval32f( dog_img, r, c-1 ) - 2 * d;
+  dyy = pixval32f( dog_img, r+1, c ) + pixval32f( dog_img, r-1, c ) - 2 * d;
+  dxy = ( pixval32f(dog_img, r+1, c+1) - pixval32f(dog_img, r+1, c-1) -
+          pixval32f(dog_img, r-1, c+1) + pixval32f(dog_img, r-1, c-1) ) / 4.0;
+  tr = dxx + dyy;
+  det = dxx * dyy - dxy * dxy;
 
-  // pre-compute filter
-  for(int j = 0 ; j < 2*W+1 ; ++j)
-    filter[j] = VL::pixel_t
-      (std::exp
-       (VL::float_t
-        (-0.5 * (j-W) * (j-W) / (s*s) ))) ;
+  /* negative determinant -> curvatures have different signs; reject feature */
+  if( det <= 0 )
+    return 1;
 
-  // normalize to one
-  normalize(filter, W) ;
-
-  // convolve
-  econvolve(temp, src, width, height, filter, W) ;
-  econvolve(dst, temp, height, width, filter, W) ;
+  if( tr * tr / det < ( curv_thr + 1.0 )*( curv_thr + 1.0 ) / curv_thr )
+    return 0;
+  return 1;
 }
 
-// ===================================================================
-//                                                     Sift(), ~Sift()
-// -------------------------------------------------------------------
+/*
+  Detects features at extrema in DoG scale space.  Bad features are discarded
+  based on contrast and ratio of principal curvatures.
 
-/** @brief Initialize Gaussian scale space parameters
- **
- ** @param _im_pt  Source image data
- ** @param _width  Soruce image width
- ** @param _height Soruce image height
- ** @param _sigman Nominal smoothing value of the input image.
- ** @param _sigma0 Base smoothing level.
- ** @param _O      Number of octaves.
- ** @param _S      Number of levels per octave.
- ** @param _omin   First octave.
- ** @param _smin   First level in each octave.
- ** @param _smax   Last level in each octave.
- **/
-Sift::Sift(const pixel_t* _im_pt, int _width, int _height,
-     VL::float_t _sigman,
-     VL::float_t _sigma0,
-     int _O, int _S,
-     int _omin, int _smin, int _smax)
-  : sigman( _sigman ),
-    sigma0( _sigma0 ),
-    O( _O ),
-    S( _S ),
-    omin( _omin ),
-    smin( _smin ),
-    smax( _smax ),
+  @param dog_pyr DoG scale space pyramid
+  @param octvs octaves of scale space represented by dog_pyr
+  @param intvls intervals per octave
+  @param contr_thr low threshold on feature contrast
+  @param curv_thr high threshold on feature ratio of principal curvatures
+  @param storage memory storage in which to store detected features
 
-    magnif( 3.0f ),
-    normalizeDescriptor( true ),
-
-    temp( NULL ),
-    octaves( NULL ),
-    filter( NULL )
+  @return Returns an array of detected features whose scales, orientations,
+    and descriptors are yet to be determined.
+*/
+static CvSeq* scale_space_extrema( IplImage*** dog_pyr, int octvs, int intvls,
+                                   double contr_thr, int curv_thr,
+                                   CvMemStorage* storage )
 {
-  process(_im_pt, _width, _height) ;
+  CvSeq* features;
+  double prelim_contr_thr = 0.5 * contr_thr / intvls;
+  struct feature* feat;
+  struct detection_data* ddata;
+  int o, i, r, c;
+
+  features = cvCreateSeq( 0, sizeof(CvSeq), sizeof(struct feature), storage );
+  for( o = 0; o < octvs; o++ )
+    for( i = 1; i <= intvls; i++ )
+      for(r = SIFT_IMG_BORDER; r < dog_pyr[o][0]->height-SIFT_IMG_BORDER; r++)
+        for(c = SIFT_IMG_BORDER; c < dog_pyr[o][0]->width-SIFT_IMG_BORDER; c++)
+          /* perform preliminary check on contrast */
+          if( std::abs( pixval32f( dog_pyr[o][i], r, c ) ) > prelim_contr_thr )
+            if( is_extremum( dog_pyr, o, i, r, c ) )
+              {
+                feat = interp_extremum(dog_pyr, o, i, r, c, intvls, contr_thr);
+                if( feat )
+                  {
+                    ddata = feat->feature_data;
+                    if( ! is_too_edge_like( dog_pyr[ddata->octv][ddata->intvl],
+                                            ddata->r, ddata->c, curv_thr ) )
+                      {
+                        cvSeqPush( features, feat );
+                      }
+                    else
+                      free( ddata );
+                    free( feat );
+                  }
+              }
+
+  return features;
 }
 
-/** @brief Destroy SIFT filter.
- **/
-Sift::~Sift()
+/*
+  Calculates characteristic scale for each feature in an array.
+
+  @param features array of features
+  @param sigma amount of Gaussian smoothing per octave of scale space
+  @param intvls intervals per octave of scale space
+*/
+static void calc_feature_scales( CvSeq* features, double sigma, int intvls )
 {
-  freeBuffers() ;
-}
+  struct feature* feat;
+  struct detection_data* ddata;
+  double intvl;
+  int i, n;
 
-/** Allocate buffers. Buffer sizes depend on the image size and the
- ** value of omin.
- **/
-void
-Sift::
-prepareBuffers()
-{
-  // compute buffer size
-  int w = (omin >= 0) ? (width  >> omin) : (width  << -omin) ;
-  int h = (omin >= 0) ? (height >> omin) : (height << -omin) ;
-  int size = w*h* std::max
-    ((smax - smin), 2*((smax+1) - (smin-2) +1)) ;
-
-  if( temp && tempReserved == size ) return ;
-
-  freeBuffers() ;
-
-  // allocate
-  temp           = new pixel_t [ size ] ;
-  tempReserved   = size ;
-  tempIsGrad     = false ;
-  tempOctave     = 0 ;
-
-  octaves = new pixel_t* [ O ] ;
-  for(int o = 0 ; o < O ; ++o) {
-    octaves[o] = new pixel_t [ (smax - smin + 1) * w * h ] ;
-    w >>= 1 ;
-    h >>= 1 ;
-  }
-}
-
-/** @brief Free buffers.
- **
- ** This function releases any buffer allocated by prepareBuffers().
- **
- ** @sa prepareBuffers().
- **/
-void
-Sift::
-freeBuffers()
-{
-  if( filter ) {
-    delete [] filter ;
-  }
-  filter = 0 ;
-
-  if( octaves ) {
-    for(int o = 0 ; o < O ; ++o) {
-      delete [] octaves[ o ] ;
+  n = features->total;
+  for( i = 0; i < n; i++ )
+    {
+      feat = CV_GET_SEQ_ELEM( struct feature, features, i );
+      ddata = feat->feature_data;
+      intvl = ddata->intvl + ddata->subintvl;
+      feat->scl = sigma * pow( 2.0, ddata->octv + intvl / intvls );
+      ddata->scl_octv = sigma * pow( 2.0, intvl / intvls );
     }
-    delete [] octaves ;
-  }
-  octaves = 0 ;
-
-  if( temp ) {
-    delete [] temp ;
-  }
-  temp = 0  ;
 }
 
-// ===================================================================
-//                                                         getKeypoint
-// -------------------------------------------------------------------
 
-/** @brief Get keypoint from position and scale
- **
- ** The function returns a keypoint with a given position and
- ** scale. Note that the keypoint structure contains fields that make
- ** sense only in conjunction with a specific scale space. Therefore
- ** the keypoint structure should be re-calculated whenever the filter
- ** is applied to a new image, even if the parameters @a x, @a y and
- ** @a sigma do not change.
- **
- ** @param x x coordinate of the center.
- ** @peram y y coordinate of the center.
- ** @param sigma scale.
- ** @return Corresponing keypoint.
- **/
-Sift::Keypoint
-Sift::getKeypoint(VL::float_t x, VL::float_t y, VL::float_t sigma) const
+
+/*
+  Halves feature coordinates and scale in case the input image was doubled
+  prior to scale space construction.
+
+  @param features array of features
+*/
+static void adjust_for_img_dbl( CvSeq* features )
+{
+  struct feature* feat;
+  int i, n;
+
+  n = features->total;
+  for( i = 0; i < n; i++ )
+    {
+      feat = CV_GET_SEQ_ELEM( struct feature, features, i );
+      feat->x /= 2.0;
+      feat->y /= 2.0;
+      feat->scl /= 2.0;
+    }
+}
+
+/*
+  Calculates the gradient magnitude and orientation at a given pixel.
+
+  @param img image
+  @param r pixel row
+  @param c pixel col
+  @param mag output as gradient magnitude at pixel (r,c)
+  @param ori output as gradient orientation at pixel (r,c)
+
+  @return Returns 1 if the specified pixel is a valid one and sets mag and
+    ori accordingly; otherwise returns 0
+*/
+static int calc_grad_mag_ori( IplImage* img, int r, int c, double* mag,
+                              double* ori )
+{
+  double dx, dy;
+
+  if( r > 0  &&  r < img->height - 1  &&  c > 0  &&  c < img->width - 1 )
+    {
+      dx = pixval32f( img, r, c+1 ) - pixval32f( img, r, c-1 );
+      dy = pixval32f( img, r-1, c ) - pixval32f( img, r+1, c );
+      *mag = sqrt( dx*dx + dy*dy );
+      *ori = atan2( dy, dx );
+      return 1;
+    }
+
+  else
+    return 0;
+}
+
+/*
+  Computes a gradient orientation histogram at a specified pixel.
+
+  @param img image
+  @param r pixel row
+  @param c pixel col
+  @param n number of histogram bins
+  @param rad radius of region over which histogram is computed
+  @param sigma std for Gaussian weighting of histogram entries
+
+  @return Returns an n-element array containing an orientation histogram
+    representing orientations between 0 and 2 PI.
+*/
+static double* ori_hist( IplImage* img, int r, int c, int n, int rad,
+                         double sigma )
+{
+  double* hist;
+  double mag, ori, w, exp_denom, PI2 = CV_PI * 2.0;
+  int bin, i, j;
+
+  hist = (double*) calloc( n, sizeof( double ) );
+  exp_denom = 2.0 * sigma * sigma;
+  for( i = -rad; i <= rad; i++ )
+    for( j = -rad; j <= rad; j++ )
+      if( calc_grad_mag_ori( img, r + i, c + j, &mag, &ori ) )
+        {
+          w = exp( -( i*i + j*j ) / exp_denom );
+          bin = cvRound( n * ( ori + CV_PI ) / PI2 );
+          bin = ( bin < n )? bin : 0;
+          hist[bin] += w * mag;
+        }
+
+  return hist;
+}
+
+/*
+  Gaussian smooths an orientation histogram.
+
+  @param hist an orientation histogram
+  @param n number of bins
+*/
+static void smooth_ori_hist( double* hist, int n )
+{
+  double prev, tmp, h0 = hist[0];
+  int i;
+
+  prev = hist[n-1];
+  for( i = 0; i < n; i++ )
+    {
+      tmp = hist[i];
+      hist[i] = 0.25 * prev + 0.5 * hist[i] +
+        0.25 * ( ( i+1 == n )? h0 : hist[i+1] );
+      prev = tmp;
+    }
+}
+
+/*
+  Finds the magnitude of the dominant orientation in a histogram
+
+  @param hist an orientation histogram
+  @param n number of bins
+
+  @return Returns the value of the largest bin in hist
+*/
+static double dominant_ori( double* hist, int n )
+{
+  double omax;
+  int maxbin, i;
+
+  omax = hist[0];
+  maxbin = 0;
+  for( i = 1; i < n; i++ )
+    if( hist[i] > omax )
+      {
+        omax = hist[i];
+        maxbin = i;
+      }
+  return omax;
+}
+
+/*
+  Makes a deep copy of a feature
+
+  @param feat feature to be cloned
+
+  @return Returns a deep copy of feat
+*/
+static struct feature* clone_feature( struct feature* feat )
+{
+  struct feature* new_feat;
+  struct detection_data* ddata;
+
+  new_feat = new_feature();
+  ddata = new_feat->feature_data;
+  memcpy( new_feat, feat, sizeof( struct feature ) );
+  memcpy( ddata, feat->feature_data, sizeof( struct detection_data ) );
+  new_feat->feature_data = ddata;
+
+  return new_feat;
+}
+
+/*
+  Adds features to an array for every orientation in a histogram greater than
+  a specified threshold.
+
+  @param features new features are added to the end of this array
+  @param hist orientation histogram
+  @param n number of bins in hist
+  @param mag_thr new features are added for entries in hist greater than this
+  @param feat new features are clones of this with different orientations
+*/
+static void add_good_ori_features( CvSeq* features, double* hist, int n,
+                                   double mag_thr, struct feature* feat )
+{
+  struct feature* new_feat;
+  double bin, PI2 = CV_PI * 2.0;
+  int l, r, i;
+
+  for( i = 0; i < n; i++ )
+    {
+      l = ( i == 0 )? n - 1 : i-1;
+      r = ( i + 1 ) % n;
+
+      if( hist[i] > hist[l]  &&  hist[i] > hist[r]  &&  hist[i] >= mag_thr )
+        {
+          bin = i + interp_hist_peak( hist[l], hist[i], hist[r] );
+          bin = ( bin < 0 )? n + bin : ( bin >= n )? bin - n : bin;
+          new_feat = clone_feature( feat );
+          new_feat->ori = ( ( PI2 * bin ) / n ) - CV_PI;
+          cvSeqPush( features, new_feat );
+          free( new_feat );
+        }
+    }
+}
+
+/*
+  Computes a canonical orientation for each image feature in an array.  Based
+  on Section 5 of Lowe's paper.  This function adds features to the array when
+  there is more than one dominant orientation at a given feature location.
+
+  @param features an array of image features
+  @param gauss_pyr Gaussian scale space pyramid
+*/
+static void calc_feature_oris( CvSeq* features, IplImage*** gauss_pyr )
+{
+  struct feature* feat;
+  struct detection_data* ddata;
+  double* hist;
+  double omax;
+  int i, j, n = features->total;
+
+  for( i = 0; i < n; i++ )
+    {
+      feat = (feature*) malloc( sizeof( struct feature ) );
+      cvSeqPopFront( features, feat );
+      ddata = feat->feature_data;
+      hist = ori_hist( gauss_pyr[ddata->octv][ddata->intvl],
+                       ddata->r, ddata->c, SIFT_ORI_HIST_BINS,
+                       cvRound( SIFT_ORI_RADIUS * ddata->scl_octv ),
+                       SIFT_ORI_SIG_FCTR * ddata->scl_octv );
+      for( j = 0; j < SIFT_ORI_SMOOTH_PASSES; j++ )
+        smooth_ori_hist( hist, SIFT_ORI_HIST_BINS );
+      omax = dominant_ori( hist, SIFT_ORI_HIST_BINS );
+      add_good_ori_features( features, hist, SIFT_ORI_HIST_BINS,
+                             omax * SIFT_ORI_PEAK_RATIO, feat );
+      free( ddata );
+      free( feat );
+      free( hist );
+    }
+}
+
+/*
+  Interpolates an entry into the array of orientation histograms that form
+  the feature descriptor.
+
+  @param hist 2D array of orientation histograms
+  @param rbin sub-bin row coordinate of entry
+  @param cbin sub-bin column coordinate of entry
+  @param obin sub-bin orientation coordinate of entry
+  @param mag size of entry
+  @param d width of 2D array of orientation histograms
+  @param n number of bins per orientation histogram
+*/
+static void interp_hist_entry( double*** hist, double rbin, double cbin,
+                               double obin, double mag, int d, int n )
+{
+  double d_r, d_c, d_o, v_r, v_c, v_o;
+  double** row, * h;
+  int r0, c0, o0, rb, cb, ob, r, c, o;
+
+  r0 = cvFloor( rbin );
+  c0 = cvFloor( cbin );
+  o0 = cvFloor( obin );
+  d_r = rbin - r0;
+  d_c = cbin - c0;
+  d_o = obin - o0;
+
+  /*
+    The entry is distributed into up to 8 bins.  Each entry into a bin
+    is multiplied by a weight of 1 - d for each dimension, where d is the
+    distance from the center value of the bin measured in bin units.
+  */
+  for( r = 0; r <= 1; r++ )
+    {
+      rb = r0 + r;
+      if( rb >= 0  &&  rb < d )
+        {
+          v_r = mag * ( ( r == 0 )? 1.0 - d_r : d_r );
+          row = hist[rb];
+          for( c = 0; c <= 1; c++ )
+            {
+              cb = c0 + c;
+              if( cb >= 0  &&  cb < d )
+                {
+                  v_c = v_r * ( ( c == 0 )? 1.0 - d_c : d_c );
+                  h = row[cb];
+                  for( o = 0; o <= 1; o++ )
+                    {
+                      ob = ( o0 + o ) % n;
+                      v_o = v_c * ( ( o == 0 )? 1.0 - d_o : d_o );
+                      h[ob] += v_o;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+  Computes the 2D array of orientation histograms that form the feature
+  descriptor.  Based on Section 6.1 of Lowe's paper.
+
+  @param img image used in descriptor computation
+  @param r row coord of center of orientation histogram array
+  @param c column coord of center of orientation histogram array
+  @param ori canonical orientation of feature whose descr is being computed
+  @param scl scale relative to img of feature whose descr is being computed
+  @param d width of 2d array of orientation histograms
+  @param n bins per orientation histogram
+
+  @return Returns a d x d array of n-bin orientation histograms.
+*/
+static double*** descr_hist( IplImage* img, int r, int c, double ori,
+                             double scl, int d, int n )
+{
+  double*** hist;
+  double cos_t, sin_t, hist_width, exp_denom, r_rot, c_rot, grad_mag,
+    grad_ori, w, rbin, cbin, obin, bins_per_rad, PI2 = 2.0 * CV_PI;
+  int radius, i, j;
+
+  hist = (double***) calloc( d, sizeof( double** ) );
+  for( i = 0; i < d; i++ )
+    {
+      hist[i] = (double**) calloc( d, sizeof( double* ) );
+      for( j = 0; j < d; j++ )
+        hist[i][j] = (double*) calloc( n, sizeof( double ) );
+    }
+
+  cos_t = cos( ori );
+  sin_t = sin( ori );
+  bins_per_rad = n / PI2;
+  exp_denom = d * d * 0.5;
+  hist_width = SIFT_DESCR_SCL_FCTR * scl;
+  radius = hist_width * sqrt(2) * ( d + 1.0 ) * 0.5 + 0.5;
+  for( i = -radius; i <= radius; i++ )
+    for( j = -radius; j <= radius; j++ )
+      {
+        /*
+          Calculate sample's histogram array coords rotated relative to ori.
+          Subtract 0.5 so samples that fall e.g. in the center of row 1 (i.e.
+          r_rot = 1.5) have full weight placed in row 1 after interpolation.
+        */
+        c_rot = ( j * cos_t - i * sin_t ) / hist_width;
+        r_rot = ( j * sin_t + i * cos_t ) / hist_width;
+        rbin = r_rot + d / 2 - 0.5;
+        cbin = c_rot + d / 2 - 0.5;
+
+        if( rbin > -1.0  &&  rbin < d  &&  cbin > -1.0  &&  cbin < d )
+          if( calc_grad_mag_ori( img, r + i, c + j, &grad_mag, &grad_ori ))
+            {
+              grad_ori -= ori;
+              while( grad_ori < 0.0 )
+                grad_ori += PI2;
+              while( grad_ori >= PI2 )
+                grad_ori -= PI2;
+
+              obin = grad_ori * bins_per_rad;
+              w = exp( -(c_rot * c_rot + r_rot * r_rot) / exp_denom );
+              interp_hist_entry( hist, rbin, cbin, obin, grad_mag * w, d, n );
+            }
+      }
+
+  return hist;
+}
+
+/*
+  Normalizes a feature's descriptor vector to unitl length
+
+  @param feat feature
+*/
+static void normalize_descr( struct feature* feat )
+{
+  double cur, len_inv, len_sq = 0.0;
+  int i, d = feat->d;
+
+  for( i = 0; i < d; i++ )
+    {
+      cur = feat->descr[i];
+      len_sq += cur*cur;
+    }
+  len_inv = 1.0 / sqrt( len_sq );
+  for( i = 0; i < d; i++ )
+    feat->descr[i] *= len_inv;
+}
+
+/*
+  Converts the 2D array of orientation histograms into a feature's descriptor
+  vector.
+
+  @param hist 2D array of orientation histograms
+  @param d width of hist
+  @param n bins per histogram
+  @param feat feature into which to store descriptor
+*/
+static void hist_to_descr( double*** hist, int d, int n, struct feature* feat )
+{
+  int int_val, i, r, c, o, k = 0;
+
+  for( r = 0; r < d; r++ )
+    for( c = 0; c < d; c++ )
+      for( o = 0; o < n; o++ )
+        feat->descr[k++] = hist[r][c][o];
+
+  feat->d = k;
+  normalize_descr( feat );
+  for( i = 0; i < k; i++ )
+    if( feat->descr[i] > SIFT_DESCR_MAG_THR )
+      feat->descr[i] = SIFT_DESCR_MAG_THR;
+  normalize_descr( feat );
+
+  /* convert floating-point descriptor to integer valued descriptor */
+  for( i = 0; i < k; i++ )
+    {
+      int_val = SIFT_INT_DESCR_FCTR * feat->descr[i];
+      feat->descr[i] = MIN( 255, int_val );
+    }
+}
+
+/*
+  Compares features for a decreasing-scale ordering.  Intended for use with
+  CvSeqSort
+
+  @param feat1 first feature
+  @param feat2 second feature
+  @param param unused
+
+  @return Returns 1 if feat1's scale is greater than feat2's, -1 if vice versa,
+    and 0 if their scales are equal
+*/
+static int feature_cmp( void* feat1, void* feat2, void* param )
+{
+  struct feature* f1 = (struct feature*) feat1;
+  struct feature* f2 = (struct feature*) feat2;
+
+  if( f1->scl < f2->scl )
+    return 1;
+  if( f1->scl > f2->scl )
+    return -1;
+  return 0;
+}
+
+/*
+  De-allocates memory held by a descriptor histogram
+
+  @param hist pointer to a 2D array of orientation histograms
+  @param d width of hist
+*/
+static void release_descr_hist( double**** hist, int d )
+{
+  int i, j;
+
+  for( i = 0; i < d; i++)
+    {
+      for( j = 0; j < d; j++ )
+        free( (*hist)[i][j] );
+      free( (*hist)[i] );
+    }
+  free( *hist );
+  *hist = NULL;
+}
+
+
+/*
+  De-allocates memory held by a scale space pyramid
+
+  @param pyr scale space pyramid
+  @param octvs number of octaves of scale space
+  @param n number of images per octave
+*/
+static void release_pyr( IplImage**** pyr, int octvs, int n )
+{
+  int i, j;
+  for( i = 0; i < octvs; i++ )
+    {
+      for( j = 0; j < n; j++ )
+        cvReleaseImage( &(*pyr)[i][j] );
+      free( (*pyr)[i] );
+    }
+  free( *pyr );
+  *pyr = NULL;
+}
+
+/*
+  Computes feature descriptors for features in an array.  Based on Section 6
+  of Lowe's paper.
+
+  @param features array of features
+  @param gauss_pyr Gaussian scale space pyramid
+  @param d width of 2D array of orientation histograms
+  @param n number of bins per orientation histogram
+*/
+static void compute_descriptors( CvSeq* features, IplImage*** gauss_pyr, int d,
+                                 int n )
+{
+  struct feature* feat;
+  struct detection_data* ddata;
+  double*** hist;
+  int i, k = features->total;
+
+  for( i = 0; i < k; i++ )
+    {
+      feat = CV_GET_SEQ_ELEM( struct feature, features, i );
+      ddata = feat->feature_data;
+      hist = descr_hist( gauss_pyr[ddata->octv][ddata->intvl], ddata->r,
+                         ddata->c, feat->ori, ddata->scl_octv, d, n );
+      hist_to_descr( hist, d, n, feat );
+      release_descr_hist( &hist, d );
+    }
+}
+
+/***** some auxilary stucture (there is not it in original implementation) *******/
+
+struct ImagePyrData
+{
+    ImagePyrData( IplImage* img, int octvs, int intvls, double _sigma, int img_dbl )
+    {
+        if( ! img )
+          CV_Error( CV_StsBadArg, "NULL image pointer" );
+
+        /* build scale space pyramid; smallest dimension of top level is ~4 pixels */
+        init_img = create_init_img( img, img_dbl, _sigma );
+
+        int max_octvs = log( MIN( init_img->width, init_img->height ) ) / log(2) - 2;
+        octvs = std::max( std::min( octvs, max_octvs ), 1 );
+
+        gauss_pyr = build_gauss_pyr( init_img, octvs, intvls, _sigma );
+        dog_pyr = build_dog_pyr( gauss_pyr, octvs, intvls );
+
+        octaves = octvs;
+        intervals = intvls;
+        sigma = _sigma;
+        is_img_dbl = img_dbl != 0 ? true : false;
+    }
+
+    virtual ~ImagePyrData()
+    {
+        cvReleaseImage( &init_img );
+        release_pyr( &gauss_pyr, octaves, intervals + 3 );
+        release_pyr( &dog_pyr, octaves, intervals + 2 );
+    }
+
+    IplImage* init_img;
+    IplImage*** gauss_pyr, *** dog_pyr;
+
+    int octaves, intervals;
+    double sigma;
+
+    bool is_img_dbl;
+};
+
+void release_features( struct feature** feat, int count )
+{
+    for( int i = 0; i < count; i++ )
+    {
+        free( (*feat)[i].feature_data );
+        (*feat)[i].feature_data = NULL;
+    }
+    free( *feat );
+}
+
+void compute_features( const ImagePyrData* imgPyrData, struct feature** feat, int& count,
+                       double contr_thr, int curv_thr )
+{
+    CvMemStorage* storage;
+    CvSeq* features;
+
+    storage = cvCreateMemStorage( 0 );
+    features = scale_space_extrema( imgPyrData->dog_pyr, imgPyrData->octaves, imgPyrData->intervals,
+                                    contr_thr, curv_thr, storage );
+
+    calc_feature_scales( features, imgPyrData->sigma, imgPyrData->intervals );
+    if( imgPyrData->is_img_dbl )
+      adjust_for_img_dbl( features );
+    calc_feature_oris( features, imgPyrData->gauss_pyr );
+
+    /* sort features by decreasing scale and move from CvSeq to array */
+    cvSeqSort( features, (CvCmpFunc)feature_cmp, NULL );
+    int n = features->total;
+    *feat = (feature*)calloc( n, sizeof(struct feature) );
+    *feat = (feature*)cvCvtSeqToArray( features, *feat, CV_WHOLE_SEQ );
+
+    cvReleaseMemStorage( &storage );
+
+    count = n;
+}
+
+/****************************************************************************************\
+  2.) wrapper of Rob Hess`s SIFT
+\****************************************************************************************/
+
+using namespace cv;
+
+SIFT::CommonParams::CommonParams() :
+        nOctaves(DEFAULT_NOCTAVES), nOctaveLayers(DEFAULT_NOCTAVE_LAYERS),
+        firstOctave(DEFAULT_FIRST_OCTAVE), angleMode(FIRST_ANGLE)
+{}
+
+SIFT::CommonParams::CommonParams( int _nOctaves, int _nOctaveLayers, int /*_firstOctave*/, int /*_angleMode*/ ) :
+        nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
+        firstOctave(-1/*_firstOctave*/), angleMode(FIRST_ANGLE/*_angleMode*/)
+{}
+
+SIFT::DetectorParams::DetectorParams() :
+        threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD())
+{}
+
+SIFT::DetectorParams::DetectorParams( double _threshold, double _edgeThreshold ) :
+        threshold(_threshold), edgeThreshold(_edgeThreshold)
+{}
+
+SIFT::DescriptorParams::DescriptorParams() :
+        magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE),
+        recalculateAngles(true)
+{}
+
+SIFT::DescriptorParams::DescriptorParams( double _magnification, bool /*_isNormalize*/, bool _recalculateAngles ) :
+        magnification(_magnification), isNormalize(true/*_isNormalize*/),
+        recalculateAngles(_recalculateAngles)
+{}
+
+SIFT::DescriptorParams::DescriptorParams( bool _recalculateAngles )
+    : magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(true),recalculateAngles(_recalculateAngles)
+{}
+
+SIFT::SIFT()
+{}
+
+SIFT::SIFT( double _threshold, double _edgeThreshold, int _nOctaves,
+            int _nOctaveLayers, int _firstOctave, int _angleMode )
+{
+    detectorParams = DetectorParams(_threshold, _edgeThreshold);
+    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
+}
+
+SIFT::SIFT( double _magnification, bool _isNormalize, bool _recalculateAngles, int _nOctaves,
+            int _nOctaveLayers, int _firstOctave, int _angleMode )
+{
+    descriptorParams = DescriptorParams(_magnification, _isNormalize, _recalculateAngles);
+    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
+}
+
+SIFT::SIFT( const CommonParams& _commParams,
+            const DetectorParams& _detectorParams,
+            const DescriptorParams& _descriptorParams )
+{
+    commParams = _commParams;
+    detectorParams = _detectorParams;
+    descriptorParams = _descriptorParams;
+}
+
+int SIFT::descriptorSize() const
+{
+    return DescriptorParams::DESCRIPTOR_SIZE;
+}
+
+SIFT::CommonParams SIFT::getCommonParams () const
+{
+    return commParams;
+}
+
+SIFT::DetectorParams SIFT::getDetectorParams () const
+{
+    return detectorParams;
+}
+
+SIFT::DescriptorParams SIFT::getDescriptorParams () const
+{
+    return descriptorParams;
+}
+
+struct SiftParams
+{
+    SiftParams( int _O, int _S )
+    {
+        O = _O;
+        S = _S;
+
+        sigma0 = 1.6 * powf(2.0f, 1.0f / S ) ;
+
+        omin = -1;
+        smin = -1;
+        smax = S + 1;
+    }
+
+    int O;
+    int S;
+
+    double sigma0;
+
+    int omin;
+    int smin;
+    int smax;
+};
+
+inline KeyPoint featureToKeyPoint( const feature& feat )
+{
+    float size = feat.scl * SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION() * 4; // 4==NBP
+    float angle = feat.ori * a_180divPI;
+    return KeyPoint( feat.x, feat.y, size, angle, 0, feat.feature_data->octv, 0 );
+}
+
+static void fillFeatureData( feature& feat, const SiftParams& params )
 {
 
   /*
@@ -1175,1023 +1530,50 @@ Sift::getKeypoint(VL::float_t x, VL::float_t y, VL::float_t sigma) const
     feasible range.
   */
 
-  int o,ix,iy,is ;
-  VL::float_t s,phi ;
+  double sigma = feat.scl;
+  double x = feat.x;
+  double y = feat.y;
 
-  phi = log2(sigma/sigma0) ;
-  o   = fast_floor( phi -  (VL::float_t(smin)+.5)/S ) ;
-  o   = std::min(o, omin+O-1) ;
-  o   = std::max(o, omin    ) ;
-  s   = S * (phi - o) ;
+  int o, ix, iy, is;
+  float s, phi;
 
-  is  = int(s + 0.5) ;
-  is  = std::min(is, smax - 2) ;
-  is  = std::max(is, smin + 1) ;
+  phi = log2( sigma / params.sigma0 ) ;
+  o = std::floor( phi -  (float(params.smin)+.5)/params.S );
+  o = std::min(o, params.omin+params.O-1);
+  o = std::max(o, params.omin);
+  s = params.S * (phi - o);
 
-  VL::float_t per = getOctaveSamplingPeriod(o) ;
+  is = int(s + 0.5);
+  is = std::min(is, params.smax - 2);
+  is = std::max(is, params.smin + 1);
+
+  float per = getOctaveSamplingPeriod(o) ;
   ix = int(x / per + 0.5) ;
   iy = int(y / per + 0.5) ;
 
-  Keypoint key ;
-  key.o  = o ;
 
-  key.ix = ix ;
-  key.iy = iy ;
-  key.is = is ;
+  detection_data* ddata = feat.feature_data;
 
-  key.x = x ;
-  key.y = y ;
-  key.s = s ;
+  ddata->r = iy;
+  ddata->c = ix;
 
-  key.sigma = sigma ;
+  ddata->octv = o + 1;
+  ddata->intvl = is + 1;
 
-  return key ;
+  ddata->subintvl = s - is;
+  ddata->scl_octv = params.sigma0 * pow(2.0, s / params.S);
 }
 
-// ===================================================================
-//                                                           process()
-// -------------------------------------------------------------------
-
-/** @brief Compute Gaussian Scale Space
- **
- ** The method computes the Gaussian scale space of the specified
- ** image. The scale space data is managed internally and can be
- ** accessed by means of getOctave() and getLevel().
- **
- ** @remark Calling this method will delete the list of keypoints
- ** constructed by detectKeypoints().
- **
- ** @param _im_pt pointer to image data.
- ** @param _width image width.
- ** @param _height image height .
- **/
-void
-Sift::
-process(const pixel_t* _im_pt, int _width, int _height)
+inline void keyPointToFeature( const KeyPoint& keypoint, feature& feat, const SiftParams& params )
 {
-  using namespace Detail ;
+    feat.x = keypoint.pt.x;
+    feat.y = keypoint.pt.y;
 
-  width  = _width ;
-  height = _height ;
-  prepareBuffers() ;
+    feat.scl = keypoint.size / (SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4); // 4==NBP
+    feat.ori = keypoint.angle * a_PIdiv180;
 
-  VL::float_t sigmak = powf(2.0f, 1.0 / S) ;
-  VL::float_t dsigma0 = sigma0 * sqrt (1.0f - 1.0f / (sigmak*sigmak) ) ;
-
-  // -----------------------------------------------------------------
-  //                                                 Make pyramid base
-  // -----------------------------------------------------------------
-  if( omin < 0 ) {
-    copyAndUpsampleRows(temp,       _im_pt, width,  height  ) ;
-    copyAndUpsampleRows(octaves[0], temp,   height, 2*width ) ;
-
-    for(int o = -1 ; o > omin ; --o) {
-      copyAndUpsampleRows(temp,       octaves[0], width  << -o,    height << -o) ;
-      copyAndUpsampleRows(octaves[0], temp,       height << -o, 2*(width  << -o)) ;             }
-
-  } else if( omin > 0 ) {
-    copyAndDownsample(octaves[0], _im_pt, width, height, 1 << omin) ;
-  } else {
-    copy(octaves[0], _im_pt, width, height) ;
-  }
-
-  {
-    VL::float_t sa = sigma0 * powf(sigmak, smin) ;
-    VL::float_t sb = sigman / powf(2.0f,   omin) ; // review this
-    if( sa > sb ) {
-      VL::float_t sd = sqrt ( sa*sa - sb*sb ) ;
-      smooth( octaves[0], temp, octaves[0],
-              getOctaveWidth(omin),
-              getOctaveHeight(omin),
-              sd ) ;
-    }
-  }
-
-  // -----------------------------------------------------------------
-  //                                                      Make octaves
-  // -----------------------------------------------------------------
-  for(int o = omin ; o < omin+O ; ++o) {
-    // Prepare octave base
-    if( o > omin ) {
-      int sbest = std::min(smin + S, smax) ;
-      copyAndDownsample(getLevel(o,   smin ),
-                getLevel(o-1, sbest),
-                getOctaveWidth(o-1),
-                getOctaveHeight(o-1), 2 ) ;
-      VL::float_t sa = sigma0 * powf(sigmak, smin      ) ;
-      VL::float_t sb = sigma0 * powf(sigmak, sbest - S ) ;
-      if(sa > sb ) {
-        VL::float_t sd = sqrt ( sa*sa - sb*sb ) ;
-        smooth( getLevel(o,0), temp, getLevel(o,0),
-                getOctaveWidth(o), getOctaveHeight(o),
-                sd ) ;
-      }
-    }
-
-    // Make other levels
-    for(int s = smin+1 ; s <= smax ; ++s) {
-      VL::float_t sd = dsigma0 * powf(sigmak, s) ;
-      smooth( getLevel(o,s), temp, getLevel(o,s-1),
-              getOctaveWidth(o), getOctaveHeight(o),
-              sd ) ;
-    }
-  }
-}
-
-/** @brief Sift detector
- **
- ** The function runs the SIFT detector on the stored Gaussian scale
- ** space (see process()). The detector consists in three steps
- **
- ** - local maxima detection;
- ** - subpixel interpolation;
- ** - rejection of weak keypoints (@a threhsold);
- ** - rejection of keypoints on edge-like structures (@a edgeThreshold).
- **
- ** As they are found, keypoints are added to an internal list.  This
- ** list can be accessed by means of the member functions
- ** getKeypointsBegin() and getKeypointsEnd(). The list is ordered by
- ** octave, which is usefult to speed-up computeKeypointOrientations()
- ** and computeKeypointDescriptor().
- **/
-void
-Sift::detectKeypoints(VL::float_t threshold, VL::float_t edgeThreshold)
-{
-  keypoints.clear() ;
-
-  int nValidatedKeypoints = 0 ;
-
-  // Process one octave per time
-  for(int o = omin ; o < omin + O ; ++o) {
-
-    int const xo = 1 ;
-    int const yo = getOctaveWidth(o) ;
-    int const so = getOctaveWidth(o) * getOctaveHeight(o) ;
-    int const ow = getOctaveWidth(o) ;
-    int const oh = getOctaveHeight(o) ;
-
-    VL::float_t xperiod = getOctaveSamplingPeriod(o) ;
-
-    // -----------------------------------------------------------------
-    //                                           Difference of Gaussians
-    // -----------------------------------------------------------------
-    pixel_t* dog = temp ;
-    tempIsGrad = false ;
-    {
-      pixel_t* pt = dog ;
-      for(int s = smin ; s <= smax-1 ; ++s) {
-        pixel_t* srca = getLevel(o, s  ) ;
-        pixel_t* srcb = getLevel(o, s+1) ;
-        pixel_t* enda = srcb ;
-        while( srca != enda ) {
-          *pt++ = *srcb++ - *srca++ ;
-        }
-      }
-    }
-
-    // -----------------------------------------------------------------
-    //                                           Find points of extremum
-    // -----------------------------------------------------------------
-    {
-      pixel_t* pt  = dog + xo + yo + so ;
-      for(int s = smin+1 ; s <= smax-2 ; ++s) {
-        for(int y = 1 ; y < oh - 1 ; ++y) {
-          for(int x = 1 ; x < ow - 1 ; ++x) {
-            pixel_t v = *pt ;
-
-            // assert( (pt - x*xo - y*yo - (s-smin)*so) - dog == 0 ) ;
-
-#define CHECK_NEIGHBORS(CMP,SGN)                    \
-            ( v CMP ## = SGN 0.8 * threshold &&     \
-              v CMP *(pt + xo) &&                   \
-              v CMP *(pt - xo) &&                   \
-              v CMP *(pt + so) &&                   \
-              v CMP *(pt - so) &&                   \
-              v CMP *(pt + yo) &&                   \
-              v CMP *(pt - yo) &&                   \
-                                                    \
-              v CMP *(pt + yo + xo) &&              \
-              v CMP *(pt + yo - xo) &&              \
-              v CMP *(pt - yo + xo) &&              \
-              v CMP *(pt - yo - xo) &&              \
-                                                    \
-              v CMP *(pt + xo      + so) &&         \
-              v CMP *(pt - xo      + so) &&         \
-              v CMP *(pt + yo      + so) &&         \
-              v CMP *(pt - yo      + so) &&         \
-              v CMP *(pt + yo + xo + so) &&         \
-              v CMP *(pt + yo - xo + so) &&         \
-              v CMP *(pt - yo + xo + so) &&         \
-              v CMP *(pt - yo - xo + so) &&         \
-                                                    \
-              v CMP *(pt + xo      - so) &&         \
-              v CMP *(pt - xo      - so) &&         \
-              v CMP *(pt + yo      - so) &&         \
-              v CMP *(pt - yo      - so) &&         \
-              v CMP *(pt + yo + xo - so) &&         \
-              v CMP *(pt + yo - xo - so) &&         \
-              v CMP *(pt - yo + xo - so) &&         \
-              v CMP *(pt - yo - xo - so) )
-
-            if( CHECK_NEIGHBORS(>,+) || CHECK_NEIGHBORS(<,-) ) {
-
-              Keypoint k ;
-              k.ix = x ;
-              k.iy = y ;
-              k.is = s ;
-              keypoints.push_back(k) ;
-            }
-            pt += 1 ;
-          }
-          pt += 2 ;
-        }
-        pt += 2*yo ;
-      }
-    }
-
-    // -----------------------------------------------------------------
-    //                                               Refine local maxima
-    // -----------------------------------------------------------------
-    { // refine
-      KeypointsIter siter ;
-      KeypointsIter diter ;
-
-      for(diter = siter = keypointsBegin() + nValidatedKeypoints ;
-          siter != keypointsEnd() ;
-          ++siter) {
-
-        int x = int( siter->ix ) ;
-        int y = int( siter->iy ) ;
-        int s = int( siter->is ) ;
-
-        VL::float_t Dx=0,Dy=0,Ds=0,Dxx=0,Dyy=0,Dss=0,Dxy=0,Dxs=0,Dys=0 ;
-        VL::float_t  b [3] ;
-        pixel_t* pt = 0;
-        int dx = 0 ;
-        int dy = 0 ;
-
-        // must be exec. at least once
-        for(int iter = 0 ; iter < 5 ; ++iter) {
-
-          VL::float_t A[3*3] ;
-
-          x += dx ;
-          y += dy ;
-
-          pt = dog
-            + xo * x
-            + yo * y
-            + so * (s - smin) ;
-
-#define at(dx,dy,ds) (*( pt + (dx)*xo + (dy)*yo + (ds)*so))
-#define Aat(i,j)     (A[(i)+(j)*3])
-
-          /* Compute the gradient. */
-          Dx = 0.5 * (at(+1,0,0) - at(-1,0,0)) ;
-          Dy = 0.5 * (at(0,+1,0) - at(0,-1,0));
-          Ds = 0.5 * (at(0,0,+1) - at(0,0,-1)) ;
-
-          /* Compute the Hessian. */
-          Dxx = (at(+1,0,0) + at(-1,0,0) - 2.0 * at(0,0,0)) ;
-          Dyy = (at(0,+1,0) + at(0,-1,0) - 2.0 * at(0,0,0)) ;
-          Dss = (at(0,0,+1) + at(0,0,-1) - 2.0 * at(0,0,0)) ;
-
-          Dxy = 0.25 * ( at(+1,+1,0) + at(-1,-1,0) - at(-1,+1,0) - at(+1,-1,0) ) ;
-          Dxs = 0.25 * ( at(+1,0,+1) + at(-1,0,-1) - at(-1,0,+1) - at(+1,0,-1) ) ;
-          Dys = 0.25 * ( at(0,+1,+1) + at(0,-1,-1) - at(0,-1,+1) - at(0,+1,-1) ) ;
-
-          /* Solve linear system. */
-          Aat(0,0) = Dxx ;
-          Aat(1,1) = Dyy ;
-          Aat(2,2) = Dss ;
-          Aat(0,1) = Aat(1,0) = Dxy ;
-          Aat(0,2) = Aat(2,0) = Dxs ;
-          Aat(1,2) = Aat(2,1) = Dys ;
-
-          b[0] = - Dx ;
-          b[1] = - Dy ;
-          b[2] = - Ds ;
-
-          // Gauss elimination
-          for(int j = 0 ; j < 3 ; ++j) {
-
-            // look for leading pivot
-            VL::float_t maxa = 0 ;
-            VL::float_t maxabsa = 0 ;
-            int   maxi = -1 ;
-            int i ;
-            for(i = j ; i < 3 ; ++i) {
-              VL::float_t a    = Aat(i,j) ;
-              VL::float_t absa = fabsf( a ) ;
-              if ( absa > maxabsa ) {
-                maxa    = a ;
-                maxabsa = absa ;
-                maxi    = i ;
-              }
-            }
-
-            // singular?
-            if( maxabsa < 1e-10f ) {
-              b[0] = 0 ;
-              b[1] = 0 ;
-              b[2] = 0 ;
-              break ;
-            }
-
-            i = maxi ;
-
-            // swap j-th row with i-th row and
-            // normalize j-th row
-            for(int jj = j ; jj < 3 ; ++jj) {
-              std::swap( Aat(j,jj) , Aat(i,jj) ) ;
-              Aat(j,jj) /= maxa ;
-            }
-            std::swap( b[j], b[i] ) ;
-            b[j] /= maxa ;
-
-            // elimination
-            for(int ii = j+1 ; ii < 3 ; ++ii) {
-              VL::float_t x = Aat(ii,j) ;
-              for(int jj = j ; jj < 3 ; ++jj) {
-                Aat(ii,jj) -= x * Aat(j,jj) ;
-              }
-              b[ii] -= x * b[j] ;
-            }
-          }
-
-          // backward substitution
-          for(int i = 2 ; i > 0 ; --i) {
-            VL::float_t x = b[i] ;
-            for(int ii = i-1 ; ii >= 0 ; --ii) {
-              b[ii] -= x * Aat(ii,i) ;
-            }
-          }
-
-          /* If the translation of the keypoint is big, move the keypoint
-           * and re-iterate the computation. Otherwise we are all set.
-           */
-          dx= ((b[0] >  0.6 && x < ow-2) ?  1 : 0 )
-            + ((b[0] < -0.6 && x > 1   ) ? -1 : 0 ) ;
-
-          dy= ((b[1] >  0.6 && y < oh-2) ?  1 : 0 )
-            + ((b[1] < -0.6 && y > 1   ) ? -1 : 0 ) ;
-
-          /*
-          std::cout<<x<<","<<y<<"="<<at(0,0,0)
-                   <<"("
-                   <<at(0,0,0)+0.5 * (Dx * b[0] + Dy * b[1] + Ds * b[2])<<")"
-                   <<" "<<std::flush ;
-          */
-
-          if( dx == 0 && dy == 0 ) break ;
-        }
-
-        /* std::cout<<std::endl ; */
-
-        // Accept-reject keypoint
-        {
-          VL::float_t val = at(0,0,0) + 0.5 * (Dx * b[0] + Dy * b[1] + Ds * b[2]) ;
-          VL::float_t score = (Dxx+Dyy)*(Dxx+Dyy) / (Dxx*Dyy - Dxy*Dxy) ;
-          VL::float_t xn = x + b[0] ;
-          VL::float_t yn = y + b[1] ;
-          VL::float_t sn = s + b[2] ;
-
-          if(fast_abs(val) > threshold &&
-             score < (edgeThreshold+1)*(edgeThreshold+1)/edgeThreshold &&
-             score >= 0 &&
-             fast_abs(b[0]) < 1.5 &&
-             fast_abs(b[1]) < 1.5 &&
-             fast_abs(b[2]) < 1.5 &&
-             xn >= 0    &&
-             xn <= ow-1 &&
-             yn >= 0    &&
-             yn <= oh-1 &&
-             sn >= smin &&
-             sn <= smax ) {
-
-            diter->o  = o ;
-
-            diter->ix = x ;
-            diter->iy = y ;
-            diter->is = s ;
-
-            diter->x = xn * xperiod ;
-            diter->y = yn * xperiod ;
-            diter->s = sn ;
-
-            diter->sigma = getScaleFromIndex(o,sn) ;
-
-            ++diter ;
-          }
-        }
-      } // next candidate keypoint
-
-      // prepare for next octave
-      keypoints.resize( diter - keypoints.begin() ) ;
-      nValidatedKeypoints = keypoints.size() ;
-    } // refine block
-
-  } // next octave
-}
-
-// ===================================================================
-//                                       computeKeypointOrientations()
-// -------------------------------------------------------------------
-
-/** @brief Compute modulus and phase of the gradient
- **
- ** The function computes the modulus and the angle of the gradient of
- ** the specified octave @a o. The result is stored in a temporary
- ** internal buffer accessed by computeKeypointDescriptor() and
- ** computeKeypointOrientations().
- **
- ** The SIFT detector provides keypoint with scale index s in the
- ** range @c smin+1 and @c smax-2. As such, the buffer contains only
- ** these levels.
- **
- ** If called mutliple time on the same data, the function exits
- ** immediately.
- **
- ** @param o octave of interest.
- **/
-void
-Sift::prepareGrad(int o)
-{
-  int const ow = getOctaveWidth(o) ;
-  int const oh = getOctaveHeight(o) ;
-  int const xo = 1 ;
-  int const yo = ow ;
-  int const so = oh*ow ;
-
-  if( ! tempIsGrad || tempOctave != o ) {
-
-    // compute dx/dy
-    for(int s = smin+1 ; s <= smax-2 ; ++s) {
-      for(int y = 1 ; y < oh-1 ; ++y ) {
-        pixel_t* src  = getLevel(o, s) + xo + yo*y ;
-        pixel_t* end  = src + ow - 1 ;
-        pixel_t* grad = 2 * (xo + yo*y + (s - smin -1)*so) + temp ;
-        while(src != end) {
-          VL::float_t Gx = 0.5 * ( *(src+xo) - *(src-xo) ) ;
-          VL::float_t Gy = 0.5 * ( *(src+yo) - *(src-yo) ) ;
-          VL::float_t m = fast_sqrt( Gx*Gx + Gy*Gy ) ;
-          VL::float_t t = fast_mod_2pi( fast_atan2(Gy, Gx) + VL::float_t(2*CV_PI) );
-          *grad++ = pixel_t( m ) ;
-          *grad++ = pixel_t( t ) ;
-          ++src ;
-        }
-      }
-    }
-  }
-
-  tempIsGrad = true ;
-  tempOctave = o ;
-}
-
-/** @brief Compute the orientation(s) of a keypoint
- **
- ** The function computes the orientation of the specified keypoint.
- ** The function returns up to four different orientations, obtained
- ** as strong peaks of the histogram of gradient orientations (a
- ** keypoint can theoretically generate more than four orientations,
- ** but this is very unlikely).
- **
- ** @remark The function needs to compute the gradient modululs and
- ** orientation of the Gaussian scale space octave to which the
- ** keypoint belongs. The result is cached, but discarded if different
- ** octaves are visited. Thereofre it is much quicker to evaluate the
- ** keypoints in their natural octave order.
- **
- ** The keypoint must lie within the scale space. In particular, the
- ** scale index is supposed to be in the range @c smin+1 and @c smax-1
- ** (this is from the SIFT detector). If this is not the case, the
- ** computation is silently aborted and no orientations are returned.
- **
- ** @param angles buffers to store the resulting angles.
- ** @param keypoint keypoint to process.
- ** @return number of orientations found.
- **/
-int
-Sift::computeKeypointOrientations(VL::float_t angles [4], Keypoint keypoint)
-{
-  int const   nbins = 36 ;
-  VL::float_t const winFactor = 1.5 ;
-  VL::float_t hist [nbins] ;
-
-  // octave
-  int o = keypoint.o ;
-  VL::float_t xperiod = getOctaveSamplingPeriod(o) ;
-
-  // offsets to move in the Gaussian scale space octave
-  const int ow = getOctaveWidth(o) ;
-  const int oh = getOctaveHeight(o) ;
-  const int xo = 2 ;
-  const int yo = xo * ow ;
-  const int so = yo * oh ;
-
-  // keypoint fractional geometry
-  VL::float_t x     = keypoint.x / xperiod ;
-  VL::float_t y     = keypoint.y / xperiod ;
-  VL::float_t sigma = keypoint.sigma / xperiod ;
-
-  // shall we use keypoints.ix,iy,is here?
-  int xi = ((int) (x+0.5)) ;
-  int yi = ((int) (y+0.5)) ;
-  int si = keypoint.is ;
-
-  VL::float_t const sigmaw = winFactor * sigma ;
-  int W = (int) floor(3.0 * sigmaw) ;
-
-  // skip the keypoint if it is out of bounds
-  if(o  < omin   ||
-     o  >=omin+O ||
-     xi < 0      ||
-     xi > ow-1   ||
-     yi < 0      ||
-     yi > oh-1   ||
-     si < smin+1 ||
-     si > smax-2 ) {
-    std::cerr<<"!"<<std::endl ;
-    return 0 ;
-  }
-
-  // make sure that the gradient buffer is filled with octave o
-  prepareGrad(o) ;
-
-  // clear the SIFT histogram
-  std::fill(hist, hist + nbins, 0.f) ;
-
-  // fill the SIFT histogram
-  pixel_t* pt = temp + xi * xo + yi * yo + (si - smin -1) * so ;
-
-#undef at
-#define at(dx,dy) (*(pt + (dx)*xo + (dy)*yo))
-
-  for(int ys = std::max(-W, 1-yi) ; ys <= std::min(+W, oh -2 -yi) ; ++ys) {
-    for(int xs = std::max(-W, 1-xi) ; xs <= std::min(+W, ow -2 -xi) ; ++xs) {
-
-      VL::float_t dx = xi + xs - x;
-      VL::float_t dy = yi + ys - y;
-      VL::float_t r2 = dx*dx + dy*dy ;
-
-      // limit to a circular window
-      if(r2 >= W*W+0.5) continue ;
-
-      VL::float_t wgt = VL::fast_expn( r2 / (2*sigmaw*sigmaw) ) ;
-      VL::float_t mod = *(pt + xs*xo + ys*yo) ;
-      VL::float_t ang = *(pt + xs*xo + ys*yo + 1) ;
-
-      //      int bin = (int) floor( nbins * ang / (2*CV_PI) ) ;
-      int bin = (int) floor( nbins * ang / (2*CV_PI) ) ;
-      hist[bin] += mod * wgt ;
-    }
-  }
-
-  // smooth the histogram
-#if defined VL_LOWE_STRICT
-  // Lowe's version apparently has a little issue with orientations
-  // around + or - pi, which we reproduce here for compatibility
-  for (int iter = 0; iter < 6; iter++) {
-    VL::float_t prev  = hist[nbins/2] ;
-    for (int i = nbins/2-1; i >= -nbins/2 ; --i) {
-      int const j  = (i     + nbins) % nbins ;
-      int const jp = (i - 1 + nbins) % nbins ;
-      VL::float_t newh = (prev + hist[j] + hist[jp]) / 3.0;
-      prev = hist[j] ;
-      hist[j] = newh ;
-    }
-  }
-#else
-  // this is slightly more correct
-  for (int iter = 0; iter < 6; iter++) {
-    VL::float_t prev  = hist[nbins-1] ;
-    VL::float_t first = hist[0] ;
-    int i ;
-    for (i = 0; i < nbins - 1; i++) {
-      VL::float_t newh = (prev + hist[i] + hist[(i+1) % nbins]) / 3.0;
-      prev = hist[i] ;
-      hist[i] = newh ;
-    }
-    hist[i] = (prev + hist[i] + first)/3.0 ;
-  }
-#endif
-
-  // find the histogram maximum
-  VL::float_t maxh = * std::max_element(hist, hist + nbins) ;
-
-  // find peaks within 80% from max
-  int nangles = 0 ;
-  for(int i = 0 ; i < nbins ; ++i) {
-    VL::float_t h0 = hist [i] ;
-    VL::float_t hm = hist [(i-1+nbins) % nbins] ;
-    VL::float_t hp = hist [(i+1+nbins) % nbins] ;
-
-    // is this a peak?
-    if( h0 > 0.8*maxh && h0 > hm && h0 > hp ) {
-
-      // quadratic interpolation
-      //      VL::float_t di = -0.5 * (hp - hm) / (hp+hm-2*h0) ;
-      VL::float_t di = -0.5 * (hp - hm) / (hp+hm-2*h0) ;
-      VL::float_t th = 2*CV_PI * (i+di+0.5) / nbins ;
-      angles [ nangles++ ] = th ;
-      if( nangles == 4 )
-        goto enough_angles ;
-    }
-  }
- enough_angles:
-  return nangles ;
-}
-
-// ===================================================================
-//                                         computeKeypointDescriptor()
-// -------------------------------------------------------------------
-
-namespace Detail {
-
-/** Normalizes in norm L_2 a descriptor. */
-void
-normalize_histogram(VL::float_t* L_begin, VL::float_t* L_end)
-{
-  VL::float_t* L_iter ;
-  VL::float_t norm = 0.0 ;
-
-  for(L_iter = L_begin; L_iter != L_end ; ++L_iter)
-    norm += (*L_iter) * (*L_iter) ;
-
-  norm = fast_sqrt(norm) ;
-
-  for(L_iter = L_begin; L_iter != L_end ; ++L_iter)
-    *L_iter /= (norm + std::numeric_limits<VL::float_t>::epsilon() ) ;
-}
-
-}
-
-/** @brief SIFT descriptor
- **
- ** The function computes the descriptor of the keypoint @a keypoint.
- ** The function fills the buffer @a descr_pt which must be large
- ** enough. The funciton uses @a angle0 as rotation of the keypoint.
- ** By calling the function multiple times, different orientations can
- ** be evaluated.
- **
- ** @remark The function needs to compute the gradient modululs and
- ** orientation of the Gaussian scale space octave to which the
- ** keypoint belongs. The result is cached, but discarded if different
- ** octaves are visited. Thereofre it is much quicker to evaluate the
- ** keypoints in their natural octave order.
- **
- ** The function silently abort the computations of keypoints without
- ** the scale space boundaries. See also siftComputeOrientations().
- **/
-void
-Sift::computeKeypointDescriptor
-(VL::float_t* descr_pt,
- Keypoint keypoint,
- VL::float_t angle0)
-{
-
-  /* The SIFT descriptor is a  three dimensional histogram of the position
-   * and orientation of the gradient.  There are NBP bins for each spatial
-   * dimesions and NBO  bins for the orientation dimesion,  for a total of
-   * NBP x NBP x NBO bins.
-   *
-   * The support  of each  spatial bin  has an extension  of SBP  = 3sigma
-   * pixels, where sigma is the scale  of the keypoint.  Thus all the bins
-   * together have a  support SBP x NBP pixels wide  . Since weighting and
-   * interpolation of  pixel is used, another  half bin is  needed at both
-   * ends of  the extension. Therefore, we  need a square window  of SBP x
-   * (NBP + 1) pixels. Finally, since the patch can be arbitrarly rotated,
-   * we need to consider  a window 2W += sqrt(2) x SBP  x (NBP + 1) pixels
-   * wide.
-   */
-
-  // octave
-  int o = keypoint.o ;
-  VL::float_t xperiod = getOctaveSamplingPeriod(o) ;
-
-  // offsets to move in Gaussian scale space octave
-  const int ow = getOctaveWidth(o) ;
-  const int oh = getOctaveHeight(o) ;
-  const int xo = 2 ;
-  const int yo = xo * ow ;
-  const int so = yo * oh ;
-
-  // keypoint fractional geometry
-  VL::float_t x     = keypoint.x / xperiod;
-  VL::float_t y     = keypoint.y / xperiod ;
-  VL::float_t sigma = keypoint.sigma / xperiod ;
-
-  VL::float_t st0   = sinf( angle0 ) ;
-  VL::float_t ct0   = cosf( angle0 ) ;
-
-  // shall we use keypoints.ix,iy,is here?
-  int xi = ((int) (x+0.5)) ;
-  int yi = ((int) (y+0.5)) ;
-  int si = keypoint.is ;
-
-  // const VL::float_t magnif = 3.0f ;
-  const int NBO = 8 ;
-  const int NBP = 4 ;
-  const VL::float_t SBP = magnif * sigma ;
-  const int   W = (int) floor (sqrt(2.0) * SBP * (NBP + 1) / 2.0 + 0.5) ;
-
-  /* Offsets to move in the descriptor. */
-  /* Use Lowe's convention. */
-  const int binto = 1 ;
-  const int binyo = NBO * NBP ;
-  const int binxo = NBO ;
-  // const int bino  = NBO * NBP * NBP ;
-
-  int bin ;
-
-  // check bounds
-  if(o  < omin   ||
-     o  >=omin+O ||
-     xi < 0      ||
-     xi > ow-1   ||
-     yi < 0      ||
-     yi > oh-1   ||
-     si < smin+1 ||
-     si > smax-2 )
-        return ;
-
-  // make sure gradient buffer is up-to-date
-  prepareGrad(o) ;
-
-  std::fill( descr_pt, descr_pt + NBO*NBP*NBP, 0.f ) ;
-
-  /* Center the scale space and the descriptor on the current keypoint.
-   * Note that dpt is pointing to the bin of center (SBP/2,SBP/2,0).
-   */
-  pixel_t const * pt = temp + xi*xo + yi*yo + (si - smin - 1)*so ;
-  VL::float_t *  dpt = descr_pt + (NBP/2) * binyo + (NBP/2) * binxo ;
-
-#define atd(dbinx,dbiny,dbint) *(dpt + (dbint)*binto + (dbiny)*binyo + (dbinx)*binxo)
-
-  /*
-   * Process pixels in the intersection of the image rectangle
-   * (1,1)-(M-1,N-1) and the keypoint bounding box.
-   */
-  for(int dyi = std::max(-W, 1-yi) ; dyi <= std::min(+W, oh-2-yi) ; ++dyi) {
-    for(int dxi = std::max(-W, 1-xi) ; dxi <= std::min(+W, ow-2-xi) ; ++dxi) {
-
-      // retrieve
-      VL::float_t mod   = *( pt + dxi*xo + dyi*yo + 0 ) ;
-      VL::float_t angle = *( pt + dxi*xo + dyi*yo + 1 ) ;
-      VL::float_t theta = fast_mod_2pi(-angle + angle0) ; // lowe compatible ?
-
-      // fractional displacement
-      VL::float_t dx = xi + dxi - x;
-      VL::float_t dy = yi + dyi - y;
-
-      // get the displacement normalized w.r.t. the keypoint
-      // orientation and extension.
-      VL::float_t nx = ( ct0 * dx + st0 * dy) / SBP ;
-      VL::float_t ny = (-st0 * dx + ct0 * dy) / SBP ;
-      VL::float_t nt = NBO * theta / (2*CV_PI) ;
-
-      // Get the gaussian weight of the sample. The gaussian window
-      // has a standard deviation equal to NBP/2. Note that dx and dy
-      // are in the normalized frame, so that -NBP/2 <= dx <= NBP/2.
-      VL::float_t const wsigma = NBP/2 ;
-      VL::float_t win = VL::fast_expn((nx*nx + ny*ny)/(2.0 * wsigma * wsigma)) ;
-
-      // The sample will be distributed in 8 adjacent bins.
-      // We start from the ``lower-left'' bin.
-      int binx = fast_floor( nx - 0.5 ) ;
-      int biny = fast_floor( ny - 0.5 ) ;
-      int bint = fast_floor( nt ) ;
-      VL::float_t rbinx = nx - (binx+0.5) ;
-      VL::float_t rbiny = ny - (biny+0.5) ;
-      VL::float_t rbint = nt - bint ;
-      int dbinx ;
-      int dbiny ;
-      int dbint ;
-
-      // Distribute the current sample into the 8 adjacent bins
-      for(dbinx = 0 ; dbinx < 2 ; ++dbinx) {
-        for(dbiny = 0 ; dbiny < 2 ; ++dbiny) {
-          for(dbint = 0 ; dbint < 2 ; ++dbint) {
-
-            if( binx+dbinx >= -(NBP/2) &&
-                binx+dbinx <   (NBP/2) &&
-                biny+dbiny >= -(NBP/2) &&
-                biny+dbiny <   (NBP/2) ) {
-              VL::float_t weight = win
-                * mod
-                * fast_abs (1 - dbinx - rbinx)
-                * fast_abs (1 - dbiny - rbiny)
-                * fast_abs (1 - dbint - rbint) ;
-
-              atd(binx+dbinx, biny+dbiny, (bint+dbint) % NBO) += weight ;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  /* Standard SIFT descriptors are normalized, truncated and normalized again */
-  if( normalizeDescriptor ) {
-
-    /* Normalize the histogram to L2 unit length. */
-    Detail::normalize_histogram(descr_pt, descr_pt + NBO*NBP*NBP) ;
-
-    /* Truncate at 0.2. */
-    for(bin = 0; bin < NBO*NBP*NBP ; ++bin) {
-      if (descr_pt[bin] > 0.2) descr_pt[bin] = 0.2;
-    }
-
-    /* Normalize again. */
-    Detail::normalize_histogram(descr_pt, descr_pt + NBO*NBP*NBP) ;
-  }
-
-}
-// namespace VL
-}
-
-/****************************************************************************************\
-  2.) wrapper of Vedaldi`s SIFT
-\****************************************************************************************/
-
-using namespace cv;
-
-SIFT::CommonParams::CommonParams() :
-        nOctaves(DEFAULT_NOCTAVES), nOctaveLayers(DEFAULT_NOCTAVE_LAYERS),
-        firstOctave(DEFAULT_FIRST_OCTAVE), angleMode(FIRST_ANGLE)
-{}
-
-SIFT::CommonParams::CommonParams( int _nOctaves, int _nOctaveLayers, int _firstOctave, int _angleMode ) :
-        nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
-        firstOctave(_firstOctave), angleMode(_angleMode)
-{}
-
-SIFT::DetectorParams::DetectorParams() :
-        threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD())
-{}
-
-SIFT::DetectorParams::DetectorParams( double _threshold, double _edgeThreshold ) :
-        threshold(_threshold), edgeThreshold(_edgeThreshold)
-{}
-
-SIFT::DescriptorParams::DescriptorParams() :
-        magnification(GET_DEFAULT_MAGNIFICATION()), isNormalize(DEFAULT_IS_NORMALIZE),
-        recalculateAngles(true)
-{}
-
-SIFT::DescriptorParams::DescriptorParams( double _magnification, bool _isNormalize, bool _recalculateAngles ) :
-        magnification(_magnification), isNormalize(_isNormalize),
-        recalculateAngles(_recalculateAngles)
-{}
-
-SIFT::SIFT()
-{}
-
-SIFT::SIFT( double _threshold, double _edgeThreshold, int _nOctaves,
-            int _nOctaveLayers, int _firstOctave, int _angleMode )
-{
-    detectorParams = DetectorParams(_threshold, _edgeThreshold);
-    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
-}
-
-SIFT::SIFT( double _magnification, bool _isNormalize, bool _recalculateAngles, int _nOctaves,
-            int _nOctaveLayers, int _firstOctave, int _angleMode )
-{
-    descriptorParams = DescriptorParams(_magnification, _isNormalize, _recalculateAngles);
-    commParams = CommonParams(_nOctaves, _nOctaveLayers, _firstOctave, _angleMode);
-}
-
-SIFT::SIFT( const CommonParams& _commParams,
-            const DetectorParams& _detectorParams,
-            const DescriptorParams& _descriptorParams )
-{
-    commParams = _commParams;
-    detectorParams = _detectorParams;
-    descriptorParams = _descriptorParams;
-}
-
-int SIFT::descriptorSize() const
-{
-    return DescriptorParams::DESCRIPTOR_SIZE;
-}
-
-SIFT::CommonParams SIFT::getCommonParams () const
-{
-    return commParams;
-}
-
-SIFT::DetectorParams SIFT::getDetectorParams () const
-{
-    return detectorParams;
-}
-
-SIFT::DescriptorParams SIFT::getDescriptorParams () const
-{
-    return descriptorParams;
-}
-
-inline KeyPoint vlKeypointToOcv( const VL::Sift& vlSift, const VL::Sift::Keypoint& vlKeypoint, float angle )
-{
-    float size = vlKeypoint.sigma*SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4;// 4==NBP
-    return KeyPoint( vlKeypoint.x, vlKeypoint.y, size, angle, 0, vlKeypoint.o, 0 );
-}
-
-inline void ocvKeypointToVl( const VL::Sift& vlSift, const KeyPoint& ocvKeypoint,
-                             VL::Sift::Keypoint& vlKeypoint, int magnification )
-{
-    float sigma = ocvKeypoint.size/(SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4);// 4==NBP
-    vlKeypoint = vlSift.getKeypoint( ocvKeypoint.pt.x, ocvKeypoint.pt.y, sigma);
-}
-
-bool computeKeypointOrientations( VL::Sift& sift, const VL::Sift::Keypoint& keypoint, float& angleVal, int angleMode )
-{
-    angleVal = 0.f;
-    VL::float_t angles[4];
-
-    int angleCount = sift.computeKeypointOrientations(angles, keypoint);
-    if( angleCount > 0 )
-    {
-        if( angleMode == SIFT::CommonParams::FIRST_ANGLE )
-        {
-            angleVal = angles[0];
-        }
-        else if( angleMode == SIFT::CommonParams::AVERAGE_ANGLE )
-        {
-            for( int i = 0; i < angleCount; i++ )
-                angleVal += angles[i];
-            angleVal /= angleCount;
-        }
-        else
-        {
-          assert(0);
-        }
-        return true;
-    }
-
-    return false;
-}
-
-
-struct KeyPoint_LessThan
-{
-    KeyPoint_LessThan(const vector<KeyPoint>& _kp) : kp(&_kp) {}
-    bool operator()(int i, int j) const
-    {
-        const KeyPoint& kp1 = (*kp)[i];
-        const KeyPoint& kp2 = (*kp)[j];
-        if( kp1.pt.x != kp2.pt.x )
-            return kp1.pt.x < kp2.pt.x;
-        if( kp1.pt.y != kp2.pt.y )
-            return kp1.pt.y < kp2.pt.y;
-        if( kp1.size != kp2.size )
-            return kp1.size > kp2.size;
-        if( kp1.size != kp2.size )
-            return kp1.size > kp2.size;
-        if( kp1.angle != kp2.angle )
-            return kp1.angle < kp2.angle;
-        if( kp1.response != kp2.response )
-            return kp1.response > kp2.response;
-        if( kp1.octave != kp2.octave )
-            return kp1.octave > kp2.octave;
-        if( kp1.class_id != kp2.class_id )
-            return kp1.class_id > kp2.class_id;
-        
-        return i < j;
-    }
-    const vector<KeyPoint>* kp;
-};
-
-
-static void removeDuplicatedKeypoints(vector<KeyPoint>& keypoints)
-{
-    int i, j, n = (int)keypoints.size();
-    vector<int> kpidx(n);
-    vector<uchar> mask(n, (uchar)1);
-    
-    for( i = 0; i < n; i++ )
-        kpidx[i] = i;
-    std::sort(kpidx.begin(), kpidx.end(), KeyPoint_LessThan(keypoints));
-    for( i = 1, j = 0; i < n; i++ )
-    {
-        KeyPoint& kp1 = keypoints[kpidx[i]];
-        KeyPoint& kp2 = keypoints[kpidx[j]];
-        if( kp1.pt.x != kp2.pt.x || kp1.pt.y != kp2.pt.y ||
-            kp1.size != kp2.size || kp1.angle != kp2.angle )
-            j = i;
-        else
-            mask[kpidx[i]] = 0;
-    }
-
-    for( i = j = 0; i < n; i++ )
-    {
-        if( mask[i] )
-        {
-            if( i != j )
-                keypoints[j] = keypoints[i];
-            j++;
-        }
-    }
-    keypoints.resize(j);
+    feat.feature_data = (detection_data*) calloc( 1, sizeof( detection_data ) );
+    fillFeatureData( feat, params );
 }
 
 // detectors
@@ -2236,30 +1618,26 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
     }
 
     Mat fimg;
-    subImage.convertTo( fimg, CV_32FC1, 1.0/255.0 );
+    subImage.convertTo( fimg, CV_32FC1 );
 
-    const double sigman = .5 ;
-    const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
-    const double a_180divPI = 180./CV_PI;
+    // compute features
+    IplImage img = fimg;
+    struct feature* features;
 
-    VL::Sift vlsift((float*)fimg.data, fimg.cols, fimg.rows,
-                    sigman, sigma0, commParams.nOctaves, commParams.nOctaveLayers,
-                    commParams.firstOctave, -1, commParams.nOctaveLayers+1);
+    ImagePyrData pyrImages( &img, commParams.nOctaves, commParams.nOctaveLayers, SIFT_SIGMA, SIFT_IMG_DBL );
 
-    vlsift.detectKeypoints(detectorParams.threshold, detectorParams.edgeThreshold);
-    int d = std::abs(int(vlsift.keypointsBegin()-vlsift.keypointsEnd()));
-    keypoints.reserve(d);
+    int feature_count = 0;
+    compute_features( &pyrImages, &features, feature_count, detectorParams.threshold, detectorParams.edgeThreshold );
 
-    for( VL::Sift::KeypointsConstIter iter = vlsift.keypointsBegin(); iter != vlsift.keypointsEnd(); ++iter )
+    // convert to KeyPoint structure
+    keypoints.resize( feature_count );
+    for( int i = 0; i < feature_count; i++ )
     {
-        float angleVal = 0.f;
-        if( computeKeypointOrientations( vlsift, *iter, angleVal, commParams.angleMode ) )
-        {
-            keypoints.push_back( vlKeypointToOcv(vlsift, *iter, angleVal*a_180divPI) );
-        }
+        keypoints[i] = featureToKeyPoint( features[i] );
     }
+    release_features( &features, feature_count );
 
-    removeDuplicatedKeypoints(keypoints);
+    KeyPointsFilter::removeDuplicated( keypoints );
 
     if( !subMask.empty() )
     {
@@ -2274,11 +1652,6 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
     }
 }
 
-struct InvalidKeypoint
-{
-    bool operator()(const KeyPoint& kp) const { return kp.octave == std::numeric_limits<int>::max(); }
-};
-
 // descriptors
 void SIFT::operator()(const Mat& image, const Mat& mask,
                       vector<KeyPoint>& keypoints,
@@ -2289,12 +1662,7 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         CV_Error( CV_StsBadArg, "img is empty or has incorrect type" );
 
     Mat fimg;
-    image.convertTo(fimg, CV_32FC1, 1.0/255.0);
-
-    const double sigman = .5 ;
-    const double sigma0 = 1.6 * powf(2.0f, 1.0f / commParams.nOctaveLayers) ;
-    const double a_180divPI = 180./CV_PI;
-    const double a_PIdiv180 = CV_PI/180.;
+    image.convertTo(fimg, CV_32FC1/*, 1.0/255.0*/);
 
     if( !useProvidedKeypoints )
         (*this)(image, mask, keypoints);
@@ -2304,47 +1672,62 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
 
-    VL::Sift vlsift((float*)fimg.data, fimg.cols, fimg.rows,
-                    sigman, sigma0, commParams.nOctaves, commParams.nOctaveLayers,
-                    commParams.firstOctave, -1, commParams.nOctaveLayers+1);
-    vlsift.setNormalizeDescriptor(descriptorParams.isNormalize);
-    vlsift.setMagnification(descriptorParams.magnification);
+    IplImage img = fimg;
+    ImagePyrData pyrImages( &img, commParams.nOctaves, commParams.nOctaveLayers, SIFT_SIGMA, SIFT_IMG_DBL );
 
-    descriptors.create( keypoints.size(), DescriptorParams::DESCRIPTOR_SIZE, DataType<VL::float_t>::type );
-    vector<KeyPoint>::iterator kp_iter = keypoints.begin();
+    // Calculate orientation of features.
+    // Note: calc_feature_oris() duplicates the points with several dominant orientations.
+    // So if keypoints was detected by Sift feature detector then some points will be
+    // duplicated twice.
+    CvMemStorage* storage = cvCreateMemStorage( 0 );
+    CvSeq* featuresSeq = cvCreateSeq( 0, sizeof(CvSeq), sizeof(struct feature), storage );
 
-    for( int pi = 0 ; kp_iter != keypoints.end(); ++kp_iter, pi++ )
+    if( descriptorParams.recalculateAngles )
     {
-        VL::Sift::Keypoint vlkpt;
-        ocvKeypointToVl( vlsift, *kp_iter, vlkpt, descriptorParams.magnification );
-
-        if( descriptorParams.recalculateAngles )
+        for( size_t i = 0; i < keypoints.size(); i++ )
         {
-            float recalcAngleVal = 0.f;
-            if( computeKeypointOrientations( vlsift, vlkpt, recalcAngleVal, commParams.angleMode ) )
-            {
-                kp_iter->angle = recalcAngleVal*a_180divPI; // save recalculated angle value
-                assert( kp_iter->angle >= 0 );
-                vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, recalcAngleVal);
-            }
-            else
-            {
-                // mark point to remove
-                kp_iter->octave = std::numeric_limits<int>::max();
-            }
+            feature* ft = (feature*) calloc( 1, sizeof( struct feature ) );
+            keyPointToFeature( keypoints[i], *ft, SiftParams( commParams.nOctaves, commParams.nOctaveLayers ) );
+            cvSeqPush( featuresSeq, ft );
         }
-        else
-        {
-            if( kp_iter->angle < 0 )
-                CV_Error( CV_StsBadArg, "Angle must be applicable (i.e. supported by feature detector that was used to detect keypoints)." );
+        calc_feature_oris( featuresSeq, pyrImages.gauss_pyr );
 
-            float angleVal = kp_iter->angle*a_PIdiv180;
-            vlsift.computeKeypointDescriptor((VL::float_t*)descriptors.ptr(pi), vlkpt, angleVal);
+        keypoints.resize( featuresSeq->total );
+        for( int i = 0; i < featuresSeq->total; i++ )
+        {
+            feature * ft = CV_GET_SEQ_ELEM( feature, featuresSeq, i );
+            keypoints[i] = featureToKeyPoint( *ft );
+        }
+
+        // Remove duplicated keypoints.
+        KeyPointsFilter::removeDuplicated( keypoints );
+
+        // Compute descriptors.
+        cvSeqRemoveSlice( featuresSeq, cvSlice(0, featuresSeq->total) );
+    }
+
+    for( size_t i = 0; i < keypoints.size(); i++ )
+    {
+        feature* ft = (feature*) calloc( 1, sizeof( struct feature ) );
+        keyPointToFeature( keypoints[i], *ft, SiftParams( commParams.nOctaves, commParams.nOctaveLayers ) );
+        cvSeqPush( featuresSeq, ft );
+    }
+    compute_descriptors( featuresSeq, pyrImages.gauss_pyr, SIFT_DESCR_WIDTH, SIFT_DESCR_HIST_BINS );
+    CV_DbgAssert( (int)keypoints.size() == featuresSeq->total );
+    // TODO check that keypoint fiels is the same as before compute_descriptors()
+
+    descriptors.create( featuresSeq->total, SIFT::DescriptorParams::DESCRIPTOR_SIZE, CV_32FC1 );
+    for( int i = 0; i < featuresSeq->total; i++ )
+    {
+        float* rowPtr = descriptors.ptr<float>(i);
+        feature * featurePtr = CV_GET_SEQ_ELEM( feature, featuresSeq, i );
+        CV_Assert( featurePtr );
+        double* desc = featurePtr->descr;
+        for( int j = 0; j < descriptors.cols; j++ )
+        {
+            rowPtr[j] = (float)desc[j];
         }
     }
 
-    if( descriptorParams.recalculateAngles )
-        keypoints.erase( remove_if(keypoints.begin(), keypoints.end(), InvalidKeypoint()), keypoints.end());
+    cvReleaseMemStorage( &storage );
 }
-
-#endif // ARM_NO_SIFT
