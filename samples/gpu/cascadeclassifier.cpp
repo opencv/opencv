@@ -1,5 +1,7 @@
 // WARNING: this sample is under construction! Use it on your own risk.
+#if defined _MSC_VER && _MSC_VER >= 1400
 #pragma warning(disable : 4100)
+#endif
 
 #include "cvconfig.h"
 #include <iostream>
@@ -13,7 +15,6 @@
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
-
 
 #if !defined(HAVE_CUDA)
 int main(int argc, const char **argv)
