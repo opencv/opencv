@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/features2d/features2d.hpp"
 
 #include <limits>
 #include <cstdio>
@@ -49,6 +51,8 @@
 using namespace std;
 using namespace cv;
 
+
+string data_path;
 /****************************************************************************************\
 *           Functions to evaluate affine covariant detectors and descriptors.            *
 \****************************************************************************************/
@@ -59,8 +63,8 @@ static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt 
     if( z )
     {
         double w = 1./z;
-        return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w), 
-						(float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
+        return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w),
+                                                (float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
     }
     return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
 }
@@ -159,24 +163,23 @@ string IS_ACTIVE_PARAMS = "isActiveParams";
 string IS_SAVE_KEYPOINTS = "isSaveKeypoints";
 
 
-class BaseQualityTest : public cvtest::BaseTest
+class BaseQualityEvaluator
 {
 public:
-    BaseQualityTest( const char* _algName ) : algName(_algName)
+    BaseQualityEvaluator( const char* _algName, const char* _testName ) : algName(_algName), testName(_testName)
     {
         //TODO: change this
         isWriteGraphicsData = true;
     }
+
+    void run();
 
 protected:
     virtual string getRunParamsFilename() const = 0;
     virtual string getResultsFilename() const = 0;
     virtual string getPlotPath() const = 0;
 
-    virtual void validQualityClear( int datasetIdx ) = 0;
     virtual void calcQualityClear( int datasetIdx ) = 0;
-    virtual void validQualityCreate( int datasetIdx ) = 0;
-    virtual bool isValidQualityEmpty( int datasetIdx ) const = 0;
     virtual bool isCalcQualityEmpty( int datasetIdx ) const = 0;
 
     void readAllDatasetsRunParams();
@@ -188,29 +191,21 @@ protected:
     virtual void readDefaultRunParams( FileNode& /*fn*/ ) {}
     virtual void writeDefaultRunParams( FileStorage& /*fs*/ ) const {}
 
-    virtual void readResults();
-    virtual void readResults( FileNode& fn, int datasetIdx, int caseIdx ) = 0;
-    void writeResults() const;
-    virtual void writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const = 0;
-
     bool readDataset( const string& datasetName, vector<Mat>& Hs, vector<Mat>& imgs );
 
-    virtual void readAlgorithm( ) {};
-    virtual void processRunParamsFile () {};
+    virtual void readAlgorithm() {}
+    virtual void processRunParamsFile() {}
     virtual void runDatasetTest( const vector<Mat>& /*imgs*/, const vector<Mat>& /*Hs*/, int /*di*/, int& /*progress*/ ) {}
-    void run( int );
 
     virtual void processResults( int datasetIdx );
-    virtual int processResults( int datasetIdx, int caseIdx ) = 0;
     virtual void processResults();
     virtual void writePlotData( int /*datasetIdx*/ ) const {}
-    virtual void writeAveragePlotData() const {};
 
-    string algName;
-    bool isWriteParams, isWriteResults, isWriteGraphicsData;
+    string algName, testName;
+    bool isWriteParams, isWriteGraphicsData;
 };
 
-void BaseQualityTest::readAllDatasetsRunParams()
+void BaseQualityEvaluator::readAllDatasetsRunParams()
 {
     string filename = getRunParamsFilename();
     FileStorage fs( filename, FileStorage::READ );
@@ -218,7 +213,7 @@ void BaseQualityTest::readAllDatasetsRunParams()
     {
         isWriteParams = true;
         setDefaultAllDatasetsRunParams();
-        ts->printf(cvtest::TS::LOG, "all runParams are default\n");
+        printf("All runParams are default.\n");
     }
     else
     {
@@ -233,7 +228,7 @@ void BaseQualityTest::readAllDatasetsRunParams()
             FileNode fn = topfn[DATASET_NAMES[i]];
             if( fn.empty() )
             {
-                ts->printf( cvtest::TS::LOG, "%d-runParams is default\n", i);
+                printf( "%d-runParams is default.\n", i);
                 setDefaultDatasetRunParams(i);
             }
             else
@@ -242,7 +237,7 @@ void BaseQualityTest::readAllDatasetsRunParams()
     }
 }
 
-void BaseQualityTest::writeAllDatasetsRunParams() const
+void BaseQualityEvaluator::writeAllDatasetsRunParams() const
 {
     string filename = getRunParamsFilename();
     FileStorage fs( filename, FileStorage::WRITE );
@@ -261,27 +256,30 @@ void BaseQualityTest::writeAllDatasetsRunParams() const
         fs << "}";
     }
     else
-        ts->printf(cvtest::TS::LOG, "file %s for writing run params can not be opened\n", filename.c_str() );
+        printf( "File %s for writing run params can not be opened.\n", filename.c_str() );
 }
 
-void BaseQualityTest::setDefaultAllDatasetsRunParams()
+void BaseQualityEvaluator::setDefaultAllDatasetsRunParams()
 {
     for( int i = 0; i < DATASETS_COUNT; i++ )
         setDefaultDatasetRunParams(i);
 }
 
-bool BaseQualityTest::readDataset( const string& datasetName, vector<Mat>& Hs, vector<Mat>& imgs )
+bool BaseQualityEvaluator::readDataset( const string& datasetName, vector<Mat>& Hs, vector<Mat>& imgs )
 {
     Hs.resize( TEST_CASE_COUNT );
     imgs.resize( TEST_CASE_COUNT+1 );
-    string dirname = string(ts->get_data_path()) + IMAGE_DATASETS_DIR + datasetName + "/";
-
+    string dirname = data_path + IMAGE_DATASETS_DIR + datasetName + "/";
     for( int i = 0; i < (int)Hs.size(); i++ )
     {
         stringstream filename; filename << "H1to" << i+2 << "p.xml";
         FileStorage fs( dirname + filename.str(), FileStorage::READ );
         if( !fs.isOpened() )
+        {
+            cout << "filename " << dirname + filename.str() << endl;
+            FileStorage fs( dirname + filename.str(), FileStorage::READ );
             return false;
+        }
         fs.getFirstTopLevelNode() >> Hs[i];
     }
 
@@ -290,123 +288,30 @@ bool BaseQualityTest::readDataset( const string& datasetName, vector<Mat>& Hs, v
         stringstream filename; filename << "img" << i+1 << ".png";
         imgs[i] = imread( dirname + filename.str(), 0 );
         if( imgs[i].empty() )
+        {
+            cout << "filename " << filename.str() << endl;
             return false;
+        }
     }
     return true;
 }
 
-void BaseQualityTest::readResults()
-{
-    string filename = getResultsFilename();
-    FileStorage fs( filename, FileStorage::READ );
-    if( fs.isOpened() )
-    {
-        isWriteResults = false;
-        FileNode topfn = fs.getFirstTopLevelNode();
-        for( int di = 0; di < DATASETS_COUNT; di++ )
-        {
-            FileNode datafn = topfn[DATASET_NAMES[di]];
-            if( datafn.empty() )
-            {
-                validQualityClear(di);
-                ts->printf( cvtest::TS::LOG, "results for %s dataset were not read\n",
-                            DATASET_NAMES[di].c_str() );
-            }
-            else
-            {
-                validQualityCreate(di);
-                for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
-                {
-                    stringstream ss; ss << "case" << ci;
-                    FileNode casefn = datafn[ss.str()];
-                    CV_Assert( !casefn.empty() );
-                    readResults( casefn , di, ci );
-                }
-            }
-        }
-    }
-    else
-        isWriteResults = true;
-}
-
-void BaseQualityTest::writeResults() const
-{
-    string filename = getResultsFilename();;
-    FileStorage fs( filename, FileStorage::WRITE );
-    if( fs.isOpened() )
-    {
-        fs << "results" << "{";
-        for( int di = 0; di < DATASETS_COUNT; di++ )
-        {
-            if( isCalcQualityEmpty(di) )
-            {
-                ts->printf(cvtest::TS::LOG, "results on %s dataset were not write because of empty\n",
-                    DATASET_NAMES[di].c_str());
-            }
-            else
-            {
-                fs << DATASET_NAMES[di] << "{";
-                for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
-                {
-                    stringstream ss; ss << "case" << ci;
-                    fs << ss.str() << "{";
-                    writeResults( fs, di, ci );
-                    fs << "}"; //ss.str()
-                }
-                fs << "}"; //DATASET_NAMES[di]
-            }
-        }
-        fs << "}"; //results
-    }
-    else
-        ts->printf(cvtest::TS::LOG, "results were not written because file %s can not be opened\n", filename.c_str() );
-}
-
-void BaseQualityTest::processResults( int datasetIdx )
+void BaseQualityEvaluator::processResults( int datasetIdx )
 {
     if( isWriteGraphicsData )
         writePlotData( datasetIdx );
 }
 
-void BaseQualityTest::processResults()
+void BaseQualityEvaluator::processResults()
 {
     if( isWriteParams )
         writeAllDatasetsRunParams();
-
-    if( isWriteGraphicsData )
-        writeAveragePlotData();
-
-    int res = cvtest::TS::OK;
-    if( isWriteResults )
-        writeResults();
-    else
-    {
-        for( int di = 0; di < DATASETS_COUNT; di++ )
-        {
-            if( isValidQualityEmpty(di) || isCalcQualityEmpty(di) )
-                continue;
-
-            ts->printf(cvtest::TS::LOG, "\nDataset: %s\n", DATASET_NAMES[di].c_str() );
-
-            for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
-            {
-                ts->printf(cvtest::TS::LOG, "case%d\n", ci);
-                int currRes = processResults( di, ci );
-                res = currRes == cvtest::TS::OK ? res : currRes;
-            }
-        }
-    }
-
-    if( res != cvtest::TS::OK )
-        ts->printf(cvtest::TS::LOG, "BAD ACCURACY\n");
-    ts->set_failed_test_info( res );
 }
 
-void BaseQualityTest::run ( int )
+void BaseQualityEvaluator::run()
 {
     readAlgorithm ();
     processRunParamsFile ();
-    readResults();
 
     int notReadDatasets = 0;
     int progress = 0;
@@ -417,13 +322,15 @@ void BaseQualityTest::run ( int )
     FileNode defaultParams = topfn[DEFAULT_PARAMS];
     readDefaultRunParams (defaultParams);
 
+    cout << testName << endl;
     for(int di = 0; di < DATASETS_COUNT; di++ )
     {
+        cout << "Dataset " << di << " [" << DATASET_NAMES[di] << "] " << flush;
         vector<Mat> imgs, Hs;
         if( !readDataset( DATASET_NAMES[di], Hs, imgs ) )
         {
             calcQualityClear (di);
-            ts->printf( cvtest::TS::LOG, "images or homography matrices of dataset named %s can not be read\n",
+            printf( "Images or homography matrices of dataset named %s can not be read\n",
                         DATASET_NAMES[di].c_str());
             notReadDatasets++;
             continue;
@@ -434,11 +341,12 @@ void BaseQualityTest::run ( int )
 
         runDatasetTest (imgs, Hs, di, progress);
         processResults( di );
+        cout << endl;
     }
     if( notReadDatasets == DATASETS_COUNT )
     {
-        ts->printf(cvtest::TS::LOG, "All datasets were not be read\n");
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+        printf( "All datasets were not be read\n");
+        exit(-1);
     }
     else
         processResults();
@@ -447,13 +355,11 @@ void BaseQualityTest::run ( int )
 
 
 
-class DetectorQualityTest : public BaseQualityTest
+class DetectorQualityEvaluator : public BaseQualityEvaluator
 {
 public:
-    DetectorQualityTest( const char* _detectorName ) :
-            BaseQualityTest( _detectorName )
+    DetectorQualityEvaluator( const char* _detectorName, const char* _testName ) : BaseQualityEvaluator( _detectorName, _testName )
     {
-        validQuality.resize(DATASETS_COUNT);
         calcQuality.resize(DATASETS_COUNT);
         isSaveKeypoints.resize(DATASETS_COUNT);
         isActiveParams.resize(DATASETS_COUNT);
@@ -463,22 +369,12 @@ public:
     }
 
 protected:
-    using BaseQualityTest::readResults;
-    using BaseQualityTest::writeResults;
-    using BaseQualityTest::processResults;
-
     virtual string getRunParamsFilename() const;
     virtual string getResultsFilename() const;
     virtual string getPlotPath() const;
 
-    virtual void validQualityClear( int datasetIdx );
     virtual void calcQualityClear( int datasetIdx );
-    virtual void validQualityCreate( int datasetIdx );
-    virtual bool isValidQualityEmpty( int datasetIdx ) const;
     virtual bool isCalcQualityEmpty( int datasetIdx ) const;
-
-    virtual void readResults( FileNode& fn, int datasetIdx, int caseIdx );
-    virtual void writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const;
 
     virtual void readDatasetRunParams( FileNode& fn, int datasetIdx );
     virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
@@ -487,14 +383,12 @@ protected:
     virtual void writeDefaultRunParams( FileStorage &fs ) const;
 
     virtual void writePlotData( int di ) const;
-    virtual void writeAveragePlotData() const;
 
     void openToWriteKeypointsFile( FileStorage& fs, int datasetIdx );
 
-    virtual void readAlgorithm( );
-    virtual void processRunParamsFile () {};
+    virtual void readAlgorithm();
+    virtual void processRunParamsFile() {}
     virtual void runDatasetTest( const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress );
-    virtual int processResults( int datasetIdx, int caseIdx );
 
     Ptr<FeatureDetector> specificDetector;
     Ptr<FeatureDetector> defaultDetector;
@@ -504,7 +398,6 @@ protected:
         float repeatability;
         int correspondenceCount;
     };
-    vector<vector<Quality> > validQuality;
     vector<vector<Quality> > calcQuality;
 
     vector<bool> isSaveKeypoints;
@@ -514,59 +407,32 @@ protected:
     bool isActiveParamsDefault;
 };
 
-string DetectorQualityTest::getRunParamsFilename() const
+string DetectorQualityEvaluator::getRunParamsFilename() const
 {
-     return string(ts->get_data_path()) + DETECTORS_DIR + algName + PARAMS_POSTFIX;
+     return data_path + DETECTORS_DIR + algName + PARAMS_POSTFIX;
 }
 
-string DetectorQualityTest::getResultsFilename() const
+string DetectorQualityEvaluator::getResultsFilename() const
 {
-    return string(ts->get_data_path()) + DETECTORS_DIR + algName + RES_POSTFIX;
+    return data_path + DETECTORS_DIR + algName + RES_POSTFIX;
 }
 
-string DetectorQualityTest::getPlotPath() const
+string DetectorQualityEvaluator::getPlotPath() const
 {
-    return string(ts->get_data_path()) + DETECTORS_DIR + "plots/";
+    return data_path + DETECTORS_DIR + "plots/";
 }
 
-void DetectorQualityTest::validQualityClear( int datasetIdx )
-{
-    validQuality[datasetIdx].clear();
-}
-
-void DetectorQualityTest::calcQualityClear( int datasetIdx )
+void DetectorQualityEvaluator::calcQualityClear( int datasetIdx )
 {
     calcQuality[datasetIdx].clear();
 }
 
-void DetectorQualityTest::validQualityCreate( int datasetIdx )
-{
-    validQuality[datasetIdx].resize(TEST_CASE_COUNT);
-}
-
-bool DetectorQualityTest::isValidQualityEmpty( int datasetIdx ) const
-{
-    return validQuality[datasetIdx].empty();
-}
-
-bool DetectorQualityTest::isCalcQualityEmpty( int datasetIdx ) const
+bool DetectorQualityEvaluator::isCalcQualityEmpty( int datasetIdx ) const
 {
     return calcQuality[datasetIdx].empty();
 }
 
-void DetectorQualityTest::readResults( FileNode& fn, int datasetIdx, int caseIdx )
-{
-    validQuality[datasetIdx][caseIdx].repeatability = fn[REPEAT];
-    validQuality[datasetIdx][caseIdx].correspondenceCount = fn[CORRESP_COUNT];
-}
-
-void DetectorQualityTest::writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const
-{
-    fs << REPEAT << calcQuality[datasetIdx][caseIdx].repeatability;
-    fs << CORRESP_COUNT << calcQuality[datasetIdx][caseIdx].correspondenceCount;
-}
-
-void DetectorQualityTest::readDefaultRunParams (FileNode &fn)
+void DetectorQualityEvaluator::readDefaultRunParams (FileNode &fn)
 {
     if (! fn.empty() )
     {
@@ -575,13 +441,13 @@ void DetectorQualityTest::readDefaultRunParams (FileNode &fn)
     }
 }
 
-void DetectorQualityTest::writeDefaultRunParams (FileStorage &fs) const
+void DetectorQualityEvaluator::writeDefaultRunParams (FileStorage &fs) const
 {
     fs << IS_SAVE_KEYPOINTS << isSaveKeypointsDefault;
     defaultDetector->write (fs);
 }
 
-void DetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
+void DetectorQualityEvaluator::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
     isActiveParams[datasetIdx] = (int)fn[IS_ACTIVE_PARAMS] != 0;
     if (isActiveParams[datasetIdx])
@@ -595,20 +461,20 @@ void DetectorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
     }
 }
 
-void DetectorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
+void DetectorQualityEvaluator::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
     fs << IS_ACTIVE_PARAMS << isActiveParams[datasetIdx];
     fs << IS_SAVE_KEYPOINTS << isSaveKeypoints[datasetIdx];
     defaultDetector->write (fs);
 }
 
-void DetectorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
+void DetectorQualityEvaluator::setDefaultDatasetRunParams( int datasetIdx )
 {
     isSaveKeypoints[datasetIdx] = isSaveKeypointsDefault;
     isActiveParams[datasetIdx] = isActiveParamsDefault;
 }
 
-void DetectorQualityTest::writePlotData(int di ) const
+void DetectorQualityEvaluator::writePlotData(int di ) const
 {
     int imgXVals[] = { 2, 3, 4, 5, 6 }; // if scale, blur or light changes
     int viewpointXVals[] = { 20, 30, 40, 50, 60 }; // if viewpoint changes
@@ -637,36 +503,13 @@ void DetectorQualityTest::writePlotData(int di ) const
     }
 }
 
-void DetectorQualityTest::writeAveragePlotData() const
+void DetectorQualityEvaluator::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
 {
-    stringstream rFilename, cFilename;
-    rFilename << getPlotPath() << algName << "_average_repeatability.csv";
-    cFilename << getPlotPath() << algName << "_average_correspondenceCount.csv";
-    ofstream rfile(rFilename.str().c_str()), cfile(cFilename.str().c_str());
-    float avRep = 0, avCorCount = 0;
-    for( int di = 0; di < DATASETS_COUNT; di++ )
-    {
-        for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
-        {
-            avRep += calcQuality[di][ci].repeatability;
-            avCorCount += calcQuality[di][ci].correspondenceCount;
-        }
-    }
-    avRep /= DATASETS_COUNT*TEST_CASE_COUNT;
-    avCorCount /= DATASETS_COUNT*TEST_CASE_COUNT;
-    rfile << algName << ", " << avRep << endl;
-    cfile << algName << ", " << cvRound(avCorCount) << endl;
-}
-
-void DetectorQualityTest::openToWriteKeypointsFile( FileStorage& fs, int datasetIdx )
-{
-    string filename = string(ts->get_data_path()) + KEYPOINTS_DIR + algName + "_"+
-                      DATASET_NAMES[datasetIdx] + ".xml.gz" ;
+    string filename = data_path + KEYPOINTS_DIR + algName + "_"+ DATASET_NAMES[datasetIdx] + ".xml.gz" ;
 
     fs.open(filename, FileStorage::WRITE);
     if( !fs.isOpened() )
-        ts->printf( cvtest::TS::LOG, "keypoints can not be written in file %s because this file can not be opened\n",
-                    filename.c_str());
+        printf( "keypoints can not be written in file %s because this file can not be opened\n", filename.c_str() );
 }
 
 inline void writeKeypoints( FileStorage& fs, const vector<KeyPoint>& keypoints, int imgIdx )
@@ -685,18 +528,39 @@ inline void readKeypoints( FileStorage& fs, vector<KeyPoint>& keypoints, int img
     read( fs[imgName.str()], keypoints);
 }
 
-void DetectorQualityTest::readAlgorithm ()
+void DetectorQualityEvaluator::readAlgorithm ()
 {
     defaultDetector = FeatureDetector::create( algName );
     specificDetector = FeatureDetector::create( algName );
     if( defaultDetector == 0 )
     {
-        ts->printf(cvtest::TS::LOG, "Algorithm can not be read\n");
-        ts->set_failed_test_info( cvtest::TS::FAIL_GENERIC);
+        printf( "Algorithm can not be read\n" );
+        exit(-1);
     }
 }
 
-void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress)
+int update_progress( const string& name, int progress, int test_case_idx, int count, double dt )
+{
+    int width = 60 /*- (int)name.length()*/;
+    if( count > 0 )
+    {
+        int t = cvRound( ((double)test_case_idx * width)/count );
+        if( t > progress )
+        {
+            cout << "." << flush;
+            progress = t;
+        }
+    }
+    else if( cvRound(dt) > progress )
+    {
+        cout << "." << flush;
+        progress = cvRound(dt);
+    }
+
+    return progress;
+}
+
+void DetectorQualityEvaluator::runDatasetTest (const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress)
 {
     Ptr<FeatureDetector> detector = isActiveParams[di] ? specificDetector : defaultDetector;
     FileStorage keypontsFS;
@@ -709,9 +573,10 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
     detector->detect( imgs[0], keypoints1 );
     writeKeypoints( keypontsFS, keypoints1, 0);
     int progressCount = DATASETS_COUNT*TEST_CASE_COUNT;
+
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
-        progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
+        progress = update_progress( testName, progress, di*TEST_CASE_COUNT + ci + 1, progressCount, 0 );
         vector<KeyPoint> keypoints2;
         float rep;
         evaluateFeatureDetector( imgs[0], imgs[ci+1], Hs[ci], &keypoints1, &keypoints2,
@@ -722,34 +587,12 @@ void DetectorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<
     }
 }
 
-void testLog( cvtest::TS* ts, bool isBadAccuracy )
+void testLog( bool isBadAccuracy )
 {
     if( isBadAccuracy )
-        ts->printf(cvtest::TS::LOG, " bad accuracy\n");
+        printf(" bad accuracy\n");
     else
-        ts->printf(cvtest::TS::LOG, "\n");
-}
-
-int DetectorQualityTest::processResults( int datasetIdx, int caseIdx )
-{
-    int res = cvtest::TS::OK;
-    bool isBadAccuracy;
-
-    Quality valid = validQuality[datasetIdx][caseIdx], calc = calcQuality[datasetIdx][caseIdx];
-
-    const int countEps = 1 + cvRound( 0.005f*(float)valid.correspondenceCount );
-    const float rltvEps = 0.5f;
-
-    ts->printf(cvtest::TS::LOG, "%s: calc=%f, valid=%f", REPEAT.c_str(), calc.repeatability, valid.repeatability );
-    isBadAccuracy = (valid.repeatability - calc.repeatability) > rltvEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? cvtest::TS::FAIL_BAD_ACCURACY : res;
-
-    ts->printf(cvtest::TS::LOG, "%s: calc=%d, valid=%d", CORRESP_COUNT.c_str(), calc.correspondenceCount, valid.correspondenceCount );
-    isBadAccuracy = (valid.correspondenceCount - calc.correspondenceCount) > countEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? cvtest::TS::FAIL_BAD_ACCURACY : res;
-    return res;
+        printf("\n");
 }
 
 /****************************************************************************************\
@@ -767,14 +610,13 @@ const string RUN_PARAMS_IS_IDENTICAL = "runParamsIsIdentical";
 const string ONE_WAY_TRAIN_DIR = "detectors_descriptors_evaluation/one_way_train_images/";
 const string ONE_WAY_IMAGES_LIST = "one_way_train_images.txt";
 
-class DescriptorQualityTest : public BaseQualityTest
+class DescriptorQualityEvaluator : public BaseQualityEvaluator
 {
 public:
     enum{ NO_MATCH_FILTER = 0 };
-    DescriptorQualityTest( const char* _descriptorName, const char* _matcherName = 0 ) :
-            BaseQualityTest( _descriptorName )
+    DescriptorQualityEvaluator( const char* _descriptorName, const char* _testName, const char* _matcherName = 0 ) :
+            BaseQualityEvaluator( _descriptorName, _testName )
     {
-        validQuality.resize(DATASETS_COUNT);
         calcQuality.resize(DATASETS_COUNT);
         calcDatasetQuality.resize(DATASETS_COUNT);
         commRunParams.resize(DATASETS_COUNT);
@@ -788,22 +630,12 @@ public:
     }
 
 protected:
-    using BaseQualityTest::readResults;
-    using BaseQualityTest::writeResults;
-    using BaseQualityTest::processResults;
-
     virtual string getRunParamsFilename() const;
     virtual string getResultsFilename() const;
     virtual string getPlotPath() const;
 
-    virtual void validQualityClear( int datasetIdx );
     virtual void calcQualityClear( int datasetIdx );
-    virtual void validQualityCreate( int datasetIdx );
-    virtual bool isValidQualityEmpty( int datasetIdx ) const;
     virtual bool isCalcQualityEmpty( int datasetIdx ) const;
-
-    virtual void readResults( FileNode& fn, int datasetIdx, int caseIdx );
-    virtual void writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const;
 
     virtual void readDatasetRunParams( FileNode& fn, int datasetIdx ); //
     virtual void writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const;
@@ -811,11 +643,9 @@ protected:
     virtual void readDefaultRunParams( FileNode &fn );
     virtual void writeDefaultRunParams( FileStorage &fs ) const;
 
-    virtual void readAlgorithm( );
-    virtual void processRunParamsFile () {};
+    virtual void readAlgorithm();
+    virtual void processRunParamsFile() {}
     virtual void runDatasetTest( const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress );
-
-    virtual int processResults( int datasetIdx, int caseIdx );
 
     virtual void writePlotData( int di ) const;
     void calculatePlotData( vector<vector<DMatch> > &allMatches, vector<vector<uchar> > &allCorrectMatchesMask, int di );
@@ -825,7 +655,6 @@ protected:
         float recall;
         float precision;
     };
-    vector<vector<Quality> > validQuality;
     vector<vector<Quality> > calcQuality;
     vector<vector<Quality> > calcDatasetQuality;
 
@@ -845,59 +674,32 @@ protected:
     string matcherName;
 };
 
-string DescriptorQualityTest::getRunParamsFilename() const
+string DescriptorQualityEvaluator::getRunParamsFilename() const
 {
-    return string(ts->get_data_path()) + DESCRIPTORS_DIR + algName + PARAMS_POSTFIX;
+    return data_path + DESCRIPTORS_DIR + algName + PARAMS_POSTFIX;
 }
 
-string DescriptorQualityTest::getResultsFilename() const
+string DescriptorQualityEvaluator::getResultsFilename() const
 {
-    return string(ts->get_data_path()) + DESCRIPTORS_DIR + algName + RES_POSTFIX;
+    return data_path + DESCRIPTORS_DIR + algName + RES_POSTFIX;
 }
 
-string DescriptorQualityTest::getPlotPath() const
+string DescriptorQualityEvaluator::getPlotPath() const
 {
-    return string(ts->get_data_path()) + DESCRIPTORS_DIR + "plots/";
+    return data_path + DESCRIPTORS_DIR + "plots/";
 }
 
-void DescriptorQualityTest::validQualityClear( int datasetIdx )
-{
-    validQuality[datasetIdx].clear();
-}
-
-void DescriptorQualityTest::calcQualityClear( int datasetIdx )
+void DescriptorQualityEvaluator::calcQualityClear( int datasetIdx )
 {
     calcQuality[datasetIdx].clear();
 }
 
-void DescriptorQualityTest::validQualityCreate( int datasetIdx )
-{
-    validQuality[datasetIdx].resize(TEST_CASE_COUNT);
-}
-
-bool DescriptorQualityTest::isValidQualityEmpty( int datasetIdx ) const
-{
-    return validQuality[datasetIdx].empty();
-}
-
-bool DescriptorQualityTest::isCalcQualityEmpty( int datasetIdx ) const
+bool DescriptorQualityEvaluator::isCalcQualityEmpty( int datasetIdx ) const
 {
     return calcQuality[datasetIdx].empty();
 }
 
-void DescriptorQualityTest::readResults( FileNode& fn, int datasetIdx, int caseIdx )
-{
-    validQuality[datasetIdx][caseIdx].recall = fn[RECALL];
-    validQuality[datasetIdx][caseIdx].precision = fn[PRECISION];
-}
-
-void DescriptorQualityTest::writeResults( FileStorage& fs, int datasetIdx, int caseIdx ) const
-{
-    fs << RECALL << calcQuality[datasetIdx][caseIdx].recall;
-    fs << PRECISION << calcQuality[datasetIdx][caseIdx].precision;
-}
-
-void DescriptorQualityTest::readDefaultRunParams (FileNode &fn)
+void DescriptorQualityEvaluator::readDefaultRunParams (FileNode &fn)
 {
     if (! fn.empty() )
     {
@@ -907,14 +709,14 @@ void DescriptorQualityTest::readDefaultRunParams (FileNode &fn)
     }
 }
 
-void DescriptorQualityTest::writeDefaultRunParams (FileStorage &fs) const
+void DescriptorQualityEvaluator::writeDefaultRunParams (FileStorage &fs) const
 {
     fs << PROJECT_KEYPOINTS_FROM_1IMAGE << commRunParamsDefault.projectKeypointsFrom1Image;
     fs << MATCH_FILTER << commRunParamsDefault.matchFilter;
     defaultDescMatcher->write (fs);
 }
 
-void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
+void DescriptorQualityEvaluator::readDatasetRunParams( FileNode& fn, int datasetIdx )
 {
     commRunParams[datasetIdx].isActiveParams = (int)fn[IS_ACTIVE_PARAMS] != 0;
     if (commRunParams[datasetIdx].isActiveParams)
@@ -930,7 +732,7 @@ void DescriptorQualityTest::readDatasetRunParams( FileNode& fn, int datasetIdx )
     }
 }
 
-void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
+void DescriptorQualityEvaluator::writeDatasetRunParams( FileStorage& fs, int datasetIdx ) const
 {
     fs << IS_ACTIVE_PARAMS << commRunParams[datasetIdx].isActiveParams;
     fs << KEYPOINTS_FILENAME << commRunParams[datasetIdx].keypontsFilename;
@@ -940,13 +742,13 @@ void DescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int datasetI
     defaultDescMatcher->write (fs);
 }
 
-void DescriptorQualityTest::setDefaultDatasetRunParams( int datasetIdx )
+void DescriptorQualityEvaluator::setDefaultDatasetRunParams( int datasetIdx )
 {
     commRunParams[datasetIdx] = commRunParamsDefault;
     commRunParams[datasetIdx].keypontsFilename = "SURF_" + DATASET_NAMES[datasetIdx] + ".xml.gz";
 }
 
-void DescriptorQualityTest::writePlotData( int di ) const
+void DescriptorQualityEvaluator::writePlotData( int di ) const
 {
     stringstream filename;
     filename << getPlotPath() << algName << "_" << DATASET_NAMES[di] << ".csv";
@@ -959,7 +761,7 @@ void DescriptorQualityTest::writePlotData( int di ) const
     fclose( file );
 }
 
-void DescriptorQualityTest::readAlgorithm( )
+void DescriptorQualityEvaluator::readAlgorithm( )
 {
     defaultDescMatcher = GenericDescriptorMatcher::create( algName );
     specificDescMatcher = GenericDescriptorMatcher::create( algName );
@@ -973,13 +775,13 @@ void DescriptorQualityTest::readAlgorithm( )
 
         if( extractor == 0 || matcher == 0 )
         {
-            ts->printf(cvtest::TS::LOG, "Algorithm can not be read\n");
-            ts->set_failed_test_info( cvtest::TS::FAIL_GENERIC);
+            printf("Algorithm can not be read\n");
+            exit(-1);
         }
     }
 }
 
-void DescriptorQualityTest::calculatePlotData( vector<vector<DMatch> > &allMatches, vector<vector<uchar> > &allCorrectMatchesMask, int di )
+void DescriptorQualityEvaluator::calculatePlotData( vector<vector<DMatch> > &allMatches, vector<vector<uchar> > &allCorrectMatchesMask, int di )
 {
     vector<Point2f> recallPrecisionCurve;
     computeRecallPrecisionCurve( allMatches, allCorrectMatchesMask, recallPrecisionCurve );
@@ -1018,14 +820,13 @@ void DescriptorQualityTest::calculatePlotData( vector<vector<DMatch> > &allMatch
     }
 }
 
-void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress)
+void DescriptorQualityEvaluator::runDatasetTest (const vector<Mat> &imgs, const vector<Mat> &Hs, int di, int &progress)
 {
-    FileStorage keypontsFS( string(ts->get_data_path()) + KEYPOINTS_DIR + commRunParams[di].keypontsFilename,
-                                    FileStorage::READ );
+    FileStorage keypontsFS( data_path + KEYPOINTS_DIR + commRunParams[di].keypontsFilename, FileStorage::READ );
     if( !keypontsFS.isOpened())
     {
        calcQuality[di].clear();
-       ts->printf( cvtest::TS::LOG, "keypoints from file %s can not be read\n", commRunParams[di].keypontsFilename.c_str() );
+       printf( "keypoints from file %s can not be read\n", commRunParams[di].keypontsFilename.c_str() );
        return;
     }
 
@@ -1041,7 +842,7 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     vector<vector<uchar> > allCorrectMatchesMask;
     for( int ci = 0; ci < TEST_CASE_COUNT; ci++ )
     {
-        progress = update_progress( progress, di*TEST_CASE_COUNT + ci, progressCount, 0 );
+        progress = update_progress( testName, progress, di*TEST_CASE_COUNT + ci + 1, progressCount, 0 );
 
         vector<KeyPoint> keypoints2;
         if( commRunParams[di].projectKeypointsFrom1Image )
@@ -1068,37 +869,15 @@ void DescriptorQualityTest::runDatasetTest (const vector<Mat> &imgs, const vecto
     calculatePlotData( allMatches1to2, allCorrectMatchesMask, di );
 }
 
-int DescriptorQualityTest::processResults( int datasetIdx, int caseIdx )
-{
-    const float rltvEps = 0.001f;
-
-    int res = cvtest::TS::OK;
-    bool isBadAccuracy;
-
-    Quality valid = validQuality[datasetIdx][caseIdx], calc = calcQuality[datasetIdx][caseIdx];
-
-    ts->printf(cvtest::TS::LOG, "%s: calc=%f, valid=%f", RECALL.c_str(), calc.recall, valid.recall );
-    isBadAccuracy = (valid.recall - calc.recall) > rltvEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? cvtest::TS::FAIL_BAD_ACCURACY : res;
-
-    ts->printf(cvtest::TS::LOG, "%s: calc=%f, valid=%f", PRECISION.c_str(), calc.precision, valid.precision );
-    isBadAccuracy = (valid.precision - calc.precision) > rltvEps;
-    testLog( ts, isBadAccuracy );
-    res = isBadAccuracy ? cvtest::TS::FAIL_BAD_ACCURACY : res;
-
-    return res;
-}
-
 //--------------------------------- Calonder descriptor test --------------------------------------------
-class CalonderDescriptorQualityTest : public DescriptorQualityTest
+class CalonderDescriptorQualityEvaluator : public DescriptorQualityEvaluator
 {
 public:
-    CalonderDescriptorQualityTest() :
-            DescriptorQualityTest( "Calonder", "quality-descriptor-calonder") {}
+    CalonderDescriptorQualityEvaluator() :
+            DescriptorQualityEvaluator( "Calonder", "quality-descriptor-calonder") {}
     virtual void readAlgorithm( )
     {
-        string classifierFile = string(ts->get_data_path()) + "/features2d/calonder_classifier.rtc";
+        string classifierFile = data_path + "/features2d/calonder_classifier.rtc";
         defaultDescMatcher = new VectorDescriptorMatch( new CalonderDescriptorExtractor<float>( classifierFile ),
                                                         new BruteForceMatcher<L2<float> > );
         specificDescMatcher = defaultDescMatcher;
@@ -1106,11 +885,11 @@ public:
 };
 
 //--------------------------------- One Way descriptor test --------------------------------------------
-class OneWayDescriptorQualityTest : public DescriptorQualityTest
+class OneWayDescriptorQualityTest : public DescriptorQualityEvaluator
 {
 public:
     OneWayDescriptorQualityTest() :
-        DescriptorQualityTest("ONEWAY", "quality-descriptor-one-way")
+        DescriptorQualityEvaluator("ONEWAY", "quality-descriptor-one-way")
     {
     }
 protected:
@@ -1125,8 +904,8 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
     FileNode fn = fs.getFirstTopLevelNode();
     fn = fn[DEFAULT_PARAMS];
 
-    string pcaFilename = string(ts->get_data_path()) + (string)fn["pcaFilename"];
-    string trainPath = string(ts->get_data_path()) + (string)fn["trainPath"];
+    string pcaFilename = data_path + (string)fn["pcaFilename"];
+    string trainPath = data_path + (string)fn["trainPath"];
     string trainImagesList = (string)fn["trainImagesList"];
     int patch_width = fn["patchWidth"];
     int patch_height = fn["patchHeight"];
@@ -1157,30 +936,42 @@ void OneWayDescriptorQualityTest::writeDatasetRunParams( FileStorage& fs, int da
     fs << MATCH_FILTER << commRunParams[datasetIdx].matchFilter;
 }
 
-// Detectors
-//DetectorQualityTest fastDetectorQuality = DetectorQualityTest( "FAST", "quality-detector-fast" );
-//DetectorQualityTest gfttDetectorQuality = DetectorQualityTest( "GFTT", "quality-detector-gftt" );
-//DetectorQualityTest harrisDetectorQuality = DetectorQualityTest( "HARRIS", "quality-detector-harris" );
-//DetectorQualityTest mserDetectorQuality = DetectorQualityTest( "MSER", "quality-detector-mser" );
-//DetectorQualityTest starDetectorQuality = DetectorQualityTest( "STAR", "quality-detector-star" );
-//DetectorQualityTest siftDetectorQuality = DetectorQualityTest( "SIFT", "quality-detector-sift" );
-//DetectorQualityTest surfDetectorQuality = DetectorQualityTest( "SURF", "quality-detector-surf" );
+int main( int argc, char** argv )
+{
+    if( argc != 2 )
+    {
+        cout << "Format: " << argv[0] << " testdata path (path to testdata/cv)" << endl;
+        return -1;
+    }
 
-// Descriptors
-//DescriptorQualityTest siftDescriptorQuality = DescriptorQualityTest( "SIFT", "quality-descriptor-sift", "BruteForce" );
-//DescriptorQualityTest surfDescriptorQuality = DescriptorQualityTest( "SURF", "quality-descriptor-surf", "BruteForce" );
-//DescriptorQualityTest fernDescriptorQualityTest( "FERN", "quality-descriptor-fern");
-//CalonderDescriptorQualityTest calonderDescriptorQualityTest;
+    data_path = argv[1];
+#ifdef WIN32
+    if( *data_path.rbegin() != '\\' )
+        data_path = data_path + "\\";
+#else
+    if( *data_path.rbegin() != '/' )
+        data_path = data_path + "/";
+#endif
 
+    Ptr<BaseQualityEvaluator> evals[] =
+    {
+        new DetectorQualityEvaluator( "FAST", "quality-detector-fast" ),
+        new DetectorQualityEvaluator( "GFTT", "quality-detector-gftt" ),
+        new DetectorQualityEvaluator( "HARRIS", "quality-detector-harris" ),
+        new DetectorQualityEvaluator( "MSER", "quality-detector-mser" ),
+        new DetectorQualityEvaluator( "STAR", "quality-detector-star" ),
+        new DetectorQualityEvaluator( "SIFT", "quality-detector-sift" ),
+        new DetectorQualityEvaluator( "SURF", "quality-detector-surf" ),
 
+        new DescriptorQualityEvaluator( "SIFT", "quality-descriptor-sift", "BruteForce" ),
+        new DescriptorQualityEvaluator( "SURF", "quality-descriptor-surf", "BruteForce" ),
+        new DescriptorQualityEvaluator( "FERN", "quality-descriptor-fern"),
+        new CalonderDescriptorQualityEvaluator()
+    };
 
-// Don't run it because of bug in OneWayDescriptorBase many to many matching. TODO: fix this bug.
-//OneWayDescriptorQualityTest oneWayDescriptorQuality;
-
-// Don't run them (will validate and save results as "quality-descriptor-sift" and "quality-descriptor-surf" test data).
-// TODO: differ result filenames.
-//DescriptorQualityTest siftL1DescriptorQuality = DescriptorQualityTest( "SIFT", "quality-descriptor-sift-L1", "BruteForce-L1" );
-//DescriptorQualityTest surfL1DescriptorQuality = DescriptorQualityTest( "SURF", "quality-descriptor-surf-L1", "BruteForce-L1" );
-//DescriptorQualityTest oppSiftL1DescriptorQuality = DescriptorQualityTest( "SIFT", "quality-descriptor-opponent-sift-L1", "BruteForce-L1" );
-//DescriptorQualityTest oppSurfL1DescriptorQuality = DescriptorQualityTest( "SURF", "quality-descriptor-opponent-surf-L1", "BruteForce-L1" );
-
+    for( size_t i = 0; i < sizeof(evals)/sizeof(evals[0]); i++ )
+    {
+        evals[i]->run();
+        cout << endl;
+    }
+}
