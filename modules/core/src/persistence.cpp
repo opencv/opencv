@@ -775,7 +775,7 @@ icvDoubleToString( char* buf, double value )
             sprintf( buf, "%d.", ivalue );
         else
         {
-            static const char* fmt = "%.16e";
+            static const char* fmt = "%.17g";
             char* ptr = buf;
             sprintf( buf, fmt, value );
             if( *ptr == '+' || *ptr == '-' )
@@ -814,7 +814,7 @@ icvFloatToString( char* buf, float value )
             sprintf( buf, "%d.", ivalue );
         else
         {
-            static const char* fmt = "%.8e";
+            static const char* fmt = "%.9g";
             char* ptr = buf;
             sprintf( buf, fmt, value );
             if( *ptr == '+' || *ptr == '-' )
