@@ -179,6 +179,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
     size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(o);
     const npy_intp* _strides = PyArray_STRIDES(o);
+    bool transposed = false;
     
     for(int i = 0; i < ndims; i++)
     {
@@ -190,6 +191,13 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
+    }
+    
+    if( ndims >= 2 && step[0] < step[1] )
+    {
+        std::swap(size[0], size[1]);
+        std::swap(step[0], step[1]);
+        transposed = true;
     }
     
     if( ndims == 3 && size[2] <= CV_CN_MAX && step[1] == elemsize*size[2] )
@@ -213,6 +221,14 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
                     // (since Mat destructor will decrement the reference counter)
     };
     m.allocator = &g_numpyAllocator;
+    
+    if( transposed )
+    {
+        Mat tmp;
+        tmp.allocator = &g_numpyAllocator;
+        transpose(m, tmp);
+        m = tmp;
+    }
     return true;
 }
 
