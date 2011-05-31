@@ -14,7 +14,7 @@ include_directories(
 link_directories("${CMAKE_SOURCE_DIR}/3rdparty/lib")
 
 set(the_target opencv_ffmpeg)
-add_library(${the_target} ffopencv.cpp ffopencv.h)
+add_library(${the_target} SHARED ffopencv.cpp ffopencv.h)
 
 add_dependencies(${the_target} opencv_core)
 target_link_libraries(${the_target} opencv_core)
