@@ -175,17 +175,18 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     CV_Assert( 0 <= anchor.x && anchor.x < ksize.width &&
                0 <= anchor.y && anchor.y < ksize.height );
 
-    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);
-    borderTab.resize( std::max(ksize.width - 1, 1)*borderElemSize);
-    
+    borderElemSize = srcElemSize/(CV_MAT_DEPTH(srcType) >= CV_32S ? sizeof(int) : 1);    
+    int borderLength = std::max(ksize.width - 1, 1);
+    borderTab.resize(borderLength*borderElemSize);
+
     maxWidth = bufStep = 0;
     constBorderRow.clear();
 
     if( rowBorderType == BORDER_CONSTANT || columnBorderType == BORDER_CONSTANT )
     {
-        constBorderValue.resize(srcElemSize*(ksize.width - 1));
+        constBorderValue.resize(srcElemSize*borderLength);
         scalarToRawData(_borderValue, &constBorderValue[0], srcType,
-                        (ksize.width-1)*CV_MAT_CN(srcType));
+                        borderLength*CV_MAT_CN(srcType));
     }
 
     wholeSize = Size(-1,-1);
