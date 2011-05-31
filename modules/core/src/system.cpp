@@ -72,7 +72,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#ifdef __MACH__
+#ifdef __MACH__ && defined __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #endif
@@ -196,7 +196,7 @@ int64 getTickCount(void)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
-#elif defined __MACH__
+#elif defined __MACH__ && defined __APPLE__
     return (int64)mach_absolute_time();
 #else
     struct timeval tv;
@@ -214,7 +214,7 @@ double getTickFrequency(void)
     return (double)freq.QuadPart;
 #elif defined __linux || defined __linux__
     return 1e9;
-#elif defined __MACH__
+#elif defined __MACH__ && defined __APPLE__
     static double freq = 0;
     if( freq == 0 )
     {
