@@ -47,35 +47,26 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::add(const GpuMat&, const Scalar&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::subtract(const GpuMat&, const Scalar&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::multiply(const GpuMat&, const Scalar&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::divide(const GpuMat&, const Scalar&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::absdiff(const GpuMat&, const Scalar&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int) { throw_nogpu(); }
-void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
-void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, double, GpuMat&) { throw_nogpu(); }
-void cv::gpu::min(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, double, GpuMat&) { throw_nogpu(); }
-void cv::gpu::max(const GpuMat&, double, GpuMat&, const Stream&) { throw_nogpu(); }
-double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int) {throw_nogpu(); return 0.0;}
-double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, const Stream&) {throw_nogpu(); return 0.0;}
+void cv::gpu::add(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::add(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::subtract(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::subtract(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::multiply(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::multiply(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::divide(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::divide(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::absdiff(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::absdiff(const GpuMat&, const Scalar&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::compare(const GpuMat&, const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
+void cv::gpu::bitwise_not(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::bitwise_or(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::bitwise_and(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::bitwise_xor(const GpuMat&, const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::min(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
+double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
 
 #else
 
@@ -90,7 +81,7 @@ namespace
 
     void nppArithmCaller(const GpuMat& src1, const GpuMat& src2, GpuMat& dst,
                          npp_arithm_8u_t npp_func_8uc1, npp_arithm_8u_t npp_func_8uc4,
-                         npp_arithm_32s_t npp_func_32sc1, npp_arithm_32f_t npp_func_32fc1)
+                         npp_arithm_32s_t npp_func_32sc1, npp_arithm_32f_t npp_func_32fc1, cudaStream_t stream)
     {
         CV_DbgAssert(src1.size() == src2.size() && src1.type() == src2.type());
         CV_Assert(src1.type() == CV_8UC1 || src1.type() == CV_8UC4 || src1.type() == CV_32SC1 || src1.type() == CV_32FC1);
@@ -99,6 +90,8 @@ namespace
         NppiSize sz;
         sz.width  = src1.cols;
         sz.height = src1.rows;
+
+        NppStreamHandler h(stream);
 
         switch (src1.type())
         {
@@ -118,7 +111,8 @@ namespace
             CV_Assert(!"Unsupported source type");
         }
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template<int SCN> struct NppArithmScalarFunc;
@@ -135,7 +129,7 @@ namespace
 
     template<typename NppArithmScalarFunc<1>::func_ptr func> struct NppArithmScalar<1, func>
     {
-        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream)
         {
             dst.create(src.size(), src.type());
 
@@ -143,14 +137,17 @@ namespace
             sz.width  = src.cols;
             sz.height = src.rows;
 
+            NppStreamHandler h(stream);
+
             nppSafeCall( func(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<typename NppArithmScalarFunc<2>::func_ptr func> struct NppArithmScalar<2, func>
     {
-        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+        static void calc(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream)
         {
             dst.create(src.size(), src.type());
 
@@ -162,78 +159,81 @@ namespace
             nValue.re = (Npp32f)sc[0];
             nValue.im = (Npp32f)sc[1];
 
+            NppStreamHandler h(stream);
+
             nppSafeCall( func(src.ptr<Npp32fc>(), src.step, nValue, dst.ptr<Npp32fc>(), dst.step, sz) );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
 }
 
-void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R);
+    nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R);
+    nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src1, src2, dst, nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, nppiMul_32s_C1R, nppiMul_32f_C1R);
+    nppArithmCaller(src1, src2, dst, nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, nppiMul_32s_C1R, nppiMul_32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32s_C1R, nppiDiv_32f_C1R);
+    nppArithmCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32s_C1R, nppiDiv_32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
     static const caller_t callers[] = {0, NppArithmScalar<1, nppiAddC_32f_C1R>::calc, NppArithmScalar<2, nppiAddC_32fc_C1R>::calc};
 
     CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
 
-    callers[src.channels()](src, sc, dst);
+    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
     static const caller_t callers[] = {0, NppArithmScalar<1, nppiSubC_32f_C1R>::calc, NppArithmScalar<2, nppiSubC_32fc_C1R>::calc};
 
     CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
 
-    callers[src.channels()](src, sc, dst);
+    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
     static const caller_t callers[] = {0, NppArithmScalar<1, nppiMulC_32f_C1R>::calc, NppArithmScalar<2, nppiMulC_32fc_C1R>::calc};
 
     CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
 
-    callers[src.channels()](src, sc, dst);
+    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst)
+void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst);
+    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
     static const caller_t callers[] = {0, NppArithmScalar<1, nppiDivC_32f_C1R>::calc, NppArithmScalar<2, nppiDivC_32fc_C1R>::calc};
 
     CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
 
-    callers[src.channels()](src, sc, dst);
+    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Absolute difference
 
-void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
+void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s)
 {
     CV_DbgAssert(src1.size() == src2.size() && src1.type() == src2.type());
 
@@ -244,6 +244,10 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
     NppiSize sz;
     sz.width  = src1.cols;
     sz.height = src1.rows;
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
 
     switch (src1.type())
     {
@@ -263,22 +267,28 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst)
         CV_Assert(!"Unsupported source type");
     }
 
-    cudaSafeCall( cudaThreadSynchronize() );
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
-void cv::gpu::absdiff(const GpuMat& src, const Scalar& s, GpuMat& dst)
+void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Stream& s)
 {
-    CV_Assert(src.type() == CV_32FC1);
+    CV_Assert(src1.type() == CV_32FC1);
 
-    dst.create( src.size(), src.type() );
+    dst.create( src1.size(), src1.type() );
 
     NppiSize sz;
-    sz.width  = src.cols;
-    sz.height = src.rows;
+    sz.width  = src1.cols;
+    sz.height = src1.rows;
 
-    nppSafeCall( nppiAbsDiffC_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz, (Npp32f)s[0]) );
+    cudaStream_t stream = StreamAccessor::getStream(s);
 
-    cudaSafeCall( cudaThreadSynchronize() );
+    NppStreamHandler h(stream);
+
+    nppSafeCall( nppiAbsDiffC_32f_C1R(src1.ptr<Npp32f>(), src1.step, dst.ptr<Npp32f>(), dst.step, sz, (Npp32f)src2[0]) );
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -287,11 +297,11 @@ void cv::gpu::absdiff(const GpuMat& src, const Scalar& s, GpuMat& dst)
 
 namespace cv { namespace gpu { namespace mathfunc
 {
-    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst);
-    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst);
+    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
 }}}
 
-void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop)
+void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int cmpop, Stream& s)
 {
     CV_DbgAssert(src1.size() == src2.size() && src1.type() == src2.type());
 
@@ -305,34 +315,42 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
     sz.width  = src1.cols;
     sz.height = src1.rows;
 
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
     if (src1.type() == CV_8UC4)
     {
         if (cmpop != CMP_NE)
         {
+            NppStreamHandler h(stream);
+
             nppSafeCall( nppiCompare_8u_C4R(src1.ptr<Npp8u>(), src1.step,
                 src2.ptr<Npp8u>(), src2.step,
                 dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
         else
         {
-            mathfunc::compare_ne_8uc4(src1, src2, dst);
+            mathfunc::compare_ne_8uc4(src1, src2, dst, stream);
         }
     }
     else
     {
         if (cmpop != CMP_NE)
         {
+            NppStreamHandler h(stream);
+
             nppSafeCall( nppiCompare_32f_C1R(src1.ptr<Npp32f>(), src1.step,
                 src2.ptr<Npp32f>(), src2.step,
                 dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
         else
         {
-            mathfunc::compare_ne_32f(src1, src2, dst);
+            mathfunc::compare_ne_32f(src1, src2, dst, stream);
         }
     }
 }
@@ -383,16 +401,7 @@ namespace
 }
 
 
-void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask)
-{
-    if (mask.empty())
-        ::bitwiseNotCaller(src, dst, 0);
-    else
-        ::bitwiseNotCaller(src, dst, mask, 0);
-}
-
-
-void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, const Stream& stream)
+void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, Stream& stream)
 {
     if (mask.empty())
         ::bitwiseNotCaller(src, dst, StreamAccessor::getStream(stream));
@@ -519,16 +528,7 @@ namespace
 }
 
 
-void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask)
-{
-    if (mask.empty())
-        ::bitwiseOrCaller(src1, src2, dst, 0);
-    else
-        ::bitwiseOrCaller(src1, src2, dst, mask, 0);
-}
-
-
-void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
+void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream)
 {
     if (mask.empty())
         ::bitwiseOrCaller(src1, src2, dst, StreamAccessor::getStream(stream));
@@ -537,16 +537,7 @@ void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, co
 }
 
 
-void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask)
-{
-    if (mask.empty())
-        ::bitwiseAndCaller(src1, src2, dst, 0);
-    else
-        ::bitwiseAndCaller(src1, src2, dst, mask, 0);
-}
-
-
-void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
+void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream)
 {
     if (mask.empty())
         ::bitwiseAndCaller(src1, src2, dst, StreamAccessor::getStream(stream));
@@ -555,16 +546,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 }
 
 
-void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask)
-{
-    if (mask.empty())
-        ::bitwiseXorCaller(src1, src2, dst, 0);
-    else
-        ::bitwiseXorCaller(src1, src2, dst, mask, 0);
-}
-
-
-void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
+void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream)
 {
     if (mask.empty())
         ::bitwiseXorCaller(src1, src2, dst, StreamAccessor::getStream(stream));
@@ -624,22 +606,7 @@ namespace
     }
 }
 
-void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
-{
-    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-    CV_Assert((src1.depth() != CV_64F) || 
-        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
-
-    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[] = 
-    {
-        min_caller<uchar>, min_caller<schar>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
-        min_caller<float>, min_caller<double>
-    };
-    funcs[src1.depth()](src1, src2, dst, 0);
-}
-
-void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
+void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream) 
 { 
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
     CV_Assert((src1.depth() != CV_64F) || 
@@ -653,22 +620,7 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Str
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
 }
-
-void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst) 
-{
-    CV_Assert((src1.depth() != CV_64F) || 
-        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
-
-    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[] = 
-    {
-        min_caller<uchar>, min_caller<schar>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
-        min_caller<float>, min_caller<double>
-    };
-    funcs[src1.depth()](src1, src2, dst, 0);
-}
-
-void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
+void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream) 
 {
     CV_Assert((src1.depth() != CV_64F) || 
         (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
@@ -682,22 +634,7 @@ void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, const Stream& st
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst) 
-{ 
-    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-    CV_Assert((src1.depth() != CV_64F) || 
-        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
-
-    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[] = 
-    {
-        max_caller<uchar>, max_caller<schar>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
-        max_caller<float>, max_caller<double>
-    };
-    funcs[src1.depth()](src1, src2, dst, 0);
-}
-
-void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Stream& stream) 
+void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream) 
 { 
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
     CV_Assert((src1.depth() != CV_64F) || 
@@ -712,21 +649,7 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const Str
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst) 
-{
-    CV_Assert((src1.depth() != CV_64F) || 
-        (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
-
-    typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[] = 
-    {
-        max_caller<uchar>, max_caller<schar>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
-        max_caller<float>, max_caller<double>
-    };
-    funcs[src1.depth()](src1, src2, dst, 0);
-}
-
-void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, const Stream& stream) 
+void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream) 
 {
     CV_Assert((src1.depth() != CV_64F) || 
         (TargetArchs::builtWith(NATIVE_DOUBLE) && DeviceInfo().supports(NATIVE_DOUBLE)));
@@ -760,10 +683,14 @@ namespace
     }
 }
 
-double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type)
+double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, Stream& s)
 {
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
     if (src.type() == CV_32FC1 && type == THRESH_TRUNC)
     {
+        NppStreamHandler h(stream);
+
         dst.create(src.size(), src.type());
 
         NppiSize sz;
@@ -773,7 +700,8 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
         nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step,
             dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {
@@ -801,36 +729,9 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
             maxVal = cvRound(maxVal);
         }
 
-        callers[src.depth()](src, dst, thresh, maxVal, type, 0);
+        callers[src.depth()](src, dst, thresh, maxVal, type, stream);
     }
 
-    return thresh;
-}
-
-double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, const Stream& stream)
-{
-    typedef void (*caller_t)(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, 
-        cudaStream_t stream);
-
-    static const caller_t callers[] = 
-    {
-        threshold_caller<unsigned char>, threshold_caller<signed char>, 
-        threshold_caller<unsigned short>, threshold_caller<short>, 
-        threshold_caller<int>, threshold_caller<float>, threshold_caller<double>
-    };
-
-    CV_Assert(src.channels() == 1 && src.depth() <= CV_64F);
-    CV_Assert(type <= THRESH_TOZERO_INV);
-
-    dst.create(src.size(), src.type());
-
-    if (src.depth() != CV_32F)
-    {
-        thresh = cvFloor(thresh);
-        maxVal = cvRound(maxVal);
-    }
-
-    callers[src.depth()](src, dst, thresh, maxVal, type, StreamAccessor::getStream(stream));
     return thresh;
 }
 

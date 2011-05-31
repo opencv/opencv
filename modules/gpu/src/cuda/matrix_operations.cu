@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall ( cudaThreadSynchronize() );        
+            cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
     void copy_to_with_mask(const DevMem2D& mat_src, DevMem2D mat_dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream)
@@ -199,7 +199,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall ( cudaThreadSynchronize() );
+            cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
     template void set_to_gpu<uchar >(const DevMem2D& mat, const uchar* scalar, const DevMem2D& mask, int channels, cudaStream_t stream);
@@ -222,7 +222,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall ( cudaThreadSynchronize() );
+            cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
     template void set_to_gpu<uchar >(const DevMem2D& mat, const uchar* scalar, int channels, cudaStream_t stream);

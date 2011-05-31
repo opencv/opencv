@@ -53,10 +53,8 @@ void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&,
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, int) { throw_nogpu(); }
 cv::gpu::StereoBeliefPropagation::StereoBeliefPropagation(int, int, int, float, float, float, float, int) { throw_nogpu(); }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
@@ -133,7 +131,7 @@ namespace
             CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
         }
 
-        void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, cudaStream_t stream)
+        void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
         {
             typedef void (*comp_data_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream);
             static const comp_data_t comp_data_callers[2][5] = 
@@ -154,16 +152,16 @@ namespace
             const int min_image_dim_size = 2;
             CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
-            init();
+            init(stream);
 
             datas[0].create(rows * rthis.ndisp, cols, rthis.msg_type);
 
-            comp_data_callers[rthis.msg_type == CV_32F][left.channels()](left, right, datas[0], stream);
+            comp_data_callers[rthis.msg_type == CV_32F][left.channels()](left, right, datas[0], StreamAccessor::getStream(stream));
 
             calcBP(disp, stream);
         }
 
-        void operator()(const GpuMat& data, GpuMat& disp, cudaStream_t stream)
+        void operator()(const GpuMat& data, GpuMat& disp, Stream& stream)
         {
             CV_Assert((data.type() == rthis.msg_type) && (data.rows % rthis.ndisp == 0));
 
@@ -176,14 +174,14 @@ namespace
             const int min_image_dim_size = 2;
             CV_Assert(min(lowest_cols, lowest_rows) > min_image_dim_size);
 
-            init();
+            init(stream);
 
             datas[0] = data;
 
             calcBP(disp, stream);
         }
     private:
-        void init()
+        void init(Stream& stream)
         {
             u.create(rows * rthis.ndisp, cols, rthis.msg_type);
             d.create(rows * rthis.ndisp, cols, rthis.msg_type);
@@ -193,10 +191,20 @@ namespace
             if (rthis.levels & 1)
             {
                 //can clear less area
-                u = zero;
-                d = zero;
-                l = zero;
-                r = zero;
+                if (stream)
+                {
+                    stream.enqueueMemSet(u, zero);
+                    stream.enqueueMemSet(d, zero);
+                    stream.enqueueMemSet(l, zero);
+                    stream.enqueueMemSet(r, zero);
+                }
+                else
+                {
+                    u.setTo(zero);
+                    d.setTo(zero);
+                    l.setTo(zero);
+                    r.setTo(zero);
+                }
             }
 
             if (rthis.levels > 1)
@@ -211,10 +219,20 @@ namespace
 
                 if ((rthis.levels & 1) == 0)
                 {
-                    u2 = zero;
-                    d2 = zero;
-                    l2 = zero;
-                    r2 = zero;
+                    if (stream)
+                    {
+                        stream.enqueueMemSet(u2, zero);
+                        stream.enqueueMemSet(d2, zero);
+                        stream.enqueueMemSet(l2, zero);
+                        stream.enqueueMemSet(r2, zero);
+                    }
+                    else
+                    {
+                        u2.setTo(zero);
+                        d2.setTo(zero);
+                        l2.setTo(zero);
+                        r2.setTo(zero);
+                    }
                 }
             }
 
@@ -229,7 +247,7 @@ namespace
             rows_all[0] = rows;
         }
 
-        void calcBP(GpuMat& disp, cudaStream_t stream)
+        void calcBP(GpuMat& disp, Stream& stream)
         {
             using namespace cv::gpu::bp;
 
@@ -259,6 +277,8 @@ namespace
 
             const int funcIdx = rthis.msg_type == CV_32F;
 
+            cudaStream_t cudaStream = StreamAccessor::getStream(stream);
+
             for (int i = 1; i < rthis.levels; ++i)
             {
                 cols_all[i] = (cols_all[i-1] + 1) / 2;
@@ -266,7 +286,7 @@ namespace
 
                 datas[i].create(rows_all[i] * rthis.ndisp, cols_all[i], rthis.msg_type);
 
-                data_step_down_callers[funcIdx](cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], stream);
+                data_step_down_callers[funcIdx](cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], cudaStream);
             }
 
             DevMem2D mus[] = {u, u2};
@@ -280,9 +300,9 @@ namespace
             {
                 // for lower level we have already computed messages by setting to zero
                 if (i != rthis.levels - 1)
-                    level_up_messages_callers[funcIdx](mem_idx, cols_all[i], rows_all[i], rows_all[i+1], mus, mds, mls, mrs, stream);
+                    level_up_messages_callers[funcIdx](mem_idx, cols_all[i], rows_all[i], rows_all[i+1], mus, mds, mls, mrs, cudaStream);
 
-                calc_all_iterations_callers[funcIdx](cols_all[i], rows_all[i], rthis.iters, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], stream);
+                calc_all_iterations_callers[funcIdx](cols_all[i], rows_all[i], rthis.iters, mus[mem_idx], mds[mem_idx], mls[mem_idx], mrs[mem_idx], datas[i], cudaStream);
 
                 mem_idx = (mem_idx + 1) & 1;
             }
@@ -291,12 +311,21 @@ namespace
                 disp.create(rows, cols, CV_16S);
 
             out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
-            out = zero;
 
-            output_callers[funcIdx](u, d, l, r, datas.front(), out, stream);
+            if (stream)
+                stream.enqueueMemSet(out, zero);
+            else
+                out.setTo(zero);
+
+            output_callers[funcIdx](u, d, l, r, datas.front(), out, cudaStream);
 
             if (disp.type() != CV_16S)
-                out.convertTo(disp, disp.type());
+            {
+                if (stream)
+                    stream.enqueueConvert(out, disp, disp.type());
+                else
+                    out.convertTo(disp, disp.type());
+            }                
         }
 
         StereoBeliefPropagation& rthis;
@@ -323,28 +352,16 @@ namespace
     };
 }
 
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
-{
-    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
-    impl(left, right, disp, 0);
-}
-
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
-    impl(left, right, disp, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp)
-{
-    ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
-    impl(data, disp, 0);
+    impl(left, right, disp, stream);
 }
 
 void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat& data, GpuMat& disp, Stream& stream)
 {
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
-    impl(data, disp, StreamAccessor::getStream(stream));
+    impl(data, disp, stream);
 }
 
 #endif /* !defined (HAVE_CUDA) */

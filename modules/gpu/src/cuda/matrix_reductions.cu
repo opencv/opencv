@@ -275,11 +275,11 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxKernel<256, T, Mask8U><<<grid, threads>>>(src, Mask8U(mask), minval_buf, maxval_buf);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
     }  
@@ -306,11 +306,11 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxKernel<256, T, MaskTrue><<<grid, threads>>>(src, MaskTrue(), minval_buf, maxval_buf);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
     }  
@@ -363,11 +363,11 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall(cudaDeviceSynchronize());
 
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
     }
@@ -395,11 +395,11 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
     }
@@ -609,17 +609,17 @@ namespace cv { namespace gpu { namespace mathfunc
                                                            minloc_buf, maxloc_buf);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
-        cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(T), cudaMemcpyDeviceToHost) );
         *minval = minval_;
         *maxval = maxval_;
 
         uint minloc_, maxloc_;
-        cudaSafeCall(cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost));
+        cudaSafeCall( cudaMemcpy(&minloc_, minloc_buf, sizeof(int), cudaMemcpyDeviceToHost) );
+        cudaSafeCall( cudaMemcpy(&maxloc_, maxloc_buf, sizeof(int), cudaMemcpyDeviceToHost) );
         minloc[1] = minloc_ / src.cols; minloc[0] = minloc_ - minloc[1] * src.cols;
         maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
     }
@@ -650,7 +650,7 @@ namespace cv { namespace gpu { namespace mathfunc
                                                              minloc_buf, maxloc_buf);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
         cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
@@ -724,7 +724,7 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
         cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
@@ -766,7 +766,7 @@ namespace cv { namespace gpu { namespace mathfunc
         minMaxLocPass2Kernel<256, T><<<1, 256>>>(minval_buf, maxval_buf, minloc_buf, maxloc_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         T minval_, maxval_;
         cudaSafeCall(cudaMemcpy(&minval_, minval_buf, sizeof(T), cudaMemcpyDeviceToHost));
@@ -895,7 +895,7 @@ namespace cv { namespace gpu { namespace mathfunc
         countNonZeroKernel<256, T><<<grid, threads>>>(src, count_buf);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         uint count;
         cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
@@ -942,7 +942,7 @@ namespace cv { namespace gpu { namespace mathfunc
         countNonZeroPass2Kernel<256, T><<<1, 256>>>(count_buf, grid.x * grid.y);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         uint count;
         cudaSafeCall(cudaMemcpy(&count, count_buf, sizeof(int), cudaMemcpyDeviceToHost));
@@ -1493,7 +1493,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
             break;
         }
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(&result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
@@ -1543,7 +1543,7 @@ namespace cv { namespace gpu { namespace mathfunc
         }
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(&result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
@@ -1615,7 +1615,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
             break;
         }
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
@@ -1665,7 +1665,7 @@ namespace cv { namespace gpu { namespace mathfunc
         }
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
@@ -1737,7 +1737,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
             break;
         }
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));
@@ -1787,7 +1787,7 @@ namespace cv { namespace gpu { namespace mathfunc
         }
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
 
         R result[4] = {0, 0, 0, 0};
         cudaSafeCall(cudaMemcpy(result, buf.ptr(0), sizeof(R) * cn, cudaMemcpyDeviceToHost));

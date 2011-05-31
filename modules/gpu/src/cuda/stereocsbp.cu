@@ -385,7 +385,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
         dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
@@ -401,7 +401,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void init_data_cost(int rows, int cols, short* disp_selected_pyr, short* data_cost_selected, size_t msg_step,
@@ -586,7 +586,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void compute_data_cost(const short* disp_selected_pyr, short* data_cost, size_t msg_step1, size_t msg_step2,
@@ -713,7 +713,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
@@ -815,7 +815,7 @@ namespace cv { namespace gpu { namespace csbp
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaThreadSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     
@@ -885,7 +885,7 @@ namespace cv { namespace gpu { namespace csbp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void compute_disp(const short* u, const short* d, const short* l, const short* r, const short* data_cost_selected, const short* disp_selected, size_t msg_step, 

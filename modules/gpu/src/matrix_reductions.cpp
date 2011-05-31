@@ -114,24 +114,14 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
     sz.width  = src.cols;
     sz.height = src.rows;
 
-#if NPP_VERSION_MAJOR >= 4
-
     DeviceBuffer dbuf(2);
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, dbuf, (double*)dbuf + 1) );
 
-    cudaSafeCall( cudaThreadSynchronize() );
+    cudaSafeCall( cudaDeviceSynchronize() );
     
     double* ptrs[2] = {mean.val, stddev.val};
     dbuf.download(ptrs);
-
-#else
-    
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, mean.val, stddev.val) );
-
-    cudaSafeCall( cudaThreadSynchronize() );
-
-#endif
 }
 
 
@@ -184,24 +174,14 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     int funcIdx = normType >> 1;
     
     double retVal;
-        
-#if NPP_VERSION_MAJOR >= 4
 
     DeviceBuffer dbuf;
 
     nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, sz, dbuf) );
 
-    cudaSafeCall( cudaThreadSynchronize() );
+    cudaSafeCall( cudaDeviceSynchronize() );
     
     dbuf.download(&retVal);
-
-#else
-
-    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, sz, &retVal) );
-
-    cudaSafeCall( cudaThreadSynchronize() );
-
-#endif   
 
     return retVal;
 }

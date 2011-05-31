@@ -139,7 +139,7 @@ namespace cv { namespace gpu { namespace imgproc
         remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );  
+        cudaSafeCall( cudaDeviceSynchronize() );  
         cudaSafeCall( cudaUnbindTexture(tex_remap) );
     }
     
@@ -153,7 +153,7 @@ namespace cv { namespace gpu { namespace imgproc
         remap_3c<<<grid, threads>>>(src.data, src.step, xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() ); 
+        cudaSafeCall( cudaDeviceSynchronize() ); 
     }
 
 /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
@@ -263,7 +263,7 @@ namespace cv { namespace gpu { namespace imgproc
         meanshift_kernel<<< grid, threads >>>( dst.data, dst.step, dst.cols, dst.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
         cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
     extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps) 
@@ -279,7 +279,7 @@ namespace cv { namespace gpu { namespace imgproc
         meanshiftproc_kernel<<< grid, threads >>>( dstr.data, dstr.step, dstsp.data, dstsp.step, dstr.cols, dstr.rows, sp, sr, maxIter, eps );
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
         cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );        
     }
 
@@ -397,7 +397,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() ); 
+            cudaSafeCall( cudaDeviceSynchronize() ); 
     }
 
     void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2D& dst, int ndisp, const cudaStream_t& stream)
@@ -411,7 +411,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaGetLastError() );
         
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 /////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
@@ -462,7 +462,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     void reprojectImageTo3D_gpu(const DevMem2D& disp, const DevMem2Df& xyzw, const float* q, const cudaStream_t& stream)
@@ -502,7 +502,7 @@ namespace cv { namespace gpu { namespace imgproc
         extractCovData_kernel<<<grid, threads>>>(Dx.cols, Dx.rows, Dx, Dy, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
@@ -611,7 +611,8 @@ namespace cv { namespace gpu { namespace imgproc
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
+
         cudaSafeCall(cudaUnbindTexture(harrisDxTex));
         cudaSafeCall(cudaUnbindTexture(harrisDyTex));
     }
@@ -727,7 +728,8 @@ namespace cv { namespace gpu { namespace imgproc
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall(cudaDeviceSynchronize());
+
         cudaSafeCall(cudaUnbindTexture(minEigenValDxTex));
         cudaSafeCall(cudaUnbindTexture(minEigenValDyTex));
     }
@@ -763,7 +765,7 @@ namespace cv { namespace gpu { namespace imgproc
         column_sumKernel_32F<<<grid, threads>>>(src.cols, src.rows, src, dst);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -791,7 +793,7 @@ namespace cv { namespace gpu { namespace imgproc
         mulSpectrumsKernel<<<grid, threads>>>(a, b, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -820,7 +822,7 @@ namespace cv { namespace gpu { namespace imgproc
         mulSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -850,7 +852,7 @@ namespace cv { namespace gpu { namespace imgproc
         mulAndScaleSpectrumsKernel<<<grid, threads>>>(a, b, scale, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -880,7 +882,7 @@ namespace cv { namespace gpu { namespace imgproc
         mulAndScaleSpectrumsKernel_CONJ<<<grid, threads>>>(a, b, scale, c);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -904,7 +906,9 @@ namespace cv { namespace gpu { namespace imgproc
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
         downsampleKernel<<<grid, threads>>>(src, rows, cols, k, dst);
-        cudaSafeCall(cudaThreadSynchronize());
+        cudaSafeCall( cudaGetLastError() );
+
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void downsampleCaller(const PtrStep src, int rows, int cols, int k, PtrStep dst);

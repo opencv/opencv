@@ -184,7 +184,9 @@ namespace cv { namespace gpu
 
             computeHypothesisScoresKernel<<<grid, threads, smem_size>>>(
                     num_points, object, image, dist_threshold, hypothesis_scores);
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     } // namespace solvepnp_ransac
 

@@ -48,8 +48,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, 
-                          GpuMat&) { throw_nogpu(); }
+void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else
 
@@ -57,14 +56,14 @@ namespace cv { namespace gpu
 {
     template <typename T>
     void blendLinearCaller(int rows, int cols, int cn, const PtrStep_<T> img1, const PtrStep_<T> img2, 
-                           const PtrStep_<float> weights1, const PtrStep_<float> weights2, PtrStep_<T> result);
+                           const PtrStep_<float> weights1, const PtrStep_<float> weights2, PtrStep_<T> result, cudaStream_t stream);
 
     void blendLinearCaller8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2, 
-                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result);
+                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result, cudaStream_t stream);
 }}
 
 void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
-                          GpuMat& result)
+                          GpuMat& result, Stream& stream)
 {
     CV_Assert(img1.size() == img2.size());
     CV_Assert(img1.type() == img2.type());
@@ -83,12 +82,12 @@ void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& 
     {
     case CV_8U:
         if (cn != 4)
-            blendLinearCaller<uchar>(size.height, size.width, cn, img1, img2, weights1, weights2, result);
+            blendLinearCaller<uchar>(size.height, size.width, cn, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
         else
-            blendLinearCaller8UC4(size.height, size.width, img1, img2, weights1, weights2, result);
+            blendLinearCaller8UC4(size.height, size.width, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
         break;
     case CV_32F:
-        blendLinearCaller<float>(size.height, size.width, cn, img1, img2, weights1, weights2, result);
+        blendLinearCaller<float>(size.height, size.width, cn, img1, img2, weights1, weights2, result, StreamAccessor::getStream(stream));
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat, "bad image depth in linear blending function");

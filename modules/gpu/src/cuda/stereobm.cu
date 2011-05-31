@@ -102,19 +102,19 @@ __device__ uint2 MinSSD(volatile unsigned int *col_ssd_cache, volatile unsigned 
 
     //See above:  #define COL_SSD_SIZE (BLOCK_W + 2 * RADIUS)
     ssd[0] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 0 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[1] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 1 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[2] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 2 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[3] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 3 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[4] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 4 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[5] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 5 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[6] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 6 * (BLOCK_W + 2 * RADIUS));
-	__syncthreads();
+    __syncthreads();
     ssd[7] = CalcSSD<RADIUS>(col_ssd_cache, col_ssd + 7 * (BLOCK_W + 2 * RADIUS));
 
     int mssd = min(min(min(ssd[0], ssd[1]), min(ssd[4], ssd[5])), min(min(ssd[2], ssd[3]), min(ssd[6], ssd[7])));
@@ -327,8 +327,8 @@ template<int RADIUS> void kernel_caller(const DevMem2D& left, const DevMem2D& ri
     stereoKernel<RADIUS><<<grid, threads, smem_size, stream>>>(left.data, right.data, left.step, disp, maxdisp);
     cudaSafeCall( cudaGetLastError() );
 
-    if (stream == 0)        
-        cudaSafeCall( cudaThreadSynchronize() );
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 };
 
 typedef void (*kernel_caller_t)(const DevMem2D& left, const DevMem2D& right, const DevMem2D& disp, int maxdisp, cudaStream_t & stream);
@@ -407,7 +407,7 @@ extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, 
     cudaSafeCall( cudaGetLastError() );
 
     if (stream == 0)   
-		cudaSafeCall( cudaThreadSynchronize() );    
+        cudaSafeCall( cudaDeviceSynchronize() );    
 
     cudaSafeCall( cudaUnbindTexture (texForSobel ) );
 }
@@ -531,10 +531,10 @@ extern "C" void postfilter_textureness(const DevMem2D& input, int winsz, float a
     textureness_kernel<<<grid, threads, smem_size, stream>>>(disp, winsz, avgTexturenessThreshold);
     cudaSafeCall( cudaGetLastError() );
 
-	if (stream == 0)					
-		cudaSafeCall( cudaThreadSynchronize() );		
-    cudaSafeCall( cudaUnbindTexture (texForTF) );
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 
+    cudaSafeCall( cudaUnbindTexture (texForTF) );
 }
 
 }}}

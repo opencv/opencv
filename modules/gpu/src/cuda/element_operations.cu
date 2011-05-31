@@ -64,19 +64,19 @@ namespace cv { namespace gpu { namespace mathfunc
     };
 
     template <typename T1, typename T2>
-    inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
         NotEqual<T1, T2> op;
-        transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), dst, op, 0);
+        transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), dst, op, stream);
     }
 
-    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<uint, uint>(src1, src2, dst);
+        compare_ne<uint, uint>(src1, src2, dst, stream);
     }
-    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst)
+    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<float, float>(src1, src2, dst);
+        compare_ne<float, float>(src1, src2, dst, stream);
     }
 
 
@@ -133,7 +133,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
@@ -165,7 +165,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
@@ -256,7 +256,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 
@@ -290,7 +290,7 @@ namespace cv { namespace gpu { namespace mathfunc
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0) 
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 

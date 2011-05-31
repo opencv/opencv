@@ -77,8 +77,8 @@
     #include "nvidia/NPP_staging/NPP_staging.hpp"
     #include "nvidia/NCVHaarObjectDetection.hpp"
 
-#define CUDART_MINIMUM_REQUIRED_VERSION 3020
-#define NPP_MINIMUM_REQUIRED_VERSION 3216
+#define CUDART_MINIMUM_REQUIRED_VERSION 4000
+#define NPP_MINIMUM_REQUIRED_VERSION 4000
 
 #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
     #error "Insufficient Cuda Runtime library version, please update it."

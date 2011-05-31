@@ -51,8 +51,7 @@ cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
 cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_nogpu(); }
 
 bool cv::gpu::StereoBM_GPU::checkIfGpuCallReasonable() { throw_nogpu(); return false; }
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -124,13 +123,7 @@ static void stereo_bm_gpu_operator ( GpuMat& minSSD,  GpuMat& leBuf, GpuMat&  ri
         bm::postfilter_textureness(le_for_bm, winSize, avergeTexThreshold, disparity, stream);
 }
 
-
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity)
-{
-    ::stereo_bm_gpu_operator(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity, 0);
-}
-
-void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, const Stream& stream)
+void cv::gpu::StereoBM_GPU::operator() ( const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream)
 {
     ::stereo_bm_gpu_operator(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity, StreamAccessor::getStream(stream));
 }

@@ -134,7 +134,7 @@ void matchTemplateNaive_CCORR_32F(const DevMem2D image, const DevMem2D templ,
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -165,7 +165,7 @@ void matchTemplateNaive_CCORR_8U(const DevMem2D image, const DevMem2D templ,
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -228,7 +228,7 @@ void matchTemplateNaive_SQDIFF_32F(const DevMem2D image, const DevMem2D templ,
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -259,7 +259,7 @@ void matchTemplateNaive_SQDIFF_8U(const DevMem2D image, const DevMem2D templ,
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -309,7 +309,7 @@ void matchTemplatePrepared_SQDIFF_8U(
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -360,7 +360,7 @@ void matchTemplatePrepared_SQDIFF_NORMED_8U(
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -392,7 +392,7 @@ void matchTemplatePrepared_CCOFF_8U(
             w, h, (float)templ_sum / (w * h), image_sum, result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -434,7 +434,7 @@ void matchTemplatePrepared_CCOFF_8UC2(
             image_sum_r, image_sum_g, result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -490,7 +490,7 @@ void matchTemplatePrepared_CCOFF_8UC3(
             image_sum_r, image_sum_g, image_sum_b, result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -556,7 +556,7 @@ void matchTemplatePrepared_CCOFF_8UC4(
             result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -602,7 +602,7 @@ void matchTemplatePrepared_CCOFF_NORMED_8U(
             image_sum, image_sqsum, result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -665,7 +665,7 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC2(
             result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -742,7 +742,7 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC3(
             result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -833,7 +833,7 @@ void matchTemplatePrepared_CCOFF_NORMED_8UC4(
             result);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -877,7 +877,7 @@ void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -919,7 +919,7 @@ void extractFirstChannel_32F(const DevMem2D image, DevMem2Df result, int cn)
     }
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 

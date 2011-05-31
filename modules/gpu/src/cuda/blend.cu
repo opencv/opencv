@@ -68,19 +68,22 @@ namespace cv { namespace gpu
 
     template <typename T>
     void blendLinearCaller(int rows, int cols, int cn, const PtrStep_<T> img1, const PtrStep_<T> img2, 
-                           const PtrStepf weights1, const PtrStepf weights2, PtrStep_<T> result)
+                           const PtrStepf weights1, const PtrStepf weights2, PtrStep_<T> result, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols * cn, threads.x), divUp(rows, threads.y));
         
-        blendLinearKernel<<<grid, threads>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
-        cudaSafeCall(cudaThreadSynchronize());
+        blendLinearKernel<<<grid, threads, 0, stream>>>(rows, cols * cn, cn, img1, img2, weights1, weights2, result);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
     template void blendLinearCaller<uchar>(int, int, int, const PtrStep, const PtrStep, 
-                                           const PtrStepf, const PtrStepf, PtrStep);
+                                           const PtrStepf, const PtrStepf, PtrStep, cudaStream_t stream);
     template void blendLinearCaller<float>(int, int, int, const PtrStepf, const PtrStepf, 
-                                           const PtrStepf, const PtrStepf, PtrStepf);
+                                           const PtrStepf, const PtrStepf, PtrStepf, cudaStream_t stream);
 
 
     __global__ void blendLinearKernel8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2,
@@ -105,13 +108,16 @@ namespace cv { namespace gpu
 
 
     void blendLinearCaller8UC4(int rows, int cols, const PtrStep img1, const PtrStep img2, 
-                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result)
+                               const PtrStepf weights1, const PtrStepf weights2, PtrStep result, cudaStream_t stream)
     {
         dim3 threads(16, 16);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
         
-        blendLinearKernel8UC4<<<grid, threads>>>(rows, cols, img1, img2, weights1, weights2, result);
-        cudaSafeCall(cudaThreadSynchronize());
+        blendLinearKernel8UC4<<<grid, threads, 0, stream>>>(rows, cols, img1, img2, weights1, weights2, result);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 }}

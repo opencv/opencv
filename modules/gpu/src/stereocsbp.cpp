@@ -53,7 +53,6 @@ void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, i
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int) { throw_nogpu(); }
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float, float, float, int, int) { throw_nogpu(); }
 
-void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
@@ -136,7 +135,7 @@ cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, in
 template<class T>
 static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2], GpuMat l[2], GpuMat r[2],
                           GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
-                          GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp, cudaStream_t stream)
+                          GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
     CV_DbgAssert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels && 0 < rthis.nr_plane
         && left.rows == right.rows && left.cols == right.cols && left.type() == right.type());
@@ -144,6 +143,8 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     CV_Assert(rthis.levels <= 8 && (left.type() == CV_8UC1 || left.type() == CV_8UC3 || left.type() == CV_8UC4));
 
     const Scalar zero = Scalar::all(0);
+
+    cudaStream_t cudaStream = StreamAccessor::getStream(stream);
 
     ////////////////////////////////////////////////////////////////////////////////////////////
     // Init
@@ -210,18 +211,36 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     csbp::load_constants(rthis.ndisp, rthis.max_data_term, rthis.data_weight,
         rthis.max_disc_term, rthis.disc_single_jump, rthis.min_disp_th, left, right, temp);
 
-    l[0] = zero;
-    d[0] = zero;
-    r[0] = zero;
-    u[0] = zero;
+    if (stream)
+    {
+        stream.enqueueMemSet(l[0], zero);
+        stream.enqueueMemSet(d[0], zero);
+        stream.enqueueMemSet(r[0], zero);
+        stream.enqueueMemSet(u[0], zero);
+        
+        stream.enqueueMemSet(l[1], zero);
+        stream.enqueueMemSet(d[1], zero);
+        stream.enqueueMemSet(r[1], zero);
+        stream.enqueueMemSet(u[1], zero);
 
-    l[1] = zero;
-    d[1] = zero;
-    r[1] = zero;
-    u[1] = zero;
+        stream.enqueueMemSet(data_cost, zero);
+        stream.enqueueMemSet(data_cost_selected, zero);
+    }
+    else
+    {
+        l[0].setTo(zero);
+        d[0].setTo(zero);
+        r[0].setTo(zero);
+        u[0].setTo(zero);
 
-    data_cost = zero;
-    data_cost_selected = zero;
+        l[1].setTo(zero);
+        d[1].setTo(zero);
+        r[1].setTo(zero);
+        u[1].setTo(zero);
+
+        data_cost.setTo(zero);
+        data_cost_selected.setTo(zero);
+    }
 
     int cur_idx = 0;
 
@@ -230,12 +249,12 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
         if (i == levels - 1)
         {
             csbp::init_data_cost(left.rows, left.cols, disp_selected_pyr[cur_idx].ptr<T>(), data_cost_selected.ptr<T>(),
-                step_pyr[i], rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], rthis.ndisp, left.channels(), rthis.use_local_init_data_cost, stream);
+                step_pyr[i], rows_pyr[i], cols_pyr[i], i, nr_plane_pyr[i], rthis.ndisp, left.channels(), rthis.use_local_init_data_cost, cudaStream);
         }
         else
         {
             csbp::compute_data_cost(disp_selected_pyr[cur_idx].ptr<T>(), data_cost.ptr<T>(), step_pyr[i], step_pyr[i+1],
-                left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), stream);
+                left.rows, left.cols, rows_pyr[i], cols_pyr[i], rows_pyr[i+1], i, nr_plane_pyr[i+1], left.channels(), cudaStream);
 
             int new_idx = (cur_idx + 1) & 1;
 
@@ -243,46 +262,49 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
                                u[cur_idx].ptr<T>(), d[cur_idx].ptr<T>(), l[cur_idx].ptr<T>(), r[cur_idx].ptr<T>(),
                                disp_selected_pyr[new_idx].ptr<T>(), disp_selected_pyr[cur_idx].ptr<T>(),
                                data_cost_selected.ptr<T>(), data_cost.ptr<T>(), step_pyr[i], step_pyr[i+1], rows_pyr[i],
-                               cols_pyr[i], nr_plane_pyr[i], rows_pyr[i+1], cols_pyr[i+1], nr_plane_pyr[i+1], stream);
+                               cols_pyr[i], nr_plane_pyr[i], rows_pyr[i+1], cols_pyr[i+1], nr_plane_pyr[i+1], cudaStream);
 
             cur_idx = new_idx;
         }
 
         csbp::calc_all_iterations(u[cur_idx].ptr<T>(), d[cur_idx].ptr<T>(), l[cur_idx].ptr<T>(), r[cur_idx].ptr<T>(),
                                   data_cost_selected.ptr<T>(), disp_selected_pyr[cur_idx].ptr<T>(), step_pyr[i],
-                                  rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], rthis.iters, stream);
+                                  rows_pyr[i], cols_pyr[i], nr_plane_pyr[i], rthis.iters, cudaStream);
     }
 
     if (disp.empty())
         disp.create(rows, cols, CV_16S);
 
     out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
-    out = zero;
+
+    if (stream)
+        stream.enqueueMemSet(out, zero);
+    else
+        out.setTo(zero);
 
     csbp::compute_disp(u[cur_idx].ptr<T>(), d[cur_idx].ptr<T>(), l[cur_idx].ptr<T>(), r[cur_idx].ptr<T>(),
-                       data_cost_selected.ptr<T>(), disp_selected_pyr[cur_idx].ptr<T>(), step_pyr[0], out, nr_plane_pyr[0], stream);
+                       data_cost_selected.ptr<T>(), disp_selected_pyr[cur_idx].ptr<T>(), step_pyr[0], out, nr_plane_pyr[0], cudaStream);
 
     if (disp.type() != CV_16S)
-        out.convertTo(disp, disp.type());
+    {
+        if (stream)
+            stream.enqueueConvert(out, disp, disp.type());
+        else
+            out.convertTo(disp, disp.type());
+    }
 }
 
 
 typedef void (*csbp_operator_t)(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2], GpuMat l[2], GpuMat r[2],
                                      GpuMat disp_selected_pyr[2], GpuMat& data_cost, GpuMat& data_cost_selected,
-                                     GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp, cudaStream_t stream);
+                                     GpuMat& temp, GpuMat& out, const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream);
 
 const static csbp_operator_t operators[] = {0, 0, 0, csbp_operator<short>, 0, csbp_operator<float>, 0, 0};
-
-void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp)
-{
-    CV_Assert(msg_type == CV_32F || msg_type == CV_16S);
-    operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out, left, right, disp, 0);
-}
 
 void cv::gpu::StereoConstantSpaceBP::operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
 {
     CV_Assert(msg_type == CV_32F || msg_type == CV_16S);
-    operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out, left, right, disp, StreamAccessor::getStream(stream));
+    operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out, left, right, disp, stream);
 }
 
 #endif /* !defined (HAVE_CUDA) */

@@ -175,7 +175,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     template <> void comp_data_gpu<uchar, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
     {
@@ -189,7 +189,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <> void comp_data_gpu<uchar3, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
@@ -204,7 +204,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     template <> void comp_data_gpu<uchar3, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
     {
@@ -218,7 +218,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template <> void comp_data_gpu<uchar4, short>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
@@ -233,7 +233,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     template <> void comp_data_gpu<uchar4, float>(const DevMem2D& left, const DevMem2D& right, const DevMem2D& data, cudaStream_t stream)
     {
@@ -247,7 +247,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 ///////////////////////////////////////////////////////////////
@@ -287,7 +287,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void data_step_down_gpu<short>(int dst_cols, int dst_rows, int src_rows, const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
@@ -337,7 +337,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void level_up_messages_gpu<short>(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2D* mus, DevMem2D* mds, DevMem2D* mls, DevMem2D* mrs, cudaStream_t stream);
@@ -457,7 +457,7 @@ namespace cv { namespace gpu { namespace bp
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
-                cudaSafeCall( cudaThreadSynchronize() );
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 
@@ -520,7 +520,7 @@ namespace cv { namespace gpu { namespace bp
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     template void output_gpu<short>(const DevMem2D& u, const DevMem2D& d, const DevMem2D& l, const DevMem2D& r, const DevMem2D& data, const DevMem2D_<short>& disp, cudaStream_t stream);

@@ -236,7 +236,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -253,7 +253,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -271,7 +271,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -445,7 +445,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -462,7 +462,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 
@@ -480,7 +480,7 @@ namespace cv { namespace gpu { namespace split_merge {
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall(cudaThreadSynchronize());
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
 

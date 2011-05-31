@@ -44,11 +44,11 @@
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf)
+void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf, Stream& s)
 {
     Size src_size = terminals.size();
     CV_Assert(terminals.type() == CV_32S);
@@ -73,17 +73,17 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
     if ((size_t)bufsz > buf.cols * buf.rows * buf.elemSize())
         buf.create(1, bufsz, CV_8U);
 
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
+
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
         terminals.step, leftTransp.step, sznpp, labels.ptr<Npp8u>(), labels.step, buf.ptr<Npp8u>()) );
 
-    cudaSafeCall( cudaThreadSynchronize() );
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
 #endif /* !defined (HAVE_CUDA) */
-
-
-
-
-
 

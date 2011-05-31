@@ -46,6 +46,8 @@
 #include "opencv2/gpu/devmem2d.hpp"
 #include "safe_call.hpp"
 #include "cuda_runtime.h"
+#include "npp.h"
+#include "NPP_staging.hpp"
 
 namespace cv
 {
@@ -106,6 +108,41 @@ namespace cv
             cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
             cudaSafeCall( cudaUnbindTexture(tex) );
         }
+
+        class NppStreamHandler
+        {
+        public:
+            inline explicit NppStreamHandler(cudaStream_t newStream = 0)
+            {
+                oldStream = nppGetStream();
+                nppSetStream(newStream);
+            }
+
+            inline ~NppStreamHandler()
+            {
+                nppSetStream(oldStream);
+            }
+
+        private:
+            cudaStream_t oldStream;
+        };
+
+        class NppStStreamHandler
+        {
+        public:
+            inline explicit NppStStreamHandler(cudaStream_t newStream = 0)
+            {
+                oldStream = nppStSetActiveCUDAstream(newStream);
+            }
+
+            inline ~NppStStreamHandler()
+            {
+                nppStSetActiveCUDAstream(oldStream);
+            }
+
+        private:
+            cudaStream_t oldStream;
+        };
     }
 }
 

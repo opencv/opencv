@@ -47,8 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int) { throw_nogpu(); }
-void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, const Stream&) { throw_nogpu(); }
+void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -455,12 +454,7 @@ namespace
     }
 }
 
-void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn)
-{
-    cvtColor_caller(src, dst, code, dcn, 0);
-}
-
-void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
+void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
 {
     cvtColor_caller(src, dst, code, dcn, StreamAccessor::getStream(stream));
 }

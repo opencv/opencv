@@ -332,7 +332,7 @@ namespace cv
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaThreadSynchronize() ); 
+                    cudaSafeCall( cudaDeviceSynchronize() ); 
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -349,7 +349,7 @@ namespace cv
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaThreadSynchronize() );            
+                    cudaSafeCall( cudaDeviceSynchronize() );            
             }
         };
         template<> struct TransformDispatcher<true>
@@ -370,7 +370,7 @@ namespace cv
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaThreadSynchronize() );
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -389,7 +389,7 @@ namespace cv
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaThreadSynchronize() );            
+                    cudaSafeCall( cudaDeviceSynchronize() );            
             }
         };
 

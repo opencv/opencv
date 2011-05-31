@@ -46,14 +46,10 @@ using namespace std;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::merge(const vector<GpuMat>& /*src*/, GpuMat& /*dst*/) { throw_nogpu(); }
-void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, const Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::merge(const vector<GpuMat>& /*src*/, GpuMat& /*dst*/, const Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, const Stream& /*stream*/) { throw_nogpu(); }
-void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, const Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::merge(const GpuMat* /*src*/, size_t /*count*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::merge(const vector<GpuMat>& /*src*/, GpuMat& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::split(const GpuMat& /*src*/, GpuMat* /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
+void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*stream*/) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -148,51 +144,25 @@ namespace cv { namespace gpu { namespace split_merge
 }}}
 
 
-void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst) 
-{ 
-    split_merge::merge(src, n, dst, 0);
-}
-
-
-void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst) 
-{
-    split_merge::merge(&src[0], src.size(), dst, 0);
-}
-
-
-void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream) 
+void cv::gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream) 
 { 
     split_merge::merge(src, n, dst, StreamAccessor::getStream(stream));
 }
 
 
-void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream) 
+void cv::gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream) 
 {
     split_merge::merge(&src[0], src.size(), dst, StreamAccessor::getStream(stream));
 }
 
 
-void cv::gpu::split(const GpuMat& src, GpuMat* dst) 
-{
-    split_merge::split(src, dst, 0);
-}
-
-
-void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst) 
-{
-    dst.resize(src.channels());
-    if(src.channels() > 0)
-        split_merge::split(src, &dst[0], 0);
-}
-
-
-void cv::gpu::split(const GpuMat& src, GpuMat* dst, const Stream& stream) 
+void cv::gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream) 
 {
     split_merge::split(src, dst, StreamAccessor::getStream(stream));
 }
 
 
-void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream) 
+void cv::gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream) 
 {
     dst.resize(src.channels());
     if(src.channels() > 0)

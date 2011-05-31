@@ -44,20 +44,11 @@
 
 #if !defined(HAVE_CUDA)
 
-void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&,
-                              GpuMat&) { throw_nogpu(); }
+void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&,
-                              GpuMat&, const Stream&) { throw_nogpu(); }
+void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
-                            const Mat&, const Mat&, GpuMat&) { throw_nogpu(); }
-
-void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&,
-                            const Mat&, const Mat&, GpuMat&, const Stream&) { throw_nogpu(); }
-
-void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, 
-                             Mat&, Mat&, bool, int, float, int, vector<int>*) { throw_nogpu(); }
+void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, vector<int>*) { throw_nogpu(); }
 
 #else
 
@@ -66,14 +57,12 @@ using namespace cv::gpu;
 
 namespace cv { namespace gpu { namespace transform_points 
 {
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl,
-              DevMem2D_<float3> dst, cudaStream_t stream);
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
 }}}
 
 namespace
 {
-    void transformPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                               GpuMat& dst, cudaStream_t stream)
+    void transformPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec, GpuMat& dst, cudaStream_t stream)
     {
         CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
         CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
@@ -88,30 +77,20 @@ namespace
     }
 }
 
-void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                              GpuMat& dst)
-{
-    ::transformPointsCaller(src, rvec, tvec, dst, 0);
-}
-
-void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                              GpuMat& dst, const Stream& stream)
+void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, GpuMat& dst, Stream& stream)
 {
     ::transformPointsCaller(src, rvec, tvec, dst, StreamAccessor::getStream(stream));
 }
 
 namespace cv { namespace gpu { namespace project_points 
 {
-    void call(const DevMem2D_<float3> src, const float* rot, const float* transl,
-              const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
+    void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
 }}}
 
 
 namespace
 {
-    void projectPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                             const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
-                             cudaStream_t stream)
+    void projectPointsCaller(const GpuMat& src, const Mat& rvec, const Mat& tvec, const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, cudaStream_t stream)
     {
         CV_Assert(src.rows == 1 && src.cols > 0 && src.type() == CV_32FC3);
         CV_Assert(rvec.size() == Size(3, 1) && rvec.type() == CV_32F);
@@ -124,20 +103,11 @@ namespace
         Rodrigues(rvec, rot);
 
         dst.create(src.size(), CV_32FC2);
-        project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(),
-                             camera_mat.ptr<float>(), dst,stream);
+        project_points::call(src, rot.ptr<float>(), tvec.ptr<float>(), camera_mat.ptr<float>(), dst,stream);
     }
 }
 
-void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                            const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst)
-{
-    ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, 0);
-}
-
-void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                            const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst,
-                            const Stream& stream)
+void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, Stream& stream)
 {
     ::projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
 }

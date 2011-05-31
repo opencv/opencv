@@ -181,7 +181,7 @@ namespace cv { namespace gpu { namespace surf
         icvCalcLayerDetAndTrace<<<grid, threads>>>(det, trace);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -338,7 +338,7 @@ namespace cv { namespace gpu { namespace surf
 
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -483,7 +483,7 @@ namespace cv { namespace gpu { namespace surf
         icvInterpolateKeypoint<<<grid, threads>>>(det, maxPosBuffer, featureX, featureY, featureLaplacian, featureSize, featureHessian, featureCounter);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -674,7 +674,7 @@ namespace cv { namespace gpu { namespace surf
         icvCalcOrientation<<<grid, threads>>>(featureX, featureY, featureSize, featureDir);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaThreadSynchronize() );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -986,24 +986,24 @@ namespace cv { namespace gpu { namespace surf
             compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
             normalize_descriptors<64><<<dim3(nFeatures, 1, 1), dim3(64, 1, 1)>>>(descriptors);
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
         else
         {
             compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);            
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
 
             normalize_descriptors<128><<<dim3(nFeatures, 1, 1), dim3(128, 1, 1)>>>(descriptors);            
             cudaSafeCall( cudaGetLastError() );
 
-            cudaSafeCall( cudaThreadSynchronize() );
+            cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 }}}

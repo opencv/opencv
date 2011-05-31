@@ -220,7 +220,7 @@ void compute_hists(int nbins, int block_stride_x, int block_stride_y,
         img_block_width, grad, qangle, scale, block_hists);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -324,7 +324,7 @@ void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
 
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -418,7 +418,7 @@ void classify_hists(int win_height, int win_width, int block_stride_y, int block
         block_hists, coefs, free_coef, threshold, labels);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 //----------------------------------------------------------------------------
@@ -463,7 +463,7 @@ void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, i
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -512,7 +512,7 @@ void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, i
         img_block_width, win_block_stride_x, win_block_stride_y, block_hists, descriptors);
     cudaSafeCall( cudaGetLastError() );
 
-    cudaSafeCall(cudaThreadSynchronize());
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 //----------------------------------------------------------------------------
@@ -636,7 +636,8 @@ void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2D& im
         compute_gradients_8UC4_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
     cudaSafeCall( cudaGetLastError() );
-    cudaSafeCall(cudaThreadSynchronize());
+
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 template <int nthreads, int correct_gamma>
@@ -707,7 +708,8 @@ void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2D& im
         compute_gradients_8UC1_kernel<nthreads, 0><<<gdim, bdim>>>(height, width, img, angle_scale, grad, qangle);
 
     cudaSafeCall( cudaGetLastError() );
-    cudaSafeCall(cudaThreadSynchronize());
+
+    cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -765,7 +767,9 @@ static void resize_for_hog(const DevMem2D& src, DevMem2D dst, TEX& tex)
 
     resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (DevMem2D_<T>)dst, colOfs);
     cudaSafeCall( cudaGetLastError() );
-    cudaSafeCall( cudaThreadSynchronize() );
+
+    cudaSafeCall( cudaDeviceSynchronize() );
+
     cudaSafeCall( cudaUnbindTexture(tex) );
 }
 
