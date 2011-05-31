@@ -236,6 +236,9 @@ public:
             float _response=0, int _octave=0, int _class_id=-1)
             : pt(x, y), size(_size), angle(_angle),
             response(_response), octave(_octave), class_id(_class_id) {}
+    
+    size_t hash() const;
+    
     //! converts vector of keypoints to vector of points
     static void convert(const std::vector<KeyPoint>& keypoints,
                         CV_OUT std::vector<Point2f>& points2f,
@@ -257,7 +260,7 @@ public:
     CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to) 
 };
-
+    
 //! writes vector of keypoints to the file storage
 CV_EXPORTS void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
 //! reads vector of keypoints from the specified file storage node

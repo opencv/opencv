@@ -43,7 +43,20 @@
 
 namespace cv
 {
-	
+
+size_t KeyPoint::hash() const
+{
+    size_t _Val = 2166136261U, scale = 16777619U;
+    Cv32suf u;
+    u.f = pt.x; _Val = (scale * _Val) ^ u.u;
+    u.f = pt.y; _Val = (scale * _Val) ^ u.u;
+    u.f = size; _Val = (scale * _Val) ^ u.u;
+    u.f = angle; _Val = (scale * _Val) ^ u.u;
+    u.f = response; _Val = (scale * _Val) ^ u.u;
+    _Val = (scale * _Val) ^ ((size_t) octave);
+    _Val = (scale * _Val) ^ ((size_t) class_id);
+    return _Val;
+}    
 
 void write(FileStorage& fs, const string& objname, const vector<KeyPoint>& keypoints)
 {
