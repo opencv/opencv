@@ -277,6 +277,15 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 endif()
 
+if(MSVC)
+    set(ENABLE_SSE ON CACHE BOOL "Enable SSE instructions for MSVC")
+    set(ENABLE_SSE2 ON CACHE BOOL "Enable SSE2 instructions for MSVC")
+    if(CMAKE_C_COMPILER MATCHES "icc")
+        set(ENABLE_SSE3 OFF CACHE BOOL "Enable SSE3 instructions for ICC")
+        set(ENABLE_SSE4_1 OFF CACHE BOOL "Enable SSE4.1 instructions for ICC")
+    endif()
+endif()
+
 # allow fine grained control over which libraries not to link, even if
 # they are available on the system
 # ====================================================================
@@ -1021,6 +1030,24 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
     set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -ggdb3 -DDEBUG -D_DEBUG")
 
+endif()
+
+if(MSVC)
+    if(ENABLE_SSE)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE")
+    endif()
+    if(ENABLE_SSE2)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+    endif()
+    if(ENABLE_SSE3)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE3")
+    endif()
+    if(ENABLE_SSE4_1)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE4.1")
+    endif()
+    if (ENABLE_SSE OR ENABLE_SSE2 OR ENABLE_SSE3 OR ENABLE_SSE4_1)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /Oi")
+    endif()
 endif()
 
 # Extra link libs if the user selects building static libs:
