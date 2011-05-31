@@ -111,9 +111,9 @@ public:
             _sizes[i] = sizes[i];
         if( cn > 1 )
         {
-            if( _sizes[dims-1] == 1 )
+            /*if( _sizes[dims-1] == 1 )
                 _sizes[dims-1] = cn;
-            else
+            else*/
                 _sizes[dims++] = cn;
         }
         PyObject* o = PyArray_SimpleNew(dims, _sizes, typenum);
