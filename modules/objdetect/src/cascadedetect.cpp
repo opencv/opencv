@@ -982,24 +982,47 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     CascadeClassifier::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
     CascadeClassifier::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    float tmp; // float accumulator -- float operations are quicker 
+#endif
     for( int si = 0; si < nstages; si++ )
     {
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
+#ifdef HAVE_TEGRA_OPTIMIZATION
+	tmp = 0;
+#else
         sum = 0;
+#endif
 
         for( wi = 0; wi < ntrees; wi++ )
         {
             CascadeClassifier::Data::DTreeNode& node = cascadeNodes[nodeOfs];
             int c = featureEvaluator(node.featureIdx);
             const int* subset = &cascadeSubsets[nodeOfs*subsetSize];
+#ifdef HAVE_TEGRA_OPTIMIZATION
+            tmp += cascadeLeaves[ subset[c>>5] & (1 << (c & 31)) ? leafOfs : leafOfs+1];
+#else
             sum += cascadeLeaves[ subset[c>>5] & (1 << (c & 31)) ? leafOfs : leafOfs+1];
+#endif
             nodeOfs++;
             leafOfs += 2;
         }
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        if( tmp < stage.threshold ) {
+	    sum = (double)tmp;
+            return -si;            
+	}
+#else
         if( sum < stage.threshold )
             return -si;            
+#endif
     }
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    sum = (double)tmp;
+#endif
+
     return 1;
 }
 
