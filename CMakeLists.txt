@@ -99,13 +99,6 @@ endif()
 # ----------------------------------------------------------------------------
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
-if(BUILD_SHARED_LIBS)
-    set(OPENCV_BUILD_SHARED_LIB 1) # For cvconfig.h, etc.
-else(BUILD_SHARED_LIBS)
-    set(OPENCV_BUILD_SHARED_LIB 0)
-endif(BUILD_SHARED_LIBS)
-
-
 # ----------------------------------------------------------------------------
 #  Variables for cvconfig.h.cmake
 # ----------------------------------------------------------------------------

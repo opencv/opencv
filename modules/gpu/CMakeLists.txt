@@ -68,7 +68,7 @@ if (HAVE_CUDA)
         string(REPLACE "/EHsc-" "/EHs" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     endif()
 	
-	if (OPENCV_BUILD_SHARED_LIB) 
+    if (BUILD_SHARED_LIBS)
 		set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-DCVAPI_EXPORTS")
 	endif()
     

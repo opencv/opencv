@@ -122,7 +122,7 @@
 #cmakedefine  HAVE_IPP
 
 /* OpenCV compiled as static or dynamic libs */
-#cmakedefine  OPENCV_BUILD_SHARED_LIB
+#cmakedefine  BUILD_SHARED_LIBS
 
 /* Name of package */
 #define  PACKAGE "${PACKAGE}"

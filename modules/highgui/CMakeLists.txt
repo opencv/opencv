@@ -244,7 +244,7 @@ set(lib_srcs ${highgui_srcs} ${grfmt_srcs})
 # ----------------------------------------------------------------------------------
 set(the_target "opencv_highgui")
 
-if (OPENCV_BUILD_SHARED_LIB) 
+if (BUILD_SHARED_LIBS)
     add_definitions(-DHIGHGUI_EXPORTS -DCVAPI_EXPORTS)
 endif()
 
