@@ -2586,7 +2586,10 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
 {
     cv::Mat data = cv::cvarrToMat(_samples), labels = cv::cvarrToMat(_labels), centers;
     if( _centers )
+    {
         centers = cv::cvarrToMat(_centers);
+        centers = centers.reshape(1);
+    }
     CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
         (labels.cols == 1 || labels.rows == 1) &&
         labels.cols + labels.rows - 1 == data.rows );
