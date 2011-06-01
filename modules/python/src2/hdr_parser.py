@@ -242,6 +242,41 @@ class CppHeaderParser(object):
         bases = ll[2:]
         return classname, bases, modlist
 
+    def parse_func_decl_no_wrap(self, decl_str):
+        fdecl = decl_str.replace("CV_OUT", "").replace("CV_IN_OUT", "")
+        fdecl = fdecl.strip().replace("\t", " ")
+        while "  " in fdecl:
+            fdecl = fdecl.replace("  ", " ")
+        fname = fdecl[:fdecl.find("(")].strip()
+        fnpos = fname.rfind(" ")
+        if fnpos < 0:
+            fnpos = 0
+        fname = fname[fnpos:].strip()
+        rettype = fdecl[:fnpos].strip()
+        args0 = fdecl[fdecl.find("(")+1:fdecl.rfind(")")].strip().split(",")
+        args = []
+        narg = ""
+        for arg in args0:
+            narg += arg.strip()
+            balance_paren = narg.count("(") - narg.count(")")
+            balance_angle = narg.count("<") - narg.count(">")
+            if balance_paren == 0 and balance_angle == 0:
+                args.append(narg.strip())
+                narg = ""
+        fname = "cv." + fname.replace("::", ".")
+        decl = [fname, rettype, [], []]
+        for arg in args:
+            dfpos = arg.find("=")
+            defval = ""
+            if dfpos >= 0:
+                defval = arg[dfpos+1:].strip()
+                arg = arg[:dfpos].strip()
+            pos = arg.rfind(" ")
+            aname = arg[pos+1:]
+            atype = arg[:pos]
+            decl[3].append([atype, aname, defval, []])    
+        return decl
+
     def parse_func_decl(self, decl_str):
         """
         Parses the function or method declaration in the form:
@@ -254,9 +289,10 @@ class CppHeaderParser(object):
         [<func name>, <return value C-type>, <list of modifiers>, <list of arguments>] (see above)
         """
 
-        if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
-            ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
-            return []
+        if self.wrap_mode:
+            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
+                ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
+                return []
 
         top = self.block_stack[-1]
         func_modlist = []
@@ -276,7 +312,7 @@ class CppHeaderParser(object):
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
         decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
-            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
+            ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
 
         static_method = False
         context = top[0]
@@ -315,7 +351,7 @@ class CppHeaderParser(object):
                 print "Error at %d. the function/method name is missing: '%s'" % (self.lineno, decl_start)
                 sys.exit(-1)
 
-        if ("::" in funcname) or funcname.startswith("~"):
+        if self.wrap_mode and (("::" in funcname) or funcname.startswith("~")):
             # if there is :: in function name (and this is in the header file),
             # it means, this is inline implementation of a class method.
             # Thus the function has been already declared within the class and we skip this repeated
@@ -324,6 +360,11 @@ class CppHeaderParser(object):
             return []
 
         funcname = self.get_dotted_name(funcname)
+
+        if not self.wrap_mode:
+            decl = self.parse_func_decl_no_wrap(decl_str)
+            decl[0] = funcname
+            return decl
 
         arg_start = args_begin+1
         npos = arg_start-1
@@ -375,22 +416,23 @@ class CppHeaderParser(object):
                     if eqpos >= 0:
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
-                    if arg_type == "InputArray" or arg_type == "InputOutputArray":
-                        arg_type = "Mat"
-                    elif arg_type == "OutputArray":
-                        arg_type = "Mat"
-                        modlist.append("/O")
-                    elif arg_type == "InputArrayOfArrays" or arg_type == "InputOutputArrayOfArrays":
-                        arg_type = "vector_Mat"
-                    elif arg_type == "OutputArrayOfArrays":
-                        arg_type = "vector_Mat"
-                        modlist.append("/O")
-                    defval = self.batch_replace(defval, [("InputArrayOfArrays", "vector<Mat>"),
-                                                         ("InputOutputArrayOfArrays", "vector<Mat>"),
-                                                         ("OutputArrayOfArrays", "vector<Mat>"),
-                                                         ("InputArray", "Mat"),
-                                                         ("InputOutputArray", "Mat"),
-                                                         ("OutputArray", "Mat")]).strip()
+                    if self.wrap_mode:
+                        if arg_type == "InputArray" or arg_type == "InputOutputArray":
+                            arg_type = "Mat"
+                        elif arg_type == "OutputArray":
+                            arg_type = "Mat"
+                            modlist.append("/O")
+                        elif arg_type == "InputArrayOfArrays" or arg_type == "InputOutputArrayOfArrays":
+                            arg_type = "vector_Mat"
+                        elif arg_type == "OutputArrayOfArrays":
+                            arg_type = "vector_Mat"
+                            modlist.append("/O")
+                        defval = self.batch_replace(defval, [("InputArrayOfArrays", "vector<Mat>"),
+                                                             ("InputOutputArrayOfArrays", "vector<Mat>"),
+                                                             ("OutputArrayOfArrays", "vector<Mat>"),
+                                                             ("InputArray", "Mat"),
+                                                             ("InputOutputArray", "Mat"),
+                                                             ("OutputArray", "Mat")]).strip()
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 
@@ -473,7 +515,7 @@ class CppHeaderParser(object):
                 stmt_type = stmt.split()[0]
                 classname, bases, modlist = self.parse_class_decl(stmt)
                 decl = []
-                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt):
+                if ("CV_EXPORTS_W" in stmt) or ("CV_EXPORTS_AS" in stmt) or (not self.wrap_mode and ("CV_EXPORTS" in stmt)):
                     decl = [stmt_type + " " + self.get_dotted_name(classname), "", modlist, []]
                     if bases:
                         decl[1] = ": " + " ".join(bases)
@@ -542,7 +584,7 @@ class CppHeaderParser(object):
                 token = t
         return token, tpos
 
-    def parse(self, hname):
+    def parse(self, hname, wmode=True):
         """
         The main method. Parses the input file.
         Returns the list of declarations (that can be print using print_decls)
@@ -562,6 +604,7 @@ class CppHeaderParser(object):
         self.block_stack = [["file", hname, True, True, None]]
         block_head = ""
         self.lineno = 0
+        self.wrap_mode = wmode
 
         for l0 in linelist:
             self.lineno += 1
