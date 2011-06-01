@@ -82,6 +82,8 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 				VideoWriter writer(string(ts->get_data_path()) + "video/output.avi",
 					CV_FOURCC('X', 'V', 'I', 'D'), fps, frame_s);
 
+				if (writer.isOpened() == false) ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+
 				for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
 				{
 					circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar::all(255));
