@@ -444,6 +444,7 @@ void ORB::CommonParams::read(const FileNode& fn)
   scale_factor_ = fn["scaleFactor"];
   n_levels_ = int(fn["nLevels"]);
   first_level_ = int(fn["firsLevel"]);
+  edge_threshold_ = fn["edgeThreshold"];
   patch_size_ = fn["patchSize"];
 }
 
@@ -452,6 +453,7 @@ void ORB::CommonParams::write(FileStorage& fs) const
   fs << "scaleFactor" << scale_factor_;
   fs << "nLevels" << int(n_levels_);
   fs << "firsLevel" << int(first_level_);
+  fs << "edgeThreshold" << int(edge_threshold_);
   fs << "patchSize" << int(patch_size_);
 }
 
