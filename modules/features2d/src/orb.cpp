@@ -202,6 +202,19 @@ inline bool keypointResponseGreater(const cv::KeyPoint& lhs, const cv::KeyPoint&
   return lhs.response > rhs.response;
 }
 
+struct KeypointResponseGreaterThanEqual
+{
+  KeypointResponseGreaterThanEqual(float value) :
+    value(value)
+  {
+  }
+  inline bool operator()(const cv::KeyPoint& kpt)
+  {
+    return kpt.response >= value;
+  }
+  float value;
+};
+
 /** Simple function that returns the area in the rectangle x1<=x<=x2, y1<=y<=y2 given an integral image
  * @param integral_image
  * @param x1
@@ -249,7 +262,8 @@ template<typename PatchType, typename SumType>
   {
     SumType m_01 = 0, m_10 = 0/*, m_00 = 0*/;
 
-    const PatchType* val_center_ptr_plus = &(image.at<PatchType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x))), *val_center_ptr_minus;
+    const PatchType* val_center_ptr_plus = &(image.at<PatchType> (cvRound(kpt.pt.y), cvRound(kpt.pt.x))),
+                   *val_center_ptr_minus;
 
     // Treat the center line differently, v=0
 
@@ -402,8 +416,8 @@ private:
     //switch (sz)
     {
       //default:
-        pattern_data = reinterpret_cast<int*> (rotated_patterns_[angle_idx].data);
-        //break;
+      pattern_data = reinterpret_cast<int*> (rotated_patterns_[angle_idx].data);
+      //break;
     }
 
     int half_kernel = ORB::kKernelWidth / 2;
@@ -455,13 +469,15 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   params_(detector_params), n_features_(n_features)
 {
   // fill the extractors and descriptors for the corresponding scales
-  int n_desired_features_per_scale = cvRound(n_features / ((1.0 / std::pow(params_.scale_factor_, 2.f * params_.n_levels_) - 1)
-      / (1.0 / std::pow(params_.scale_factor_, 2) - 1)));
+  int n_desired_features_per_scale = cvRound(
+                                             n_features / ((1.0 / std::pow(params_.scale_factor_,
+                                                                           2.f * params_.n_levels_) - 1) / (1.0
+                                                 / std::pow(params_.scale_factor_, 2) - 1)));
   n_features_per_level_.resize(detector_params.n_levels_);
   for (unsigned int level = 0; level < detector_params.n_levels_; level++)
   {
-    n_desired_features_per_scale = cvRound(n_desired_features_per_scale / std::pow(params_.scale_factor_, 2));
     n_features_per_level_[level] = n_desired_features_per_scale;
+    n_desired_features_per_scale = cvRound(n_desired_features_per_scale / std::pow(params_.scale_factor_, 2));
   }
 
   // pre-compute the end of a row in a circular patch
@@ -481,7 +497,8 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
 }
 
 /** returns the descriptor size in bytes */
-int ORB::descriptorSize() const {
+int ORB::descriptorSize() const
+{
   return kBytes;
 }
 
@@ -602,6 +619,25 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
   }
 }
 
+//takes keypoints and culls them by the response
+inline void cull(std::vector<cv::KeyPoint>& keypoints, size_t n_points)
+{
+  //this is only necessary if the keypoints size is greater than the number of desired points.
+  if (keypoints.size() > n_points)
+  {
+    //first use nth element to partition the keypoints into the best and worst.
+    std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), keypointResponseGreater);
+    //this is the boundary response, and in the case of FAST may be ambigous
+    float ambiguous_response = keypoints[n_points - 1].response;
+    //use std::partition to grab all of the keypoints with the boundary response.
+    std::vector<cv::KeyPoint>::const_iterator new_end =
+        std::partition(keypoints.begin() + n_points, keypoints.end(),
+                       KeypointResponseGreaterThanEqual(ambiguous_response));
+    //resize the keypoints, given this new end point. nth_element and partition reordered the points inplace
+    keypoints.resize(new_end - keypoints.begin());
+  }
+}
+
 /** Compute the ORB keypoints on an image
  * @param image_pyramid the image pyramid to compute the features and descriptors on
  * @param mask_pyramid the masks to apply at every level
@@ -629,18 +665,14 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
     // half_patch_size_ for orientation, 4 for Harris
     unsigned int border_safety = std::max(half_patch_size_, 4);
     cv::KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), border_safety);
-
     // Keep more points than necessary as FAST does not give amazing corners
-    if (keypoints.size() > 2 * n_features_per_level_[level])
-    {
-      std::nth_element(keypoints.begin(), keypoints.begin() + 2 * n_features_per_level_[level], keypoints.end(),
-                       keypointResponseGreater);
-      keypoints.resize(2 * n_features_per_level_[level]);
-    }
+    cull(keypoints, 2 * n_features_per_level_[level]);
 
     // Compute the Harris cornerness (better scoring than FAST)
     HarrisResponse h(image_pyramid[level]);
     h(keypoints);
+    //cull to the final desired level, using the new harris scores.
+    cull(keypoints, n_features_per_level_[level]);
 
     // Set the level of the coordinates
     for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
@@ -648,14 +680,6 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
       keypoint->octave = level;
 
     all_keypoints.insert(all_keypoints.end(), keypoints.begin(), keypoints.end());
-  }
-
-  // Only keep what we need
-  if (all_keypoints.size() > n_features_)
-  {
-    std::nth_element(all_keypoints.begin(), all_keypoints.begin() + n_features_, all_keypoints.end(),
-                     keypointResponseGreater);
-    all_keypoints.resize(n_features_);
   }
 
   // Cluster the keypoints
