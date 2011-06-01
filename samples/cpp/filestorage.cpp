@@ -59,7 +59,7 @@ void read(const FileNode& node, MyData& x, const MyData& default_value = MyData(
   if(node.empty())
     x = default_value;
   else
-    x = (MyData)node;
+    x.read(node);
 }
 
 ostream& operator<<(ostream& out, const MyData& m){

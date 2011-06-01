@@ -2828,7 +2828,10 @@ FileNodeIterator& operator >> (FileNodeIterator& it, vector<_Tp>& vec)
 }
 
 template<typename _Tp> static inline void operator >> (const FileNode& n, _Tp& value)
-{ FileNodeIterator it = n.begin(); it >> value; }
+{ read( n, value, _Tp()); }
+
+template<typename _Tp> static inline void operator >> (const FileNode& n, vector<_Tp>& vec)
+{ FileNodeIterator it = n.begin(); it >> vec; }
 
 static inline bool operator == (const FileNodeIterator& it1, const FileNodeIterator& it2)
 {
