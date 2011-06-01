@@ -44,6 +44,11 @@ if (HAVE_CUDA)
 
     #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
     #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
+    
+    if (APPLE)
+        set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;-fno-finite-math-only;")
+    endif()
+    
 
     string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
