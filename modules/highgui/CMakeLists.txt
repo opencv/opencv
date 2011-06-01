@@ -380,39 +380,38 @@ if(BUILD_TESTS)
 
   add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
-endif(BUILD_TESTS)
+  if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
+      set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
+      if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
+          if(${CMAKE_GENERATOR} MATCHES "Visual*")
+              set(${the_target}_pch "test/test_precomp.cpp")
+          endif()            
+          add_native_precompiled_header(${the_target} ${pch_header})
+      elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
+          add_precompiled_header(${the_target} ${pch_header})
+      endif()
+  endif()
 
-if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
-    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-        if(${CMAKE_GENERATOR} MATCHES "Visual*")
-            set(${the_target}_pch "test/test_precomp.cpp")
-        endif()            
-        add_native_precompiled_header(${the_target} ${pch_header})
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-        add_precompiled_header(${the_target} ${pch_header})
-    endif()
-endif()
-
-# Additional target properties
-set_target_properties(${the_target} PROPERTIES
-    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-    RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
-    )
+  # Additional target properties
+  set_target_properties(${the_target} PROPERTIES
+      DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+      RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+      )
 	
-if(ENABLE_SOLUTION_FOLDERS)
-	set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-endif()	
+  if(ENABLE_SOLUTION_FOLDERS)
+	  set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+  endif()	
 
-add_dependencies(${the_target} ${test_deps})
+  add_dependencies(${the_target} ${test_deps})
 
-# Add the required libraries for linking:
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
+  # Add the required libraries for linking:
+  target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
 
-enable_testing()
-get_target_property(LOC ${the_target} LOCATION)
-add_test(${the_target} "${LOC}")
+  enable_testing()
+  get_target_property(LOC ${the_target} LOCATION)
+  add_test(${the_target} "${LOC}")
 
-if(WIN32)
-    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
-endif()
+  if(WIN32)
+      install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+  endif()
+endif(BUILD_TESTS)
