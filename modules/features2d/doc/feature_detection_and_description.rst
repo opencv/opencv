@@ -231,21 +231,13 @@ Class for extracting ORB features and descriptors from an image ::
     {
     public:
         /** The patch sizes that can be used (only one right now) */
-        enum PatchSize
-        {
-            PATCH_LEARNED_31 = 31
-        };
-
         struct CommonParams
         {
-            static const unsigned int DEFAULT_N_LEVELS = 3;
-            static const float DEFAULT_SCALE_FACTOR = 1.2;
-            static const unsigned int DEFAULT_FIRST_LEVEL = 0;
-            static const PatchSize DEFAULT_PATCH_SIZE = PATCH_LEARNED_31;
+            enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
 
             /** default constructor */
-            CommonParams(float scale_factor = DEFAULT_SCALE_FACTOR, unsigned int n_levels = DEFAULT_N_LEVELS,
-                 unsigned int first_level = DEFAULT_FIRST_LEVEL, PatchSize patch_size = DEFAULT_PATCH_SIZE);
+            CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS,
+                 int edge_threshold = 31, unsigned int first_level = DEFAULT_FIRST_LEVEL);
             void read(const FileNode& fn);
             void write(FileStorage& fs) const;
 
@@ -257,8 +249,8 @@ Class for extracting ORB features and descriptors from an image ::
              * if 1, that means we will also look at the image scale_factor_ times bigger
              */
             unsigned int first_level_;
-            /** The size of the patch that will be used for orientation and comparisons */
-            PatchSize patch_size_;
+            /** How far from the boundary the points should be */
+            int edge_threshold_;
         };
 
         // c:function::default constructor

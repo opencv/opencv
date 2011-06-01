@@ -420,14 +420,16 @@ public:
 
   struct CV_EXPORTS CommonParams
   {
-    enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0, DEFAULT_PATCH_SIZE = 31 };
+    enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
 
     /** default constructor */
-    CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS,
-                 unsigned int first_level = DEFAULT_FIRST_LEVEL, int patch_size = DEFAULT_PATCH_SIZE) :
+    CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS, int edge_threshold = 31,
+                 unsigned int first_level = DEFAULT_FIRST_LEVEL) :
       scale_factor_(scale_factor), n_levels_(n_levels), first_level_(first_level >= n_levels ? 0 : first_level),
-          patch_size_(patch_size)
+      edge_threshold_(edge_threshold)
     {
+      // No other patch size is supported right now
+      patch_size_ = 31;
     }
     void read(const FileNode& fn);
     void write(FileStorage& fs) const;
@@ -440,6 +442,11 @@ public:
      * if 1, that means we will also look at the image scale_factor_ times bigger
      */
     unsigned int first_level_;
+    /** How far from the boundary the points should be */
+    int edge_threshold_;
+
+    friend class ORB;
+  protected:
     /** The size of the patch that will be used for orientation and comparisons */
     int patch_size_;
   };

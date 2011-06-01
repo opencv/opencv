@@ -469,16 +469,17 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   params_(detector_params), n_features_(n_features)
 {
   // fill the extractors and descriptors for the corresponding scales
-  int n_desired_features_per_scale = cvRound(
-                                             n_features / ((1.0 / std::pow(params_.scale_factor_,
-                                                                           2.f * params_.n_levels_) - 1) / (1.0
-                                                 / std::pow(params_.scale_factor_, 2) - 1)));
+  float factor = 1.0 / params_.scale_factor_ / params_.scale_factor_;
+  int n_desired_features_per_scale = cvRound(n_features / ((std::pow(factor, params_.n_levels_) - 1) / (factor - 1)));
   n_features_per_level_.resize(detector_params.n_levels_);
   for (unsigned int level = 0; level < detector_params.n_levels_; level++)
   {
     n_features_per_level_[level] = n_desired_features_per_scale;
-    n_desired_features_per_scale = cvRound(n_desired_features_per_scale / std::pow(params_.scale_factor_, 2));
+    n_desired_features_per_scale = cvRound(n_desired_features_per_scale * factor);
   }
+
+  // Make sure we forget about what is too close to the boundary
+  params_.edge_threshold_ = std::max(params_.edge_threshold_, params_.patch_size_ + kKernelWidth / 2 + 2);
 
   // pre-compute the end of a row in a circular patch
   half_patch_size_ = params_.patch_size_ / 2;
@@ -563,12 +564,16 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
   }
 
   // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
-  std::vector<std::vector<cv::KeyPoint> > all_keypoints;
+  std::vector < std::vector<cv::KeyPoint> > all_keypoints;
   if (do_keypoints)
+    // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
     computeKeyPoints(image_pyramid, mask_pyramid, all_keypoints);
   else
   {
-    // Cluster the input keypoints
+    // Remove keypoints very close to the border
+    cv::KeyPointsFilter::runByImageBorder(keypoints_in_out, image.size(), params_.edge_threshold_);
+
+    // Cluster the input keypoints depending on the level they were computed at
     all_keypoints.resize(params_.n_levels_);
     for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints_in_out.begin(), keypoint_end = keypoints_in_out.end(); keypoint
         != keypoint_end; ++keypoint)
@@ -651,6 +656,9 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
   std::vector<cv::KeyPoint> all_keypoints;
   all_keypoints.reserve(2 * n_features_);
 
+  // half_patch_size_ for orientation, 4 for Harris
+  unsigned int edge_threshold = std::max(std::max(half_patch_size_, 4), params_.edge_threshold_);
+
   for (unsigned int level = 0; level < params_.n_levels_; ++level)
   {
     all_keypoints_out[level].reserve(n_features_per_level_[level]);
@@ -662,9 +670,8 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
     fd.detect(image_pyramid[level], keypoints, mask_pyramid[level]);
 
     // Remove keypoints very close to the border
-    // half_patch_size_ for orientation, 4 for Harris
-    unsigned int border_safety = std::max(half_patch_size_, 4);
-    cv::KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), border_safety);
+    cv::KeyPointsFilter::runByImageBorder(keypoints, image_pyramid[level].size(), edge_threshold);
+
     // Keep more points than necessary as FAST does not give amazing corners
     cull(keypoints, 2 * n_features_per_level_[level]);
 
@@ -816,10 +823,6 @@ void ORB::computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image
   cv::Mat gray_image = image;
   if (image.type() != CV_8UC1)
     cv::cvtColor(image, gray_image, CV_BGR2GRAY);
-
-  int border_safety = params_.patch_size_ + kKernelWidth / 2 + 2;
-  //Remove keypoints very close to the border
-  cv::KeyPointsFilter::runByImageBorder(keypoints, image.size(), border_safety);
 
   // Get the patterns to apply
   OrbPatterns* patterns = patterns_[level];
