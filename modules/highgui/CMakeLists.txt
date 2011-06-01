@@ -360,7 +360,7 @@ install(FILES ${highgui_ext_hdrs}
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
                     "${CMAKE_CURRENT_BINARY_DIR}")
 
-set(test_deps opencv_ts opencv_highgui)
+set(test_deps opencv_ts opencv_highgui opencv_imgproc)
 
 foreach(d ${test_deps})
     if(${d} MATCHES "opencv_")
