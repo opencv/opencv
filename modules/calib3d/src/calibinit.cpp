@@ -1912,6 +1912,16 @@ bool cv::findChessboardCorners( const InputArray& _image, Size patternSize,
     return ok;
 }
 
+namespace
+{
+int quiet_error(int status, const char* func_name,
+                                       const char* err_msg, const char* file_name,
+                                       int line, void* userdata )
+{
+  return 0;
+}
+}
+
 void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
                             const InputArray& _corners,
                             bool patternWasFound )
@@ -1972,14 +1982,21 @@ bool cv::findCirclesGrid( const InputArray& _image, Size patternSize,
       centers.clear();
       CirclesGridFinder boxFinder(patternSize, points, parameters);
       bool isFound = false;
+#define BE_QUIET 1
+#if BE_QUIET
+      redirectError(quiet_error);
+#endif
       try
       {
         isFound = boxFinder.findHoles();
       }
       catch (cv::Exception)
       {
-      }
 
+      }
+#if BE_QUIET
+      redirectError(0);
+#endif
       if (isFound)
       {
       	switch(parameters.gridType)
