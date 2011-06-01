@@ -72,7 +72,7 @@ namespace
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
+bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
@@ -83,13 +83,13 @@ CV_EXPORTS bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::has(int major, int minor)
+bool cv::gpu::TargetArchs::has(int major, int minor)
 {
     return hasPtx(major, minor) || hasBin(major, minor);
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
+bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
@@ -101,7 +101,7 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasBin(int major, int minor)
+bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
@@ -113,7 +113,7 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
+bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, 
@@ -126,14 +126,14 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
+bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
 {
     return hasEqualOrGreaterPtx(major, minor) ||
            hasEqualOrGreaterBin(major, minor);
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
+bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, 
@@ -146,7 +146,7 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 }
 
 
-CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
+bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
 #if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, 
@@ -161,9 +161,10 @@ CV_EXPORTS bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 
 #if !defined (HAVE_CUDA)
 
-CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
-CV_EXPORTS void cv::gpu::setDevice(int) { throw_nogpu(); } 
-CV_EXPORTS int cv::gpu::getDevice() { throw_nogpu(); return 0; } 
+int cv::gpu::getCudaEnabledDeviceCount() { return 0; }
+void cv::gpu::setDevice(int) { throw_nogpu(); } 
+int cv::gpu::getDevice() { throw_nogpu(); return 0; }
+void cv::gpu::resetDevice() { throw_nogpu(); }
 size_t cv::gpu::DeviceInfo::freeMemory() const { throw_nogpu(); return 0; }
 size_t cv::gpu::DeviceInfo::totalMemory() const { throw_nogpu(); return 0; }
 bool cv::gpu::DeviceInfo::supports(cv::gpu::FeatureSet) const { throw_nogpu(); return false; }
@@ -173,7 +174,7 @@ void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount()
+int cv::gpu::getCudaEnabledDeviceCount()
 {
     int count;
     cudaSafeCall( cudaGetDeviceCount( &count ) );
@@ -181,17 +182,23 @@ CV_EXPORTS int cv::gpu::getCudaEnabledDeviceCount()
 }
 
 
-CV_EXPORTS void cv::gpu::setDevice(int device)
+void cv::gpu::setDevice(int device)
 {
     cudaSafeCall( cudaSetDevice( device ) );
 }
 
 
-CV_EXPORTS int cv::gpu::getDevice()
+int cv::gpu::getDevice()
 {
     int device;    
     cudaSafeCall( cudaGetDevice( &device ) );
     return device;
+}
+
+
+void cv::gpu::resetDevice()
+{
+    cudaSafeCall( cudaDeviceReset() );
 }
 
 

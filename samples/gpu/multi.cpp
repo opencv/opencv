@@ -36,8 +36,6 @@ using namespace cv::gpu;
 
 struct Worker { void operator()(int device_id) const; };
 
-MultiGpuManager multi_gpu_mgr;
-
 int main()
 {
     int num_devices = getCudaEnabledDeviceCount();
@@ -58,8 +56,6 @@ int main()
         }
     }
 
-    multi_gpu_mgr.init();
-
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
     parallel_do(devices, devices + 2, Worker());
@@ -70,7 +66,7 @@ int main()
 
 void Worker::operator()(int device_id) const
 {
-    multi_gpu_mgr.gpuOn(device_id);
+    setDevice(device_id);
 
     Mat src(1000, 1000, CV_32F);
     Mat dst;
@@ -95,8 +91,6 @@ void Worker::operator()(int device_id) const
     // after context is extracted from the stack
     d_src.release();
     d_dst.release();
-
-    multi_gpu_mgr.gpuOff();
 }
 
 #endif

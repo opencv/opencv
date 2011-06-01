@@ -64,6 +64,10 @@ namespace cv
         CV_EXPORTS void setDevice(int device);
         CV_EXPORTS int getDevice();
 
+        //! Explicitly destroys and cleans up all resources associated with the current device in the current process. 
+        //! Any subsequent API call to this device will reinitialize the device.
+        CV_EXPORTS void resetDevice();
+
         enum FeatureSet
         {
             FEATURE_SET_COMPUTE_10 = 10,
@@ -130,34 +134,6 @@ namespace cv
             int multi_processor_count_;
             int majorVersion_;
             int minorVersion_;
-        };
-
-        /////////////////////////// Multi GPU Manager //////////////////////////////
-
-        // Provides functionality for working with many GPUs
-        class CV_EXPORTS MultiGpuManager
-        {
-        public:
-            MultiGpuManager();
-            ~MultiGpuManager();
-
-            // Must be called before any other GPU calls
-            void init();
-
-            // Makes the given GPU active
-            void gpuOn(int gpu_id);
-
-            // Finishes the piece of work on the current GPU
-            void gpuOff();
-
-            static const int BAD_GPU_ID = -1;
-
-        private:
-            void operator=(const MultiGpuManager&);
-            MultiGpuManager(const MultiGpuManager&);
-
-            class Impl;
-            Ptr<Impl> impl_;
         };
 
         //////////////////////////////// Error handling ////////////////////////
