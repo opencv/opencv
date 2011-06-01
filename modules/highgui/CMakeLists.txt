@@ -356,7 +356,7 @@ install(FILES ${highgui_ext_hdrs}
 
 
 ############################# highgui tests ################################
-
+if(BUILD_TESTS)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
                     "${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -378,6 +378,7 @@ source_group("Include" FILES ${test_hdrs})
 set(the_target "opencv_test_highgui")
 
 add_executable(${the_target} ${test_srcs} ${test_hdrs})
+endif(BUILD_TETSTS)
 
 if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
     set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
