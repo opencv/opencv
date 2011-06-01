@@ -95,9 +95,9 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
     #endif
         for( ; j < size.width; j++ )
         {
-            double a = cov[j*3]*0.5;
-            double b = cov[j*3+1];
-            double c = cov[j*3+2]*0.5;
+            float a = cov[j*3]*0.5f;
+            float b = cov[j*3+1];
+            float c = cov[j*3+2]*0.5f;
             dst[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
         }
     }
@@ -144,7 +144,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
                 b = _mm_movehl_ps(b, t);
                 t = _mm_add_ps(a, c);
                 a = _mm_sub_ps(_mm_mul_ps(a, c), _mm_mul_ps(b, b));
-                t = _mm_mul_ps(_mm_mul_ps(t, t), k4);
+                t = _mm_mul_ps(_mm_mul_ps(k4, t), t);
                 a = _mm_sub_ps(a, t);
                 _mm_storeu_ps(dst + j, a);
             }
@@ -153,9 +153,9 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
 
         for( ; j < size.width; j++ )
         {
-            double a = cov[j*3];
-            double b = cov[j*3+1];
-            double c = cov[j*3+2];
+            float a = cov[j*3];
+            float b = cov[j*3+1];
+            float c = cov[j*3+2];
             dst[j] = (float)(a*c - b*b - k*(a + c)*(a + c));
         }
     }
@@ -362,8 +362,8 @@ void cv::preCornerDetect( const InputArray& _src, OutputArray _dst, int ksize, i
         
         for( j = 0; j < size.width; j++ )
         {
-            double dx = dxdata[j];
-            double dy = dydata[j];
+            float dx = dxdata[j];
+            float dy = dydata[j];
             dstdata[j] = (float)(factor*(dx*dx*d2ydata[j] + dy*dy*d2xdata[j] - 2*dx*dy*dxydata[j]));
         }
     }
