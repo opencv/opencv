@@ -357,28 +357,30 @@ install(FILES ${highgui_ext_hdrs}
 
 ############################# highgui tests ################################
 if(BUILD_TESTS)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
-                    "${CMAKE_CURRENT_BINARY_DIR}")
 
-set(test_deps opencv_ts opencv_highgui opencv_imgproc)
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
+                      "${CMAKE_CURRENT_BINARY_DIR}")
 
-foreach(d ${test_deps})
-    if(${d} MATCHES "opencv_")
-        string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-        include_directories("${d_dir}/include")
-    endif()
-endforeach()
+  set(test_deps opencv_ts opencv_highgui opencv_imgproc)
 
-file(GLOB test_srcs "test/*.cpp")
-file(GLOB test_hdrs "test/*.h*")
+  foreach(d ${test_deps})
+      if(${d} MATCHES "opencv_")
+          string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+          include_directories("${d_dir}/include")
+      endif()
+  endforeach()
 
-source_group("Src" FILES ${test_srcs})
-source_group("Include" FILES ${test_hdrs})
+  file(GLOB test_srcs "test/*.cpp")
+  file(GLOB test_hdrs "test/*.h*")
 
-set(the_target "opencv_test_highgui")
+  source_group("Src" FILES ${test_srcs})
+  source_group("Include" FILES ${test_hdrs})
 
-add_executable(${the_target} ${test_srcs} ${test_hdrs})
-endif(BUILD_TETSTS)
+  set(the_target "opencv_test_highgui")
+
+  add_executable(${the_target} ${test_srcs} ${test_hdrs})
+
+endif(BUILD_TESTS)
 
 if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
     set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
