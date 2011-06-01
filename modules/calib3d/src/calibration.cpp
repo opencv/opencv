@@ -789,28 +789,42 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         /*!CV_IS_MAT(distCoeffs) ||*/ !CV_IS_MAT(imagePoints) )
         CV_Error( CV_StsBadArg, "One of required arguments is not a valid matrix" );
 
-    count = MAX(objectPoints->rows, objectPoints->cols);
+    int total = objectPoints->rows * objectPoints->cols * CV_MAT_CN(objectPoints->type);
+    if(total % 3 != 0)
+    {
+        //we have stopped support of homogeneous coordinates because it cause ambiguity in interpretation of the input data
+        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+    }
+    count = total / 3;
 
-    if( CV_IS_CONT_MAT(objectPoints->type) && CV_MAT_DEPTH(objectPoints->type) == CV_64F &&
+    if( CV_IS_CONT_MAT(objectPoints->type) &&
+        (CV_MAT_DEPTH(objectPoints->type) == CV_32F || CV_MAT_DEPTH(objectPoints->type) == CV_64F)&&
         ((objectPoints->rows == 1 && CV_MAT_CN(objectPoints->type) == 3) ||
         (objectPoints->rows == count && CV_MAT_CN(objectPoints->type)*objectPoints->cols == 3)))
     {
-        matM = cvCloneMat(objectPoints);
+        matM = cvCreateMat( objectPoints->rows, objectPoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(objectPoints->type)) );
+        cvConvert(objectPoints, matM);
     }
     else
     {
-        matM = cvCreateMat( 1, count, CV_64FC3 );
-        cvConvertPointsHomogeneous( objectPoints, matM );
+//        matM = cvCreateMat( 1, count, CV_64FC3 );
+//        cvConvertPointsHomogeneous( objectPoints, matM );
+        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
     }
 
-    if( CV_IS_CONT_MAT(imagePoints->type) && CV_MAT_DEPTH(imagePoints->type) == CV_64F &&
+    if( CV_IS_CONT_MAT(imagePoints->type) &&
+        (CV_MAT_DEPTH(imagePoints->type) == CV_32F || CV_MAT_DEPTH(imagePoints->type) == CV_64F) &&
         ((imagePoints->rows == 1 && CV_MAT_CN(imagePoints->type) == 2) ||
         (imagePoints->rows == count && CV_MAT_CN(imagePoints->type)*imagePoints->cols == 2)))
     {
-        _m = cvCloneMat(imagePoints);
+        _m = cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) );
+        cvConvert(imagePoints, _m);
     }
     else
-        _m = cvCreateMat( 1, count, CV_64FC2 );
+    {
+//        _m = cvCreateMat( 1, count, CV_64FC2 );
+        CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
+    }
 
     M = (CvPoint3D64f*)matM->data.db;
     m = (CvPoint2D64f*)_m->data.db;
@@ -1108,7 +1122,8 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
     }
 
     if( _m != imagePoints )
-        cvConvertPointsHomogeneous( _m, imagePoints );
+        cvConvert( _m, imagePoints );
+
     if( _dpdr != dpdr )
         cvConvert( _dpdr, dpdr );
     
