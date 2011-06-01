@@ -457,6 +457,9 @@ public:
    */
   ORB(size_t n_features = 500, const CommonParams & detector_params = CommonParams());
 
+  /** destructor to empty the patterns */
+  ~ORB();
+
   /** returns the descriptor size in bytes */
   int descriptorSize() const;
 
