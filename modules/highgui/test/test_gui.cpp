@@ -40,7 +40,9 @@
 //
 //M*/
 
-#include "cvtest.h"
+#include "test_precomp.hpp"
+
+#if 0
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -103,5 +105,6 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 }
 
 CV_HighGuiOnlyGuiTest highGuiOnlyGui_test;
+#endif
 
 

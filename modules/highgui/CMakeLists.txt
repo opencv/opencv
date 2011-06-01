@@ -353,3 +353,63 @@ install(TARGETS ${the_target}
 install(FILES ${highgui_ext_hdrs}
         DESTINATION include/opencv2/highgui
         COMPONENT main)
+
+
+############################# highgui tests ################################
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
+                    "${CMAKE_CURRENT_BINARY_DIR}")
+
+set(test_deps opencv_ts opencv_highgui)
+
+foreach(d ${test_deps})
+    if(${d} MATCHES "opencv_")
+        string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+        include_directories("${d_dir}/include")
+    endif()
+endforeach()
+
+file(GLOB test_srcs "test/*.cpp")
+file(GLOB test_hdrs "test/*.h*")
+
+source_group("Src" FILES ${test_srcs})
+source_group("Include" FILES ${test_hdrs})
+
+set(the_target "opencv_test_highgui")
+
+add_executable(${the_target} ${test_srcs} ${test_hdrs})
+
+if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
+    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
+    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
+        if(${CMAKE_GENERATOR} MATCHES "Visual*")
+            set(${the_target}_pch "test/test_precomp.cpp")
+        endif()            
+        add_native_precompiled_header(${the_target} ${pch_header})
+    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
+        add_precompiled_header(${the_target} ${pch_header})
+    endif()
+endif()
+
+# Additional target properties
+set_target_properties(${the_target} PROPERTIES
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+    )
+	
+if(ENABLE_SOLUTION_FOLDERS)
+	set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+endif()	
+
+add_dependencies(${the_target} ${test_deps})
+
+# Add the required libraries for linking:
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
+
+enable_testing()
+get_target_property(LOC ${the_target} LOCATION)
+add_test(${the_target} "${LOC}")
+
+if(WIN32)
+    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+endif()

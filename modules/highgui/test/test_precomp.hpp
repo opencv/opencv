@@ -3,7 +3,7 @@
 
 #include "opencv2/ts/ts.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/core/imgproc_c.h"
+#include "opencv2/imgproc/imgproc_c.h"
 #include <iostream>
 
 #endif

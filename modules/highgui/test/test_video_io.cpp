@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#if 0
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -307,6 +309,8 @@ void CV_HighGuiTest::run( int /*start_from */)
 }
 CV_HighGuiTest HighGui_test;
 
+
+#endif
 
 #endif
 

@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+#if 0
+
 using namespace cv;
 
 //#define DRAW_TEST_IMAGE
@@ -408,3 +410,5 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
 
 CV_DrawingTest_CPP drawing_test_cpp;
 CV_DrawingTest_C drawing_test_c;
+
+#endif
