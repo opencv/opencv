@@ -49,7 +49,7 @@
 
 #if ENABLE_LOG
   #include <iostream>
-  #define LOG(msg) std::cout << msg;
+  #define LOG(msg) { std::cout << msg; std::cout.flush(); }
 #else
   #define LOG(msg)
 #endif
