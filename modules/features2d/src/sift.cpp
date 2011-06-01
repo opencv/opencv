@@ -1450,10 +1450,10 @@ SIFT::DescriptorParams SIFT::getDescriptorParams () const
 
 struct SiftParams
 {
-    SiftParams( int _O, int _S )
+    SiftParams( int argO, int argS )
     {
-        O = _O;
-        S = _S;
+        O = argO;
+        S = argS;
 
         sigma0 = 1.6 * powf(2.0f, 1.0f / S ) ;
 
