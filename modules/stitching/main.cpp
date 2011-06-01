@@ -100,7 +100,7 @@ void printUsage()
         "  --blend_strength <float>\n"
         "      Blending strength from [0,100] range. The default is 5.\n"
         "  --output <result_img>\n"
-        "      The default is 'result.png'.";
+        "      The default is 'result.png'.\n";
 }
 
 
