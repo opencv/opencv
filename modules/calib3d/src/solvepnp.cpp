@@ -48,8 +48,8 @@ void cv::solvePnP( const InputArray& _opoints, const InputArray& _ipoints,
                   OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess )
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
-    int npoints = opoints.checkVector(3, CV_32F);
-    CV_Assert( npoints >= 0 && npoints == ipoints.checkVector(2, CV_32F) );
+    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    CV_Assert( npoints >= 0 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
     
     _rvec.create(3, 1, CV_64F);
     _tvec.create(3, 1, CV_64F);
