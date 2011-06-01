@@ -1872,8 +1872,10 @@ void cv::reduce(const InputArray& _src, OutputArray _dst, int dim, int op, int d
     {
         op = CV_REDUCE_SUM;
         if( sdepth < CV_32S && ddepth < CV_32S )
+        {
             temp.create(dst.rows, dst.cols, CV_32SC(cn));
-        //ddepth = CV_32S;
+            ddepth = CV_32S;
+        }
     }
 
     ReduceFunc func = 0;
