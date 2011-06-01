@@ -578,6 +578,19 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
     for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints_in_out.begin(), keypoint_end = keypoints_in_out.end(); keypoint
         != keypoint_end; ++keypoint)
       all_keypoints[keypoint->octave].push_back(*keypoint);
+
+    // Make sure we rescale the coordinates
+    for (unsigned int level = 0; level < params_.n_levels_; ++level)
+    {
+      if (level == params_.first_level_)
+        continue;
+
+      std::vector<cv::KeyPoint> & keypoints = all_keypoints[level];
+      float scale = 1.0f / std::pow(params_.scale_factor_, float(level - params_.first_level_));
+      for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
+          != keypoint_end; ++keypoint)
+        keypoint->pt *= scale;
+    }
   }
 
   keypoints_in_out.clear();
@@ -593,10 +606,9 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
       // integral image
       computeIntegralImage(working_mat, level, integral_image);
 
-    // Compute the features
+    // Get the features and compute their orientation
     std::vector<cv::KeyPoint> & keypoints = all_keypoints[level];
-    if (do_keypoints)
-      computeOrientation(working_mat, integral_image, level, keypoints);
+    computeOrientation(working_mat, integral_image, level, keypoints);
 
     // Compute the descriptors
     cv::Mat desc;
@@ -653,9 +665,6 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
 {
   all_keypoints_out.resize(params_.n_levels_);
 
-  std::vector<cv::KeyPoint> all_keypoints;
-  all_keypoints.reserve(2 * n_features_);
-
   // half_patch_size_ for orientation, 4 for Harris
   unsigned int edge_threshold = std::max(std::max(half_patch_size_, 4), params_.edge_threshold_);
 
@@ -663,7 +672,7 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
   {
     all_keypoints_out[level].reserve(n_features_per_level_[level]);
 
-    std::vector<cv::KeyPoint> keypoints;
+    std::vector<cv::KeyPoint> & keypoints = all_keypoints_out[level];
 
     // Detect FAST features, 20 is a good threshold
     cv::FastFeatureDetector fd(20, true);
@@ -678,21 +687,14 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
     // Compute the Harris cornerness (better scoring than FAST)
     HarrisResponse h(image_pyramid[level]);
     h(keypoints);
-    //cull to the final desired level, using the new harris scores.
+    //cull to the final desired level, using the new Harris scores.
     cull(keypoints, n_features_per_level_[level]);
 
     // Set the level of the coordinates
     for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
         != keypoint_end; ++keypoint)
       keypoint->octave = level;
-
-    all_keypoints.insert(all_keypoints.end(), keypoints.begin(), keypoints.end());
   }
-
-  // Cluster the keypoints
-  for (std::vector<cv::KeyPoint>::iterator keypoint = all_keypoints.begin(), keypoint_end = all_keypoints.end(); keypoint
-      != keypoint_end; ++keypoint)
-    all_keypoints_out[keypoint->octave].push_back(*keypoint);
 }
 
 /** Compute the ORB keypoint orientations
