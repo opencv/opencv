@@ -1288,8 +1288,6 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
                     double sigma_color, double sigma_space,
                     int borderType )
 {
-    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
-    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
     int cn = src.channels();
     int i, j, k, maxk, radius;
     Size size = src.size();
@@ -1302,6 +1300,9 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
+    
+    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
+    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
 
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
@@ -1389,8 +1390,6 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
                      double sigma_color, double sigma_space,
                      int borderType )
 {
-    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
-    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
     int cn = src.channels();
     int i, j, k, maxk, radius;
     double minValSrc=-1, maxValSrc=1;
@@ -1408,6 +1407,9 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
+    
+    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
+    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
 
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
