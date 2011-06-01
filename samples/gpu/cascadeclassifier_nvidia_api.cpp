@@ -59,14 +59,14 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
 
     if (bHelp)
     {
-        matPrint(canvas, 2, fontColorNV, ostringstream("Space - switch GPU / CPU"));
-        matPrint(canvas, 3, fontColorNV, ostringstream("M - switch OneFace / MultiFace"));
-        matPrint(canvas, 4, fontColorNV, ostringstream("F - toggle rectangles Filter"));
-        matPrint(canvas, 5, fontColorNV, ostringstream("H - toggle hotkeys help"));
+        matPrint(canvas, 2, fontColorNV, (ostringstream&)(ostringstream() << "Space - switch GPU / CPU"));
+        matPrint(canvas, 3, fontColorNV, (ostringstream&)(ostringstream() << "M - switch OneFace / MultiFace"));
+        matPrint(canvas, 4, fontColorNV, (ostringstream&)(ostringstream() << "F - toggle rectangles Filter"));
+        matPrint(canvas, 5, fontColorNV, (ostringstream&)(ostringstream() << "H - toggle hotkeys help"));
     }
     else
     {
-        matPrint(canvas, 2, fontColorNV, ostringstream("H - toggle hotkeys help"));
+        matPrint(canvas, 2, fontColorNV, (ostringstream&)(ostringstream() << "H - toggle hotkeys help"));
     }
 }
 
