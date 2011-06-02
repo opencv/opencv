@@ -127,6 +127,8 @@ protected:
     void  writeTag( WLByteStream& strm, TiffTag tag,
                     TiffFieldType fieldType,
                     int count, int value );
+
+    bool writeLibTiff( const Mat& img, const vector<int>& params );
 };
 
 }

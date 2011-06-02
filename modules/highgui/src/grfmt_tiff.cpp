@@ -321,8 +321,135 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
     strm.putDWord( value );
 }
 
+#ifdef HAVE_TIFF
+bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
+{
+    int channels = img.channels();
+    int width = img.cols, height = img.rows;
+    int depth = img.depth();
 
-bool  TiffEncoder::write( const Mat& img, const vector<int>& )
+    int bitsPerChannel = -1;
+    switch (depth)
+    {
+        case CV_8U:
+        {
+            bitsPerChannel = 8;
+            break;
+        }
+        case CV_16U:
+        {
+            bitsPerChannel = 16;
+            break;
+        }
+        default:
+        {
+            return false;
+        }   
+    }
+    
+    const int bitsPerByte = 8;
+    size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+    int rowsPerStrip = (1 << 13)/fileStep;
+
+    if( rowsPerStrip < 1 )
+        rowsPerStrip = 1;
+
+    if( rowsPerStrip > height )
+        rowsPerStrip = height;
+
+
+    // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
+    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    TIFF* pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+    if (!pTiffHandle)
+    {
+        return false;
+    }
+    
+    // defaults for now, maybe base them on params in the future
+    int   compression  = COMPRESSION_LZW;
+    int   predictor    = PREDICTOR_HORIZONTAL;
+
+    int   colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
+
+    if ( !TIFFSetField(pTiffHandle, TIFFTAG_IMAGEWIDTH, width)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_IMAGELENGTH, height)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_BITSPERSAMPLE, bitsPerChannel)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_COMPRESSION, compression)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_PHOTOMETRIC, colorspace)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_SAMPLESPERPIXEL, channels)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_ROWSPERSTRIP, rowsPerStrip)
+      || !TIFFSetField(pTiffHandle, TIFFTAG_PREDICTOR, predictor)
+       )
+    {
+        TIFFClose(pTiffHandle);
+        return false;
+    }
+
+    // row buffer, because TIFFWriteScanline modifies the original data!
+    size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
+    AutoBuffer<uchar,1024> _buffer(scanlineSize+32);
+    uchar* buffer = _buffer;
+    if (!buffer)
+    {
+        TIFFClose(pTiffHandle);
+        return false;
+    }
+
+    for (int y = 0; y < height; ++y)
+    {
+        switch(channels)
+        {
+            case 1:
+            {
+                memcpy(buffer, img.data + img.step * y, scanlineSize);
+                break;
+            }
+
+            case 3:
+            {
+                if (depth == CV_8U)
+                    icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                else
+                    icvCvt_BGR2RGB_16u_C3R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                break;
+            }
+
+            case 4:
+            {
+                if (depth == CV_8U)
+                    icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
+                else
+                    icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+            }
+
+            default:
+            {
+                TIFFClose(pTiffHandle);
+                return false;
+            }
+        }
+
+        int writeResult = TIFFWriteScanline(pTiffHandle, buffer, y, 0);
+        if (writeResult != 1)
+        {
+            TIFFClose(pTiffHandle);
+            return false;
+        }
+    }
+    
+    TIFFClose(pTiffHandle);
+    return true;
+}
+
+#endif
+
+#ifdef HAVE_TIFF
+bool  TiffEncoder::write( const Mat& img, const vector<int>& params)
+#else
+bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
+#endif
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -341,8 +468,15 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
         if( !strm.open(*m_buf) )
             return false;
     }
-    else if( !strm.open(m_filename) )
-        return false;
+    else 
+    {
+#ifdef HAVE_TIFF
+      return writeLibTiff(img, params);
+#else
+      if( !strm.open(m_filename) )
+          return false;
+#endif
+    }
 
     int rowsPerStrip = (1 << 13)/fileStep;
 
@@ -388,15 +522,22 @@ bool  TiffEncoder::write( const Mat& img, const vector<int>& )
         for( ; y < limit; y++ )
         {
             if( channels == 3 )
+            {
                 if (depth == CV_8U)
                     icvCvt_BGR2RGB_8u_C3R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
                 else
                     icvCvt_BGR2RGB_16u_C3R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
-            else if( channels == 4 )
+            }
+            else
+            {
+              if( channels == 4 )
+              {
                 if (depth == CV_8U)
                     icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
                 else
                     icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+              }
+            }
 
             strm.putBytes( channels > 1 ? buffer : img.data + img.step*y, fileStep );
         }
