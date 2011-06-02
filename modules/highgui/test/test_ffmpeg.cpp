@@ -53,9 +53,13 @@ class CV_FFmpegWriteBigImageTest : public cvtest::BaseTest
 		{
 			try
 			{
+				ts->printf(ts->LOG, "start  reading bit image\n");
 				Mat img = imread(string(ts->get_data_path()) + "readwrite/read.png");
+				ts->printf(ts->LOG, "finish reading bit image\n");
 				if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+				ts->printf(ts->LOG, "start  writing bit image\n");
 				imwrite(string(ts->get_data_path()) + "readwrite/write.png", img);
+				ts->printf(ts->LOG, "finish writing bit image\n");
 			}
 			catch(...)
 			{
@@ -105,6 +109,7 @@ string ext_from_int(int ext)
 	if (ext == 2) return ".bmp";
 	if (ext == 3) return ".pgm";
 	if (ext == 4) return ".tiff";
+	return "";
 }
 
 class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
@@ -129,6 +134,7 @@ class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
 							Mat img_test = imread(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext));
 							CV_Assert(img.size() == img_test.size());
 							CV_Assert(img.type() == img_test.type());
+							ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", depth, num_channels, ext_from_int(ext).c_str());
 							if (countNonZero(img != img_test) != 0)
 								ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
 						}
