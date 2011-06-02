@@ -1113,6 +1113,9 @@ double cv::norm( const InputArray& _src, int normType, const InputArray& _mask )
     
 double cv::norm( const InputArray& _src1, const InputArray& _src2, int normType, const InputArray& _mask )
 {
+    if( normType & CV_RELATIVE )
+        return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
+    
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
     

@@ -49,7 +49,7 @@ using namespace cv;
 class CV_DrawingTest : public cvtest::BaseTest
 {
 public:
-	CV_DrawingTest( const char* testName ){}
+	CV_DrawingTest(){}
 protected:
     void run( int );
 	virtual void draw( Mat& img ) = 0;
@@ -65,14 +65,12 @@ void CV_DrawingTest::run( int )
 	
 	draw( testImg );
 
-#ifdef DRAW_TEST_IMAGE
-	imwrite( filename, testImg );
-#else
 	valImg = imread( filename );
 	if( valImg.empty() )
 	{
-		ts->printf( ts->LOG, "test image can not be read");
-		ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        imwrite( filename, testImg );
+		//ts->printf( ts->LOG, "test image can not be read");
+		//ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
 	}
 	else
 	{
@@ -88,11 +86,10 @@ void CV_DrawingTest::run( int )
 			ts->set_failed_test_info(checkLineIterator( testImg ));
 		}
 	}
-#endif
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-class CV_DrawingTest_CPP : public cvtest::BaseTest
+class CV_DrawingTest_CPP : public CV_DrawingTest
 {
 public:
     CV_DrawingTest_CPP() {}
@@ -241,7 +238,7 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
 	return 0;
 }
 
-class CV_DrawingTest_C : public cvtest::BaseTest
+class CV_DrawingTest_C : public CV_DrawingTest
 {
 public:
     CV_DrawingTest_C() {}
@@ -408,6 +405,6 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
 	return 0;
 }
 
-//TEST(Highgui_Drawing_CPP,    regression) { CV_DrawingTest_CPP test; test.safe_run(); }
-//TEST(Highgui_Drawing_C,      regression) { CV_DrawingTest_C   test; test.safe_run(); }
+TEST(Highgui_Drawing_CPP,    regression) { CV_DrawingTest_CPP test; test.safe_run(); }
+TEST(Highgui_Drawing_C,      regression) { CV_DrawingTest_C   test; test.safe_run(); }
 
