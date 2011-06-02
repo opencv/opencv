@@ -561,7 +561,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
     // Compute the resized image
     if (level != params_.first_level_)
     {
-      float scale = 1 / std::pow(params_.scale_factor_, float(level - params_.first_level_));
+      float scale = 1 / std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
       cv::resize(image, image_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
       if (!mask.empty())
         cv::resize(mask, mask_pyramid[level], cv::Size(), scale, scale, cv::INTER_AREA);
@@ -596,7 +596,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
         continue;
 
       std::vector<cv::KeyPoint> & keypoints = all_keypoints[level];
-      float scale = 1.0f / std::pow(params_.scale_factor_, float(level - params_.first_level_));
+      float scale = 1.0f / std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
       for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
           != keypoint_end; ++keypoint)
         keypoint->pt *= scale;
@@ -628,7 +628,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
     // Copy to the output data
     if (level != params_.first_level_)
     {
-      float scale = std::pow(params_.scale_factor_, float(level - params_.first_level_));
+      float scale = std::pow(params_.scale_factor_, float(level) - float(params_.first_level_));
       for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
           != keypoint_end; ++keypoint)
         keypoint->pt *= scale;
