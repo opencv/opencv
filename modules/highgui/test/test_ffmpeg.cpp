@@ -46,7 +46,7 @@
 using namespace cv;
 using namespace std;
 
-class CV_FFmpegWriteBigImagesTest : public cvtest::BaseTest
+class CV_FFmpegWriteBigImageTest : public cvtest::BaseTest
 {
 	public:
 		void run(int)
@@ -98,6 +98,50 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 		}
 };
 
+string ext_from_int(int ext)
+{
+	if (ext == 0) return ".png";
+	if (ext == 1) return ".jpg";
+	if (ext == 2) return ".bmp";
+	if (ext == 3) return ".pgm";
+	if (ext == 4) return ".tiff";
+}
 
-TEST(Highgui_FFmpeg_WriteBigImage, regression) { CV_FFmpegWriteBigImagesTest test; test.safe_run(); }
-TEST(Highgui_FFmpeg_WriteBigVideo, regression) { CV_FFmpegWriteBigVideoTest  test; test.safe_run(); }
+class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
+{
+	public:
+		void run(int)
+		{
+			try
+			{
+				const int img_r = 640;
+				const int img_c = 480;
+				Size frame_s = Size(img_c, img_r);
+
+				for (size_t ext = 0; ext < 5; ++ext) // 0 - png, 1 - jpg, 2 - bmp, 3 - pgm, 4 - tiff
+				for (size_t k = 1; k <= 3; ++k)
+					for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
+						for (size_t depth = CV_8U; depth <= CV_16U; ++depth)
+						{
+							Mat img(img_r * k, img_c * k, CV_MAKETYPE(depth, num_channels), Scalar::all(0));
+							circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+							imwrite(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), img);
+							Mat img_test = imread(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext));
+							CV_Assert(img.size() == img_test.size());
+							CV_Assert(img.type() == img_test.type());
+							if (countNonZero(img != img_test) != 0)
+								ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
+						}
+			}
+			catch(...)
+			{
+				ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+			}
+			ts->set_failed_test_info(cvtest::TS::OK);
+		}
+};
+
+
+TEST(Highgui_FFmpeg_WriteSequenceImage,    regression) { CV_FFmpegWriteSequenceImageTest test; test.safe_run(); }
+TEST(Highgui_FFmpeg_WriteBigImage,         regression) { CV_FFmpegWriteBigImageTest      test; test.safe_run(); }
+TEST(Highgui_FFmpeg_WriteBigVideo,         regression) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
