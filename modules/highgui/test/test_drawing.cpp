@@ -40,17 +40,16 @@
 //M*/
 
 #include "test_precomp.hpp"
-
-#if 0
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 
 //#define DRAW_TEST_IMAGE
 
-class CV_DrawingTest : public CvTest
+class CV_DrawingTest : public cvtest::BaseTest
 {
 public:
-	CV_DrawingTest( const char* testName ) : CvTest( testName, "drawing funcs" ) {}
+	CV_DrawingTest( const char* testName ){}
 protected:
     void run( int );
 	virtual void draw( Mat& img ) = 0;
@@ -59,7 +58,6 @@ protected:
 
 void CV_DrawingTest::run( int )
 {
-    int code = CvTS::OK;
 	Mat testImg, valImg;
 	const string name = "drawing/image.jpg";
 	string path = ts->get_data_path(), filename;
@@ -73,8 +71,8 @@ void CV_DrawingTest::run( int )
 	valImg = imread( filename );
 	if( valImg.empty() )
 	{
-		ts->printf( CvTS::LOG, "test image can not be read");
-		code = CvTS::FAIL_INVALID_TEST_DATA;
+		ts->printf( ts->LOG, "test image can not be read");
+		ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
 	}
 	else
 	{
@@ -82,22 +80,22 @@ void CV_DrawingTest::run( int )
 		float Eps = 0.9f;
 		if( err > Eps)
 		{
-			ts->printf( CvTS::LOG, "CV_RELATIVE_L1 between testImg and valImg is equal %f (larger than %f)\n", err, Eps );
-			code = CvTS::FAIL_BAD_ACCURACY;
+			ts->printf( ts->LOG, "CV_RELATIVE_L1 between testImg and valImg is equal %f (larger than %f)\n", err, Eps );
+			ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 		}
 		else
 		{
-			code = checkLineIterator( testImg );
+			ts->set_failed_test_info(checkLineIterator( testImg ));
 		}
 	}
 #endif
-    ts->set_failed_test_info( code );
+    ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-class CV_DrawingTest_CPP : public CV_DrawingTest
+class CV_DrawingTest_CPP : public cvtest::BaseTest
 {
 public:
-    CV_DrawingTest_CPP() : CV_DrawingTest( "drawing_cpp" ) {}
+    CV_DrawingTest_CPP() {}
 protected:
 	virtual void draw( Mat& img );
 	virtual int checkLineIterator( Mat& img);
@@ -235,17 +233,18 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
 		float err = (float)norm( v );
 		if( err != 0 )
 		{
-			ts->printf( CvTS::LOG, "LineIterator works incorrect" );
-			return CvTS::FAIL_INVALID_OUTPUT;
+			ts->printf( ts->LOG, "LineIterator works incorrect" );
+			ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
 		}
 	}
-	return CvTS::OK;
+	ts->set_failed_test_info(cvtest::TS::OK);
+	return 0;
 }
 
-class CV_DrawingTest_C : public CV_DrawingTest
+class CV_DrawingTest_C : public cvtest::BaseTest
 {
 public:
-    CV_DrawingTest_C() : CV_DrawingTest( "drawing_c" ) {}
+    CV_DrawingTest_C() {}
 protected:
 	virtual void draw( Mat& img );
 	virtual int checkLineIterator( Mat& img);
@@ -400,15 +399,15 @@ int CV_DrawingTest_C::checkLineIterator( Mat& _img )
 		float err = (float)norm( v );
 		if( err != 0 )
 		{
-			ts->printf( CvTS::LOG, "CvLineIterator works incorrect" );
-			return CvTS::FAIL_INVALID_OUTPUT;
+			ts->printf( ts->LOG, "CvLineIterator works incorrect" );
+			ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
 		}
 		CV_NEXT_LINE_POINT(it);
 	}
-	return CvTS::OK;
+	ts->set_failed_test_info(cvtest::TS::OK);
+	return 0;
 }
 
-CV_DrawingTest_CPP drawing_test_cpp;
-CV_DrawingTest_C drawing_test_c;
+TEST(Highgui_Drawing_CPP,    regression) { CV_DrawingTest_CPP test; test.safe_run(); }
+TEST(Highgui_Drawing_C,      regression) { CV_DrawingTest_C   test; test.safe_run(); }
 
-#endif
