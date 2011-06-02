@@ -78,7 +78,7 @@ protected:
     bool custom_inv_transform;
     int fwd_code, inv_code;
     bool test_cpp;
-    bool hue_channel;
+    int hue_range;
 };
 
 
@@ -98,7 +98,7 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
     fwd_code_str = inv_code_str = 0;
 
     test_cpp = false;
-    hue_channel = false;
+    hue_range = 0;
 }
 
 
@@ -183,17 +183,17 @@ void CV_ColorCvtBaseTest::prepare_to_validation( int /*test_case_idx*/ )
     convert_backward( test_mat[INPUT][0], test_mat[REF_OUTPUT][0],
                       test_mat[REF_OUTPUT][1] );
     int depth = test_mat[REF_OUTPUT][0].depth();
-    if( depth == CV_8U && hue_channel )
+    if( depth == CV_8U && hue_range )
     {
         for( int y = 0; y < test_mat[REF_OUTPUT][0].rows; y++ )
         {
-            const uchar* h0 = test_mat[REF_OUTPUT][0].ptr(y);
+            uchar* h0 = test_mat[REF_OUTPUT][0].ptr(y);
             uchar* h = test_mat[OUTPUT][0].ptr(y);
             
             for( int x = 0; x < test_mat[REF_OUTPUT][0].cols; x++, h0 += 3, h += 3 )
             {
-                if( abs(*h - *h0) == 180 && *h == 0 )
-                    *h = 180;
+                if( abs(*h - *h0) >= hue_range-1 && (*h <= 1 || *h0 <= 1) )
+                    *h = *h0 = 0;
             }
         }
     }
@@ -595,18 +595,32 @@ protected:
 CV_ColorHSVTest::CV_ColorHSVTest() : CV_ColorCvtBaseTest( true, true, false )
 {
     INIT_FWD_INV_CODES( BGR2HSV, HSV2BGR );
-    hue_channel = true;
+    hue_range = 180;
 }
 
 
 void CV_ColorHSVTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
+    RNG& rng = ts->get_rng();
 
-    if( blue_idx == 0 )
-        fwd_code = CV_BGR2HSV, inv_code = CV_HSV2BGR;
+    bool full_hrange = (rng.next() & 256) != 0;
+    if( full_hrange )
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_BGR2HSV_FULL, inv_code = CV_HSV2BGR_FULL;
+        else
+            fwd_code = CV_RGB2HSV_FULL, inv_code = CV_HSV2RGB_FULL;
+        hue_range = 256;
+    }
     else
-        fwd_code = CV_RGB2HSV, inv_code = CV_HSV2RGB;
+    {
+        if( blue_idx == 0 )
+            fwd_code = CV_BGR2HSV, inv_code = CV_HSV2BGR;
+        else
+            fwd_code = CV_RGB2HSV, inv_code = CV_HSV2RGB;
+        hue_range = 180;
+    }
 }
 
 
@@ -620,7 +634,7 @@ double CV_ColorHSVTest::get_success_error_level( int /*test_case_idx*/, int i, i
 void CV_ColorHSVTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* dst_row, int n )
 {
     int depth = test_mat[INPUT][0].depth();
-    float h_scale = depth == CV_8U ? 30.f : 60.f;
+    float h_scale = depth == CV_8U ? hue_range*30.f/180 : 60.f;
     float scale = depth == CV_8U ? 255.f : depth == CV_16U ? 65535.f : 1.f;
     int j;
 
@@ -659,7 +673,7 @@ void CV_ColorHSVTest::convert_row_bgr2abc_32f_c3( const float* src_row, float* d
 void CV_ColorHSVTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* dst_row, int n )
 {
     int depth = test_mat[INPUT][0].depth();
-    float h_scale = depth == CV_8U ? 1.f/30 : 1.f/60;
+    float h_scale = depth == CV_8U ? 180/(hue_range*30.f) : 1.f/60;
     float scale = depth == CV_8U ? 1.f/255 : depth == CV_16U ? 1.f/65535 : 1;
     int j;
 
@@ -720,7 +734,7 @@ protected:
 CV_ColorHLSTest::CV_ColorHLSTest() : CV_ColorCvtBaseTest( true, true, false )
 {
     INIT_FWD_INV_CODES( BGR2HLS, HLS2BGR );
-    hue_channel = true;
+    hue_range = 180;
 }
 
 
@@ -1634,12 +1648,12 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-TEST(Imgcore_ColorGray, accuracy) { CV_ColorGrayTest test; test.safe_run(); }
-TEST(Imgcore_ColorYCrCb, accuracy) { CV_ColorYCrCbTest test; test.safe_run(); }
-TEST(Imgcore_ColorHSV, accuracy) { CV_ColorHSVTest test; test.safe_run(); }
-TEST(Imgcore_ColorHLS, accuracy) { CV_ColorHLSTest test; test.safe_run(); }
-TEST(Imgcore_ColorXYZ, accuracy) { CV_ColorXYZTest test; test.safe_run(); }
-TEST(Imgcore_ColorLab, accuracy) { CV_ColorLabTest test; test.safe_run(); }
-TEST(Imgcore_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
-TEST(Imgcore_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
-TEST(Imgcore_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
+TEST(Imgproc_ColorGray, accuracy) { CV_ColorGrayTest test; test.safe_run(); }
+TEST(Imgproc_ColorYCrCb, accuracy) { CV_ColorYCrCbTest test; test.safe_run(); }
+TEST(Imgproc_ColorHSV, accuracy) { CV_ColorHSVTest test; test.safe_run(); }
+TEST(Imgproc_ColorHLS, accuracy) { CV_ColorHLSTest test; test.safe_run(); }
+TEST(Imgproc_ColorXYZ, accuracy) { CV_ColorXYZTest test; test.safe_run(); }
+TEST(Imgproc_ColorLab, accuracy) { CV_ColorLabTest test; test.safe_run(); }
+TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
+TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
+TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
