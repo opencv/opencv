@@ -43,6 +43,11 @@
 #ifndef __OPENCV_GPU_DEVMEM2D_HPP__
 #define __OPENCV_GPU_DEVMEM2D_HPP__
 
+#if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)
+    #include "thrust/device_ptr.h"
+#endif
+
+
 namespace cv
 {    
     namespace gpu
@@ -55,6 +60,7 @@ namespace cv
 #else
     #define __CV_GPU_HOST_DEVICE__
 #endif
+
         template <bool expr> struct StaticAssert;
         template <> struct StaticAssert<true> {static __CV_GPU_HOST_DEVICE__ void check(){}};        
         
@@ -80,6 +86,11 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step ); }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step ); }            
+
+#if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)    
+            thrust::device_ptr<T> begin() const { return thrust::device_ptr<T>(data); }
+            thrust::device_ptr<T> end() const { return thrust::device_ptr<T>(data) + cols * rows; }
+#endif
         };
  
         template<typename T> struct PtrStep_
@@ -96,10 +107,12 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step); }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step); }
-        };
 
-        
-       
+#if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)    
+            thrust::device_ptr<T> begin() const { return thrust::device_ptr<T>(data); }
+#endif
+        };
+               
         template<typename T> struct PtrElemStep_ : public PtrStep_<T>
         {                   
             PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep_<T>(mem) 
