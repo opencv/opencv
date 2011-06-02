@@ -545,11 +545,15 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints_in_out,
+void ORB::operator()(const cv::Mat &image_in, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints_in_out,
                      cv::Mat & descriptors, bool do_keypoints, bool do_descriptors)
 {
   if ((!do_keypoints) && (!do_descriptors))
     return;
+
+  cv::Mat image;
+  if (image_in.type() != CV_8UC1)
+    cvtColor(image_in, image, CV_BGR2GRAY);
 
   if (do_descriptors)
     descriptors.release();
@@ -716,9 +720,6 @@ void ORB::computeKeyPoints(const std::vector<cv::Mat>& image_pyramid, const std:
 void ORB::computeOrientation(const cv::Mat& image, const cv::Mat& integral_image, unsigned int scale,
                              std::vector<cv::KeyPoint>& keypoints) const
 {
-  // If using the integral image, some offsets will be pre-computed for speed
-  std::vector<int> horizontal_offsets(8 * half_patch_size_), vertical_offsets(8 * half_patch_size_);
-
   // Process each keypoint
   for (std::vector<cv::KeyPoint>::iterator keypoint = keypoints.begin(), keypoint_end = keypoints.end(); keypoint
       != keypoint_end; ++keypoint)
