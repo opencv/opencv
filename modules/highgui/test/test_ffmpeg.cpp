@@ -53,7 +53,7 @@ class CV_FFmpegWriteBigImagesTest : public cvtest::BaseTest
 		{
 			try
 			{
-				Mat img = imread(string(ts->get_data_path()) + "readwrite/read.png", 0);
+				Mat img = imread(string(ts->get_data_path()) + "readwrite/read.png");
 				if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
 				imwrite(string(ts->get_data_path()) + "readwrite/write.png", img);
 			}
