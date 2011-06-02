@@ -108,7 +108,6 @@ ImageDecoder TiffDecoder::newDecoder() const
 
 bool TiffDecoder::readHeader()
 {
-    char errmsg[1024];
     bool result = false;
 
     close();
@@ -119,8 +118,7 @@ bool TiffDecoder::readHeader()
         int width = 0, height = 0, photometric = 0;
         m_tif = tif;
 
-        if( TIFFRGBAImageOK( tif, errmsg ) &&
-            TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &width ) &&
+        if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &width ) &&
             TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &height ) &&
             TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
@@ -134,7 +132,26 @@ bool TiffDecoder::readHeader()
                ((photometric != 2 && photometric != 1) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
-            m_type = CV_MAKETYPE(bpp > 8 ? CV_16U : CV_8U, photometric > 1 ? 3 : 1);
+
+            switch(bpp)
+            {
+                case 8:
+                    m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? 3 : 1);
+                    break;
+                case 16:
+                    m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? 3 : 1);
+                    break;
+
+                case 32:
+                    m_type = CV_MAKETYPE(CV_32F, photometric > 1 ? 3 : 1);
+                    break;
+                case 64:
+                    m_type = CV_MAKETYPE(CV_64F, photometric > 1 ? 3 : 1);
+                    break;
+
+                default:
+                    result = false;
+            }
             result = true;
         }
     }
@@ -153,7 +170,7 @@ bool  TiffDecoder::readData( Mat& img )
     uchar* data = img.data;
     int step = (int)img.step;
     
-    if( img.depth() != CV_8U && img.depth() != CV_16U )
+    if( img.depth() != CV_8U && img.depth() != CV_16U && img.depth() != CV_32F && img.depth() != CV_64F )
         return false;
 
     if( m_tif && m_width && m_height )
@@ -167,7 +184,18 @@ bool  TiffDecoder::readData( Mat& img )
         int bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
-        int dst_bpp = img.depth() == CV_8U ? 8 : 16;
+        const int bitsPerByte = 8;
+        int dst_bpp = img.elemSize1() * bitsPerByte;
+
+        if(dst_bpp == 8)
+        {
+            char errmsg[1024];
+            if(!TIFFRGBAImageOK( tif, errmsg ))
+            {
+                close();
+                return false;
+            }
+        }
 
         if( (!is_tiled &&
             TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 )) ||
@@ -184,6 +212,8 @@ bool  TiffDecoder::readData( Mat& img )
             AutoBuffer<uchar> _buffer(tile_height0*tile_width0*8);
             uchar* buffer = _buffer;
             ushort* buffer16 = (ushort*)buffer;
+            float* buffer32 = (float*)buffer;
+            double* buffer64 = (double*)buffer;
             int tileidx = 0;
 
             for( y = 0; y < m_height; y += tile_height0, data += step*tile_height0 )
@@ -200,82 +230,126 @@ bool  TiffDecoder::readData( Mat& img )
                     if( x + tile_width > m_width )
                         tile_width = m_width - x;
 
-                    if( dst_bpp == 8 )
+                    switch(dst_bpp)
                     {
-                        if( !is_tiled )
-                            ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
-                        else
-                            ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
-                        
-                        if( !ok )
+                        case 8:
+                        {
+                            if( !is_tiled )
+                                ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
+                            else
+                                ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
+
+                            if( !ok )
+                            {
+                                close();
+                                return false;
+                            }
+
+                            for( i = 0; i < tile_height; i++ )
+                                if( color )
+                                    icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                                             data + x*3 + step*(tile_height - i - 1), 0,
+                                                             cvSize(tile_width,1), 2 );
+                                else
+                                    icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
+                                                              data + x + step*(tile_height - i - 1), 0,
+                                                              cvSize(tile_width,1), 2 );
+                            break;
+                        }
+
+                        case 16:
+                        {
+                            if( !is_tiled )
+                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
+                            else
+                                ok = (int)TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
+
+                            if( !ok )
+                            {
+                                close();
+                                return false;
+                            }
+
+                            for( i = 0; i < tile_height; i++ )
+                            {
+                                if( color )
+                                {
+                                    if( ncn == 1 )
+                                    {
+                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
+                                                                  (ushort*)(data + step*i) + x*3, 0,
+                                                                  cvSize(tile_width,1) );
+                                    }
+                                    else if( ncn == 3 )
+                                    {
+                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
+                                                               (ushort*)(data + step*i) + x*3, 0,
+                                                               cvSize(tile_width,1) );
+                                    }
+                                    else
+                                    {
+                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
+                                                               (ushort*)(data + step*i) + x*3, 0,
+                                                               cvSize(tile_width,1), 2 );
+                                    }
+                                }
+                                else
+                                {
+                                    if( ncn == 1 )
+                                    {
+                                        memcpy((ushort*)(data + step*i)+x,
+                                               buffer16 + i*tile_width*ncn,
+                                               tile_width*sizeof(buffer16[0]));
+                                    }
+                                    else
+                                    {
+                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width*ncn, 0,
+                                                               (ushort*)(data + step*i) + x, 0,
+                                                               cvSize(tile_width,1), ncn, 2 );
+                                    }
+                                }
+                            }
+                            break;
+                        }
+
+                        case 32:
+                        case 64:
+                        {
+                            if( !is_tiled )
+                                ok = (int)TIFFReadEncodedStrip( tif, tileidx, buffer, (tsize_t)-1 ) >= 0;
+                            else
+                                ok = (int)TIFFReadEncodedTile( tif, tileidx, buffer, (tsize_t)-1 ) >= 0;
+
+                            if( !ok || ncn != 1 )
+                            {
+                                close();
+                                return false;
+                            }
+
+                            for( i = 0; i < tile_height; i++ )
+                            {
+                                if(dst_bpp == 32)
+                                {
+                                    memcpy((float*)(data + step*i)+x,
+                                           buffer32 + i*tile_width*ncn,
+                                           tile_width*sizeof(buffer32[0]));
+                                }
+                                else
+                                {
+                                    memcpy((double*)(data + step*i)+x,
+                                         buffer64 + i*tile_width*ncn,
+                                         tile_width*sizeof(buffer64[0]));
+                                }
+                            }
+
+                            break;
+                        }
+                        default:
                         {
                             close();
                             return false;
                         }
-                        
-                        for( i = 0; i < tile_height; i++ )
-                            if( color )
-                                icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
-                                                         data + x*3 + step*(tile_height - i - 1), 0,
-                                                         cvSize(tile_width,1), 2 );
-                            else
-                                icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
-                                                          data + x + step*(tile_height - i - 1), 0,
-                                                          cvSize(tile_width,1), 2 );
                     }
-                    else
-                    {
-                        if( !is_tiled )
-                            ok = (int)TIFFReadEncodedStrip( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
-                        else
-                            ok = (int)TIFFReadEncodedTile( tif, tileidx, (uint32*)buffer, (tsize_t)-1 ) >= 0;
-                        
-                        if( !ok )
-                        {
-                            close();
-                            return false;
-                        }
-                        
-                        for( i = 0; i < tile_height; i++ )
-                        {
-                            if( color )
-                            {
-                                if( ncn == 1 )
-                                {
-                                    icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
-                                                              (ushort*)(data + step*i) + x*3, 0,
-                                                              cvSize(tile_width,1) );
-                                }
-                                else if( ncn == 3 )
-                                {
-                                    icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
-                                                           (ushort*)(data + step*i) + x*3, 0,
-                                                           cvSize(tile_width,1) );
-                                }
-                                else
-                                {
-                                    icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
-                                                           (ushort*)(data + step*i) + x*3, 0,
-                                                           cvSize(tile_width,1), 2 );
-                                }
-                            }
-                            else
-                            {
-                                if( ncn == 1 )
-                                {
-                                    memcpy((ushort*)(data + step*i)+x,
-                                           buffer16 + i*tile_width*ncn,
-                                           tile_width*sizeof(buffer16[0]));
-                                }
-                                else
-                                {
-                                    icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width*ncn, 0,
-                                                           (ushort*)(data + step*i) + x, 0,
-                                                           cvSize(tile_width,1), ncn, 2 );
-                                }
-                            }
-                        }
-                    } 
                 }
             }
 
