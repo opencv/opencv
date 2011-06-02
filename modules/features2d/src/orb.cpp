@@ -554,6 +554,8 @@ void ORB::operator()(const cv::Mat &image_in, const cv::Mat &mask, std::vector<c
   cv::Mat image;
   if (image_in.type() != CV_8UC1)
     cvtColor(image_in, image, CV_BGR2GRAY);
+  else
+    image = image_in;
 
   if (do_descriptors)
     descriptors.release();
