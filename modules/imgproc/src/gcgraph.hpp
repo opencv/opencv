@@ -97,7 +97,7 @@ template <class TWeight>
 void GCGraph<TWeight>::create( unsigned int vtxCount, unsigned int edgeCount )
 {
     vtcs.reserve( vtxCount );
-    edges.reserve( edgeCount );
+    edges.reserve( edgeCount + 2 );
     flow = 0;
 }
 
@@ -117,6 +117,9 @@ void GCGraph<TWeight>::addEdges( int i, int j, TWeight w, TWeight revw )
     CV_Assert( j>=0 && j<(int)vtcs.size() );
     CV_Assert( w>=0 && revw>=0 );
     CV_Assert( i != j );
+
+    if( !edges.size() )
+        edges.resize( 2 );
 
     Edge fromI, toI;
     fromI.dst = j;

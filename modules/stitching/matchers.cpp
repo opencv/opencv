@@ -257,6 +257,16 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 namespace 
 {
+    class PairLess
+    {
+    public:
+        bool operator()(const pair<int,int>& l, const pair<int,int>& r) const
+        {
+            return l.first < r.first || (l.first == r.first && l.second < r.second);
+        }
+    };
+    typedef set<pair<int,int>,PairLess> MatchesSet;
+
     // These two classes are aimed to find features matches only, not to 
     // estimate homography
 
@@ -288,7 +298,8 @@ namespace
     {
         matches_info.matches.clear();
         FlannBasedMatcher matcher;
-        vector< vector<DMatch> > pair_matches;
+        vector< vector<DMatch> > pair_matches;        
+        MatchesSet matches;
 
         // Find 1->2 matches
         matcher.knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
@@ -299,7 +310,10 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
+            {
                 matches_info.matches.push_back(m0);
+                matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
+            }
         }
 
         // Find 2->1 matches
@@ -312,7 +326,8 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
-                matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
+                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                    matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }
        
@@ -324,6 +339,7 @@ namespace
         descriptors2_.upload(features2.descriptors);
         BruteForceMatcher_GPU< L2<float> > matcher;
         vector< vector<DMatch> > pair_matches;
+        MatchesSet matches;
 
         // Find 1->2 matches
         matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
@@ -335,7 +351,10 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
+            {
                 matches_info.matches.push_back(m0);
+                matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
+            }
         }
 
         // Find 2->1 matches
@@ -349,7 +368,8 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
-                matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
+                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                    matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }
 
