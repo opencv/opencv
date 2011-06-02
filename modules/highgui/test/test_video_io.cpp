@@ -41,64 +41,20 @@
 //M*/
 
 #include "test_precomp.hpp"
-
-#if 0
-
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 using namespace std;
 
-#if defined WIN32 || defined _WIN32
-//#if 0
-    
-#else
-
-#define MARKERS1
-
-#ifdef MARKERS
-	#define marker(x) cout << (x)  << endl
-#else
-	#define marker(x) 
-#endif
-
-struct TempDirHolder
+class CV_HighGuiTest : public cvtest::BaseTest
 {
-	string temp_folder;
-	TempDirHolder()
-    {
-        temp_folder = tempfile();
-        exec_cmd("mkdir " + temp_folder);
-    }	
-	~TempDirHolder() { exec_cmd("rm -rf " + temp_folder); }
-	static void exec_cmd(const string& cmd) { marker(cmd); int res = system( cmd.c_str() ); (void)res; }
-	
-	TempDirHolder& operator=(const TempDirHolder&);
+	protected:
+		void ImagesTest(const string& dir);
+		void VideoTest (const string& dir, int fourcc);
+
+	public:    
+		void run(int);
 };
-
-
-class CV_HighGuiTest : public CvTest
-{
-public:
-    CV_HighGuiTest();
-    ~CV_HighGuiTest();    
-protected:    
-    void run(int);
-	
-	bool ImagesTest(const string& dir, const string& tmp);
-	bool VideoTest(const string& dir, const string& tmp, int fourcc);
-	
-	bool GuiTest(const string& dir, const string& tmp);
-};
-
-CV_HighGuiTest::CV_HighGuiTest(): CvTest( "z-highgui", "?" )
-{
-    support_testing_modes = CvTS::CORRECTNESS_CHECK_MODE;
-}
-CV_HighGuiTest::~CV_HighGuiTest() {}
 
 double PSNR(const Mat& m1, const Mat& m2)
 {		
@@ -106,38 +62,41 @@ double PSNR(const Mat& m1, const Mat& m2)
 	absdiff( m1.reshape(1), m2.reshape(1), tmp);
 	multiply(tmp, tmp, tmp);
 		
-	double MSE =  1.0/(tmp.cols * tmp.rows) * sum(tmp)[0];
+	double MSE = 1.0/(tmp.cols * tmp.rows) * sum(tmp)[0];
 	
 	return 20 * log10(255.0 / sqrt(MSE));	
 }
 
-bool CV_HighGuiTest::ImagesTest(const string& dir, const string& tmp)
+void CV_HighGuiTest::ImagesTest(const string& dir)
 {
-	int code = CvTS::OK;
+	string _name = dir + string("shared/baboon.jpg");
+	ts->printf(ts->LOG, "reading image : %s\n", _name.c_str());
+
 	Mat image = imread(dir + "shared/baboon.jpg");
+	image.convertTo(image, CV_8UC3);
 	
 	if (image.empty())
 	{
-		 ts->set_failed_test_info(CvTS::FAIL_MISSING_TEST_DATA);
-		 return false;
-	}	
-		
-	const string exts[] = {"png", "bmp", "tiff", "jpg", "jp2", "ppm", "ras"};	
+		ts->set_failed_test_info(ts->FAIL_MISSING_TEST_DATA);
+		return;
+	}
+
+	const string exts[] = {"png", "bmp", "tiff", "jpg", "jp2", "ppm", "ras" };	
 	const size_t ext_num = sizeof(exts)/sizeof(exts[0]);	
 	
 	for(size_t i = 0; i < ext_num; ++i)
 	{
-		ts->printf(CvTS::LOG, "ext=%s\n", exts[i].c_str());
         string ext = exts[i];
-		string full_name = tmp + "/img." + ext;
-		marker(exts[i]);	
-		
-		imwrite(full_name, image);			
+		string full_name = dir + "img." + ext;
+		ts->printf(ts->LOG, " full_name : %s\n", full_name.c_str());
+
+		imwrite(full_name, image);
+
 		Mat loaded = imread(full_name);	
 		if (loaded.empty())
 		{
-            ts->printf(CvTS::LOG, "Reading failed at fmt=%s\n", ext.c_str());
-			code = CvTS::FAIL_MISMATCH;
+			ts->printf(ts->LOG, "Reading failed at fmt=%s\n", ext.c_str());
+			ts->set_failed_test_info(ts->FAIL_MISMATCH);
 			continue;
 		}			
 						
@@ -145,62 +104,68 @@ bool CV_HighGuiTest::ImagesTest(const string& dir, const string& tmp)
 		double psnr = PSNR(loaded, image);
 		if (psnr < thresDbell)
 		{
-			ts->printf(CvTS::LOG, "Reading image from file: too big difference (=%g) with fmt=%s\n", psnr, ext.c_str());
-			code = CvTS::FAIL_BAD_ACCURACY;
+			ts->printf(ts->LOG, "Reading image from file: too big difference (=%g) with fmt=%s\n", psnr, ext.c_str());
+			ts->set_failed_test_info(ts->FAIL_BAD_ACCURACY);
 			continue;			
 		}	
 		
+		vector<uchar> from_file;
+
 		FILE *f = fopen(full_name.c_str(), "rb");
 		fseek(f, 0, SEEK_END);
-		size_t len = ftell(f);				
-		vector<uchar> from_file(len);
+		long len = ftell(f);		
+		from_file.resize((size_t)len);
 		fseek(f, 0, SEEK_SET);
-		size_t read = fread(&from_file[0], len, sizeof(vector<uchar>::value_type), f); (void)read;
+		from_file.resize(fread(&from_file[0], 1, from_file.size(), f));
 		fclose(f);
-
-		
+	
 		vector<uchar> buf;		
 		imencode("." + exts[i], image, buf);
 		
 		if (buf != from_file)
 		{
-            ts->printf(CvTS::LOG, "Encoding failed with fmt=%s\n", ext.c_str());
-			code = CvTS::FAIL_MISMATCH;
+            ts->printf(ts->LOG, "Encoding failed with fmt=%s\n", ext.c_str());
+			ts->set_failed_test_info(ts->FAIL_MISMATCH);
 			continue;			
 		}			
 		
 		Mat buf_loaded = imdecode(Mat(buf), 1);
+
 		if (buf_loaded.empty())
 		{
-			ts->printf(CvTS::LOG, "Decoding failed with fmt=%s\n", ext.c_str());
-            code = CvTS::FAIL_MISMATCH;
-			continue;				
+			ts->printf(ts->LOG, "Decoding failed with fmt=%s\n", ext.c_str());
+            ts->set_failed_test_info(ts->FAIL_MISMATCH);
+			continue;			
 		}
-
 		
         psnr = PSNR(buf_loaded, image);
+
 		if (psnr < thresDbell)
 		{
-			ts->printf(CvTS::LOG, "Decoding image from memory: too small PSNR (=%gdb) with fmt=%s\n", psnr, ext.c_str());
-			code = CvTS::FAIL_MISMATCH;
+			ts->printf(ts->LOG, "Decoding image from memory: too small PSNR (=%gdb) with fmt=%s\n", psnr, ext.c_str());
+			ts->set_failed_test_info(ts->FAIL_MISMATCH);
 			continue;			
-		}					
+		}
+		
 	}
-	ts->set_failed_test_info(code);  
-	return code == CvTS::OK;		
+
+	ts->printf(ts->LOG, "end test function : ImagesTest \n");
+	ts->set_failed_test_info(ts->OK);  
 }
 
-bool CV_HighGuiTest::VideoTest(const string& dir, const string& tmp, int fourcc)
+void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 {	
 	string src_file = dir + "shared/video_for_test.avi";		
-	string tmp_name = tmp + "/video.avi";
-		
+	string tmp_name = dir + "video.avi";
+
+	ts->printf(ts->LOG, "reading video : %s\n", src_file.c_str());
+
 	CvCapture* cap = cvCaptureFromFile(src_file.c_str());
 	
 	if (!cap)
 	{
-		ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-		return false;
+		ts->set_failed_test_info(ts->FAIL_MISMATCH);
+		return;
 	}
 	
 	CvVideoWriter* writer = 0;
@@ -208,7 +173,7 @@ bool CV_HighGuiTest::VideoTest(const string& dir, const string& tmp, int fourcc)
     int counter = 0;
 	for(;;)
 	{
-		IplImage* img = cvQueryFrame( cap );
+		IplImage * img = cvQueryFrame( cap );
 
 		if (!img)
 			break;
@@ -218,42 +183,35 @@ bool CV_HighGuiTest::VideoTest(const string& dir, const string& tmp, int fourcc)
 			writer = cvCreateVideoWriter(tmp_name.c_str(), fourcc, 24, cvGetSize(img));					
 			if (writer == 0)
 			{
-				marker("can't craete writer");
+				ts->printf(ts->LOG, "can't create writer\n");
 				cvReleaseCapture( &cap );
-				ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-				return false;				
+				ts->set_failed_test_info(ts->FAIL_MISMATCH);
+				return;				
 			}
 		}
 				
 		cvWriteFrame(writer, img);		
 	}	
-		
 
 	cvReleaseVideoWriter( &writer );	
 	cvReleaseCapture( &cap );
 	
-	marker("mid++");
-	
 	cap = cvCaptureFromFile(src_file.c_str());
-	marker("mid1");
+
 	CvCapture *saved = cvCaptureFromFile(tmp_name.c_str());		
 	if (!saved)
 	{
-		ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-		return false;			
+		ts->set_failed_test_info(ts->FAIL_MISMATCH);
+		return;			
 	}
-
 
 	const double thresDbell = 20;	
 	
-	bool error = false;
     counter = 0;
 	for(;;)
 	{		
-
-		IplImage* ipl = cvQueryFrame( cap );
+		IplImage* ipl  = cvQueryFrame( cap );
 		IplImage* ipl1 = cvQueryFrame( saved );
-
 		
 		if (!ipl || !ipl1)
 			break;
@@ -263,54 +221,35 @@ bool CV_HighGuiTest::VideoTest(const string& dir, const string& tmp, int fourcc)
 				
 		if (PSNR(img1, img) < thresDbell)
 		{		
-			error = true;
+			ts->set_failed_test_info(ts->FAIL_MISMATCH);
 			break;				
 		}			
 	}	
 		
 	cvReleaseCapture( &cap );
 	cvReleaseCapture( &saved );
-		
-	if (error)
-	{
-		ts->set_failed_test_info(CvTS::FAIL_MISMATCH);
-		return false;			
-	}
-	
-	return true;		
+
+	ts->printf(ts->LOG, "end test function : ImagesVideo \n");
 }
 
 
 void CV_HighGuiTest::run( int /*start_from */)
-{	   
-    TempDirHolder th;
-		
-	if (!ImagesTest(ts->get_data_path(), th.temp_folder))
-		return;
-
+{
+	ImagesTest(ts->get_data_path());
+	
 #if defined WIN32 || defined __linux__
-
 #if !defined HAVE_GSTREAMER || defined HAVE_GSTREAMER_APP  
-	if (!VideoTest(ts->get_data_path(), th.temp_folder, CV_FOURCC_DEFAULT))
-		return;	
 
+	VideoTest(ts->get_data_path(), CV_FOURCC_DEFAULT);
 
-	if (!VideoTest(ts->get_data_path(), th.temp_folder, CV_FOURCC('M', 'J', 'P', 'G')))
-		return;
+	VideoTest(ts->get_data_path(), CV_FOURCC('X', 'V', 'I', 'D'));
 
-    
-	if (!VideoTest(ts->get_data_path(), th.temp_folder, CV_FOURCC('M', 'P', 'G', '2')))
-		return;				
+	VideoTest(ts->get_data_path(), CV_FOURCC('M', 'P', 'G', '2'));
+
+	VideoTest(ts->get_data_path(), CV_FOURCC('M', 'J', 'P', 'G'));
 
 #endif
-	//if (!VideoTest(ts->get_data_path(), th.temp_folder, CV_FOURCC('D', 'X', '5', '0')))		return;				
 #endif
-    ts->set_failed_test_info(CvTS::OK);
 }
-CV_HighGuiTest HighGui_test;
 
-
-#endif
-
-#endif
-
+TEST(Highgui_HighGui, regression) { CV_HighGuiTest  test; test.safe_run(); }

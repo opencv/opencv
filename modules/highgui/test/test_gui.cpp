@@ -41,70 +41,46 @@
 //M*/
 
 #include "test_precomp.hpp"
-
-#if 0
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <iostream>
-#include "cvaux.h"
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 using namespace std;
 
-//#if defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64
-#define MARKERS
-
-#ifdef MARKERS
-	#define marker(x) cout << (x)  << endl
-#else
-	#define marker(x) 
-#endif
-
-
-class CV_HighGuiOnlyGuiTest : public CvTest
+class CV_HighGuiOnlyGuiTest : public cvtest::BaseTest
 {
-public:
-    CV_HighGuiOnlyGuiTest();
-    ~CV_HighGuiOnlyGuiTest();    
-protected:    
-    void run(int);				
+	protected:    
+		void run(int);				
 };
-
-CV_HighGuiOnlyGuiTest::CV_HighGuiOnlyGuiTest(): CvTest( "z-highgui-gui-only", "?" )
-{
-    support_testing_modes = CvTS::CORRECTNESS_CHECK_MODE;
-}
-CV_HighGuiOnlyGuiTest::~CV_HighGuiOnlyGuiTest() {}
 
 void Foo(int /*k*/, void* /*z*/) {}
 
 void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
 {	   
-    cout << "GUI 1" << endl;
+    ts->printf(ts->LOG, "GUI 1\n");
 	namedWindow("Win");
-    cout << "GUI 2" << endl;
-	Mat m(30, 30, CV_8U);	
+    
+	ts->printf(ts->LOG, "GUI 2\n");
+	Mat m(256, 256, CV_8U);	
 	m = Scalar(128);	
-    cout << "GUI 3" << endl;
+    
+	ts->printf(ts->LOG, "GUI 3\n");
 	imshow("Win", m);	
-    cout << "GUI 4" << endl;
+    
+	ts->printf(ts->LOG, "GUI 4\n");
 	int value = 50;
-    cout << "GUI 5" << endl;
+    
+	ts->printf(ts->LOG, "GUI 5\n");
 	createTrackbar( "trackbar", "Win", &value, 100, Foo, &value);	
-    cout << "GUI 6" << endl;
+    
+	ts->printf(ts->LOG, "GUI 6\n");
 	getTrackbarPos( "trackbar", "Win" );	
-    cout << "GUI 7" << endl;
+    
+	ts->printf(ts->LOG, "GUI 7\n");
 	waitKey(500);		
-    cout << "GUI 8" << endl;
+    
+	ts->printf(ts->LOG, "GUI 8\n");
 	cvDestroyAllWindows();
-    cout << "GUI 9" << endl;
-	
-    ts->set_failed_test_info(CvTS::OK);
+    ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-CV_HighGuiOnlyGuiTest highGuiOnlyGui_test;
-#endif
-
-
+TEST(Highgui_GUI,    regression) { CV_HighGuiOnlyGuiTest test; test.safe_run(); }
