@@ -43,7 +43,7 @@
 
 #if defined HAVE_VIDEOINPUT && (_MSC_VER >= 1400 || defined __GNUC__)
 
-#include "videoinput.h"
+#include "videoInput.h"
 
 /********************* Capturing video from camera via VFW *********************/
 
