@@ -368,7 +368,11 @@ bool  TiffDecoder::readData( Mat& img )
 TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
+#ifdef HAVE_TIFF
+    m_buf_supported = false;
+#else
     m_buf_supported = true;
+#endif
 }
 
 TiffEncoder::~TiffEncoder()
