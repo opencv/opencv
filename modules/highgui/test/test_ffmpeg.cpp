@@ -78,19 +78,21 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 			const int img_c = 4096;
 			Size frame_s = Size(img_c, img_r);
 			const double fps = 30;
-			const double time_sec = 1;
+			const double time_sec = 2;
+			const int coeff = static_cast<int>(static_cast<double>(cv::min(img_c, img_r)) / (fps * time_sec));
 
 			Mat img(img_r, img_c, CV_8UC3, Scalar::all(0));
 			try
 			{
-				VideoWriter writer(string(ts->get_data_path()) + "video/output.avi",
-					CV_FOURCC('X', 'V', 'I', 'D'), fps, frame_s);
+				VideoWriter writer(string(ts->get_data_path()) + "video/output.avi", CV_FOURCC('X', 'V', 'I', 'D'), fps, frame_s);
 
 				if (writer.isOpened() == false) ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
 
 				for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
 				{
-					circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar::all(255));
+					//circle(img, Point2i(img_c / 2, img_r / 2), cv::min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
+					rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)), 
+						Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1); 
 					writer << img;
 				}
 			}
@@ -105,55 +107,115 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 string ext_from_int(int ext)
 {
 	if (ext == 0) return ".png";
-	if (ext == 1) return ".jpg";
-	if (ext == 2) return ".bmp";
-	if (ext == 3) return ".pgm";
-	if (ext == 4) return ".tiff";
+	if (ext == 1) return ".bmp";
+	if (ext == 2) return ".pgm";
+	if (ext == 3) return ".tiff";
 	return "";
 }
 
-//class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
-//{
-//	public:
-//		void run(int)
-//		{
-//			try
-//			{
-//				const int img_r = 640;
-//				const int img_c = 480;
-//				Size frame_s = Size(img_c, img_r);
-//
-//				for (size_t ext = 0; ext < 5; ++ext) // 0 - png, 1 - jpg, 2 - bmp, 3 - pgm, 4 - tiff
-//				for (size_t k = 1; k <= 3; ++k)
-//					for (size_t num_channels = 1; num_channels <= 4; ++num_channels)
-//						for (size_t depth = CV_8U; depth <= CV_16U; ++depth)
-//						{
-//							ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", depth, num_channels, ext_from_int(ext).c_str());
-//							ts->printf(ts->LOG, "creating image\n");
-//							Mat img(img_r * k, img_c * k, CV_MAKETYPE(depth, num_channels), Scalar::all(0));
-//							ts->printf(ts->LOG, "drawing circle\n");
-//							circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
-//							ts->printf(ts->LOG, "writing image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
-//							imwrite(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), img);
-//							ts->printf(ts->LOG, "reading test image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
-//							Mat img_test = imread(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext));
-//							
-//							CV_Assert(img.size() == img_test.size());
-//							CV_Assert(img.type() == img_test.type());
-//
-//							ts->printf(ts->LOG, "checking test image\n");
-//							if (countNonZero(img != img_test) != 0)
-//								ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-//						}
-//			}
-//			catch(...)
-//			{
-//				ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
-//			}
-//			ts->set_failed_test_info(cvtest::TS::OK);
-//		}
-//};
+class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
+{
+	public:
+		void run(int)
+		{
+			try
+			{
+				const int img_r = 640;
+				const int img_c = 480;
+				Size frame_s = Size(img_c, img_r);
+
+				for (size_t k = 1; k <= 5; ++k)
+				{
+					for (size_t ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					{
+						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
+						Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
+						circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+						ts->printf(ts->LOG, "writing      image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
+						imwrite(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), img);
+						ts->printf(ts->LOG, "reading test image : %s\n", string(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext)).c_str());
+						
+						Mat img_test = imread(string(ts->get_data_path()) + "readwrite/test" + ext_from_int(ext), CV_LOAD_IMAGE_UNCHANGED);
+						
+						if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
+
+						CV_Assert(img.size() == img_test.size());
+						CV_Assert(img.type() == img_test.type());
+
+						double n = norm(img, img_test);
+						if ( n > 1.0)
+						{
+							ts->printf(ts->LOG, "norm = %f \n", n);
+							ts->set_failed_test_info(ts->FAIL_MISMATCH);
+						}
+					}
+
+					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					{
+						// jpeg
+						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
+						Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
+						circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+						string filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + "_.jpg");
+						imwrite(filename, img);
+						img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+
+						filename = string(ts->get_data_path() + "readwrite/test_" + char(k + 48) + "_c" + char(num_channels + 48) + ".jpg");
+						ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
+						Mat img_test = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+						
+						if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
+
+						CV_Assert(img.size() == img_test.size());
+						CV_Assert(img.type() == img_test.type());
+
+						double n = norm(img, img_test);
+						if ( n > 1.0)
+						{
+							ts->printf(ts->LOG, "norm = %f \n", n);
+							ts->set_failed_test_info(ts->FAIL_MISMATCH);
+						}
+					}
+
+					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					{
+						// tiff
+						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
+						Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
+						circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+						string filename = string(ts->get_data_path() + "readwrite/test.tiff");
+						imwrite(filename, img);
+						ts->printf(ts->LOG, "reading test image : %s\n", filename.c_str());
+						Mat img_test = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+						
+						if (img_test.empty()) ts->set_failed_test_info(ts->FAIL_MISMATCH);
+
+						CV_Assert(img.size() == img_test.size());
+
+						ts->printf(ts->LOG, "img      : %d ; %d \n", img.channels(), img.depth());
+						ts->printf(ts->LOG, "img_test : %d ; %d \n", img_test.channels(), img_test.depth());
+
+						CV_Assert(img.type() == img_test.type());
 
 
-//TEST(Highgui_FFmpeg_WriteBigImage,         regression) { CV_FFmpegWriteBigImageTest      test; test.safe_run(); }
-//TEST(Highgui_FFmpeg_WriteBigVideo,         regression) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
+						double n = norm(img, img_test);
+						if ( n > 1.0)
+						{
+							ts->printf(ts->LOG, "norm = %f \n", n);
+							ts->set_failed_test_info(ts->FAIL_MISMATCH);
+						}
+					}
+				}
+			}
+			catch(const cv::Exception & e)
+			{
+				ts->printf(ts->LOG, "Exception: %s\n" , e.what());
+				ts->set_failed_test_info(ts->FAIL_MISMATCH);
+			}
+		}
+};
+
+TEST(Highgui_FFmpeg_WriteBigImage,         regression) { CV_FFmpegWriteBigImageTest      test; test.safe_run(); }
+TEST(Highgui_FFmpeg_WriteBigVideo,         regression) { CV_FFmpegWriteBigVideoTest      test; test.safe_run(); }
+TEST(Highgui_FFmpeg_WriteSequenceImage,    regression) { CV_FFmpegWriteSequenceImageTest test; test.safe_run(); }

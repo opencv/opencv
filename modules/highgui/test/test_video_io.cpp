@@ -69,10 +69,10 @@ double PSNR(const Mat& m1, const Mat& m2)
 
 void CV_HighGuiTest::ImagesTest(const string& dir)
 {
-	string _name = dir + string("shared/baboon.jpg");
+	string _name = dir + string("../cv/shared/baboon.jpg");
 	ts->printf(ts->LOG, "reading image : %s\n", _name.c_str());
 
-	Mat image = imread(dir + "shared/baboon.jpg");
+	Mat image = imread(_name);
 	image.convertTo(image, CV_8UC3);
 	
 	if (image.empty())
@@ -155,7 +155,7 @@ void CV_HighGuiTest::ImagesTest(const string& dir)
 
 void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 {	
-	string src_file = dir + "shared/video_for_test.avi";		
+	string src_file = dir + "../cv/shared/video_for_test.avi";		
 	string tmp_name = dir + "video.avi";
 
 	ts->printf(ts->LOG, "reading video : %s\n", src_file.c_str());
@@ -183,7 +183,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, int fourcc)
 			writer = cvCreateVideoWriter(tmp_name.c_str(), fourcc, 24, cvGetSize(img));					
 			if (writer == 0)
 			{
-				ts->printf(ts->LOG, "can't create writer\n");
+				ts->printf(ts->LOG, "can't create writer (with fourcc : %d)\n", fourcc);
 				cvReleaseCapture( &cap );
 				ts->set_failed_test_info(ts->FAIL_MISMATCH);
 				return;				
