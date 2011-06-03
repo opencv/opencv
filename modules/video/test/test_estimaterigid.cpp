@@ -135,7 +135,14 @@ bool CV_RigidTransform_Test::testNPoints(int from)
 bool CV_RigidTransform_Test::testImage()
 {
     Mat img;
-    pyrDown(imread( string(ts->get_data_path()) + "shared/graffiti.png", 1), img);
+    Mat testImg = imread( string(ts->get_data_path()) + "shared/graffiti.png", 1);
+    if (testImg.empty())
+    {
+       ts->printf( ts->LOG, "test image can not be read");
+       ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+       return false;
+    }
+    pyrDown(testImg, img);
          
     Mat aff = cv::getRotationMatrix2D(Point(img.cols/2, img.rows/2), 1, 0.99);
     aff.ptr<double>()[2]+=3;
