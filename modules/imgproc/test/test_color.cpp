@@ -1528,7 +1528,7 @@ protected:
 };
 
 
-CV_ColorBayerTest::CV_ColorBayerTest() : CV_ColorCvtBaseTest( false, false, false )
+CV_ColorBayerTest::CV_ColorBayerTest() : CV_ColorCvtBaseTest( false, false, true )
 {
     test_array[OUTPUT].pop_back();
     test_array[REF_OUTPUT].pop_back();
@@ -1545,8 +1545,8 @@ void CV_ColorBayerTest::get_test_array_types_and_sizes( int test_case_idx, vecto
     RNG& rng = ts->get_rng();
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    types[INPUT][0] = CV_8UC1;
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_8UC3;
+    types[INPUT][0] = CV_MAT_DEPTH(types[INPUT][0]);
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(CV_MAT_DEPTH(types[INPUT][0]), 3);
     inplace = false;
 
     fwd_code = cvtest::randInt(rng)%4 + CV_BayerBG2BGR;
@@ -1571,22 +1571,20 @@ void CV_ColorBayerTest::run_func()
 }
 
 
-void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
+template<typename T>
+static void bayer2BGR_(const Mat& src, Mat& dst, int code)
 {
-    const Mat& src = test_mat[INPUT][0];
-    Mat& dst = test_mat[REF_OUTPUT][0];
     int i, j, cols = src.cols - 2;
-    int code = fwd_code;
     int bi = 0;
-    int step = src.step;
-
-    if( fwd_code == CV_BayerRG2BGR || fwd_code == CV_BayerGR2BGR )
+    int step = (int)(src.step/sizeof(T));
+    
+    if( code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
         bi ^= 2;
-
+    
     for( i = 1; i < src.rows - 1; i++ )
     {
-        const uchar* ptr = src.ptr(i) + 1;
-        uchar* dst_row = dst.ptr(i) + 3;
+        const T* ptr = src.ptr<T>(i) + 1;
+        T* dst_row = dst.ptr<T>(i) + 3;
         int save_code = code;
         if( cols <= 0 )
         {
@@ -1594,7 +1592,7 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
             dst_row[cols*3] = dst_row[cols*3+1] = dst_row[cols*3+2] = 0;
             continue;
         }
-
+        
         for( j = 0; j < cols; j++ )
         {
             int b, g, r;
@@ -1611,9 +1609,9 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
                 r = (ptr[j-step] + ptr[j+step]) >> 1;
             }
             code ^= 1;
-            dst_row[j*3 + bi] = (uchar)b;
-            dst_row[j*3 + 1] = (uchar)g;
-            dst_row[j*3 + (bi^2)] = (uchar)r;
+            dst_row[j*3 + bi] = (T)b;
+            dst_row[j*3 + 1] = (T)g;
+            dst_row[j*3 + (bi^2)] = (T)r;
         }
         
         dst_row[-3] = dst_row[0];
@@ -1629,14 +1627,14 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
     
     if( src.rows <= 2 )
     {
-        memset( dst.ptr(), 0, (cols+2)*3 );
-        memset( dst.ptr(dst.rows-1), 0, (cols+2)*3 );
+        memset( dst.ptr(), 0, (cols+2)*3*sizeof(T) );
+        memset( dst.ptr(dst.rows-1), 0, (cols+2)*3*sizeof(T) );
     }
     else
     {
-        uchar* top_row = dst.ptr();
-        uchar* bottom_row = dst.ptr(dst.rows-1);
-        int dstep = dst.step;
+        T* top_row = dst.ptr<T>();
+        T* bottom_row = dst.ptr<T>(dst.rows-1);
+        int dstep = (int)(dst.step/sizeof(T));
         
         for( j = 0; j < (cols+2)*3; j++ )
         {
@@ -1644,6 +1642,20 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
             bottom_row[j] = bottom_row[j - dstep];
         }
     }
+}
+
+
+void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
+{
+    const Mat& src = test_mat[INPUT][0];
+    Mat& dst = test_mat[REF_OUTPUT][0];
+    int depth = src.depth();
+    if( depth == CV_8U )
+        bayer2BGR_<uchar>(src, dst, fwd_code);
+    else if( depth == CV_16U )
+        bayer2BGR_<ushort>(src, dst, fwd_code);
+    else
+        CV_Error(CV_StsUnsupportedFormat, "");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
