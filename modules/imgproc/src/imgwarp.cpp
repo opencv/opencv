@@ -2416,7 +2416,8 @@ void cv::remap( const InputArray& _src, OutputArray _dst,
         remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u, short>, 0,
         remapBilinear<Cast<float, ushort>, RemapNoVec, float>,
         remapBilinear<Cast<float, short>, RemapNoVec, float>, 0,
-        remapBilinear<Cast<float, float>, RemapNoVec, float>, 0, 0
+        remapBilinear<Cast<float, float>, RemapNoVec, float>,
+        remapBilinear<Cast<double, double>, RemapNoVec, float>, 0
     };
 
     static RemapFunc cubic_tab[] =
@@ -2424,7 +2425,8 @@ void cv::remap( const InputArray& _src, OutputArray _dst,
         remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
         remapBicubic<Cast<float, ushort>, float, 1>,
         remapBicubic<Cast<float, short>, float, 1>, 0,
-        remapBicubic<Cast<float, float>, float, 1>, 0, 0
+        remapBicubic<Cast<float, float>, float, 1>,
+        remapBicubic<Cast<double, double>, float, 1>, 0
     };
 
     static RemapFunc lanczos4_tab[] =
@@ -2432,7 +2434,8 @@ void cv::remap( const InputArray& _src, OutputArray _dst,
         remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE>, 0,
         remapLanczos4<Cast<float, ushort>, float, 1>,
         remapLanczos4<Cast<float, short>, float, 1>, 0,
-        remapLanczos4<Cast<float, float>, float, 1>, 0, 0
+        remapLanczos4<Cast<float, float>, float, 1>,
+        remapLanczos4<Cast<double, double>, float, 1>, 0
     };
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
@@ -2808,7 +2811,7 @@ void cv::warpAffine( const InputArray& _src, OutputArray _dst,
                      int flags, int borderType, const Scalar& borderValue )
 {
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize, src.type() );
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     CV_Assert( dst.data != src.data && src.cols > 0 && src.rows > 0 );
 
@@ -2945,7 +2948,7 @@ void cv::warpPerspective( const InputArray& _src, OutputArray _dst, const InputA
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize, src.type() );
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     
     CV_Assert( dst.data != src.data && src.cols > 0 && src.rows > 0 );
