@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     
     namedWindow("image", CV_WINDOW_NORMAL);
     namedWindow("foreground mask", CV_WINDOW_NORMAL);
-        namedWindow("foreground image", CV_WINDOW_NORMAL);
+    namedWindow("foreground image", CV_WINDOW_NORMAL);
     namedWindow("mean background image", CV_WINDOW_NORMAL);
 
     BackgroundSubtractorMOG2 bg_model;
