@@ -57,7 +57,7 @@ void convertAndResize(const T& src, T& gray, T& resized, double scale)
 }
 
 
-void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const ostringstream &ss)
+void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
 {
     int fontFace = FONT_HERSHEY_DUPLEX;
     double fontScale = 0.8;
@@ -67,8 +67,8 @@ void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const ostringstream &ss
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss.str(), org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
-    putText(img, ss.str(), org, fontFace, fontScale, fontColor, fontThickness, 16);
+    putText(img, ss, org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
@@ -79,27 +79,27 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
 
     ostringstream ss;
     ss << "FPS = " << setprecision(1) << fixed << fps;
-    matPrint(canvas, 0, fontColorRed, ss);
+    matPrint(canvas, 0, fontColorRed, ss.str());
     ss.str("");
     ss << "[" << canvas.cols << "x" << canvas.rows << "], " <<
         (bGpu ? "GPU, " : "CPU, ") <<
         (bLargestFace ? "OneFace, " : "MultiFace, ") <<
         (bFilter ? "Filter:ON" : "Filter:OFF");
-    matPrint(canvas, 1, fontColorRed, ss);
+    matPrint(canvas, 1, fontColorRed, ss.str());
 
+    // by Anatoly. MacOS fix. ostringstream(const string&) is a private
+    // matPrint(canvas, 2, fontColorNV, ostringstream("Space - switch GPU / CPU"));
     if (bHelp)
-    {        
-        // by Anatoly. MacOS fix. ostringstream(const string&) is a private
-        //matPrint(canvas, 2, fontColorNV, ostringstream("Space - switch GPU / CPU"));
-        matPrint(canvas, 2, fontColorNV, (ostringstream&)(ostringstream() << "Space - switch GPU / CPU"));
-        matPrint(canvas, 3, fontColorNV, (ostringstream&)(ostringstream() << "M - switch OneFace / MultiFace"));
-        matPrint(canvas, 4, fontColorNV, (ostringstream&)(ostringstream() << "F - toggle rectangles Filter"));
-        matPrint(canvas, 5, fontColorNV, (ostringstream&)(ostringstream() << "H - toggle hotkeys help"));
-        matPrint(canvas, 6, fontColorNV, (ostringstream&)(ostringstream() << "1/Q - increase/decrease scale"));
+    {
+        matPrint(canvas, 2, fontColorNV, "Space - switch GPU / CPU");
+        matPrint(canvas, 3, fontColorNV, "M - switch OneFace / MultiFace");
+        matPrint(canvas, 4, fontColorNV, "F - toggle rectangles Filter");
+        matPrint(canvas, 5, fontColorNV, "H - toggle hotkeys help");
+        matPrint(canvas, 6, fontColorNV, "1/Q - increase/decrease scale");
     }
     else
     {
-        matPrint(canvas, 2, fontColorNV, (ostringstream&)(ostringstream() << "H - toggle hotkeys help"));
+        matPrint(canvas, 2, fontColorNV, "H - toggle hotkeys help");
     }
 }
 
