@@ -253,14 +253,14 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 
     for( x = 0; x < dsize.width; x++ )
     {
-        int sx = saturate_cast<int>(x*ifx);
+        int sx = cvFloor(x*ifx);
         x_ofs[x] = std::min(sx, ssize.width-1)*pix_size;
     }
 
     for( y = 0; y < dsize.height; y++ )
     {
         uchar* D = dst.data + dst.step*y;
-        int sy = std::min(saturate_cast<int>(y*ify), ssize.height-1);
+        int sy = std::min(cvFloor(y*ify), ssize.height-1);
         const uchar* S = src.data + src.step*sy;
 
         switch( pix_size )
