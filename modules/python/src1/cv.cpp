@@ -2965,16 +2965,20 @@ static PyObject *pycvCreateHist(PyObject *self, PyObject *args, PyObject *kw)
   }
   cvhistogram_t *h = PyObject_NEW(cvhistogram_t, &cvhistogram_Type);
   args = Py_BuildValue("Oi", dims, CV_32FC1);
+  memset(&h->h, 0, sizeof(h->h));
   h->bins = pycvCreateMatND(self, args);
   Py_DECREF(args);
   if (h->bins == NULL) {
     return NULL;
   }
-  h->h.type = CV_HIST_MAGIC_VAL;
+  h->h.type = CV_HIST_MAGIC_VAL + CV_HIST_UNIFORM_FLAG;
   if (!convert_to_CvArr(h->bins, &(h->h.bins), "bins"))
     return NULL;
 
-  ERRWRAP(cvSetHistBinRanges(&(h->h), r.rr, uniform));
+  if(r.rr)
+  {
+      ERRWRAP(cvSetHistBinRanges(&(h->h), r.rr, uniform));
+  }
 
   return (PyObject*)h;
 }
