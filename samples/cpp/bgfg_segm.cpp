@@ -31,12 +31,14 @@ int main(int argc, char** argv)
         return -1;
     }
     
-    namedWindow("BG", 1);
-    namedWindow("FG", 1);
+    namedWindow("image", CV_WINDOW_NORMAL);
+    namedWindow("foreground mask", CV_WINDOW_NORMAL);
+        namedWindow("foreground image", CV_WINDOW_NORMAL);
+    namedWindow("mean background image", CV_WINDOW_NORMAL);
 
     BackgroundSubtractorMOG2 bg_model;
-    Mat img, fgmask;
-    
+    Mat img, fgmask, fgimg;
+
     for(;;)
     {
         cap >> img;
@@ -44,10 +46,24 @@ int main(int argc, char** argv)
         if( img.empty() )
             break;
         
+        if( fgimg.empty() )
+          fgimg.create(img.size(), img.type());
+
+        //update the model
         bg_model(img, fgmask, update_bg_model ? -1 : 0);
-        
+
+        fgimg = Scalar::all(0);
+        img.copyTo(fgimg, fgmask);
+
+        Mat bgimg;
+        bg_model.getBackgroundImage(bgimg);
+
         imshow("image", img);
         imshow("foreground mask", fgmask);
+        imshow("foreground image", fgimg);
+        if(!bgimg.empty())
+          imshow("mean background image", bgimg );
+
         char k = (char)waitKey(30);
         if( k == 27 ) break;
         if( k == ' ' )
