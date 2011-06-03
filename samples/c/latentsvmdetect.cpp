@@ -19,8 +19,10 @@ void help()
             "It reads in a trained object model and then uses that to detect the object in an image\n"
             "Usage: \n"
             "./latentsvmdetect [--image_filename]=<image_filename, cat.jpg as default> \n"
-            "       [--model_filename] = <model_filename, cat.xml as default> \n"
-            "       [--threads_number] = <number of threads, -1 as default>\n"
+            "       [--model_filename]=<model_filename, cat.xml as default> \n"
+            "       [--threads_number]=<number of threads, -1 as default>\n"
+            "Example: \n"
+            "./latentsvmdetect --image_filename=cat.jpg --model_filename=cat.xml --threads_number=7 \n"
             "  Press any key to quit.\n");
 }
 

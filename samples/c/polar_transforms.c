@@ -9,7 +9,7 @@
 void help()
 {
 	printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
-			"Call:\n"
+            "Usage :\n"
 			"./polar_transforms [[camera number -- Default 0],[AVI path_filename]]\n\n"
 			);
 }
@@ -20,15 +20,17 @@ int main( int argc, char** argv )
     IplImage*  lin_polar_img = 0;
     IplImage*  recovered_img = 0;
 
+    help();
+
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
     else if( argc == 2 )
         capture = cvCaptureFromAVI( argv[1] );
-    help();
     if( !capture )
     {
         fprintf(stderr,"Could not initialize capturing...\n");
         fprintf(stderr,"Usage: %s <CAMERA_NUMBER>    , or \n       %s <VIDEO_FILE>\n",argv[0],argv[0]);
+        help();
         return -1;
     }
 

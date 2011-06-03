@@ -17,7 +17,9 @@ void help()
     printf("\nThis program demonstrates the Maximal Extremal Region interest point detector.\n"
            "It finds the most stable (in size) dark and white regions as a threshold is increased.\n"
            "\n Usage: \n"
-           "./mser_sample [--image_filename] <path_and_image_filename, default is 'puzzle.png'> \n");
+           "./mser_sample [--image_filename] <path_and_image_filename, default is 'puzzle.png'> \n"
+           "Example: \n"
+           "./mser_sample --image_filename=puzzle.png \n");
 }
 
 static CvScalar colors[] = 

@@ -58,23 +58,31 @@ void help()
     		"Morphology operators are built on max (close) and min (open) operators as measured by pixels covered by small structuring elements.\n"
     		"These operators are very efficient.\n"
     		"This program also allows you to play with elliptical, rectangluar and cross structure elements\n"
-    		"Call:\n"
+            "Usage: \n"
     		"./morphologyc [image_name -- Default baboon.jpg]\n"
     		"\nHot keys: \n"
-        "\tESC - quit the program\n"
-        "\tr - use rectangle structuring element\n"
-        "\te - use elliptic structuring element\n"
-        "\tc - use cross-shaped structuring element\n"
-        "\tSPACE - loop through all the options\n" );
+                "\tESC - quit the program\n"
+                "\tr - use rectangle structuring element\n"
+                "\te - use elliptic structuring element\n"
+                "\tc - use cross-shaped structuring element\n"
+                "\tSPACE - loop through all the options\n" );
 }
 
 int main( int argc, char** argv )
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
-    if( (src = cvLoadImage(filename,1)) == 0 )
-        return -1;
+    char* filename = 0;
 
     help();
+
+    filename = argc == 2 ? argv[1] : (char*)"baboon.jpg";
+    if( (src = cvLoadImage(filename,1)) == 0 )
+    {
+        printf("Cannot load file image %s\n", filename);
+        help();
+        return -1;
+    }
+
+
 
     dst = cvCloneImage(src);
 

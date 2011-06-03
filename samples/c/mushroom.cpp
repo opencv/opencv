@@ -5,20 +5,20 @@
 void help()
 {
 	printf("\nThis program demonstrated the use of OpenCV's decision tree function for learning and predicting data\n"
-			"Call:\n"
-			"./mushroom <path to agaricus-lepiota.data>\n");
-	printf("\n"
-	"The sample demonstrates how to build a decision tree for classifying mushrooms.\n"
-	"It uses the sample base agaricus-lepiota.data from UCI Repository, here is the link:\n"
-	"\n"
-	"Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
-	"UCI Repository of machine learning databases\n"
-	"[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
-	"Irvine, CA: University of California, Department of Information and Computer Science.\n"
-	"\n"
-	"// loads the mushroom database, which is a text file, containing\n"
-	"// one training sample per row, all the input variables and the output variable are categorical,\n"
-	"// the values are encoded by characters.\n\n");
+            "Usage :\n"
+            "./mushroom <path to agaricus-lepiota.data>\n"
+            "\n"
+            "The sample demonstrates how to build a decision tree for classifying mushrooms.\n"
+            "It uses the sample base agaricus-lepiota.data from UCI Repository, here is the link:\n"
+            "\n"
+            "Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998).\n"
+            "UCI Repository of machine learning databases\n"
+            "[http://www.ics.uci.edu/~mlearn/MLRepository.html].\n"
+            "Irvine, CA: University of California, Department of Information and Computer Science.\n"
+            "\n"
+            "// loads the mushroom database, which is a text file, containing\n"
+            "// one training sample per row, all the input variables and the output variable are categorical,\n"
+            "// the values are encoded by characters.\n\n");
 }
 
 int mushroom_read_database( const char* filename, CvMat** data, CvMat** missing, CvMat** responses )
@@ -297,6 +297,8 @@ int main( int argc, char** argv )
     CvMat *data = 0, *missing = 0, *responses = 0;
     CvDTree* dtree;
     const char* base_path = argc >= 2 ? argv[1] : "agaricus-lepiota.data";
+
+    help();
 
     if( !mushroom_read_database( base_path, &data, &missing, &responses ) )
     {

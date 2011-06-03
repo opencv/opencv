@@ -4,10 +4,10 @@
 void help()
 {
 	printf(
-			"This program demonstrate dense \"Farneback\n optical flow\n"
+            "\n This program demonstrate dense \"Farneback\n optical flow\n"
 			"It read from camera 0, and shows how to use and display dense Franeback optical flow\n"
-			"Call:\n"
-			"./fback_c\n\n");
+            "Usage: \n"
+            "./fback_c \n");
 
 }
 void drawOptFlowMap(const CvMat* flow, CvMat* cflowmap, int step,

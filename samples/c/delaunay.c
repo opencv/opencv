@@ -7,8 +7,8 @@ void help()
 	printf("\nThis program demostrates iterative construction of\n"
 			"delaunay triangulation and voronoi tesselation.\n"
 			"It draws a random set of points in an image and then delaunay triangulates them.\n"
-			"Call:\n"
-			"./delaunay\n"
+            "Usage: \n"
+            "./delaunay \n"
 			"\nThis program builds the traingulation interactively, you may stop this process by\n"
 			"hitting any key.\n");
 }

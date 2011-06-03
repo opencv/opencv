@@ -6,8 +6,14 @@
 
 void help()
 {
-    printf( "Usage:\n" ""
-    "./convert_cascade --size=\"<width>x<height>\" input_cascade_path output_cascade_filename\n" );
+    printf("\n This sample demonstrates cascade's convertation \n"
+    "Usage:\n"
+    "./convert_cascade --size=\"<width>x<height>\"<convertation size> \n"
+    "                   input_cascade_path \n"
+    "                   output_cascade_filename\n"
+    "Example: \n"
+    "./convert_cascade --size=640x480 ../../opencv/data/haarcascades/haarcascade_eye.xml ../../opencv/data/haarcascades/test_cascade.xml \n"
+    );
 }
 
 int main( int argc, char** argv )
@@ -16,6 +22,8 @@ int main( int argc, char** argv )
     char comment[1024];
     CvHaarClassifierCascade* cascade = 0;
     CvSize size;
+
+    help();
 
     if( argc != 4 || strncmp( argv[1], size_opt, strlen(size_opt) ) != 0 )
     {

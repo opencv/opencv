@@ -12,7 +12,7 @@ void help()
 			"of thresholded layers of decaying frame differencing. New movements are stamped on top with floating system\n"
 			"time code and motions too old are thresholded away. This is the 'motion history file'. The program reads from the camera of your choice or from\n"
 			"a file. Gradients of motion history are used to detect direction of motoin etc\n"
-			"Call:\n"
+            "Usage :\n"
 			"./motempl [camera number 0-n or file name, default is camera 0]\n"
 			);
 }
@@ -160,7 +160,9 @@ int main(int argc, char** argv)
 {
     IplImage* motion = 0;
     CvCapture* capture = 0;
+
     help();
+
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         capture = cvCaptureFromCAM( argc == 2 ? argv[1][0] - '0' : 0 );
     else if( argc == 2 )

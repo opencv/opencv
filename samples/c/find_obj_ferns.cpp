@@ -14,9 +14,11 @@ void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"
             "descriptor classifier"
-            "Usage:\n"
+            "Usage: \n"
             "./find_obj_ferns [--object_filename]=<object_filename, box.png as default> \n"
-            "           [--scene_filename]=<scene_filename box_in_scene.png as default>] \n");
+            "           [--scene_filename]=<scene_filename box_in_scene.png as default>] \n"
+            "Example: \n"
+            "./find_obj_ferns --object_filename=box.png --scene_filename=box_in_scene.png \n");
 }
 
 int main(int argc, const char** argv)

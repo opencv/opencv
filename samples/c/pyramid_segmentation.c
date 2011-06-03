@@ -7,7 +7,7 @@ void help()
 {
 	printf("\nThis program demonstrated color pyramid segmentation cvcvPyrSegmentation() which is controlled\n"
 			"by two trhesholds which can be manipulated by a trackbar. It can take an image file name or defaults to 'fruits.jpg'\n"
-			"Call:\n"
+            "Usage :\n"
 			"./pyaramid_segmentation [image_path_filename -- Defaults to fruits.jpg]\n\n"
 			);
 }
@@ -36,32 +36,24 @@ void ON_SEGMENT(int a)
     cvPyrSegmentation(image0, image1, storage, &comp,
                       level, threshold1+1, threshold2+1);
 
-    /*l_comp = comp->total;
-
-    i = 0;
-    min_comp.value = cvScalarAll(0);
-    while(i<l_comp)
-    {
-        cur_comp = (CvConnectedComp*)cvGetSeqElem ( comp, i );
-        if(fabs(255- min_comp.value.val[0])>
-           fabs(255- cur_comp->value.val[0]) &&
-           fabs(min_comp.value.val[1])>
-           fabs(cur_comp->value.val[1]) &&
-           fabs(min_comp.value.val[2])>
-           fabs(cur_comp->value.val[2]) )
-           min_comp = *cur_comp;
-        i++;
-    }*/
     cvShowImage("Segmentation", image1);
 }
 
 
 int main( int argc, char** argv )
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"fruits.jpg";
+    char* filename;
+
+    help();
+
+    filename = argc == 2 ? argv[1] : (char*)"fruits.jpg";
 
     if( (image[0] = cvLoadImage( filename, 1)) == 0 )
+    {
+        help();
+        printf("Cannot load fileimage - %s\n", filename);
         return -1;
+    }
 
     cvNamedWindow("Source", 0);
     cvShowImage("Source", image[0]);

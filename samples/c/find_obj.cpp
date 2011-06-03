@@ -19,12 +19,14 @@ using namespace cv;
 
 void help()
 {
-    printf( "This program demonstrated the use of the SURF Detector and Descriptor using\n"
+    printf( "\n This program demonstrated the use of the SURF Detector and Descriptor using\n"
             "either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
             "on planar objects.\n"
-            "Usage :\n"
+            "Usage: \n"
             "./find_obj [--object_filename]=<object_filename, box.png as default> \n"
-            "       [--scene_filename]=<scene_filename box_in_scene.png as default>]\n\n"
+            "       [--scene_filename]=<scene_filename box_in_scene.png as default>] \n"
+            "Example: \n"
+            "./find_obj --object_filename =box.png --scene_filename = box_in_scene.png \n\n"
             );
 }
 
