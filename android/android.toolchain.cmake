@@ -227,6 +227,7 @@ if( ARM_TARGET STREQUAL "armeabi" )
  set( ARMEABI true )
  set( ARMEABI_NDK_NAME "armeabi" )
  set( NEON false )
+ set( CMAKE_SYSTEM_PROCESSOR "armv5te" )
 else()
  if( ARM_TARGET STREQUAL "armeabi-v7a with NEON" )
   set( NEON true )
@@ -240,6 +241,7 @@ Supported values are: \"armeabi\", \"armeabi-v7a\", \"armeabi-v7a with NEON\", \
  endif()
  set( ARMEABI_V7A true )
  set( ARMEABI_NDK_NAME "armeabi-v7a" )
+ set( CMAKE_SYSTEM_PROCESSOR "armv7-a" )
 endif()
 
 #setup output directories
@@ -248,8 +250,12 @@ set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_SOURCE_DIR} CACHE PATH "root for library o
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS OFF CACHE BOOL "")
 if( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS )
  #some cmake standard modules work incorrectly if output paths are changed
- set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" FORCE )
- set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ARMEABI_NDK_NAME} CACHE PATH "Output directory for applications" FORCE)
+ if( EXISTS ${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt )
+  # these paths are required for jni part of Android projects
+  # but they may conflict with traditional unix makefile's folder structure
+  set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" FORCE )
+  set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ARMEABI_NDK_NAME} CACHE PATH "Output directory for applications" FORCE)
+ endif()
  set( CMAKE_INSTALL_PREFIX ${ANDROID_NDK_TOOLCHAIN_ROOT}/user/${ARMEABI_NDK_NAME} CACHE STRING "path for installing" FORCE )
 endif()
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS ON CACHE INTERNAL "" FORCE)

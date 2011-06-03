@@ -245,11 +245,6 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
     set(ENABLE_PROFILING OFF CACHE BOOL "Enable profiling in the GCC compiler (Add flags: -g -pg)")
     set(USE_OMIT_FRAME_POINTER ON CACHE BOOL "Enable -fomit-frame-pointer for GCC")
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm*)
-        # We can use only -O2 because the -O3 causes gcc crash
-        set(USE_O2 ON CACHE BOOL "Enable -O2 for GCC")
-        set(USE_FAST_MATH ON CACHE BOOL "Enable -ffast-math for GCC")
-    endif()
 
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64*)
         set(X86_64 1)
@@ -257,7 +252,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES i686*|i386*|x86*)
         set(X86 1)
-    endif()   
+    endif()
 
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES powerpc*)
         set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC")
@@ -1148,14 +1143,8 @@ set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
 
-if (ANDROID)
-    if (NOT BUILD_SHARED_LIBS)
-      set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} "${CMAKE_BINARY_DIR}/lib")
-    endif()
-
-    if( HAVE_ANDROID_NATIVE_CAMERA )
-      set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
-    endif()
+if( HAVE_ANDROID_NATIVE_CAMERA )
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)

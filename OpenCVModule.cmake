@@ -32,21 +32,27 @@ macro(define_opencv_module name)
     add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
 
     # For dynamic link numbering convenions
-    set_target_properties(${the_target} PROPERTIES
-        VERSION ${OPENCV_VERSION}
-        SOVERSION ${OPENCV_SOVERSION}
-        OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"		
-        )	
-	if(ENABLE_SOLUTION_FOLDERS)
-		set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-	endif()	
+    if(NOT ANDROID)
+        # Android SDK build scripts can include only .so files into final .apk
+        # As result we should not set version properties for Android
+        set_target_properties(${the_target} PROPERTIES
+            VERSION ${OPENCV_VERSION}
+            SOVERSION ${OPENCV_SOVERSION}
+            )
+    endif()
+
+    set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )	
+
+    if(ENABLE_SOLUTION_FOLDERS)
+        set_target_properties(${the_target} PROPERTIES FOLDER "modules")
+    endif()	
 		
-        if (BUILD_SHARED_LIBS)
-		if(MSVC)
-			set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
-		else()
-			add_definitions(-DCVAPI_EXPORTS) 		
-		endif()
+    if (BUILD_SHARED_LIBS)
+        if(MSVC)
+            set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+        else()
+            add_definitions(-DCVAPI_EXPORTS) 		
+        endif()
     endif()
 
     # Additional target properties

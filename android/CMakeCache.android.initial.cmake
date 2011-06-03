@@ -105,3 +105,6 @@ SET( ENABLE_SSE42 OFF CACHE INTERNAL "" FORCE )
 
 #Enable SSSE3 instructions
 SET( ENABLE_SSSE3 OFF CACHE INTERNAL "" FORCE )
+
+#Set output folder to "libs" instead of "lib" for better compatibility with java projects
+SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/libs CACHE PATH "path for android libs" )

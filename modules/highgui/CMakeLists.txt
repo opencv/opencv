@@ -273,11 +273,15 @@ if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
 endif()
 
 # For dynamic link numbering convenions
-set_target_properties(${the_target} PROPERTIES
-    VERSION ${OPENCV_VERSION}
-    SOVERSION ${OPENCV_SOVERSION}
-    OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}"
-    )
+if(NOT ANDROID)
+    # Android SDK build scripts can include only .so files into final .apk
+    set_target_properties(${the_target} PROPERTIES
+        VERSION ${OPENCV_VERSION}
+        SOVERSION ${OPENCV_SOVERSION}
+        )
+endif()
+
+set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )	
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
