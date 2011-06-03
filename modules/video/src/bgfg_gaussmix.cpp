@@ -63,6 +63,10 @@ void BackgroundSubtractor::operator()(const InputArray&, OutputArray, double)
 {
 }
 
+void BackgroundSubtractor::getBackgroundImage(OutputArray) const
+{
+}
+
 static const int defaultNMixtures = CV_BGFG_MOG_NGAUSSIANS;
 static const int defaultHistory = CV_BGFG_MOG_WINDOW_SIZE;
 static const double defaultBackgroundRatio = CV_BGFG_MOG_BACKGROUND_THRESHOLD;

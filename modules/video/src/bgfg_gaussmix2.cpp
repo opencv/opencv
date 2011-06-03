@@ -1291,6 +1291,62 @@ void BackgroundSubtractorMOG2::operator()(const InputArray& _image, OutputArray 
 		float(learningRate));
 }
 
+void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
+{
+    CV_Assert(CV_BGFG_MOG2_NDMAX == 3);
+    Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));
+
+    int firstGaussianIdx = 0;
+    CvPBGMMGaussian* pGMM = (CvPBGMMGaussian*)bgmodel.data;
+    for(int row=0; row<meanBackground.rows; row++)
+    {
+        for(int col=0; col<meanBackground.cols; col++)
+        {
+            int nModes = static_cast<int>(bgmodelUsedModes.at<uchar>(row, col));
+            double meanVal[CV_BGFG_MOG2_NDMAX] = {0.0, 0.0, 0.0};
+
+            double totalWeight = 0.0;
+            for(int gaussianIdx = firstGaussianIdx; gaussianIdx < firstGaussianIdx + nModes; gaussianIdx++)
+            {
+                CvPBGMMGaussian gaussian = pGMM[gaussianIdx];
+                totalWeight += gaussian.weight;
+
+                for(int chIdx = 0; chIdx < CV_BGFG_MOG2_NDMAX; chIdx++)
+                {
+                    meanVal[chIdx] += gaussian.weight * gaussian.mean[chIdx];
+                }
+
+                if(totalWeight > backgroundRatio)
+                    break;
+            }
+
+            Vec3f val = Vec3f(meanVal[0], meanVal[1], meanVal[2]) * (1.0 / totalWeight);
+            meanBackground.at<Vec3b>(row, col) = Vec3b(val);
+            firstGaussianIdx += nmixtures;
+        }
+    }
+
+    switch(CV_MAT_CN(frameType))
+    {
+        case 1:
+        {
+            vector<Mat> channels;
+            split(meanBackground, channels);
+            channels[0].copyTo(backgroundImage);
+            break;
+        }
+
+        case 3:
+        {
+            meanBackground.copyTo(backgroundImage);
+            break;
+        }
+
+        default:
+            CV_Assert(false);
+    }
+}
+
 }
 
 /* End of file. */
