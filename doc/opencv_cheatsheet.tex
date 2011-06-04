@@ -134,7 +134,7 @@
 \setlength{\columnsep}{2pt}
 
 \begin{center}
-     \Large{\textbf{OpenCV 2.2 Cheat Sheet (C++)}} \\
+     \Large{\textbf{OpenCV 2.3 Cheat Sheet (C++)}} \\
 \end{center}
 \newlength{\MyLen}
 \settowidth{\MyLen}{\texttt{letterpaper}/\texttt{a4paper} \ }
@@ -381,7 +381,7 @@ implements the core of Levenberg-Marquardt optimization algorithm.
 & Compute the spatial image derivatives \\
 \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html\#cv-laplacian}{Laplacian()}} & compute Laplacian: $\Delta I = \frac{\partial ^ 2 I}{\partial x^2} + \frac{\partial ^ 2 I}{\partial y^2}$  \\
 
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html\#cv-erode}{erode()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html\#cv-dilate}{dilate()}} & Erode or dilate the image \\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html\#cv-erode}{erode()}}, \texttt{\href{http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html\#cv-dilate}{dilate()}} & Morphological operations \\
 
 \end{tabular}
 
@@ -455,11 +455,10 @@ Example. Decimate image by factor of $\sqrt{2}$:\\
 
 \begin{tabbing}
 Example. Compute Hue-Saturation histogram of an image:\\
-\texttt{Mat hsv, H; MatND tempH;}\\
+\texttt{Mat hsv, H;}\\
 \texttt{cvtColor(image, hsv, CV\_BGR2HSV);}\\
 \texttt{int planes[]=\{0, 1\}, hsize[] = \{32, 32\};}\\
-\texttt{calcHist(\&hsv, 1, planes, Mat(), tempH, 2, hsize, 0);}\\
-\texttt{H = tempH;}
+\texttt{calcHist(\&hsv, 1, planes, Mat(), H, 2, hsize, 0);}\\
 \end{tabbing}
 
 \subsection{Contours}
@@ -520,7 +519,7 @@ samples on what are the contours and how to use them.
 
 \begin{tabbing}
 \textbf{Wr}\=\textbf{iting and reading raster images}\\
-\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html\#cv-imwrite}{imwrite}{imwrite}("myimage.jpg", image);}\\
+\texttt{\href{http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html\#cv-imwrite}{imwrite}("myimage.jpg", image);}\\
 \texttt{Mat image\_color\_copy = \href{http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html\#cv-imread}{imread}("myimage.jpg", 1);}\\
 \texttt{Mat image\_grayscale\_copy = \href{http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html\#cv-imread}{imread}("myimage.jpg", 0);}\\
 \end{tabbing}
