@@ -60,7 +60,6 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-#warning TEGRA OPTIMIZED THRESHOLD IS USED
     switch( type )
     {
     case THRESH_BINARY:

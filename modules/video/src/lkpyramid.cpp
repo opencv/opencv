@@ -51,9 +51,8 @@ void cv::calcOpticalFlowPyrLK( const InputArray& _prevImg, const InputArray& _ne
                            int flags )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-#warning "TEGRA OPTIMIZED calcOpticalFlowPyrLK IS USED"
     if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, derivLambda, flags))
-	return;
+        return;
 #endif
     Mat prevImg = _prevImg.getMat(), nextImg = _nextImg.getMat(), prevPtsMat = _prevPts.getMat();
     derivLambda = std::min(std::max(derivLambda, 0.), 1.);

@@ -2648,10 +2648,130 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     }
 }
 
-}
+///////////////////////////////////// YUV420i -> RGB /////////////////////////////////////
+
+template<int R>
+struct YUV420i2BGR888Invoker
+{
+    Mat& dst;
+    const uchar* my1, *muv;
+    int width;
+
+    YUV420i2BGR888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
+        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
+
+    void operator()(const BlockedRange& range) const
+    {
+        //B = 1.164(Y - 16)                  + 2.018(U - 128)
+        //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
+        //R = 1.164(Y - 16) + 1.596(V - 128)
+
+        const uchar* y1 = my1 + range.begin() * width, *uv = muv + range.begin() * width / 2;
+
+        for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
+        {
+            uchar* row1 = dst.ptr<uchar>(j);
+            uchar* row2 = dst.ptr<uchar>(j+1);
+            const uchar* y2 = y1 + width;
+
+            for(int i = 0; i < width; i+=2,row1+=6,row2+=6)
+            {
+                int cr = uv[i] - 128;
+                int cb = uv[i+1] - 128;
+
+                int ruv = 409 * cr + 128;
+                int guv = 128 - 100 * cb - 208 * cr;
+                int buv = 516 * cb + 128;
+
+                int y00 = (y1[i] - 16) * 298;
+                row1[0+R] = saturate_cast<uchar>((y00 + buv) >> 8);
+                row1[1] = saturate_cast<uchar>((y00 + guv) >> 8);
+                row1[2-R] = saturate_cast<uchar>((y00 + ruv) >> 8);
+
+                int y01 = (y1[i+1] - 16) * 298;
+                row1[3+R] = saturate_cast<uchar>((y01 + buv) >> 8);
+                row1[4] = saturate_cast<uchar>((y01 + guv) >> 8);
+                row1[5-R] = saturate_cast<uchar>((y01 + ruv) >> 8);
+
+                int y10 = (y2[i] - 16) * 298;
+                row2[0+R] = saturate_cast<uchar>((y10 + buv) >> 8);
+                row2[1] = saturate_cast<uchar>((y10 + guv) >> 8);
+                row2[2-R] = saturate_cast<uchar>((y10 + ruv) >> 8);
+
+                int y11 = (y2[i+1] - 16) * 298;
+                row2[3+R] = saturate_cast<uchar>((y11 + buv) >> 8);
+                row2[4] = saturate_cast<uchar>((y11 + guv) >> 8);
+                row2[5-R] = saturate_cast<uchar>((y11 + ruv) >> 8);
+            }
+        }
+    }
+};
+
+template<int R>
+struct YUV420i2BGRA8888Invoker
+{
+    Mat& dst;
+    const uchar* my1, *muv;
+    int width;
+
+    YUV420i2BGRA8888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
+        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
+
+    void operator()(const BlockedRange& range) const
+    {
+        //B = 1.164(Y - 16)                  + 2.018(U - 128)
+        //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
+        //R = 1.164(Y - 16) + 1.596(V - 128)
+
+        const uchar* y1 = my1 + range.begin() * width, *uv = muv + range.begin() * width / 2;
+
+        for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
+        {
+            uchar* row1 = dst.ptr<uchar>(j);
+            uchar* row2 = dst.ptr<uchar>(j+1);
+            const uchar* y2 = y1 + width;
+
+            for(int i = 0; i < width; i+=2,row1+=8,row2+=8)
+            {
+                int cr = uv[i] - 128;
+                int cb = uv[i+1] - 128;
+
+                int ruv = 409 * cr + 128;
+                int guv = 128 - 100 * cb - 208 * cr;
+                int buv = 516 * cb + 128;
+
+                int y00 = (y1[i] - 16) * 298;
+                row1[0+R] = saturate_cast<uchar>((y00 + buv) >> 8);
+                row1[1] = saturate_cast<uchar>((y00 + guv) >> 8);
+                row1[2-R] = saturate_cast<uchar>((y00 + ruv) >> 8);
+                row1[3] = (uchar)0xff;
+
+                int y01 = (y1[i+1] - 16) * 298;
+                row1[4+R] = saturate_cast<uchar>((y01 + buv) >> 8);
+                row1[5] = saturate_cast<uchar>((y01 + guv) >> 8);
+                row1[6-R] = saturate_cast<uchar>((y01 + ruv) >> 8);
+                row1[7] = (uchar)0xff;
+
+                int y10 = (y2[i] - 16) * 298;
+                row2[0+R] = saturate_cast<uchar>((y10 + buv) >> 8);
+                row2[1] = saturate_cast<uchar>((y10 + guv) >> 8);
+                row2[2-R] = saturate_cast<uchar>((y10 + ruv) >> 8);
+                row2[3] = (uchar)0xff;
+
+                int y11 = (y2[i+1] - 16) * 298;
+                row2[4+R] = saturate_cast<uchar>((y11 + buv) >> 8);
+                row2[5] = saturate_cast<uchar>((y11 + guv) >> 8);
+                row2[6-R] = saturate_cast<uchar>((y11 + ruv) >> 8);
+                row2[7] = (uchar)0xff;
+            }
+        }
+    }
+};
+
+}//namespace cv
 
 //////////////////////////////////////////////////////////////////////////////////////////
-//                                   The main function                                  // 
+//                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
 
 void cv::cvtColor( const InputArray& _src, OutputArray _dst, int code, int dcn )
@@ -2992,6 +3112,40 @@ void cv::cvtColor( const InputArray& _src, OutputArray _dst, int code, int dcn )
                 Bayer2RGB_VNG_8u(src, dst, code);
             }
             break;
+        case CV_YUV420i2BGR: case CV_YUV420i2RGB:
+            {
+                if(dcn <= 0) dcn = 3;
+                CV_Assert( dcn == 3 || dcn == 4 );
+                CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U && src.isContinuous() );
+
+                Size dstSz(sz.width, sz.height * 2 / 3);
+                _dst.create( dstSz, CV_MAKETYPE(depth, dcn));
+                dst = _dst.getMat();
+
+                const uchar* y = src.ptr();
+                const uchar* uv = y + dstSz.area();
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+                if (!tegra::YUV420i2BGR(y, uv, dst, CV_YUV420i2RGB == code))
+#endif
+                {
+                    if (CV_YUV420i2RGB == code)
+                    {
+                        if (dcn == 3)
+                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV420i2BGR888Invoker<2>(dst, dstSz.width, y, uv));
+                        else
+                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV420i2BGRA8888Invoker<2>(dst, dstSz.width, y, uv));
+                    }
+                    else
+                    {
+                        if (dcn == 3)
+                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV420i2BGR888Invoker<0>(dst, dstSz.width, y, uv));
+                        else
+                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV420i2BGRA8888Invoker<0>(dst, dstSz.width, y, uv));
+                    }
+                }
+            }
+            break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
@@ -3009,5 +3163,3 @@ cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
 
 
 /* End of file. */
-
-
