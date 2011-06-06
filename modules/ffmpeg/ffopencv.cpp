@@ -528,7 +528,9 @@ That's all there is to it!
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 
+#if !defined(_MT) || defined(_DLL) 
 extern "C" { __declspec(dllexport) unsigned int __lc_codepage = 0; }
+#endif
 
 #pragma comment(lib, "libgcc_.a")
 #pragma comment(lib, "libmingwex_.a")

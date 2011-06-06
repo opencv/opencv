@@ -100,6 +100,55 @@ endif()
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
 # ----------------------------------------------------------------------------
+# Use statically or dynamically linked CRT?
+# Default: dynamic
+# ----------------------------------------------------------------------------
+if(MSVC AND NOT BUILD_SHARED_LIBS)
+  option (BUILD_WITH_STATIC_CRT "Enables use of staticaly linked CRT" OFF)
+endif()
+  
+if(MSVC)
+	if(BUILD_WITH_STATIC_CRT)
+		foreach(flag_var
+				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+				CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+				CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+		   if(${flag_var} MATCHES "/MD")
+			  string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+		   endif(${flag_var} MATCHES "/MD")
+
+		   if(${flag_var} MATCHES "/MDd")
+			  string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
+		   endif(${flag_var} MATCHES "/MDd")		   
+		endforeach(flag_var)
+		
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
+		
+		set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
+		set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
+				
+	else(BUILD_WITH_STATIC_CRT)
+		foreach(flag_var
+				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+				CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+				CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+		   if(${flag_var} MATCHES "/MT")
+			  string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
+		   endif(${flag_var} MATCHES "/MT")
+
+		   if(${flag_var} MATCHES "/MTd")
+			  string(REGEX REPLACE "/MTd" "/MDd" ${flag_var} "${${flag_var}}")
+		   endif(${flag_var} MATCHES "/MTd")		   
+		endforeach(flag_var)
+
+	endif(BUILD_WITH_STATIC_CRT)
+endif(MSVC)
+
+
+
+# ----------------------------------------------------------------------------
 #  Variables for cvconfig.h.cmake
 # ----------------------------------------------------------------------------
 set(PACKAGE "opencv")
