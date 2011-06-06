@@ -307,11 +307,28 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 		else
 			monocrome=false;
 		break;	
-	case CV_CAP_PROP_EXPOSURE:
-		if (PvAttrUint32Set(Camera.Handle,"ExposureValue",(tPvUint32)value)==ePvErrSuccess)
-			break;
+    case CV_CAP_PROP_EXPOSURE:
+	    if ((PvAttrUint32Set(Camera.Handle,"ExposureValue",(tPvUint32)value)==ePvErrSuccess)) 
+		break;
+	    else
+		return false;
+    case CV_CAP_PROP_PVAPI_MULTICASTIP:
+	    
+    	    if (value==-1) {
+		if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "Off")==ePvErrSuccess)) 
+		    break;
+		else 
+		    return false;
+	    }
+	    else {
+		string ip=cv::format("%d.%d.%d.%d", (value>>24)&255, (value>>16)&255, (value>>8)&255, value&255);
+		if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
+		(PvAttrStringSet(priv->handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess)) {
+		    break;
 		else
-			return false;
+		    return false;
+		}
+	    }
     default:
         return false;
     }
