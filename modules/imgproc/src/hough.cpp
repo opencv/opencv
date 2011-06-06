@@ -1090,7 +1090,7 @@ namespace cv
 
 const int STORAGE_SIZE = 1 << 12;
 
-static void seqToMat(const CvSeq* seq, OutputArray& _arr)
+static void seqToMat(const CvSeq* seq, OutputArray _arr)
 {
     if( seq && seq->total > 0 )
     {
@@ -1104,7 +1104,7 @@ static void seqToMat(const CvSeq* seq, OutputArray& _arr)
     
 }
     
-void cv::HoughLines( const InputArray& _image, OutputArray _lines,
+void cv::HoughLines( InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
                      double srn, double stn )
 {
@@ -1117,7 +1117,7 @@ void cv::HoughLines( const InputArray& _image, OutputArray _lines,
     seqToMat(seq, _lines);
 }
 
-void cv::HoughLinesP( const InputArray& _image, OutputArray _lines,
+void cv::HoughLinesP( InputArray _image, OutputArray _lines,
                       double rho, double theta, int threshold,
                       double minLineLength, double maxGap )
 {
@@ -1129,7 +1129,7 @@ void cv::HoughLinesP( const InputArray& _image, OutputArray _lines,
     seqToMat(seq, _lines);
 }
 
-void cv::HoughCircles( const InputArray& _image, OutputArray _circles,
+void cv::HoughCircles( InputArray _image, OutputArray _circles,
                        int method, double dp, double min_dist,
                        double param1, double param2,
                        int minRadius, int maxRadius )

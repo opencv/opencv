@@ -685,8 +685,8 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
 
 }
 
-void cv::gemm( const InputArray& matA, const InputArray& matB, double alpha,
-           const InputArray& matC, double beta, OutputArray matD, int flags )
+void cv::gemm( InputArray matA, InputArray matB, double alpha,
+           InputArray matC, double beta, OutputArray matD, int flags )
 {
     const int block_lin_size = 128;
     const int block_size = block_lin_size * block_lin_size;
@@ -1731,7 +1731,7 @@ static TransformFunc diagTransformTab[] =
 
 }
 
-void cv::transform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
+void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows;
@@ -1908,7 +1908,7 @@ perspectiveTransform_64f(const double* src, double* dst, const double* m, int le
 
 }
 
-void cv::perspectiveTransform( const InputArray& _src, OutputArray _dst, const InputArray& _mtx )
+void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mtx )
 {
     Mat src = _src.getMat(), m = _mtx.getMat();
     int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
@@ -2041,7 +2041,7 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 
 }
 
-void cv::scaleAdd( const InputArray& _src1, double alpha, const InputArray& _src2, OutputArray _dst )
+void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst )
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     int depth = src1.depth(), cn = src1.channels();
@@ -2120,7 +2120,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
         _mean = mean.reshape(1, size.height);
 }
 
-void cv::calcCovarMatrix( const InputArray& _data, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
+void cv::calcCovarMatrix( InputArray _data, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
 {
     Mat data = _data.getMat(), mean;
     CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
@@ -2158,7 +2158,7 @@ void cv::calcCovarMatrix( const InputArray& _data, OutputArray _covar, InputOutp
 *                                        Mahalanobis                                     *
 \****************************************************************************************/
 
-double cv::Mahalanobis( const InputArray& _v1, const InputArray& _v2, const InputArray& _icovar )
+double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
 {
     Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat(); 
     int type = v1.type(), depth = v1.depth();
@@ -2239,7 +2239,7 @@ double cv::Mahalanobis( const InputArray& _v1, const InputArray& _v2, const Inpu
     return std::sqrt(result);
 }
 
-double cv::Mahalonobis( const InputArray& _v1, const InputArray& _v2, const InputArray& _icovar )
+double cv::Mahalonobis( InputArray _v1, InputArray _v2, InputArray _icovar )
 {
     return Mahalanobis(_v1, _v2, _icovar);
 }
@@ -2446,8 +2446,8 @@ typedef void (*MulTransposedFunc)(const Mat& src, Mat& dst, const Mat& delta, do
 
 }
 
-void cv::mulTransposed( const InputArray& _src, OutputArray _dst, bool ata,
-                        const InputArray& _delta, double scale, int dtype )
+void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
+                        InputArray _delta, double scale, int dtype )
 {
     Mat src = _src.getMat(), delta = _delta.getMat();
     const int gemm_level = 100; // boundary above which GEMM is faster.
@@ -2701,7 +2701,7 @@ static DotProdFunc dotProdTab[] =
     (DotProdFunc)dotProd_64f, 0
 };
 
-double Mat::dot(const InputArray& _mat) const
+double Mat::dot(InputArray _mat) const
 {
     Mat mat = _mat.getMat();
     int cn = channels();
@@ -2733,12 +2733,12 @@ double Mat::dot(const InputArray& _mat) const
 
 PCA::PCA() {}
 
-PCA::PCA(const InputArray& data, const InputArray& mean, int flags, int maxComponents)
+PCA::PCA(InputArray data, InputArray mean, int flags, int maxComponents)
 {
     operator()(data, mean, flags, maxComponents);
 }
 
-PCA& PCA::operator()(const InputArray& _data, const InputArray& __mean, int flags, int maxComponents)
+PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComponents)
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
@@ -2823,7 +2823,7 @@ PCA& PCA::operator()(const InputArray& _data, const InputArray& __mean, int flag
 }
 
 
-void PCA::project(const InputArray& _data, OutputArray result) const
+void PCA::project(InputArray _data, OutputArray result) const
 {
     Mat data = _data.getMat();
     CV_Assert( mean.data && eigenvectors.data &&
@@ -2846,14 +2846,14 @@ void PCA::project(const InputArray& _data, OutputArray result) const
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, result, 0 );
 }
 
-Mat PCA::project(const InputArray& data) const
+Mat PCA::project(InputArray data) const
 {
     Mat result;
     project(data, result);
     return result;
 }
 
-void PCA::backProject(const InputArray& _data, OutputArray result) const
+void PCA::backProject(InputArray _data, OutputArray result) const
 {
     Mat data = _data.getMat();
     CV_Assert( mean.data && eigenvectors.data &&
@@ -2874,7 +2874,7 @@ void PCA::backProject(const InputArray& _data, OutputArray result) const
     }
 }
 
-Mat PCA::backProject(const InputArray& data) const
+Mat PCA::backProject(InputArray data) const
 {
     Mat result;
     backProject(data, result);

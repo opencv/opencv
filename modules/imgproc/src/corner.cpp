@@ -299,7 +299,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
 }
 
-void cv::cornerMinEigenVal( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, int borderType )
+void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32F );
@@ -308,7 +308,7 @@ void cv::cornerMinEigenVal( const InputArray& _src, OutputArray _dst, int blockS
 }
 
 
-void cv::cornerHarris( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
+void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32F );
@@ -317,7 +317,7 @@ void cv::cornerHarris( const InputArray& _src, OutputArray _dst, int blockSize, 
 }
 
 
-void cv::cornerEigenValsAndVecs( const InputArray& _src, OutputArray _dst, int blockSize, int ksize, int borderType )
+void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
     Mat src = _src.getMat();
     Size dsz = _dst.size();
@@ -330,7 +330,7 @@ void cv::cornerEigenValsAndVecs( const InputArray& _src, OutputArray _dst, int b
 }
 
 
-void cv::preCornerDetect( const InputArray& _src, OutputArray _dst, int ksize, int borderType )
+void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType )
 {
     Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
 

@@ -358,7 +358,7 @@ public:
     //! the virtual destructor
     virtual ~BackgroundSubtractor();
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
-    CV_WRAP_AS(apply) virtual void operator()(const InputArray& image, OutputArray fgmask,
+    CV_WRAP_AS(apply) virtual void operator()(InputArray image, OutputArray fgmask,
                                               double learningRate=0);
 					      
     virtual void getBackgroundImage(OutputArray) const;
@@ -385,7 +385,7 @@ public:
     //! the destructor
     virtual ~BackgroundSubtractorMOG();
     //! the update operator
-    virtual void operator()(const InputArray& image, OutputArray fgmask, double learningRate=0);
+    virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=0);
     
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
@@ -412,7 +412,7 @@ public:
     //! the destructor
     virtual ~BackgroundSubtractorMOG2();
     //! the update operator
-    virtual void operator()(const InputArray& image, OutputArray fgmask, double learningRate=-1);
+    virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1);
     
     virtual void getBackgroundImage(OutputArray) const;
     

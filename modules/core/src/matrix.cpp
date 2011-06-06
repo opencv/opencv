@@ -698,7 +698,7 @@ void cv::extractImageCOI(const CvArr* arr, OutputArray _ch, int coi)
     mixChannels( &mat, 1, &ch, 1, _pairs, 1 );
 }
     
-void cv::insertImageCOI(const InputArray& _ch, CvArr* arr, int coi)
+void cv::insertImageCOI(InputArray _ch, CvArr* arr, int coi)
 {
     Mat ch = _ch.getMat(), mat = cvarrToMat(arr, false, true, 1);
     if(coi < 0)
@@ -860,13 +860,13 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
                                         Input/Output Array
 \*************************************************************************************************/
 
-InputArray::InputArray() : flags(0), obj(0) {}
-InputArray::InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
-InputArray::InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
-InputArray::InputArray(const double& val) : flags(MATX+CV_64F), obj((void*)&val), sz(Size(1,1)) {}
-InputArray::InputArray(const MatExpr& expr) : flags(EXPR), obj((void*)&expr) {}
+_InputArray::_InputArray() : flags(0), obj(0) {}
+_InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
+_InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
+_InputArray::_InputArray(const double& val) : flags(MATX+CV_64F), obj((void*)&val), sz(Size(1,1)) {}
+_InputArray::_InputArray(const MatExpr& expr) : flags(EXPR), obj((void*)&expr) {}
  
-Mat InputArray::getMat(int i) const
+Mat _InputArray::getMat(int i) const
 {
     int k = kind();
     
@@ -921,7 +921,7 @@ Mat InputArray::getMat(int i) const
 }
     
     
-void InputArray::getMatVector(vector<Mat>& mv) const
+void _InputArray::getMatVector(vector<Mat>& mv) const
 {
     int k = kind();
     
@@ -1002,12 +1002,12 @@ void InputArray::getMatVector(vector<Mat>& mv) const
     }
 }
     
-int InputArray::kind() const
+int _InputArray::kind() const
 {
     return flags & -(1 << KIND_SHIFT);
 }
     
-Size InputArray::size(int i) const
+Size _InputArray::size(int i) const
 {
     int k = kind();
     
@@ -1065,12 +1065,12 @@ Size InputArray::size(int i) const
     }
 }
 
-size_t InputArray::total(int i) const
+size_t _InputArray::total(int i) const
 {
     return size(i).area();
 }
     
-int InputArray::type(int i) const
+int _InputArray::type(int i) const
 {
     int k = kind();
     
@@ -1096,17 +1096,17 @@ int InputArray::type(int i) const
     }
 }
     
-int InputArray::depth(int i) const
+int _InputArray::depth(int i) const
 {
     return CV_MAT_DEPTH(type(i));
 }
     
-int InputArray::channels(int i) const
+int _InputArray::channels(int i) const
 {
     return CV_MAT_CN(type(i));
 }
     
-bool InputArray::empty() const
+bool _InputArray::empty() const
 {
     int k = kind();
     
@@ -1143,23 +1143,23 @@ bool InputArray::empty() const
 }
     
     
-OutputArray::OutputArray() {}
-OutputArray::OutputArray(Mat& m) : InputArray(m) {}
-OutputArray::OutputArray(vector<Mat>& vec) : InputArray(vec) {}
+_OutputArray::_OutputArray() {}
+_OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
+_OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
     
-bool OutputArray::fixedSize() const
+bool _OutputArray::fixedSize() const
 {
     int k = kind();
     return k == MATX;
 }
 
-bool OutputArray::fixedType() const
+bool _OutputArray::fixedType() const
 {
     int k = kind();
     return k != MAT && k != STD_VECTOR_MAT;
 }
     
-void OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int fixedDepthMask)
+void _OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1171,7 +1171,7 @@ void OutputArray::create(Size _sz, int type, int i, bool allowTransposed, int fi
     create(2, sz, type, i, allowTransposed, fixedDepthMask);
 }
 
-void OutputArray::create(int rows, int cols, int type, int i, bool allowTransposed, int fixedDepthMask)
+void _OutputArray::create(int rows, int cols, int type, int i, bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1183,7 +1183,7 @@ void OutputArray::create(int rows, int cols, int type, int i, bool allowTranspos
     create(2, sz, type, i, allowTransposed, fixedDepthMask);
 }
     
-void OutputArray::create(int dims, const int* size, int type, int i, bool allocateVector, int fixedDepthMask)
+void _OutputArray::create(int dims, const int* size, int type, int i, bool allocateVector, int fixedDepthMask) const
 {
     int k = kind();
     type = CV_MAT_TYPE(type);
@@ -1331,7 +1331,7 @@ void OutputArray::create(int dims, const int* size, int type, int i, bool alloca
     }
 }
     
-void OutputArray::release()
+void _OutputArray::release() const
 {
     int k = kind();
     
@@ -1363,7 +1363,7 @@ void OutputArray::release()
     }    
 }
 
-void OutputArray::clear()
+void _OutputArray::clear() const
 {
     int k = kind();
     
@@ -1376,12 +1376,12 @@ void OutputArray::clear()
     release();
 }
     
-bool OutputArray::needed() const
+bool _OutputArray::needed() const
 {
     return kind() != NONE;
 }
 
-Mat& OutputArray::getMatRef(int i)
+Mat& _OutputArray::getMatRef(int i) const
 {
     int k = kind();
     if( i < 0 )
@@ -1397,6 +1397,9 @@ Mat& OutputArray::getMatRef(int i)
         return v[i];
     }
 }
+
+static _OutputArray _none;
+OutputArray None() { return _none; }
     
 }
 
@@ -1431,13 +1434,13 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
 }
     
-void cv::hconcat(const InputArray& src1, const InputArray& src2, OutputArray dst)
+void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
     Mat src[] = {src1.getMat(), src2.getMat()};
     hconcat(src, 2, dst);
 }
     
-void cv::hconcat(const InputArray& _src, OutputArray dst)
+void cv::hconcat(InputArray _src, OutputArray dst)
 {
     vector<Mat> src;
     _src.getMatVector(src);
@@ -1471,13 +1474,13 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
     }
 }
     
-void cv::vconcat(const InputArray& src1, const InputArray& src2, OutputArray dst)
+void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
     Mat src[] = {src1.getMat(), src2.getMat()};
     vconcat(src, 2, dst);
 }        
 
-void cv::vconcat(const InputArray& _src, OutputArray dst)
+void cv::vconcat(InputArray _src, OutputArray dst)
 {
     vector<Mat> src;
     _src.getMatVector(src);
@@ -1526,7 +1529,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
 //////////////////////////////////////////// trace ///////////////////////////////////////////    
     
-cv::Scalar cv::trace( const InputArray& _m )
+cv::Scalar cv::trace( InputArray _m )
 {
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
@@ -1665,7 +1668,7 @@ static TransposeInplaceFunc transposeInplaceTab[] =
 
 }
     
-void cv::transpose( const InputArray& _src, OutputArray _dst )
+void cv::transpose( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     size_t esz = src.elemSize();
@@ -1725,7 +1728,7 @@ void cv::completeSymm( InputOutputArray _m, bool LtoR )
 }
 
     
-cv::Mat cv::Mat::cross(const InputArray& _m) const
+cv::Mat cv::Mat::cross(InputArray _m) const
 {
     Mat m = _m.getMat();
     int t = type(), d = CV_MAT_DEPTH(t);
@@ -1850,7 +1853,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
     
-void cv::reduce(const InputArray& _src, OutputArray _dst, int dim, int op, int dtype)
+void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 );
@@ -2086,7 +2089,7 @@ typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 
 }
     
-void cv::sort( const InputArray& _src, OutputArray _dst, int flags )
+void cv::sort( InputArray _src, OutputArray _dst, int flags )
 {
     static SortFunc tab[] =
     {
@@ -2101,7 +2104,7 @@ void cv::sort( const InputArray& _src, OutputArray _dst, int flags )
     func( src, dst, flags );
 }
 
-void cv::sortIdx( const InputArray& _src, OutputArray _dst, int flags )
+void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 {
     static SortFunc tab[] =
     {
@@ -2237,7 +2240,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 
 }
     
-double cv::kmeans( const InputArray& _data, int K,
+double cv::kmeans( InputArray _data, int K,
                    InputOutputArray _bestLabels,
                    TermCriteria criteria, int attempts,
                    int flags, OutputArray _centers )
@@ -2597,7 +2600,7 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
         labels.cols + labels.rows - 1 == data.rows );
     
     double compactness = cv::kmeans(data, cluster_count, labels, termcrit, attempts,
-                                    flags, _centers ? cv::OutputArray(centers) : cv::OutputArray() );
+                                    flags, _centers ? cv::_OutputArray(centers) : cv::_OutputArray() );
     if( _compactness )
         *_compactness = compactness;
     return 1;

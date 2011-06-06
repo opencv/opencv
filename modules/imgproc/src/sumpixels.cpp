@@ -225,7 +225,7 @@ typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_
 }
 
 
-void cv::integral( const InputArray& _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth )
+void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth )
 {
     Mat src = _src.getMat(), sum, sqsum, tilted;
     int depth = src.depth(), cn = src.channels();
@@ -270,14 +270,14 @@ void cv::integral( const InputArray& _src, OutputArray _sum, OutputArray _sqsum,
           tilted.data, tilted.step, src.size(), cn );
 }
     
-void cv::integral( const InputArray& src, OutputArray sum, int sdepth )
+void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
-    integral( src, sum, OutputArray(), OutputArray(), sdepth );
+    integral( src, sum, None(), None(), sdepth );
 }
 
-void cv::integral( const InputArray& src, OutputArray sum, OutputArray sqsum, int sdepth )
+void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth )
 {
-    integral( src, sum, sqsum, OutputArray(), sdepth );
+    integral( src, sum, sqsum, None(), sdepth );
 }
 
 
@@ -300,8 +300,8 @@ cvIntegral( const CvArr* image, CvArr* sumImage,
         tilted0 = tilted = cv::cvarrToMat(tiltedSumImage);
         ptilted = &tilted;
     }
-    cv::integral( src, sum, psqsum ? cv::OutputArray(*psqsum) : cv::OutputArray(),
-                  ptilted ? cv::OutputArray(*ptilted) : cv::OutputArray(), sum.depth() );
+    cv::integral( src, sum, psqsum ? cv::_OutputArray(*psqsum) : cv::_OutputArray(),
+                  ptilted ? cv::_OutputArray(*ptilted) : cv::_OutputArray(), sum.depth() );
 
     CV_Assert( sum.data == sum0.data && sqsum.data == sqsum0.data && tilted.data == tilted0.data );
 }

@@ -197,7 +197,7 @@ static void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, Size srcro
 
 }
     
-void cv::copyMakeBorder( const InputArray& _src, OutputArray _dst, int top, int bottom,
+void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
     Mat src = _src.getMat();

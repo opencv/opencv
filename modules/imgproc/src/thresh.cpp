@@ -498,7 +498,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
 
 }
     
-double cv::threshold( const InputArray& _src, OutputArray _dst, double thresh, double maxval, int type )
+double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
     Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;
@@ -548,7 +548,7 @@ double cv::threshold( const InputArray& _src, OutputArray _dst, double thresh, d
 }
 
 
-void cv::adaptiveThreshold( const InputArray& _src, OutputArray _dst, double maxValue,
+void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
                             int method, int type, int blockSize, double delta )
 {
     Mat src = _src.getMat();

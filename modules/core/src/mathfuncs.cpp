@@ -319,7 +319,7 @@ static void Sqrt_64f(const double* src, double* dst, int len)
 *                                  Cartezian -> Polar                                    *
 \****************************************************************************************/
 
-void magnitude( const InputArray& src1, const InputArray& src2, OutputArray dst )
+void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 {
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
@@ -350,7 +350,7 @@ void magnitude( const InputArray& src1, const InputArray& src2, OutputArray dst 
 }
 
     
-void phase( const InputArray& src1, const InputArray& src2, OutputArray dst, bool angleInDegrees )
+void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
@@ -407,7 +407,7 @@ void phase( const InputArray& src1, const InputArray& src2, OutputArray dst, boo
 }
  
     
-void cartToPolar( const InputArray& src1, const InputArray& src2,
+void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     Mat X = src1.getMat(), Y = src2.getMat();
@@ -553,7 +553,7 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
 }
 
 
-void polarToCart( const InputArray& src1, const InputArray& src2,
+void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     Mat Mag = src1.getMat(), Angle = src2.getMat();
@@ -1117,7 +1117,7 @@ static void Exp_64f( const double *_x, double *y, int n )
 
 #endif
 
-void exp( const InputArray& _src, OutputArray _dst )
+void exp( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
@@ -1762,7 +1762,7 @@ static void Log_64f( const double *x, double *y, int n )
 
 #endif
 
-void log( const InputArray& _src, OutputArray _dst )
+void log( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
@@ -1858,7 +1858,7 @@ static IPowFunc ipowTab[] =
 };
 
     
-void pow( const InputArray& _src, double power, OutputArray _dst )
+void pow( InputArray _src, double power, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
@@ -1957,14 +1957,14 @@ void pow( const InputArray& _src, double power, OutputArray _dst )
     }
 }
 
-void sqrt(const InputArray& a, OutputArray b)
+void sqrt(InputArray a, OutputArray b)
 {
     pow(a, 0.5, b);
 }
 
 /************************** CheckArray for NaN's, Inf's *********************************/
 
-bool checkRange(const InputArray& _src, bool quiet, Point* pt,
+bool checkRange(InputArray _src, bool quiet, Point* pt,
                 double minVal, double maxVal)
 {
     Mat src = _src.getMat();
@@ -2191,7 +2191,7 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
   -----------------------------------------------------------------------
 */
 
-int cv::solveCubic( const InputArray& _coeffs, OutputArray _roots )
+int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 {
     const int n0 = 3;
     Mat coeffs = _coeffs.getMat();
@@ -2320,7 +2320,7 @@ int cv::solveCubic( const InputArray& _coeffs, OutputArray _roots )
 
 /* finds complex roots of a polynomial using Durand-Kerner method:
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
-double cv::solvePoly( const InputArray& _coeffs0, OutputArray _roots0, int maxIters )
+double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
     typedef Complex<double> C;
 

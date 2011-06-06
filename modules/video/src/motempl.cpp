@@ -442,7 +442,7 @@ cvSegmentMotion( const CvArr* mhiimg, CvArr* segmask, CvMemStorage* storage,
 }
 
 
-void cv::updateMotionHistory( const InputArray& _silhouette, InputOutputArray _mhi,
+void cv::updateMotionHistory( InputArray _silhouette, InputOutputArray _mhi,
                               double timestamp, double duration )
 {
     Mat silhouette = _silhouette.getMat();
@@ -450,7 +450,7 @@ void cv::updateMotionHistory( const InputArray& _silhouette, InputOutputArray _m
     cvUpdateMotionHistory( &c_silhouette, &c_mhi, timestamp, duration );
 }
 
-void cv::calcMotionGradient( const InputArray& _mhi, OutputArray _mask,
+void cv::calcMotionGradient( InputArray _mhi, OutputArray _mask,
                              OutputArray _orientation,
                              double delta1, double delta2,
                              int aperture_size )
@@ -462,8 +462,8 @@ void cv::calcMotionGradient( const InputArray& _mhi, OutputArray _mask,
     cvCalcMotionGradient(&c_mhi, &c_mask, &c_orientation, delta1, delta2, aperture_size);
 }
 
-double cv::calcGlobalOrientation( const InputArray& _orientation, const InputArray& _mask,
-                                  const InputArray& _mhi, double timestamp,
+double cv::calcGlobalOrientation( InputArray _orientation, InputArray _mask,
+                                  InputArray _mhi, double timestamp,
                                   double duration )
 {
     Mat orientation = _orientation.getMat(), mask = _mask.getMat(), mhi = _mhi.getMat();
@@ -471,7 +471,7 @@ double cv::calcGlobalOrientation( const InputArray& _orientation, const InputArr
     return cvCalcGlobalOrientation(&c_orientation, &c_mask, &c_mhi, timestamp, duration);
 }
 
-void cv::segmentMotion(const InputArray& _mhi, OutputArray _segmask,
+void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
                        vector<Rect>& boundingRects,
                        double timestamp, double segThresh)
 {

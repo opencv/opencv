@@ -443,7 +443,7 @@ static RandnScaleFunc randnScaleTab[] =
     (RandnScaleFunc)randnScale_64f, 0 
 };
     
-void RNG::fill( InputOutputArray _mat, int disttype, const InputArray& _param1arg, const InputArray& _param2arg )
+void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, InputArray _param2arg )
 {
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
     int depth = mat.depth(), cn = mat.channels();
@@ -718,12 +718,12 @@ RNG& theRNG()
 
 }
     
-void cv::randu(InputOutputArray dst, const InputArray& low, const InputArray& high)
+void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
 {
     theRNG().fill(dst, RNG::UNIFORM, low, high);
 }
 
-void cv::randn(InputOutputArray dst, const InputArray& mean, const InputArray& stddev)
+void cv::randn(InputOutputArray dst, InputArray mean, InputArray stddev)
 {
     theRNG().fill(dst, RNG::NORMAL, mean, stddev);
 }    

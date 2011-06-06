@@ -232,7 +232,7 @@ cv::crossCorr( const Mat& img, const Mat& templ, Mat& corr,
 
 /*****************************************************************************************/
 
-void cv::matchTemplate( const InputArray& _img, const InputArray& _templ, OutputArray _result, int method )
+void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method )
 {
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
     

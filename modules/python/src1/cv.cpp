@@ -3971,7 +3971,7 @@ static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels
         (labels.cols == 1 || labels.rows == 1) &&
         labels.cols + labels.rows - 1 == data.rows );
     return cv::kmeans(data, cluster_count, labels, termcrit, attempts,
-                        flags, _centers ? cv::OutputArray(centers) : cv::OutputArray() );
+                        flags, _centers ? cv::_OutputArray(centers) : cv::_OutputArray() );
 }
 
 #define cvKMeans2(samples, nclusters, labels, termcrit, attempts, flags, centers) \

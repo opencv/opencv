@@ -392,7 +392,7 @@ static SumSqrFunc sumSqrTab[] =
 
 }
     
-cv::Scalar cv::sum( const InputArray& _src )
+cv::Scalar cv::sum( InputArray _src )
 {
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
@@ -445,7 +445,7 @@ cv::Scalar cv::sum( const InputArray& _src )
     return s;
 }
 
-int cv::countNonZero( const InputArray& _src )
+int cv::countNonZero( InputArray _src )
 {
     Mat src = _src.getMat();
     CountNonZeroFunc func = countNonZeroTab[src.depth()];
@@ -463,7 +463,7 @@ int cv::countNonZero( const InputArray& _src )
     return nz;
 }    
     
-cv::Scalar cv::mean( const InputArray& _src, const InputArray& _mask )
+cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     if( !mask.empty() )
@@ -523,7 +523,7 @@ cv::Scalar cv::mean( const InputArray& _src, const InputArray& _mask )
 }    
 
     
-void cv::meanStdDev( const InputArray& _src, OutputArray _mean, OutputArray _sdv, const InputArray& _mask )
+void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     if( !mask.empty() )
@@ -601,7 +601,7 @@ void cv::meanStdDev( const InputArray& _src, OutputArray _mean, OutputArray _sdv
     for( j = 0; j < 2; j++ )
     {
         const double* sptr = j == 0 ? s : sq;
-        OutputArray& _dst = j == 0 ? _mean : _sdv;
+        _OutputArray _dst = j == 0 ? _mean : _sdv;
         if( !_dst.needed() )
             continue;
 
@@ -733,9 +733,9 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
     
 }
 
-void cv::minMaxIdx(const InputArray& _src, double* minVal,
+void cv::minMaxIdx(InputArray _src, double* minVal,
                    double* maxVal, int* minIdx, int* maxIdx,
-                   const InputArray& _mask)
+                   InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth();
@@ -782,8 +782,8 @@ void cv::minMaxIdx(const InputArray& _src, double* minVal,
         ofs2idx(src, maxidx, maxIdx);
 }    
         
-void cv::minMaxLoc( const InputArray& _img, double* minVal, double* maxVal,
-                Point* minLoc, Point* maxLoc, const InputArray& mask )
+void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
+                Point* minLoc, Point* maxLoc, InputArray mask )
 {
     Mat img = _img.getMat();
     CV_Assert(img.dims <= 2);
@@ -1017,7 +1017,7 @@ static NormDiffFunc normDiffTab[3][8] =
 
 }
     
-double cv::norm( const InputArray& _src, int normType, const InputArray& _mask )
+double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();
@@ -1111,7 +1111,7 @@ double cv::norm( const InputArray& _src, int normType, const InputArray& _mask )
 }
 
     
-double cv::norm( const InputArray& _src1, const InputArray& _src2, int normType, const InputArray& _mask )
+double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
     if( normType & CV_RELATIVE )
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);

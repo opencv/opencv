@@ -1011,15 +1011,13 @@ See Also:
 exp
 ---
 
-.. c:function:: void exp(const Mat& src, Mat& dst)
-
-.. c:function:: void exp(const MatND& src, MatND& dst)
+.. c:function:: void exp(const InputArray& src, OutputArray dst)
 
     Calculates the exponent of every array element.
 
     :param src: Source array.
 
-    :param dst: Destination array of the same size and same type as  ``src`` .
+    :param dst: Destination array; will have the same size and same type as ``src``.
 
 The function ``exp`` calculates the exponent of every element of the input array:
 

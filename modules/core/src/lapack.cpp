@@ -866,7 +866,7 @@ SVBkSb( int m, int n, const double* w, size_t wstep,
                    m(0,1)*((double)m(1,0)*m(2,2) - (double)m(1,2)*m(2,0)) +  \
                    m(0,2)*((double)m(1,0)*m(2,1) - (double)m(1,1)*m(2,0)))
 
-double cv::determinant( const InputArray& _mat )
+double cv::determinant( InputArray _mat )
 {
     Mat mat = _mat.getMat();
     double result = 0;
@@ -943,7 +943,7 @@ double cv::determinant( const InputArray& _mat )
 #define Df( y, x ) ((float*)(dstdata + y*dststep))[x]
 #define Dd( y, x ) ((double*)(dstdata + y*dststep))[x]
 
-double cv::invert( const InputArray& _src, OutputArray _dst, int method )
+double cv::invert( InputArray _src, OutputArray _dst, int method )
 {
     bool result = false;
     Mat src = _src.getMat();
@@ -1122,7 +1122,7 @@ double cv::invert( const InputArray& _src, OutputArray _dst, int method )
 *                              Solving a linear system                                   *
 \****************************************************************************************/
 
-bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray _dst, int method )
+bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
 {
     bool result = true;
     Mat src = _src.getMat(), _src2 = _src2arg.getMat();
@@ -1401,7 +1401,7 @@ bool cv::solve( const InputArray& _src, const InputArray& _src2arg, OutputArray 
 namespace cv
 {
 
-static bool eigen( const InputArray& _src, OutputArray _evals, OutputArray _evects, bool computeEvects, int, int )
+static bool eigen( InputArray _src, OutputArray _evals, OutputArray _evects, bool computeEvects, int, int )
 {
     Mat src = _src.getMat();
     int type = src.type();
@@ -1433,12 +1433,12 @@ static bool eigen( const InputArray& _src, OutputArray _evals, OutputArray _evec
 
 }
     
-bool cv::eigen( const InputArray& src, OutputArray evals, int lowindex, int highindex )
+bool cv::eigen( InputArray src, OutputArray evals, int lowindex, int highindex )
 {
-    return eigen(src, evals, OutputArray(), false, lowindex, highindex);
+    return eigen(src, evals, None(), false, lowindex, highindex);
 }
 
-bool cv::eigen( const InputArray& src, OutputArray evals, OutputArray evects,
+bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects,
                 int lowindex, int highindex )
 {
     return eigen(src, evals, evects, true, lowindex, highindex);
@@ -1447,7 +1447,7 @@ bool cv::eigen( const InputArray& src, OutputArray evals, OutputArray evects,
 namespace cv
 {
 
-static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
+static void _SVDcompute( InputArray _aarr, OutputArray _w,
                          OutputArray _u, OutputArray _vt, int flags )
 {
     Mat src = _aarr.getMat();
@@ -1515,18 +1515,18 @@ static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
 }       
     
     
-void SVD::compute( const InputArray& a, OutputArray w, OutputArray u, OutputArray vt, int flags )
+void SVD::compute( InputArray a, OutputArray w, OutputArray u, OutputArray vt, int flags )
 {
     _SVDcompute(a, w, u, vt, flags);
 }
 
-void SVD::compute( const InputArray& a, OutputArray w, int flags )
+void SVD::compute( InputArray a, OutputArray w, int flags )
 {
-    _SVDcompute(a, w, OutputArray(), OutputArray(), flags);
+    _SVDcompute(a, w, None(), None(), flags);
 }
     
-void SVD::backSubst( const InputArray& _w, const InputArray& _u, const InputArray& _vt,
-                     const InputArray& _rhs, OutputArray _dst )
+void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
+                     InputArray _rhs, OutputArray _dst )
 {
     Mat w = _w.getMat(), u = _u.getMat(), vt = _vt.getMat(), rhs = _rhs.getMat();
     int type = w.type(), esz = (int)w.elemSize();
@@ -1553,14 +1553,14 @@ void SVD::backSubst( const InputArray& _w, const InputArray& _u, const InputArra
 }
 
     
-SVD& SVD::operator ()(const InputArray& a, int flags)
+SVD& SVD::operator ()(InputArray a, int flags)
 {
     _SVDcompute(a, w, u, vt, flags);
     return *this;
 }
 
 
-void SVD::backSubst( const InputArray& rhs, OutputArray dst ) const
+void SVD::backSubst( InputArray rhs, OutputArray dst ) const
 {
     backSubst( w, u, vt, rhs, dst );
 }

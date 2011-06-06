@@ -851,7 +851,7 @@ BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
     
 }
     
-void cv::convertScaleAbs( const InputArray& _src, OutputArray _dst, double alpha, double beta )
+void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
     Mat src = _src.getMat();
     int cn = src.channels();
@@ -990,7 +990,7 @@ static LUTFunc lutTab[] =
 
 }
     
-void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, int interpolation )
+void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst, int interpolation )
 {
     Mat src = _src.getMat(), lut = _lut.getMat();
     CV_Assert( interpolation == 0 );
@@ -1016,8 +1016,8 @@ void cv::LUT( const InputArray& _src, const InputArray& _lut, OutputArray _dst, 
 }
 
 
-void cv::normalize( const InputArray& _src, OutputArray _dst, double a, double b,
-                    int norm_type, int rtype, const InputArray& _mask )
+void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
+                    int norm_type, int rtype, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
     

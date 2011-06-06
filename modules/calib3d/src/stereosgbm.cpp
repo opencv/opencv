@@ -819,7 +819,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
 typedef cv::Point_<short> Point2s;
 
-void StereoSGBM::operator ()( const InputArray& _left, const InputArray& _right,
+void StereoSGBM::operator ()( InputArray _left, InputArray _right,
                              OutputArray _disp )
 {
     Mat left = _left.getMat(), right = _right.getMat();
@@ -958,7 +958,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
     }
 }    
     
-void cv::validateDisparity( InputOutputArray _disp, const InputArray& _cost, int minDisparity,
+void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
                             int numberOfDisparities, int disp12MaxDiff )
 {
     Mat disp = _disp.getMat(), cost = _cost.getMat();

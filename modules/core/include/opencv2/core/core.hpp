@@ -1263,30 +1263,30 @@ protected:
 /*!
  Proxy datatype for passing Mat's and vector<>'s as input parameters 
  */
-class CV_EXPORTS InputArray
+class CV_EXPORTS _InputArray
 {
 public:
     enum { KIND_SHIFT=16, NONE=0<<KIND_SHIFT, MAT=1<<KIND_SHIFT,
         MATX=2<<KIND_SHIFT, STD_VECTOR=3<<KIND_SHIFT,
         STD_VECTOR_VECTOR=4<<KIND_SHIFT,
         STD_VECTOR_MAT=5<<KIND_SHIFT, EXPR=6<<KIND_SHIFT };
-    InputArray();
-    InputArray(const Mat& m);
-    InputArray(const MatExpr& expr);
-    template<typename _Tp> InputArray(const vector<_Tp>& vec);
-    template<typename _Tp> InputArray(const vector<vector<_Tp> >& vec);
-    InputArray(const vector<Mat>& vec);
-    template<typename _Tp, int m, int n> InputArray(const Matx<_Tp, m, n>& matx);
-    InputArray(const double& val);
-    Mat getMat(int i=-1) const;
-    void getMatVector(vector<Mat>& mv) const;
-    int kind() const;
-    Size size(int i=-1) const;
-    size_t total(int i=-1) const;
-    int type(int i=-1) const;
-    int depth(int i=-1) const;
-    int channels(int i=-1) const;
-    bool empty() const;
+    _InputArray();
+    _InputArray(const Mat& m);
+    _InputArray(const MatExpr& expr);
+    template<typename _Tp> _InputArray(const vector<_Tp>& vec);
+    template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
+    _InputArray(const vector<Mat>& vec);
+    template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
+    _InputArray(const double& val);
+    virtual Mat getMat(int i=-1) const;
+    virtual void getMatVector(vector<Mat>& mv) const;
+    virtual int kind() const;
+    virtual Size size(int i=-1) const;
+    virtual size_t total(int i=-1) const;
+    virtual int type(int i=-1) const;
+    virtual int depth(int i=-1) const;
+    virtual int channels(int i=-1) const;
+    virtual bool empty() const;
 
     int flags;
     void* obj;
@@ -1312,31 +1312,34 @@ enum
 /*!
  Proxy datatype for passing Mat's and vector<>'s as input parameters 
  */
-class CV_EXPORTS OutputArray : public InputArray
+class CV_EXPORTS _OutputArray : public _InputArray
 {
 public:
-    OutputArray();
-    OutputArray(Mat& m);
-    template<typename _Tp> OutputArray(vector<_Tp>& vec);
-    template<typename _Tp> OutputArray(vector<vector<_Tp> >& vec);
-    OutputArray(vector<Mat>& vec);
-    template<typename _Tp, int m, int n> OutputArray(Matx<_Tp, m, n>& matx);
-    bool fixedSize() const;
-    bool fixedType() const;
-    bool needed() const;
-    Mat& getMatRef(int i=-1);
-    void create(Size sz, int type, int i=-1, bool allocateVector=false, int fixedDepthMask=0);
-    void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0);
-    void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0);
-    void release();
-    void clear();
+    _OutputArray();
+    _OutputArray(Mat& m);
+    template<typename _Tp> _OutputArray(vector<_Tp>& vec);
+    template<typename _Tp> _OutputArray(vector<vector<_Tp> >& vec);
+    _OutputArray(vector<Mat>& vec);
+    template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
+    virtual bool fixedSize() const;
+    virtual bool fixedType() const;
+    virtual bool needed() const;
+    virtual Mat& getMatRef(int i=-1) const;
+    virtual void create(Size sz, int type, int i=-1, bool allocateVector=false, int fixedDepthMask=0) const;
+    virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    virtual void release() const;
+    virtual void clear() const;
 };
 
+typedef const _InputArray& InputArray;
 typedef InputArray InputArrayOfArrays;
+typedef const _OutputArray& OutputArray;
 typedef OutputArray OutputArrayOfArrays;
+typedef OutputArray InputOutputArray;
 
-typedef OutputArray InputOutputArray;    
-    
+CV_EXPORTS OutputArray None();
+
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
 enum { MAGIC_MASK=0xFFFF0000, TYPE_MASK=0x00000FFF, DEPTH_MASK=7 };
@@ -1647,7 +1650,7 @@ public:
     // It calls m.create(this->size(), this->type()).
     void copyTo( OutputArray m ) const;
     //! copies those matrix elements to "m" that are marked with non-zero mask elements.
-    void copyTo( OutputArray m, const InputArray& mask ) const;
+    void copyTo( OutputArray m, InputArray mask ) const;
     //! converts matrix to another datatype with optional scalng. See cvConvertScale.
     void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
 
@@ -1656,7 +1659,7 @@ public:
     //! sets every matrix element to s
     Mat& operator = (const Scalar& s);
     //! sets some of the matrix elements to s, according to the mask
-    Mat& setTo(const Scalar& s, const InputArray& mask=InputArray());
+    Mat& setTo(const Scalar& s, InputArray mask=None());
     //! creates alternative matrix header for the same data, with different
     // number of channels and/or different number of rows. see cvReshape.
     Mat reshape(int _cn, int _rows=0) const;
@@ -1667,13 +1670,13 @@ public:
     //! matrix inversion by means of matrix expressions
     MatExpr inv(int method=DECOMP_LU) const;
     //! per-element matrix multiplication by means of matrix expressions
-    MatExpr mul(const InputArray& m, double scale=1) const;
+    MatExpr mul(InputArray m, double scale=1) const;
     MatExpr mul(const MatExpr& m, double scale=1) const;
     
     //! computes cross-product of 2 3D vectors
-    Mat cross(const InputArray& m) const;
+    Mat cross(InputArray m) const;
     //! computes dot-product
-    double dot(const InputArray& m) const;
+    double dot(InputArray m) const;
 
     //! Matlab-style matrix initialization
     static MatExpr zeros(int rows, int cols, int type);
@@ -1923,7 +1926,7 @@ public:
     float uniform(float a, float b);
     //! returns uniformly distributed double-precision floating-point random number from [a,b) range
     double uniform(double a, double b);
-    void fill( InputOutputArray mat, int distType, const InputArray& a, const InputArray& b );
+    void fill( InputOutputArray mat, int distType, InputArray a, InputArray b );
     //! returns Gaussian random variate with mean zero.
     double gaussian(double sigma);
 
@@ -1968,68 +1971,68 @@ CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
 //! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
 CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
 //! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
-CV_EXPORTS void insertImageCOI(const InputArray& coiimg, CvArr* arr, int coi=-1);  
+CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);  
     
 //! adds one matrix to another (dst = src1 + src2)
-CV_EXPORTS_W void add(const InputArray& src1, const InputArray& src2, OutputArray dst,
-                      const InputArray& mask=InputArray(), int dtype=-1);
+CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
+                      InputArray mask=None(), int dtype=-1);
 //! subtracts one matrix from another (dst = src1 - src2) 
-CV_EXPORTS_W void subtract(const InputArray& src1, const InputArray& src2, OutputArray dst,
-                           const InputArray& mask=InputArray(), int dtype=-1);
+CV_EXPORTS_W void subtract(InputArray src1, InputArray src2, OutputArray dst,
+                           InputArray mask=None(), int dtype=-1);
 
 //! computes element-wise weighted product of the two arrays (dst = scale*src1*src2)
-CV_EXPORTS_W void multiply(const InputArray& src1, const InputArray& src2,
+CV_EXPORTS_W void multiply(InputArray src1, InputArray src2,
                            OutputArray dst, double scale=1, int dtype=-1);
     
 //! computes element-wise weighted quotient of the two arrays (dst = scale*src1/src2)
-CV_EXPORTS_W void divide(const InputArray& src1, const InputArray& src2, OutputArray dst,
+CV_EXPORTS_W void divide(InputArray src1, InputArray src2, OutputArray dst,
                          double scale=1, int dtype=-1);
     
 //! computes element-wise weighted reciprocal of an array (dst = scale/src2)
-CV_EXPORTS_W void divide(double scale, const InputArray& src2,
+CV_EXPORTS_W void divide(double scale, InputArray src2,
                          OutputArray dst, int dtype=-1);
 
 //! adds scaled array to another one (dst = alpha*src1 + src2)
-CV_EXPORTS_W void scaleAdd(const InputArray& src1, double alpha, const InputArray& src2, OutputArray dst);
+CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
     
 //! computes weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
-CV_EXPORTS_W void addWeighted(const InputArray& src1, double alpha, const InputArray& src2,
+CV_EXPORTS_W void addWeighted(InputArray src1, double alpha, InputArray src2,
                               double beta, double gamma, OutputArray dst, int dtype=-1);
 
 //! scales array elements, computes absolute values and converts the results to 8-bit unsigned integers: dst(i)=saturate_cast<uchar>abs(src(i)*alpha+beta)
-CV_EXPORTS_W void convertScaleAbs(const InputArray& src, OutputArray dst,
+CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha=1, double beta=0);
 //! transforms array of numbers using a lookup table: dst(i)=lut(src(i))
-CV_EXPORTS_W void LUT(const InputArray& src, const InputArray& lut, OutputArray dst,
+CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
                       int interpolation=0);
 
 //! computes sum of array elements
-CV_EXPORTS_W Scalar sum(const InputArray& src); 
+CV_EXPORTS_W Scalar sum(InputArray src); 
 //! computes the number of nonzero array elements
-CV_EXPORTS_W int countNonZero( const InputArray& src );
+CV_EXPORTS_W int countNonZero( InputArray src );
 //! computes mean value of selected array elements
-CV_EXPORTS_W Scalar mean(const InputArray& src, const InputArray& mask=InputArray());
+CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=None());
 //! computes mean value and standard deviation of all or selected array elements
-CV_EXPORTS_W void meanStdDev(const InputArray& src, OutputArray mean, OutputArray stddev,
-                             const InputArray& mask=InputArray());
+CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stddev,
+                             InputArray mask=None());
 //! computes norm of the selected array part
-CV_EXPORTS_W double norm(const InputArray& src1, int normType=NORM_L2, const InputArray& mask=InputArray());
+CV_EXPORTS_W double norm(InputArray src1, int normType=NORM_L2, InputArray mask=None());
 //! computes norm of selected part of the difference between two arrays
-CV_EXPORTS_W double norm(const InputArray& src1, const InputArray& src2,
-                         int normType=NORM_L2, const InputArray& mask=InputArray());
+CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
+                         int normType=NORM_L2, InputArray mask=None());
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values 
-CV_EXPORTS_W void normalize( const InputArray& src, OutputArray dst, double alpha=1, double beta=0,
-                             int norm_type=NORM_L2, int dtype=-1, const InputArray& mask=InputArray());
+CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0,
+                             int norm_type=NORM_L2, int dtype=-1, InputArray mask=None());
 
 //! finds global minimum and maximum array elements and returns their values and their locations
-CV_EXPORTS_W void minMaxLoc(const InputArray& src, CV_OUT double* minVal,
+CV_EXPORTS_W void minMaxLoc(InputArray src, CV_OUT double* minVal,
                            CV_OUT double* maxVal=0, CV_OUT Point* minLoc=0,
-                           CV_OUT Point* maxLoc=0, const InputArray& mask=InputArray());
-CV_EXPORTS void minMaxIdx(const InputArray& src, double* minVal, double* maxVal,
-                          int* minIdx=0, int* maxIdx=0, const InputArray& mask=InputArray());
+                           CV_OUT Point* maxLoc=0, InputArray mask=None());
+CV_EXPORTS void minMaxIdx(InputArray src, double* minVal, double* maxVal,
+                          int* minIdx=0, int* maxIdx=0, InputArray mask=None());
     
 //! transforms 2D matrix to 1D row or column vector by taking sum, minimum, maximum or mean value over all the rows
-CV_EXPORTS_W void reduce(const InputArray& src, OutputArray dst, int dim, int rtype, int dtype=-1);
+CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype=-1);
 
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
@@ -2048,43 +2051,43 @@ CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                             const int* fromTo, size_t npairs);
 
 //! reverses the order of the rows, columns or both in a matrix
-CV_EXPORTS_W void flip(const InputArray& src, OutputArray dst, int flipCode);
+CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 //! replicates the input matrix the specified number of times in the horizontal and/or vertical direction
-CV_EXPORTS_W void repeat(const InputArray& src, int ny, int nx, OutputArray dst);
+CV_EXPORTS_W void repeat(InputArray src, int ny, int nx, OutputArray dst);
 CV_EXPORTS Mat repeat(const Mat& src, int ny, int nx);
         
 CV_EXPORTS void hconcat(const Mat* src, size_t nsrc, OutputArray dst);
-CV_EXPORTS void hconcat(const InputArray& src1, const InputArray& src2, OutputArray dst);
-CV_EXPORTS_W void hconcat(const InputArray& src, OutputArray dst);
+CV_EXPORTS void hconcat(InputArray src1, InputArray src2, OutputArray dst);
+CV_EXPORTS_W void hconcat(InputArray src, OutputArray dst);
 
 CV_EXPORTS void vconcat(const Mat* src, size_t nsrc, OutputArray dst);
-CV_EXPORTS void vconcat(const InputArray& src1, const InputArray& src2, OutputArray dst);
-CV_EXPORTS_W void vconcat(const InputArray& src, OutputArray dst);
+CV_EXPORTS void vconcat(InputArray src1, InputArray src2, OutputArray dst);
+CV_EXPORTS_W void vconcat(InputArray src, OutputArray dst);
     
 //! computes bitwise conjunction of the two arrays (dst = src1 & src2)
-CV_EXPORTS_W void bitwise_and(const InputArray& src1, const InputArray& src2,
-                              OutputArray dst, const InputArray& mask=InputArray());
+CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2,
+                              OutputArray dst, InputArray mask=None());
 //! computes bitwise disjunction of the two arrays (dst = src1 | src2)
-CV_EXPORTS_W void bitwise_or(const InputArray& src1, const InputArray& src2,
-                             OutputArray dst, const InputArray& mask=InputArray());
+CV_EXPORTS_W void bitwise_or(InputArray src1, InputArray src2,
+                             OutputArray dst, InputArray mask=None());
 //! computes bitwise exclusive-or of the two arrays (dst = src1 ^ src2)
-CV_EXPORTS_W void bitwise_xor(const InputArray& src1, const InputArray& src2,
-                              OutputArray dst, const InputArray& mask=InputArray());
+CV_EXPORTS_W void bitwise_xor(InputArray src1, InputArray src2,
+                              OutputArray dst, InputArray mask=None());
 //! inverts each bit of array (dst = ~src)
-CV_EXPORTS_W void bitwise_not(const InputArray& src, OutputArray dst,
-                              const InputArray& mask=InputArray());
+CV_EXPORTS_W void bitwise_not(InputArray src, OutputArray dst,
+                              InputArray mask=None());
 //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
-CV_EXPORTS_W void absdiff(const InputArray& src1, const InputArray& src2, OutputArray dst);
+CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst);
 //! set mask elements for those array elements which are within the element-specific bounding box (dst = lowerb <= src && src < upperb)    
-CV_EXPORTS_W void inRange(const InputArray& src, const InputArray& lowerb,
-                          const InputArray& upperb, OutputArray dst);    
+CV_EXPORTS_W void inRange(InputArray src, InputArray lowerb,
+                          InputArray upperb, OutputArray dst);    
 //! compares elements of two arrays (dst = src1 <cmpop> src2)
-CV_EXPORTS_W void compare(const InputArray& src1, const InputArray& src2, OutputArray dst, int cmpop);
+CV_EXPORTS_W void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop);
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
-CV_EXPORTS_W void min(const InputArray& src1, const InputArray& src2, OutputArray dst);
+CV_EXPORTS_W void min(InputArray src1, InputArray src2, OutputArray dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
-CV_EXPORTS_W void max(const InputArray& src1, const InputArray& src2, OutputArray dst);
+CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst);
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(const Mat& src1, const Mat& src2, Mat& dst);
@@ -2096,79 +2099,79 @@ CV_EXPORTS void max(const Mat& src1, const Mat& src2, Mat& dst);
 CV_EXPORTS void max(const Mat& src1, double src2, Mat& dst);    
     
 //! computes square root of each matrix element (dst = src**0.5)
-CV_EXPORTS_W void sqrt(const InputArray& src, OutputArray dst);
+CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
 //! raises the input matrix elements to the specified power (b = a**power) 
-CV_EXPORTS_W void pow(const InputArray& src, double power, OutputArray dst);
+CV_EXPORTS_W void pow(InputArray src, double power, OutputArray dst);
 //! computes exponent of each matrix element (dst = e**src)
-CV_EXPORTS_W void exp(const InputArray& src, OutputArray dst);
+CV_EXPORTS_W void exp(InputArray src, OutputArray dst);
 //! computes natural logarithm of absolute value of each matrix element: dst = log(abs(src))
-CV_EXPORTS_W void log(const InputArray& src, OutputArray dst);
+CV_EXPORTS_W void log(InputArray src, OutputArray dst);
 //! computes cube root of the argument
 CV_EXPORTS_W float cubeRoot(float val);
 //! computes the angle in degrees (0..360) of the vector (x,y)
 CV_EXPORTS_W float fastAtan2(float y, float x);
 //! converts polar coordinates to Cartesian
-CV_EXPORTS_W void polarToCart(const InputArray& magnitude, const InputArray& angle,
+CV_EXPORTS_W void polarToCart(InputArray magnitude, InputArray angle,
                               OutputArray x, OutputArray y, bool angleInDegrees=false);
 //! converts Cartesian coordinates to polar
-CV_EXPORTS_W void cartToPolar(const InputArray& x, const InputArray& y,
+CV_EXPORTS_W void cartToPolar(InputArray x, InputArray y,
                               OutputArray magnitude, OutputArray angle,
                               bool angleInDegrees=false);
 //! computes angle (angle(i)) of each (x(i), y(i)) vector
-CV_EXPORTS_W void phase(const InputArray& x, const InputArray& y, OutputArray angle,
+CV_EXPORTS_W void phase(InputArray x, InputArray y, OutputArray angle,
                         bool angleInDegrees=false);
 //! computes magnitude (magnitude(i)) of each (x(i), y(i)) vector
-CV_EXPORTS_W void magnitude(const InputArray& x, const InputArray& y, OutputArray magnitude);
+CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 //! checks that each matrix element is within the specified range.
-CV_EXPORTS_W bool checkRange(const InputArray& a, bool quiet=true, CV_OUT Point* pt=0,
+CV_EXPORTS_W bool checkRange(InputArray a, bool quiet=true, CV_OUT Point* pt=0,
                             double minVal=-DBL_MAX, double maxVal=DBL_MAX);
 //! implements generalized matrix product algorithm GEMM from BLAS
-CV_EXPORTS_W void gemm(const InputArray& src1, const InputArray& src2, double alpha,
-                       const InputArray& src3, double gamma, OutputArray dst, int flags=0);
+CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
+                       InputArray src3, double gamma, OutputArray dst, int flags=0);
 //! multiplies matrix by its transposition from the left or from the right
-CV_EXPORTS_W void mulTransposed( const InputArray& src, OutputArray dst, bool aTa,
-                                 const InputArray& delta=InputArray(),
+CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
+                                 InputArray delta=None(),
                                  double scale=1, int dtype=-1 );
 //! transposes the matrix
-CV_EXPORTS_W void transpose(const InputArray& src, OutputArray dst);
+CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
 //! performs affine transformation of each element of multi-channel input matrix
-CV_EXPORTS_W void transform(const InputArray& src, OutputArray dst, const InputArray& m );
+CV_EXPORTS_W void transform(InputArray src, OutputArray dst, InputArray m );
 //! performs perspective transformation of each element of multi-channel input matrix
-CV_EXPORTS_W void perspectiveTransform(const InputArray& src, OutputArray dst, const InputArray& m );
+CV_EXPORTS_W void perspectiveTransform(InputArray src, OutputArray dst, InputArray m );
 
 //! extends the symmetrical matrix from the lower half or from the upper half 
 CV_EXPORTS_W void completeSymm(InputOutputArray mtx, bool lowerToUpper=false);
 //! initializes scaled identity matrix
 CV_EXPORTS_W void setIdentity(InputOutputArray mtx, const Scalar& s=Scalar(1));
 //! computes determinant of a square matrix
-CV_EXPORTS_W double determinant(const InputArray& mtx);
+CV_EXPORTS_W double determinant(InputArray mtx);
 //! computes trace of a matrix
-CV_EXPORTS_W Scalar trace(const InputArray& mtx);
+CV_EXPORTS_W Scalar trace(InputArray mtx);
 //! computes inverse or pseudo-inverse matrix
-CV_EXPORTS_W double invert(const InputArray& src, OutputArray dst, int flags=DECOMP_LU);
+CV_EXPORTS_W double invert(InputArray src, OutputArray dst, int flags=DECOMP_LU);
 //! solves linear system or a least-square problem
-CV_EXPORTS_W bool solve(const InputArray& src1, const InputArray& src2,
+CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
                         OutputArray dst, int flags=DECOMP_LU);
 //! sorts independently each matrix row or each matrix column
-CV_EXPORTS_W void sort(const InputArray& src, OutputArray dst, int flags);
+CV_EXPORTS_W void sort(InputArray src, OutputArray dst, int flags);
 //! sorts independently each matrix row or each matrix column
-CV_EXPORTS_W void sortIdx(const InputArray& src, OutputArray dst, int flags);
+CV_EXPORTS_W void sortIdx(InputArray src, OutputArray dst, int flags);
 //! finds real roots of a cubic polynomial
-CV_EXPORTS_W int solveCubic(const InputArray& coeffs, OutputArray roots);
+CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 //! finds real and complex roots of a polynomial
-CV_EXPORTS_W double solvePoly(const InputArray& coeffs, OutputArray roots, int maxIters=300);
+CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters=300);
 //! finds eigenvalues of a symmetric matrix
-CV_EXPORTS bool eigen(const InputArray& src, OutputArray eigenvalues, int lowindex=-1,
+CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1,
                       int highindex=-1);
 //! finds eigenvalues and eigenvectors of a symmetric matrix
-CV_EXPORTS bool eigen(const InputArray& src, OutputArray eigenvalues,
+CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues,
                       OutputArray eigenvectors,
                       int lowindex=-1, int highindex=-1);
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
                                  int flags, int ctype=CV_64F);
 //! computes covariation matrix of a set of samples
-CV_EXPORTS_W void calcCovarMatrix( const InputArray& samples, OutputArray covar,
+CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    OutputArray mean, int flags, int ctype=CV_64F);
 
 /*!
@@ -2231,17 +2234,17 @@ public:
     //! default constructor
     PCA();
     //! the constructor that performs PCA
-    PCA(const InputArray& data, const InputArray& mean, int flags, int maxComponents=0);
+    PCA(InputArray data, InputArray mean, int flags, int maxComponents=0);
     //! operator that performs PCA. The previously stored data, if any, is released
-    PCA& operator()(const InputArray& data, const InputArray& mean, int flags, int maxComponents=0);
+    PCA& operator()(InputArray data, InputArray mean, int flags, int maxComponents=0);
     //! projects vector from the original space to the principal components subspace
-    Mat project(const InputArray& vec) const;
+    Mat project(InputArray vec) const;
     //! projects vector from the original space to the principal components subspace
-    void project(const InputArray& vec, OutputArray result) const;
+    void project(InputArray vec, OutputArray result) const;
     //! reconstructs the original vector from the projection
-    Mat backProject(const InputArray& vec) const;
+    Mat backProject(InputArray vec) const;
     //! reconstructs the original vector from the projection
-    void backProject(const InputArray& vec, OutputArray result) const;
+    void backProject(InputArray vec, OutputArray result) const;
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
@@ -2268,18 +2271,18 @@ public:
     //! the default constructor
     SVD();
     //! the constructor that performs SVD
-    SVD( const InputArray& src, int flags=0 );
+    SVD( InputArray src, int flags=0 );
     //! the operator that performs SVD. The previously allocated SVD::u, SVD::w are SVD::vt are released.
-    SVD& operator ()( const InputArray& src, int flags=0 );
+    SVD& operator ()( InputArray src, int flags=0 );
 
     //! decomposes matrix and stores the results to user-provided matrices
-    static void compute( const InputArray& src, OutputArray w,
+    static void compute( InputArray src, OutputArray w,
                          OutputArray u, OutputArray vt, int flags=0 );
     //! computes singular values of a matrix
-    static void compute( const InputArray& src, OutputArray w, int flags=0 );
+    static void compute( InputArray src, OutputArray w, int flags=0 );
     //! performs back substitution
-    static void backSubst( const InputArray& w, const InputArray& u,
-                           const InputArray& vt, const InputArray& rhs,
+    static void backSubst( InputArray w, InputArray u,
+                           InputArray vt, InputArray rhs,
                            OutputArray dst );
     
     template<typename _Tp, int m, int n, int nm> static void compute( const Matx<_Tp, m, n>& a,
@@ -2290,28 +2293,28 @@ public:
         const Matx<_Tp, m, nm>& u, const Matx<_Tp, n, nm>& vt, const Matx<_Tp, m, nb>& rhs, Matx<_Tp, n, nb>& dst );
     
     //! finds dst = arg min_{|dst|=1} |m*dst|
-    static void solveZ( const InputArray& src, OutputArray dst );
+    static void solveZ( InputArray src, OutputArray dst );
     //! performs back substitution, so that dst is the solution or pseudo-solution of m*dst = rhs, where m is the decomposed matrix 
-    void backSubst( const InputArray& rhs, OutputArray dst ) const;
+    void backSubst( InputArray rhs, OutputArray dst ) const;
 
     Mat u, w, vt;
 };
 
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
-CV_EXPORTS_W double Mahalanobis(const InputArray& v1, const InputArray& v2, const InputArray& icovar);
+CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
 //! a synonym for Mahalanobis
-CV_EXPORTS double Mahalonobis(const InputArray& v1, const InputArray& v2, const InputArray& icovar);
+CV_EXPORTS double Mahalonobis(InputArray v1, InputArray v2, InputArray icovar);
 
 //! performs forward or inverse 1D or 2D Discrete Fourier Transformation
-CV_EXPORTS_W void dft(const InputArray& src, OutputArray dst, int flags=0, int nonzeroRows=0);
+CV_EXPORTS_W void dft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0);
 //! performs inverse 1D or 2D Discrete Fourier Transformation
-CV_EXPORTS_W void idft(const InputArray& src, OutputArray dst, int flags=0, int nonzeroRows=0);
+CV_EXPORTS_W void idft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0);
 //! performs forward or inverse 1D or 2D Discrete Cosine Transformation
-CV_EXPORTS_W void dct(const InputArray& src, OutputArray dst, int flags=0);
+CV_EXPORTS_W void dct(InputArray src, OutputArray dst, int flags=0);
 //! performs inverse 1D or 2D Discrete Cosine Transformation
-CV_EXPORTS_W void idct(const InputArray& src, OutputArray dst, int flags=0);
+CV_EXPORTS_W void idct(InputArray src, OutputArray dst, int flags=0);
 //! computes element-wise product of the two Fourier spectrums. The second spectrum can optionally be conjugated before the multiplication
-CV_EXPORTS_W void mulSpectrums(const InputArray& a, const InputArray& b, OutputArray c,
+CV_EXPORTS_W void mulSpectrums(InputArray a, InputArray b, OutputArray c,
                                int flags, bool conjB=false);
 //! computes the minimal vector size vecsize1 >= vecsize so that the dft() of the vector of length vecsize1 can be computed efficiently
 CV_EXPORTS_W int getOptimalDFTSize(int vecsize);
@@ -2326,9 +2329,9 @@ enum
     KMEANS_USE_INITIAL_LABELS=1 // Uses the user-provided labels for K-Means initialization
 };
 //! clusters the input data using k-Means algorithm
-CV_EXPORTS_W double kmeans( const InputArray& data, int K, CV_OUT InputOutputArray bestLabels,
+CV_EXPORTS_W double kmeans( InputArray data, int K, CV_OUT InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,
-                            int flags, OutputArray centers=OutputArray() );
+                            int flags, OutputArray centers=None() );
 
 //! returns the thread-local Random number generator
 CV_EXPORTS RNG& theRNG();
@@ -2337,10 +2340,10 @@ CV_EXPORTS RNG& theRNG();
 template<typename _Tp> static inline _Tp randu() { return (_Tp)theRNG(); }
 
 //! fills array with uniformly-distributed random numbers from the range [low, high)
-CV_EXPORTS_W void randu(CV_IN_OUT OutputArray dst, const InputArray& low, const InputArray& high);
+CV_EXPORTS_W void randu(CV_IN_OUT OutputArray dst, InputArray low, InputArray high);
     
 //! fills array with normally-distributed random numbers with the specified mean and the standard deviation
-CV_EXPORTS_W void randn(CV_IN_OUT OutputArray dst, const InputArray& mean, const InputArray& stddev);
+CV_EXPORTS_W void randn(CV_IN_OUT OutputArray dst, InputArray mean, InputArray stddev);
 
 //! shuffles the input array elements
 CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor=1., RNG* rng=0);
@@ -3647,30 +3650,30 @@ public:
     //! the default constructor
     CV_WRAP KDTree();
     //! the full constructor that builds the search tree
-    CV_WRAP KDTree(const InputArray& points, bool copyAndReorderPoints=false);
+    CV_WRAP KDTree(InputArray points, bool copyAndReorderPoints=false);
     //! the full constructor that builds the search tree
-    CV_WRAP KDTree(const InputArray& points, const InputArray& _labels,
+    CV_WRAP KDTree(InputArray points, InputArray _labels,
                    bool copyAndReorderPoints=false);
     //! builds the search tree
-    CV_WRAP void build(const InputArray& points, bool copyAndReorderPoints=false);
+    CV_WRAP void build(InputArray points, bool copyAndReorderPoints=false);
     //! builds the search tree
-    CV_WRAP void build(const InputArray& points, const InputArray& labels,
+    CV_WRAP void build(InputArray points, InputArray labels,
                        bool copyAndReorderPoints=false);
     //! finds the K nearest neighbors of "vec" while looking at Emax (at most) leaves
-    CV_WRAP int findNearest(const InputArray& vec, int K, int Emax,
+    CV_WRAP int findNearest(InputArray vec, int K, int Emax,
                             OutputArray neighborsIdx,
-                            OutputArray neighbors=OutputArray(),
-                            OutputArray dist=OutputArray(),
-                            OutputArray labels=OutputArray()) const;
+                            OutputArray neighbors=None(),
+                            OutputArray dist=None(),
+                            OutputArray labels=None()) const;
     //! finds all the points from the initial set that belong to the specified box 
-    CV_WRAP void findOrthoRange(const InputArray& minBounds,
-                                const InputArray& maxBounds,
+    CV_WRAP void findOrthoRange(InputArray minBounds,
+                                InputArray maxBounds,
                                 OutputArray neighborsIdx,
-                                OutputArray neighbors=OutputArray(),
-                                OutputArray labels=OutputArray()) const;
+                                OutputArray neighbors=None(),
+                                OutputArray labels=None()) const;
     //! returns vectors with the specified indices
-    CV_WRAP void getPoints(const InputArray& idx, OutputArray pts,
-                           OutputArray labels=OutputArray()) const;
+    CV_WRAP void getPoints(InputArray idx, OutputArray pts,
+                           OutputArray labels=None()) const;
     //! return a vector with the specified index
     const float* getPoint(int ptidx, int* label=0) const;
     //! returns the search space dimensionality

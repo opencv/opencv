@@ -146,7 +146,7 @@ double cv::getWindowProperty(const string& winname, int prop_id)
 	return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
-void cv::imshow( const string& winname, const InputArray& _img )
+void cv::imshow( const string& winname, InputArray _img )
 {
     Mat img = _img.getMat();
     CvMat c_img = img;

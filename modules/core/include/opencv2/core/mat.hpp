@@ -745,8 +745,8 @@ static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMod
 ///////////////////////////////////////////// SVD //////////////////////////////////////////////////////
 
 inline SVD::SVD() {}
-inline SVD::SVD( const InputArray& m, int flags ) { operator ()(m, flags); }
-inline void SVD::solveZ( const InputArray& m, OutputArray _dst )
+inline SVD::SVD( InputArray m, int flags ) { operator ()(m, flags); }
+inline void SVD::solveZ( InputArray m, OutputArray _dst )
 {
     SVD svd(m);
     _dst.create(svd.vt.cols, 1, svd.vt.type());
@@ -1099,18 +1099,18 @@ process( const Mat_<T1>& m1, const Mat_<T2>& m2, Mat_<T3>& m3, Op op )
     
 /////////////////////////////// Input/Output Arrays /////////////////////////////////
     
-template<typename _Tp> InputArray::InputArray(const vector<_Tp>& vec)
+template<typename _Tp> _InputArray::_InputArray(const vector<_Tp>& vec)
     : flags(STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp> InputArray::InputArray(const vector<vector<_Tp> >& vec)
+template<typename _Tp> _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
     : flags(STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp, int m, int n> InputArray::InputArray(const Matx<_Tp, m, n>& mtx)
+template<typename _Tp, int m, int n> _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
     : flags(MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
 
-template<typename _Tp> OutputArray::OutputArray(vector<_Tp>& vec) : InputArray(vec) {}
-template<typename _Tp> OutputArray::OutputArray(vector<vector<_Tp> >& vec) : InputArray(vec) {}
-template<typename _Tp, int m, int n> OutputArray::OutputArray(Matx<_Tp, m, n>& mtx) : InputArray(mtx) {}
+template<typename _Tp> _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
+template<typename _Tp> _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
+template<typename _Tp, int m, int n> _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
     
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 

@@ -52,9 +52,9 @@ template<typename T> struct greaterThanPtr
 
 }
     
-void cv::goodFeaturesToTrack( const InputArray& _image, OutputArray _corners,
+void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
-                              const InputArray& _mask, int blockSize,
+                              InputArray _mask, int blockSize,
                               bool useHarrisDetector, double harrisK )
 {
     Mat image = _image.getMat(), mask = _mask.getMat();

@@ -1053,7 +1053,7 @@ CV_IMPL void cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst )
     }
 }
 
-cv::Mat cv::findHomography( const InputArray& _points1, const InputArray& _points2,
+cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             int method, double ransacReprojThreshold, OutputArray _mask )
 {
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
@@ -1075,13 +1075,13 @@ cv::Mat cv::findHomography( const InputArray& _points1, const InputArray& _point
     return H;
 }
 
-cv::Mat cv::findHomography( const InputArray& _points1, const InputArray& _points2,
+cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                             OutputArray _mask, int method, double ransacReprojThreshold )
 {
     return cv::findHomography(_points1, _points2, method, ransacReprojThreshold, _mask);
 }
 
-cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _points2,
+cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                int method, double param1, double param2,
                                OutputArray _mask )
 {
@@ -1104,15 +1104,15 @@ cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _p
     return F;
 }
 
-cv::Mat cv::findFundamentalMat( const InputArray& _points1, const InputArray& _points2,
+cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 OutputArray _mask, int method, double param1, double param2 )
 {
     return cv::findFundamentalMat(_points1, _points2, method, param1, param2, _mask);
 }
 
 
-void cv::computeCorrespondEpilines( const InputArray& _points, int whichImage,
-                                    const InputArray& _Fmat, OutputArray _lines )
+void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
+                                    InputArray _Fmat, OutputArray _lines )
 {
     Mat points = _points.getMat(), F = _Fmat.getMat();
     int npoints = points.checkVector(2);
@@ -1123,7 +1123,7 @@ void cv::computeCorrespondEpilines( const InputArray& _points, int whichImage,
     cvComputeCorrespondEpilines(&c_points, whichImage, &c_F, &c_lines);
 }
 
-void cv::convertPointsFromHomogeneous( const InputArray& _src, OutputArray _dst )
+void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int npoints = src.checkVector(3), cn = 3;
@@ -1140,7 +1140,7 @@ void cv::convertPointsFromHomogeneous( const InputArray& _src, OutputArray _dst 
     cvConvertPointsHomogeneous(&c_src, &c_dst);
 }
 
-void cv::convertPointsToHomogeneous( const InputArray& _src, OutputArray _dst )
+void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     int npoints = src.checkVector(2), cn = 2;
@@ -1157,7 +1157,7 @@ void cv::convertPointsToHomogeneous( const InputArray& _src, OutputArray _dst )
     cvConvertPointsHomogeneous(&c_src, &c_dst);
 }
 
-void cv::convertPointsHomogeneous( const InputArray& _src, OutputArray _dst )
+void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 {
     int stype = _src.type(), dtype = _dst.type();
     CV_Assert( _dst.fixedType() );

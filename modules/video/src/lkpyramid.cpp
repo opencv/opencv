@@ -42,8 +42,8 @@
 #include <float.h>
 #include <stdio.h>
 
-void cv::calcOpticalFlowPyrLK( const InputArray& _prevImg, const InputArray& _nextImg,
-                           const InputArray& _prevPts, InputOutputArray _nextPts,
+void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
+                           InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err,
                            Size winSize, int maxLevel,
                            TermCriteria criteria,
@@ -1869,8 +1869,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
     return 1;
 }
 
-cv::Mat cv::estimateRigidTransform( const InputArray& src1,
-                                    const InputArray& src2,
+cv::Mat cv::estimateRigidTransform( InputArray src1,
+                                    InputArray src2,
                                     bool fullAffine )
 {
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();

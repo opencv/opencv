@@ -3547,14 +3547,14 @@ KDTree::KDTree()
     normType = NORM_L2;
 }
 
-KDTree::KDTree(const InputArray& _points, bool _copyData)
+KDTree::KDTree(InputArray _points, bool _copyData)
 {
     maxDepth = -1;
     normType = NORM_L2;
     build(_points, _copyData);
 }
 
-KDTree::KDTree(const InputArray& _points, const InputArray& _labels, bool _copyData)
+KDTree::KDTree(InputArray _points, InputArray _labels, bool _copyData)
 {
     maxDepth = -1;
     normType = NORM_L2;
@@ -3637,13 +3637,13 @@ computeSums( const Mat& points, const size_t* ofs, int a, int b, double* sums )
 }
 
     
-void KDTree::build(const InputArray& _points, bool _copyData)
+void KDTree::build(InputArray _points, bool _copyData)
 {
-    build(_points, InputArray(), _copyData);
+    build(_points, None(), _copyData);
 }
 
 
-void KDTree::build(const InputArray& __points, const InputArray& __labels, bool _copyData)
+void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
 {
     Mat _points = __points.getMat(), _labels = __labels.getMat();
     CV_Assert(_points.type() == CV_32F && !_points.empty());
@@ -3753,7 +3753,7 @@ struct PQueueElem
 };
 
 
-int KDTree::findNearest(const InputArray& _vec, int K, int emax,
+int KDTree::findNearest(InputArray _vec, int K, int emax,
                         OutputArray _neighborsIdx, OutputArray _neighbors,
                         OutputArray _dist, OutputArray _labels) const
     
@@ -3896,8 +3896,8 @@ int KDTree::findNearest(const InputArray& _vec, int K, int emax,
 }
 
 
-void KDTree::findOrthoRange(const InputArray& _lowerBound,
-                            const InputArray& _upperBound,
+void KDTree::findOrthoRange(InputArray _lowerBound,
+                            InputArray _upperBound,
                             OutputArray _neighborsIdx,
                             OutputArray _neighbors,
                             OutputArray _labels ) const
@@ -3953,7 +3953,7 @@ void KDTree::findOrthoRange(const InputArray& _lowerBound,
 }
 
     
-void KDTree::getPoints(const InputArray& _idx, OutputArray _pts, OutputArray _labels) const
+void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) const
 {
     Mat idxmat = _idx.getMat(), pts, labelsmat;
     CV_Assert( idxmat.isContinuous() && idxmat.type() == CV_32S &&

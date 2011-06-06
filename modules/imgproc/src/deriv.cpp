@@ -470,7 +470,7 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
     
 #endif
 
-void cv::Sobel( const InputArray& _src, OutputArray _dst, int ddepth, int dx, int dy,
+void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
     Mat src = _src.getMat();
@@ -503,7 +503,7 @@ void cv::Sobel( const InputArray& _src, OutputArray _dst, int ddepth, int dx, in
 }
 
 
-void cv::Scharr( const InputArray& _src, OutputArray _dst, int ddepth, int dx, int dy,
+void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
     Mat src = _src.getMat();
@@ -536,7 +536,7 @@ void cv::Scharr( const InputArray& _src, OutputArray _dst, int ddepth, int dx, i
 }
 
 
-void cv::Laplacian( const InputArray& _src, OutputArray _dst, int ddepth, int ksize,
+void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
     Mat src = _src.getMat();    

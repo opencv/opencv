@@ -295,7 +295,7 @@ static bool imwrite_( const string& filename, const Mat& image,
     return code;
 }
 
-bool imwrite( const string& filename, const InputArray& _img,
+bool imwrite( const string& filename, InputArray _img,
               const vector<int>& params )
 {
     Mat img = _img.getMat();
@@ -389,14 +389,14 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 }
 
 
-Mat imdecode( const InputArray& _buf, int flags )
+Mat imdecode( InputArray _buf, int flags )
 {
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, LOAD_MAT, &img );
     return img;
 }
     
-bool imencode( const string& ext, const InputArray& _image,
+bool imencode( const string& ext, InputArray _image,
                vector<uchar>& buf, const vector<int>& params )
 {
     Mat temp, image = _image.getMat();

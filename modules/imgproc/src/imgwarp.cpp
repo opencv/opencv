@@ -1317,7 +1317,7 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
     
 //////////////////////////////////////////////////////////////////////////////////////////
 
-void cv::resize( const InputArray& _src, OutputArray _dst, Size dsize,
+void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
     static ResizeFunc linear_tab[] =
@@ -2401,8 +2401,8 @@ typedef void (*RemapFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
 
 }
     
-void cv::remap( const InputArray& _src, OutputArray _dst,
-                const InputArray& _map1, const InputArray& _map2,
+void cv::remap( InputArray _src, OutputArray _dst,
+                InputArray _map1, InputArray _map2,
                 int interpolation, int borderType, const Scalar& borderValue )
 {
     static RemapNNFunc nn_tab[] =
@@ -2667,7 +2667,7 @@ void cv::remap( const InputArray& _src, OutputArray _dst,
 }
 
 
-void cv::convertMaps( const InputArray& _map1, const InputArray& _map2,
+void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
                       int dstm1type, bool nninterpolate )
 {
@@ -2806,8 +2806,8 @@ void cv::convertMaps( const InputArray& _map1, const InputArray& _map2,
 }
 
 
-void cv::warpAffine( const InputArray& _src, OutputArray _dst,
-                     const InputArray& _M0, Size dsize,
+void cv::warpAffine( InputArray _src, OutputArray _dst,
+                     InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
     Mat src = _src.getMat(), M0 = _M0.getMat();
@@ -2944,7 +2944,7 @@ void cv::warpAffine( const InputArray& _src, OutputArray _dst,
 }
 
 
-void cv::warpPerspective( const InputArray& _src, OutputArray _dst, const InputArray& _M0,
+void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
     Mat src = _src.getMat(), M0 = _M0.getMat();
@@ -3146,7 +3146,7 @@ cv::Mat cv::getAffineTransform( const Point2f src[], const Point2f dst[] )
     return M;
 }
     
-void cv::invertAffineTransform(const InputArray& _matM, OutputArray __iM)
+void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
 {
     Mat matM = _matM.getMat();
     CV_Assert(matM.rows == 2 && matM.cols == 3);

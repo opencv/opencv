@@ -452,7 +452,7 @@ bool cv::Affine3DEstimator::checkSubset( const CvMat* ms1, int count )
     return j == i;
 }
 
-int cv::estimateAffine3D(const InputArray& _from, const InputArray& _to,
+int cv::estimateAffine3D(InputArray _from, InputArray _to,
                          OutputArray _out, OutputArray _outliers,
                          double param1, double param2)
 {

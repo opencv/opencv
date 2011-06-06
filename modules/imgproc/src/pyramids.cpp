@@ -401,7 +401,7 @@ typedef void (*PyrFunc)(const Mat&, Mat&);
 
 }
     
-void cv::pyrDown( const InputArray& _src, OutputArray _dst, const Size& _dsz )
+void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz )
 {
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
@@ -425,7 +425,7 @@ void cv::pyrDown( const InputArray& _src, OutputArray _dst, const Size& _dsz )
     func( src, dst );
 }
 
-void cv::pyrUp( const InputArray& _src, OutputArray _dst, const Size& _dsz )
+void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz )
 {
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size(src.cols*2, src.rows*2) : _dsz;
@@ -449,7 +449,7 @@ void cv::pyrUp( const InputArray& _src, OutputArray _dst, const Size& _dsz )
     func( src, dst );
 }
 
-void cv::buildPyramid( const InputArray& _src, OutputArrayOfArrays _dst, int maxlevel )
+void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel )
 {
     Mat src = _src.getMat();
     _dst.create( maxlevel + 1, 1, 0 );

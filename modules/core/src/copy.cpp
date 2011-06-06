@@ -260,7 +260,7 @@ void Mat::copyTo( OutputArray _dst ) const
     }
 }
 
-void Mat::copyTo( OutputArray _dst, const InputArray& _mask ) const
+void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
     Mat mask = _mask.getMat();
     if( !mask.data )
@@ -333,7 +333,7 @@ Mat& Mat::operator = (const Scalar& s)
     return *this;
 }
 
-Mat& Mat::setTo(const Scalar& s, const InputArray& _mask)
+Mat& Mat::setTo(const Scalar& s, InputArray _mask)
 {
     Mat mask = _mask.getMat();
     if( !mask.data )
@@ -441,7 +441,7 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     }
 }
 
-void flip( const InputArray& _src, OutputArray _dst, int flip_mode )
+void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     Mat src = _src.getMat();
     
@@ -460,7 +460,7 @@ void flip( const InputArray& _src, OutputArray _dst, int flip_mode )
 }
 
 
-void repeat(const InputArray& _src, int ny, int nx, OutputArray _dst)
+void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 );

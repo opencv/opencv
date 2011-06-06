@@ -850,7 +850,7 @@ cvDistTransform( const void* srcarr, void* dstarr,
     }
 }
 
-void cv::distanceTransform( const InputArray& _src, OutputArray _dst, OutputArray _labels,
+void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labels,
                             int distanceType, int maskSize )
 {
     Mat src = _src.getMat();
@@ -860,7 +860,7 @@ void cv::distanceTransform( const InputArray& _src, OutputArray _dst, OutputArra
     cvDistTransform(&c_src, &c_dst, distanceType, maskSize, 0, &c_labels);
 }
 
-void cv::distanceTransform( const InputArray& _src, OutputArray _dst,
+void cv::distanceTransform( InputArray _src, OutputArray _dst,
                             int distanceType, int maskSize )
 {
     Mat src = _src.getMat();

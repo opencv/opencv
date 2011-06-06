@@ -335,7 +335,7 @@ CV_IMPL void cvCanny( const void* srcarr, void* dstarr,
     }
 }
 
-void cv::Canny( const InputArray& image, OutputArray _edges,
+void cv::Canny( InputArray image, OutputArray _edges,
                 double threshold1, double threshold2,
                 int apertureSize, bool L2gradient )
 {

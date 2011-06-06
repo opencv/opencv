@@ -88,7 +88,7 @@ CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              bool initial_button_state CV_DEFAULT(0));
 //-------------------------
 
-CV_EXPORTS_W void imshow( const string& winname, const InputArray& mat );
+CV_EXPORTS_W void imshow( const string& winname, InputArray mat );
 
 typedef void (CV_CDECL *TrackbarCallback)(int pos, void* userdata);
 
@@ -106,10 +106,10 @@ typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
 CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
     
 CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
-CV_EXPORTS_W bool imwrite( const string& filename, const InputArray& img,
+CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
               const vector<int>& params=vector<int>());
-CV_EXPORTS_W Mat imdecode( const InputArray& buf, int flags );
-CV_EXPORTS_W bool imencode( const string& ext, const InputArray& img,
+CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
+CV_EXPORTS_W bool imencode( const string& ext, InputArray img,
                             vector<uchar>& buf,
                             const vector<int>& params=vector<int>());
 

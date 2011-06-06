@@ -43,8 +43,8 @@
 #include "precomp.hpp"
 using namespace cv;
 
-void cv::solvePnP( const InputArray& _opoints, const InputArray& _ipoints,
-                  const InputArray& _cameraMatrix, const InputArray& _distCoeffs,
+void cv::solvePnP( InputArray _opoints, InputArray _ipoints,
+                  InputArray _cameraMatrix, InputArray _distCoeffs,
                   OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess )
 {
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
@@ -257,8 +257,8 @@ namespace cv
     }
 }
 
-void cv::solvePnPRansac(const InputArray& _opoints, const InputArray& _ipoints,
-                        const InputArray& _cameraMatrix, const InputArray& _distCoeffs,
+void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
+                        InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, int minInliersCount,
                         OutputArray _inliers)

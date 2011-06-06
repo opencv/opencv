@@ -290,7 +290,7 @@ cvCamShift( const void* imgProb, CvRect windowIn,
 }
 
 
-cv::RotatedRect cv::CamShift( const InputArray& _probImage, Rect& window,
+cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
                               TermCriteria criteria )
 {
     CvConnectedComp comp;
@@ -302,7 +302,7 @@ cv::RotatedRect cv::CamShift( const InputArray& _probImage, Rect& window,
     return RotatedRect(Point2f(box.center), Size2f(box.size), box.angle);
 }
 
-int cv::meanShift( const InputArray& _probImage, Rect& window, TermCriteria criteria )
+int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
 {
     CvConnectedComp comp;
     Mat probImage = _probImage.getMat();

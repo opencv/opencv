@@ -971,45 +971,45 @@ Below is the formal description of the ``Mat`` methods.
 
 Mat::Mat
 ------------
-.. c:function:: (1) Mat::Mat()
+.. cpp:function:: Mat::Mat()
+                  
+.. cpp:function:: Mat::Mat(int rows, int cols, int type)
+                  
+.. cpp:function:: Mat::Mat(Size size, int type)
+                  
+.. cpp:function:: Mat::Mat(int rows, int cols, int type, const Scalar& s)
+                  
+.. cpp:function:: Mat::Mat(Size size, int type, const Scalar& s)
+                  
+.. cpp:function:: Mat::Mat(const Mat& m)
+                  
+.. cpp:function:: Mat::Mat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP)
+                  
+.. cpp:function:: Mat::Mat(Size size, int type, void* data, size_t step=AUTO_STEP)
+                  
+.. cpp:function:: Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
+                  
+.. cpp:function:: Mat::Mat(const Mat& m, const Rect& roi)
 
-.. c:function:: (2) Mat::Mat(int rows, int cols, int type)
+.. cpp:function:: Mat::Mat(const CvMat* m, bool copyData=false)
+                  
+.. cpp:function:: Mat::Mat(const IplImage* img, bool copyData=false)
+                  
+.. cpp:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
-.. c:function:: (3) Mat::Mat(Size size, int type)
+.. cpp:function:: template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
 
-.. c:function:: (4) Mat::Mat(int rows, int cols, int type, const Scalar& s)
-
-.. c:function:: (5) Mat::Mat(Size size, int type, const Scalar& s)
-
-.. c:function:: (6) Mat::Mat(const Mat& m)
-
-.. c:function:: (7) Mat::Mat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP)
-
-.. c:function:: (8) Mat::Mat(Size size, int type, void* data, size_t step=AUTO_STEP)
-
-.. c:function:: (9) Mat::Mat(const Mat& m, const Range& rowRange, const Range& colRange)
-
-.. c:function:: (10) Mat::Mat(const Mat& m, const Rect& roi)
-
-.. c:function:: (11) Mat::Mat(const CvMat* m, bool copyData=false)
-
-.. c:function:: (12) Mat::Mat(const IplImage* img, bool copyData=false)
-
-.. c:function:: (13) template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
-
-.. c:function:: (14) template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
-
-.. c:function:: (15) template<typename T> explicit Mat::Mat(const vector<T>& vec, bool copyData=false)
-
-.. c:function:: (16) Mat::Mat(const MatExpr& expr)
-
-.. c:function:: (17) Mat::Mat(int ndims, const int* sizes, int type)
-
-.. c:function:: (18) Mat::Mat(int ndims, const int* sizes, int type, const Scalar& s)
-
-.. c:function:: (19) Mat::Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0)
-
-.. c:function:: (20) Mat::Mat(const Mat& m, const Range* ranges)
+.. cpp:function:: template<typename T> explicit Mat::Mat(const vector<T>& vec, bool copyData=false)
+                  
+.. cpp:function:: Mat::Mat(const MatExpr& expr)
+                  
+.. cpp:function:: Mat::Mat(int ndims, const int* sizes, int type)
+                  
+.. cpp:function:: Mat::Mat(int ndims, const int* sizes, int type, const Scalar& s)
+                  
+.. cpp:function:: Mat::Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0)
+                  
+.. cpp:function:: Mat::Mat(const Mat& m, const Range* ranges)
 
     Provides various array constructors.
 
@@ -1509,7 +1509,9 @@ The method returns a Matlab-style identity matrix initializer, similarly to
 Mat::create
 ---------------
 .. cpp:function:: void Mat::create(int rows, int cols, int type)
+
 .. cpp:function:: void Mat::create(Size size, int type)
+
 .. cpp:function:: void Mat::create(int ndims, const int* sizes, int type)
 
     Allocates new array data if needed.

@@ -868,7 +868,7 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 }
 
 
-void cv::getRectSubPix( const InputArray& _image, Size patchSize, Point2f center,
+void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
                         OutputArray _patch, int patchType )
 {
     Mat image = _image.getMat();

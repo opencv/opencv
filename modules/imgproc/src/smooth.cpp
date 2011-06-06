@@ -294,7 +294,7 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
 }
 
 
-void cv::boxFilter( const InputArray& _src, OutputArray _dst, int ddepth,
+void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
@@ -316,7 +316,7 @@ void cv::boxFilter( const InputArray& _src, OutputArray _dst, int ddepth,
     f->apply( src, dst );
 }
 
-void cv::blur( const InputArray& src, OutputArray dst,
+void cv::blur( InputArray src, OutputArray dst,
            Size ksize, Point anchor, int borderType )
 {
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
@@ -410,7 +410,7 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
 }
 
 
-void cv::GaussianBlur( const InputArray& _src, OutputArray _dst, Size ksize,
+void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
@@ -1219,7 +1219,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 }
     
-void cv::medianBlur( const InputArray& _src0, OutputArray _dst, int ksize )
+void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
@@ -1518,7 +1518,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
 }
 
-void cv::bilateralFilter( const InputArray& _src, OutputArray _dst, int d,
+void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
 {

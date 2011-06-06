@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-cv::Mat cv::getDefaultNewCameraMatrix( const InputArray& _cameraMatrix, Size imgsize,
+cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
 {
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -59,8 +59,8 @@ cv::Mat cv::getDefaultNewCameraMatrix( const InputArray& _cameraMatrix, Size img
     return newCameraMatrix;
 }
 
-void cv::initUndistortRectifyMap( const InputArray& _cameraMatrix, const InputArray& _distCoeffs,
-                              const InputArray& _matR, const InputArray& _newCameraMatrix,
+void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
+                              InputArray _matR, InputArray _newCameraMatrix,
                               Size size, int m1type, OutputArray _map1, OutputArray _map2 )
 {
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
@@ -161,8 +161,8 @@ void cv::initUndistortRectifyMap( const InputArray& _cameraMatrix, const InputAr
 }
 
 
-void cv::undistort( const InputArray& _src, OutputArray _dst, const InputArray& _cameraMatrix,
-                    const InputArray& _distCoeffs, const InputArray& _newCameraMatrix )
+void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
+                    InputArray _distCoeffs, InputArray _newCameraMatrix )
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
@@ -381,11 +381,11 @@ void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatr
 }
 
 
-void cv::undistortPoints( const InputArray& _src, OutputArray _dst,
-                          const InputArray& _cameraMatrix,
-                          const InputArray& _distCoeffs,
-                          const InputArray& _Rmat,
-                          const InputArray& _Pmat )
+void cv::undistortPoints( InputArray _src, OutputArray _dst,
+                          InputArray _cameraMatrix,
+                          InputArray _distCoeffs,
+                          InputArray _Rmat,
+                          InputArray _Pmat )
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
@@ -488,7 +488,7 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
 
 }
     
-float cv::initWideAngleProjMap( const InputArray& _cameraMatrix0, const InputArray& _distCoeffs0,
+float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeffs0,
                             Size imageSize, int destImageWidth, int m1type,
                             OutputArray _map1, OutputArray _map2, int projType, double _alpha )
 {

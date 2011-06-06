@@ -1894,7 +1894,7 @@ cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,
     }
 }
 
-bool cv::findChessboardCorners( const InputArray& _image, Size patternSize,
+bool cv::findChessboardCorners( InputArray _image, Size patternSize,
                             OutputArray corners, int flags )
 {
     int count = patternSize.area()*2;
@@ -1923,7 +1923,7 @@ int quiet_error(int status, const char* func_name,
 }
 
 void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
-                            const InputArray& _corners,
+                            InputArray _corners,
                             bool patternWasFound )
 {
     Mat corners = _corners.getMat();
@@ -1936,7 +1936,7 @@ void cv::drawChessboardCorners( InputOutputArray _image, Size patternSize,
                              nelems, patternWasFound );
 }
 
-bool cv::findCirclesGrid( const InputArray& _image, Size patternSize,
+bool cv::findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector )
 {
 	bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;

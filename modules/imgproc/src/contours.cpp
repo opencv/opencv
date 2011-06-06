@@ -1519,13 +1519,13 @@ void cv::findContours( const InputOutputArray _image, OutputArrayOfArrays _conto
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
-    findContours(_image, _contours, OutputArrayOfArrays(), mode, method, offset);
+    findContours(_image, _contours, None(), mode, method, offset);
 }
 
 namespace cv
 {
 
-static void addChildContour(const InputArrayOfArrays& contours,
+static void addChildContour(InputArrayOfArrays contours,
                             size_t ncontours,
                             const Vec4i* hierarchy,
                             int i, vector<CvSeq>& seq,
@@ -1552,9 +1552,9 @@ static void addChildContour(const InputArrayOfArrays& contours,
     
 }
 
-void cv::drawContours( InputOutputArray _image, const InputArrayOfArrays& _contours,
+void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int contourIdx, const Scalar& color, int thickness,
-                   int lineType, const InputArray& _hierarchy,
+                   int lineType, InputArray _hierarchy,
                    int maxLevel, Point offset )
 {
     Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
@@ -1632,7 +1632,7 @@ void cv::drawContours( InputOutputArray _image, const InputArrayOfArrays& _conto
 }
 
 
-void cv::approxPolyDP( const InputArray& _curve, OutputArray _approxCurve,
+void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
                        double epsilon, bool closed )
 {
     Mat curve = _curve.getMat();
@@ -1649,7 +1649,7 @@ void cv::approxPolyDP( const InputArray& _curve, OutputArray _approxCurve,
 }
 
 
-double cv::arcLength( const InputArray& _curve, bool closed )
+double cv::arcLength( InputArray _curve, bool closed )
 {
     Mat curve = _curve.getMat();
     CV_Assert(curve.checkVector(2) >= 0 && (curve.depth() == CV_32F || curve.depth() == CV_32S));
@@ -1658,7 +1658,7 @@ double cv::arcLength( const InputArray& _curve, bool closed )
 }
 
 
-cv::Rect cv::boundingRect( const InputArray& _points )
+cv::Rect cv::boundingRect( InputArray _points )
 {
     Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
@@ -1667,7 +1667,7 @@ cv::Rect cv::boundingRect( const InputArray& _points )
 }
 
 
-double cv::contourArea( const InputArray& _contour, bool oriented )
+double cv::contourArea( InputArray _contour, bool oriented )
 {
     Mat contour = _contour.getMat();
     CV_Assert(contour.checkVector(2) >= 0 && (contour.depth() == CV_32F || contour.depth() == CV_32S));
@@ -1676,7 +1676,7 @@ double cv::contourArea( const InputArray& _contour, bool oriented )
 }
 
 
-cv::RotatedRect cv::minAreaRect( const InputArray& _points )
+cv::RotatedRect cv::minAreaRect( InputArray _points )
 {
     Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
@@ -1685,7 +1685,7 @@ cv::RotatedRect cv::minAreaRect( const InputArray& _points )
 }
 
 
-void cv::minEnclosingCircle( const InputArray& _points,
+void cv::minEnclosingCircle( InputArray _points,
                              Point2f& center, float& radius )
 {
     Mat points = _points.getMat();
@@ -1695,8 +1695,8 @@ void cv::minEnclosingCircle( const InputArray& _points,
 }
 
 
-double cv::matchShapes( const InputArray& _contour1,
-                        const InputArray& _contour2,
+double cv::matchShapes( InputArray _contour1,
+                        InputArray _contour2,
                         int method, double parameter )
 {
     Mat contour1 = _contour1.getMat(), contour2 = _contour2.getMat();
@@ -1709,7 +1709,7 @@ double cv::matchShapes( const InputArray& _contour1,
 }
 
 
-void cv::convexHull( const InputArray& _points, OutputArray _hull, bool clockwise, bool returnPoints )
+void cv::convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
     Mat points = _points.getMat();
     int nelems = points.checkVector(2), depth = points.depth();
@@ -1730,7 +1730,7 @@ void cv::convexHull( const InputArray& _points, OutputArray _hull, bool clockwis
     shull.copyTo(dhull);
 }
 
-bool cv::isContourConvex( const InputArray& _contour )
+bool cv::isContourConvex( InputArray _contour )
 {
     Mat contour = _contour.getMat();
     CV_Assert(contour.checkVector(2) >= 0 &&
@@ -1739,7 +1739,7 @@ bool cv::isContourConvex( const InputArray& _contour )
     return cvCheckContourConvexity(&c) > 0;
 }
 
-cv::RotatedRect cv::fitEllipse( const InputArray& _points )
+cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
     Mat points = _points.getMat();
     CV_Assert(points.checkVector(2) >= 0 &&
@@ -1749,7 +1749,7 @@ cv::RotatedRect cv::fitEllipse( const InputArray& _points )
 }
 
 
-void cv::fitLine( const InputArray& _points, OutputArray _line, int distType,
+void cv::fitLine( InputArray _points, OutputArray _line, int distType,
                   double param, double reps, double aeps )
 {
     Mat points = _points.getMat();
@@ -1767,7 +1767,7 @@ void cv::fitLine( const InputArray& _points, OutputArray _line, int distType,
 }
 
 
-double cv::pointPolygonTest( const InputArray& _contour,
+double cv::pointPolygonTest( InputArray _contour,
                              Point2f pt, bool measureDist )
 {
     Mat contour = _contour.getMat();

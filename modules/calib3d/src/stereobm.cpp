@@ -920,7 +920,7 @@ void StereoBM::init(int _preset, int _ndisparities, int _SADWindowSize)
     state->SADWindowSize = _SADWindowSize;
 }
 
-void StereoBM::operator()( const InputArray& _left, const InputArray& _right,
+void StereoBM::operator()( InputArray _left, InputArray _right,
                            OutputArray _disparity, int disptype )
 {
     Mat left = _left.getMat(), right = _right.getMat();

@@ -407,7 +407,7 @@ CV_WRAP static inline void convertPointsHomogeneous( const Mat& src, CV_OUT Mat&
 }
 
 //! finds circles' grid pattern of the specified size in the image
-CV_WRAP static inline void findCirclesGridDefault( const InputArray& image, Size patternSize,
+CV_WRAP static inline void findCirclesGridDefault( InputArray image, Size patternSize,
                                                    OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID )
 {
     findCirclesGrid(image, patternSize, centers, flags);

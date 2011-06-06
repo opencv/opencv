@@ -1589,7 +1589,7 @@ MatExpr Mat::inv(int method) const
 }
     
 
-MatExpr Mat::mul(const InputArray& m, double scale) const
+MatExpr Mat::mul(InputArray m, double scale) const
 {
     MatExpr e;
     MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);

@@ -1138,8 +1138,8 @@ icvDistC( const float *x, const float *y, void *user_param )
 }
 
 
-float cv::EMD( const InputArray& _signature1, const InputArray& _signature2,
-               int distType, const InputArray& _cost,
+float cv::EMD( InputArray _signature1, InputArray _signature2,
+               int distType, InputArray _cost,
                float* lowerBound, OutputArray _flow )
 {
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();

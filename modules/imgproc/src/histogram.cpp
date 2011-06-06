@@ -593,7 +593,7 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
-                   const InputArray& _mask, OutputArray _hist, int dims, const int* histSize,
+                   InputArray _mask, OutputArray _hist, int dims, const int* histSize,
                    const float** ranges, bool uniform, bool accumulate )
 {
     Mat mask = _mask.getMat();
@@ -816,7 +816,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
 }
     
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
-               const InputArray& _mask, SparseMat& hist, int dims, const int* histSize,
+               InputArray _mask, SparseMat& hist, int dims, const int* histSize,
                const float** ranges, bool uniform, bool accumulate )
 {
     Mat mask = _mask.getMat();
@@ -1120,7 +1120,7 @@ calcBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 }
     
 void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
-                          const InputArray& _hist, OutputArray _backProject,
+                          InputArray _hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
     Mat hist = _hist.getMat();
@@ -1316,7 +1316,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     
 ////////////////// C O M P A R E   H I S T O G R A M S ////////////////////////    
 
-double cv::compareHist( const InputArray& _H1, const InputArray& _H2, int method )
+double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 {
     Mat H1 = _H1.getMat(), H2 = _H2.getMat();
     const Mat* arrays[] = {&H1, &H2, 0};
@@ -2409,7 +2409,7 @@ CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
 }
 
 
-void cv::equalizeHist( const InputArray& _src, OutputArray _dst )
+void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );

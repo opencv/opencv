@@ -1452,7 +1452,7 @@ static void CCSIDFT_64f( const double* src, double* dst, int n, int nf, int* fac
 }
     
 
-void cv::dft( const InputArray& _src0, OutputArray _dst, int flags, int nonzero_rows )
+void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
     static DFTFunc dft_tbl[6] =
     {
@@ -1840,12 +1840,12 @@ void cv::dft( const InputArray& _src0, OutputArray _dst, int flags, int nonzero_
 }
 
 
-void cv::idft( const InputArray& src, OutputArray dst, int flags, int nonzero_rows )
+void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
 {
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
-void cv::mulSpectrums( const InputArray& _srcA, const InputArray& _srcB,
+void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
@@ -2218,7 +2218,7 @@ static void IDCT_64f(const double* src, int src_step, double* dft_src, double* d
 
 }
     
-void cv::dct( const InputArray& _src0, OutputArray _dst, int flags )
+void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
     static DCTFunc dct_tbl[4] =
     {
@@ -2373,7 +2373,7 @@ void cv::dct( const InputArray& _src0, OutputArray _dst, int flags )
 }
 
 
-void cv::idct( const InputArray& src, OutputArray dst, int flags )
+void cv::idct( InputArray src, OutputArray dst, int flags )
 {
     dct( src, dst, flags | DCT_INVERSE );
 }

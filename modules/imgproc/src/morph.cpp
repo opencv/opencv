@@ -909,7 +909,7 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
 }
 
 
-cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, const InputArray& _kernel, Point anchor)
+cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _kernel, Point anchor)
 {
     Mat kernel = _kernel.getMat();
     int depth = CV_MAT_DEPTH(type);
@@ -943,7 +943,7 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, const InputArr
 }
 
 
-cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, const InputArray& _kernel,
+cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArray _kernel,
          Point anchor, int _rowBorderType, int _columnBorderType,
          const Scalar& _borderValue )
 {
@@ -1038,8 +1038,8 @@ cv::Mat cv::getStructuringElement(int shape, Size ksize, Point anchor)
 namespace cv
 {
 
-static void morphOp( int op, const InputArray& _src, OutputArray& _dst,
-                     const InputArray& _kernel,
+static void morphOp( int op, InputArray _src, OutputArray _dst,
+                     InputArray _kernel,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
@@ -1087,7 +1087,7 @@ template<> void Ptr<IplConvKernel>::delete_obj()
 
 }
 
-void cv::erode( const InputArray& src, OutputArray dst, const InputArray& kernel,
+void cv::erode( InputArray src, OutputArray dst, InputArray kernel,
                 Point anchor, int iterations,
                 int borderType, const Scalar& borderValue )
 {
@@ -1095,7 +1095,7 @@ void cv::erode( const InputArray& src, OutputArray dst, const InputArray& kernel
 }
 
 
-void cv::dilate( const InputArray& src, OutputArray dst, const InputArray& kernel,
+void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
                  Point anchor, int iterations,
                  int borderType, const Scalar& borderValue )
 {
@@ -1103,8 +1103,8 @@ void cv::dilate( const InputArray& src, OutputArray dst, const InputArray& kerne
 }
 
 
-void cv::morphologyEx( const InputArray& _src, OutputArray _dst, int op,
-                       const InputArray& kernel, Point anchor, int iterations,
+void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
+                       InputArray kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
     Mat src = _src.getMat(), temp;

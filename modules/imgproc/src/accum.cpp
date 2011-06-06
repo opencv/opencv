@@ -350,7 +350,7 @@ inline int getAccTabIdx(int sdepth, int ddepth)
     
 }
     
-void cv::accumulate( const InputArray& _src, InputOutputArray _dst, const InputArray& _mask )
+void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
@@ -374,7 +374,7 @@ void cv::accumulate( const InputArray& _src, InputOutputArray _dst, const InputA
 }
 
 
-void cv::accumulateSquare( const InputArray& _src, InputOutputArray _dst, const InputArray& _mask )
+void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
@@ -397,8 +397,8 @@ void cv::accumulateSquare( const InputArray& _src, InputOutputArray _dst, const 
         func(ptrs[0], ptrs[1], ptrs[2], len, cn);
 }
 
-void cv::accumulateProduct( const InputArray& _src1, const InputArray& _src2,
-                            InputOutputArray _dst, const InputArray& _mask )
+void cv::accumulateProduct( InputArray _src1, InputArray _src2,
+                            InputOutputArray _dst, InputArray _mask )
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src1.depth(), ddepth = dst.depth(), cn = src1.channels();
@@ -423,8 +423,8 @@ void cv::accumulateProduct( const InputArray& _src1, const InputArray& _src2,
 }
 
 
-void cv::accumulateWeighted( const InputArray& _src, CV_IN_OUT InputOutputArray _dst,
-                             double alpha, const InputArray& _mask )
+void cv::accumulateWeighted( InputArray _src, CV_IN_OUT InputOutputArray _dst,
+                             double alpha, InputArray _mask )
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();

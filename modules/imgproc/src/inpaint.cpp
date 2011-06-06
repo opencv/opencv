@@ -807,7 +807,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     }
 }
 
-void cv::inpaint( const InputArray& _src, const InputArray& _mask, OutputArray _dst,
+void cv::inpaint( InputArray _src, InputArray _mask, OutputArray _dst,
                   double inpaintRange, int flags )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();

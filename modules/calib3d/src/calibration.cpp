@@ -2768,8 +2768,8 @@ CV_IMPL int cvStereoRectifyUncalibrated(
 }
 
 
-void cv::reprojectImageTo3D( const InputArray& _disparity,
-                             OutputArray __3dImage, const InputArray& _Qmat,
+void cv::reprojectImageTo3D( InputArray _disparity,
+                             OutputArray __3dImage, InputArray _Qmat,
                              bool handleMissingValues, int dtype )
 {
     Mat disparity = _disparity.getMat(), Q = _Qmat.getMat();
@@ -3109,9 +3109,9 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
 namespace cv
 {
 
-static void collectCalibrationData( const InputArrayOfArrays& objectPoints,
-                                    const InputArrayOfArrays& imagePoints1,
-                                    const InputArrayOfArrays& imagePoints2,
+static void collectCalibrationData( InputArrayOfArrays objectPoints,
+                                    InputArrayOfArrays imagePoints1,
+                                    InputArrayOfArrays imagePoints2,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
@@ -3190,7 +3190,7 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype)
 }
 
 
-void cv::Rodrigues(const InputArray& _src, OutputArray _dst, OutputArray _jacobian)
+void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 {
     Mat src = _src.getMat();
     bool v2m = src.cols == 1 || src.rows == 1;
@@ -3207,7 +3207,7 @@ void cv::Rodrigues(const InputArray& _src, OutputArray _dst, OutputArray _jacobi
         dst = Scalar(0);
 }
 
-void cv::matMulDeriv( const InputArray& _Amat, const InputArray& _Bmat,
+void cv::matMulDeriv( InputArray _Amat, InputArray _Bmat,
                       OutputArray _dABdA, OutputArray _dABdB )
 {
     Mat A = _Amat.getMat(), B = _Bmat.getMat();
@@ -3218,8 +3218,8 @@ void cv::matMulDeriv( const InputArray& _Amat, const InputArray& _Bmat,
 }
 
 
-void cv::composeRT( const InputArray& _rvec1, const InputArray& _tvec1,
-                    const InputArray& _rvec2, const InputArray& _tvec2,
+void cv::composeRT( InputArray _rvec1, InputArray _tvec1,
+                    InputArray _rvec2, InputArray _tvec2,
                     OutputArray _rvec3, OutputArray _tvec3,
                     OutputArray _dr3dr1, OutputArray _dr3dt1,
                     OutputArray _dr3dr2, OutputArray _dr3dt2,
@@ -3292,11 +3292,11 @@ void cv::composeRT( const InputArray& _rvec1, const InputArray& _tvec1,
 }
 
 
-void cv::projectPoints( const InputArray& _opoints,
-                        const InputArray& _rvec,
-                        const InputArray& _tvec,
-                        const InputArray& _cameraMatrix,
-                        const InputArray& _distCoeffs,
+void cv::projectPoints( InputArray _opoints,
+                        InputArray _rvec,
+                        InputArray _tvec,
+                        InputArray _cameraMatrix,
+                        InputArray _distCoeffs,
                         OutputArray _ipoints,
                         OutputArray _jacobian,
                         double aspectRatio )
@@ -3334,12 +3334,12 @@ void cv::projectPoints( const InputArray& _opoints,
                       &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
 
-cv::Mat cv::initCameraMatrix2D( const InputArrayOfArrays& objectPoints,
-                                const InputArrayOfArrays& imagePoints,
+cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
+                                InputArrayOfArrays imagePoints,
                                 Size imageSize, double aspectRatio )
 {
     Mat objPt, imgPt, npoints, cameraMatrix(3, 3, CV_64F);
-    collectCalibrationData( objectPoints, imagePoints, InputArrayOfArrays(),
+    collectCalibrationData( objectPoints, imagePoints, None(),
                             objPt, imgPt, 0, npoints );
     CvMat _objPt = objPt, _imgPt = imgPt, _npoints = npoints, _cameraMatrix = cameraMatrix;
     cvInitIntrinsicParams2D( &_objPt, &_imgPt, &_npoints,
@@ -3348,8 +3348,8 @@ cv::Mat cv::initCameraMatrix2D( const InputArrayOfArrays& objectPoints,
 }
 
 
-double cv::calibrateCamera( const InputArrayOfArrays& _objectPoints,
-                            const InputArrayOfArrays& _imagePoints,
+double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
+                            InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
                             OutputArray _rvecs, OutputArray _tvecs, int flags )
 {
@@ -3364,7 +3364,7 @@ double cv::calibrateCamera( const InputArrayOfArrays& _objectPoints,
     size_t i, nimages = _objectPoints.total();
     CV_Assert( nimages > 0 );
     Mat objPt, imgPt, npoints, rvecM((int)nimages, 3, CV_64FC1), tvecM((int)nimages, 3, CV_64FC1);
-    collectCalibrationData( _objectPoints, _imagePoints, InputArrayOfArrays(),
+    collectCalibrationData( _objectPoints, _imagePoints, None(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
@@ -3391,7 +3391,7 @@ double cv::calibrateCamera( const InputArrayOfArrays& _objectPoints,
 }
 
 
-void cv::calibrationMatrixValues( const InputArray& _cameraMatrix, Size imageSize,
+void cv::calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
                                   double apertureWidth, double apertureHeight,
                                   double& fovx, double& fovy, double& focalLength,
                                   Point2d& principalPoint, double& aspectRatio )
@@ -3402,9 +3402,9 @@ void cv::calibrationMatrixValues( const InputArray& _cameraMatrix, Size imageSiz
         &fovx, &fovy, &focalLength, (CvPoint2D64f*)&principalPoint, &aspectRatio );
 }
 
-double cv::stereoCalibrate( const InputArrayOfArrays& _objectPoints,
-                          const InputArrayOfArrays& _imagePoints1,
-                          const InputArrayOfArrays& _imagePoints2,
+double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
+                          InputArrayOfArrays _imagePoints1,
+                          InputArrayOfArrays _imagePoints2,
                           InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1,
                           InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2,
                           Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
@@ -3463,9 +3463,9 @@ double cv::stereoCalibrate( const InputArrayOfArrays& _objectPoints,
 }
 
 
-void cv::stereoRectify( const InputArray& _cameraMatrix1, const InputArray& _distCoeffs1,
-                        const InputArray& _cameraMatrix2, const InputArray& _distCoeffs2,
-                        Size imageSize, const InputArray& _Rmat, const InputArray& _Tmat,
+void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
+                        InputArray _cameraMatrix2, InputArray _distCoeffs2,
+                        Size imageSize, InputArray _Rmat, InputArray _Tmat,
                         OutputArray _Rmat1, OutputArray _Rmat2,
                         OutputArray _Pmat1, OutputArray _Pmat2,
                         OutputArray _Qmat, int flags,
@@ -3500,8 +3500,8 @@ void cv::stereoRectify( const InputArray& _cameraMatrix1, const InputArray& _dis
         newImageSize, (CvRect*)validPixROI1, (CvRect*)validPixROI2);
 }
 
-bool cv::stereoRectifyUncalibrated( const InputArray& _points1, const InputArray& _points2,
-                                    const InputArray& _Fmat, Size imgSize,
+bool cv::stereoRectifyUncalibrated( InputArray _points1, InputArray _points2,
+                                    InputArray _Fmat, Size imgSize,
                                     OutputArray _Hmat1, OutputArray _Hmat2, double threshold )
 {
     int rtype = CV_64F;
@@ -3516,8 +3516,8 @@ bool cv::stereoRectifyUncalibrated( const InputArray& _points1, const InputArray
     return cvStereoRectifyUncalibrated(&c_pt1, &c_pt2, p_F, imgSize, &c_H1, &c_H2, threshold) > 0;
 }
 
-cv::Mat cv::getOptimalNewCameraMatrix( const InputArray& _cameraMatrix,
-                                       const InputArray& _distCoeffs,
+cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
+                                       InputArray _distCoeffs,
                                        Size imgSize, double alpha, Size newImgSize,
                                        Rect* validPixROI )
 {
@@ -3534,7 +3534,7 @@ cv::Mat cv::getOptimalNewCameraMatrix( const InputArray& _cameraMatrix,
 }
 
 
-cv::Vec3d cv::RQDecomp3x3( const InputArray& _Mmat,
+cv::Vec3d cv::RQDecomp3x3( InputArray _Mmat,
                            OutputArray _Rmat,
                            OutputArray _Qmat,
                            OutputArray _Qx,
@@ -3567,7 +3567,7 @@ cv::Vec3d cv::RQDecomp3x3( const InputArray& _Mmat,
 }
 
 
-void cv::decomposeProjectionMatrix( const InputArray& _projMatrix, OutputArray _cameraMatrix,
+void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraMatrix,
                                     OutputArray _rotMatrix, OutputArray _transVect,
                                     OutputArray _rotMatrixX, OutputArray _rotMatrixY,
                                     OutputArray _rotMatrixZ, OutputArray _eulerAngles )
@@ -3614,8 +3614,8 @@ void cv::decomposeProjectionMatrix( const InputArray& _projMatrix, OutputArray _
 namespace cv
 {
     
-static void adjust3rdMatrix(const InputArrayOfArrays& _imgpt1_0,
-                            const InputArrayOfArrays& _imgpt3_0, 
+static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
+                            InputArrayOfArrays _imgpt3_0, 
                             const Mat& cameraMatrix1, const Mat& distCoeffs1,
                             const Mat& cameraMatrix3, const Mat& distCoeffs3,
                             const Mat& R1, const Mat& R3, const Mat& P1, Mat& P3 )
@@ -3666,13 +3666,13 @@ static void adjust3rdMatrix(const InputArrayOfArrays& _imgpt1_0,
 
 }
 
-float cv::rectify3Collinear( const InputArray& _cameraMatrix1, const InputArray& _distCoeffs1,
-                   const InputArray& _cameraMatrix2, const InputArray& _distCoeffs2,
-                   const InputArray& _cameraMatrix3, const InputArray& _distCoeffs3,
-                   const InputArrayOfArrays& _imgpt1,
-                   const InputArrayOfArrays& _imgpt3,
-                   Size imageSize, const InputArray& _Rmat12, const InputArray& _Tmat12,
-                   const InputArray& _Rmat13, const InputArray& _Tmat13,
+float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
+                   InputArray _cameraMatrix2, InputArray _distCoeffs2,
+                   InputArray _cameraMatrix3, InputArray _distCoeffs3,
+                   InputArrayOfArrays _imgpt1,
+                   InputArrayOfArrays _imgpt3,
+                   Size imageSize, InputArray _Rmat12, InputArray _Tmat12,
+                   InputArray _Rmat13, InputArray _Tmat13,
                    OutputArray _Rmat1, OutputArray _Rmat2, OutputArray _Rmat3,
                    OutputArray _Pmat1, OutputArray _Pmat2, OutputArray _Pmat3,
                    OutputArray _Qmat,

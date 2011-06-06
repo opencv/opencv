@@ -244,30 +244,30 @@ namespace cv
 {
     
 //! updates motion history image using the current silhouette
-CV_EXPORTS_W void updateMotionHistory( const InputArray& silhouette, InputOutputArray mhi,
+CV_EXPORTS_W void updateMotionHistory( InputArray silhouette, InputOutputArray mhi,
                                        double timestamp, double duration );
 
 //! computes the motion gradient orientation image from the motion history image
-CV_EXPORTS_W void calcMotionGradient( const InputArray& mhi, OutputArray mask,
+CV_EXPORTS_W void calcMotionGradient( InputArray mhi, OutputArray mask,
                                       OutputArray orientation,
                                       double delta1, double delta2,
                                       int apertureSize=3 );
 
 //! computes the global orientation of the selected motion history image part
-CV_EXPORTS_W double calcGlobalOrientation( const InputArray& orientation, const InputArray& mask,
-                                           const InputArray& mhi, double timestamp,
+CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray mask,
+                                           InputArray mhi, double timestamp,
                                            double duration );
 
-CV_EXPORTS_W void segmentMotion(const InputArray& mhi, OutputArray segmask,
+CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
                                 vector<Rect>& boundingRects,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm
-CV_EXPORTS_W RotatedRect CamShift( const InputArray& probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
 
 //! updates the object tracking window using meanshift algorithm
-CV_EXPORTS_W int meanShift( const InputArray& probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W int meanShift( InputArray probImage, CV_IN_OUT Rect& window,
                             TermCriteria criteria );
 
 /*!
@@ -315,8 +315,8 @@ public:
 enum { OPTFLOW_USE_INITIAL_FLOW=4, OPTFLOW_FARNEBACK_GAUSSIAN=256 };
 
 //! computes sparse optical flow using multi-scale Lucas-Kanade algorithm
-CV_EXPORTS_W void calcOpticalFlowPyrLK( const InputArray& prevImg, const InputArray& nextImg,
-                           const InputArray& prevPts, CV_OUT InputOutputArray nextPts,
+CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
+                           InputArray prevPts, CV_OUT InputOutputArray nextPts,
                            OutputArray status, OutputArray err,
                            Size winSize=Size(15,15), int maxLevel=3,
                            TermCriteria criteria=TermCriteria(
@@ -326,13 +326,13 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( const InputArray& prevImg, const InputAr
                            int flags=0 );
 
 //! computes dense optical flow using Farneback algorithm
-CV_EXPORTS_W void calcOpticalFlowFarneback( const InputArray& prev, const InputArray& next,
+CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
                            CV_OUT InputOutputArray flow, double pyr_scale, int levels, int winsize,
                            int iterations, int poly_n, double poly_sigma, int flags );
 
 //! estimates the best-fit Euqcidean, similarity, affine or perspective transformation
 // that maps one 2D point set to another or one image to another.
-CV_EXPORTS_W Mat estimateRigidTransform( const InputArray& src, const InputArray& dst,
+CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
     
 }

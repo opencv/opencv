@@ -951,7 +951,7 @@ static inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
     if( sc.dims > 2 || (sc.cols != 1 && sc.rows != 1) || !sc.isContinuous() )
         return false;
     int cn = CV_MAT_CN(atype);
-    if( akind == InputArray::MATX && sckind != InputArray::MATX )
+    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
         return false;
     return sc.size() == Size(1, 1) || sc.size() == Size(1, cn) || sc.size() == Size(cn, 1) ||
         (sc.size() == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
@@ -975,8 +975,8 @@ static void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, si
 
 }
 
-void binary_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _dst,
-               const InputArray& _mask, const BinaryFunc* tab, bool bitwise)
+void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+               InputArray _mask, const BinaryFunc* tab, bool bitwise)
 {
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
@@ -1005,7 +1005,7 @@ void binary_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _d
         return;
     }
 
-    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+    if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
         src1.size != src2.size || src1.type() != src2.type() )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
@@ -1130,62 +1130,62 @@ static BinaryFunc minTab[] =
 
 }
 
-void cv::bitwise_and(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = and8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
-void cv::bitwise_or(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = or8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
-void cv::bitwise_xor(const InputArray& a, const InputArray& b, OutputArray c, const InputArray& mask)
+void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = xor8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
-void cv::bitwise_not(const InputArray& a, OutputArray c, const InputArray& mask)
+void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
     BinaryFunc f = not8u;
     binary_op(a, a, c, mask, &f, true);
 }
 
-void cv::max( const InputArray& src1, const InputArray& src2, OutputArray dst )
+void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, InputArray(), maxTab, false );
+    binary_op(src1, src2, dst, None(), maxTab, false );
 }
 
-void cv::min( const InputArray& src1, const InputArray& src2, OutputArray dst )
+void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, InputArray(), minTab, false );
+    binary_op(src1, src2, dst, None(), minTab, false );
 }
 
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, InputArray(), maxTab, false );
+    binary_op(src1, src2, _dst, None(), maxTab, false );
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, InputArray(), minTab, false );
+    binary_op(src1, src2, _dst, None(), minTab, false );
 }
 
 void cv::max(const Mat& src1, double src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, InputArray(), maxTab, false );
+    binary_op(src1, src2, _dst, None(), maxTab, false );
 }
 
 void cv::min(const Mat& src1, double src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, InputArray(), minTab, false );
+    binary_op(src1, src2, _dst, None(), minTab, false );
 }
 
 /****************************************************************************************\
@@ -1195,8 +1195,8 @@ void cv::min(const Mat& src1, double src2, Mat& dst)
 namespace cv
 {
 
-void arithm_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _dst,
-               const InputArray& _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
+void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+               InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
 {
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
@@ -1216,7 +1216,7 @@ void arithm_op(const InputArray& _src1, const InputArray& _src2, OutputArray& _d
 
     bool haveScalar = false, swapped12 = false;
 
-    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+    if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
         src1.size != src2.size || src1.channels() != src2.channels() )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
@@ -1452,21 +1452,21 @@ static BinaryFunc absdiffTab[] =
 
 }
 
-void cv::add( const InputArray& src1, const InputArray& src2, OutputArray dst,
-          const InputArray& mask, int dtype )
+void cv::add( InputArray src1, InputArray src2, OutputArray dst,
+          InputArray mask, int dtype )
 {
     arithm_op(src1, src2, dst, mask, dtype, addTab );
 }
 
-void cv::subtract( const InputArray& src1, const InputArray& src2, OutputArray dst,
-               const InputArray& mask, int dtype )
+void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
+               InputArray mask, int dtype )
 {
     arithm_op(src1, src2, dst, mask, dtype, subTab );
 }
 
-void cv::absdiff( const InputArray& src1, const InputArray& src2, OutputArray dst )
+void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
-    arithm_op(src1, src2, dst, InputArray(), -1, absdiffTab);
+    arithm_op(src1, src2, dst, None(), -1, absdiffTab);
 }
 
 /****************************************************************************************\
@@ -1776,22 +1776,22 @@ static BinaryFunc recipTab[] =
 
 }
 
-void cv::multiply(const InputArray& src1, const InputArray& src2,
+void cv::multiply(InputArray src1, InputArray src2,
                   OutputArray dst, double scale, int dtype)
 {
-    arithm_op(src1, src2, dst, InputArray(), dtype, mulTab, true, &scale);
+    arithm_op(src1, src2, dst, None(), dtype, mulTab, true, &scale);
 }
 
-void cv::divide(const InputArray& src1, const InputArray& src2,
+void cv::divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
-    arithm_op(src1, src2, dst, InputArray(), dtype, divTab, true, &scale);
+    arithm_op(src1, src2, dst, None(), dtype, divTab, true, &scale);
 }
 
-void cv::divide(double scale, const InputArray& src2,
+void cv::divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
-    arithm_op(src2, src2, dst, InputArray(), dtype, recipTab, true, &scale);
+    arithm_op(src2, src2, dst, None(), dtype, recipTab, true, &scale);
 }
 
 /****************************************************************************************\
@@ -1940,11 +1940,11 @@ static BinaryFunc addWeightedTab[] =
 
 }
 
-void cv::addWeighted( const InputArray& src1, double alpha, const InputArray& src2,
+void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
                       double beta, double gamma, OutputArray dst, int dtype )
 {
     double scalars[] = {alpha, beta, gamma};
-    arithm_op(src1, src2, dst, InputArray(), dtype, addWeightedTab, true, scalars);
+    arithm_op(src1, src2, dst, None(), dtype, addWeightedTab, true, scalars);
 }
 
 
@@ -2077,7 +2077,7 @@ static double getMaxVal(int depth)
 
 }
 
-void cv::compare(const InputArray& _src1, const InputArray& _src2, OutputArray _dst, int op)
+void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 {
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
@@ -2096,7 +2096,7 @@ void cv::compare(const InputArray& _src1, const InputArray& _src2, OutputArray _
 
     bool haveScalar = false;
 
-    if( (kind1 == InputArray::MATX) + (kind2 == InputArray::MATX) == 1 ||
+    if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
         src1.size != src2.size || src1.type() != src2.type() )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
@@ -2307,15 +2307,15 @@ static InRangeFunc inRangeTab[] =
 
 }
 
-void cv::inRange(const InputArray& _src, const InputArray& _lowerb,
-                 const InputArray& _upperb, OutputArray _dst)
+void cv::inRange(InputArray _src, InputArray _lowerb,
+                 InputArray _upperb, OutputArray _dst)
 {
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
     bool lbScalar = false, ubScalar = false;
 
-    if( (lkind == InputArray::MATX && skind != InputArray::MATX) ||
+    if( (lkind == _InputArray::MATX && skind != _InputArray::MATX) ||
         src.size != lb.size || src.type() != lb.type() )
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
@@ -2324,7 +2324,7 @@ void cv::inRange(const InputArray& _src, const InputArray& _lowerb,
         lbScalar = true;
     }
 
-    if( (ukind == InputArray::MATX && skind != InputArray::MATX) ||
+    if( (ukind == _InputArray::MATX && skind != _InputArray::MATX) ||
         src.size != ub.size || src.type() != ub.type() )
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )

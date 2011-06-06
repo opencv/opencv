@@ -2774,7 +2774,7 @@ struct YUV420i2BGRA8888Invoker
 //                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
 
-void cv::cvtColor( const InputArray& _src, OutputArray _dst, int code, int dcn )
+void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     Mat src = _src.getMat(), dst;
     Size sz = src.size();

@@ -1257,7 +1257,7 @@ void BackgroundSubtractorMOG2::initialize(Size _frameSize, int _frameType)
     bgmodelUsedModes = Scalar::all(0);
 }
 
-void BackgroundSubtractorMOG2::operator()(const InputArray& _image, OutputArray _fgmask, double learningRate)
+void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;

@@ -525,7 +525,7 @@ void estimateSegmentation( GCGraph<double>& graph, Mat& mask )
     }
 }
 
-void cv::grabCut( const InputArray& _img, InputOutputArray _mask, Rect rect,
+void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
                   InputOutputArray _bgdModel, InputOutputArray _fgdModel,
                   int iterCount, int mode )
 {
