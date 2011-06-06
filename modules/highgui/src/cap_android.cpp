@@ -119,7 +119,7 @@ private:
 
     void prepareCacheForYUV420i(int width, int height);
     static bool convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
-    static bool convertYUV420i2BGR888(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder);
+    static bool convertYUV420i2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha);
 
     friend class HighguiAndroidCameraActivity;
 };
@@ -354,21 +354,21 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
     {
         switch(outputType)
         {
-        case CV_CAP_ANDROID_COLOR_FRAME:
-            if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2BGR888(m_width, m_height, current_frameYUV420i, m_frameColor.mat, false)))
-                    return NULL;
-            image = m_frameColor.getIplImagePtr();
-            break;
         case CV_CAP_ANDROID_GREY_FRAME:
             if (!m_hasGray)
                 if (!(m_hasGray = convertYUV420i2Grey(m_width, m_height, current_frameYUV420i, m_frameGray.mat)))
                     return NULL;
             image = m_frameGray.getIplImagePtr();
             break;
-        case CV_CAP_ANDROID_COLOR_FRAME_RGB:
+        case CV_CAP_ANDROID_COLOR_FRAME_BGR: case CV_CAP_ANDROID_COLOR_FRAME_RGB:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2BGR888(m_width, m_height, current_frameYUV420i, m_frameColor.mat, true)))
+                if (!(m_hasColor = convertYUV420i2BGR(m_width, m_height, current_frameYUV420i, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGB, false)))
+                    return NULL;
+            image = m_frameColor.getIplImagePtr();
+            break;
+        case CV_CAP_ANDROID_COLOR_FRAME_BGRA: case CV_CAP_ANDROID_COLOR_FRAME_RGBA:
+            if (!m_hasColor)
+                if (!(m_hasColor = convertYUV420i2BGR(m_width, m_height, current_frameYUV420i, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGBA, true)))
                     return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
@@ -439,103 +439,28 @@ void CvCapture_Android::prepareCacheForYUV420i(int width, int height)
     }
 }
 
-inline unsigned char clamp(int value)
-{
-    if (value <= 0)
-        return 0;
-    if (value >= 255)
-        return (unsigned char)255;
-    return (unsigned char)value;
-}
-
-
 bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat)
 {
     if (yuv == 0) return false;
-
+#define ALWAYS_COPY_GRAY 0
+#if ALWAYS_COPY_GRAY
     resmat.create(height, width, CV_8UC1);
     unsigned char* matBuff = resmat.ptr<unsigned char> (0);
     memcpy(matBuff, yuv, width * height);
+#else
+    resmat = cv::Mat(height, width, CV_8UC1, (void*)yuv);
+#endif
     return !resmat.empty();
 }
 
-template<int R>
-struct YUV420i2BGR888Invoker
-{
-	cv::Mat& dst;
-	unsigned char* my1, *muv;
-	int width;
-
-	YUV420i2BGR888Invoker(cv::Mat& _dst, int _width, unsigned char* _y1, unsigned char* _uv)
-		: dst(_dst), my1(_y1), muv(_uv), width(_width) {}
-
-	void operator()(const cv::BlockedRange& range) const
-    	{
-		//B = 1.164(Y - 16)                  + 2.018(U - 128)
-		//G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
-		//R = 1.164(Y - 16) + 1.596(V - 128)
-
-		unsigned char* y1 = my1 + range.begin() * width, *uv = muv + range.begin() * width / 2;
-
-		for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
-		{
-			unsigned char* row1 = dst.ptr<unsigned char>(j);
-			unsigned char* row2 = dst.ptr<unsigned char>(j+1);
-			unsigned char* y2 = y1 + width;
-
-			for(int i = 0; i < width; i+=2,row1+=6,row2+=6)
-			{
-			    int cr = uv[i] - 128;
-			    int cb = uv[i+1] - 128;
-
-			    int ruv = 409 * cr + 128;
-			    int guv = 128 - 100 * cb - 208 * cr;
-			    int buv = 516 * cb + 128;
-
-			    int y00 = (y1[i] - 16) * 298;
-			    row1[0+R] = clamp((y00 + buv) >> 8);
-			    row1[1] = clamp((y00 + guv) >> 8);
-			    row1[2-R] = clamp((y00 + ruv) >> 8);
-
-			    int y01 = (y1[i+1] - 16) * 298;
-			    row1[3+R] = clamp((y01 + buv) >> 8);
-			    row1[4] = clamp((y01 + guv) >> 8);
-			    row1[5-R] = clamp((y01 + ruv) >> 8);
-
-			    int y10 = (y2[i] - 16) * 298;
-			    row2[0+R] = clamp((y10 + buv) >> 8);
-			    row2[1] = clamp((y10 + guv) >> 8);
-			    row2[2-R] = clamp((y10 + ruv) >> 8);
-
-			    int y11 = (y2[i+1] - 16) * 298;
-			    row2[3+R] = clamp((y11 + buv) >> 8);
-			    row2[4] = clamp((y11 + guv) >> 8);
-			    row2[5-R] = clamp((y11 + ruv) >> 8);
-			}
-		}
-	}
-};
-
-bool CvCapture_Android::convertYUV420i2BGR888(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder)
+bool CvCapture_Android::convertYUV420i2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha)
 {
     if (yuv == 0) return false;
     CV_Assert(width % 2 == 0 && height % 2 == 0);
 
-    resmat.create(height, width, CV_8UC3);
+    cv::Mat src(height*3/2, width, CV_8UC1, (void*)yuv);
 
-    unsigned char* y1 = (unsigned char*)yuv;
-    unsigned char* uv = y1 + width * height;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#warning "TEGRA OPTIMIZED YUV420i TO RGB888 CONVERSION IS USED"
-    if (!tegra::YUV420i2BGR888(width, height, y1, uv, resmat, inRGBorder))
-#endif
-    {
-        if (inRGBorder)
-            cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<2>(resmat, width, y1, uv));
-        else
-            cv::parallel_for(cv::BlockedRange(0, height, 2), YUV420i2BGR888Invoker<0>(resmat, width, y1, uv));
-    }
+    cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420i2RGB : CV_YUV420i2BGR, withAlpha ? 4 : 3);
 
     return !resmat.empty();
 }
