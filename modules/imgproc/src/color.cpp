@@ -2653,12 +2653,12 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 template<int R>
 struct YUV420i2BGR888Invoker
 {
-    Mat& dst;
+    Mat* dst;
     const uchar* my1, *muv;
     int width;
 
     YUV420i2BGR888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
-        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
+        : dst(&_dst), my1(_y1), muv(_uv), width(_width) {}
 
     void operator()(const BlockedRange& range) const
     {
@@ -2670,8 +2670,8 @@ struct YUV420i2BGR888Invoker
 
         for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
         {
-            uchar* row1 = dst.ptr<uchar>(j);
-            uchar* row2 = dst.ptr<uchar>(j+1);
+            uchar* row1 = dst->ptr<uchar>(j);
+            uchar* row2 = dst->ptr<uchar>(j+1);
             const uchar* y2 = y1 + width;
 
             for(int i = 0; i < width; i+=2,row1+=6,row2+=6)
@@ -2710,12 +2710,12 @@ struct YUV420i2BGR888Invoker
 template<int R>
 struct YUV420i2BGRA8888Invoker
 {
-    Mat& dst;
+    Mat* dst;
     const uchar* my1, *muv;
     int width;
 
     YUV420i2BGRA8888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
-        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
+        : dst(&_dst), my1(_y1), muv(_uv), width(_width) {}
 
     void operator()(const BlockedRange& range) const
     {
@@ -2727,8 +2727,8 @@ struct YUV420i2BGRA8888Invoker
 
         for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
         {
-            uchar* row1 = dst.ptr<uchar>(j);
-            uchar* row2 = dst.ptr<uchar>(j+1);
+            uchar* row1 = dst->ptr<uchar>(j);
+            uchar* row2 = dst->ptr<uchar>(j+1);
             const uchar* y2 = y1 + width;
 
             for(int i = 0; i < width; i+=2,row1+=8,row2+=8)

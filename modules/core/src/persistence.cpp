@@ -1424,9 +1424,9 @@ icvYMLWrite( CvFileStorage* fs, const char* key, const char* data )
 
         for( i = 0; i < keylen; i++ )
         {
-            int c = key[i];
+            char c = key[i];
 
-            ptr[i] = (char)c;
+            ptr[i] = c;
             if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
                 CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
         }

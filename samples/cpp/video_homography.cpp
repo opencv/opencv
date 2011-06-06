@@ -160,7 +160,7 @@ int main(int ac, char ** av)
     {
         capture >> frame;
         if (frame.empty())
-            continue;
+            break;
 
         cvtColor(frame, gray, CV_RGB2GRAY);
 

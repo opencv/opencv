@@ -469,7 +469,7 @@ ORB::ORB(size_t n_features, const CommonParams & detector_params) :
   params_(detector_params), n_features_(n_features)
 {
   // fill the extractors and descriptors for the corresponding scales
-  float factor = 1.0 / params_.scale_factor_ / params_.scale_factor_;
+  float factor = (float)(1.0 / params_.scale_factor_ / params_.scale_factor_);
   int n_desired_features_per_scale = cvRound(n_features / ((std::pow(factor, int(params_.n_levels_)) - 1)
                                                  / (factor - 1)));
   n_features_per_level_.resize(detector_params.n_levels_);

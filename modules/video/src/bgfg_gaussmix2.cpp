@@ -1320,7 +1320,7 @@ void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) c
                     break;
             }
 
-            Vec3f val = Vec3f(meanVal[0], meanVal[1], meanVal[2]) * (1.0 / totalWeight);
+            Vec3f val = Vec3f((float)meanVal[0], (float)meanVal[1], (float)meanVal[2]) * (float)(1.0 / totalWeight);
             meanBackground.at<Vec3b>(row, col) = Vec3b(val);
             firstGaussianIdx += nmixtures;
         }
@@ -1343,7 +1343,7 @@ void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) c
         }
 
         default:
-            CV_Assert(false);
+            CV_Error(CV_StsUnsupportedFormat, "");
     }
 }
 

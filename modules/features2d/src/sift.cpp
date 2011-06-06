@@ -637,7 +637,7 @@ static struct feature* interp_extremum( IplImage*** dog_pyr, int octv,
 {
   struct feature* feat;
   struct detection_data* ddata;
-  double xi, xr, xc, contr;
+  double xi=0, xr=0, xc=0, contr;
   int i = 0;
 
   while( i < SIFT_MAX_INTERP_STEPS )

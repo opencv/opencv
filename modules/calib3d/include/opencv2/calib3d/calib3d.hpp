@@ -730,7 +730,7 @@ protected:
 
 //! filters off speckles (small regions of incorrectly computed disparity)
 CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal, int maxSpeckleSize, double maxDiff,
-                                  InputOutputArray buf=InputOutputArray() );
+                                  InputOutputArray buf=None() );
 
 //! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
 CV_EXPORTS_W Rect getValidDisparityROI( Rect roi1, Rect roi2,
