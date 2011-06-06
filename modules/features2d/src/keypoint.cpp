@@ -247,8 +247,6 @@ struct KeyPoint_LessThan
             return kp1.pt.y < kp2.pt.y;
         if( kp1.size != kp2.size )
             return kp1.size > kp2.size;
-        if( kp1.size != kp2.size )
-            return kp1.size > kp2.size;
         if( kp1.angle != kp2.angle )
             return kp1.angle < kp2.angle;
         if( kp1.response != kp2.response )
