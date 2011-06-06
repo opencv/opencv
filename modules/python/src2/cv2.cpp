@@ -856,6 +856,14 @@ void initcv2()
   PUBLISH(GC_INIT_WITH_MASK);
   PUBLISH(GC_EVAL);
 
+  PUBLISH(CV_ROW_SAMPLE);
+  PUBLISH(CV_VAR_NUMERICAL);
+  PUBLISH(CV_VAR_ORDERED);
+  PUBLISH(CV_VAR_CATEGORICAL);
+
+  PUBLISH(CV_AA);
+
+
 #include "pyopencv_generated_const_reg.h"
 }
 
