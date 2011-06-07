@@ -19,85 +19,74 @@ vector<string> split_string(const string& str, const string& delimiters)
     return res;
 }
 
-void PreprocessArgs(int _argc, const char* _argv[], int& argc, char**& argv)
-{
-    std::vector<std::string> buffer_vector;
-    std::string buffer_string;
-    std::string buffer2_string;
-    int find_symbol;
-
-    for (int i = 0; i < _argc; i++)
-    {
-        buffer_string = _argv[i];
-        find_symbol = buffer_string.find('=');
-        if (find_symbol == -1)
-            buffer_vector.push_back(buffer_string);
-        else if (find_symbol == 0 || find_symbol == (int)(buffer_string.length() - 1))
-        {
-            buffer_string.erase(find_symbol, (find_symbol + 1));
-            if(!buffer_string.empty())
-                buffer_vector.push_back(buffer_string);
-        }
-        else
-        {
-            buffer2_string = buffer_string;
-            buffer_string.erase(find_symbol);
-            buffer_vector.push_back(buffer_string);
-            buffer2_string.erase(0, find_symbol + 1);
-            buffer_vector.push_back(buffer2_string);
-
-        }
-    }
-
-    argc = buffer_vector.size();
-    argv = new char* [argc];
-    for (int i=0; i < argc; i++)
-    {
-        argv[i] = new char[buffer_vector[i].length() + 1];
-        memcpy(argv[i], buffer_vector[i].c_str(), buffer_vector[i].length() + 1);
-    }
-}
-
-
-CommandLineParser::CommandLineParser(int _argc, const char* _argv[])
+CommandLineParser::CommandLineParser(int argc, const char* argv[])
 {
     std::string cur_name;
-    bool was_pushed=false;
-    int argc;
-    char** argv;
-    PreprocessArgs(_argc, _argv, argc, argv);
+    std::string buffer;
+    std::stringstream str_buff(std::stringstream::in | std::stringstream::out);
+    std::string str_index;
+    std::map<std::string, std::string >::iterator it;
+    int find_symbol;
+    int index = 0;
 
-    for(int i=1; i < argc; i++) {
 
-            if(!argv[i])
-                    break;
+    for(int i = 1; i < argc; i++)
+    {
 
-            if( (argv[i][0]== '-') && (strlen(argv[i]) > 1)
-                    &&
-                    ( (argv[i][1] < '0') || (argv[i][1] > '9'))   )
+        if(!argv[i])
+            break;
+        cur_name = argv[i];
+        if((cur_name.find('-') == 0) && ((int)cur_name.find('=') != -1) &&
+           (cur_name.find('=') != (cur_name.length() - 1)))
+        {
+            while (cur_name.find('-') == 0)
+                cur_name.erase(0,1);
+
+            buffer = cur_name;
+            find_symbol = (int)cur_name.find('=');
+            cur_name.erase(find_symbol);
+            buffer.erase(0, find_symbol + 1);
+            if (data.find(cur_name) != data.end())
             {
-                    if (!cur_name.empty() && !was_pushed) {
-                            data[cur_name].push_back("");
-                    }
-                    cur_name=argv[i];
-                    while (cur_name.find('-') == 0)
+                string str_exception="dublicating parameters for name='" + cur_name + "'";
+                CV_Error(CV_StsParseError, str_exception);
+            }
+                else
+                    data[cur_name] = buffer;
+        }
+            else if (cur_name.find('=') == 0)
+                {
+                    string str_exception="This key is wrong. The key mustn't have '=' like increment' '" + cur_name + "'";
+                    CV_Error(CV_StsParseError, str_exception);
+                }
+            else if(((int)cur_name.find('-') == -1) && ((int)cur_name.find('=') != -1))
+                {
+                    string str_exception="This key must be defined with '--' or '-' increment'" + cur_name + "'";
+                    CV_Error(CV_StsParseError, str_exception);
+                }
+            else if (cur_name.find('=') == (cur_name.length() - 1))
+                {
+                    string str_exception="This key must have argument after '=''" + cur_name + "'";
+                    CV_Error(CV_StsParseError, str_exception);
+                }
+            else
+                {
+                    str_buff<< index;
+                    str_index = str_buff.str();
+                    str_buff.seekp(0);
+                    for(it = data.begin(); it != data.end(); it++)
                     {
-                        cur_name.erase(0,1);
-                    }
-                    was_pushed=false;
-
-                    if (data.find(cur_name) != data.end()) {
+                        if (it->second == cur_name)
+                        {
                             string str_exception="dublicating parameters for name='" + cur_name + "'";
                             CV_Error(CV_StsParseError, str_exception);
+                        }
                     }
-                    continue;
-            }
+                    data[str_index.c_str()] = cur_name;
+                    index++;
+                }
 
-            data[cur_name].push_back(argv[i]);
-            was_pushed=true;
     }
-    if (!cur_name.empty() && !was_pushed)
-            data[cur_name].push_back("");
 }
 
 bool CommandLineParser::has(const std::string& keys) const
@@ -131,7 +120,7 @@ std::string CommandLineParser::getString(const std::string& keys) const
 
     if (found_index<0)
         return string();
-    return data.find(names[found_index])->second[0];
+    return data.find(names[found_index])->second;
 }
 
 template<typename _Tp>

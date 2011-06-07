@@ -4174,10 +4174,22 @@ protected:
 
  The class is used for reading command arguments.
  Supports the following syntax:
-   //-k=10  --x 0.001 --inputFile lena.jpg
-   int k = parser.get<int>("--k | -k", -1);
-   double x = parser.get<double>("--x");
-   string inputFile = parser.get<string>("--inputFile");
+   //-k=10 --key --db=-10.11 -key1 argument --inputFile=lena.jpg
+   CommandLineParser parser(argc, argv);
+   int k = parser.get<int>("k", -1);        //these methods also work
+   double db = parser.get<double>("db");    //with <float> and <unsigned int> type
+   string key = parser.get<string>("0");
+   string key1 = parser.get<string>("1");
+   string argument = parser.get<string>("2");
+   string inputFile = parser.get<string>("inputFile");
+
+   If parameter must to have some value, you have to define it using '--' or '-' increment
+   and assign is a value through '='. For example like this: --key=120 or -file_name=lena.jpg
+   If parameter doesn't has any value, you can define it with '--' or '-' increment and without it.
+   In this case you have to select it index in command line, if you whant to get it.
+   Only keys without any value have it personal index.Index starts from zero.
+   For example, see the string with arguments above: --key has index 0, -key has index 1, argument has index 2
+    other keys have some values and they don't have index.
 */
 class CV_EXPORTS CommandLineParser
 {
@@ -4200,7 +4212,7 @@ class CV_EXPORTS CommandLineParser
         }
 
     protected:
-        std::map<std::string, std::vector<std::string> > data;
+        std::map<std::string, std::string > data;
         std::string getString(const std::string& name) const;
 
         template<typename _Tp>
