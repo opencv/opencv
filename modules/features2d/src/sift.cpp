@@ -1380,6 +1380,10 @@ SIFT::CommonParams::CommonParams( int _nOctaves, int _nOctaveLayers, int /*_firs
         firstOctave(-1/*_firstOctave*/), angleMode(FIRST_ANGLE/*_angleMode*/)
 {}
 
+SIFT::CommonParams::CommonParams( int _nOctaves, int _nOctaveLayers ) :
+        nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers), firstOctave(-1), angleMode(FIRST_ANGLE)
+{}
+
 SIFT::DetectorParams::DetectorParams() :
         threshold(GET_DEFAULT_THRESHOLD()), edgeThreshold(GET_DEFAULT_EDGE_THRESHOLD())
 {}

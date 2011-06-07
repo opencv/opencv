@@ -312,6 +312,7 @@ public:
 
         CommonParams();
         CommonParams( int _nOctaves, int _nOctaveLayers, int /*_firstOctave*/, int /*_angleMode*/ );
+        CommonParams( int _nOctaves, int _nOctaveLayers );
         int nOctaves, nOctaveLayers;
         int firstOctave; // it is not used now (firstOctave == 0 always)
         int angleMode;   // it is not used now
