@@ -351,9 +351,9 @@ Here is a short example: ::
     approxPolyDP(contour, approx, 5, true);
     double area1 = contourArea(approx);
 
-    cout << "area0 =" << area0 << endl <<
-            "area1 =" << area1 << endl <<
-            "approx poly vertices" << approx.size() << endl;
+    cout << "area0 = " << area0 << endl <<
+            "area1 = " << area1 << endl <<
+            "approx poly vertices = " << approx.size() << endl;
 
 .. index:: convexHull
 
