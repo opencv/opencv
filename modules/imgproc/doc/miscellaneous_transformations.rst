@@ -202,7 +202,7 @@ The function can do the following transformations:
 
     .. math::
 
-        H  \leftarrow \forkthree{{60(G - B)}/{S}}{if $V=R$}{{120+60(B - R)}/{S}}{if $V=G$}{{240+60(R - G)}/{S}}{if $V=B$}
+        H  \leftarrow \forkthree{{60(G - B)}/{(V-min(R,G,B))}}{if $V=R$}{{120+60(B - R)}/{(V-min(R,G,B))}}{if $V=G$}{{240+60(R - G)}/{(V-min(R,G,B))}}{if $V=B$}
 
     If
     :math:`H<0`     then
