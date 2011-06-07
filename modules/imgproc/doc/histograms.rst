@@ -5,13 +5,11 @@ Histograms
 
 .. index:: calcHist
 
-.. _calcHist:
-
 calcHist
 ------------
-.. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               MatND\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
+.. cpp:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform=true,               bool accumulate=false )
 
-.. c:function:: void calcHist( const Mat* arrays, int narrays,               const int* channels, const Mat\& mask,               SparseMat\& hist, int dims, const int* histSize,               const float** ranges, bool uniform=true,               bool accumulate=false )
+.. cpp:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               SparseMat& hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
 
     Calculates a histogram of a set of arrays.
 
@@ -99,13 +97,11 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
 
 .. index:: calcBackProject
 
-.. _calcBackProject:
-
 calcBackProject
 -------------------
-.. c:function:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const MatND\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
+.. cpp:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, InputArray hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
-.. c:function:: void calcBackProject( const Mat* arrays, int narrays,                      const int* channels, const SparseMat\& hist,                      Mat\& backProject, const float** ranges,                      double scale=1, bool uniform=true )
+.. cpp:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, const SparseMat& hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
     Calculates the back projection of a histogram.
 
@@ -119,7 +115,7 @@ calcBackProject
 
     :param backProject: Destination back projection aray that is a single-channel array of the same size and depth as  ``arrays[0]`` .
 	
-    :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :func:`calcHist` .
+    :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :cpp:func:`calcHist` .
 	
     :param scale: Optional scale factor for the output back projection.
 
@@ -137,21 +133,19 @@ The functions ``calcBackProject`` calculate the back project of the histogram. T
     Find connected components in the resulting picture and choose, for example, the largest component.
 
 This is an approximate algorithm of the
-:func:`CAMShift` color object tracker.
+:cpp:func:`CAMShift` color object tracker.
 
 See Also:
-:func:`calcHist`
+:cpp:func:`calcHist`
 
 .. index:: compareHist
-
-.. _compareHist:
 
 compareHist
 -----------
 
-.. c:function:: double compareHist( const MatND\& H1, const MatND\& H2, int method )
+.. cpp:function:: double compareHist( InputArray H1, InputArray H2, int method )
 
-.. c:function:: double compareHist( const SparseMat\& H1,  const SparseMat\& H2, int method )
+.. cpp:function:: double compareHist( const SparseMat& H1,  const SparseMat& H2, int method )
 
     Compares two histograms.
 
@@ -207,15 +201,13 @@ The function returns
 :math:`d(H_1, H_2)` .
 
 While the function works well with 1-, 2-, 3-dimensional dense histograms, it may not be suitable for high-dimensional sparse histograms. In such histograms,  because of aliasing and sampling problems, the coordinates of non-zero histogram bins can slightly shift. To compare such histograms or more general sparse configurations of weighted points, consider using the
-:func:`calcEMD` function.
+:cpp:func:`calcEMD` function.
 
 .. index:: equalizeHist
 
-.. _equalizeHist:
-
 equalizeHist
 ----------------
-.. c:function:: void equalizeHist( const Mat\& src, Mat\& dst )
+.. cpp:function:: void equalizeHist( InputArray src, OutputArray dst )
 
     Equalizes the histogram of a grayscale image.
 

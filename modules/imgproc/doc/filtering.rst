@@ -6,21 +6,19 @@ Image Filtering
 ===============
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images (represented as
-:func:`Mat`'s). It means that for each pixel location
+:cpp:func:`Mat`'s). It means that for each pixel location
 :math:`(x,y)` in the source image (normally, rectangular), its neighborhood is considered and used to compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of morphological operations, it is the minimum or maximum values, and so on. The computed response is stored in the destination image at the same location
 :math:`(x,y)` . It means that the output image will be of the same size as the input image. Normally, the functions support multi-channel arrays, in which case every channel is processed independently. Therefore, the output image will also have the same number of channels as the input one.
 
 Another common feature of the functions and classes described in this section is that, unlike simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For example, if you want to smooth an image using a Gaussian
 :math:`3 \times 3` filter, then, when processing the left-most pixels in each row, you need pixels to the left of them, that is, outside of the image. You can let these pixels be the same as the left-most image pixels ("replicated border" extrapolation method), or assume that all the non-existing pixels are zeros ("contant border" extrapolation method), and so on.
-OpenCV enables you to specify the extrapolation method. For details, see the function  :func:`borderInterpolate`  and discussion of the  ``borderType``  parameter in various functions below.
+OpenCV enables you to specify the extrapolation method. For details, see the function  :cpp:func:`borderInterpolate`  and discussion of the  ``borderType``  parameter in various functions below.
 
 .. index:: BaseColumnFilter
 
-.. _BaseColumnFilter:
-
 BaseColumnFilter
 ----------------
-.. c:type:: BaseColumnFilter
+.. cpp:class:: BaseColumnFilter
 
 Base class for filters with single-column kernels ::
 
@@ -55,23 +53,21 @@ The class ``BaseColumnFilter`` is a base class for filtering data using single-c
 
 where
 :math:`F` is a filtering function but, as it is represented as a class, it can produce any side effects, memorize previously processed data, and so on. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:cpp:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 See Also:
-:func:`BaseRowFilter`,
-:func:`BaseFilter`,
-:func:`FilterEngine`,
-:func:`getColumnSumFilter`,
-:func:`getLinearColumnFilter`,
-:func:`getMorphologyColumnFilter`
+:cpp:func:`BaseRowFilter`,
+:cpp:func:`BaseFilter`,
+:cpp:func:`FilterEngine`,
+:cpp:func:`getColumnSumFilter`,
+:cpp:func:`getLinearColumnFilter`,
+:cpp:func:`getMorphologyColumnFilter`
 
 .. index:: BaseFilter
 
-.. _BaseFilter:
-
 BaseFilter
 ----------
-.. c:type:: BaseFilter
+.. cpp:class:: BaseFilter
 
 Base class for 2D image filters ::
 
@@ -107,22 +103,20 @@ The class ``BaseFilter`` is a base class for filtering data using 2D kernels. Fi
 
 where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:cpp:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 See Also:
-:func:`BaseColumnFilter`,
-:func:`BaseRowFilter`,
-:func:`FilterEngine`,
-:func:`getLinearFilter`,
-:func:`getMorphologyFilter`
+:cpp:func:`BaseColumnFilter`,
+:cpp:func:`BaseRowFilter`,
+:cpp:func:`FilterEngine`,
+:cpp:func:`getLinearFilter`,
+:cpp:func:`getMorphologyFilter`
 
 .. index:: BaseRowFilter
 
-.. _BaseRowFilter:
-
 BaseRowFilter
 -------------
-.. c:type:: BaseRowFilter
+.. cpp:class:: BaseRowFilter
 
 Base class for filters with single-row kernels ::
 
@@ -150,23 +144,21 @@ The class ``BaseRowFilter`` is a base class for filtering data using single-row 
 
 where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:cpp:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 See Also:
-:func:`BaseColumnFilter`,
-:func:`Filter`,
-:func:`FilterEngine`,
-:func:`getLinearRowFilter`,
-:func:`getMorphologyRowFilter`,
-:func:`getRowSumFilter`
+:cpp:func:`BaseColumnFilter`,
+:cpp:func:`Filter`,
+:cpp:func:`FilterEngine`,
+:cpp:func:`getLinearRowFilter`,
+:cpp:func:`getMorphologyRowFilter`,
+:cpp:func:`getRowSumFilter`
 
 .. index:: FilterEngine
 
-.. _FilterEngine:
-
 FilterEngine
 ------------
-.. c:type:: FilterEngine
+.. cpp:class:: FilterEngine
 
 Generic image filtering class ::
 
@@ -239,12 +231,12 @@ The class ``FilterEngine`` can be used to apply an arbitrary filtering operation
 It contains all the necessary intermediate buffers, computes extrapolated values
 of the "virtual" pixels outside of the image, and so on. Pointers to the initialized ``FilterEngine`` instances
 are returned by various ``create*Filter`` functions (see below) and they are used inside high-level functions such as
-:func:`filter2D`,
-:func:`erode`,
-:func:`dilate`, and others. Thus, the class plays a key role in many of OpenCV filtering functions.
+:cpp:func:`filter2D`,
+:cpp:func:`erode`,
+:cpp:func:`dilate`, and others. Thus, the class plays a key role in many of OpenCV filtering functions.
 
 This class makes it easier to combine filtering operations with other operations, such as color space conversions, thresholding, arithmetic operations, and others. By combining several operations together you can get much better performance because your data will stay in cache. For example, see below the implementation of the Laplace operator for floating-point images, which is a simplified implementation of
-:func:`Laplacian` : ::
+:cpp:func:`Laplacian` : ::
 
     void laplace_f(const Mat& src, Mat& dst)
     {
@@ -355,7 +347,7 @@ Unlike the earlier versions of OpenCV, now the filtering operations fully suppor
 
 
 Explore the data types. As it was mentioned in the
-:func:`BaseFilter` description, the specific filters can process data of any type, despite that ``Base*Filter::operator()`` only takes ``uchar`` pointers and no information about the actual types. To make it all work, the following rules are used:
+:cpp:func:`BaseFilter` description, the specific filters can process data of any type, despite that ``Base*Filter::operator()`` only takes ``uchar`` pointers and no information about the actual types. To make it all work, the following rules are used:
 
 *
     In case of separable filtering, ``FilterEngine::rowFilter``   is  applied first. It transforms the input image data (of type ``srcType``  ) to the intermediate results stored in the internal buffers (of type ``bufType``   ). Then, these intermediate results are processed as
@@ -366,21 +358,21 @@ Explore the data types. As it was mentioned in the
     In case of non-separable filtering, ``bufType``     must be the same as ``srcType``     . The source data is copied to the temporary buffer, if needed, and then just passed to ``FilterEngine::filter2D``     . That is, the input type for ``filter2D``     is ``srcType``     (= ``bufType``     ) and the output type is ``dstType``     .
 
 See Also:
-:func:`BaseColumnFilter`,
-:func:`BaseFilter`,
-:func:`BaseRowFilter`,
-:func:`createBoxFilter`,
-:func:`createDerivFilter`,
-:func:`createGaussianFilter`,
-:func:`createLinearFilter`,
-:func:`createMorphologyFilter`,
-:func:`createSeparableLinearFilter`
+:cpp:func:`BaseColumnFilter`,
+:cpp:func:`BaseFilter`,
+:cpp:func:`BaseRowFilter`,
+:cpp:func:`createBoxFilter`,
+:cpp:func:`createDerivFilter`,
+:cpp:func:`createGaussianFilter`,
+:cpp:func:`createLinearFilter`,
+:cpp:func:`createMorphologyFilter`,
+:cpp:func:`createSeparableLinearFilter`
 
 .. index:: bilateralFilter
 
 bilateralFilter
 -------------------
-.. c:function:: void bilateralFilter( const Mat& src, Mat& dst, int d,                      double sigmaColor, double sigmaSpace,                      int borderType=BORDER_DEFAULT )
+.. cpp:function:: void bilateralFilter( InputArray src, OutputArray dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT )
 
     Applies the bilateral filter to an image.
 
@@ -401,7 +393,7 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.ht
 
 blur
 --------
-.. c:function:: void blur( const Mat& src, Mat& dst,           Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
+.. cpp:function:: void blur( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
 
     Smoothes an image using the normalized box filter.
 
@@ -424,16 +416,16 @@ The function smoothes an image using the kernel:
 The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFilter(src, dst, src.type(), anchor, true, borderType)`` .
 
 See Also:
-:func:`boxFilter`,
-:func:`bilateralFilter`,
-:func:`GaussianBlur`,
-:func:`medianBlur` 
+:cpp:func:`boxFilter`,
+:cpp:func:`bilateralFilter`,
+:cpp:func:`GaussianBlur`,
+:cpp:func:`medianBlur` 
 
 .. index:: borderInterpolate
 
 borderInterpolate
 ---------------------
-.. c:function:: int borderInterpolate( int p, int len, int borderType )
+.. cpp:function:: int borderInterpolate( int p, int len, int borderType )
 
     Computes the source location of an extrapolated pixel.
 
@@ -450,18 +442,18 @@ The function computes and returns the coordinate of the donor pixel, correspondi
 
 
 Normally, the function is not called directly. It is used inside
-:func:`FilterEngine` and
-:func:`copyMakeBorder` to compute tables for quick extrapolation.
+:cpp:func:`FilterEngine` and
+:cpp:func:`copyMakeBorder` to compute tables for quick extrapolation.
 
 See Also:
-:func:`FilterEngine`,
-:func:`copyMakeBorder`
+:cpp:func:`FilterEngine`,
+:cpp:func:`copyMakeBorder`
 
 .. index:: boxFilter
 
 boxFilter
 -------------
-.. c:function:: void boxFilter( const Mat& src, Mat& dst, int ddepth,                Size ksize, Point anchor=Point(-1,-1),                bool normalize=true,                int borderType=BORDER_DEFAULT )
+.. cpp:function:: void boxFilter( InputArray src, OutputArray dst, int ddepth, Size ksize, Point anchor=Point(-1,-1), bool normalize=true, int borderType=BORDER_DEFAULT )
 
     Smoothes an image using the box filter.
 
@@ -491,24 +483,24 @@ where
 
 Unnormalized box filter is useful for computing various integral characteristics over each pixel neighborhood, such as covariance matrices of image derivatives (used in dense optical flow algorithms,
 and so on). If you need to compute pixel sums over variable-size windows, use
-:func:`integral` .
+:cpp:func:`integral` .
 
 See Also:
-:func:`boxFilter`,
-:func:`bilateralFilter`,
-:func:`GaussianBlur`,
-:func:`medianBlur`,
-:func:`integral` 
+:cpp:func:`boxFilter`,
+:cpp:func:`bilateralFilter`,
+:cpp:func:`GaussianBlur`,
+:cpp:func:`medianBlur`,
+:cpp:func:`integral` 
 
 .. index:: buildPyramid
 
 buildPyramid
 ----------------
-.. c:function:: void buildPyramid( const Mat& src, vector<Mat>& dst, int maxlevel )
+.. cpp:function:: void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxlevel )
 
     Constructs the Gaussian pyramid for an image.
 
-    :param src: Source image. Check  :func:`pyrDown`  for the list of supported types.
+    :param src: Source image. Check  :cpp:func:`pyrDown`  for the list of supported types.
 
     :param dst: Destination vector of  ``maxlevel+1``  images of the same type as  ``src`` . ``dst[0]``  will be the same as  ``src`` .  ``dst[1]``  is the next pyramid layer,
         a smoothed and down-sized  ``src``  , and so on.
@@ -516,13 +508,13 @@ buildPyramid
     :param maxlevel: 0-based index of the last (the smallest) pyramid layer. It must be non-negative.
 
 The function constructs a vector of images and builds the Gaussian pyramid by recursively applying
-:func:`pyrDown` to the previously built pyramid layers, starting from ``dst[0]==src`` .
+:cpp:func:`pyrDown` to the previously built pyramid layers, starting from ``dst[0]==src`` .
 
 .. index:: copyMakeBorder
 
 copyMakeBorder
 ------------------
-.. c:function:: void copyMakeBorder( const Mat& src, Mat& dst,                    int top, int bottom, int left, int right,                    int borderType, const Scalar& value=Scalar() )
+.. cpp:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
 
     Forms a border around an image.
 
@@ -532,12 +524,12 @@ copyMakeBorder
     
     :param top, bottom, left, right: Parameter specifying how many pixels in each direction from the source image rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``  mean that 1 pixel-wide border needs to be built.
 
-    :param borderType: Border type. See  :func:`borderInterpolate` for details.
+    :param borderType: Border type. See  :cpp:func:`borderInterpolate` for details.
     
     :param value: Border value if  ``borderType==BORDER_CONSTANT`` .
     
 The function copies the source image into the middle of the destination image. The areas to the left, to the right, above and below the copied source image will be filled with extrapolated pixels. This is not what
-:func:`FilterEngine` or filtering functions based on it do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
+:cpp:func:`FilterEngine` or filtering functions based on it do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
 
 The function supports the mode when ``src`` is already in the middle of ``dst`` . In this case, the function does not copy ``src`` itself but simply constructs the border, for example: ::
 
@@ -557,16 +549,16 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
 
 
 See Also:
-:func:`borderInterpolate`
+:cpp:func:`borderInterpolate`
 .. index:: createBoxFilter
 
 createBoxFilter
 -------------------
-.. c:function:: Ptr<FilterEngine> createBoxFilter( int srcType, int dstType,                                 Size ksize, Point anchor=Point(-1,-1),                                 bool normalize=true,                                 int borderType=BORDER_DEFAULT)
+.. cpp:function:: Ptr<FilterEngine> createBoxFilter( int srcType, int dstType,                                 Size ksize, Point anchor=Point(-1,-1), bool normalize=true, int borderType=BORDER_DEFAULT)
 
-.. c:function:: Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,                                   int ksize, int anchor=-1)
+.. cpp:function:: Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,                                   int ksize, int anchor=-1)
 
-.. c:function:: Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType,                                   int ksize, int anchor=-1, double scale=1)
+.. cpp:function:: Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType,                                   int ksize, int anchor=-1, double scale=1)
 
     Returns a box filter engine.
 
@@ -580,31 +572,31 @@ createBoxFilter
 
     :param anchor: Anchor position with the kernel. Negative values mean that the anchor is at the kernel center.
 
-    :param normalize: Flag specifying whether the sums are normalized or not. See  :func:`boxFilter` for details.
+    :param normalize: Flag specifying whether the sums are normalized or not. See  :cpp:func:`boxFilter` for details.
     
     :param scale: Another way to specify normalization in lower-level  ``getColumnSumFilter`` .
     
-    :param borderType: Border type to use. See  :func:`borderInterpolate` .
+    :param borderType: Border type to use. See  :cpp:func:`borderInterpolate` .
 
 The function is a convenience function that retrieves the horizontal sum primitive filter with
-:func:`getRowSumFilter` , vertical sum filter with
-:func:`getColumnSumFilter` , constructs new
-:func:`FilterEngine` , and passes both of the primitive filters there. The constructed filter engine can be used for image filtering with normalized or unnormalized box filter.
+:cpp:func:`getRowSumFilter` , vertical sum filter with
+:cpp:func:`getColumnSumFilter` , constructs new
+:cpp:func:`FilterEngine` , and passes both of the primitive filters there. The constructed filter engine can be used for image filtering with normalized or unnormalized box filter.
 
 The function itself is used by
-:func:`blur` and
-:func:`boxFilter` .
+:cpp:func:`blur` and
+:cpp:func:`boxFilter` .
 
 See Also:
-:func:`FilterEngine`,
-:func:`blur`,
-:func:`boxFilter` 
+:cpp:func:`FilterEngine`,
+:cpp:func:`blur`,
+:cpp:func:`boxFilter` 
 
 .. index:: createDerivFilter
 
 createDerivFilter
 ---------------------
-.. c:function:: Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,                                     int dx, int dy, int ksize,                                     int borderType=BORDER_DEFAULT )
+.. cpp:function:: Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,                                     int dx, int dy, int ksize, int borderType=BORDER_DEFAULT )
 
     Returns an engine for computing image derivatives.
 
@@ -616,57 +608,57 @@ createDerivFilter
 
     :param dy: Derivative order in respect of y.
 
-    :param ksize: Aperture size See  :func:`getDerivKernels` .
+    :param ksize: Aperture size See  :cpp:func:`getDerivKernels` .
     
-    :param borderType: Border type to use. See  :func:`borderInterpolate` .
+    :param borderType: Border type to use. See  :cpp:func:`borderInterpolate` .
 
-The function :func:`createDerivFilter` is a small convenience function that retrieves linear filter coefficients for computing image derivatives using
-:func:`getDerivKernels` and then creates a separable linear filter with
-:func:`createSeparableLinearFilter` . The function is used by
-:func:`Sobel` and
-:func:`Scharr` .
+The function :cpp:func:`createDerivFilter` is a small convenience function that retrieves linear filter coefficients for computing image derivatives using
+:cpp:func:`getDerivKernels` and then creates a separable linear filter with
+:cpp:func:`createSeparableLinearFilter` . The function is used by
+:cpp:func:`Sobel` and
+:cpp:func:`Scharr` .
 
 See Also:
-:func:`createSeparableLinearFilter`,
-:func:`getDerivKernels`,
-:func:`Scharr`,
-:func:`Sobel` 
+:cpp:func:`createSeparableLinearFilter`,
+:cpp:func:`getDerivKernels`,
+:cpp:func:`Scharr`,
+:cpp:func:`Sobel` 
 
 .. index:: createGaussianFilter
 
 createGaussianFilter
 ------------------------
-.. c:function:: Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,                                   double sigmaX, double sigmaY=0,                                   int borderType=BORDER_DEFAULT)
+.. cpp:function:: Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,                                   double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT)
 
     Returns an engine for smoothing images with the Gaussian filter.
 
     :param type: Source and destination image type.
 
-    :param ksize: Aperture size. See  :func:`getGaussianKernel` .
+    :param ksize: Aperture size. See  :cpp:func:`getGaussianKernel` .
     
-    :param sigmaX: Gaussian sigma in the horizontal direction. See  :func:`getGaussianKernel` .
+    :param sigmaX: Gaussian sigma in the horizontal direction. See  :cpp:func:`getGaussianKernel` .
     
     :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
     
-    :param borderType: Border type to use. See  :func:`borderInterpolate` .
+    :param borderType: Border type to use. See  :cpp:func:`borderInterpolate` .
 
-The function :func:`createGaussianFilter` computes Gaussian kernel coefficients and then returns a separable linear filter for that kernel. The function is used by
-:func:`GaussianBlur` . Note that while the function takes just one data type, both for input and output, you can pass this limitation by calling
-:func:`getGaussianKernel` and then
-:func:`createSeparableFilter` directly.
+The function :cpp:func:`createGaussianFilter` computes Gaussian kernel coefficients and then returns a separable linear filter for that kernel. The function is used by
+:cpp:func:`GaussianBlur` . Note that while the function takes just one data type, both for input and output, you can pass this limitation by calling
+:cpp:func:`getGaussianKernel` and then
+:cpp:func:`createSeparableFilter` directly.
 
 See Also:
-:func:`createSeparableLinearFilter`,
-:func:`getGaussianKernel`,
-:func:`GaussianBlur` 
+:cpp:func:`createSeparableLinearFilter`,
+:cpp:func:`getGaussianKernel`,
+:cpp:func:`GaussianBlur` 
 
 .. index:: createLinearFilter
 
 createLinearFilter
 ----------------------
-.. c:function:: Ptr<FilterEngine> createLinearFilter(int srcType, int dstType,               const Mat& kernel, Point _anchor=Point(-1,-1),               double delta=0, int rowBorderType=BORDER_DEFAULT,               int columnBorderType=-1, const Scalar& borderValue=Scalar())
+.. cpp:function:: Ptr<FilterEngine> createLinearFilter(int srcType, int dstType, InputArray kernel, Point _anchor=Point(-1,-1), double delta=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar())
 
-.. c:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,                               const Mat& kernel,                               Point anchor=Point(-1,-1),                               double delta=0, int bits=0)
+.. cpp:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,                               InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int bits=0)
 
     Creates a non-separable linear filter engine.
 
@@ -682,30 +674,30 @@ createLinearFilter
 
     :param bits: Number of the fractional bits. the parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :cpp:func:`borderInterpolate` for details.
     
     :param borderValue: Border vaule used in case of a constant border.
 
 The function returns a pointer to a 2D linear filter for the specified kernel, the source array type, and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to the
-:func:`FilterEngine` constructor.
+:cpp:func:`FilterEngine` constructor.
 
 See Also:
-:func:`createSeparableLinearFilter`,
-:func:`FilterEngine`,
-:func:`filter2D`
+:cpp:func:`createSeparableLinearFilter`,
+:cpp:func:`FilterEngine`,
+:cpp:func:`filter2D`
 .. index:: createMorphologyFilter
 
 createMorphologyFilter
 --------------------------
-.. c:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    const Mat& element, Point anchor=Point(-1,-1),    int rowBorderType=BORDER_CONSTANT,    int columnBorderType=-1,    const Scalar& borderValue=morphologyDefaultBorderValue())
+.. cpp:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    InputArray element, Point anchor=Point(-1,-1), int rowBorderType=BORDER_CONSTANT, int columnBorderType=-1, const Scalar& borderValue=morphologyDefaultBorderValue())
 
-.. c:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& element,                                    Point anchor=Point(-1,-1))
+.. cpp:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element,                                    Point anchor=Point(-1,-1))
 
-.. c:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type,                                          int esize, int anchor=-1)
+.. cpp:function:: Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type,                                          int esize, int anchor=-1)
 
-.. c:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type,                                                int esize, int anchor=-1)
+.. cpp:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type,                                                int esize, int anchor=-1)
 
-.. c:function:: static inline Scalar morphologyDefaultBorderValue(){ return Scalar::all(DBL_MAX) }
+.. cpp:function:: static inline Scalar morphologyDefaultBorderValue(){ return Scalar::all(DBL_MAX) }
 
     Creates an engine for non-separable morphological operations.
 
@@ -719,32 +711,32 @@ createMorphologyFilter
 
     :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the kernel center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :cpp:func:`borderInterpolate` for details.
     
     :param borderValue: Border value in case of a constant border. The default value, \   ``morphologyDefaultBorderValue`` , has a special meaning. It is transformed  :math:`+\inf`  for the erosion and to  :math:`-\inf`  for the dilation, which means that the minimum (maximum) is effectively computed only over the pixels that are inside the image.
 
 The functions construct primitive morphological filtering operations or a filter engine based on them. Normally it is enough to use
-:func:`createMorphologyFilter` or even higher-level
-:func:`erode`,
-:func:`dilate` , or
-:func:`morphologyEx` .
+:cpp:func:`createMorphologyFilter` or even higher-level
+:cpp:func:`erode`,
+:cpp:func:`dilate` , or
+:cpp:func:`morphologyEx` .
 Note that
-:func:`createMorphologyFilter` analyzes the structuring element shape and builds a separable morphological filter engine when the structuring element is square.
+:cpp:func:`createMorphologyFilter` analyzes the structuring element shape and builds a separable morphological filter engine when the structuring element is square.
 
 See Also:
-:func:`erode`,
-:func:`dilate`,
-:func:`morphologyEx`,
-:func:`FilterEngine`
+:cpp:func:`erode`,
+:cpp:func:`dilate`,
+:cpp:func:`morphologyEx`,
+:cpp:func:`FilterEngine`
 .. index:: createSeparableLinearFilter
 
 createSeparableLinearFilter
 -------------------------------
-.. c:function:: Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,                         const Mat& rowKernel, const Mat& columnKernel,                         Point anchor=Point(-1,-1), double delta=0,                         int rowBorderType=BORDER_DEFAULT,                         int columnBorderType=-1,                         const Scalar& borderValue=Scalar())
+.. cpp:function:: Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,                         InputArray rowKernel, InputArray columnKernel, Point anchor=Point(-1,-1), double delta=0,                         int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar())
 
-.. c:function:: Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,                         const Mat& columnKernel, int anchor,                         int symmetryType, double delta=0,                         int bits=0)
+.. cpp:function:: Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,                         InputArray columnKernel, int anchor, int symmetryType, double delta=0, int bits=0)
 
-.. c:function:: Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,                         const Mat& rowKernel, int anchor,                         int symmetryType)
+.. cpp:function:: Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,                         InputArray rowKernel, int anchor, int symmetryType)
 
     Creates an engine for a separable linear filter.
 
@@ -764,28 +756,28 @@ createSeparableLinearFilter
 
     :param bits: Number of the fractional bits. The parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :cpp:func:`borderInterpolate` for details.
     
     :param borderValue: Border value used in case of a constant border.
 
-    :param symmetryType: Type of each row and column kernel. See  :func:`getKernelType` . 
+    :param symmetryType: Type of each row and column kernel. See  :cpp:func:`getKernelType` . 
 
 The functions construct primitive separable linear filtering operations or a filter engine based on them. Normally it is enough to use
-:func:`createSeparableLinearFilter` or even higher-level
-:func:`sepFilter2D` . The function
-:func:`createMorphologyFilter` is smart enough to figure out the ``symmetryType`` for each of the two kernels, the intermediate ``bufType``  and, if filtering can be done in integer arithmetics, the number of ``bits`` to encode the filter coefficients. If it does not work for you, it is possible to call ``getLinearColumnFilter``,``getLinearRowFilter`` directly and then pass them to the
-:func:`FilterEngine` constructor.
+:cpp:func:`createSeparableLinearFilter` or even higher-level
+:cpp:func:`sepFilter2D` . The function
+:cpp:func:`createMorphologyFilter` is smart enough to figure out the ``symmetryType`` for each of the two kernels, the intermediate ``bufType``  and, if filtering can be done in integer arithmetics, the number of ``bits`` to encode the filter coefficients. If it does not work for you, it is possible to call ``getLinearColumnFilter``,``getLinearRowFilter`` directly and then pass them to the
+:cpp:func:`FilterEngine` constructor.
 
 See Also:
-:func:`sepFilter2D`,
-:func:`createLinearFilter`,
-:func:`FilterEngine`,
-:func:`getKernelType`
+:cpp:func:`sepFilter2D`,
+:cpp:func:`createLinearFilter`,
+:cpp:func:`FilterEngine`,
+:cpp:func:`getKernelType`
 .. index:: dilate
 
 dilate
 ----------
-.. c:function:: void dilate( const Mat& src, Mat& dst, const Mat& element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
+.. cpp:function:: void dilate( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Dilates an image by using a specific structuring element.
 
@@ -799,9 +791,9 @@ dilate
 
     :param iterations: Number of times dilation is applied.
 
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
     
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :func:`createMorphologyFilter` for details.
+    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :cpp:func:`createMorphologyFilter` for details.
     
 The function dilates the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the maximum is taken:
 
@@ -812,14 +804,14 @@ The function dilates the source image using the specified structuring element th
 The function supports the in-place mode. Dilation can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
 See Also:
-:func:`erode`,
-:func:`morphologyEx`,
-:func:`createMorphologyFilter`
+:cpp:func:`erode`,
+:cpp:func:`morphologyEx`,
+:cpp:func:`createMorphologyFilter`
 .. index:: erode
 
 erode
 ---------
-.. c:function:: void erode( const Mat& src, Mat& dst, const Mat& element,            Point anchor=Point(-1,-1), int iterations=1,            int borderType=BORDER_CONSTANT,            const Scalar& borderValue=morphologyDefaultBorderValue() )
+.. cpp:function:: void erode( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Erodes an image by using a specific structuring element.
 
@@ -833,9 +825,9 @@ erode
 
     :param iterations: Number of times erosion is applied.
 
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
     
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :func:`createMorphoogyFilter` for details.
+    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :cpp:func:`createMorphoogyFilter` for details.
     
 The function erodes the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the minimum is taken:
 
@@ -846,15 +838,15 @@ The function erodes the source image using the specified structuring element tha
 The function supports the in-place mode. Erosion can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
 See Also:
-:func:`dilate`,
-:func:`morphologyEx`,
-:func:`createMorphologyFilter`
+:cpp:func:`dilate`,
+:cpp:func:`morphologyEx`,
+:cpp:func:`createMorphologyFilter`
 
 .. index:: filter2D
 
 filter2D
 ------------
-.. c:function:: void filter2D( const Mat& src, Mat& dst, int ddepth,               const Mat& kernel, Point anchor=Point(-1,-1),               double delta=0, int borderType=BORDER_DEFAULT )
+.. cpp:function:: void filter2D( InputArray src, OutputArray dst, int ddepth, InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
 
     Convolves an image with the kernel.
 
@@ -864,13 +856,13 @@ filter2D
     
     :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` .
     
-    :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :func:`split`  and process them individually.
+    :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :cpp:func:`split`  and process them individually.
 
     :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor should lie within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
 
     :param delta: Optional value added to the filtered pixels before storing them in  ``dst`` .
     
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
 The function applies an arbitrary linear filter to an image. In-place operation is supported. When the aperture is partially outside the image, the function interpolates outlier pixel values according to the specified border mode.
 
@@ -881,21 +873,21 @@ The function does actually compute correlation, not the convolution:
     \texttt{dst} (x,y) =  \sum _{ \stackrel{0\leq x' < \texttt{kernel.cols},}{0\leq y' < \texttt{kernel.rows}} }  \texttt{kernel} (x',y')* \texttt{src} (x+x'- \texttt{anchor.x} ,y+y'- \texttt{anchor.y} )
 
 That is, the kernel is not mirrored around the anchor point. If you need a real convolution, flip the kernel using
-:func:`flip` and set the new anchor to ``(kernel.cols - anchor.x - 1, kernel.rows - anchor.y - 1)`` .
+:cpp:func:`flip` and set the new anchor to ``(kernel.cols - anchor.x - 1, kernel.rows - anchor.y - 1)`` .
 
-The function uses the DFT-based algorithm in case of sufficiently large kernels (~``11 x 11`` or larger) and the direct algorithm (that uses the engine retrieved by :func:`createLinearFilter` ) for small kernels.
+The function uses the DFT-based algorithm in case of sufficiently large kernels (~``11 x 11`` or larger) and the direct algorithm (that uses the engine retrieved by :cpp:func:`createLinearFilter` ) for small kernels.
 
 See Also:
-:func:`sepFilter2D`,
-:func:`createLinearFilter`,
-:func:`dft`,
-:func:`matchTemplate`
+:cpp:func:`sepFilter2D`,
+:cpp:func:`createLinearFilter`,
+:cpp:func:`dft`,
+:cpp:func:`matchTemplate`
 
 .. index:: GaussianBlur
 
 GaussianBlur
 ----------------
-.. c:function:: void GaussianBlur( const Mat& src, Mat& dst, Size ksize,                   double sigmaX, double sigmaY=0,                   int borderType=BORDER_DEFAULT )
+.. cpp:function:: void GaussianBlur( InputArray src, OutputArray dst, Size ksize, double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT )
 
     Smoothes an image using a Gaussian filter.
 
@@ -905,24 +897,24 @@ GaussianBlur
     
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. Or, they can be zero's and then they are computed from  ``sigma*`` .
     
-    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively. See  :func:`getGaussianKernel` for details. To fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX`` ,  and  ``sigmaY`` .
+    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively. See  :cpp:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX`` ,  and  ``sigmaY`` .
     
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
 
 See Also:
-:func:`sepFilter2D`,
-:func:`filter2D`,
-:func:`blur`,
-:func:`boxFilter`,
-:func:`bilateralFilter`,
-:func:`medianBlur`
+:cpp:func:`sepFilter2D`,
+:cpp:func:`filter2D`,
+:cpp:func:`blur`,
+:cpp:func:`boxFilter`,
+:cpp:func:`bilateralFilter`,
+:cpp:func:`medianBlur`
 .. index:: getDerivKernels
 
 getDerivKernels
 -------------------
-.. c:function:: void getDerivKernels( Mat& kx, Mat& ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
+.. cpp:function:: void getDerivKernels( OutputArray kx, OutputArray ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
 
     Returns filter coefficients for computing spatial image derivatives.
 
@@ -942,16 +934,16 @@ getDerivKernels
 
 The function computes and returns the filter coefficients for spatial image derivatives. When ``ksize=CV_SCHARR`` , the Scharr
 :math:`3 \times 3` kernels are generated (see
-:func:`Scharr` ). Otherwise, Sobel kernels are generated (see
-:func:`Sobel` ). The filters are normally passed to
-:func:`sepFilter2D` or to
-:func:`createSeparableLinearFilter` .
+:cpp:func:`Scharr` ). Otherwise, Sobel kernels are generated (see
+:cpp:func:`Sobel` ). The filters are normally passed to
+:cpp:func:`sepFilter2D` or to
+:cpp:func:`createSeparableLinearFilter` .
 
 .. index:: getGaussianKernel
 
 getGaussianKernel
 ---------------------
-.. c:function:: Mat getGaussianKernel( int ksize, double sigma, int ktype=CV_64F )
+.. cpp:function:: Mat getGaussianKernel( int ksize, double sigma, int ktype=CV_64F )
 
     Returns Gaussian filter coefficients.
 
@@ -973,22 +965,22 @@ where
 :math:`\sum_i G_i=1`.
 
 Two of such generated kernels can be passed to
-:func:`sepFilter2D` or to
-:func:`createSeparableLinearFilter`. Those functions automatically recognize smoothing kernels (i.e. symmetrical kernel with sum of weights = 1) and handle them accordingly. You may also use the higher-level
-:func:`GaussianBlur`.
+:cpp:func:`sepFilter2D` or to
+:cpp:func:`createSeparableLinearFilter`. Those functions automatically recognize smoothing kernels (i.e. symmetrical kernel with sum of weights = 1) and handle them accordingly. You may also use the higher-level
+:cpp:func:`GaussianBlur`.
 
 See Also:
-:func:`sepFilter2D`,
-:func:`createSeparableLinearFilter`,
-:func:`getDerivKernels`,
-:func:`getStructuringElement`,
-:func:`GaussianBlur` 
+:cpp:func:`sepFilter2D`,
+:cpp:func:`createSeparableLinearFilter`,
+:cpp:func:`getDerivKernels`,
+:cpp:func:`getStructuringElement`,
+:cpp:func:`GaussianBlur` 
 
 .. index:: getKernelType
 
 getKernelType
 -----------------
-.. c:function:: int getKernelType(const Mat& kernel, Point anchor)
+.. cpp:function:: int getKernelType(InputArray kernel, Point anchor)
 
     Returns the kernel type.
 
@@ -1011,7 +1003,7 @@ The function analyzes the kernel coefficients and returns the corresponding kern
 
 getStructuringElement
 -------------------------
-.. c:function:: Mat getStructuringElement(int shape, Size esize, Point anchor=Point(-1,-1))
+.. cpp:function:: Mat getStructuringElement(int shape, Size esize, Point anchor=Point(-1,-1))
 
     Returns a structuring element of the specified size and shape for morphological operations.
 
@@ -1036,16 +1028,16 @@ getStructuringElement
     :param anchor: Anchor position within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the center. Note that only the shape of a cross-shaped element depends on the anchor position. In other cases the anchor just regulates how much the result of the morphological operation is shifted.
 
 The function constructs and returns the structuring element that can be then passed to
-:func:`createMorphologyFilter`,
-:func:`erode`,
-:func:`dilate` or
-:func:`morphologyEx` . But you can also construct an arbitrary binary mask yourself and use it as the structuring element.
+:cpp:func:`createMorphologyFilter`,
+:cpp:func:`erode`,
+:cpp:func:`dilate` or
+:cpp:func:`morphologyEx` . But you can also construct an arbitrary binary mask yourself and use it as the structuring element.
 
 .. index:: medianBlur
 
 medianBlur
 --------------
-.. c:function:: void medianBlur( const Mat& src, Mat& dst, int ksize )
+.. cpp:function:: void medianBlur( InputArray src, OutputArray dst, int ksize )
 
     Smoothes an image using the median filter.
 
@@ -1059,16 +1051,16 @@ The function smoothes an image using the median filter with the
 :math:`\texttt{ksize} \times \texttt{ksize}` aperture. Each channel of a multi-channel image is processed independently. In-place operation is supported.
 
 See Also:
-:func:`bilateralFilter`,
-:func:`blur`,
-:func:`boxFilter`,
-:func:`GaussianBlur`
+:cpp:func:`bilateralFilter`,
+:cpp:func:`blur`,
+:cpp:func:`boxFilter`,
+:cpp:func:`GaussianBlur`
 
 .. index:: morphologyEx
 
 morphologyEx
 ----------------
-.. c:function:: void morphologyEx( const Mat& src, Mat& dst,                    int op, const Mat& element,                   Point anchor=Point(-1,-1), int iterations=1,                   int borderType=BORDER_CONSTANT,                   const Scalar& borderValue=morphologyDefaultBorderValue() )
+.. cpp:function:: void morphologyEx( InputArray src, OutputArray dst, int op, InputArray element,                   Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
     Performs advanced morphological transformations.
 
@@ -1092,9 +1084,9 @@ morphologyEx
 
     :param iterations: Number of times erosion and dilation are applied.
 
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
     
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :func:`createMorphoogyFilter` for details.
+    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :cpp:func:`createMorphoogyFilter` for details.
 
 The function can perform advanced morphological transformations using an erosion and dilation as basic operations.
 
@@ -1131,15 +1123,15 @@ Morphological gradient:
 Any of the operations can be done in-place.
 
 See Also:
-:func:`dilate`,
-:func:`erode`,
-:func:`createMorphologyFilter`
+:cpp:func:`dilate`,
+:cpp:func:`erode`,
+:cpp:func:`createMorphologyFilter`
 
 .. index:: Laplacian
 
 Laplacian
 -------------
-.. c:function:: void Laplacian( const Mat& src, Mat& dst, int ddepth,               int ksize=1, double scale=1, double delta=0,               int borderType=BORDER_DEFAULT )
+.. cpp:function:: void Laplacian( InputArray src, OutputArray dst, int ddepth, int ksize=1, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
     Calculates the Laplacian of an image.
 
@@ -1149,13 +1141,13 @@ Laplacian
     
     :param ddepth: Desired depth of the destination image.
 
-    :param ksize: Aperture size used to compute the second-derivative filters. See  :func:`getDerivKernels` for details. The size must be positive and odd.
+    :param ksize: Aperture size used to compute the second-derivative filters. See  :cpp:func:`getDerivKernels` for details. The size must be positive and odd.
 
-    :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied. See  :func:`getDerivKernels` for details.
+    :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied. See  :cpp:func:`getDerivKernels` for details.
 
     :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
     
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
 The function calculates the Laplacian of the source image by adding up the second x and y derivatives calculated using the Sobel operator:
 
@@ -1171,14 +1163,14 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
     \vecthreethree {0}{1}{0}{1}{-4}{1}{0}{1}{0}
 
 See Also:
-:func:`Sobel`,
-:func:`Scharr`
+:cpp:func:`Sobel`,
+:cpp:func:`Scharr`
 
 .. index:: pyrDown
 
 pyrDown
 -----------
-.. c:function:: void pyrDown( const Mat& src, Mat& dst, const Size& dstsize=Size())
+.. cpp:function:: void pyrDown( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
     Smoothes an image and downsamples it.
 
@@ -1205,7 +1197,7 @@ Then, it downsamples the image by rejecting even rows and columns.
 
 pyrUp
 ---------
-.. c:function:: void pyrUp( const Mat& src, Mat& dst, const Size& dstsize=Size())
+.. cpp:function:: void pyrUp( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
     Upsamples an image and then smoothes it.
 
@@ -1221,13 +1213,13 @@ pyrUp
             | \texttt{dstsize.width} -src.cols*2| \leq  ( \texttt{dstsize.width}   \mod  2)  \\ | \texttt{dstsize.height} -src.rows*2| \leq  ( \texttt{dstsize.height}   \mod  2) \end{array}
 
 The function performs the upsampling step of the Gaussian pyramid construction  though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
-:func:`pyrDown`  multiplied by 4.
+:cpp:func:`pyrDown`  multiplied by 4.
 
 .. index:: sepFilter2D
 
 sepFilter2D
 ---------------
-.. c:function:: void sepFilter2D( const Mat& src, Mat& dst, int ddepth,                  const Mat& rowKernel, const Mat& columnKernel,                  Point anchor=Point(-1,-1),                  double delta=0, int borderType=BORDER_DEFAULT )
+.. cpp:function:: void sepFilter2D( InputArray src, OutputArray dst, int ddepth, InputArray rowKernel, InputArray columnKernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
 
     Applies a separable linear filter to an image.
 
@@ -1245,23 +1237,23 @@ sepFilter2D
 
     :param delta: Value added to the filtered results before storing them.
 
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
 The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with the 1D kernel ``rowKernel`` . Then, every column of the result is filtered with the 1D kernel ``columnKernel`` . The final result shifted by ``delta`` is stored in ``dst`` .
 
 See Also:
-:func:`createSeparableLinearFilter`,
-:func:`filter2D`,
-:func:`Sobel`,
-:func:`GaussianBlur`,
-:func:`boxFilter`,
-:func:`blur` 
+:cpp:func:`createSeparableLinearFilter`,
+:cpp:func:`filter2D`,
+:cpp:func:`Sobel`,
+:cpp:func:`GaussianBlur`,
+:cpp:func:`boxFilter`,
+:cpp:func:`blur` 
 
 .. index:: Sobel
 
 Sobel
 ---------
-.. c:function:: void Sobel( const Mat& src, Mat& dst, int ddepth,            int xorder, int yorder, int ksize=3,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
+.. cpp:function:: void Sobel( InputArray src, OutputArray dst, int ddepth, int xorder, int yorder, int ksize=3, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
     Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -1277,11 +1269,11 @@ Sobel
 
     :param ksize: Size of the extended Sobel kernel. It must be 1, 3, 5, or 7.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :func:`getDerivKernels` for details.
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :cpp:func:`getDerivKernels` for details.
 
     :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
     
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
 In all cases except one, the
 :math:`\texttt{ksize} \times
@@ -1324,17 +1316,17 @@ The second case corresponds to a kernel of:
     \vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}
 
 See Also:
-:func:`Scharr`,
-:func:`Lapacian`,
-:func:`sepFilter2D`,
-:func:`filter2D`,
-:func:`GaussianBlur`
+:cpp:func:`Scharr`,
+:cpp:func:`Lapacian`,
+:cpp:func:`sepFilter2D`,
+:cpp:func:`filter2D`,
+:cpp:func:`GaussianBlur`
 
 .. index:: Scharr
 
 Scharr
 ----------
-.. c:function:: void Scharr( const Mat& src, Mat& dst, int ddepth,            int xorder, int yorder,            double scale=1, double delta=0,            int borderType=BORDER_DEFAULT )
+.. cpp:function:: void Scharr( InputArray src, OutputArray dst, int ddepth, int xorder, int yorder,            double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
     Calculates the first x- or y- image derivative using Scharr operator.
 
@@ -1348,11 +1340,11 @@ Scharr
 
     :param yorder: Order of the derivative y.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :func:`getDerivKernels` for details.
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :cpp:func:`getDerivKernels` for details.
 
     :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
     
-    :param borderType: Pixel extrapolation method. See  :func:`borderInterpolate` for details.
+    :param borderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
     
 The function computes the first x- or y- spatial image derivative using the Scharr operator. The call
 

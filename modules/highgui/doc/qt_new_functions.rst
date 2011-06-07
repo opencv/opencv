@@ -62,7 +62,7 @@ The following code is an example used to generate the figure. ::
 
 setWindowProperty
 ---------------------
-.. c:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
+.. cpp:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
     Changes parameters of a window dynamically.
 
@@ -96,7 +96,7 @@ The function ``setWindowProperty``  enables changing properties of a window.
 
 getWindowProperty
 ---------------------
-.. c:function:: void  getWindowProperty(const char* name, int prop_id)
+.. cpp:function:: void  getWindowProperty(const string& name, int prop_id)
 
     Provides parameters of a window.
 
@@ -122,7 +122,7 @@ The function ``getWindowProperty``  returns properties of a window.
 
 fontQt
 ----------
-.. c:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+.. cpp:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
 
     Creates the font to draw a text on an image.
 
@@ -167,7 +167,7 @@ A basic usage of this function is the following: ::
 
 addText
 -----------
-.. c:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
+.. cpp:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
 
     Creates the font to draw a text on an image.
 
@@ -192,7 +192,7 @@ using a specific font
 
 displayOverlay
 ------------------
-.. c:function:: void displayOverlay(const string& name, const string& text, int delay)
+.. cpp:function:: void displayOverlay(const string& name, const string& text, int delay)
 
     Displays a  text on a window image as an overlay for a specified duration.  
 
@@ -208,7 +208,7 @@ The function ``displayOverlay`` displays useful information/tips on top of the w
 
 displayStatusBar
 --------------------
-.. c:function:: void displayStatusBar(const string& name, const string& text, int delay)
+.. cpp:function:: void displayStatusBar(const string& name, const string& text, int delay)
 
     Displays a text on the window statusbar during the specified period of time.
 
@@ -227,7 +227,7 @@ The function ``displayOverlay`` displays useful information/tips on top of the w
 createOpenGLCallback
 ------------------------
 
-.. c:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
+.. cpp:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
 
     Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
@@ -279,7 +279,7 @@ The function ``createOpenGLCallback`` can be used to draw 3D data on the window.
 saveWindowParameters
 ------------------------
 
-.. c:function:: void saveWindowParameters(const string& name)
+.. cpp:function:: void saveWindowParameters(const string& name)
 
     Saves parameters of the window ``windowname`` .
 
@@ -293,7 +293,7 @@ The function ``saveWindowParameters`` saves size, location, flags,  trackbars va
 loadWindowParameters
 ------------------------
 
-.. c:function:: void loadWindowParameters(const string& name)
+.. cpp:function:: void loadWindowParameters(const string& name)
 
     Loads parameters of the window ``windowname`` .
 
@@ -307,7 +307,7 @@ The function ``loadWindowParameters`` loads size, location, flags, trackbars val
 createButton
 ----------------
 
-.. c:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
+.. cpp:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
 
     Creates a callback function called to draw OpenGL on top of the image display by ``windowname`` .
 

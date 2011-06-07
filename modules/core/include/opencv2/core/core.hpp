@@ -2340,10 +2340,10 @@ CV_EXPORTS RNG& theRNG();
 template<typename _Tp> static inline _Tp randu() { return (_Tp)theRNG(); }
 
 //! fills array with uniformly-distributed random numbers from the range [low, high)
-CV_EXPORTS_W void randu(CV_IN_OUT OutputArray dst, InputArray low, InputArray high);
+CV_EXPORTS_W void randu(InputOutputArray dst, InputArray low, InputArray high);
     
 //! fills array with normally-distributed random numbers with the specified mean and the standard deviation
-CV_EXPORTS_W void randn(CV_IN_OUT OutputArray dst, InputArray mean, InputArray stddev);
+CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev);
 
 //! shuffles the input array elements
 CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor=1., RNG* rng=0);

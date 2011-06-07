@@ -5,7 +5,7 @@ Image Filtering
 
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images (represented as 
-:func:`Mat`
+:cpp:func:`Mat`
 's), that is, for each pixel location 
 :math:`(x,y)`
 in the source image some its (normally rectangular) neighborhood is considered and used to compute the response. In case of a linear filter it is a weighted sum of pixel values, in case of morphological operations it is the minimum or maximum etc. The computed response is stored to the destination image at the same location 

@@ -278,7 +278,7 @@ The algorithm does the following:
     
     
 Note: if you're using a non-square (=non-NxN) grid and
-:func:`findChessboardCorners`
+:cpp:func:`findChessboardCorners`
 for calibration, and 
 ``calibrateCamera``
 returns
@@ -303,7 +303,7 @@ See also:
 , 
 :ref:`FindExtrinsicCameraParams2`
 , 
-:func:`initCameraMatrix2D`
+:cpp:func:`initCameraMatrix2D`
 , 
 :ref:`StereoCalibrate`
 , 
@@ -2312,7 +2312,7 @@ StereoRectify
     :param P1, P2: The output  :math:`3 \times 4`  projection matrices in the new (rectified) coordinate systems. 
     
     
-    :param Q: The output  :math:`4 \times 4`  disparity-to-depth mapping matrix, see  :func:`reprojectImageTo3D` . 
+    :param Q: The output  :math:`4 \times 4`  disparity-to-depth mapping matrix, see  :cpp:func:`reprojectImageTo3D` . 
     
     :type Q: :class:`CvMat`
     
@@ -2337,7 +2337,7 @@ StereoRectify
     
     
 The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, that makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. On input the function takes the matrices computed by 
-:func:`stereoCalibrate`
+:cpp:func:`stereoCalibrate`
 and on output it gives 2 rotation matrices and also 2 projection matrices in the new coordinates. The 2 cases are distinguished by the function are: 
 
 
@@ -2595,12 +2595,12 @@ UndistortPoints
     :type distCoeffs: :class:`CvMat`
     
     
-    :param R: The rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :func:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used 
+    :param R: The rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :cpp:func:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used 
     
     :type R: :class:`CvMat`
     
     
-    :param P: The new camera matrix (3x3) or the new projection matrix (3x4).  ``P1``  or  ``P2`` , computed by  :func:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used 
+    :param P: The new camera matrix (3x3) or the new projection matrix (3x4).  ``P1``  or  ``P2`` , computed by  :cpp:func:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used 
     
     :type P: :class:`CvMat`
     

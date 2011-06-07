@@ -39,7 +39,7 @@ The actual implementations of the geometrical transformations, from the most gen
 convertMaps
 -----------
 
-.. c:function:: void convertMaps( const Mat& map1, const Mat& map2, Mat& dstmap1, Mat& dstmap2, int dstmap1type, bool nninterpolation=false )
+.. cpp:function:: void convertMaps( InputArray map1, InputArray map2, OutputArray dstmap1, OutputArray dstmap2, int dstmap1type, bool nninterpolation=false )
 
     Converts image transformation maps from one representation to another.
 
@@ -56,11 +56,11 @@ convertMaps
     :param nninterpolation: Flag indicating whether the fixed-point maps are used for the nearest-neighbor or for a more complex interpolation.
 
 The function converts a pair of maps for
-:func:`remap` from one representation to another. The following options ( ``(map1.type(), map2.type())`` :math:`\rightarrow` ``(dstmap1.type(), dstmap2.type())`` ) are supported:
+:cpp:func:`remap` from one representation to another. The following options ( ``(map1.type(), map2.type())`` :math:`\rightarrow` ``(dstmap1.type(), dstmap2.type())`` ) are supported:
 
 *
     :math:`\texttt{(CV\_32FC1, CV\_32FC1)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}`     . This is the most frequently used conversion operation, in which the original floating-point maps (see
-    :func:`remap`     ) are converted to a more compact and much faster fixed-point representation. The first output array contains the rounded coordinates and the second array (created only when ``nninterpolation=false``     ) contains indices in the interpolation tables.
+    :cpp:func:`remap`     ) are converted to a more compact and much faster fixed-point representation. The first output array contains the rounded coordinates and the second array (created only when ``nninterpolation=false``     ) contains indices in the interpolation tables.
 
 *
     :math:`\texttt{(CV\_32FC2)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}`     . The same as above but the original maps are stored in one 2-channel matrix.
@@ -69,17 +69,15 @@ The function converts a pair of maps for
     Reverse conversion. Obviously, the reconstructed floating-point maps will not be exactly the same as the originals.
 
 See Also:
-:func:`remap`,
-:func:`undisort`,
-:func:`initUndistortRectifyMap`
+:cpp:func:`remap`,
+:cpp:func:`undisort`,
+:cpp:func:`initUndistortRectifyMap`
 
 .. index:: getAffineTransform
 
-.. _getAffineTransform:
-
 getAffineTransform
 ----------------------
-.. c:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+.. cpp:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates an affine transform from three pairs of the corresponding points.
 
@@ -102,8 +100,8 @@ where
     i=0,1,2
 
 See Also:
-:func:`warpAffine`,
-:func:`transform`
+:cpp:func:`warpAffine`,
+:cpp:func:`transform`
 
 
 .. index:: getPerspectiveTransform
@@ -112,7 +110,7 @@ See Also:
 
 getPerspectiveTransform
 ---------------------------
-.. c:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+.. cpp:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates a perspective transform from four pairs of the corresponding points.
 
@@ -135,9 +133,9 @@ where
     i=0,1,2
 
 See Also:
-:func:`findHomography`,
-:func:`warpPerspective`,
-:func:`perspectiveTransform`
+:cpp:func:`findHomography`,
+:cpp:func:`warpPerspective`,
+:cpp:func:`perspectiveTransform`
 
 .. index:: getRectSubPix
 
@@ -145,7 +143,7 @@ See Also:
 
 getRectSubPix
 -----------------
-.. c:function:: void getRectSubPix( const Mat& image, Size patchSize, Point2f center, Mat& dst, int patchType=-1 )
+.. cpp:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
 
     Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
@@ -170,12 +168,12 @@ using bilinear interpolation. Every channel of multi-channel
 images is processed independently. While the center of the rectangle
 must be inside the image, parts of the rectangle may be
 outside. In this case, the replication border mode (see
-:func:`borderInterpolate` ) is used to extrapolate
+:cpp:func:`borderInterpolate` ) is used to extrapolate
 the pixel values outside of the image.
 
 See Also:
-:func:`warpAffine`,
-:func:`warpPerspective`
+:cpp:func:`warpAffine`,
+:cpp:func:`warpPerspective`
 
 .. index:: getRotationMatrix2D
 
@@ -183,7 +181,7 @@ See Also:
 
 getRotationMatrix2D
 -----------------------
-.. c:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
+.. cpp:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
 
     Calculates an affine matrix of 2D rotation.
 
@@ -208,9 +206,9 @@ where
 The transformation maps the rotation center to itself. If this is not the target, adjust the shift.
 
 See Also:
-:func:`getAffineTransform`,
-:func:`warpAffine`,
-:func:`transform`
+:cpp:func:`getAffineTransform`,
+:cpp:func:`warpAffine`,
+:cpp:func:`transform`
 
 .. index:: invertAffineTransform
 
@@ -218,7 +216,7 @@ See Also:
 
 invertAffineTransform
 -------------------------
-.. c:function:: void invertAffineTransform(const Mat& M, Mat& iM)
+.. cpp:function:: void invertAffineTransform(InputArray M, OutputArray iM)
 
     Inverts an affine transformation.
 
@@ -243,20 +241,20 @@ The result is also a
 remap
 -----
 
-.. c:function:: void remap( const Mat& src, Mat& dst, const Mat& map1, const Mat& map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. cpp:function:: void remap( InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a generic geometrical transformation to an image.
 
     :param src: Source image.
 
     :param dst: Destination image. It has the same size as  ``map1``  and the same type as  ``src`` .
-    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having the type  ``CV_16SC2`` , ``CV_32FC1`` , or  ``CV_32FC2`` . See  :func:`convertMaps`  for details on converting a floating point representation to fixed-point for speed.
+    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having the type  ``CV_16SC2`` , ``CV_32FC1`` , or  ``CV_32FC2`` . See  :cpp:func:`convertMaps`  for details on converting a floating point representation to fixed-point for speed.
 
     :param map2: The second map of  ``y``  values having the type  ``CV_16UC1`` , ``CV_32FC1`` , or none (empty map if ``map1`` is  ``(x,y)``  points), respectively.
 
-    :param interpolation: Interpolation method (see  :func:`resize` ). The method  ``INTER_AREA``  is not supported by this function.
+    :param interpolation: Interpolation method (see  :cpp:func:`resize` ). The method  ``INTER_AREA``  is not supported by this function.
 
-    :param borderMode: Pixel extrapolation method (see  :func:`borderInterpolate` ). When \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -274,7 +272,7 @@ where values of pixels with non-integer coordinates are computed using one of av
 :math:`(x,y)` in
 :math:`map_1` , or
 fixed-point maps created by using
-:func:`convertMaps` . The reason you might want to convert from floating to fixed-point
+:cpp:func:`convertMaps` . The reason you might want to convert from floating to fixed-point
 representations of a map is that they can yield much faster (~2x) remapping operations. In the converted case,
 :math:`map_1` contains pairs ``(cvFloor(x), cvFloor(y))`` and
 :math:`map_2` contains indices in a table of interpolation coefficients.
@@ -288,7 +286,7 @@ This function cannot operate in-place.
 resize
 ----------
 
-.. c:function:: void resize( const Mat& src, Mat& dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
+.. cpp:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
 
     Resizes an image.
 
@@ -343,9 +341,9 @@ If you want to decimate the image by factor of 2 in each direction, you can call
 
 
 See Also:
-:func:`warpAffine`,
-:func:`warpPerspective`,
-:func:`remap` 
+:cpp:func:`warpAffine`,
+:cpp:func:`warpPerspective`,
+:cpp:func:`remap` 
 
 .. index:: warpAffine
 
@@ -353,7 +351,7 @@ See Also:
 
 warpAffine
 --------------
-.. c:function:: void warpAffine( const Mat& src, Mat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. cpp:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies an affine transformation to an image.
 
@@ -365,9 +363,9 @@ warpAffine
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -378,23 +376,21 @@ The function ``warpAffine`` transforms the source image using the specified matr
     \texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})
 
 when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is first inverted with
-:func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
+:cpp:func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
 See Also:
-:func:`warpPerspective`,
-:func:`resize`,
-:func:`remap`,
-:func:`getRectSubPix`,
-:func:`transform`
+:cpp:func:`warpPerspective`,
+:cpp:func:`resize`,
+:cpp:func:`remap`,
+:cpp:func:`getRectSubPix`,
+:cpp:func:`transform`
 
 .. index:: warpPerspective
 
-.. _warpPerspective:
-
 warpPerspective
 -------------------
-.. c:function:: void warpPerspective( const Mat& src, Mat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. cpp:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a perspective transformation to an image.
 
@@ -406,9 +402,9 @@ warpPerspective
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -420,13 +416,178 @@ The function ``warpPerspective`` transforms the source image using the specified
          \frac{M_{21} x + M_{22} y + M_{23}}{M_{31} x + M_{32} y + M_{33}} \right )
 
 when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is first inverted with
-:func:`invert` and then put in the formula above instead of ``M`` .
+:cpp:func:`invert` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
 See Also:
-:func:`warpAffine`,
-:func:`resize`,
-:func:`remap`,
-:func:`getRectSubPix`,
-:func:`perspectiveTransform`
+:cpp:func:`warpAffine`,
+:cpp:func:`resize`,
+:cpp:func:`remap`,
+:cpp:func:`getRectSubPix`,
+:cpp:func:`perspectiveTransform`
+
+
+.. index:: initUndistortRectifyMap
+
+initUndistortRectifyMap
+---------------------------
+
+.. cpp:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )
+
+    Computes the undistortion and rectification transformation map.
+
+    :param cameraMatrix: Input camera matrix  :math:`A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
+    
+    :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+
+    :param R: Optional rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is assumed.
+
+    :param newCameraMatrix: New camera matrix  :math:`A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}` .
+    
+    :param size: Undistorted image size.
+
+    :param m1type: Type of the first output map that can be  ``CV_32FC1``  or  ``CV_16SC2`` . See  :ref:`convertMaps` for details.
+    
+    :param map1: The first output map.
+
+    :param map2: The second output map.
+
+The function computes the joint undistortion and rectification transformation and represents the result in the form of maps for
+:ref:`Remap` . The undistorted image looks like original, as if it is captured with a camera using the camera matrix ``=newCameraMatrix`` and zero distortion. In case of a monocular camera, ``newCameraMatrix`` is usually equal to ``cameraMatrix`` , or it can be computed by
+:ref:`GetOptimalNewCameraMatrix` for a better control over scaling. In case of a stereo camera, ``newCameraMatrix`` is normally set to ``P1`` or ``P2`` computed by
+:ref:`StereoRectify` .
+
+Also, this new camera is oriented differently in the coordinate space, according to ``R`` . That, for example, helps to align two heads of a stereo camera so that the epipolar lines on both images become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
+
+The function actually builds the maps for the inverse mapping algorithm that is used by
+:ref:`Remap` . That is, for each pixel
+:math:`(u, v)` in the destination (corrected and rectified) image, the function computes the corresponding coordinates in the source image (that is, in the original image from camera). The following process is applied:
+
+.. math::
+
+    \begin{array}{l} x  \leftarrow (u - {c'}_x)/{f'}_x  \\ y  \leftarrow (v - {c'}_y)/{f'}_y  \\{[X\,Y\,W]} ^T  \leftarrow R^{-1}*[x \, y \, 1]^T  \\ x'  \leftarrow X/W  \\ y'  \leftarrow Y/W  \\ x"  \leftarrow x' (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + 2p_1 x' y' + p_2(r^2 + 2 x'^2)  \\ y"  \leftarrow y' (1 + k_1 r^2 + k_2 r^4 + k_3 r^6) + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y'  \\ map_x(u,v)  \leftarrow x" f_x + c_x  \\ map_y(u,v)  \leftarrow y" f_y + c_y \end{array}
+
+where
+:math:`(k_1, k_2, p_1, p_2[, k_3])` are the distortion coefficients.
+
+In case of a stereo camera, this function is called twice: once for each camera head, after
+:ref:`StereoRectify` , which in its turn is called after
+:ref:`StereoCalibrate` . But if the stereo camera was not calibrated, it is still possible to compute the rectification transformations directly from the fundamental matrix using
+:ref:`StereoRectifyUncalibrated` . For each camera, the function computes homography ``H`` as the rectification transformation in a pixel domain, not a rotation matrix ``R`` in 3D space. ``R`` can be computed from ``H`` as
+
+.. math::
+
+    \texttt{R} =  \texttt{cameraMatrix} ^{-1}  \cdot \texttt{H} \cdot \texttt{cameraMatrix}
+
+where ``cameraMatrix`` can be chosen arbitrarily.
+
+
+.. index:: getDefaultNewCameraMatrix
+
+getDefaultNewCameraMatrix
+-----------------------------
+.. cpp:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
+
+    Returns the default new camera matrix.
+
+    :param cameraMatrix: Input camera matrix.
+
+    :param imageSize: Camera view image size in pixels.
+
+    :param centerPrincipalPoint: Location of the principal point in the new camera matrix. The parameter indicates whether this location should be at the image center or not.
+
+The function returns the camera matrix that is either an exact copy of the input ``cameraMatrix`` (when ``centerPrinicipalPoint=false`` ), or the modified one (when ``centerPrincipalPoint`` =true).
+
+In the latter case, the new camera matrix will be:
+
+.. math::
+
+    \begin{bmatrix} f_x && 0 && ( \texttt{imgSize.width} -1)*0.5  \\ 0 && f_y && ( \texttt{imgSize.height} -1)*0.5  \\ 0 && 0 && 1 \end{bmatrix} ,
+
+where
+:math:`f_x` and
+:math:`f_y` are
+:math:`(0,0)` and
+:math:`(1,1)` elements of ``cameraMatrix`` , respectively.
+
+By default, the undistortion functions in OpenCV (see 
+:ref:`initUndistortRectifyMap`,
+:ref:`undistort`) do not move the principal point. However, when you work with stereo, it is important to move the principal points in both views to the same y-coordinate (which is required by most of stereo correspondence algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for each view where the principal points are located at the center.
+
+
+.. index:: undistort
+
+undistort
+-------------
+.. cpp:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=None() )
+
+    Transforms an image to compensate for lens distortion.
+
+    :param src: Input (distorted) image.
+
+    :param dst: Output (corrected) image that has the same size and type as  ``src`` .
+    
+    :param cameraMatrix: Input camera matrix  :math:`A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
+    
+    :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+
+    :param newCameraMatrix: Camera matrix of the distorted image. By default, it is the same as  ``cameraMatrix``  but you may additionally scale and shift the result by using a different matrix.
+
+The function transforms an image to compensate radial and tangential lens distortion.
+
+The function is simply a combination of
+:ref:`InitUndistortRectifyMap` (with unity ``R`` ) and
+:ref:`Remap` (with bilinear interpolation). See the former function for details of the transformation being performed.
+
+Those pixels in the destination image, for which there is no correspondent pixels in the source image, are filled with zeros (black color).
+
+A particular subset of the source image that will be visible in the corrected image can be regulated by ``newCameraMatrix`` . You can use
+:ref:`GetOptimalNewCameraMatrix` to compute the appropriate ``newCameraMatrix``  depending on your requirements.
+
+The camera matrix and the distortion parameters can be determined using
+:ref:`calibrateCamera` . If the resolution of images is different from the resolution used at the calibration stage,
+:math:`f_x, f_y, c_x` and
+:math:`c_y` need to be scaled accordingly, while the distortion coefficients remain the same.
+
+
+.. index:: undistortPoints
+
+undistortPoints
+-------------------
+.. cpp:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=None(), InputArray P=None())
+
+    Computes the ideal point coordinates from the observed point coordinates.
+
+    :param src: Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
+
+    :param dst: Output ideal point coordinates after undistortion and reverse perspective transformation.
+
+    :param cameraMatrix: Camera matrix  :math:`\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
+    
+    :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+
+    :param R: Rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2``  computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used.
+
+    :param P: New camera matrix (3x3) or new projection matrix (3x4).  ``P1``  or  ``P2``  computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used.
+
+The function is similar to
+:ref:`undistort` and
+:ref:`initUndistortRectifyMap`  but it operates on a sparse set of points instead of a raster image. Also the function performs a reverse transformation to
+:ref:`projectPoints` . In case of a 3D object, it does not reconstruct its 3D coordinates, but for a planar object, it does, up to a translation vector, if the proper ``R`` is specified. ::
+
+    // (u,v) is the input point, (u', v') is the output point
+    // camera_matrix=[fx 0 cx; 0 fy cy; 0 0 1]
+    // P=[fx' 0 cx' tx; 0 fy' cy' ty; 0 0 1 tz]
+    x" = (u - cx)/fx
+    y" = (v - cy)/fy
+    (x',y') = undistort(x",y",dist_coeffs)
+    [X,Y,W]T = R*[x' y' 1]T
+    x = X/W, y = Y/W
+    u' = x*fx' + cx'
+    v' = y*fy' + cy',
+
+where ``undistort()`` is an approximate iterative algorithm that estimates the normalized original point coordinates out of the normalized distorted point coordinates ("normalized" means that the coordinates do not depend on the camera matrix).
+
+The function can be used for both a stereo camera head or a monocular camera (when R is empty).
+
  

@@ -490,7 +490,7 @@ gpu::reprojectImageTo3D
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`reprojectImageTo3D` .
+See Also: :c:cpp:func:`reprojectImageTo3D` .
 
 .. index:: gpu::solvePnPRansac
 
@@ -507,7 +507,7 @@ gpu::solvePnPRansac
     
     :param camera_mat: 3x3 matrix of intrinsic camera parameters.
     
-    :param dist_coef: Distortion coefficients. See :c:func:`undistortPoints` for details.
+    :param dist_coef: Distortion coefficients. See :c:cpp:func:`undistortPoints` for details.
     
     :param rvec: Output 3D rotation vector.
     
@@ -523,5 +523,5 @@ gpu::solvePnPRansac
     
     :param inliers: Output vector of inlier indices.   
 
-See Also :c:func:`solvePnPRansac`.
+See Also :c:cpp:func:`solvePnPRansac`.
   

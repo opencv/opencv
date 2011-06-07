@@ -7,14 +7,14 @@ Motion Analysis and Object Tracking
 
 calcOpticalFlowPyrLK
 ------------------------
-.. c:function:: void calcOpticalFlowPyrLK( const Mat\& prevImg, const Mat\& nextImg,        const vector<Point2f>\& prevPts, vector<Point2f>\& nextPts,        vector<uchar>\& status, vector<float>\& err,         Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(            TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),        double derivLambda=0.5, int flags=0 )
+.. cpp:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), double derivLambda=0.5, int flags=0 )
 
     Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids.
 
     :param prevImg: The first 8-bit single-channel or 3-channel input image.
 
     :param nextImg: The second input image of the same size and the same type as  ``prevImg`` .
-	
+
     :param prevPts: Vector of points for which the flow needs to be found.
 
     :param nextPts: Output vector of points containing the calculated new positions of input features in the second image.
@@ -43,16 +43,16 @@ Bouguet00
 
 calcOpticalFlowFarneback
 ----------------------------
-.. c:function:: void calcOpticalFlowFarneback( const Mat\& prevImg, const Mat\& nextImg,                               Mat\& flow, double pyrScale, int levels, int winsize,                               int iterations, int polyN, double polySigma, int flags )
+.. cpp:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 
     Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
     :param prevImg: The first 8-bit single-channel input image.
 
     :param nextImg: The second input image of the same size and the same type as  ``prevImg`` .
-	
+
     :param flow: Computed flow image that has the same size as  ``prevImg``  and type  ``CV_32FC2`` .
-	
+
     :param pyrScale: Parameter specifying the image scale (<1) to build pyramids for each image.  ``pyrScale=0.5``  means a classical pyramid, where each next layer is twice smaller than the previous one.
 
     :param levels: Number of pyramid layers including the initial image.  ``levels=1``  means that no extra layers are created and only the original images are used.
@@ -81,7 +81,7 @@ The function finds an optical flow for each ``prevImg`` pixel using the alorithm
 
 updateMotionHistory
 -----------------------
-.. c:function:: void updateMotionHistory( const Mat\& silhouette, Mat\& mhi,                          double timestamp, double duration )
+.. cpp:function:: void updateMotionHistory( InputArray silhouette, InputOutputArray mhi, double timestamp, double duration )
 
     Updates the motion history image by a moving silhouette.
 
@@ -102,8 +102,8 @@ The function updates the motion history image as follows:
 That is, MHI pixels where the motion occurs are set to the current ``timestamp`` , while the pixels where the motion happened last time a long time ago are cleared.
 
 The function, together with
-:func:`calcMotionGradient` and
-:func:`calcGlobalOrientation` , implements a motion templates technique described in
+:cpp:func:`calcMotionGradient` and
+:cpp:func:`calcGlobalOrientation` , implements a motion templates technique described in
 Davis97
 and
 Bradski00
@@ -114,7 +114,7 @@ See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the mo
 
 calcMotionGradient
 ----------------------
-.. c:function:: void calcMotionGradient( const Mat\& mhi, Mat\& mask,                         Mat\& orientation,                         double delta1, double delta2,                         int apertureSize=3 )
+.. cpp:function:: void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,                         double delta1, double delta2, int apertureSize=3 )
 
     Calculates a gradient orientation of a motion history image.
 
@@ -130,7 +130,7 @@ calcMotionGradient
 
             \min ( \texttt{delta1}  ,  \texttt{delta2}  )  \le  M(x,y)-m(x,y)  \le   \max ( \texttt{delta1}  , \texttt{delta2} ).
 
-    :param apertureSize: Aperture size of  the :func:`Sobel`  operator.
+    :param apertureSize: Aperture size of  the :cpp:func:`Sobel`  operator.
 
 The function calculates a gradient orientation at each pixel
 :math:`(x, y)` as:
@@ -140,26 +140,26 @@ The function calculates a gradient orientation at each pixel
     \texttt{orientation} (x,y)= \arctan{\frac{d\texttt{mhi}/dy}{d\texttt{mhi}/dx}}
 
 In fact,
-:func:`fastArctan` and
-:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
+:cpp:func:`fastArctan` and
+:cpp:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
 .. index:: calcGlobalOrientation
 
 calcGlobalOrientation
 -------------------------
-.. c:function:: double calcGlobalOrientation( const Mat\& orientation, const Mat\& mask,                              const Mat\& mhi, double timestamp,                              double duration )
+.. cpp:function:: double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi, double timestamp, double duration )
 
     Calculates a global motion orientation in a selected region.
 
-    :param orientation: Motion gradient orientation image calculated by the function  :func:`calcMotionGradient` .
+    :param orientation: Motion gradient orientation image calculated by the function  :cpp:func:`calcMotionGradient` .
     
-    :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :func:`calcMotionGradient` , and the mask of a region whose direction needs to be calculated.
+    :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :cpp:func:`calcMotionGradient` , and the mask of a region whose direction needs to be calculated.
 
-    :param mhi: Motion history image calculated by  :func:`updateMotionHistory` .
+    :param mhi: Motion history image calculated by  :cpp:func:`updateMotionHistory` .
     
-    :param timestamp: Timestamp passed to  :func:`updateMotionHistory` .
+    :param timestamp: Timestamp passed to  :cpp:func:`updateMotionHistory` .
     
-    :param duration: Maximum duration of a motion track in milliseconds, passed to  :func:`updateMotionHistory` .
+    :param duration: Maximum duration of a motion track in milliseconds, passed to  :cpp:func:`updateMotionHistory` .
 
 The function calculates an average
 motion direction in the selected region and returns the angle between
@@ -171,21 +171,21 @@ weight and the motion occurred in the past has a smaller weight, as recorded in 
 
 CamShift
 ------------
-.. c:function:: RotatedRect CamShift( const Mat\& probImage, Rect\& window,                      TermCriteria criteria )
+.. cpp:function:: RotatedRect CamShift( InputArray probImage, Rect& window, TermCriteria criteria )
 
     Finds an object center, size, and orientation.
 
-    :param probImage: Back projection of the object histogram. See  :func:`calcBackProject` .
+    :param probImage: Back projection of the object histogram. See  :cpp:func:`calcBackProject` .
     
     :param window: Initial search window.
 
-    :param criteria: Stop criteria for the underlying  :func:`meanShift` .
+    :param criteria: Stop criteria for the underlying  :cpp:func:`meanShift` .
 
 The function implements the CAMSHIFT object tracking algrorithm
 Bradski98
 .
 First, it finds an object center using
-:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
+:cpp:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
 
 See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
@@ -193,23 +193,23 @@ See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
 meanShift
 -------------
-.. c:function:: int meanShift( const Mat\& probImage, Rect\& window,               TermCriteria criteria )
+.. cpp:function:: int meanShift( InputArray probImage, Rect& window, TermCriteria criteria )
 
     Finds an object on a back projection image.
 
-    :param probImage: Back projection of the object histogram. See  :func:`calcBackProject` for details.
+    :param probImage: Back projection of the object histogram. See  :cpp:func:`calcBackProject` for details.
 	
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
 
 The function implements the iterative object search algorithm. It takes the input back projection of an object and the initial position. The mass center in ``window`` of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations ``criteria.maxCount`` is done or until the window center shifts by less than ``criteria.epsilon`` . The algorithm is used inside
-:func:`CamShift` and, unlike
-:func:`CamShift` , the search window size or orientation do not change during the search. You can simply pass the output of
-:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise (for example, by retrieving connected components with
-:func:`findContours` , throwing away contours with small area (
-:func:`contourArea` ), and rendering the  remaining contours with
-:func:`drawContours` ).
+:cpp:func:`CamShift` and, unlike
+:cpp:func:`CamShift` , the search window size or orientation do not change during the search. You can simply pass the output of
+:cpp:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise (for example, by retrieving connected components with
+:cpp:func:`findContours` , throwing away contours with small area (
+:cpp:func:`contourArea` ), and rendering the  remaining contours with
+:cpp:func:`drawContours` ).
 
 .. index:: KalmanFilter
 

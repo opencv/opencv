@@ -221,7 +221,7 @@ Boosted tree classifier ::
 
 CvBoost::train
 --------------
-.. c:function:: bool CvBoost::train(  const CvMat* _train_data,  int _tflag,               const CvMat* _responses,  const CvMat* _var_idx=0,               const CvMat* _sample_idx=0,  const CvMat* _var_type=0,               const CvMat* _missing_mask=0,               CvBoostParams params=CvBoostParams(),               bool update=false )
+.. cpp:function:: bool CvBoost::train(  const CvMat* _train_data,  int _tflag,               const CvMat* _responses,  const CvMat* _var_idx=0,               const CvMat* _sample_idx=0,  const CvMat* _var_type=0,               const CvMat* _missing_mask=0,               CvBoostParams params=CvBoostParams(),               bool update=false )
 
     Trains a boosted tree classifier.
 
@@ -233,7 +233,7 @@ The train method follows the common template. The last parameter ``update`` spec
 
 CvBoost::predict
 ----------------
-.. c:function:: float CvBoost::predict(  const CvMat* sample,  const CvMat* missing=0,                          CvMat* weak_responses=0,  CvSlice slice=CV_WHOLE_SEQ,                          bool raw_mode=false ) const
+.. cpp:function:: float CvBoost::predict(  const CvMat* sample,  const CvMat* missing=0,                          CvMat* weak_responses=0,  CvSlice slice=CV_WHOLE_SEQ,                          bool raw_mode=false ) const
 
     Predicts a response for an input sample.
 
@@ -245,7 +245,7 @@ The method ``CvBoost::predict`` runs the sample through the trees in the ensembl
 
 CvBoost::prune
 --------------
-.. c:function:: void CvBoost::prune( CvSlice slice )
+.. cpp:function:: void CvBoost::prune( CvSlice slice )
 
     Removes the specified weak classifiers.
 
@@ -261,7 +261,7 @@ Do not confuse this method with the pruning of individual decision trees, which 
 
 CvBoost::get_weak_predictors
 ----------------------------
-.. c:function:: CvSeq* CvBoost::get_weak_predictors()
+.. cpp:function:: CvSeq* CvBoost::get_weak_predictors()
 
     Returns the sequence of weak tree classifiers.
 

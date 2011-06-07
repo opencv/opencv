@@ -9,20 +9,20 @@ The boundaries of the shapes can be rendered with antialiasing (implemented only
 All the functions include the parameter color that uses a rgb value (that may be constructed
 with 
 ``CV_RGB``
-macro or the  :func:`cvScalar`  function 
+macro or the  :cpp:func:`cvScalar`  function 
 ) for color
 images and brightness for grayscale images. For color images the order channel
 is normally 
 *Blue, Green, Red*
 , this is what 
-:func:`imshow`
+:cpp:func:`imshow`
 , 
-:func:`imread`
+:cpp:func:`imread`
 and 
-:func:`imwrite`
+:cpp:func:`imwrite`
 expect
 , so if you form a color using 
-:func:`cvScalar`
+:cpp:func:`cvScalar`
 , it should look like:
 
 
@@ -32,7 +32,7 @@ expect
 
 
 If you are using your own image rendering and I/O functions, you can use any channel ordering, the drawing functions process each channel independently and do not depend on the channel order or even on the color space used. The whole image can be converted from BGR to RGB or to a different color space using 
-:func:`cvtColor`
+:cpp:func:`cvtColor`
 .
 
 If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also, many drawing functions can handle pixel coordinates specified with sub-pixel accuracy, that is, the coordinates can be passed as fixed-point numbers, encoded as integers. The number of fractional bits is specified by the 

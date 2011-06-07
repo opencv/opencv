@@ -51,7 +51,7 @@ descriptors is represented as
 
 DescriptorExtractor::compute
 --------------------------------
-.. c:function:: void DescriptorExtractor::compute( const Mat\& image,                                      vector<KeyPoint>\& keypoints,                                                                      Mat\& descriptors ) const
+.. cpp:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 
     Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
@@ -61,7 +61,7 @@ DescriptorExtractor::compute
 
     :param descriptors: Descriptors. Row i is the descriptor for keypoint i.
 
-.. c:function:: void DescriptorExtractor::compute( const vector<Mat>\& images,                                                           vector<vector<KeyPoint> >\& keypoints,                                                       vector<Mat>\& descriptors ) const
+.. cpp:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
 
     :param images: Image set.
 
@@ -75,7 +75,7 @@ DescriptorExtractor::compute
 
 DescriptorExtractor::read
 -----------------------------
-.. c:function:: void DescriptorExtractor::read( const FileNode\& fn )
+.. cpp:function:: void DescriptorExtractor::read( const FileNode& fn )
 
     Reads the object of a descriptor extractor from a file node.
 
@@ -85,7 +85,7 @@ DescriptorExtractor::read
 
 DescriptorExtractor::write
 ------------------------------
-.. c:function:: void DescriptorExtractor::write( FileStorage\& fs ) const
+.. cpp:function:: void DescriptorExtractor::write( FileStorage& fs ) const
 
     Writes the object of a descriptor extractor to a file storage.
 
@@ -95,7 +95,7 @@ DescriptorExtractor::write
 
 DescriptorExtractor::create
 -------------------------------
-.. c:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
+.. cpp:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
 
     Creates a descriptor extractor by name.
 

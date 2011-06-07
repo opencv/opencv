@@ -9,7 +9,7 @@ User Interface
 
 createTrackbar
 ------------------
-.. c:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange CV_DEFAULT(0), void* userdata CV_DEFAULT(0))
+.. cpp:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
     Creates a trackbar and attaches it to the specified window.
 
@@ -45,7 +45,7 @@ Clicking the label of each trackbar enables editing the trackbar values manually
 
 getTrackbarPos
 ------------------
-.. c:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
+.. cpp:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
 
     Returns the trackbar position.
 
@@ -67,7 +67,7 @@ Qt-specific details:
 
 imshow
 ----------
-.. c:function:: void imshow( const string& winname, const Mat& image )
+.. cpp:function:: void imshow( const string& winname, InputArray image )
 
     Displays an image in the specified window.
 
@@ -92,7 +92,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
 namedWindow
 ---------------
-.. c:function:: void namedWindow( const string& winname, int flags )
+.. cpp:function:: void namedWindow( const string& winname, int flags )
 
     Creates a window.
 
@@ -132,7 +132,7 @@ Qt-specific details:
 
 setTrackbarPos
 ------------------
-.. c:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
+.. cpp:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
 
     Sets the trackbar position.
 
@@ -156,7 +156,7 @@ Qt-specific details:
 
 waitKey
 -----------
-.. c:function:: int waitKey(int delay=0)
+.. cpp:function:: int waitKey(int delay=0)
 
     Waits for a pressed key.
 

@@ -7,7 +7,7 @@ Feature Detection and Description
 
 FAST
 --------
-.. c:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
+.. cpp:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
 
     Detects corners using the FAST algorithm by E. Rosten (*Machine learning for high-speed corner detection*, 2006).
 
@@ -355,11 +355,11 @@ Class containing a base structure for ``RTreeClassifier`` ::
 
 RandomizedTree::train
 -------------------------
-.. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
+.. cpp:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
     Trains a randomized tree using an input set of keypoints.
 
-.. c:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
+.. cpp:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
     :param base_set: Vector of the ``BaseKeypoint`` type. It contains image keypoints used for training.
     
@@ -379,9 +379,9 @@ RandomizedTree::train
 
 RandomizedTree::read
 ------------------------
-.. c:function:: read(const char* file_name, int num_quant_bits)
+.. cpp:function:: read(const char* file_name, int num_quant_bits)
 
-.. c:function:: read(std::istream &is, int num_quant_bits)
+.. cpp:function:: read(std::istream &is, int num_quant_bits)
 
     Reads a pre-saved randomized tree from a file or stream.
 
@@ -395,11 +395,11 @@ RandomizedTree::read
 
 RandomizedTree::write
 -------------------------
-.. c:function:: void write(const char* file_name) const
+.. cpp:function:: void write(const char* file_name) const
 
     Writes the current randomized tree to a file or stream.
 
-.. c:function:: void write(std::ostream \&os) const
+.. cpp:function:: void write(std::ostream \&os) const
 
     :param file_name: Name of the file where randomized tree data is stored.
 
@@ -409,7 +409,7 @@ RandomizedTree::write
 
 RandomizedTree::applyQuantization
 -------------------------------------
-.. c:function:: void applyQuantization(int num_quant_bits)
+.. cpp:function:: void applyQuantization(int num_quant_bits)
 
     Applies quantization to the current randomized tree.
 
@@ -519,11 +519,11 @@ Class containing ``RTreeClassifier``. It represents the Calonder descriptor that
 
 RTreeClassifier::train
 --------------------------
-.. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. cpp:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
     Trains a randomized tree classifier using an input set of keypoints.
 
-.. c:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+.. cpp:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
     :param base_set: Vector of the ``BaseKeypoint``  type. It contains image keypoints used for training.
     
@@ -547,11 +547,11 @@ RTreeClassifier::train
 
 RTreeClassifier::getSignature
 ---------------------------------
-.. c:function:: void getSignature(IplImage *patch, uchar *sig)
+.. cpp:function:: void getSignature(IplImage *patch, uchar *sig)
 
     Returns a signature for an image patch.
 
-.. c:function:: void getSignature(IplImage *patch, float *sig)
+.. cpp:function:: void getSignature(IplImage *patch, float *sig)
 
     :param patch: Image patch to calculate the signature for.
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
@@ -561,7 +561,7 @@ RTreeClassifier::getSignature
 RTreeClassifier::getSparseSignature
 --------------------------------------- 
 
-.. c:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
+.. cpp:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
 
     Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
 
@@ -575,7 +575,7 @@ RTreeClassifier::getSparseSignature
 
 RTreeClassifier::countNonZeroElements
 -----------------------------------------
-.. c:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
+.. cpp:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
 
     Returns the number of non-zero elements in an input array.
 
@@ -589,11 +589,11 @@ RTreeClassifier::countNonZeroElements
 
 RTreeClassifier::read
 -------------------------
-.. c:function:: read(const char* file_name)
+.. cpp:function:: read(const char* file_name)
 
     Reads a pre-saved ``RTreeClassifier`` from a file or stream.
 
-.. c:function:: read(std::istream& is)
+.. cpp:function:: read(std::istream& is)
 
     :param file_name: Name of the file that contains randomized tree data.
 
@@ -603,11 +603,11 @@ RTreeClassifier::read
 
 RTreeClassifier::write
 --------------------------
-.. c:function:: void write(const char* file_name) const
+.. cpp:function:: void write(const char* file_name) const
 
     Writes the current ``RTreeClassifier`` to a file or stream.
 
-.. c:function:: void write(std::ostream &os) const
+.. cpp:function:: void write(std::ostream &os) const
 
     :param file_name: Name of the file where randomized tree data is stored.
 
@@ -617,7 +617,7 @@ RTreeClassifier::write
 
 RTreeClassifier::setQuantization
 ------------------------------------
-.. c:function:: void setQuantization(int num_quant_bits)
+.. cpp:function:: void setQuantization(int num_quant_bits)
 
     Applies quantization to the current randomized tree.
 

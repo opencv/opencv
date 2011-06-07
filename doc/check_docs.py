@@ -16,13 +16,13 @@ opencv_hdr_list = [
 ]
 
 opencv_module_list = [
-"core",
-"imgproc",
-"calib3d",
-"features2d",
-"video",
-"objdetect",
-"highgui",
+#"core",
+#"imgproc",
+#"calib3d",
+#"features2d",
+#"video",
+#"objdetect",
+#"highgui",
 "ml"
 ]
 
@@ -33,7 +33,7 @@ class RSTParser(object):
         fdecl = ""
         balance = 0
         lineno = 0
-    
+        
         for l in df.readlines():
             lineno += 1
             ll = l.strip()
@@ -48,6 +48,7 @@ class RSTParser(object):
             if balance > 0:
                 continue
             rst_decl = self.parser.parse_func_decl_no_wrap(fdecl)
+
             hdr_decls = self.fmap.get(rst_decl[0], [])
             if not hdr_decls:
                 print "Documented function %s (%s) in %s:%d is not in the headers" % (fdecl, rst_decl[0], docname, lineno)
@@ -68,6 +69,7 @@ class RSTParser(object):
                 self.fmap[rst_decl[0]] = hdr_decls[:decl_idx] + hdr_decls[decl_idx+1:]
                 continue
             print "Documented function %s in %s:%d does not have a match" % (fdecl, docname, lineno)
+        df.close()
 
     def check_module_docs(self, name):
         self.parser = hp.CppHeaderParser()
@@ -94,11 +96,14 @@ class RSTParser(object):
             self.process_rst(d)
             
         print "\n\n########## The list of undocumented functions: ###########\n\n"
+        misscount = 0
         fkeys = sorted(self.fmap.keys())
         for f in fkeys:
             decls = self.fmap[f]
             for d in decls:
+                misscount += 1
                 print "%s %s(%s)" % (d[1], d[0], ", ".join([a[0] + " " + a[1] for a in d[3]]))
+        print "\n\n\nundocumented functions in %s: %d" % (name, misscount)
     
 p = RSTParser()
 for m in opencv_module_list:

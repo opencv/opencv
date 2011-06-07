@@ -148,7 +148,7 @@ In contrast with :c:type:`Mat`, in most cases ``GpuMat::isContinuous() == false`
 You are not recommended to leave static or global ``GpuMat`` variables allocated, that is to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
 
 See Also:
-:func:`Mat`
+:cpp:func:`Mat`
 
 .. index:: gpu::CudaMem
 
@@ -157,7 +157,7 @@ gpu::CudaMem
 .. cpp:class:: gpu::CudaMem
 
 This class with reference counting wraps special memory type allocation functions from CUDA. Its interface is also
-:func:`Mat`-like but with additional memory type parameters.
+:cpp:func:`Mat`-like but with additional memory type parameters.
     
 *
     ``ALLOC_PAGE_LOCKED``:  Sets a page locked memory type, used commonly for fast and asynchronous uploading/downloading data from/to GPU.

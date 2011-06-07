@@ -195,7 +195,7 @@ gpu::BruteForceMatcher_GPU::match
     Finds the best match for each descriptor from a query set with train descriptors.
 
 See Also:
-:c:func:`DescriptorMatcher::match` 
+:c:cpp:func:`DescriptorMatcher::match` 
 
 .. index:: gpu::BruteForceMatcher_GPU::matchSingle
 
@@ -264,10 +264,10 @@ gpu::BruteForceMatcher_GPU::knnMatch
 
     Finds the k best matches for each descriptor from a query set with train descriptors. The function returns detected k (or less if not possible) matches in the increasing order by distance.
 
-.. c:function:: void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
+.. cpp:function:: void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
 
 See Also:
-:func:`DescriptorMatcher::knnMatch` 
+:cpp:func:`DescriptorMatcher::knnMatch` 
 
 .. index:: gpu::BruteForceMatcher_GPU::knnMatch
 
@@ -308,7 +308,7 @@ gpu::BruteForceMatcher_GPU::radiusMatch
     This function works only on devices with the compute capability  :math:`>=` 1.1.
 
 See Also:
-:func:`DescriptorMatcher::radiusMatch` 
+:cpp:func:`DescriptorMatcher::radiusMatch` 
 
 .. index:: gpu::BruteForceMatcher_GPU::radiusMatch
 

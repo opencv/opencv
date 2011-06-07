@@ -173,11 +173,11 @@ gpu::HOGDescriptor::detectMultiScale
 
 	Performs object detection with a multi-scale window.
 
-    :param img: Source image. See  :func:`gpu::HOGDescriptor::detect`  for type limitations.
+    :param img: Source image. See  :cpp:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
     :param found_locations: Detected objects boundaries.
 
-    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :func:`gpu::HOGDescriptor::detect`  for details.
+    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :cpp:func:`gpu::HOGDescriptor::detect`  for details.
 
     :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -185,7 +185,7 @@ gpu::HOGDescriptor::detectMultiScale
 
     :param scale0: Coefficient of the detection window increase.
 
-    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :func:`groupRectangles` .
+    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :cpp:func:`groupRectangles` .
 
 .. index:: gpu::HOGDescriptor::getDescriptors
 
@@ -197,7 +197,7 @@ gpu::HOGDescriptor::getDescriptors
 
     Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
 
-    :param img: Source image. See  :func:`gpu::HOGDescriptor::detect`  for type limitations.
+    :param img: Source image. See  :cpp:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
     :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -324,5 +324,5 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     imshow("Faces", image_cpu);
 
 
-See Also: :c:func:`CascadeClassifier::detectMultiScale` 
+See Also: :c:cpp:func:`CascadeClassifier::detectMultiScale` 
 

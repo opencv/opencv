@@ -16,7 +16,7 @@ gpu::transpose
     :param dst: Destination matrix.
 
 See Also:
-:c:func:`transpose` 
+:c:cpp:func:`transpose` 
 
 .. index:: gpu::flip
 
@@ -40,7 +40,7 @@ gpu::flip
             
 
 See Also:
-:c:func:`flip` 
+:c:cpp:func:`flip` 
 
 .. index:: gpu::LUT
 
@@ -57,7 +57,7 @@ gpu::LUT
     :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src``.
             
 
-See Also: :c:func:`LUT` 
+See Also: :c:cpp:func:`LUT` 
 
 .. index:: gpu::merge
 
@@ -81,7 +81,7 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`merge` 
+See Also: :c:cpp:func:`merge` 
 
 .. index:: gpu::split
 
@@ -103,7 +103,7 @@ gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`split`
+See Also: :c:cpp:func:`split`
 
 .. index:: gpu::magnitude
 
@@ -128,7 +128,7 @@ gpu::magnitude
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`magnitude` 
+:c:cpp:func:`magnitude` 
 
 .. index:: gpu::magnitudeSqr
 
@@ -173,7 +173,7 @@ gpu::phase
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`phase` 
+:c:cpp:func:`phase` 
 
 .. index:: gpu::cartToPolar
 
@@ -198,7 +198,7 @@ gpu::cartToPolar
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`cartToPolar` 
+:c:cpp:func:`cartToPolar` 
 
 .. index:: gpu::polarToCart
 
@@ -223,4 +223,4 @@ gpu::polarToCart
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:c:func:`polarToCart` 
+:c:cpp:func:`polarToCart` 

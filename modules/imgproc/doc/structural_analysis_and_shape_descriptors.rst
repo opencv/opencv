@@ -7,7 +7,7 @@ Structural Analysis and Shape Descriptors
 
 moments
 -----------
-.. c:function:: Moments moments( const Mat& array, bool binaryImage=false )
+.. cpp:function:: Moments moments( InputArray array, bool binaryImage=false )
 
     Calculates all of the moments up to the third order of a polygon or rasterized shape where the class ``Moments`` is defined as: ::
 
@@ -72,18 +72,18 @@ http://en.wikipedia.org/wiki/Green_theorem
 ). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
 
 See Also:
-:func:`contourArea`,
-:func:`arcLength`
+:cpp:func:`contourArea`,
+:cpp:func:`arcLength`
 
 .. index:: HuMoments
 
 HuMoments
 -------------
-.. c:function:: void HuMoments( const Moments& moments, double h[7] )
+.. cpp:function:: void HuMoments( const Moments& moments, double h[7] )
 
     Calculates the seven Hu invariants.
 
-    :param moments: Input moments computed with  :func:`moments` .
+    :param moments: Input moments computed with  :cpp:func:`moments` .
     :param h: Output Hu invariants.
 
 The function calculates the seven Hu invariants (see
@@ -101,19 +101,19 @@ where
 These values are proved to be invariants to the image scale, rotation, and reflection except the seventh one, whose sign is changed by reflection. This invariance is proved with the assumption of infinite image resolution. In case of raster images, the computed Hu invariants for the original and transformed images are a bit different.
 
 See Also:
-:func:`matchShapes`
+:cpp:func:`matchShapes`
 
 .. index:: findContours
 
 findContours
 ----------------
-.. c:function:: void findContours( const Mat& image, vector<vector<Point> >& contours,                   vector<Vec4i>& hierarchy, int mode,                   int method, Point offset=Point())
+.. cpp:function:: void findContours( InputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
 
-.. c:function:: void findContours( const Mat& image, vector<vector<Point> >& contours,                   int mode, int method, Point offset=Point())
+.. cpp:function:: void findContours( InputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
     Finds contours in a binary image.
 
-    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :func:`compare` ,  :func:`inRange` ,  :func:`threshold` ,  :func:`adaptiveThreshold` ,  :func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
+    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :cpp:func:`compare` ,  :cpp:func:`inRange` ,  :cpp:func:`threshold` ,  :cpp:func:`adaptiveThreshold` ,  :cpp:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
 
@@ -150,7 +150,7 @@ Source ``image`` is modified by this function.
 
 drawContours
 ----------------
-.. c:function:: void drawContours( Mat& image, const vector<vector<Point> >& contours,                   int contourIdx, const Scalar& color, int thickness=1,                   int lineType=8, const vector<Vec4i>& hierarchy=vector<Vec4i>(),                   int maxLevel=INT_MAX, Point offset=Point() )
+.. cpp:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=None(), int maxLevel=INT_MAX, Point offset=Point() )
 
     Draws contours outlines or filled contours.
 
@@ -165,7 +165,7 @@ drawContours
     :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
         drawn.
 
-    :param lineType: Line connectivity. See  :func:`line`  for details.
+    :param lineType: Line connectivity. See  :cpp:func:`line`  for details.
 
     :param hierarchy: Optional information about hierarchy. It is only needed if you want to draw only some of the  contours (see  ``maxLevel`` ).
 
@@ -221,13 +221,11 @@ The function draws contour outlines in the image if
 
 approxPolyDP
 ----------------
-.. c:function:: void approxPolyDP( const Mat& curve,                   vector<Point>& approxCurve,                   double epsilon, bool closed )
-
-.. c:function:: void approxPolyDP( const Mat& curve,                   vector<Point2f>& approxCurve,                   double epsilon, bool closed )
+.. cpp:function:: void approxPolyDP( InputArray curve, OutputArray approxCurve, double epsilon, bool closed )
 
     Approximates a polygonal curve(s) with the specified precision.
 
-    :param curve: Polygon or curve to approximate. It must be  :math:`1 \times N`  or  :math:`N \times 1`  matrix of type  ``CV_32SC2``  or  ``CV_32FC2`` . You can also convert  ``vector<Point>``  or  ``vector<Point2f>`` to the matrix by calling the  ``Mat(const vector<T>&)``  constructor.
+    :param curve: Input vector of 2d point, stored in ``std::vector`` or ``Mat``.
 
     :param approxCurve: Result of the approximation. The type should match the type of the input curve.
 
@@ -238,15 +236,17 @@ approxPolyDP
 The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices, so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
+See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp on how to use the function.
+
 .. index:: arcLength
 
 arcLength
 -------------
-.. c:function:: double arcLength( const Mat& curve, bool closed )
+.. cpp:function:: double arcLength( InputArray curve, bool closed )
 
     Calculates a contour perimeter or a curve length.
 
-    :param curve: Input vector of 2D points represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to a matrix with the  ``Mat(const vector<T>&)``  constructor.
+    :param curve: Input vector of 2D points, stored in ``std::vector`` or ``Mat``.
 
     :param closed: Flag indicating whether the curve is closed or not.
 
@@ -256,11 +256,11 @@ The function computes a curve length or a closed contour perimeter.
 
 boundingRect
 ----------------
-.. c:function:: Rect boundingRect( const Mat& points )
+.. cpp:function:: Rect boundingRect( InputArray points )
 
     Calculates the up-right bounding rectangle of a point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to a matrix using the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
 
@@ -268,14 +268,14 @@ The function calculates and returns the minimal up-right bounding rectangle for 
 
 estimateRigidTransform
 --------------------------
-.. c:function:: Mat estimateRigidTransform( const Mat& srcpt, const Mat& dstpt,                            bool fullAffine )
+.. cpp:function:: Mat estimateRigidTransform( InputArray srcpt, InputArray dstpt, bool fullAffine )
 
     Computes an optimal affine transformation between two 2D point sets.
 
-    :param srcpt: The first input 2D point set.
+    :param srcpt: The first input 2D point set, stored in ``std::vector`` or ``Mat``.
 
     :param dst: The second input 2D point set of the same size and the same type as  ``A`` .
-	
+
     :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
 
 The function finds an optimal affine transform
@@ -298,15 +298,15 @@ where
 when ``fullAffine=false`` .
 
 See Also:
-:func:`getAffineTransform`,
-:func:`getPerspectiveTransform`,
-:func:`findHomography`
+:cpp:func:`getAffineTransform`,
+:cpp:func:`getPerspectiveTransform`,
+:cpp:func:`findHomography`
 
 .. index:: estimateAffine3D
 
 estimateAffine3D
 --------------------
-.. c:function:: int estimateAffine3D(const Mat& srcpt, const Mat& dstpt, Mat& out,                     vector<uchar>& outliers, double ransacThreshold = 3.0, double confidence = 0.99)
+.. cpp:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
 
     Computes an optimal affine transformation between two 3D point sets.
 
@@ -328,16 +328,16 @@ The function estimates an optimal 3D affine transformation between two 3D point 
 
 contourArea
 ---------------
-.. c:function:: double contourArea( const Mat& contour )
+.. cpp:function:: double contourArea( InputArray contour )
 
     Calculates a contour area.
 
-    :param contour: Contour vertices represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to a matrix using the ``Mat(const vector<T>&)``  constructor.
+    :param contour: Input vector of 2d points (contour vertices), stored in ``std::vector`` or ``Mat``.
 
 The function computes a contour area. Similarly to
-:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
-:func:`drawContours` or
-:func:`fillPoly` , can be different.
+:cpp:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
+:cpp:func:`drawContours` or
+:cpp:func:`fillPoly` , can be different.
 Here is a short example: ::
 
     vector<Point> contour;
@@ -351,45 +351,40 @@ Here is a short example: ::
     approxPolyDP(contour, approx, 5, true);
     double area1 = contourArea(approx);
 
-    cout << "area0 = " << area0 << endl <<
-            "area1 = " << area1 << endl <<
-            "approx poly vertices = " << approx.size() << endl;
+    cout << "area0 =" << area0 << endl <<
+            "area1 =" << area1 << endl <<
+            "approx poly vertices" << approx.size() << endl;
 
 .. index:: convexHull
 
 convexHull
 --------------
-.. c:function:: void convexHull( const Mat& points, vector<int>& hull,                 bool clockwise=false )
-
-.. c:function:: void convexHull( const Mat& points, vector<Point>& hull,                 bool clockwise=false )
-
-.. c:function:: void convexHull( const Mat& points, vector<Point2f>& hull,                 bool clockwise=false )
+.. cpp:function:: void convexHull( InputArray points, OutputArray hull, bool clockwise=false, bool returnPoints=true )
 
     Finds the convex hull of a point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` /``vector<Point2f>``  converted to a matrix using the ``Mat(const vector<T>&)``  constructor.
+    :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
-    :param hull: Output convex hull. It is either a vector of points that form the hull (must have the same type as the input points), or a vector of 0-based point indices of the hull points in the original array (since the set of convex hull points is a subset of the original point set).
+    :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case ``hull`` elements will be the convex hull points themselves.
 
-    :param clockwise: If true, the output convex hull will be oriented clockwise. Otherwise, it will be oriented counter-clockwise. The usual screen coordinate system is assumed where the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
+    :param clockwise: Orientation flag. If true, the output convex hull will be oriented clockwise. Otherwise, it will be oriented counter-clockwise. The usual screen coordinate system is assumed where the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
+    
+    :param returnPoints: Operation flag. In the case of matrix, when the flag is true, the function will return convex hull points, otherwise it will return indices of the convex hull points. When the output array is ``std::vector``, the flag is ignored, and the output depends on the type of the vector - ``std::vector<int>`` implies ``returnPoints=true``, ``std::vector<Point>`` implies ``returnPoints=false``.
 
 The functions find the convex hull of a 2D point set using the Sklansky's algorithm
 Sklansky82
 that has
-:math:`O(N logN)` or
-:math:`O(N)` complexity (where
-:math:`N` is the number of input points), depending on how the initial sorting is implemented (currently it is
-:math:`O(N logN)` . See the OpenCV sample ``convexhull.c`` that demonstrates the usage of different function variants.
+*O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
 
 .. index:: fitEllipse
 
 fitEllipse
 --------------
-.. c:function:: RotatedRect fitEllipse( const InputArray& points )
+.. cpp:function:: RotatedRect fitEllipse( InputArray points )
 
     Fits an ellipse around a set of 2D points.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
+    :param points: Input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed.
 
@@ -397,13 +392,13 @@ The function calculates the ellipse that fits (in least-squares sense) a set of 
 
 fitLine
 -----------
-.. c:function:: void fitLine( const InputArray& points, OutputArray& line, int distType,              double param, double reps, double aeps )
+.. cpp:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
 
     Fits a line to a 2D or 3D point set.
 
-    :param points: Input 2D or 3D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by ``vector<Point>``, ``vector<Point2f>``, ``vector<Point3i>`` or ``vector<Point3f>``.
+    :param points: Input vector of 2D or 3D points, stored in ``std::vector<>`` or ``Mat``.
 
-    :param line: Output line parameters. In case of 2D fitting it should be ``Vec4f``, a vector of 4 floats  ``(vx, vy, x0, y0)``,  where  ``(vx, vy)``  is a normalized vector collinear to the line and  ``(x0, y0)``  is a point on the line. In case of 3D fitting, it should be ``Vec6f``, a vector of 6 floats  ``(vx, vy, vz, x0, y0, z0)``, where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
+    :param line: Output line parameters. In case of 2D fitting it should be a vector of 4 elements (like ``Vec4f``) - ``(vx, vy, x0, y0)``,  where  ``(vx, vy)``  is a normalized vector collinear to the line and  ``(x0, y0)``  is a point on the line. In case of 3D fitting, it should be a vector of 6 elements (like  ``Vec6f``) - ``(vx, vy, vz, x0, y0, z0)``, where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
 
     :param distType: Distance used by the M-estimator (see the discussion).
 
@@ -463,11 +458,11 @@ http://en.wikipedia.org/wiki/M-estimator
 
 isContourConvex
 -------------------
-.. c:function:: bool isContourConvex( const InputArray& contour )
+.. cpp:function:: bool isContourConvex( InputArray contour )
 
     Tests a contour convexity.
 
-    :param contour: Tested contour, a matrix of type ``CV_32SC2``  or  ``CV_32FC2`` , or  ``vector<Point>`` or ``vector<Point2f>``.
+    :param contour: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function tests whether the input contour is convex or not. The contour must be simple, that is, without self-intersections. Otherwise, the function output is undefined.
 
@@ -475,11 +470,11 @@ The function tests whether the input contour is convex or not. The contour must 
 
 minAreaRect
 ---------------
-.. c:function:: RotatedRect minAreaRect( const InputArray& points )
+.. cpp:function:: RotatedRect minAreaRect( InputArray points )
 
     Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
+    :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
 
@@ -487,11 +482,11 @@ The function calculates and returns the minimum-area bounding rectangle (possibl
 
 minEnclosingCircle
 ----------------------
-.. c:function:: void minEnclosingCircle( const InputArray& points, Point2f& center, float& radius )
+.. cpp:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
 
     Finds a circle of the minimum area enclosing a 2D point set.
 
-    :param points: Input 2D point set represented either by  ``CV_32SC2``  or  ``CV_32FC2``  matrix, or by  ``vector<Point>`` or ``vector<Point2f>``.
+    :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
     :param center: Output center of the circle.
 
@@ -503,7 +498,7 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 
 matchShapes
 ---------------
-.. c:function:: double matchShapes( const InputArray& object1, const InputArray& object2, int method, double parameter=0 )
+.. cpp:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
 
     Compares two shapes.
 
@@ -517,7 +512,7 @@ matchShapes
     :param parameter: Method-specific parameter (not supported now).
 
 The function compares two shapes. All three implemented methods use the Hu invariants (see
-:func:`HuMoments` ) as follows (
+:cpp:func:`HuMoments` ) as follows (
 :math:`A` denotes ``object1``,:math:`B` denotes ``object2`` ):
 
 * method=CV\_CONTOUR\_MATCH\_I1
@@ -553,7 +548,7 @@ and
 
 pointPolygonTest
 --------------------
-.. c:function:: double pointPolygonTest( const InputArray& contour, Point2f pt, bool measureDist )
+.. cpp:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
 
     Performs a point-in-contour test.
 

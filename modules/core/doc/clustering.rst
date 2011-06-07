@@ -10,7 +10,7 @@ Clustering
 kmeans
 ------
 
-.. c:function:: double kmeans( const Mat& samples, int clusterCount, Mat& labels, TermCriteria termcrit, int attempts,               int flags, Mat* centers )
+.. cpp:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=None() )
 
     Finds centers of clusters and groups input samples around the clusters.
 
@@ -57,9 +57,9 @@ attempts to 1, initialize labels each time using a custom algorithm, pass them w
 
 partition
 -------------
-.. c:function:: template<typename _Tp, class _EqPredicate> int
+.. cpp:function:: template<typename _Tp, class _EqPredicate> int
 
-.. c:function:: partition( const vector<_Tp>& vec, vector<int>& labels,               _EqPredicate predicate=_EqPredicate())
+.. cpp:function:: partition( const vector<_Tp>& vec, vector<int>& labels,               _EqPredicate predicate=_EqPredicate())
 
     Splits an element set into equivalency classes.
 

@@ -9,12 +9,12 @@ OpenCV (Open Source Computer Vision Library: http://opencv.willowgarage.com/wiki
 OpenCV has a modular structure, which means that the package includes several shared or static libraries. The following modules are available:
 
  * **core** - a compact module defining basic data structures, including the dense multi-dimensional array ``Mat`` and basic functions used by all other modules.
- * **imgproc** - an image processing module that includes linear and non-linear image filtering, geometrical image transformations (resize, affine and perspective wraping, generic table-based remapping), color space conversion, histograms, and so on.
+ * **imgproc** - an image processing module that includes linear and non-linear image filtering, geometrical image transformations (resize, affine and perspective warping, generic table-based remapping), color space conversion, histograms, and so on.
  * **video** - a video analysis module that includes motion estimation, background subtraction, and object tracking algorithms.
  * **calib3d** - basic multiple-view geometry algorithms, single and stereo camera calibration, object pose estimation, stereo correspondence algorithms, and elements of 3D reconstruction.
  * **features2d** - salient feature detectors, descriptors, and descriptor matchers.
  * **objdetect** - detection of objects and instances of the predefined classes (for example, faces, eyes, mugs, people, cars, and so on).
- * **highgui** - an easy-to-use interface to video capturing, image and video codecs APIs, as well as simple UI capabilities.
+ * **highgui** - an easy-to-use interface to video capturing, image and video codecs, as well as simple UI capabilities.
  * **gpu** - GPU-accelerated algorithms from different OpenCV modules.
  * ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and others.
 
@@ -56,7 +56,7 @@ Automatic Memory Management
 
 OpenCV handles all the memory automatically.
 
-First of all, ``std::vector``, ``Mat``, and other data structures used by the functions and methods have destructors that deallocate the underlying memory buffers when needed. This means that the destructors do not always deallocate the buffers as in case of ``Mat``. They take into account possible data sharing. A destructor decrements the reference counter associated with the matrix data buffer. The buffer is deallocated if and only if the reference counter reaches zero, that is, when no other structures refer to the same buffer. Similarly, when a ``Mat`` instance is copied, no actual data is really copied. Instead, the counter associated with its reference is incremented to memorize that there is another owner of the same data. There is also the ``Mat::clone`` method that creates a full copy of the matrix data. See the example below: ::
+First of all, ``std::vector``, ``Mat``, and other data structures used by the functions and methods have destructors that deallocate the underlying memory buffers when needed. This means that the destructors do not always deallocate the buffers as in case of ``Mat``. They take into account possible data sharing. A destructor decrements the reference counter associated with the matrix data buffer. The buffer is deallocated if and only if the reference counter reaches zero, that is, when no other structures refer to the same buffer. Similarly, when a ``Mat`` instance is copied, no actual data is really copied. Instead, the reference counter is incremented to memorize that there is another owner of the same data. There is also the ``Mat::clone`` method that creates a full copy of the matrix data. See the example below: ::
 
     // create a big 8Mb matrix
     Mat A(1000, 1000, CV_64F);
@@ -100,7 +100,7 @@ description for details.
 Automatic Allocation of the Output Data
 ---------------------------------------
 
-OpenCV deallocates the memory automatically, as well as automatically allocates the memory for output function parameters  most of the time. So, if a function has one or more input arrays (``cv::Mat`` instances) and some output arrays, the output arrays are automatically allocated or reallocated. The size and type of the output arrays are determined from the size and type of input arrays. If needed, the functions take extra parameters that help to figure out the output array properties.
+OpenCV deallocates the memory automatically, as well as automatically allocates the memory for output function parameters most of the time. So, if a function has one or more input arrays (``cv::Mat`` instances) and some output arrays, the output arrays are automatically allocated or reallocated. The size and type of the output arrays are determined from the size and type of input arrays. If needed, the functions take extra parameters that help to figure out the output array properties.
 
 Example: ::
 
@@ -152,9 +152,9 @@ where ``cv::uchar`` is an OpenCV 8-bit unsigned integer type. In the optimized S
 Fixed Pixel Types. Limited Use of Templates
 -------------------------------------------
 
-Templates is a great feature of C++ that enables implementation of very powerful, efficient and yet safe data structures and algorithms. However, the extensive use of templates may dramatically increase compilation time and code size. Besides, it is difficult to separate an interface and implementation when templates are used exclusively. This could be fine for basic algorithms but not good for computer vision libraries where a single algorithm may span a thousand lines of code. Because of this and also to simplify development of bindings for other languages, like Python*, Java*, Matlab* that do not have templates at all or have limited template capabilities, the current OpenCV implementation is based on polymorphism and runtime dispatching over templates. In those places where runtime dispatching would be too slow (like pixel access operators), impossible (generic ``Ptr<>`` implementation), or just very inconvenient (``saturate_cast<>()``) the current implementation introduces small template classes, methods, and functions. Anywhere else in this implementation templates are not used.
+Templates is a great feature of C++ that enables implementation of very powerful, efficient and yet safe data structures and algorithms. However, the extensive use of templates may dramatically increase compilation time and code size. Besides, it is difficult to separate an interface and implementation when templates are used exclusively. This could be fine for basic algorithms but not good for computer vision libraries where a single algorithm may span thousands lines of code. Because of this and also to simplify development of bindings for other languages, like Python, Java, Matlab that do not have templates at all or have limited template capabilities, the current OpenCV implementation is based on polymorphism and runtime dispatching over templates. In those places where runtime dispatching would be too slow (like pixel access operators), impossible (generic ``Ptr<>`` implementation), or just very inconvenient (``saturate_cast<>()``) the current implementation introduces small template classes, methods, and functions. Anywhere else in the current OpenCV version the use of templates is limited.
 
-There is a limited fixed set of primitive data types the library can operate on. That is, array elements should have one of the following types:
+Consequently, there is a limited fixed set of primitive data types the library can operate on. That is, array elements should have one of the following types:
 
   * 8-bit unsigned integer (uchar)
   * 8-bit signed integer (schar)
@@ -163,7 +163,7 @@ There is a limited fixed set of primitive data types the library can operate on.
   * 32-bit signed integer (int)
   * 32-bit floating-point number (float)
   * 64-bit floating-point number (double)
-  * a tuple of several elements where all elements have the same type (one of the above). An array whose elements are such tuples, are called multi-channel arrays, as opposite to the single-channel arrays, whose elements are scalar values. The maximum possible number of channels is defined by the ``CV_CN_MAX`` constant, which is not smaller than 32.
+  * a tuple of several elements where all elements have the same type (one of the above). An array whose elements are such tuples, are called multi-channel arrays, as opposite to the single-channel arrays, whose elements are scalar values. The maximum possible number of channels is defined by the ``CV_CN_MAX`` constant, which is currently set to 512.
 
 For these basic types, the following enumeration is applied::
 
@@ -190,11 +190,16 @@ Arrays with more complex elements cannot be constructed or processed using OpenC
 
   * The face detection algorithm only works with 8-bit grayscale or color images.
   * Linear algebra functions and most of the machine learning algorithms work with floating-point arrays only.
-  * Basic functions, such as ``cv::add``, support all types, except for ``CV_8SC(n)``.
+  * Basic functions, such as ``cv::add``, support all types.
   * Color space conversion functions support 8-bit unsigned, 16-bit unsigned, and 32-bit floating-point types.
 
-The subset of supported types for each functions has been defined from practical needs. All this information about supported types can be put together into a special table. In different implementations of the standard, the tables may look differently. For example, on embedded platforms the double-precision floating-point type (``CV_64F``) may be unavailable.
+The subset of supported types for each function has been defined from practical needs and could be extended in future based on user requests.
 
+
+InputArray and OutputArray
+--------------------------
+
+Many OpenCV functions process dense 2-dimensional or multi-dimensional numerical arrays. Usually, such functions take cpp:class:`Mat` as parameters, but in some cases it's more convenient to use ``std::vector<>`` (for a point set, for example) or ``Matx<>`` (for 3x3 homography matrix and such). To avoid many duplicates in the API, special "proxy" classes have been introduced. The base "proxy" class is ``InputArray``. It is used for passing read-only arrays on a function input. The derived from ``InputArray`` class ``OutputArray`` is used to specify an output array for a function. Normally, you should not care of those intermediate types (and you should not declare variables of those types explicitly) - it will all just work automatically. You can assume that instead of ``InputArray``/``OutputArray`` you can always use ``Mat``, ``std::vector<>``, ``Matx<>``, ``Vec<>`` or ``Scalar``. When a function has an optional input or output array, and you do not have or do not want one, pass ``cv::None()``.
 
 Error Handling
 --------------

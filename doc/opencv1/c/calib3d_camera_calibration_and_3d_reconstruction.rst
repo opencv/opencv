@@ -308,7 +308,7 @@ The algorithm does the following:
     
 The function returns the final re-projection error.
 Note: if you're using a non-square (=non-NxN) grid and
-:func:`findChessboardCorners`
+:cpp:func:`findChessboardCorners`
 for calibration, and 
 ``calibrateCamera``
 returns
@@ -333,7 +333,7 @@ See also:
 , 
 :ref:`FindExtrinsicCameraParams2`
 , 
-:func:`initCameraMatrix2D`
+:cpp:func:`initCameraMatrix2D`
 , 
 :ref:`StereoCalibrate`
 , 
@@ -2303,7 +2303,7 @@ StereoRectify
     :param P1, P2: The output  :math:`3 \times 4`  projection matrices in the new (rectified) coordinate systems. 
     
     
-    :param Q: The output  :math:`4 \times 4`  disparity-to-depth mapping matrix, see  :func:`reprojectImageTo3D` . 
+    :param Q: The output  :math:`4 \times 4`  disparity-to-depth mapping matrix, see  :cpp:func:`reprojectImageTo3D` . 
     
     
     :param flags: The operation flags; may be 0 or  ``CV_CALIB_ZERO_DISPARITY`` . If the flag is set, the function makes the principal points of each camera have the same pixel coordinates in the rectified views. And if the flag is not set, the function may still shift the images in horizontal or vertical direction (depending on the orientation of epipolar lines) in order to maximize the useful image area. 
@@ -2320,7 +2320,7 @@ StereoRectify
     
     
 The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, that makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. On input the function takes the matrices computed by 
-:func:`stereoCalibrate`
+:cpp:func:`stereoCalibrate`
 and on output it gives 2 rotation matrices and also 2 projection matrices in the new coordinates. The 2 cases are distinguished by the function are: 
 
 
@@ -2562,10 +2562,10 @@ UndistortPoints
     :param distCoeffs: The input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5 or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed. 
     
     
-    :param R: The rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :func:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used 
+    :param R: The rectification transformation in object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :cpp:func:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used 
     
     
-    :param P: The new camera matrix (3x3) or the new projection matrix (3x4).  ``P1``  or  ``P2`` , computed by  :func:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used 
+    :param P: The new camera matrix (3x3) or the new projection matrix (3x4).  ``P1``  or  ``P2`` , computed by  :cpp:func:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used 
     
     
     

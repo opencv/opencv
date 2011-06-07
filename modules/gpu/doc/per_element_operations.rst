@@ -21,7 +21,7 @@ gpu::add
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`add`
+See Also: :c:cpp:func:`add`
 
 .. index:: gpu::subtract
 
@@ -39,7 +39,7 @@ gpu::subtract
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`subtract`
+See Also: :c:cpp:func:`subtract`
 
 
 
@@ -59,7 +59,7 @@ gpu::multiply
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`multiply`
+See Also: :c:cpp:func:`multiply`
 
 
 .. index:: gpu::divide
@@ -78,9 +78,9 @@ gpu::divide
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-	This function, in contrast to :c:func:`divide`, uses a round-down rounding mode.
+	This function, in contrast to :c:cpp:func:`divide`, uses a round-down rounding mode.
 
-See Also: :c:func:`divide`
+See Also: :c:cpp:func:`divide`
 
 
 
@@ -96,7 +96,7 @@ gpu::exp
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :c:func:`exp`
+See Also: :c:cpp:func:`exp`
 
 
 
@@ -112,7 +112,7 @@ gpu::log
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :c:func:`log`
+See Also: :c:cpp:func:`log`
 
 
 
@@ -132,7 +132,7 @@ gpu::absdiff
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :c:func:`absdiff`
+See Also: :c:cpp:func:`absdiff`
 
 .. index:: gpu::compare
 
@@ -157,7 +157,7 @@ gpu::compare
             * **CMP_LE:** ``src1(.) <= src2(.)``
             * **CMP_NE:** ``src1(.) != src2(.)``
 
-See Also: :c:func:`compare`
+See Also: :c:cpp:func:`compare`
 
 
 .. index:: gpu::bitwise_not
@@ -268,7 +268,7 @@ gpu::min
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`min`
+See Also: :c:cpp:func:`min`
 
 
 
@@ -294,4 +294,4 @@ gpu::max
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :c:func:`max`
+See Also: :c:cpp:func:`max`

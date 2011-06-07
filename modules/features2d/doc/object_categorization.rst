@@ -41,7 +41,7 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
 BOWTrainer::add
 -------------------
-.. c:function:: void BOWTrainer::add( const Mat& descriptors )
+.. cpp:function:: void BOWTrainer::add( const Mat& descriptors )
 
     Adds descriptors to a training set. The training set is clustered using ``clustermethod`` to construct the vocabulary.
 
@@ -51,7 +51,7 @@ BOWTrainer::add
 
 BOWTrainer::getDescriptors
 ------------------------------
-.. c:function:: const vector<Mat>& BOWTrainer::getDescriptors() const
+.. cpp:function:: const vector<Mat>& BOWTrainer::getDescriptors() const
 
     Returns a training set of descriptors.
 
@@ -59,7 +59,7 @@ BOWTrainer::getDescriptors
 
 BOWTrainer::descripotorsCount
 ---------------------------------
-.. c:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
+.. cpp:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
 
     Returns the count of all descriptors stored in the training set.
 
@@ -67,11 +67,11 @@ BOWTrainer::descripotorsCount
 
 BOWTrainer::cluster
 -----------------------
-.. c:function:: Mat BOWTrainer::cluster() const
+.. cpp:function:: Mat BOWTrainer::cluster() const
 
     Clusters train descriptors. The vocabulary consists of cluster centers. So, this method returns the vocabulary. In the first variant of the method, train descriptors stored in the object are clustered. In the second variant, input descriptors are clustered.
 
-.. c:function:: Mat BOWTrainer::cluster( const Mat& descriptors ) const
+.. cpp:function:: Mat BOWTrainer::cluster( const Mat& descriptors ) const
 
     :param descriptors: Descriptors to cluster. Each row of  the ``descriptors``  matrix is a descriptor. Descriptors are not added to the inner train descriptor set.
 
@@ -146,7 +146,7 @@ Here is the class declaration ::
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 --------------------------------------------------------
-.. c:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
+.. cpp:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
 
     The class constructor.
 
@@ -158,7 +158,7 @@ BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 
 BOWImgDescriptorExtractor::setVocabulary
 --------------------------------------------
-.. c:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
+.. cpp:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
 
     Sets a visual vocabulary.
 
@@ -168,7 +168,7 @@ BOWImgDescriptorExtractor::setVocabulary
 
 BOWImgDescriptorExtractor::getVocabulary
 --------------------------------------------
-.. c:function:: const Mat& BOWImgDescriptorExtractor::getVocabulary() const
+.. cpp:function:: const Mat& BOWImgDescriptorExtractor::getVocabulary() const
 
     Returns the set vocabulary.
 
@@ -176,7 +176,7 @@ BOWImgDescriptorExtractor::getVocabulary
 
 BOWImgDescriptorExtractor::compute
 --------------------------------------
-.. c:function:: void BOWImgDescriptorExtractor::compute( const Mat& image,           vector<KeyPoint>& keypoints, Mat& imgDescriptor,           vector<vector<int> >* pointIdxsOfClusters=0,           Mat* descriptors=0 )
+.. cpp:function:: void BOWImgDescriptorExtractor::compute( const Mat& image,           vector<KeyPoint>& keypoints, Mat& imgDescriptor,           vector<vector<int> >* pointIdxsOfClusters=0,           Mat* descriptors=0 )
 
     Computes an image descriptor using the set visual vocabulary.
 
@@ -194,7 +194,7 @@ BOWImgDescriptorExtractor::compute
 
 BOWImgDescriptorExtractor::descriptorSize
 ---------------------------------------------
-.. c:function:: int BOWImgDescriptorExtractor::descriptorSize() const
+.. cpp:function:: int BOWImgDescriptorExtractor::descriptorSize() const
 
     Returns an image discriptor size if the vocabulary is set. Otherwise, it returns 0.
 
@@ -202,7 +202,7 @@ BOWImgDescriptorExtractor::descriptorSize
 
 BOWImgDescriptorExtractor::descriptorType
 ---------------------------------------------
-.. c:function:: int BOWImgDescriptorExtractor::descriptorType() const
+.. cpp:function:: int BOWImgDescriptorExtractor::descriptorType() const
 
     Returns an image descriptor type.
 

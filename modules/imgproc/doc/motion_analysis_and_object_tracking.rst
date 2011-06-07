@@ -7,7 +7,7 @@ Motion Analysis and Object Tracking
 
 accumulate
 --------------
-.. c:function:: void accumulate( const Mat\& src, Mat\& dst, const Mat\& mask=Mat() )
+.. cpp:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=None() )
 
     Adds an image to the accumulator.
 
@@ -28,15 +28,15 @@ The function supports multi-channel images. Each channel is processed independen
 The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
 See Also:
-:func:`accumulateSquare`,
-:func:`accumulateProduct`,
-:func:`accumulateWeighted`
+:cpp:func:`accumulateSquare`,
+:cpp:func:`accumulateProduct`,
+:cpp:func:`accumulateWeighted`
 
 .. index:: accumulateSquare
 
 accumulateSquare
 --------------------
-.. c:function:: void accumulateSquare( const Mat\& src, Mat\& dst,  const Mat\& mask=Mat() )
+.. cpp:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=None() )
 
     Adds the square of a source image to the accumulator.
 
@@ -55,15 +55,15 @@ The function adds the input image ``src`` or its selected region, raised to powe
 The function supports multi-channel images Each channel is processed independently.
 
 See Also:
-:func:`accumulateSquare`,
-:func:`accumulateProduct`,
-:func:`accumulateWeighted`
+:cpp:func:`accumulateSquare`,
+:cpp:func:`accumulateProduct`,
+:cpp:func:`accumulateWeighted`
 
 .. index:: accumulateProduct
 
 accumulateProduct
 ---------------------
-.. c:function:: void accumulateProduct( const Mat\& src1, const Mat\& src2,                        Mat\& dst, const Mat\& mask=Mat() )
+.. cpp:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=None() )
 
     Adds the per-element product of two input images to the accumulator.
 
@@ -84,15 +84,15 @@ The function adds the product of 2 images or their selected regions to the accum
 The function supports multi-channel images. Each channel is processed independently.
 
 See Also:
-:func:`accumulate`,
-:func:`accumulateSquare`,
-:func:`accumulateWeighted`
+:cpp:func:`accumulate`,
+:cpp:func:`accumulateSquare`,
+:cpp:func:`accumulateWeighted`
 
 .. index:: accumulateWeighted
 
 accumulateWeighted
 ----------------------
-.. c:function:: void accumulateWeighted( const Mat\& src, Mat\& dst,                         double alpha, const Mat\& mask=Mat() )
+.. cpp:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=None() )
 
     Updates a running average.
 
@@ -114,6 +114,6 @@ That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets
 The function supports multi-channel images. Each channel is processed independently.
 
 See Also:
-:func:`accumulate`,
-:func:`accumulateSquare`,
-:func:`accumulateProduct` 
+:cpp:func:`accumulate`,
+:cpp:func:`accumulateSquare`,
+:cpp:func:`accumulateProduct` 

@@ -1,4 +1,4 @@
-import os, sys, re
+import os, sys, re, string
 
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
@@ -253,7 +253,25 @@ class CppHeaderParser(object):
             fnpos = 0
         fname = fname[fnpos:].strip()
         rettype = fdecl[:fnpos].strip()
-        args0 = fdecl[fdecl.find("(")+1:fdecl.rfind(")")].strip().split(",")
+        
+        if rettype.endswith("operator"):
+            fname = ("operator " + fname).strip()
+            rettype = rettype[:rettype.rfind("operator")].strip()
+            if rettype.endswith("::"):
+                rpos = rettype.rfind(" ")
+                if rpos >= 0:
+                    fname = rettype[rpos+1:].strip() + fname
+                    rettype = rettype[:rpos].strip()
+                else:
+                    fname = rettype + fname
+                    rettype = ""
+        
+        apos = fdecl.find("(")
+        if fname.endswith("operator"):
+            fname += "()"
+            apos = fdecl.find("(", apos+1)
+        args0 = fdecl[apos+1:fdecl.rfind(")")].strip().split(",")
+
         args = []
         narg = ""
         for arg in args0:
@@ -265,6 +283,7 @@ class CppHeaderParser(object):
                 narg = ""
         fname = "cv." + fname.replace("::", ".")
         decl = [fname, rettype, [], []]
+        
         for arg in args:
             dfpos = arg.find("=")
             defval = ""
@@ -274,7 +293,8 @@ class CppHeaderParser(object):
             pos = arg.rfind(" ")
             aname = arg[pos+1:]
             atype = arg[:pos]
-            decl[3].append([atype, aname, defval, []])    
+            decl[3].append([atype, aname, defval, []])
+        
         return decl
 
     def parse_func_decl(self, decl_str):
@@ -293,7 +313,11 @@ class CppHeaderParser(object):
             if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
                 ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
                 return []
-
+        
+        # ignore old API in the documentation check (for now)        
+        if "CVAPI(" in decl_str:
+            return [] 
+                
         top = self.block_stack[-1]
         func_modlist = []
 

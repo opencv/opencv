@@ -42,7 +42,7 @@ gpu::meanShiftProc
     :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
 
 See Also:
-:c:func:`gpu::meanShiftFiltering` 
+:c:cpp:func:`gpu::meanShiftFiltering` 
 
 .. index:: gpu::meanShiftSegmentation
 
@@ -81,7 +81,7 @@ gpu::integral
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
 See Also:
-:c:func:`integral` 
+:c:cpp:func:`integral` 
 
 .. index:: gpu::sqrIntegral
 
@@ -128,7 +128,7 @@ gpu::cornerHarris
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
 See Also:
-:c:func:`cornerHarris` 
+:c:cpp:func:`cornerHarris` 
 
 .. index:: gpu::cornerMinEigenVal
 
@@ -150,7 +150,7 @@ gpu::cornerMinEigenVal
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
-See also: :c:func:`cornerMinEigenVal`
+See also: :c:cpp:func:`cornerMinEigenVal`
 
 .. index:: gpu::mulSpectrums
 
@@ -173,7 +173,7 @@ gpu::mulSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:c:func:`mulSpectrums` 
+:c:cpp:func:`mulSpectrums` 
 
 .. index:: gpu::mulAndScaleSpectrums
 
@@ -198,7 +198,7 @@ gpu::mulAndScaleSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:c:func:`mulSpectrums` 
+:c:cpp:func:`mulSpectrums` 
 
 .. index:: gpu::dft
 
@@ -237,7 +237,7 @@ gpu::dft
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
 See Also:
-:c:func:`dft` 
+:c:cpp:func:`dft` 
 
 .. index:: gpu::convolve
 
@@ -268,7 +268,7 @@ gpu::ConvolveBuf
 .. cpp:class:: gpu::ConvolveBuf
 
 This class provides a memory buffer for the
-    :c:func:`gpu::convolve` function. 
+    :c:cpp:func:`gpu::convolve` function. 
 ::
 
     struct CV_EXPORTS ConvolveBuf
@@ -290,12 +290,12 @@ gpu::ConvolveBuf::ConvolveBuf
 .. cpp:function:: ConvolveBuf::ConvolveBuf()
 
     Constructs an empty buffer that is properly resized after the first call of the 
-    :c:func:`convolve` function.
+    :c:cpp:func:`convolve` function.
 
 .. cpp:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
     Constructs a buffer for the 
-    :c:func:`convolve` function with respective arguments.
+    :c:cpp:func:`convolve` function with respective arguments.
 
 .. index:: gpu::matchTemplate
 
@@ -328,7 +328,7 @@ gpu::matchTemplate
     * ``CV_TM_CCORR``
 
 See Also:
-:c:func:`matchTemplate` 
+:c:cpp:func:`matchTemplate` 
 
 .. index:: gpu::remap
 
@@ -354,7 +354,7 @@ gpu::remap
 
     Values of pixels with non-integer coordinates are computed using bilinear the interpolation.
 
-See Also: :c:func:`remap` 
+See Also: :c:cpp:func:`remap` 
 
 .. index:: gpu::cvtColor
 
@@ -370,7 +370,7 @@ gpu::cvtColor
 
     :param dst: Destination image with the same size and depth as  ``src`` .
 
-    :param code: Color space conversion code. For details, see  :func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
+    :param code: Color space conversion code. For details, see  :cpp:func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
 
     :param dcn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src`` and the  ``code`` .
 
@@ -379,7 +379,7 @@ gpu::cvtColor
     3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
 See Also:
-:func:`cvtColor` 
+:cpp:func:`cvtColor` 
 
 .. index:: gpu::threshold
 
@@ -399,12 +399,12 @@ gpu::threshold
 
     :param maxVal: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
 
-    :param thresholdType: Threshold type. For details, see  :func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
+    :param thresholdType: Threshold type. For details, see  :cpp:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
 
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:func:`threshold` 
+:cpp:func:`threshold` 
 
 .. index:: gpu::resize
 
@@ -439,7 +439,7 @@ gpu::resize
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
 
-See Also: :func:`resize` 
+See Also: :cpp:func:`resize` 
 
 .. index:: gpu::warpAffine
 
@@ -457,10 +457,10 @@ gpu::warpAffine
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :cpp:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 See Also:
-:func:`warpAffine` 
+:cpp:func:`warpAffine` 
 
 .. index:: gpu::warpPerspective
 
@@ -478,10 +478,10 @@ gpu::warpPerspective
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 See Also:
-:func:`warpPerspective` 
+:cpp:func:`warpPerspective` 
 
 .. index:: gpu::rotate
 
@@ -506,7 +506,7 @@ gpu::rotate
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
 See Also:
-:func:`gpu::warpAffine` 
+:cpp:func:`gpu::warpAffine` 
 
 .. index:: gpu::copyMakeBorder
 
@@ -525,7 +525,7 @@ gpu::copyMakeBorder
     :param value: Border value.
 
 See Also:
-:func:`copyMakeBorder`
+:cpp:func:`copyMakeBorder`
 
 .. index:: gpu::rectStdDev
 

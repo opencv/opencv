@@ -15,9 +15,9 @@ The GPU module depends on the CUDA Toolkit and NVIDIA Performance Primitives lib
 The OpenCV GPU module is designed for ease of use and does not require any knowledge of CUDA. Though, such a knowledge will certainly be useful to handle non-trivial cases or achieve the highest performance. It is helpful to understand the cost of various operations, what the GPU does, what the preferred data formats are, and so on. The GPU module is an effective instrument for quick implementation of GPU-accelerated computer vision algorithms. However, if your algorithm involves many simple operations, then, for the best possible performance, you may still need to write your own kernels to avoid extra write and read operations on the intermediate results.
 
 To enable CUDA support, configure OpenCV using ``CMake`` with ``WITH_CUDA=ON`` . When the flag is set and if CUDA is installed, the full-featured OpenCV GPU module is built. Otherwise, the module is still built, but at runtime all functions from the module throw
-:func:`Exception` with ``CV_GpuNotSupported`` error code, except for
-:func:`gpu::getCudaEnabledDeviceCount()`. The latter function returns zero GPU count in this case. Building OpenCV without CUDA support does not perform device code compilation, so it does not require the CUDA Toolkit installed. Therefore, using the
-:func:`gpu::getCudaEnabledDeviceCount()` function, you can implement a high-level algorithm that will detect GPU presence at runtime and choose an appropriate implementation (CPU or GPU) accordingly.
+:cpp:func:`Exception` with ``CV_GpuNotSupported`` error code, except for
+:cpp:func:`gpu::getCudaEnabledDeviceCount()`. The latter function returns zero GPU count in this case. Building OpenCV without CUDA support does not perform device code compilation, so it does not require the CUDA Toolkit installed. Therefore, using the
+:cpp:func:`gpu::getCudaEnabledDeviceCount()` function, you can implement a high-level algorithm that will detect GPU presence at runtime and choose an appropriate implementation (CPU or GPU) accordingly.
 
 Compilation for Different NVIDIA* Platforms
 -------------------------------------------
@@ -34,12 +34,12 @@ By default, the OpenCV GPU module includes:
     PTX code for compute capabilities 1.1 and 1.3 (controlled by ``CUDA_ARCH_PTX``     in ``CMake``)
 
 This means that for devices with CC 1.3 and 2.0 binary images are ready to run. For all newer platforms, the PTX code for 1.3 is JIT'ed to a binary image. For devices with CC 1.1 and 1.2, the PTX for 1.1 is JIT'ed. For devices with CC 1.0, no code is available and the functions throw
-:func:`Exception`. For platforms where JIT compilation is performed first, the run is slow.
+:cpp:func:`Exception`. For platforms where JIT compilation is performed first, the run is slow.
 
 On a GPU with CC 1.0, you can still compile the GPU module and most of the functions will run flawlessly. To achieve this, add "1.0" to the list of binaries, for example, ``CUDA_ARCH_BIN="1.0 1.3 2.0"`` . The functions that cannot be run on CC 1.0 GPUs throw an exception.
 
 You can always determine at runtime whether the OpenCV GPU-built binaries (or PTX code) are compatible with your GPU. The function
-:func:`gpu::DeviceInfo::isCompatible` returns the compatibility status (true/false).
+:cpp:func:`gpu::DeviceInfo::isCompatible` returns the compatibility status (true/false).
 
 Threading and Multi-threading
 ------------------------------
@@ -57,7 +57,7 @@ In the current version, each of the OpenCV GPU algorithms can use only a single 
 
 *
     If you use only synchronous functions, create several CPU threads (one per each GPU) and from within each thread create a CUDA context for the corresponding GPU using
-    :func:`gpu::setDevice()`     or Driver API. Each of the threads will use the associated GPU.
+    :cpp:func:`gpu::setDevice()`     or Driver API. Each of the threads will use the associated GPU.
 
 *
     If you use asynchronous functions, you can use the Driver API to create several CUDA contexts associated with different GPUs but attached to one CPU thread. Within the thread you can switch from one GPU to another by making the corresponding context "current". With non-blocking GPU calls, managing algorithm is clear.
