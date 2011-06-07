@@ -609,6 +609,7 @@ public:
                                 CV_OUT cv::Mat* labels=0 );
     
     CV_WRAP virtual float predict( const cv::Mat& sample, CV_OUT cv::Mat* probs=0 ) const;
+    CV_WRAP virtual double calcLikelihood( const cv::Mat &sample ) const;
     
     CV_WRAP int  getNClusters() const;
     CV_WRAP cv::Mat  getMeans()     const;
@@ -616,7 +617,8 @@ public:
     CV_WRAP cv::Mat  getWeights()   const;
     CV_WRAP cv::Mat  getProbs()     const;
     
-    CV_WRAP inline double getLikelihood() const { return log_likelihood;     };
+    CV_WRAP inline double getLikelihood() const { return log_likelihood; }
+    CV_WRAP inline double getLikelihoodDelta() const { return log_likelihood_delta; }
 #endif
     
     CV_WRAP virtual void clear();
@@ -627,11 +629,18 @@ public:
     const CvMat*  get_weights()   const;
     const CvMat*  get_probs()     const;
 
-    inline double         get_log_likelihood     () const { return log_likelihood;     };
+    inline double get_log_likelihood() const { return log_likelihood; }
+    inline double get_log_likelihood_delta() const { return log_likelihood_delta; }
     
 //    inline const CvMat *  get_log_weight_div_det () const { return log_weight_div_det; };
 //    inline const CvMat *  get_inv_eigen_values   () const { return inv_eigen_values;   };
 //    inline const CvMat ** get_cov_rotate_mats    () const { return cov_rotate_mats;    };
+
+    virtual void read( CvFileStorage* fs, CvFileNode* node );
+    virtual void write( CvFileStorage* fs, const char* name ) const;
+
+    virtual void write_params( CvFileStorage* fs ) const;
+    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
 protected:
 
@@ -645,6 +654,7 @@ protected:
                          const CvMat* means );
     CvEMParams params;
     double log_likelihood;
+    double log_likelihood_delta;
 
     CvMat* means;
     CvMat** covs;
