@@ -821,7 +821,6 @@ int CvANN_MLP::train( const CvMat* _inputs, const CvMat* _outputs,
         init_weights();
 
     max_iter = params.term_crit.type & CV_TERMCRIT_ITER ? params.term_crit.max_iter : MAX_ITER;
-    max_iter = MIN( max_iter, MAX_ITER );
     max_iter = MAX( max_iter, 1 );
 
     epsilon = params.term_crit.type & CV_TERMCRIT_EPS ? params.term_crit.epsilon : DEFAULT_EPSILON;
