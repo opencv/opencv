@@ -470,7 +470,7 @@ double CvEM::calcLikelihood( const cv::Mat &input_sample ) const
 
     // probability = (2*pi)^(-dims/2)*exp( -0.5 * cur )
     cvConvertScale( &expo, &expo, -0.5 );
-    double factor = -double(dims)/2.0 * log(2.0*M_PI);
+    double factor = -double(dims)/2.0 * log(2.0*CV_PI);
     cvAndS( &expo, cvScalar(factor), &expo );
 
     // Calculate the log-likelihood of the given sample -
@@ -551,7 +551,7 @@ CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 
     // probability = (2*pi)^(-dims/2)*exp( -0.5 * cur )
     cvConvertScale( &expo, &expo, -0.5 );
-    double factor = -double(dims)/2.0 * log(2.0*M_PI);
+    double factor = -double(dims)/2.0 * log(2.0*CV_PI);
     cvAndS( &expo, cvScalar(factor), &expo );
 
     // Calculate the posterior probability of each component
