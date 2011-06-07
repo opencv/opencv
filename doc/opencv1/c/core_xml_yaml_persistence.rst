@@ -56,30 +56,30 @@ using CXCore functions:
 
 XML:
 
+::
 
-\begin{verbatim}
-<?xml version="1.0">
-<opencv_storage>
-<A type_id="opencv-matrix">
-  <rows>3</rows>
-  <cols>3</cols>
-  <dt>f</dt>
-  <data>1. 0. 0. 0. 1. 0. 0. 0. 1.</data>
-</A>
-</opencv_storage>
+  <?xml version="1.0">
+  <opencv_storage>
+  <A type_id="opencv-matrix">
+    <rows>3</rows>
+    <cols>3</cols>
+    <dt>f</dt>
+    <data>1. 0. 0. 0. 1. 0. 0. 0. 1.</data>
+  </A>
+  </opencv_storage>
 
-\end{verbatim}
+
 YAML:
 
+::
 
-\begin{verbatim}
-A: !!opencv-matrix
-  rows: 3
-  cols: 3
-  dt: f
-  data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1.]
+  A: !!opencv-matrix
+    rows: 3
+    cols: 3
+    dt: f
+    data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1.]
 
-\end{verbatim}
+
 As it can be seen from the examples, XML uses nested tags to represent
 hierarchy, while YAML uses indentation for that purpose (similar
 to the Python programming language).

@@ -177,22 +177,21 @@ Boosted Haar classifier structures.
 
 All the structures are used for representing a cascaded of boosted Haar classifiers. The cascade has the following hierarchical structure:
 
+::
 
-\begin{verbatim}
-Cascade:
-        Stage,,1,,:
-            Classifier,,11,,:
-                Feature,,11,,
-            Classifier,,12,,:
-                Feature,,12,,
-            ...
-        Stage,,2,,:
-            Classifier,,21,,:
-                Feature,,21,,
-            ...
-        ...
+  Cascade:
+          Stage,,1,,:
+              Classifier,,11,,:
+                  Feature,,11,,
+              Classifier,,12,,:
+                  Feature,,12,,
+              ...
+          Stage,,2,,:
+              Classifier,,21,,:
+                  Feature,,21,,
+              ...
+          ...
 
-\end{verbatim}
 The whole hierarchy can be constructed manually or loaded from a file or an embedded base using the function 
 :ref:`LoadHaarClassifierCascade`
 .
