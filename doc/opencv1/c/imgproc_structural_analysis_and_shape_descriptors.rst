@@ -1304,7 +1304,7 @@ MatchShapes
     
     
     :param method: Comparison method;
-          ``CV_CONTOUR_MATCH_I1`` , 
+          ``CV_CONTOURS_MATCH_I1`` , 
           ``CV_CONTOURS_MATCH_I2``  
         or 
           ``CV_CONTOURS_MATCH_I3`` 
@@ -1330,7 +1330,7 @@ is
 
     
 
-* method=CV\_CONTOUR\_MATCH\_I1
+* method=CV\_CONTOURS\_MATCH\_I1
     
     
     .. math::
@@ -1340,7 +1340,7 @@ is
     
     
 
-* method=CV\_CONTOUR\_MATCH\_I2
+* method=CV\_CONTOURS\_MATCH\_I2
     
     
     .. math::
@@ -1350,7 +1350,7 @@ is
     
     
 
-* method=CV\_CONTOUR\_MATCH\_I3
+* method=CV\_CONTOURS\_MATCH\_I3
     
     
     .. math::
