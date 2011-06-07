@@ -3026,7 +3026,7 @@ sort
 
             * **CV_SORT_DESCENDING** Each matrix row is sorted in the descending order. This flag and the previous one are also mutually exclusive.
 
-The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
+The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. So you should pass two operation flags to get desirable behaviour. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
 
 See Also:
 :func:`sortIdx`,
@@ -3057,7 +3057,7 @@ sortIdx
 
             * **CV_SORT_DESCENDING** Each matrix row is sorted in the descending order. This flag and the previous one are also mutually exclusive.
 
-The function ``sortIdx`` sorts each matrix row or each matrix column in the ascending or descending order. Instead of reordering the elements themselves, it stores the indices of sorted elements in the destination array. For example: ::
+The function ``sortIdx`` sorts each matrix row or each matrix column in the ascending or descending order. So you should pass two operation flags to get desirable behaviour. Instead of reordering the elements themselves, it stores the indices of sorted elements in the destination array. For example: ::
 
     Mat A = Mat::eye(3,3,CV_32F), B;
     sortIdx(A, B, CV_SORT_EVERY_ROW + CV_SORT_ASCENDING);
