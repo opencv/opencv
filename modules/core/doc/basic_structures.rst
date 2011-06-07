@@ -1895,7 +1895,7 @@ Mat::channels
 -----------------
 .. cpp:function:: int Mat::channels(void) const
 
-    Returns a matrix element depth.
+    Returns the number of matrix channels.
 
 The method returns the number of matrix channels.
 
