@@ -344,7 +344,28 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
 bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue )
 {
     CV_Assert( depthGenerator.IsValid() );
-    CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for setting.\n");
+    switch(propIdx)
+    {   
+        case CV_CAP_PROP_OPENNI_REGISTRATION_ON:
+            {
+                CV_Assert( imageGenerator.IsValid() );
+                if (!depthGenerator.GetAlternativeViewPointCap ().IsViewPointAs (imageGenerator))
+                {
+                    if (depthGenerator.GetAlternativeViewPointCap ().IsViewPointSupported (imageGenerator))
+                    {
+                      XnStatus status = depthGenerator.GetAlternativeViewPointCap().SetViewPoint (imageGenerator);
+                      if (status != XN_STATUS_OK)
+                         CV_Error( CV_StsError, std::string("turning registration on failed. Reason: ") + xnGetStatusString (status));
+                    }
+                    else
+                       CV_Error( CV_StsError, "turning registration on failed. Reason: unsupported viewpoint");
+                }
+            }
+            return true;
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for setting.\n");
+    }
     return false;
 }
 
