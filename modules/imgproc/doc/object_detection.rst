@@ -23,7 +23,7 @@ The function slides through ``image`` , compares the
 overlapped patches of size
 :math:`w \times h` against ``templ`` using the specified method and stores the comparison results in ``result`` . Here are the formulae for the available comparison
 methods (
-:math:`I` denotes ``image``,:math:`T` ``template``,:math:`R` ``result`` ). The summation is done over template and/or the
+:math:`I` denotes ``image``, :math:`T` ``template``, :math:`R` ``result`` ). The summation is done over template and/or the
 image patch:
 :math:`x' = 0...w-1, y' = 0...h-1`
 * method=CV\_TM\_SQDIFF
@@ -48,13 +48,13 @@ image patch:
 
     .. math::
 
-        R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I'(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+        R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
 
 * method=CV\_TM\_CCOEFF
 
     .. math::
 
-        R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))
+        R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I'(x+x',y+y'))
 
     where
 
