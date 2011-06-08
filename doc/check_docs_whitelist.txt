@@ -1,0 +1,24 @@
+# this is a list of functions, classes and methods
+# that are not supposed to be documented in the near future,
+# to make the output of check_docs.py script more sensible.
+#
+# Syntax:
+#    every line starting with # is a comment
+#    there can be empty lines
+#    each line includes either a class name (including all the necessary namespaces),
+#                              or a function/method name
+#                              or a full declaration of a function/method
+#    if a class name is in the whitelist, all the methods are considered "white-listed" too
+#    if a method/function name is listed, then all the overload variants are "white-listed".
+#    that is, to white list a particular overloaded variant of a function/method you need to put
+#    full declaration into the file
+#
+
+cv::Mat::MSize
+cv::Mat::MStep
+cv::Algorithm
+cv::_InputArray
+cv::_OutputArray
+
+CvLevMarq
+

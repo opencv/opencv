@@ -16,17 +16,60 @@ opencv_hdr_list = [
 ]
 
 opencv_module_list = [
-#"core",
-#"imgproc",
-#"calib3d",
-#"features2d",
-#"video",
-#"objdetect",
-#"highgui",
+"core",
+"imgproc",
+"calib3d",
+"features2d",
+"video",
+"objdetect",
+"highgui",
 "ml"
 ]
 
 class RSTParser(object):
+    
+    def __init__(self):
+        self.read_whitelist()
+    
+    # reads the file containing functions and classes that do not need to be documented
+    def read_whitelist(self):
+        self.whitelist = {}
+        try:
+            wf = open("check_docs_whitelist.txt", "rt")
+        except IOError:
+            return
+        self.parser = hp.CppHeaderParser()
+        
+        for l in wf.readlines():
+            cpos = l.find("#")
+            if cpos >= 0:
+                l = l[:cpos]
+            l = l.strip()
+            if not l:
+                continue
+            rst_decl = None
+            if "(" in l:
+                rst_decl = self.parser.parse_func_decl_no_wrap(l)
+                fname = rst_decl[0]
+            else:
+                fname = l.replace("::", ".")
+            complist = fname.split(".")
+            prefix = ""
+            alreadyListed = False
+            wl = []
+            for c in complist:
+                prefix = (prefix + "." + c).lstrip(".")
+                wl = self.whitelist.get(prefix, [])
+                if wl == "*":
+                    break
+            if wl == "*":
+                continue
+            if not rst_decl:
+                self.whitelist[fname] = "*"
+            else:
+                wl.append(rst_decl)
+                self.whitelist[fname] = wl
+        wf.close()
             
     def process_rst(self, docname):
         df = open(docname, "rt")
@@ -71,6 +114,9 @@ class RSTParser(object):
             print "Documented function %s in %s:%d does not have a match" % (fdecl, docname, lineno)
         df.close()
 
+    def decl2str(self, decl):
+        return "%s %s(%s)" % (decl[1], decl[0], ", ".join([a[0] + " " + a[1] for a in decl[3]]))
+
     def check_module_docs(self, name):
         self.parser = hp.CppHeaderParser()
         decls = []
@@ -80,8 +126,6 @@ class RSTParser(object):
             if hname.startswith("../modules/" + name):
                 decls += self.parser.parse(hname, wmode=False)
                 
-        #parser.print_decls(decls)
-    
         for d in decls:
             fname = d[0]
             if not fname.startswith("struct") and not fname.startswith("class") and not fname.startswith("const"):
@@ -99,12 +143,30 @@ class RSTParser(object):
         misscount = 0
         fkeys = sorted(self.fmap.keys())
         for f in fkeys:
+            # skip undocumented destructors
+            if "~" in f:
+                continue
             decls = self.fmap[f]
+            fcomps = f.split(".")
+            prefix = ""
+            wlist_decls = []
+            for c in fcomps:
+                prefix = (prefix + "." + c).lstrip(".")
+                wlist_decls = self.whitelist.get(prefix, [])
+                if wlist_decls == "*":
+                    break
+            if wlist_decls == "*":
+                continue
+            wlist_decls = [self.decl2str(d) for d in wlist_decls]
+                
             for d in decls:
-                misscount += 1
-                print "%s %s(%s)" % (d[1], d[0], ", ".join([a[0] + " " + a[1] for a in d[3]]))
+                dstr = self.decl2str(d)
+                if dstr not in wlist_decls:
+                    misscount += 1
+                    print "%s %s(%s)" % (d[1], d[0].replace(".", "::"), ", ".join([a[0] + " " + a[1] for a in d[3]]))
         print "\n\n\nundocumented functions in %s: %d" % (name, misscount)
-    
+
+
 p = RSTParser()
 for m in opencv_module_list:
     print "\n\n*************************** " + m + " *************************\n"
