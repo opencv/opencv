@@ -88,6 +88,29 @@
 namespace cv
 {
 
+Exception::Exception() { code = 0; line = 0; }
+
+Exception::Exception(int _code, const string& _err, const string& _func, const string& _file, int _line)
+: code(_code), err(_err), func(_func), file(_file), line(_line)
+{
+    formatMessage();
+}
+
+Exception::~Exception() throw() {}
+
+/*!
+ \return the error description and the context as a text string.
+ */ 
+const char* Exception::what() const throw() { return msg.c_str(); }
+
+void Exception::formatMessage()
+{
+    if( func.size() > 0 )
+        msg = format("%s:%d: error: (%d) %s in function %s\n", file.c_str(), line, code, err.c_str(), func.c_str());
+    else
+        msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
+}
+    
 struct HWFeatures
 {
     enum { MAX_FEATURE = CV_HARDWARE_MAX_FEATURE };

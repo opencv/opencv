@@ -90,11 +90,11 @@ The macros ``CV_Assert`` and ``CV_DbgAssert`` evaluate the specified expression.
 
 error
 ---------
-.. cpp:function:: void error( const Exception\& exc )
+.. cpp:function:: void error( const Exception& exc )
 
-.. cpp:function:: \#define CV_Error( code, msg ) <...>
+.. cpp:function:: #define CV_Error( code, msg ) <...>
 
-.. cpp:function:: \#define CV_Error_( code, args ) <...>
+.. cpp:function:: #define CV_Error_( code, args ) <...>
 
     Signals an error and raises an exception.
 
@@ -244,6 +244,16 @@ That is, the following code computes the execution time in seconds: ::
     // do something ...
     t = ((double)getTickCount() - t)/getTickFrequency();
 
+.. index:: getCPUTickCount
+
+getCPUTickCount
+----------------
+.. cpp:function:: int64 getCPUTickCount()
+
+    Returns the number of CPU ticks.
+
+The function returns the current number of CPU ticks on some architectures (such as x86, x64, PowerPC). On other platforms the function is equivalent to ``getTickCount``. It can also be used for very accurate time measurements, as well as for RNG initialization. Note that in the case of multi-CPU systems a thread, from which ``getCPUTickCount`` is called, can be suspended and resumed at another CPU with its own counter, so in theory (and practice too) the subsequent calls to the function do not necessary return the monotonously increasing values. Also, since modern CPU vary the CPU frequency depending on the load, the number of CPU clocks spent in some code can not be directly converted to time units. Therefore, ``getTickCount`` is generally a preferable solution for measuring execution time.
+
 .. index:: setNumThreads
 
 setNumThreads
@@ -259,3 +269,27 @@ The function sets the number of threads used by OpenCV in parallel OpenMP region
 See Also:
 :cpp:func:`getNumThreads`,
 :cpp:func:`getThreadNum` 
+
+.. index:: setUseOptimized
+
+setUseOptimized
+-----------------
+.. cpp:function:: void setUseOptimized(bool onoff)
+
+    Enables or disables the optimized code.
+
+    :param onoff: The boolean flag, specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
+
+The function can be used to dynamically turn on and off optimized code (i.e. code that uses SSE2, AVX etc. instructions on the platforms that support it). It sets some global flag, which is further checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only safe to call the function on the very top level in your application, where you can be pretty much sure that no other OpenCV function is currently executed.
+
+By default, the optimized code is enabled (unless you disable it in CMake). The current status can be retrieved using ``useOptimized``.
+
+.. index:: useOptimized
+
+useOptimized
+-----------------
+.. cpp:function:: bool useOptimized()
+
+    Returns status if the optimized code use
+
+The function returns true if the optimized code is enabled, false otherwise.

@@ -125,29 +125,19 @@ public:
     /*!
      Default constructor
      */
-    Exception() { code = 0; line = 0; }
+    Exception();
     /*!
      Full constructor. Normally the constuctor is not called explicitly.
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
-    Exception(int _code, const string& _err, const string& _func, const string& _file, int _line)
-        : code(_code), err(_err), func(_func), file(_file), line(_line)
-    { formatMessage(); }
-    
-    virtual ~Exception() throw() {}
+    Exception(int _code, const string& _err, const string& _func, const string& _file, int _line);
+    virtual ~Exception() throw();
 
     /*!
      \return the error description and the context as a text string.
     */ 
-    virtual const char *what() const throw() { return msg.c_str(); }
-
-    void formatMessage()
-    {
-        if( func.size() > 0 )
-            msg = format("%s:%d: error: (%d) %s in function %s\n", file.c_str(), line, code, err.c_str(), func.c_str());
-        else
-            msg = format("%s:%d: error: (%d) %s\n", file.c_str(), line, code, err.c_str());
-    }
+    virtual const char *what() const throw();
+    void formatMessage();
     
     string msg; ///< the formatted error message
 
@@ -1671,7 +1661,6 @@ public:
     MatExpr inv(int method=DECOMP_LU) const;
     //! per-element matrix multiplication by means of matrix expressions
     MatExpr mul(InputArray m, double scale=1) const;
-    MatExpr mul(const MatExpr& m, double scale=1) const;
     
     //! computes cross-product of 2 3D vectors
     Mat cross(InputArray m) const;

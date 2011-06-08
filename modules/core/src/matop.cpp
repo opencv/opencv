@@ -1592,14 +1592,13 @@ MatExpr Mat::inv(int method) const
 MatExpr Mat::mul(InputArray m, double scale) const
 {
     MatExpr e;
-    MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
-    return e;
-}
-    
-MatExpr Mat::mul(const MatExpr& m, double scale) const
-{
-    MatExpr e;
-    m.op->multiply(MatExpr(*this), m, e, scale);
+    if(m.kind() == _InputArray::EXPR)
+    {
+        const MatExpr& me = *(const MatExpr*)m.obj;
+        me.op->multiply(MatExpr(*this), me, e, scale);
+    }
+    else
+        MatOp_Bin::makeExpr(e, '*', *this, m.getMat(), scale);
     return e;
 }
 

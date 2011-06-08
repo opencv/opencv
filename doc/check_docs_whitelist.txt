@@ -16,6 +16,8 @@
 
 cv::Mat::MSize
 cv::Mat::MStep
+cv::MatConstIterator
+cv::NAryMatIterator
 cv::Algorithm
 cv::_InputArray
 cv::_OutputArray

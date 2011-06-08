@@ -17,13 +17,13 @@ opencv_hdr_list = [
 
 opencv_module_list = [
 "core",
-"imgproc",
-"calib3d",
-"features2d",
-"video",
-"objdetect",
-"highgui",
-"ml"
+#"imgproc",
+#"calib3d",
+#"features2d",
+#"video",
+#"objdetect",
+#"highgui",
+#"ml"
 ]
 
 class RSTParser(object):
@@ -91,14 +91,15 @@ class RSTParser(object):
             if balance > 0:
                 continue
             rst_decl = self.parser.parse_func_decl_no_wrap(fdecl)
-
-            hdr_decls = self.fmap.get(rst_decl[0], [])
+            fname = rst_decl[0]
+            hdr_decls = self.fmap.get(fname, [])
             if not hdr_decls:
-                print "Documented function %s (%s) in %s:%d is not in the headers" % (fdecl, rst_decl[0], docname, lineno)
+                print "Documented function %s (%s) in %s:%d is not in the headers" % (fdecl, rst_decl[0].replace(".", "::"), docname, lineno)
                 continue
             decl_idx = 0
             for hd in hdr_decls:
                 if len(hd[3]) != len(rst_decl[3]):
+                    decl_idx += 1
                     continue
                 idx = 0
                 for a in hd[3]:
@@ -109,7 +110,7 @@ class RSTParser(object):
                     break
                 decl_idx += 1
             if decl_idx < len(hdr_decls):
-                self.fmap[rst_decl[0]] = hdr_decls[:decl_idx] + hdr_decls[decl_idx+1:]
+                self.fmap[fname] = hdr_decls[:decl_idx] + hdr_decls[decl_idx+1:]
                 continue
             print "Documented function %s in %s:%d does not have a match" % (fdecl, docname, lineno)
         df.close()
@@ -128,10 +129,10 @@ class RSTParser(object):
                 
         for d in decls:
             fname = d[0]
-            if not fname.startswith("struct") and not fname.startswith("class") and not fname.startswith("const"):
+            if not fname.startswith("struct") and not fname.startswith("class") and not fname.startswith("const"):                
                 dlist = self.fmap.get(fname, [])
                 dlist.append(d)
-                self.fmap[fname] = dlist 
+                self.fmap[fname] = dlist
     
         self.missing_docfunc_list = []
     

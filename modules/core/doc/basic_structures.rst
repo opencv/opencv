@@ -1245,8 +1245,8 @@ The method creates a full copy of the array. The original ``step[]`` are not tak
 
 Mat::copyTo
 ---------------
-.. cpp:function:: void Mat::copyTo( Mat& m ) const
-.. cpp:function:: void Mat::copyTo( Mat& m, const Mat& mask ) const
+.. cpp:function:: void Mat::copyTo( OutputArray m ) const
+.. cpp:function:: void Mat::copyTo( OutputArray m, InputArray mask ) const
 
     Copies the matrix to another one.
 
@@ -1267,7 +1267,7 @@ When the operation mask is specified, and the ``Mat::create`` call shown above r
 
 Mat::convertTo
 ------------------
-.. cpp:function:: void Mat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
+.. cpp:function:: void Mat::convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const
 
     Converts an array to another datatype with optional scaling.
 
@@ -1304,7 +1304,7 @@ This is an internally used method called by the
 
 Mat::setTo
 --------------
-.. cpp:function:: Mat& Mat::setTo(const Scalar& s, const Mat& mask=Mat())
+.. cpp:function:: Mat& Mat::setTo(const Scalar& s, InputArray mask=noArray())
 
     Sets all or some of the array elements to the specified value.
 
@@ -1381,13 +1381,11 @@ The method performs matrix inversion by means of matrix expressions. This means 
 
 Mat::mul
 ------------
-.. cpp:function:: MatExpr Mat::mul(const Mat& m, double scale=1) const
-
-.. cpp:function:: MatExpr Mat::mul(const MatExpr& m, double scale=1) const
+.. cpp:function:: MatExpr Mat::mul(InputArray m, double scale=1) const
 
     Performs an element-wise multiplication or division of the two matrices.
 
-    :param m: Another matrix of the same type and the same size as  ``*this`` , or a matrix expression.
+    :param m: Another array of the same type and the same size as ``*this``, or a matrix expression.
 
     :param scale: Optional scale factor.
 
@@ -1402,7 +1400,7 @@ Here is an example: ::
 
 Mat::cross
 --------------
-.. cpp:function:: Mat Mat::cross(const Mat& m) const
+.. cpp:function:: Mat Mat::cross(InputArray m) const
 
     Computes a cross-product of two 3-element vectors.
 
@@ -1414,7 +1412,7 @@ The method computes a cross-product of two 3-element vectors. The vectors must b
 
 Mat::dot
 ------------
-.. cpp:function:: double Mat::dot(const Mat& m) const
+.. cpp:function:: double Mat::dot(InputArray m) const
 
     Computes a dot-product of two vectors.
 
@@ -1594,20 +1592,35 @@ This method can be called manually to force the matrix data deallocation. But si
 
 Mat::resize
 ---------------
-.. cpp:function:: void Mat::resize( size_t sz ) const
+.. cpp:function:: void Mat::resize( size_t sz )
+.. cpp:function:: void Mat::resize( size_t sz, const Scalar& s )
 
     Changes the number of matrix rows.
 
     :param sz: The new number of rows.
+    :param s: The value assigned to the newly added elements
 
-The method changes the number of matrix rows. If the matrix is reallocated, the first ``min(Mat::rows, sz)`` rows are preserved. The method emulates the corresponding method of the STL vector class.
+The methods change the number of matrix rows. If the matrix is reallocated, the first ``min(Mat::rows, sz)`` rows are preserved. The methods emulates the corresponding methods of the STL vector class.
+
+
+.. index:: Mat::reserve
+
+Mat::reserve
+---------------
+.. cpp:function:: void Mat::reserve( size_t sz )
+
+    Reserves space for the certain number of rows
+
+    :param sz: The number of rows
+
+The methods reserves space for ``sz`` rows. If matrix already has space enough to store ``sz`` rows, nothing happens. If the matrix is reallocated, the first ``Mat::rows`` rows are preserved. The methods emulates the corresponding method of the STL vector class.
 
 .. index:: Mat::push_back
 
 Mat::push_back
 --------------
 .. cpp:function:: template<typename T> void Mat::push_back(const T& elem)
-.. cpp:function:: template<typename T> void Mat::push_back(const Mat_<T>& elem)
+.. cpp:function:: void Mat::push_back(const Mat& elem)
 
     Adds elements to the bottom of the matrix.
 
