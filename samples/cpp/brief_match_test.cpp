@@ -4,6 +4,7 @@
  *  Created on: Oct 17, 2010
  *      Author: ethan
  */
+#include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -11,6 +12,7 @@
 #include <vector>
 #include <iostream>
 
+using namespace std;
 using namespace cv;
 
 using std::cout;
@@ -18,13 +20,15 @@ using std::cerr;
 using std::endl;
 using std::vector;
 
-void help(char **av)
-{
-	   cerr << "usage: " << av[0] << " im1.jpg im2.jpg"
-			   << "\n"
-			   << "This program shows how to use BRIEF descriptor to match points in features2d\n"
-			   << "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
-			   << endl;
+void help()
+{ 
+       printf("\nThis program shows how to use BRIEF descriptor to match points in features2d\n"
+              "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
+              "Usage: \n"
+              "     ./brief_match_test [--first_file]=<first file name, left01.jpg as default> \n"
+              "                        [--second_file]=<second file name, left02.jpg as default> \n"
+              "Example: \n"
+              "./brief_match_test --first_file=left01.jpg --second_file=left02.jpg \n");
 }
 
 //Copy (x,y) location of descriptor matches found from KeyPoint data structures into Point2f vectors
@@ -55,16 +59,22 @@ double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*k
 
 
 
-int main(int ac, char ** av)
+int main(int ac, const char ** av)
 {
-  if (ac != 3)
-  {
-	help(av);
-    return 1;
-  }
+  help();
+
+  CommandLineParser parser(ac, av);
+
   string im1_name, im2_name;
-  im1_name = av[1];
-  im2_name = av[2];
+  im1_name = parser.get<string>("first_file", "left01.jpg");
+  im2_name = parser.get<string>("second_file", "left02.jpg");
+
+  if (im1_name.empty() || im2_name.empty())
+  {
+    help();
+    printf("\n You have to indicate two files first_file and second_file \n");
+    return -1;
+  }
 
   Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
   Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);

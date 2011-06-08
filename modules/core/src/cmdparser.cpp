@@ -3,6 +3,31 @@
 using namespace std;
 using namespace cv;
 
+void helpParser()
+{
+    printf("\nThe CommandLineParser class is designed for command line arguments parsing\n"
+           "Supported syntax: \n"
+           "    --key1=arg1 or --key3 <The keys with '--' can have argument.\n"
+                                     "If it has argument, you should assign it through '=' sign> \n"
+           "    -key2=arg2 or -key2  <The keys witn '-' can have argument \n"
+                                    "If it has argument, you should assign it through '=' sign> \n"
+           "    key3                 <This key can't has any parameter> \n"
+           "Usage: \n"
+           "      Imagine that the input parameters are next:\n"
+           "                -k=10 --key --db=-10.11 -key1 argument --inputFile=lena.jpg\n"
+           "parser.get<int>(\"k\")<If you need to take 'k' value.\n"
+           "                    It also works with 'unsigned int', 'double', 'float' and 'string' types>\n"
+           "parser.get<double>(\"db\", 99.99)<If you need to take 'db' value.\n"
+           "                                If its value is empty, you will get default value 99.99>\n"
+           "                                It also works with 'int', 'unsigned int', 'float' and 'string' types\n"
+           "parser.get<string>(\"0\")<If you need to take 'key'. It's the first parameter without value\n"
+           "                          and it has index 0>\n"
+           "parser.get<stirng>(\"1\")<If you need to take 'key1'. It's the second parameter without value\n"
+           "                          and it has index 1>\n"
+           "parser.get<stirng>(\"2\")<If you need to take 'argument'. It's the third parameter without value\n"
+           "                          and it has index 2>\n\n"
+           );
+}
 
 vector<string> split_string(const string& str, const string& delimiters)
 {
@@ -24,7 +49,6 @@ CommandLineParser::CommandLineParser(int argc, const char* argv[])
     std::string cur_name;
     std::string buffer;
     std::stringstream str_buff(std::stringstream::in | std::stringstream::out);
-    std::string str_index;
     std::map<std::string, std::string >::iterator it;
     int find_symbol;
     int index = 0;
@@ -48,41 +72,65 @@ CommandLineParser::CommandLineParser(int argc, const char* argv[])
             buffer.erase(0, find_symbol + 1);
             if (data.find(cur_name) != data.end())
             {
-                string str_exception="dublicating parameters for name='" + cur_name + "'";
-                CV_Error(CV_StsParseError, str_exception);
+                printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
+                       , cur_name.c_str());
+                printf("Constructor will not continue its work since this moment.\n"
+                       "Please enter parameters without dublicates\n");
+                helpParser();
+                data.clear();
+                break;
             }
                 else
                     data[cur_name] = buffer;
         }
             else if (cur_name.find('=') == 0)
                 {
-                    string str_exception="This key is wrong. The key mustn't have '=' like increment' '" + cur_name + "'";
-                    CV_Error(CV_StsParseError, str_exception);
+                    printf("The next key is wrong: key= %s\n", cur_name.c_str());
+                    printf("Constructor will not continue its work since this moment.\n"
+                           "Please enter parameters without any mistakes\n");
+                    helpParser();
+                    data.clear();
+                    break;
                 }
             else if(((int)cur_name.find('-') == -1) && ((int)cur_name.find('=') != -1))
                 {
-                    string str_exception="This key must be defined with '--' or '-' increment'" + cur_name + "'";
-                    CV_Error(CV_StsParseError, str_exception);
+                    printf("The next key must be defined with '--' or '-' increment: key= %s\n", cur_name.c_str());
+                    printf("Constructor will not continue its work since this moment.\n"
+                           "Please enter parameters without any mistakes\n");
+                    helpParser();
+                    data.clear();
+                    break;
                 }
             else if (cur_name.find('=') == (cur_name.length() - 1))
                 {
-                    string str_exception="This key must have argument after '=''" + cur_name + "'";
-                    CV_Error(CV_StsParseError, str_exception);
+                    printf("The next key must have argument after '=': key= %s\n", cur_name.c_str());
+                    printf("Constructor will not continue its work since this moment.\n"
+                           "Please enter parameters without any mistakes\n");
+                    helpParser();
+                    data.clear();
+                    break;
                 }
             else
                 {
-                    str_buff<< index;
-                    str_index = str_buff.str();
-                    str_buff.seekp(0);
-                    for(it = data.begin(); it != data.end(); it++)
+                str_buff << index;
+                while (cur_name.find('-') == 0)
+                    cur_name.erase(0,1);
+
+                for(it = data.begin(); it != data.end(); it++)
+                {
+                    if (it->second == cur_name)
                     {
-                        if (it->second == cur_name)
-                        {
-                            string str_exception="dublicating parameters for name='" + cur_name + "'";
-                            CV_Error(CV_StsParseError, str_exception);
-                        }
+                        printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
+                               , cur_name.c_str());
+                        printf("Constructor will not continue its work since this moment.\n"
+                               "Please enter parameters without dublicates\n");
+                        helpParser();
+                        data.clear();
+                        break;
                     }
-                    data[str_index.c_str()] = cur_name;
+                }
+                    data[str_buff.str()] = cur_name;
+                    str_buff.seekp(0);
                     index++;
                 }
 

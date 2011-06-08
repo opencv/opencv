@@ -4233,7 +4233,6 @@ class CV_EXPORTS CommandLineParser
         template<typename _Tp>
         _Tp analyzeValue(const std::string& str);
     };
-
     template<> CV_EXPORTS
     std::string CommandLineParser::analyzeValue<std::string>(const std::string& str);
 
