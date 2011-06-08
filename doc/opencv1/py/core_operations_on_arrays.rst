@@ -62,7 +62,7 @@ AbsDiffS
 
 
 
-.. function:: AbsDiffS(src,value,dst)-> None
+.. function:: AbsDiffS(src,dst,value)-> None
 
     Calculates absolute difference between an array and a scalar.
 
