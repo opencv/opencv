@@ -1,5 +1,6 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/contrib/contrib.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -16,15 +17,15 @@ const string defaultDirToSaveResImages = "../../opencv/samples/cpp/matching_to_m
 
 void printPrompt( const string& applName )
 {
-	cout << "/*\n"
-	<< " * This is a sample on matching descriptors detected on one image to descriptors detected in image set.\n"
-	<< " * So we have one query image and several train images. For each keypoint descriptor of query image\n"
-	<< " * the one nearest train descriptor is found the entire collection of train images. To visualize the result\n"
-	<< " * of matching we save images, each of which combines query and train image with matches between them (if they exist).\n"
-	<< " * Match is drawn as line between corresponding points. Count of all matches is equel to count of\n"
-	<< " * query keypoints, so we have the same count of lines in all set of result images (but not for each result\n"
-	<< " * (train) image).\n"
-	<< " */\n" << endl;
+    cout << "/*\n"
+         << " * This is a sample on matching descriptors detected on one image to descriptors detected in image set.\n"
+         << " * So we have one query image and several train images. For each keypoint descriptor of query image\n"
+         << " * the one nearest train descriptor is found the entire collection of train images. To visualize the result\n"
+         << " * of matching we save images, each of which combines query and train image with matches between them (if they exist).\n"
+         << " * Match is drawn as line between corresponding points. Count of all matches is equel to count of\n"
+         << " * query keypoints, so we have the same count of lines in all set of result images (but not for each result\n"
+         << " * (train) image).\n"
+         << " */\n" << endl;
 
     cout << endl << "Format:\n" << endl;
     cout << "./" << applName << " [detectorType] [descriptorType] [matcherType] [queryImage] [fileWithTrainImages] [dirToSaveResImages]" << endl;
@@ -48,16 +49,21 @@ void maskMatchesByTrainImgIdx( const vector<DMatch>& matches, int trainImgIdx, v
 
 void readTrainFilenames( const string& filename, string& dirName, vector<string>& trainFilenames )
 {
-    const char dlmtr = '/';
-
     trainFilenames.clear();
 
     ifstream file( filename.c_str() );
     if ( !file.is_open() )
         return;
 
-    size_t pos = filename.rfind(dlmtr);
+    size_t pos = filename.rfind('\\');
+    char dlmtr = '\\';
+    if (pos == String::npos)
+    {
+        pos = filename.rfind('/');
+        dlmtr = '/';
+    }
     dirName = pos == string::npos ? "" : filename.substr(0, pos) + dlmtr;
+
     while( !file.eof() )
     {
         string str; getline( file, str );
@@ -142,6 +148,12 @@ void computeDescriptors( const Mat& queryImage, vector<KeyPoint>& queryKeypoints
     cout << "< Computing descriptors for keypoints..." << endl;
     descriptorExtractor->compute( queryImage, queryKeypoints, queryDescriptors );
     descriptorExtractor->compute( trainImages, trainKeypoints, trainDescriptors );
+    
+    int totalTrainDesc = 0;
+    for( vector<Mat>::const_iterator tdIter = trainDescriptors.begin(); tdIter != trainDescriptors.end(); tdIter++ )
+        totalTrainDesc += tdIter->rows;
+
+    cout << "Query descriptors count: " << queryDescriptors.rows << "; Total train descriptors count: " << totalTrainDesc << endl;
     cout << ">" << endl;
 }
 
@@ -149,9 +161,23 @@ void matchDescriptors( const Mat& queryDescriptors, const vector<Mat>& trainDesc
                        vector<DMatch>& matches, Ptr<DescriptorMatcher>& descriptorMatcher )
 {
     cout << "< Set train descriptors collection in the matcher and match query descriptors to them..." << endl;
+    TickMeter tm;
+
+    tm.start();
     descriptorMatcher->add( trainDescriptors );
+    descriptorMatcher->train();
+    tm.stop();
+    double buildTime = tm.getTimeMilli();
+
+    tm.start();
     descriptorMatcher->match( queryDescriptors, matches );
+    tm.stop();
+    double matchTime = tm.getTimeMilli();
+
     CV_Assert( queryDescriptors.rows == (int)matches.size() || matches.empty() );
+    
+    cout << "Number of matches: " << matches.size() << endl;
+    cout << "Build time: " << buildTime << " ms; Match time: " << matchTime << " ms" << endl;
     cout << ">" << endl;
 }
 
@@ -168,7 +194,7 @@ void saveResultImages( const Mat& queryImage, const vector<KeyPoint>& queryKeypo
         {
             maskMatchesByTrainImgIdx( matches, i, mask );
             drawMatches( queryImage, queryKeypoints, trainImages[i], trainKeypoints[i],
-                         matches, drawImg, Scalar::all(-1), Scalar::all(-1), mask );
+                         matches, drawImg, Scalar(255, 0, 0), Scalar(0, 255, 255), mask );
             string filename = resultDir + "/res_" + trainImagesNames[i];
             if( !imwrite( filename, drawImg ) )
                 cout << "Image " << filename << " can not be saved (may be because directory " << resultDir << " does not exist)." << endl;
