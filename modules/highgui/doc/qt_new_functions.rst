@@ -309,7 +309,7 @@ createButton
 
 .. cpp:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
 
-    Creates a callback function called to draw OpenGL on top of the image display by ``windowname`` .
+    Attaches a button to the control panel.
 
     :param  button_name: Name of the button.
 
