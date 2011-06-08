@@ -26,7 +26,7 @@ void help()
             "./find_obj [--object_filename]=<object_filename, box.png as default> \n"
             "       [--scene_filename]=<scene_filename box_in_scene.png as default>] \n"
             "Example: \n"
-            "./find_obj --object_filename =box.png --scene_filename = box_in_scene.png \n\n"
+            "./find_obj --object_filename=box.png --scene_filename=box_in_scene.png \n\n"
             );
 }
 
