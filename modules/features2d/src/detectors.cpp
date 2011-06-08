@@ -407,8 +407,8 @@ void SiftFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
 /*
  *  SurfFeatureDetector
  */
-SurfFeatureDetector::SurfFeatureDetector( double hessianThreshold, int octaves, int octaveLayers)
-    : surf(hessianThreshold, octaves, octaveLayers)
+SurfFeatureDetector::SurfFeatureDetector( double hessianThreshold, int octaves, int octaveLayers, bool upright )
+    : surf(hessianThreshold, octaves, octaveLayers, false, upright)
 {}
 
 void SurfFeatureDetector::read (const FileNode& fn)
@@ -416,8 +416,9 @@ void SurfFeatureDetector::read (const FileNode& fn)
     double hessianThreshold = fn["hessianThreshold"];
     int octaves = fn["octaves"];
     int octaveLayers = fn["octaveLayers"];
+    bool upright = (int)fn["upright"] != 0;
 
-    surf = SURF( hessianThreshold, octaves, octaveLayers );
+    surf = SURF( hessianThreshold, octaves, octaveLayers, false, upright );
 }
 
 void SurfFeatureDetector::write (FileStorage& fs) const
@@ -427,6 +428,7 @@ void SurfFeatureDetector::write (FileStorage& fs) const
     fs << "hessianThreshold" << surf.hessianThreshold;
     fs << "octaves" << surf.nOctaves;
     fs << "octaveLayers" << surf.nOctaveLayers;
+    fs << "upright" << surf.upright;
 }
 
 void SurfFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const

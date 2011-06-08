@@ -81,6 +81,7 @@ CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
 typedef struct CvSURFParams
 {
     int    extended;
+    int    upright;
     double hessianThreshold;
 
     int    nOctaves;
@@ -395,7 +396,7 @@ public:
     CV_WRAP SURF();
     //! the full constructor taking all the necessary parameters
     CV_WRAP SURF(double _hessianThreshold, int _nOctaves=4,
-         int _nOctaveLayers=2, bool _extended=false);
+         int _nOctaveLayers=2, bool _extended=false, bool _upright=false);
 
     //! returns the descriptor size in float's (64 or 128)
     CV_WRAP int descriptorSize() const;
@@ -1519,7 +1520,7 @@ protected:
 class CV_EXPORTS SurfFeatureDetector : public FeatureDetector
 {
 public:
-    SurfFeatureDetector( double hessianThreshold=400., int octaves=3, int octaveLayers=4 );
+    SurfFeatureDetector( double hessianThreshold=400., int octaves=3, int octaveLayers=4, bool upright=false );
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
 
@@ -1897,7 +1898,7 @@ protected:
 class CV_EXPORTS SurfDescriptorExtractor : public DescriptorExtractor
 {
 public:
-    SurfDescriptorExtractor( int nOctaves=4, int nOctaveLayers=2, bool extended=false );
+    SurfDescriptorExtractor( int nOctaves=4, int nOctaveLayers=2, bool extended=false, bool upright=false );
 
     virtual void read( const FileNode &fn );
     virtual void write( FileStorage &fs ) const;
@@ -1906,7 +1907,7 @@ public:
     virtual int descriptorType() const;
 
 protected:
-	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     SURF surf;
 };

@@ -191,8 +191,8 @@ int SiftDescriptorExtractor::descriptorType() const
 *                                SurfDescriptorExtractor                                 *
 \****************************************************************************************/
 SurfDescriptorExtractor::SurfDescriptorExtractor( int nOctaves,
-                                                  int nOctaveLayers, bool extended )
-    : surf( 0.0, nOctaves, nOctaveLayers, extended )
+                                                  int nOctaveLayers, bool extended, bool upright )
+    : surf( 0.0, nOctaves, nOctaveLayers, extended, upright )
 {}
 
 void SurfDescriptorExtractor::computeImpl( const Mat& image,
@@ -218,8 +218,9 @@ void SurfDescriptorExtractor::read( const FileNode &fn )
     int nOctaves = fn["nOctaves"];
     int nOctaveLayers = fn["nOctaveLayers"];
     bool extended = (int)fn["extended"] != 0;
+    bool upright = (int)fn["upright"] != 0;
 
-    surf = SURF( 0.0, nOctaves, nOctaveLayers, extended );
+    surf = SURF( 0.0, nOctaves, nOctaveLayers, extended, upright );
 }
 
 void SurfDescriptorExtractor::write( FileStorage &fs ) const
@@ -229,6 +230,7 @@ void SurfDescriptorExtractor::write( FileStorage &fs ) const
     fs << "nOctaves" << surf.nOctaves;
     fs << "nOctaveLayers" << surf.nOctaveLayers;
     fs << "extended" << surf.extended;
+    fs << "upright" << surf.upright;
 }
 
 int SurfDescriptorExtractor::descriptorSize() const
