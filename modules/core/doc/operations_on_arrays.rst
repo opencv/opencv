@@ -2802,7 +2802,7 @@ The roots are stored in the ``roots`` array.
 solvePoly
 ---------
 
-.. cpp:function:: void solvePoly(InputArray coeffs, OutputArray roots, int maxIters=20, int fig=100)
+.. cpp:function:: void solvePoly(InputArray coeffs, OutputArray roots, int maxIters=300)
 
     Finds the real or complex roots of a polynomial equation.
 
@@ -2812,13 +2812,11 @@ solvePoly
 
     :param maxIters: Maximum number of iterations the algorithm does.
 
-    :param fig:
-
 The function ``solvePoly`` finds real and complex roots of a polynomial equation:
 
 .. math::
 
-    \texttt{coeffs} [0] x^{n} +  \texttt{coeffs} [1] x^{n-1} + ... +  \texttt{coeffs} [n-1] x +  \texttt{coeffs} [n] = 0
+    \texttt{coeffs} [n] x^{n} +  \texttt{coeffs} [n-1] x^{n-1} + ... +  \texttt{coeffs} [1] x +  \texttt{coeffs} [0] = 0
 
 .. index:: sort
 
