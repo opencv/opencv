@@ -293,9 +293,38 @@ And vice versa, when ``whichImage=2``,
 Line coefficients are defined up to a scale. They are normalized so that
 :math:`a_i^2+b_i^2=1` .
 
-.. index:: convertPointsHomogeneous
 
-.. _convertPointsHomogeneous:
+.. index:: convertPointsToHomogeneous
+
+convertPointsToHomogeneous
+------------------------
+
+.. cpp:function:: void convertPointsToHomogeneous( InputArray src, OutputArray dst )
+
+    Converts points from Euclidean to homogeneous space.
+
+    :param src: Input vector of ``N``-dimensional points.
+
+    :param dst: Output vector of ``N+1``-dimensional points.
+
+The function converts points from Euclidean to homogeneous space by appending 1's to the tuple of point coordinates. That is, each point ``(x1, x2, ..., xn)`` is converted to ``(x1, x2, ..., xn, 1)``.
+
+.. index:: convertPointsFromHomogeneous
+
+convertPointsFromHomogeneous
+------------------------
+
+.. cpp:function:: void convertPointsFromHomogeneous( InputArray src, OutputArray dst )
+
+    Converts points from homogeneous to Euclidean space.
+
+    :param src: Input vector of ``N``-dimensional points.
+
+    :param dst: Output vector of ``N-1``-dimensional points.
+
+The function converts points homogeneous to Euclidean space using perspective projection. That is, each point ``(x1, x2, ... x(n-1), xn)`` is converted to ``(x1/xn, x2/xn, ..., x(n-1)/xn)``. When ``xn=0``, the output point coordinates will be ``(0,0,0,...)``.
+
+.. index:: convertPointsHomogeneous
 
 convertPointsHomogeneous
 ------------------------
@@ -306,16 +335,9 @@ convertPointsHomogeneous
 
     :param src: Input array or vector of 2D, 3D, or 4D points.
 
-    :param dst: Output vector of 2D or 3D points.
+    :param dst: Output vector of 2D, 3D or 4D points.
 
-The functions convert 2D or 3D points from/to homogeneous coordinates, or simply copy or transpose
-the array. If the input array dimensionality is larger than the output, each coordinate is divided by the last coordinate:
-
-.. math::
-
-    \begin{array}{l} (x,y[,z],w) -> (x',y'[,z']) \\ \text{where} \\ x' = x/w  \\ y' = y/w  \\ z' = z/w  \quad \text{(if output is 3D)} \end{array}
-
-If the output array dimensionality is larger, an extra 1 is appended to each point.  Otherwise, the input array is simply copied (with an optional transposition) to the output.
+The function converts 2D or 3D points from/to homogeneous coordinates by calling either :cpp:func:`convertPointsToHomogeneous` or :cpp:func:`convertPointsFromHomogeneous`. The function is obsolete; use one of the previous two instead.
 
 .. index:: decomposeProjectionMatrix
 
