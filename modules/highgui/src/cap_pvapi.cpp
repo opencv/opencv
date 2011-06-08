@@ -58,6 +58,7 @@
 
 #include <PvApi.h>
 #include <unistd.h>
+#include <string>
 //#include <arpa/inet.h>
 
 #define MAX_CAMERAS 10
@@ -276,8 +277,12 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
         PvAttrUint32Get(Camera.Handle, "Height", &nTemp);
         return (double)nTemp;
     case CV_CAP_PROP_EXPOSURE:
-		PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
-		return (double)nTemp;
+	PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
+	return (double)nTemp;
+    case CV_CAP_PROP_FPS:
+	tPvFloat32 nfTemp;
+        PvAttrFloat32Get(Camera.Handle, "StatFrameRate", &nfTemp);
+        return (double)nfTemp;
     }
     return -1.0;
 }
@@ -321,13 +326,12 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 		    return false;
 	    }
 	    else {
-		string ip=cv::format("%d.%d.%d.%d", (value>>24)&255, (value>>16)&255, (value>>8)&255, value&255);
+		std::string ip=cv::format("%d.%d.%d.%d", ((int)value>>24)&255, ((int)value>>16)&255, ((int)value>>8)&255, (int)value&255);
 		if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
-		(PvAttrStringSet(priv->handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess)) {
+		(PvAttrStringSet(Camera.Handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess)) 
 		    break;
 		else
 		    return false;
-		}
 	    }
     default:
         return false;
