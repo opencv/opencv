@@ -86,6 +86,7 @@ class CvCapture_OpenNI : public CvCapture
 {
 public:
     static const int INVALID_PIXEL_VAL = 0;
+    static const int INVALID_COORDINATE_VAL = 0;
 
     CvCapture_OpenNI();
     virtual ~CvCapture_OpenNI();
@@ -110,7 +111,7 @@ protected:
     static const int outputTypesCount = 7;
 
     IplImage* retrieveDepthMap();
-    IplImage* retrievePointCloudMap(); 
+    IplImage* retrievePointCloudMap();
     IplImage* retrieveDisparityMap();
     IplImage* retrieveDisparityMap_32F();
     IplImage* retrieveValidDepthMask();
@@ -345,7 +346,7 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
 {
     CV_Assert( depthGenerator.IsValid() );
     switch(propIdx)
-    {   
+    {
         case CV_CAP_PROP_OPENNI_REGISTRATION_ON:
             {
                 CV_Assert( imageGenerator.IsValid() );
@@ -482,25 +483,36 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     cv::Mat depth;
     getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
-    const float badPoint = 0;
+    const int badPoint = INVALID_PIXEL_VAL;
+    const float badCoord = INVALID_COORDINATE_VAL;
     cv::Mat pointCloud_XYZ( rows, cols, CV_32FC3, cv::Scalar::all(badPoint) );
+
+    cv::Ptr<XnPoint3D> proj = new XnPoint3D[cols*rows];
+    cv::Ptr<XnPoint3D> real = new XnPoint3D[cols*rows];
+    for( int y = 0; y < rows; y++ )
+    {
+        for( int x = 0; x < cols; x++ )
+        {
+            int ind = y*cols+x;
+            proj[ind].X = x;
+            proj[ind].Y = y;
+            proj[ind].Z = depth.at<unsigned short>(y, x);
+        }
+    }
+    depthGenerator.ConvertProjectiveToRealWorld(cols*rows, proj, real);
 
     for( int y = 0; y < rows; y++ )
     {
         for( int x = 0; x < cols; x++ )
         {
-
-            unsigned short d = depth.at<unsigned short>(y, x);
             // Check for invalid measurements
-            if( d == CvCapture_OpenNI::INVALID_PIXEL_VAL ) // not valid
-                continue;
-
-            XnPoint3D proj, real;
-            proj.X = x;
-            proj.Y = y;
-            proj.Z = d;
-            depthGenerator.ConvertProjectiveToRealWorld(1, &proj, &real);
-            pointCloud_XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real.X*0.001f, real.Y*0.001f, real.Z*0.001f); // from mm to meters
+            if( depth.at<unsigned short>(y, x) == badPoint ) // not valid
+                pointCloud_XYZ.at<cv::Point3f>(y,x) = cv::Point3f( badCoord, badCoord, badCoord );
+            else
+            {
+                int ind = y*cols+x;
+                pointCloud_XYZ.at<cv::Point3f>(y,x) = cv::Point3f( real[ind].X*0.001f, real[ind].Y*0.001f, real[ind].Z*0.001f); // from mm to meters
+            }
         }
     }
 
@@ -509,7 +521,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     return outputMaps[CV_CAP_OPENNI_POINT_CLOUD_MAP].getIplImagePtr();
 }
 
-void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F, 
+void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp, XnDouble baseline, XnUInt64 F,
                            XnUInt64 noSampleValue, XnUInt64 shadowValue )
 {
     cv::Mat depth;
@@ -520,7 +532,7 @@ void computeDisparity_32F( const xn::DepthMetaData& depthMetaData, cv::Mat& disp
     // disparity = baseline * F / z;
 
     float mult = baseline /*mm*/ * F /*pixels*/;
-    
+
     disp.create( depth.size(), CV_32FC1);
     disp = cv::Scalar::all( CvCapture_OpenNI::INVALID_PIXEL_VAL );
     for( int y = 0; y < disp.rows; y++ )
@@ -543,7 +555,7 @@ IplImage* CvCapture_OpenNI::retrieveDisparityMap()
     computeDisparity_32F( depthMetaData, disp32, baseline, depthFocalLength_VGA, noSampleValue, shadowValue );
 
     disp32.convertTo( outputMaps[CV_CAP_OPENNI_DISPARITY_MAP].mat, CV_8UC1 );
-    
+
     return outputMaps[CV_CAP_OPENNI_DISPARITY_MAP].getIplImagePtr();
 }
 
@@ -566,7 +578,7 @@ IplImage* CvCapture_OpenNI::retrieveValidDepthMask()
     getDepthMapFromMetaData( depthMetaData, depth, noSampleValue, shadowValue );
 
     outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].mat = depth != CvCapture_OpenNI::INVALID_PIXEL_VAL;
-    
+
     return outputMaps[CV_CAP_OPENNI_VALID_DEPTH_MASK].getIplImagePtr();
 }
 
