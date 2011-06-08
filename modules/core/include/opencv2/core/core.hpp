@@ -4178,18 +4178,14 @@ protected:
    CommandLineParser parser(argc, argv);
    int k = parser.get<int>("k", -1);        //these methods also work
    double db = parser.get<double>("db");    //with <float> and <unsigned int> type
-   string key = parser.get<string>("0");
-   string key1 = parser.get<string>("1");
-   string argument = parser.get<string>("2");
+   bool key = parser.get<bool>("key"); <The method return 'true', if 'key' was defined in command line
+           "                           and it will return 'false' otherwise.>
+   bool key1 = parser.get<bool>("key1"); The method return 'true', if 'key' was defined in command line
+           "                             and it will return 'false' otherwise.>
+   string argument = parser.get<string>("0"); <If you need to take argument. It's the first parameter without '-' or '--' increment
+                            and without value. It has index 0. The second parameter of this type will have index 1>
+                            It also works with 'int', 'unsigned int', 'double' and 'float' types.
    string inputFile = parser.get<string>("inputFile");
-
-   If parameter must to have some value, you have to define it using '--' or '-' increment
-   and assign is a value through '='. For example like this: --key=120 or -file_name=lena.jpg
-   If parameter doesn't has any value, you can define it with '--' or '-' increment and without it.
-   In this case you have to select it index in command line, if you whant to get it.
-   Only keys without any value have it personal index.Index starts from zero.
-   For example, see the string with arguments above: --key has index 0, -key has index 1, argument has index 2
-    other keys have some values and they don't have index.
 */
 class CV_EXPORTS CommandLineParser
 {
@@ -4197,9 +4193,6 @@ class CV_EXPORTS CommandLineParser
 
         //! the default constructor
         CommandLineParser(int argc, const char* argv[]);
-
-        //! allows to check if parameter is given
-        bool has(const std::string& keys) const;
 
         //! get parameter, if parameter is not given get default parameter
         template<typename _Tp>
@@ -4214,6 +4207,8 @@ class CV_EXPORTS CommandLineParser
     protected:
         std::map<std::string, std::string > data;
         std::string getString(const std::string& name) const;
+
+        bool has(const std::string& keys) const;
 
         template<typename _Tp>
         _Tp analizeValue(const std::string& str);
@@ -4233,6 +4228,9 @@ class CV_EXPORTS CommandLineParser
         template<typename _Tp>
         _Tp analyzeValue(const std::string& str);
     };
+    template<> CV_EXPORTS
+    bool CommandLineParser::get<bool>(const std::string& name, const bool& default_value);
+
     template<> CV_EXPORTS
     std::string CommandLineParser::analyzeValue<std::string>(const std::string& str);
 

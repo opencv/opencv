@@ -15,17 +15,18 @@ void helpParser()
            "Usage: \n"
            "      Imagine that the input parameters are next:\n"
            "                -k=10 --key --db=-10.11 -key1 argument --inputFile=lena.jpg\n"
-           "parser.get<int>(\"k\")<If you need to take 'k' value.\n"
+           "parser.get<int>(\"k\")<If you need to take k value.\n"
            "                    It also works with 'unsigned int', 'double', 'float' and 'string' types>\n"
-           "parser.get<double>(\"db\", 99.99)<If you need to take 'db' value.\n"
+           "parser.get<double>(\"db\", 99.99)<If you need to take db value.\n"
            "                                If its value is empty, you will get default value 99.99>\n"
            "                                It also works with 'int', 'unsigned int', 'float' and 'string' types\n"
-           "parser.get<string>(\"0\")<If you need to take 'key'. It's the first parameter without value\n"
-           "                          and it has index 0>\n"
-           "parser.get<stirng>(\"1\")<If you need to take 'key1'. It's the second parameter without value\n"
-           "                          and it has index 1>\n"
-           "parser.get<stirng>(\"2\")<If you need to take 'argument'. It's the third parameter without value\n"
-           "                          and it has index 2>\n\n"
+           "parser.get<bool>(\"key\")<The method return 'true', if 'key' was defined in command line\n"
+           "                          and it will return 'false' otherwise.>\n"
+           "parser.get<bool>(\"key1\")<The method return 'true', if 'key' was defined in command line\n"
+           "                          and it will return 'false' otherwise.>\n"
+           "parser.get<stirng>(\"0\")<If you need to take argument. It's the first parameter without '-' or '--' increment \n"
+           "                          and without value. It has index 0. The second parameter of this type will have index 1>\n"
+           "                          It also works with 'int', 'unsigned int', 'double' and 'float' types\n\n"
            );
 }
 
@@ -110,25 +111,42 @@ CommandLineParser::CommandLineParser(int argc, const char* argv[])
                     data.clear();
                     break;
                 }
-            else
+            else if ((cur_name.find('-') == 0) && ((cur_name[1] < '0') || (cur_name[1] > '9')) )
                 {
-                str_buff << index;
-                while (cur_name.find('-') == 0)
+                    while (cur_name.find('-') == 0)
                     cur_name.erase(0,1);
 
-                for(it = data.begin(); it != data.end(); it++)
-                {
-                    if (it->second == cur_name)
+                    for(it = data.begin(); it != data.end(); it++)
                     {
-                        printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
-                               , cur_name.c_str());
-                        printf("Constructor will not continue its work since this moment.\n"
-                               "Please enter parameters without dublicates\n");
-                        helpParser();
-                        data.clear();
-                        break;
+                        if (it->first == cur_name)
+                        {
+                            printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
+                                   , cur_name.c_str());
+                            printf("Constructor will not continue its work since this moment.\n"
+                                   "Please enter parameters without dublicates\n");
+                            helpParser();
+                            data.clear();
+                            break;
+                        }
                     }
+                    data[cur_name] = "true";
                 }
+            else
+                {
+                    str_buff << index;
+                    for(it = data.begin(); it != data.end(); it++)
+                    {
+                        if (it->second == cur_name)
+                        {
+                            printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
+                                   , cur_name.c_str());
+                            printf("Constructor will not continue its work since this moment.\n"
+                                   "Please enter parameters without dublicates\n");
+                            helpParser();
+                            data.clear();
+                            break;
+                        }
+                    }
                     data[str_buff.str()] = cur_name;
                     str_buff.seekp(0);
                     index++;
@@ -214,6 +232,14 @@ static _Tp fromStringNumber(const std::string& str)//the default conversion func
         CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
     
     return  getData<_Tp>(str);
+}
+
+template<>
+bool CommandLineParser::get<bool>(const std::string& name, const bool& default_value)
+{
+    if (!has(name))
+        return false;
+    return true;
 }
 
 template<>
