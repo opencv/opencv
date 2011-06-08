@@ -1319,6 +1319,8 @@ icvYMLParse( CvFileStorage* fs )
                     CV_PARSE_ERROR( "The YAML streams must start with '---', except the first one" );
                 break;
             }
+            else if( fs->dummy_eof )
+                break;
             else
                 CV_PARSE_ERROR( "Invalid or unsupported syntax" );
         }
