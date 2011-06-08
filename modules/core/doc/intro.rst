@@ -23,10 +23,10 @@ The further chapters of the document describe functionality of each module. But 
 API Concepts
 ================
 
-*``cv``* Namespace
+``cv`` Namespace
 ------------------
 
-All the OpenCV classes and functions are placed into the *``cv``* namespace. Therefore, to access this functionality from your code, use the ``cv::`` specifier or ``using namespace cv;`` directive:
+All the OpenCV classes and functions are placed into the ``cv`` namespace. Therefore, to access this functionality from your code, use the ``cv::`` specifier or ``using namespace cv;`` directive:
 
 .. code-block:: c
 
