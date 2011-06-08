@@ -438,7 +438,7 @@ The function requires white space (like a square-thick border, the wider the bet
 
 findCirclesGrid
 -------------------
-.. cpp:function:: bool findCirclesGrid( InputArray image, Size patternSize, vector<Point2f>& centers, int flags=CALIB_CB_SYMMETRIC_GRID )
+.. cpp:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
 
     Finds the centers in the grid of circles.
 
@@ -453,9 +453,14 @@ findCirclesGrid
             * **CALIB_CB_SYMMETRIC_GRID** Use symmetric pattern of circles.
 
             * **CALIB_CB_ASYMMETRIC_GRID** Use asymmetric pattern of circles.
+            
+            * **CALIB_CB_CLUSTERING** Use a special algorithm for grid detection. It is more robust to perspective distortions but much more sensitive to background clutter.
+
+    :param blobDetector: FeatureDetector that finds blobs like dark circles on light background
+
 
 The function attempts to determine
-whether the input image is a grid of circles. If it is, the function locates centers of the circles. The function returns a
+whether the input image contains a grid of circles. If it is, the function locates centers of the circles. The function returns a
 non-zero value if all of the centers have been found and they have been placed
 in a certain order (row by row, left to right in every row). Otherwise, if the function fails to find all the corners or reorder
 them, it returns 0.
