@@ -433,7 +433,7 @@ namespace cv
 {
 
 //! converts rotation vector to rotation matrix or vice versa using Rodrigues transformation
-CV_EXPORTS_W void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=None());
+CV_EXPORTS_W void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray());
 
 //! type of the robust estimation algorithm
 enum
@@ -445,7 +445,7 @@ enum
 //! computes the best-fit perspective transformation mapping srcPoints to dstPoints.
 CV_EXPORTS_W Mat findHomography( InputArray srcPoints, InputArray dstPoints,
                                  int method=0, double ransacReprojThreshold=3,
-                                 OutputArray mask=None());
+                                 OutputArray mask=noArray());
 
 //! variant of findHomography for backward compatibility
 CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
@@ -453,17 +453,17 @@ CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
     
 //! Computes RQ decomposition of 3x3 matrix
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
-                                OutputArray Qx=None(),
-                                OutputArray Qy=None(),
-                                OutputArray Qz=None());
+                                OutputArray Qx=noArray(),
+                                OutputArray Qy=noArray(),
+                                OutputArray Qz=noArray());
 
 //! Decomposes the projection matrix into camera matrix and the rotation martix and the translation vector
 CV_EXPORTS_W void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix,
                                              OutputArray rotMatrix, OutputArray transVect,
-                                             OutputArray rotMatrixX=None(),
-                                             OutputArray rotMatrixY=None(),
-                                             OutputArray rotMatrixZ=None(),
-                                             OutputArray eulerAngles=None() );   
+                                             OutputArray rotMatrixX=noArray(),
+                                             OutputArray rotMatrixY=noArray(),
+                                             OutputArray rotMatrixZ=noArray(),
+                                             OutputArray eulerAngles=noArray() );   
 
 //! computes derivatives of the matrix product w.r.t each of the multiplied matrix coefficients
 CV_EXPORTS_W void matMulDeriv( InputArray A, InputArray B,
@@ -474,17 +474,17 @@ CV_EXPORTS_W void matMulDeriv( InputArray A, InputArray B,
 CV_EXPORTS_W void composeRT( InputArray rvec1, InputArray tvec1,
                              InputArray rvec2, InputArray tvec2,
                              OutputArray rvec3, OutputArray tvec3,
-                             OutputArray dr3dr1=None(), OutputArray dr3dt1=None(),
-                             OutputArray dr3dr2=None(), OutputArray dr3dt2=None(),
-                             OutputArray dt3dr1=None(), OutputArray dt3dt1=None(),
-                             OutputArray dt3dr2=None(), OutputArray dt3dt2=None() );
+                             OutputArray dr3dr1=noArray(), OutputArray dr3dt1=noArray(),
+                             OutputArray dr3dr2=noArray(), OutputArray dr3dt2=noArray(),
+                             OutputArray dt3dr1=noArray(), OutputArray dt3dt1=noArray(),
+                             OutputArray dt3dr2=noArray(), OutputArray dt3dt2=noArray() );
 
 //! projects points from the model coordinate space to the image coordinates. Also computes derivatives of the image coordinates w.r.t the intrinsic and extrinsic camera parameters
 CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  InputArray rvec, InputArray tvec,
                                  InputArray cameraMatrix, InputArray distCoeffs,
                                  OutputArray imagePoints,
-                                 OutputArray jacobian=None(),
+                                 OutputArray jacobian=noArray(),
                                  double aspectRatio=0 );
 
 //! computes the camera pose from a few 3D points and the corresponding projections. The outliers are not handled.
@@ -504,7 +504,7 @@ CV_EXPORTS_W void solvePnPRansac( InputArray objectPoints,
                                   int iterationsCount = 100,
                                   float reprojectionError = 8.0,
                                   int minInliersCount = 100,
-                                  OutputArray inliers = None() );
+                                  OutputArray inliers = noArray() );
 
 //! initializes camera matrix from a few 3D points and the corresponding projections.
 CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
@@ -646,7 +646,7 @@ enum
 CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
                                      int method=FM_RANSAC,
                                      double param1=3., double param2=0.99,
-                                     OutputArray mask=None());
+                                     OutputArray mask=noArray());
 
 //! variant of findFundamentalMat for backward compatibility
 CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
@@ -730,7 +730,7 @@ protected:
 
 //! filters off speckles (small regions of incorrectly computed disparity)
 CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal, int maxSpeckleSize, double maxDiff,
-                                  InputOutputArray buf=None() );
+                                  InputOutputArray buf=noArray() );
 
 //! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
 CV_EXPORTS_W Rect getValidDisparityROI( Rect roi1, Rect roi2,

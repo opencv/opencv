@@ -3639,7 +3639,7 @@ computeSums( const Mat& points, const size_t* ofs, int a, int b, double* sums )
     
 void KDTree::build(InputArray _points, bool _copyData)
 {
-    build(_points, None(), _copyData);
+    build(_points, noArray(), _copyData);
 }
 
 

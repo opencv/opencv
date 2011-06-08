@@ -7,7 +7,7 @@ Motion Analysis and Object Tracking
 
 accumulate
 --------------
-.. cpp:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=None() )
+.. cpp:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
     Adds an image to the accumulator.
 
@@ -36,7 +36,7 @@ See Also:
 
 accumulateSquare
 --------------------
-.. cpp:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=None() )
+.. cpp:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
     Adds the square of a source image to the accumulator.
 
@@ -63,7 +63,7 @@ See Also:
 
 accumulateProduct
 ---------------------
-.. cpp:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=None() )
+.. cpp:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
     Adds the per-element product of two input images to the accumulator.
 
@@ -92,7 +92,7 @@ See Also:
 
 accumulateWeighted
 ----------------------
-.. cpp:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=None() )
+.. cpp:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
     Updates a running average.
 

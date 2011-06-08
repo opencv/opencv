@@ -272,12 +272,12 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     
 void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
-    integral( src, sum, None(), None(), sdepth );
+    integral( src, sum, noArray(), noArray(), sdepth );
 }
 
 void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth )
 {
-    integral( src, sum, sqsum, None(), sdepth );
+    integral( src, sum, sqsum, noArray(), sdepth );
 }
 
 

@@ -1435,7 +1435,7 @@ static bool eigen( InputArray _src, OutputArray _evals, OutputArray _evects, boo
     
 bool cv::eigen( InputArray src, OutputArray evals, int lowindex, int highindex )
 {
-    return eigen(src, evals, None(), false, lowindex, highindex);
+    return eigen(src, evals, noArray(), false, lowindex, highindex);
 }
 
 bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects,
@@ -1522,7 +1522,7 @@ void SVD::compute( InputArray a, OutputArray w, OutputArray u, OutputArray vt, i
 
 void SVD::compute( InputArray a, OutputArray w, int flags )
 {
-    _SVDcompute(a, w, None(), None(), flags);
+    _SVDcompute(a, w, noArray(), noArray(), flags);
 }
     
 void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,

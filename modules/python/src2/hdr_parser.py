@@ -457,7 +457,7 @@ class CppHeaderParser(object):
                                                              ("InputArray", "Mat"),
                                                              ("InputOutputArray", "Mat"),
                                                              ("OutputArray", "Mat"),
-                                                             ("None", arg_type)]).strip()
+                                                             ("noArray", arg_type)]).strip()
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

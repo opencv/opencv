@@ -1338,7 +1338,7 @@ typedef const _OutputArray& OutputArray;
 typedef OutputArray OutputArrayOfArrays;
 typedef OutputArray InputOutputArray;
 
-CV_EXPORTS OutputArray None();
+CV_EXPORTS OutputArray noArray();
 
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
@@ -1659,7 +1659,7 @@ public:
     //! sets every matrix element to s
     Mat& operator = (const Scalar& s);
     //! sets some of the matrix elements to s, according to the mask
-    Mat& setTo(const Scalar& s, InputArray mask=None());
+    Mat& setTo(const Scalar& s, InputArray mask=noArray());
     //! creates alternative matrix header for the same data, with different
     // number of channels and/or different number of rows. see cvReshape.
     Mat reshape(int _cn, int _rows=0) const;
@@ -1975,10 +1975,10 @@ CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
     
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
-                      InputArray mask=None(), int dtype=-1);
+                      InputArray mask=noArray(), int dtype=-1);
 //! subtracts one matrix from another (dst = src1 - src2) 
 CV_EXPORTS_W void subtract(InputArray src1, InputArray src2, OutputArray dst,
-                           InputArray mask=None(), int dtype=-1);
+                           InputArray mask=noArray(), int dtype=-1);
 
 //! computes element-wise weighted product of the two arrays (dst = scale*src1*src2)
 CV_EXPORTS_W void multiply(InputArray src1, InputArray src2,
@@ -2011,25 +2011,25 @@ CV_EXPORTS_W Scalar sum(InputArray src);
 //! computes the number of nonzero array elements
 CV_EXPORTS_W int countNonZero( InputArray src );
 //! computes mean value of selected array elements
-CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=None());
+CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=noArray());
 //! computes mean value and standard deviation of all or selected array elements
 CV_EXPORTS_W void meanStdDev(InputArray src, OutputArray mean, OutputArray stddev,
-                             InputArray mask=None());
+                             InputArray mask=noArray());
 //! computes norm of the selected array part
-CV_EXPORTS_W double norm(InputArray src1, int normType=NORM_L2, InputArray mask=None());
+CV_EXPORTS_W double norm(InputArray src1, int normType=NORM_L2, InputArray mask=noArray());
 //! computes norm of selected part of the difference between two arrays
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
-                         int normType=NORM_L2, InputArray mask=None());
+                         int normType=NORM_L2, InputArray mask=noArray());
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values 
 CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha=1, double beta=0,
-                             int norm_type=NORM_L2, int dtype=-1, InputArray mask=None());
+                             int norm_type=NORM_L2, int dtype=-1, InputArray mask=noArray());
 
 //! finds global minimum and maximum array elements and returns their values and their locations
 CV_EXPORTS_W void minMaxLoc(InputArray src, CV_OUT double* minVal,
                            CV_OUT double* maxVal=0, CV_OUT Point* minLoc=0,
-                           CV_OUT Point* maxLoc=0, InputArray mask=None());
+                           CV_OUT Point* maxLoc=0, InputArray mask=noArray());
 CV_EXPORTS void minMaxIdx(InputArray src, double* minVal, double* maxVal,
-                          int* minIdx=0, int* maxIdx=0, InputArray mask=None());
+                          int* minIdx=0, int* maxIdx=0, InputArray mask=noArray());
     
 //! transforms 2D matrix to 1D row or column vector by taking sum, minimum, maximum or mean value over all the rows
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype=-1);
@@ -2067,16 +2067,16 @@ CV_EXPORTS_W void vconcat(InputArray src, OutputArray dst);
     
 //! computes bitwise conjunction of the two arrays (dst = src1 & src2)
 CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2,
-                              OutputArray dst, InputArray mask=None());
+                              OutputArray dst, InputArray mask=noArray());
 //! computes bitwise disjunction of the two arrays (dst = src1 | src2)
 CV_EXPORTS_W void bitwise_or(InputArray src1, InputArray src2,
-                             OutputArray dst, InputArray mask=None());
+                             OutputArray dst, InputArray mask=noArray());
 //! computes bitwise exclusive-or of the two arrays (dst = src1 ^ src2)
 CV_EXPORTS_W void bitwise_xor(InputArray src1, InputArray src2,
-                              OutputArray dst, InputArray mask=None());
+                              OutputArray dst, InputArray mask=noArray());
 //! inverts each bit of array (dst = ~src)
 CV_EXPORTS_W void bitwise_not(InputArray src, OutputArray dst,
-                              InputArray mask=None());
+                              InputArray mask=noArray());
 //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
 CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst);
 //! set mask elements for those array elements which are within the element-specific bounding box (dst = lowerb <= src && src < upperb)    
@@ -2130,7 +2130,7 @@ CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
                        InputArray src3, double gamma, OutputArray dst, int flags=0);
 //! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
-                                 InputArray delta=None(),
+                                 InputArray delta=noArray(),
                                  double scale=1, int dtype=-1 );
 //! transposes the matrix
 CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
@@ -2331,7 +2331,7 @@ enum
 //! clusters the input data using k-Means algorithm
 CV_EXPORTS_W double kmeans( InputArray data, int K, CV_OUT InputOutputArray bestLabels,
                             TermCriteria criteria, int attempts,
-                            int flags, OutputArray centers=None() );
+                            int flags, OutputArray centers=noArray() );
 
 //! returns the thread-local Random number generator
 CV_EXPORTS RNG& theRNG();
@@ -3662,18 +3662,18 @@ public:
     //! finds the K nearest neighbors of "vec" while looking at Emax (at most) leaves
     CV_WRAP int findNearest(InputArray vec, int K, int Emax,
                             OutputArray neighborsIdx,
-                            OutputArray neighbors=None(),
-                            OutputArray dist=None(),
-                            OutputArray labels=None()) const;
+                            OutputArray neighbors=noArray(),
+                            OutputArray dist=noArray(),
+                            OutputArray labels=noArray()) const;
     //! finds all the points from the initial set that belong to the specified box 
     CV_WRAP void findOrthoRange(InputArray minBounds,
                                 InputArray maxBounds,
                                 OutputArray neighborsIdx,
-                                OutputArray neighbors=None(),
-                                OutputArray labels=None()) const;
+                                OutputArray neighbors=noArray(),
+                                OutputArray labels=noArray()) const;
     //! returns vectors with the specified indices
     CV_WRAP void getPoints(InputArray idx, OutputArray pts,
-                           OutputArray labels=None()) const;
+                           OutputArray labels=noArray()) const;
     //! return a vector with the specified index
     const float* getPoint(int ptidx, int* label=0) const;
     //! returns the search space dimensionality

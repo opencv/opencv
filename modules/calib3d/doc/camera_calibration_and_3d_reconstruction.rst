@@ -221,7 +221,7 @@ The function computes various useful camera characteristics from the previously 
 composeRT
 -------------
 
-.. cpp:function:: void composeRT( InputArray rvec1, InputArray tvec1, InputArray rvec2, InputArray tvec2, OutputArray rvec3, OutputArray tvec3, OutputArray dr3dr1=None(), OutputArray dr3dt1=None(), OutputArray dr3dr2=None(), OutputArray dr3dt2=None(), OutputArray dt3dr1=None(), OutputArray dt3dt1=None(), OutputArray dt3dr2=None(), OutputArray dt3dt2=None() )
+.. cpp:function:: void composeRT( InputArray rvec1, InputArray tvec1, InputArray rvec2, InputArray tvec2, OutputArray rvec3, OutputArray tvec3, OutputArray dr3dr1=noArray(), OutputArray dr3dt1=noArray(), OutputArray dr3dr2=noArray(), OutputArray dr3dt2=noArray(), OutputArray dt3dr1=noArray(), OutputArray dt3dt1=noArray(), OutputArray dt3dr2=noArray(), OutputArray dt3dt2=noArray() )
 
     Combines two rotation-and-shift transformations.
 
@@ -508,7 +508,7 @@ The function estimates the object pose given a set of object points, their corre
 solvePnPRansac
 ------------------
 
-.. cpp:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = None()  )
+.. cpp:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray()  )
 
     Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
@@ -543,7 +543,7 @@ The function estimates an object pose given a set of object points, their corres
 
 findFundamentalMat
 ----------------------
-.. cpp:function:: Mat findFundamentalMat( InputArray points1, InputArray points2, int method=FM_RANSAC, double param1=3., double param2=0.99, OutputArray mask=None() )
+.. cpp:function:: Mat findFundamentalMat( InputArray points1, InputArray points2, int method=FM_RANSAC, double param1=3., double param2=0.99, OutputArray mask=noArray() )
 
     Calculates a fundamental matrix from the corresponding points in two images.
 
@@ -605,7 +605,7 @@ corresponding to the specified points. It can also be passed to
 
 findHomography
 ------------------
-.. cpp:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=None() )
+.. cpp:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
 
     Finds a perspective transformation between two planes.
 
@@ -760,7 +760,7 @@ The function computes partial derivatives of the elements of the matrix product
 projectPoints
 -----------------
 
-.. cpp:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray dpdrot=None(), OutputArray dpdt=None(), OutputArray dpdf=None(), OutputArray dpdc=None(), OutputArray dpddist=None(), double aspectRatio=0 )
+.. cpp:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray dpdrot=noArray(), OutputArray dpdt=noArray(), OutputArray dpdf=noArray(), OutputArray dpdc=noArray(), OutputArray dpddist=noArray(), double aspectRatio=0 )
 
     Projects 3D points to an image plane.
 
@@ -870,7 +870,7 @@ that could be used in OpenGL.
 
 Rodrigues
 -------------
-.. cpp:function:: void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=None())
+.. cpp:function:: void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray())
 
     Converts a rotation matrix to a rotation vector or vice versa.
 

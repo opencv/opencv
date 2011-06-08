@@ -67,7 +67,7 @@ See Also: :cpp:func:`abs`
 
 add
 -------
-.. cpp:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=None(), int dtype=-1)
+.. cpp:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 
     Computes the per-element sum of two arrays or an array and a scalar.
 
@@ -166,7 +166,7 @@ See Also:
 
 bitwise_and
 -----------
-.. cpp:function:: void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=None())
+.. cpp:function:: void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise conjunction of two arrays or an array and a scalar.
 
@@ -208,7 +208,7 @@ In case of floating-point arrays, their machine-specific bit representations (us
 
 bitwise_not
 -----------
-.. cpp:function:: void bitwise_not(InputArray src, OutputArray dst, InputArray mask=None())
+.. cpp:function:: void bitwise_not(InputArray src, OutputArray dst, InputArray mask=noArray())
 
     Inverts every bit of an array.
 
@@ -230,7 +230,7 @@ In case of a floating-point source array, its machine-specific bit representatio
 
 bitwise_or
 ----------
-.. cpp:function:: void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=None())
+.. cpp:function:: void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise disjunction of two arrays or an array and a scalar.
 
@@ -273,7 +273,7 @@ The function computes the per-element bit-wise logical disjunction:
 
 bitwise_xor
 -----------
-.. cpp:function:: void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=None())
+.. cpp:function:: void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise "exclusive or" operation on two arrays or an array and a scalar.
 
@@ -1513,7 +1513,7 @@ See Also:
 mean
 ----
 
-.. cpp:function:: Scalar mean(InputArray mtx, InputArray mask=None())
+.. cpp:function:: Scalar mean(InputArray mtx, InputArray mask=noArray())
 
     Calculates an average (mean) of array elements.
 
@@ -1540,7 +1540,7 @@ See Also:
 meanStdDev
 ----------
 
-.. cpp:function:: void meanStdDev(InputArray mtx, OutputArray mean, OutputArray stddev, InputArray mask=None())
+.. cpp:function:: void meanStdDev(InputArray mtx, OutputArray mean, OutputArray stddev, InputArray mask=noArray())
 
     Calculates mean and standard deviation of array elements.
 
@@ -1656,7 +1656,7 @@ See Also:
 minMaxLoc
 ---------
 
-.. cpp:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=None())
+.. cpp:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 
 .. cpp:function:: void minMaxLoc(const SparseMat& src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0)
 
@@ -1824,7 +1824,7 @@ See Also:
 mulTransposed
 -------------
 
-.. cpp:function:: void mulTransposed(InputArray src, OutputArray dst, bool aTa, InputArray delta=None(), double scale=1, int rtype=-1)
+.. cpp:function:: void mulTransposed(InputArray src, OutputArray dst, bool aTa, InputArray delta=noArray(), double scale=1, int rtype=-1)
 
     Calculates the product of a matrix and its transposition.
 
@@ -1834,7 +1834,7 @@ mulTransposed
 
     :param aTa: Flag specifying the multiplication ordering. See the description below.
 
-    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=None()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :cpp:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  description.
+    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :cpp:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  description.
 
     :param scale: Optional scale factor for the matrix product.
 
@@ -1867,9 +1867,9 @@ See Also:
 norm
 ----
 
-.. cpp:function:: double norm(InputArray src1, int normType=NORM_L2, InputArray mask=None())
+.. cpp:function:: double norm(InputArray src1, int normType=NORM_L2, InputArray mask=noArray())
 
-.. cpp:function:: double norm(InputArray src1, InputArray src2, int normType, InputArray mask=None())
+.. cpp:function:: double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray())
 
 .. cpp:function:: double norm( const SparseMat& src, int normType )
 
@@ -1918,7 +1918,7 @@ A multi-channel source arrays are treated as a single-channel, that is, the resu
 normalize
 ---------
 
-.. cpp:function:: void normalize(const InputArray src, OutputArray dst, double alpha=1, double beta=0, int normType=NORM_L2, int rtype=-1, InputArray mask=None())
+.. cpp:function:: void normalize(const InputArray src, OutputArray dst, double alpha=1, double beta=0, int normType=NORM_L2, int rtype=-1, InputArray mask=noArray())
 
 .. cpp:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 
@@ -2938,7 +2938,7 @@ See Also:
 subtract
 --------
 
-.. cpp:function:: void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=None(), int dtype=-1)
+.. cpp:function:: void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 
     Calculates the per-element difference between two arrays or array and a scalar.
 

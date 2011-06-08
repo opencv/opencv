@@ -3339,7 +3339,7 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
                                 Size imageSize, double aspectRatio )
 {
     Mat objPt, imgPt, npoints, cameraMatrix(3, 3, CV_64F);
-    collectCalibrationData( objectPoints, imagePoints, None(),
+    collectCalibrationData( objectPoints, imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat _objPt = objPt, _imgPt = imgPt, _npoints = npoints, _cameraMatrix = cameraMatrix;
     cvInitIntrinsicParams2D( &_objPt, &_imgPt, &_npoints,
@@ -3364,7 +3364,7 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     size_t i, nimages = _objectPoints.total();
     CV_Assert( nimages > 0 );
     Mat objPt, imgPt, npoints, rvecM((int)nimages, 3, CV_64FC1), tvecM((int)nimages, 3, CV_64FC1);
-    collectCalibrationData( _objectPoints, _imagePoints, None(),
+    collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;

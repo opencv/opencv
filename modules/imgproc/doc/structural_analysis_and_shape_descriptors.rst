@@ -150,7 +150,7 @@ Source ``image`` is modified by this function.
 
 drawContours
 ----------------
-.. cpp:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=None(), int maxLevel=INT_MAX, Point offset=Point() )
+.. cpp:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
 
     Draws contours outlines or filled contours.
 

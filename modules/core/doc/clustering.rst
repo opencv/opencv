@@ -10,7 +10,7 @@ Clustering
 kmeans
 ------
 
-.. cpp:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=None() )
+.. cpp:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=noArray() )
 
     Finds centers of clusters and groups input samples around the clusters.
 

@@ -1156,36 +1156,36 @@ void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 
 void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, None(), maxTab, false );
+    binary_op(src1, src2, dst, noArray(), maxTab, false );
 }
 
 void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, None(), minTab, false );
+    binary_op(src1, src2, dst, noArray(), minTab, false );
 }
 
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, None(), maxTab, false );
+    binary_op(src1, src2, _dst, noArray(), maxTab, false );
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, None(), minTab, false );
+    binary_op(src1, src2, _dst, noArray(), minTab, false );
 }
 
 void cv::max(const Mat& src1, double src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, None(), maxTab, false );
+    binary_op(src1, src2, _dst, noArray(), maxTab, false );
 }
 
 void cv::min(const Mat& src1, double src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, None(), minTab, false );
+    binary_op(src1, src2, _dst, noArray(), minTab, false );
 }
 
 /****************************************************************************************\
@@ -1466,7 +1466,7 @@ void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
-    arithm_op(src1, src2, dst, None(), -1, absdiffTab);
+    arithm_op(src1, src2, dst, noArray(), -1, absdiffTab);
 }
 
 /****************************************************************************************\
@@ -1779,19 +1779,19 @@ static BinaryFunc recipTab[] =
 void cv::multiply(InputArray src1, InputArray src2,
                   OutputArray dst, double scale, int dtype)
 {
-    arithm_op(src1, src2, dst, None(), dtype, mulTab, true, &scale);
+    arithm_op(src1, src2, dst, noArray(), dtype, mulTab, true, &scale);
 }
 
 void cv::divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
-    arithm_op(src1, src2, dst, None(), dtype, divTab, true, &scale);
+    arithm_op(src1, src2, dst, noArray(), dtype, divTab, true, &scale);
 }
 
 void cv::divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
-    arithm_op(src2, src2, dst, None(), dtype, recipTab, true, &scale);
+    arithm_op(src2, src2, dst, noArray(), dtype, recipTab, true, &scale);
 }
 
 /****************************************************************************************\
@@ -1944,7 +1944,7 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
                       double beta, double gamma, OutputArray dst, int dtype )
 {
     double scalars[] = {alpha, beta, gamma};
-    arithm_op(src1, src2, dst, None(), dtype, addWeightedTab, true, scalars);
+    arithm_op(src1, src2, dst, noArray(), dtype, addWeightedTab, true, scalars);
 }
 
 

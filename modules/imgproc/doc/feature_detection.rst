@@ -193,7 +193,7 @@ The algorithm sets the center of the neighborhood window at this new center
 goodFeaturesToTrack
 -------------------
 
-.. cpp:function:: void goodFeaturesToTrack( InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=None(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
+.. cpp:function:: void goodFeaturesToTrack( InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=noArray(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
 
     Determines strong corners on an image.
 

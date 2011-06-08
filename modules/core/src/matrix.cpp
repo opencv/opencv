@@ -1399,7 +1399,7 @@ Mat& _OutputArray::getMatRef(int i) const
 }
 
 static _OutputArray _none;
-OutputArray None() { return _none; }
+OutputArray noArray() { return _none; }
     
 }
 

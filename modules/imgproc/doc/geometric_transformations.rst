@@ -519,7 +519,7 @@ By default, the undistortion functions in OpenCV (see
 
 undistort
 -------------
-.. cpp:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=None() )
+.. cpp:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
 
     Transforms an image to compensate for lens distortion.
 
@@ -554,7 +554,7 @@ The camera matrix and the distortion parameters can be determined using
 
 undistortPoints
 -------------------
-.. cpp:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=None(), InputArray P=None())
+.. cpp:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
 
     Computes the ideal point coordinates from the observed point coordinates.
 

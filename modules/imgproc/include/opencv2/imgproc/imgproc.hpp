@@ -462,7 +462,7 @@ CV_EXPORTS void cornerSubPix( InputArray image, InputOutputArray corners,
 //! finds the strong enough corners where the cornerMinEigenVal() or cornerHarris() report the local maxima
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      int maxCorners, double qualityLevel, double minDistance,
-                                     InputArray mask=None(), int blockSize=3,
+                                     InputArray mask=noArray(), int blockSize=3,
                                      bool useHarrisDetector=false, double k=0.04 );
 
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
@@ -574,16 +574,16 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
 CV_EXPORTS_W void accumulate( InputArray src, CV_IN_OUT InputOutputArray dst,
-                              InputArray mask=None() );
+                              InputArray mask=noArray() );
 //! adds squared src image to the accumulator (dst += src*src).
 CV_EXPORTS_W void accumulateSquare( InputArray src, CV_IN_OUT InputOutputArray dst,
-                                    InputArray mask=None() );
+                                    InputArray mask=noArray() );
 //! adds product of the 2 images to the accumulator (dst += src1*src2).
 CV_EXPORTS_W void accumulateProduct( InputArray src1, InputArray src2,
-                                     CV_IN_OUT InputOutputArray dst, InputArray mask=None() );
+                                     CV_IN_OUT InputOutputArray dst, InputArray mask=noArray() );
 //! updates the running average (dst = dst*(1-alpha) + src*alpha)
 CV_EXPORTS_W void accumulateWeighted( InputArray src, CV_IN_OUT InputOutputArray dst,
-                                      double alpha, InputArray mask=None() );
+                                      double alpha, InputArray mask=noArray() );
     
 //! type of the threshold operation
 enum { THRESH_BINARY=CV_THRESH_BINARY, THRESH_BINARY_INV=CV_THRESH_BINARY_INV,
@@ -617,7 +617,7 @@ CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxle
 CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
                              InputArray cameraMatrix,
                              InputArray distCoeffs,
-                             InputArray newCameraMatrix=None() );
+                             InputArray newCameraMatrix=noArray() );
     
 //! initializes maps for cv::remap() to correct lens distortion and optionally rectify the image
 CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
@@ -643,7 +643,7 @@ CV_EXPORTS_W Mat getDefaultNewCameraMatrix( InputArray cameraMatrix, Size imgsiz
 //! returns points' coordinates after lens distortion correction
 CV_EXPORTS void undistortPoints( InputArray src, OutputArray dst,
                                  InputArray cameraMatrix, InputArray distCoeffs,
-                                 InputArray R=None(), InputArray P=None());
+                                 InputArray R=noArray(), InputArray P=noArray());
 
 template<> CV_EXPORTS void Ptr<CvHistogram>::delete_obj();
     
@@ -682,8 +682,8 @@ CV_EXPORTS double compareHist( const SparseMat& H1, const SparseMat& H2, int met
 CV_EXPORTS_W void equalizeHist( InputArray src, OutputArray dst );
     
 CV_EXPORTS float EMD( InputArray signature1, InputArray signature2,
-                      int distType, InputArray cost=None(),
-                      float* lowerBound=0, OutputArray flow=None() );
+                      int distType, InputArray cost=noArray(),
+                      float* lowerBound=0, OutputArray flow=noArray() );
 
 //! segments the image using watershed algorithm
 CV_EXPORTS_W void watershed( InputArray image, InputOutputArray markers );
@@ -818,7 +818,7 @@ CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contou
 CV_EXPORTS void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
                               int thickness=1, int lineType=8,
-                              InputArray hierarchy=None(),
+                              InputArray hierarchy=noArray(),
                               int maxLevel=INT_MAX, Point offset=Point() );
 
 //! approximates contour or a curve using Douglas-Peucker algorithm

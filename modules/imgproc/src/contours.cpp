@@ -1519,7 +1519,7 @@ void cv::findContours( const InputOutputArray _image, OutputArrayOfArrays _conto
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
-    findContours(_image, _contours, None(), mode, method, offset);
+    findContours(_image, _contours, noArray(), mode, method, offset);
 }
 
 namespace cv
