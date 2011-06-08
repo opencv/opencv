@@ -225,6 +225,8 @@ EMD
 
     :param flow: The resultant  :math:`\texttt{size1} \times \texttt{size2}`  flow matrix:  :math:`\texttt{flow}_{i,j}`  is a flow from  :math:`i`  th point of  ``signature1``  to  :math:`j`  th point of  ``signature2``  .
 
+The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in :ref:`RubnerSept98` is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
+
 
 .. index:: equalizeHist
 
