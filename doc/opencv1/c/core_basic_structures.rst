@@ -948,7 +948,6 @@ Multi-dimensional sparse multi-channel array.
         struct CvSet* heap; 
         void** hashtable; 
         int hashsize;
-        int total; 
         int valoffset; 
         int idxoffset; 
         int size[CV_MAX_DIM]; 
@@ -1008,13 +1007,6 @@ Multi-dimensional sparse multi-channel array.
     
         Size of the hash table 
     
-    
-    
-    .. attribute:: total
-    
-    
-    
-        Total number of sparse array nodes 
     
     
     
