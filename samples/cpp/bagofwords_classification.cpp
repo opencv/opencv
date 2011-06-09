@@ -1860,7 +1860,7 @@ string VocData::checkFilenamePathsep( const string filename, bool add_trailing_s
     pos = filename_new.find("\\");
     while (pos != filename_new.npos)
     {
-        filename_new.replace(pos,2,"/");
+        filename_new.replace(pos,1,"/");
         pos = filename_new.find("\\", pos);
     }
     if (add_trailing_slash)
