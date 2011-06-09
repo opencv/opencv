@@ -1532,8 +1532,6 @@ namespace cv
             //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
             float keypointsRatio;
 
-            bool upright;
-
             GpuMat sum, mask1, maskSum, intBuffer;
 
             GpuMat det, trace;
