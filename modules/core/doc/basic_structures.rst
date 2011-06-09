@@ -3,42 +3,12 @@ Basic Structures
 
 .. highlight:: cpp
 
-.. index:: _DataType
-
-.. _DataType:
-
 DataType
 --------
 
 .. cpp:class:: DataType
 
-Template "trait" class for other OpenCV primitive data types ::
-
-    template<typename _Tp> class DataType
-    {
-        // value_type is always a synonym to _Tp.
-        typedef _Tp value_type;
-
-        // intermediate type used for operations on _Tp.
-        // it is int for uchar, signed char, unsigned short, signed short, and int,
-        // float for float, double for double, ...
-        typedef <...> work_type;
-        // in the case of multi-channel data, it is the data type of each channel
-        typedef <...> channel_type;
-        enum
-        {
-            // CV_8U ... CV_64F
-            depth = DataDepth<channel_type>::value,
-            // 1 ...
-            channels = <...>,
-            // '1u', '4i', '3f', '2d' etc.
-            fmt=<...>,
-            // CV_8UC3, CV_32FC2 ...
-            type = CV_MAKETYPE(depth, channels)
-        };
-    };
-
-The template class ``DataType`` is a descriptive class for OpenCV primitive data types and other types that comply with the following definition. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C(<number_of_channels>)``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
+- Template "trait" class for other OpenCV primitive data types. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double`` or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C(<number_of_channels>)``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
 :ref:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``, ``Mat``, ``Mat_``, ``SparseMat``, ``SparseMat_``, or any other container that is able to store ``Vec`` instances.
 
 The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used but its specialized versions, such as: ::
@@ -75,44 +45,12 @@ The main purpose of this class is to convert compilation-time type information t
 
 So, such traits are used to tell OpenCV which data type you are working with, even if such a type is not native to OpenCV. For example, the matrix ``B`` intialization above is compiled because OpenCV defines the proper specialized template class ``DataType<complex<_Tp> >`` . This mechanism is also useful (and used in OpenCV this way) for generic algorithms implementations.
 
-.. index:: Point\_
-
 Point\_
 -------
 
 .. cpp:class:: Point_
 
-Template class for 2D points ::
-
-    template<typename _Tp> class Point_
-    {
-    public:
-        typedef _Tp value_type;
-
-        Point_();
-        Point_(_Tp _x, _Tp _y);
-        Point_(const Point_& pt);
-        Point_(const CvPoint& pt);
-        Point_(const CvPoint2D32f& pt);
-        Point_(const Size_<_Tp>& sz);
-        Point_(const Vec<_Tp, 2>& v);
-        Point_& operator = (const Point_& pt);
-        template<typename _Tp2> operator Point_<_Tp2>() const;
-        operator CvPoint() const;
-        operator CvPoint2D32f() const;
-        operator Vec<_Tp, 2>() const;
-
-        // computes dot-product (this->x*pt.x + this->y*pt.y)
-        _Tp dot(const Point_& pt) const;
-        // computes dot-product using double-precision arithmetics
-        double ddot(const Point_& pt) const;
-        // returns true if the point is inside the rectangle "r".
-        bool inside(const Rect_<_Tp>& r) const;
-
-        _Tp x, y;
-    };
-
-The class represents a 2D point specified by its coordinates
+Template class for 2D points, specified by its coordinates
 :math:`x` and
 :math:`y` .
 An instance of the class is interchangeable with C structures, ``CvPoint`` and ``CvPoint2D32f`` . There is also a cast operator to convert point coordinates to the specified type. The conversion from floating-point coordinates to integer coordinates is done by rounding. Commonly, the conversion uses this
@@ -142,39 +80,12 @@ Example: ::
     Point pt = (a + b)*10.f;
     cout << pt.x << ", " << pt.y << endl;
 
-.. index:: Point3\_
-
 Point3\_
 --------
 
 .. cpp:class:: Point3_
 
-Template class for 3D points ::
-
-    template<typename _Tp> class Point3_
-    {
-    public:
-        typedef _Tp value_type;
-
-        Point3_();
-        Point3_(_Tp _x, _Tp _y, _Tp _z);
-        Point3_(const Point3_& pt);
-        explicit Point3_(const Point_<_Tp>& pt);
-        Point3_(const CvPoint3D32f& pt);
-        Point3_(const Vec<_Tp, 3>& v);
-        Point3_& operator = (const Point3_& pt);
-        template<typename _Tp2> operator Point3_<_Tp2>() const;
-        operator CvPoint3D32f() const;
-        operator Vec<_Tp, 3>() const;
-
-        _Tp dot(const Point3_& pt) const;
-        double ddot(const Point3_& pt) const;
-
-        _Tp x, y, z;
-    };
-
-
-The class represents a 3D point specified by its coordinates
+Template class for 3D points, specified by its coordinates
 :math:`x`,
 :math:`y` and
 :math:`z` .
@@ -186,40 +97,12 @@ The following ``Point3_<>`` aliases are available: ::
     typedef Point3_<float> Point3f;
     typedef Point3_<double> Point3d;
 
-.. index:: Size\_
-
 Size\_
 ------
 
 .. cpp:class:: Size_
 
-Template class for specfying an image or rectangle size ::
-
-    template<typename _Tp> class Size_
-    {
-    public:
-        typedef _Tp value_type;
-
-        Size_();
-        Size_(_Tp _width, _Tp _height);
-        Size_(const Size_& sz);
-        Size_(const CvSize& sz);
-        Size_(const CvSize2D32f& sz);
-        Size_(const Point_<_Tp>& pt);
-        Size_& operator = (const Size_& sz);
-        _Tp area() const;
-
-        operator Size_<int>() const;
-        operator Size_<float>() const;
-        operator Size_<double>() const;
-        operator CvSize() const;
-        operator CvSize2D32f() const;
-
-        _Tp width, height;
-    };
-
-
-The class ``Size_`` is similar to ``Point_``  except that the two members are called ``width`` and ``height`` instead of ``x`` and ``y`` . The structure can be converted to and from the old OpenCV structures
+Template class for specfying size of an image or rectangle. The class includes two members are called ``width`` and ``height``. The structure can be converted to and from the old OpenCV structures
 ``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
 OpenCV defines the following ``Size_<>`` aliases: ::
@@ -228,56 +111,15 @@ OpenCV defines the following ``Size_<>`` aliases: ::
     typedef Size2i Size;
     typedef Size_<float> Size2f;
 
-.. index:: Rect\_
-
 Rect\_
 ------
 
 .. cpp:class:: Rect_
 
-Template class for 2D rectangles ::
+Template class for 2D rectangles, described by the following parameters::
 
-    template<typename _Tp> class Rect_
-    {
-    public:
-        typedef _Tp value_type;
-
-        Rect_();
-        Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
-        Rect_(const Rect_& r);
-        Rect_(const CvRect& r);
-        // (x, y) <- org, (width, height) <- sz
-        Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
-        // (x, y) <- min(pt1, pt2), (width, height) <- max(pt1, pt2) - (x, y)
-        Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
-        Rect_& operator = ( const Rect_& r );
-        // returns Point_<_Tp>(x, y)
-        Point_<_Tp> tl() const;
-        // returns Point_<_Tp>(x+width, y+height)
-        Point_<_Tp> br() const;
-
-        // returns Size_<_Tp>(width, height)
-        Size_<_Tp> size() const;
-        // returns width*height
-        _Tp area() const;
-
-        operator Rect_<int>() const;
-        operator Rect_<float>() const;
-        operator Rect_<double>() const;
-        operator CvRect() const;
-
-        // x <= pt.x && pt.x < x + width &&
-        // y <= pt.y && pt.y < y + height ? true : false
-        bool contains(const Point_<_Tp>& pt) const;
-
-        _Tp x, y, width, height;
-    };
-
-
-The rectangle is described with the following parameters:
-
-* Coordinates of the top-left corner. This is a default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV. Though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner. 
-* Rectangle width and height.
+ * Coordinates of the top-left corner. This is a default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV. Though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner. 
+ * Rectangle width and height.
 
 OpenCV typically assumes that the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not. For example, the method ``Rect_::contains`` returns ``true`` if
 
@@ -328,100 +170,30 @@ For your convenience, the ``Rect_<>`` alias is available: ::
 
     typedef Rect_<int> Rect;
 
-.. index:: _RotatedRect
-
-.. _RotatedRect:
-
 RotatedRect
 -----------
 
 .. cpp:class:: RotatedRect
 
-Template class for rotated rectangles ::
+Template class for rotated rectangles that are specified by the center, size and the rotation angle in degrees.
 
-    class RotatedRect
-    {
-    public:
-        // constructors
-        RotatedRect();
-        RotatedRect(const Point2f& _center, const Size2f& _size, float _angle);
-        RotatedRect(const CvBox2D& box);
-
-        // returns minimal up-right rectangle that contains the rotated rectangle
-        Rect boundingRect() const;
-        // backward conversion to CvBox2D
-        operator CvBox2D() const;
-
-        // mass center of the rectangle
-        Point2f center;
-        // size
-        Size2f size;
-        // rotation angle in degrees
-        float angle;
-    };
-
-
-The class ``RotatedRect`` replaces the old ``CvBox2D`` and is fully compatible with it.
-
-.. index:: TermCriteria
 
 TermCriteria
 ------------
 
 .. cpp:class:: TermCriteria
 
-Template class defining termination criteria for iterative algorithms ::
-
-    class TermCriteria
-    {
-    public:
-        enum { COUNT=1, MAX_ITER=COUNT, EPS=2 };
-
-        // constructors
-        TermCriteria();
-        // type can be MAX_ITER, EPS or MAX_ITER+EPS.
-        // type = MAX_ITER means that only the number of iterations does matter;
-        // type = EPS means that only the required precision (epsilon) does matter
-        //    (though, most algorithms limit the number of iterations anyway)
-        // type = MAX_ITER + EPS means that algorithm stops when
-        // either the specified number of iterations is made,
-        // or when the specified accuracy is achieved - whatever happens first.
-        TermCriteria(int _type, int _maxCount, double _epsilon);
-        TermCriteria(const CvTermCriteria& criteria);
-        operator CvTermCriteria() const;
-
-        int type;
-        int maxCount;
-        double epsilon;
-    };
-
-
-The class ``TermCriteria`` replaces the old ``CvTermCriteria`` and is fully compatible with it.
-
-.. index:: Matx
-
-.. _Matx:
+Template class defining termination criteria for iterative algorithms
 
 Matx
 ----
 
 .. cpp:class:: Matx
 
-Template class for small matrices ::
+Template class for small matrices, whose type and size are known at compilation time.: ::
 
-    template<typename T, int m, int n> class Matx
-    {
-    public:
-        typedef T value_type;
-        enum { depth = DataDepth<T>::value, channels = m*n,
-               type = CV_MAKETYPE(depth, channels) };
-
-        // various methods
-        ...
-
-        Tp val[m*n];
-    };
-
+    template<typename _Tp, int m, int n> class Matx {...};
+    
     typedef Matx<float, 1, 2> Matx12f;
     typedef Matx<double, 1, 2> Matx12d;
     ...
@@ -439,10 +211,8 @@ Template class for small matrices ::
     ...
     typedef Matx<float, 6, 6> Matx66f;
     typedef Matx<double, 6, 6> Matx66d;
-
-
-The class represents small matrices whose type and size are known at compilation time. If you need a more flexible type, use
-:cpp:class:`Mat` . The elements of the matrix ``M`` are accessible using the ``M(i,j)`` notation. Most of the common matrix operations (see also
+    
+If you need a more flexible type, use :cpp:class:`Mat` . The elements of the matrix ``M`` are accessible using the ``M(i,j)`` notation. Most of the common matrix operations (see also
 :ref:`MatrixExpressions` ) are available. To do an operation on ``Matx`` that is not implemented, you can easily convert the matrix to
 :cpp:class:`Mat` and backwards. ::
 
@@ -451,27 +221,16 @@ The class represents small matrices whose type and size are known at compilation
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
 
-.. index:: Vec
-
-.. _Vec:
 
 Vec
 ---
 
 .. cpp:class:: Vec
 
-Template class for short numerical vectors ::
+Template class for short numerical vectors, a partial case of :cpp:class:`Matx`: ::
 
-    template<typename T, int cn> class Vec : public Matx<T, cn, 1>
-    {
-    public:
-        typedef T value_type;
-        enum { depth = DataDepth<T>::value, channels = cn,
-               type = CV_MAKETYPE(depth, channels) };
-
-        // various methods ...
-    };
-
+    template<typename _Tp, int n> class Vec : public Matx<_Tp, n, 1> {...};
+    
     typedef Vec<uchar, 2> Vec2b;
     typedef Vec<uchar, 3> Vec3b;
     typedef Vec<uchar, 4> Vec4b;
@@ -493,79 +252,51 @@ Template class for short numerical vectors ::
     typedef Vec<double, 3> Vec3d;
     typedef Vec<double, 4> Vec4d;
     typedef Vec<double, 6> Vec6d;
+    
+It is possible to convert ``Vec<T,2>`` to/from ``Point_``, ``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. 
 
-``Vec`` is a partial case of ``Matx`` . It is possible to convert ``Vec<T,2>`` to/from ``Point_``, ``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ref:`Scalar`. The elements of ``Vec`` are accessed using ``operator[]``. All the expected vector operations are implemented too:
+All the expected vector operations are implemented too:
 
-*
-    :math:`\texttt{v1} = \texttt{v2} \pm \texttt{v3}`,    :math:`\texttt{v1} = \texttt{v2} * \alpha`,    :math:`\texttt{v1} = \alpha * \texttt{v2}`     in addition to the corresponding augmenting operations. Note that these operations apply
-    to each computed vector component.
+* ``v1 = v2 + v3``
+* ``v1 = v2 - v3``
+* ``v1 = v2 * scale``
+* ``v1 = scale * v2``
+* ``v1 = -v2``
+* ``v1 += v2`` and other augmenting operations.
+* ``v1 == v2, v1 != v2``
+* ``norm(v1)``  (euclidean norm)
 
-* ``v1 == v2, v1 != v2`` * ``norm(v1)``     (:math:`L_2`-norm)
-
-The ``Vec`` class is commonly used to describe pixel types of multi-channel arrays. See 
-:ref:`Mat_` for details.
-
-.. index:: Scalar
-
-.. _Scalar:
+The ``Vec`` class is commonly used to describe pixel types of multi-channel arrays. See :cpp:class:`Mat` for details.
 
 Scalar\_
 --------
 
 .. cpp:class:: Scalar_
 
-Template class for a 4-element vector ::
+Template class for a 4-element vector, derived from Vec ::
 
-    template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
-    {
-    public:
-        Scalar_();
-        Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
-        Scalar_(const CvScalar& s);
-        Scalar_(_Tp v0);
-        static Scalar_<_Tp> all(_Tp v0);
-        operator CvScalar() const;
-
-        template<typename T2> operator Scalar_<T2>() const;
-
-        Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
-        template<typename T2> void convertTo(T2* buf, int channels, int unroll_to=0) const;
-    };
-
+    template<typename _Tp> class Scalar_ : public Vec<_Tp, 4> { ... };
+    
     typedef Scalar_<double> Scalar;
 
-
-The template class ``Scalar_`` and its double-precision instantiation ``Scalar`` represent a 4-element vector. Being derived from ``Vec<_Tp, 4>`` , they can be used as typical 4-element vectors. In addition, they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values. It is a drop-in replacement for
-``CvScalar`` that was used for the same purpose in the earlier versions of OpenCV.
-
-.. index:: Range
-
-.. _Range:
+Being derived from ``Vec<_Tp, 4>`` , ``Scalar_`` and ``Scalar`` can be used just as typical 4-element vectors. In addition, they can be converted to/from ``CvScalar`` . The type ``Scalar`` is widely used in OpenCV for passing pixel values.
 
 Range
 -----
 
 .. cpp:class:: Range
 
-Template class specifying a continuous subsequence (slice) of a sequence ::
+Template class specifying a continuous subsequence (slice) of a sequence. ::
 
     class Range
     {
     public:
-        Range();
-        Range(int _start, int _end);
-        Range(const CvSlice& slice);
-        int size() const;
-        bool empty() const;
-        static Range all();
-        operator CvSlice() const;
-
+        ...
         int start, end;
     };
 
-
 The class is used to specify a row or a column span in a matrix (
-:ref:`Mat` ) and for many other purposes. ``Range(a,b)`` is basically the same as ``a:b`` in Matlab or ``a..b`` in Python. As in Python, ``start`` is an inclusive left boundary of the range and ``end`` is an exclusive right boundary of the range. Such a half-opened interval is usually denoted as
+:cpp:class:`Mat` ) and for many other purposes. ``Range(a,b)`` is basically the same as ``a:b`` in Matlab or ``a..b`` in Python. As in Python, ``start`` is an inclusive left boundary of the range and ``end`` is an exclusive right boundary of the range. Such a half-opened interval is usually denoted as
 :math:`[start,end)` .
 
 The static method ``Range::all()`` returns a special variable that means "the whole sequence" or "the whole range", just like " ``:`` " in Matlab or " ``...`` " in Python. All the methods and functions in OpenCV that take ``Range`` support this special ``Range::all()`` value. But, of course, in case of your own custom processing, you will probably have to check and handle it explicitly: ::
@@ -580,10 +311,6 @@ The static method ``Range::all()`` returns a special variable that means "the wh
         }
     }
 
-
-.. index:: Ptr
-
-.. _Ptr:
 
 Ptr
 ---
@@ -1870,10 +1597,6 @@ Mat::type
 
 The method returns a matrix element type. This is an id, compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
 
-.. index:: Mat::depth
-
-.. _Mat::depth:
-
 Mat::depth
 --------------
 .. cpp:function:: int Mat::depth() const
@@ -1896,10 +1619,6 @@ The method returns the matrix element depth id (the type of each individual chan
 
 * ``CV_64F``     - 64-bit floating-point numbers ( ``-DBL_MAX..DBL_MAX, INF, NAN``     )
 
-.. index:: Mat::channels
-
-.. _Mat::channels:
-
 Mat::channels
 -----------------
 .. cpp:function:: int Mat::channels() const
@@ -1907,10 +1626,6 @@ Mat::channels
     Returns the number of matrix channels.
 
 The method returns the number of matrix channels.
-
-.. index:: Mat::step1
-
-.. _Mat::step1:
 
 Mat::step1
 --------------
@@ -1921,8 +1636,6 @@ Mat::step1
 The method returns a matrix step divided by
 :cpp:func:`Mat::elemSize1()` . It can be useful to quickly access an arbitrary matrix element.
 
-.. index:: Mat::size
-
 Mat::size
 -------------
 .. cpp:function:: Size Mat::size() const
@@ -1931,10 +1644,6 @@ Mat::size
 
 The method returns a matrix size: ``Size(cols, rows)`` .
 
-.. index:: Mat::empty
-
-.. _Mat::empty:
-
 Mat::empty
 --------------
 .. cpp:function:: bool Mat::empty() const
@@ -1942,10 +1651,6 @@ Mat::empty
     Returns ``true`` if the array has no elemens.
 
 The method returns ``true`` if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL. Because of ``pop_back()`` and ``resize()`` methods ``M.total() == 0`` does not imply that ``M.data == NULL`` .
-
-.. index:: Mat::ptr
-
-.. _Mat::ptr:
 
 Mat::ptr
 ------------
@@ -1963,10 +1668,6 @@ Mat::ptr
 
 The methods return ``uchar*`` or typed pointer to the specified matrix row. See the sample in
 :cpp:func:`Mat::isContinuous` () to know how to use these methods.
-
-.. index:: Mat::at
-
-.. _Mat::at:
 
 Mat::at
 -----------
@@ -2010,10 +1711,6 @@ Here is an example of initialization of a Hilbert matrix: ::
             H.at<double>(i,j)=1./(i+j+1);
 
 
-.. index:: Mat::begin
-
-.. _Mat::begin:
-
 Mat::begin
 --------------
 .. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
@@ -2051,10 +1748,6 @@ The methods return the matrix read-only or read-write iterators. The use of matr
         }
     }
 
-
-.. index:: Mat::end
-
-.. _Mat::end:
 
 Mat::end
 ------------
@@ -2113,8 +1806,6 @@ To use ``Mat_`` for multi-channel images/matrices, pass ``Vec`` as a ``Mat_`` pa
         for(int j = 0; j < img.cols; j++)
             img(i,j)[2] ^= (uchar)(i ^ j);
 
-
-.. _NAryMatIterator:
 
 NAryMatIterator
 ---------------
@@ -2185,8 +1876,6 @@ Here is an example of how you can compute a normalized and thresholded 3D color 
             it.planes[0] *= s;
     }
 
-
-.. index:: SparseMat
 
 SparseMat
 ---------
@@ -2468,8 +2157,6 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
             }
 
     ..
-
-.. index:: SparseMat\_
 
 SparseMat\_
 -----------

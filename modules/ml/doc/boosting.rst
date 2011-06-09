@@ -43,21 +43,21 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
     :math:`m`     =
     :math:`1,2,...,M`     :
 
-    ##.
+    #.
         Fit the classifier
         :math:`f_m(x) \in{-1,1}`         , using weights
         :math:`w_i`         on the training data.
 
-    ##.
+    #.
         Compute
         :math:`err_m = E_w [1_{(y =\neq f_m(x))}], c_m = log((1 - err_m)/err_m)`         .
 
-    ##.
+    #.
         Set
         :math:`w_i \Leftarrow w_i exp[c_m 1_{(y_i \neq f_m(x_i))}], i = 1,2,...,N,`         and renormalize so that
         :math:`\Sigma i w_i = 1`         .
 
-    ##.
+    #.
         Output the classifier sign
         :math:`[\Sigma m = 1M c_m f_m(x)]`         .
 
@@ -153,67 +153,11 @@ In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression t
 
 .. index:: CvBoost
 
-.. _CvBoost:
-
 CvBoost
 -------
-.. c:type:: CvBoost
+.. cpp:class:: CvBoost
 
-Boosted tree classifier ::
-
-    class CvBoost : public CvStatModel
-    {
-    public:
-        // Boosting type
-        enum { DISCRETE=0, REAL=1, LOGIT=2, GENTLE=3 };
-
-        // Splitting criteria
-        enum { DEFAULT=0, GINI=1, MISCLASS=3, SQERR=4 };
-
-        CvBoost();
-        virtual ~CvBoost();
-
-        CvBoost( const Mat& _train_data, int _tflag,
-                 const Mat& _responses, const Mat& _var_idx=0,
-                 const Mat& _sample_idx=0, const Mat& _var_type=0,
-                 const Mat& _missing_mask=0,
-                 CvBoostParams params=CvBoostParams() );
-
-        virtual bool train( const Mat& _train_data, int _tflag,
-                 const Mat& _responses, const Mat& _var_idx=0,
-                 const Mat& _sample_idx=0, const Mat& _var_type=0,
-                 const Mat& _missing_mask=0,
-                 CvBoostParams params=CvBoostParams(),
-                 bool update=false );
-
-        virtual float predict( const Mat& _sample, const Mat& _missing=0,
-                               Mat& weak_responses=0, CvSlice slice=CV_WHOLE_SEQ,
-                               bool raw_mode=false ) const;
-
-        virtual void prune( CvSlice slice );
-
-        virtual void clear();
-
-        virtual void write( CvFileStorage* storage, const char* name );
-        virtual void read( CvFileStorage* storage, CvFileNode* node );
-
-        CvSeq* get_weak_predictors();
-        const CvBoostParams& get_params() const;
-        ...
-
-    protected:
-        virtual bool set_params( const CvBoostParams& _params );
-        virtual void update_weights( CvBoostTree* tree );
-        virtual void trim_weights();
-        virtual void write_params( CvFileStorage* fs );
-        virtual void read_params( CvFileStorage* fs, CvFileNode* node );
-
-        CvDTreeTrainData* data;
-        CvBoostParams params;
-        CvSeq* weak;
-        ...
-    };
-
+Boosted tree classifier, derived from :cpp:class:`CvStatModel`
 
 .. index:: CvBoost::train
 

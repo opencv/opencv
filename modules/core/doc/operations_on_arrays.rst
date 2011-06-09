@@ -3,7 +3,14 @@ Operations on Arrays
 
 .. highlight:: cpp
 
-.. index:: abs
+.. list-table:: **Arithmetical Operations**
+
+   * -
+     -
+   * - :cpp:funcx:`abs` (src)
+     - Computes an absolute value of each matrix element.
+   * - :cpp:funcx:`absdiff` (src1, src2, dst)
+     - Computes the per-element absolute difference between 2 arrays or between an array and a scalar.
 
 abs
 ---
@@ -22,12 +29,10 @@ abs
 
     * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to ``convertScaleAbs(A, C, alpha, beta)``
     
-The output matrix has the same size and the same type as the input one (except for the last case, where ``C`` will be ``depth=CV_8U`` ).
+    The output matrix has the same size and the same type as the input one (except for the last case, where ``C`` will be ``depth=CV_8U`` ).
 
-See Also: :ref:`MatrixExpressions`, 
-:cpp:func:`absdiff`
+    .. seealso:: :ref:`MatrixExpressions`, :cpp:func:`absdiff`
 
-.. index:: absdiff
 
 absdiff
 -----------
@@ -40,30 +45,28 @@ absdiff
     :param src2: The second input array or a scalar.
     :param dst: The destination array. It will have the same size and type as ``src1`` (or ``src2``).
     
-The function ``absdiff`` computes:
+    The function ``absdiff`` computes:
 
- #. absolute difference between two arrays when they have the same size and type:
+    #. absolute difference between two arrays when they have the same size and type:
 
-    .. math::
-        \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2}(I)|)
+        .. math::
+            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2}(I)|)
 
- #. absolute difference between an array and a scalar, when the second array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src1``:
+    #. absolute difference between an array and a scalar, when the second array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src1``:
 
-    .. math::
-        \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2} |)
+        .. math::
+            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2} |)
 
- #. or absolute difference between a scalar and an array, when the first array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src2``:
+    #. or absolute difference between a scalar and an array, when the first array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src2``:
 
-            .. math::
-                \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1} -  \texttt{src2}(I) |)
+        .. math::
+            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1} -  \texttt{src2}(I) |)
 
 
-where  ``I`` is a multi-dimensional index of array elements.
-In case of multi-channel arrays, each channel is processed independently.
+    where  ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
 
-See Also: :cpp:func:`abs`
+    .. seealso:: :cpp:func:`abs`
 
-.. index:: add
 
 add
 -------
@@ -113,14 +116,15 @@ The first function in the list above can be replaced with matrix expressions: ::
 
 The input arrays and the destination array can all have the same or different depths. For example, you can add 16-bit unsigned array to 8-bit signed array and store the sum as 32-bit floating-point array. Depth of the output array is determined by ``dtype`` parameter. In the 2nd and 3rd cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
 
-See Also:
-:cpp:func:`subtract`,
-:cpp:func:`addWeighted`,
-:cpp:func:`scaleAdd`,
-:cpp:func:`convertScale`,
-:ref:`MatrixExpressions`
+.. seealso::
+   
+    :cpp:func:`subtract`,
+    :cpp:func:`addWeighted`,
+    :cpp:func:`scaleAdd`,
+    :cpp:func:`convertScale`,
+    :ref:`MatrixExpressions`
 
-.. index:: addWeighted
+
 
 addWeighted
 ---------------
@@ -155,14 +159,15 @@ The function can be replaced with a matrix expression: ::
     dst = src1*alpha + src2*beta + gamma;
 
 
-See Also:
-:cpp:func:`add`,
-:cpp:func:`subtract`,
-:cpp:func:`scaleAdd`,
-:cpp:func:`convertScale`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: bitwise_and
+    :cpp:func:`add`,
+    :cpp:func:`subtract`,
+    :cpp:func:`scaleAdd`,
+    :cpp:func:`convertScale`,
+    :ref:`MatrixExpressions`
+
+
 
 bitwise_and
 -----------
@@ -204,7 +209,7 @@ The function computes the per-element bit-wise logical conjunction:
 
 In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
 
-.. index:: bitwise_not
+
 
 bitwise_not
 -----------
@@ -226,7 +231,7 @@ The function computes per-element bit-wise inversion of the source array:
 
 In case of a floating-point source array, its machine-specific bit representation (usually IEEE754-compliant) is used for the operation. In case of multi-channel arrays, each channel is processed independently.
 
-.. index:: bitwise_or
+
 
 bitwise_or
 ----------
@@ -269,7 +274,7 @@ The function computes the per-element bit-wise logical disjunction:
     In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
     
 
-.. index:: bitwise_xor
+
 
 bitwise_xor
 -----------
@@ -312,7 +317,7 @@ The function computes the per-element bit-wise logical "exclusive-or" operation:
     In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
     
 
-.. index:: calcCovarMatrix
+
 
 calcCovarMatrix
 ---------------
@@ -339,7 +344,7 @@ calcCovarMatrix
 
                       \texttt{scale}   \cdot  [  \texttt{vects}  [0]-  \texttt{mean}  , \texttt{vects}  [1]-  \texttt{mean}  ,...]^T  \cdot  [ \texttt{vects}  [0]- \texttt{mean}  , \texttt{vects}  [1]- \texttt{mean}  ,...],
                       
-                The covariance matrix will be  :math:`\texttt{nsamples} \times \texttt{nsamples}` . Such an unusual covariance matrix is used for fast PCA of a set of very large vectors (see, for example, the EigenFaces technique for face recognition). Eigenvalues of this "scrambled" matrix match the eigenvalues of the true covariance matrix. The "true" eigenvectors can be easily calculated from the eigenvectors of the "scrambled" covariance matrix.
+                The covariance matrix will be  ``nsamples x nsamples``. Such an unusual covariance matrix is used for fast PCA of a set of very large vectors (see, for example, the EigenFaces technique for face recognition). Eigenvalues of this "scrambled" matrix match the eigenvalues of the true covariance matrix. The "true" eigenvectors can be easily calculated from the eigenvectors of the "scrambled" covariance matrix.
 
             * **CV_COVAR_NORMAL** The output covariance matrix is calculated as:
 
@@ -359,12 +364,13 @@ calcCovarMatrix
 
 The functions ``calcCovarMatrix`` calculate the covariance matrix and, optionally, the mean vector of the set of input vectors.
 
-See Also:
-:cpp:func:`PCA`,
-:cpp:func:`mulTransposed`,
-:cpp:func:`Mahalanobis`
+.. seealso::
 
-.. index:: cartToPolar
+    :cpp:class:`PCA`,
+    :cpp:func:`mulTransposed`,
+    :cpp:func:`Mahalanobis`
+
+
 
 cartToPolar
 -----------
@@ -379,7 +385,7 @@ cartToPolar
     
     :param magnitude: The destination array of magnitudes of the same size and type as  ``x`` .
     
-    :param angle: The destination array of angles of the same size and type as  ``x`` . The angles are measured in radians  :math:`(0`  to  :math:`2 \pi )`  or in degrees (0 to 360 degrees).
+    :param angle: The destination array of angles of the same size and type as  ``x`` . The angles are measured in radians  (from 0 to 2*Pi) or in degrees (0 to 360 degrees).
 
     :param angleInDegrees: The flag indicating whether the angles are measured in radians, which is a default mode, or in degrees.
 
@@ -389,10 +395,9 @@ The function ``cartToPolar`` calculates either the magnitude, angle, or both for
 
     \begin{array}{l} \texttt{magnitude} (I)= \sqrt{\texttt{x}(I)^2+\texttt{y}(I)^2} , \\ \texttt{angle} (I)= \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))[ \cdot180 / \pi ] \end{array}
 
-The angles are calculated with
-:math:`\sim\,0.3^\circ` accuracy. For the point (0,0) , the angle is set to 0.
+The angles are calculated with accuracy about 0.3 degrees. For the point (0,0) the angle is set to 0.
 
-.. index:: checkRange
+
 
 checkRange
 ----------
@@ -412,11 +417,11 @@ checkRange
     :param maxVal: The exclusive upper boundary of valid values range.
 
 The functions ``checkRange`` check that every array element is neither NaN nor
-:math:`\pm \infty` . When ``minVal < -DBL_MAX`` and ``maxVal < DBL_MAX`` , the functions also check that each value is between ``minVal`` and ``maxVal`` . In case of multi-channel arrays, each channel is processed independently.
+infinite. When ``minVal < -DBL_MAX`` and ``maxVal < DBL_MAX`` , the functions also check that each value is between ``minVal`` and ``maxVal`` . In case of multi-channel arrays, each channel is processed independently.
 If some values are out of range, position of the first outlier is stored in ``pos`` (when
-:math:`\texttt{pos}\ne0` ). Then, the functions either return false (when ``quiet=true`` ) or throw an exception.
+``pos != NULL``). Then, the functions either return false (when ``quiet=true`` ) or throw an exception.
 
-.. index:: compare
+
 
 compare
 -------
@@ -473,14 +478,15 @@ The comparison operations can be replaced with the equivalent matrix expressions
     ...
 
 
-See Also:
-:cpp:func:`checkRange`,
-:cpp:func:`min`,
-:cpp:func:`max`,
-:cpp:func:`threshold`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: completeSymm
+    :cpp:func:`checkRange`,
+    :cpp:func:`min`,
+    :cpp:func:`max`,
+    :cpp:func:`threshold`,
+    :ref:`MatrixExpressions`
+
+
 
 completeSymm
 ------------
@@ -503,10 +509,12 @@ The function ``completeSymm`` copies the lower half of a square matrix to its an
     :math:`\texttt{mtx}_{ij}=\texttt{mtx}_{ji}`     for
     :math:`i < j`     if ``lowerToUpper=true``
     
-See Also: :cpp:func:`flip`,
-:cpp:func:`transpose`
+.. seealso::
 
-.. index:: convertScaleAbs
+    :cpp:func:`flip`,
+    :cpp:func:`transpose`
+
+
 
 convertScaleAbs
 ---------------
@@ -540,11 +548,12 @@ In case of multi-channel arrays, the function processes each channel independent
     // but it will allocate a temporary matrix
 
 
-See Also:
-:cpp:func:`Mat::convertTo`,
-:cpp:func:`abs`
+.. seealso::
 
-.. index:: countNonZero
+    :cpp:func:`Mat::convertTo`,
+    :cpp:func:`abs`
+
+
 
 countNonZero
 ------------
@@ -561,14 +570,15 @@ The function returns the number of non-zero elements in ``mtx`` :
 
     \sum _{I: \; \texttt{mtx} (I) \ne0 } 1
 
-See Also:
-:cpp:func:`mean`,
-:cpp:func:`meanStdDev`,
-:cpp:func:`norm`,
-:cpp:func:`minMaxLoc`,
-:cpp:func:`calcCovarMatrix`
+.. seealso::
 
-.. index:: cubeRoot
+    :cpp:func:`mean`,
+    :cpp:func:`meanStdDev`,
+    :cpp:func:`norm`,
+    :cpp:func:`minMaxLoc`,
+    :cpp:func:`calcCovarMatrix`
+
+
 
 cubeRoot
 --------
@@ -579,10 +589,9 @@ cubeRoot
 
     :param val: A function argument.
 
-The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. *NaN*
-and :math:`\pm\infty` are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
+The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
 
-.. index:: cvarrToMat
+
 
 cvarrToMat
 ----------
@@ -640,15 +649,14 @@ The last parameter, ``coiMode`` , specifies how to deal with an image with COI s
 :cpp:func:`mixChannel` or
 :cpp:func:`insertImageCOI` , respectively).
 
-See Also:
-:c:func:`cvGetImage`,
-:c:func:`cvGetMat`,
-:c:func:`cvGetMatND`,
-:cpp:func:`extractImageCOI`,
-:cpp:func:`insertImageCOI`,
-:cpp:func:`mixChannels` 
+.. seealso::
 
-.. index:: dct
+    :c:func:`cvGetImage`,
+    :c:func:`cvGetMat`,
+    :c:func:`cvGetMatND`,
+    :cpp:func:`extractImageCOI`,
+    :cpp:func:`insertImageCOI`,
+    :cpp:func:`mixChannels` 
 
 dct
 -------
@@ -668,54 +676,56 @@ dct
 
 The function ``dct`` performs a forward or inverse discrete Cosine transform (DCT) of a 1D or 2D floating-point array:
 
-* Forward Cosine transform of a 1D vector of
-:math:`N` elements:
+*
+    Forward Cosine transform of a 1D vector of ``N`` elements:
 
-.. math::
+    .. math::
 
-    Y = C^{(N)}  \cdot X
+        Y = C^{(N)}  \cdot X
 
-where
+    where
 
-.. math::
+    .. math::
 
-    C^{(N)}_{jk}= \sqrt{\alpha_j/N} \cos \left ( \frac{\pi(2k+1)j}{2N} \right )
+        C^{(N)}_{jk}= \sqrt{\alpha_j/N} \cos \left ( \frac{\pi(2k+1)j}{2N} \right )
 
-and
-:math:`\alpha_0=1`,:math:`\alpha_j=2` for
-:math:`j > 0` .
+    and
+    
+    :math:`\alpha_0=1`, :math:`\alpha_j=2` for *j > 0*.
 
-* Inverse Cosine transform of a 1D vector of N elements:
+*
+    Inverse Cosine transform of a 1D vector of ``N`` elements:
 
-.. math::
+    .. math::
 
-    X =  \left (C^{(N)} \right )^{-1}  \cdot Y =  \left (C^{(N)} \right )^T  \cdot Y
+        X =  \left (C^{(N)} \right )^{-1}  \cdot Y =  \left (C^{(N)} \right )^T  \cdot Y
 
-(since
-:math:`C^{(N)}` is an orthogonal matrix,
-:math:`C^{(N)} \cdot \left(C^{(N)}\right)^T = I` )
+    (since
+    :math:`C^{(N)}` is an orthogonal matrix,
+    :math:`C^{(N)} \cdot \left(C^{(N)}\right)^T = I` )
 
-* Forward Cosine transform of 2D
-:math:`M \times N` matrix:
+*
+    Forward 2D Cosine transform of ``M x N`` matrix:
 
-.. math::
+    .. math::
 
-    Y = C^{(N)}  \cdot X  \cdot \left (C^{(N)} \right )^T
+        Y = C^{(N)}  \cdot X  \cdot \left (C^{(N)} \right )^T
 
-* Inverse Cosine transform of a 2D vector of
-:math:`M \times N` elements:
+*
+    Inverse 2D Cosine transform of ``M x N`` matrix:
 
-.. math::
+    .. math::
 
-    X =  \left (C^{(N)} \right )^T  \cdot X  \cdot C^{(N)}
+        X =  \left (C^{(N)} \right )^T  \cdot X  \cdot C^{(N)}
+
 
 The function chooses the mode of operation by looking at the flags and size of the input array:
 
 *
-    If ``(flags & DCT_INVERSE) == 0``     , the function does a forward 1D or 2D transform. Otherwise, it is an inverse 1D or 2D transform.
+    If ``(flags & DCT_INVERSE) == 0`` , the function does a forward 1D or 2D transform. Otherwise, it is an inverse 1D or 2D transform.
 
 *
-    If ``(flags & DCT_ROWS) :math:`\ne` 0``     , the function performs a 1D transform of each row.
+    If ``(flags & DCT_ROWS) != 0`` , the function performs a 1D transform of each row.
 
 *
     If the array is a single column or a single row, the function performs a 1D transform.
@@ -723,23 +733,19 @@ The function chooses the mode of operation by looking at the flags and size of t
 *
     If none of the above is true, the function performs a 2D transform.
 
-**Note**
-: 
-Currently ``dct`` supports even-size arrays (2, 4, 6 ...). For data analysis and approximation, you can pad the array when necessary.
+.. note::
+ 
+    Currently ``dct`` supports even-size arrays (2, 4, 6 ...). For data analysis and approximation, you can pad the array when necessary.
 
-Also, the function performance depends very much, and not monotonically, on the array size (see
-:cpp:func:`getOptimalDFTSize` ). In the current implementation DCT of a vector of size ``N`` is computed via DFT of a vector of size ``N/2`` . Thus, the optimal DCT size
-:math:`\texttt{N}^*\geq\texttt{N}` can be computed as: ::
+    Also, the function performance depends very much, and not monotonically, on the array size (see
+    :cpp:func:`getOptimalDFTSize` ). In the current implementation DCT of a vector of size ``N`` is computed via DFT of a vector of size ``N/2`` . Thus, the optimal DCT size ``N1 >= N`` can be computed as: ::
 
-    size_t getOptimalDCTSize(size_t N) { return 2*getOptimalDFTSize((N+1)/2); }
+        size_t getOptimalDCTSize(size_t N) { return 2*getOptimalDFTSize((N+1)/2); }
+        N1 = getOptimalDCTSize(N);
+
+.. seealso:: :cpp:func:`dft` , :cpp:func:`getOptimalDFTSize` , :cpp:func:`idct`
 
 
-See Also:
-:cpp:func:`dft`,
-:cpp:func:`getOptimalDFTSize`,
-:cpp:func:`idct`
-
-.. index:: dft
 
 dft
 ---
@@ -763,40 +769,48 @@ dft
 
             * **DFT_REAL_OUTPUT** Perform an inverse transformation of 1D or 2D complex array. The result is normally a complex array of the same size. However, if the source array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array. While the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array. Note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array. So, the output will also be a real array.
 
-    :param nonzeroRows: When the parameter  :math:`\ne 0` , the function assumes that only the first  ``nonzeroRows``  rows of the input array ( ``DFT_INVERSE``  is not set) or only the first  ``nonzeroRows``  of the output array ( ``DFT_INVERSE``  is set) contain non-zeros. Thus, the function can handle the rest of the rows more efficiently and save some time. This technique is very useful for computing array cross-correlation or convolution using DFT.
+    :param nonzeroRows: When the parameter is not zero, the function assumes that only the first  ``nonzeroRows``  rows of the input array ( ``DFT_INVERSE``  is not set) or only the first  ``nonzeroRows``  of the output array ( ``DFT_INVERSE``  is set) contain non-zeros. Thus, the function can handle the rest of the rows more efficiently and save some time. This technique is very useful for computing array cross-correlation or convolution using DFT.
 
-Forward Fourier transform of 1D vector of N elements:
 
-.. math::
+The function performs one of the following:
 
-    Y = F^{(N)}  \cdot X,
+*
+    Forward Fourier transform of 1D vector of ``N`` elements:
 
-where
-:math:`F^{(N)}_{jk}=\exp(-2\pi i j k/N)` and
-:math:`i=\sqrt{-1}` Inverse Fourier transform of 1D vector of N elements:
+    .. math::
 
-.. math::
+        Y = F^{(N)}  \cdot X,
 
-    \begin{array}{l} X'=  \left (F^{(N)} \right )^{-1}  \cdot Y =  \left (F^{(N)} \right )^*  \cdot y  \\ X = (1/N)  \cdot X, \end{array}
+    where
+    :math:`F^{(N)}_{jk}=\exp(-2\pi i j k/N)` and
+    :math:`i=\sqrt{-1}`
+    
+*
+    Inverse Fourier transform of 1D vector of ``N`` elements:
 
-where
-:math:`F^*=\left(\textrm{Re}(F^{(N)})-\textrm{Im}(F^{(N)})\right)^T` Forward Fourier transform of 2D vector of
-:math:`M \times N` elements:
+    .. math::
 
-.. math::
+        \begin{array}{l} X'=  \left (F^{(N)} \right )^{-1}  \cdot Y =  \left (F^{(N)} \right )^*  \cdot y  \\ X = (1/N)  \cdot X, \end{array}
 
-    Y = F^{(M)}  \cdot X  \cdot F^{(N)}
+    where
+    :math:`F^*=\left(\textrm{Re}(F^{(N)})-\textrm{Im}(F^{(N)})\right)^T`
 
-Inverse Fourier transform of 2D vector of
-:math:`M \times N` elements:
+*    
+    Forward 2D Fourier transform of ``M x N`` matrix:
 
-.. math::
+    .. math::
 
-    \begin{array}{l} X'=  \left (F^{(M)} \right )^*  \cdot Y  \cdot \left (F^{(N)} \right )^* \\ X =  \frac{1}{M \cdot N} \cdot X' \end{array}
+        Y = F^{(M)}  \cdot X  \cdot F^{(N)}
 
-In case of real (single-channel) data, the packed format is called
-*CCS*
-(complex-conjugate-symmetrical). It was borrowed from IPL and used to represent the result of a forward Fourier transform or input for an inverse Fourier transform:
+*
+    Inverse 2D Fourier transform of ``M x N`` matrix:
+
+    .. math::
+
+        \begin{array}{l} X'=  \left (F^{(M)} \right )^*  \cdot Y  \cdot \left (F^{(N)} \right )^* \\ X =  \frac{1}{M \cdot N} \cdot X' \end{array}
+
+
+In case of real (single-channel) data, the output spectrum of the forward Fourier transform or input spectrum of the inverse Fourier transform can be represented in a packed format called *CCS* (complex-conjugate-symmetrical). It was borrowed from IPL (Intel Image Processing Library). Here is how 2D *CCS* spectrum looks:
 
 .. math::
 
@@ -820,9 +834,7 @@ So, the function chooses an operation mode depending on the flags and size of th
 
 If ``DFT_SCALE`` is set, the scaling is done after the transformation.
 
-Unlike
-:cpp:func:`dct` , the function supports arrays of arbitrary size. But only those arrays are processed efficiently, whose sizes can be factorized in a product of small prime numbers (2, 3, and 5 in the current implementation). Such an efficient DFT size can be computed using the
-:cpp:func:`getOptimalDFTSize` method.
+Unlike :cpp:func:`dct` , the function supports arrays of arbitrary size. But only those arrays are processed efficiently, whose sizes can be factorized in a product of small prime numbers (2, 3, and 5 in the current implementation). Such an efficient DFT size can be computed using the :cpp:func:`getOptimalDFTSize` method.
 
 Here is a sample illustrating how to compute a DFT-based convolution of two 2D real arrays: ::
 
@@ -870,27 +882,19 @@ Here is a sample illustrating how to compute a DFT-based convolution of two 2D r
 To optimize this sample, consider the following approaches:
 
 *
-    Since :math:`\texttt{nonzeroRows} \ne 0`     is passed to the forward transform calls and since  ``A``     / ``B``     is copied to the top-left corners of ``tempA``     / ``tempB``     , respectively, it is not necessary to clear the whole ``tempA``     and ``tempB``     . It is only necessary to clear the ``tempA.cols - A.cols``     ( ``tempB.cols - B.cols``     ) rightmost columns of the matrices.
+    Since ``nonzeroRows != 0`` is passed to the forward transform calls and since  ``A`` and ``B`` are copied to the top-left corners of ``tempA`` and ``tempB``, respectively, it is not necessary to clear the whole ``tempA`` and ``tempB``. It is only necessary to clear the ``tempA.cols - A.cols`` ( ``tempB.cols - B.cols``) rightmost columns of the matrices.
 
-* This DFT-based convolution does not have to be applied to the whole big arrays, especially if ``B``     is significantly smaller than ``A``     or vice versa. Instead, you can compute convolution by parts. To do this, you need to split the destination array ``C``     into multiple tiles. For each tile, estimate which parts of ``A``     and ``B``     are required to compute convolution in this tile. If the tiles in ``C``     are too small, the speed will decrease a lot because of repeated work. In the ultimate case, when each tile in ``C``     is a single pixel, the algorithm becomes equivalent to the naive convolution algorithm. If the tiles are too big, the temporary arrays ``tempA``     and ``tempB``     become too big and there is also a slowdown because of bad cache locality. So, there is an optimal tile size somewhere in the middle.
+*
+   This DFT-based convolution does not have to be applied to the whole big arrays, especially if ``B``     is significantly smaller than ``A`` or vice versa. Instead, you can compute convolution by parts. To do this, you need to split the destination array ``C``     into multiple tiles. For each tile, estimate which parts of ``A``     and ``B``     are required to compute convolution in this tile. If the tiles in ``C``     are too small, the speed will decrease a lot because of repeated work. In the ultimate case, when each tile in ``C``     is a single pixel, the algorithm becomes equivalent to the naive convolution algorithm. If the tiles are too big, the temporary arrays ``tempA``     and ``tempB``     become too big and there is also a slowdown because of bad cache locality. So, there is an optimal tile size somewhere in the middle.
 
 *
     If different tiles in ``C``     can be computed in parallel and, thus, the convolution is done by parts, the loop can be threaded.
 
-All of the above improvements have been implemented in :cpp:func:`matchTemplate` and :cpp:func:`filter2D` . Therefore, by using them, you can get the performance even better than with the above theoretically optimal implementation. Though, those two functions actually compute cross-correlation, not convolution, so you need to "flip" the kernel or the image around the center using :cpp:func:`flip` .
+All of the above improvements have been implemented in :cpp:func:`matchTemplate` and :cpp:func:`filter2D` . Therefore, by using them, you can get the performance even better than with the above theoretically optimal implementation. Though, those two functions actually compute cross-correlation, not convolution, so you need to "flip" the second convolution operand ``B`` vertically and horizontally using :cpp:func:`flip` .
 
-See Also:
-:cpp:func:`dct`,
-:cpp:func:`getOptimalDFTSize`,
-:cpp:func:`mulSpectrums`,
-:cpp:func:`filter2D`,
-:cpp:func:`matchTemplate`,
-:cpp:func:`flip`,
-:cpp:func:`cartToPolar`,
-:cpp:func:`magnitude`,
-:cpp:func:`phase`
+.. seealso:: :cpp:func:`dct` , :cpp:func:`getOptimalDFTSize` , :cpp:func:`mulSpectrums`, :cpp:func:`filter2D` , :cpp:func:`matchTemplate` , :cpp:func:`flip` , :cpp:func:`cartToPolar` , :cpp:func:`magnitude` , :cpp:func:`phase`
 
-.. index:: divide
+
 
 divide
 ----------
@@ -924,13 +928,14 @@ or a scalar by array, when there is no ``src1`` :
 
 When ``src2(I)`` is zero, ``dst(I)`` will also be zero. Different channels of multi-channel arrays are processed independently.
 
-See Also:
-:cpp:func:`multiply`,
-:cpp:func:`add`,
-:cpp:func:`subtract`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: determinant
+    :cpp:func:`multiply`,
+    :cpp:func:`add`,
+    :cpp:func:`subtract`,
+    :ref:`MatrixExpressions`
+
+
 
 determinant
 -----------
@@ -946,14 +951,15 @@ the direct method is used. For larger matrices, the function uses LU factorizati
 
 For symmetric positively-determined matrices, it is also possible to use :cpp:func:`eigen` decomposition to compute the determinant.
 
-See Also:
-:cpp:func:`trace`,
-:cpp:func:`invert`,
-:cpp:func:`solve`,
-:cpp:func:`eigen`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: eigen
+    :cpp:func:`trace`,
+    :cpp:func:`invert`,
+    :cpp:func:`solve`,
+    :cpp:func:`eigen`,
+    :ref:`MatrixExpressions`
+
+
 
 eigen
 -----
@@ -964,7 +970,7 @@ eigen
 
     Computes eigenvalues and eigenvectors of a symmetric matrix.
 
-    :param src: The input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetric:  :math:`\texttt{src}^T=\texttt{src}`
+    :param src: The input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetrical (``src`` :sup:`T` == ``src``).
     
     :param eigenvalues: The output vector of eigenvalues of the same type as  ``src`` . The eigenvalues are stored in the descending order.
 
@@ -978,11 +984,9 @@ The functions ``eigen`` compute just eigenvalues, or eigenvalues and eigenvector
 
     src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
 
-See Also:
-:cpp:func:`completeSymm`,
-:cpp:func:`PCA`
+.. seealso:: :cpp:func:`completeSymm` , :cpp:class:`PCA`
 
-.. index:: exp
+
 
 exp
 ---
@@ -1001,21 +1005,11 @@ The function ``exp`` calculates the exponent of every element of the input array
 
     \texttt{dst} [I] = e^{ \texttt{src} }(I)
 
-The maximum relative error is about
-:math:`7 \times 10^{-6}` for single-precision and less than
-:math:`10^{-10}` for double-precision. Currently, the function converts denormalized values to zeros on output. Special values (NaN,
-:math:`\pm \infty` ) are not handled.
+The maximum relative error is about ``7e-6`` for single-precision input and less than ``1e-10`` for double-precision input. Currently, the function converts denormalized values to zeros on output. Special values (NaN, Inf) are not handled.
 
-See Also:
-:cpp:func:`log`,
-:cpp:func:`cartToPolar`,
-:cpp:func:`polarToCart`,
-:cpp:func:`phase`,
-:cpp:func:`pow`,
-:cpp:func:`sqrt`,
-:cpp:func:`magnitude`
+.. seealso::  :cpp:func:`log` , :cpp:func:`cartToPolar` , :cpp:func:`polarToCart` , :cpp:func:`phase` , :cpp:func:`pow` , :cpp:func:`sqrt` , :cpp:func:`magnitude`
 
-.. index:: extractImageCOI
+
 
 extractImageCOI
 ---------------
@@ -1036,15 +1030,9 @@ To extract a channel from a new-style matrix, use
 :cpp:func:`mixChannels` or
 :cpp:func:`split` .
 
-See Also:
-:cpp:func:`mixChannels`,
-:cpp:func:`split`,
-:cpp:func:`merge`,
-:cpp:func:`cvarrToMat`,
-:c:func:`cvSetImageCOI`,
-:c:func:`cvGetImageCOI`
+.. seealso::  :cpp:func:`mixChannels` , :cpp:func:`split` , :cpp:func:`merge` , :cpp:func:`cvarrToMat` , :c:func:`cvSetImageCOI` , :c:func:`cvGetImageCOI`
 
-.. index:: fastAtan2
+
 
 fastAtan2
 ---------
@@ -1057,12 +1045,9 @@ fastAtan2
 
     :param y: y-coordinate of the vector.
 
-The function ``fastAtan2`` calculates the full-range angle of an input 2D vector. The angle is measured in degrees and varies from
-:math:`0^\circ` to
-:math:`360^\circ` . The accuracy is about
-:math:`0.3^\circ` .
+The function ``fastAtan2`` calculates the full-range angle of an input 2D vector. The angle is measured in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
 
-.. index:: flip
+
 
 flip
 --------
@@ -1087,27 +1072,20 @@ The function ``flip`` flips the array in one of three different ways (row and co
 The example scenarios of using the function are the following:
 
  *
-    Vertical flipping of the image (
-    :math:`\texttt{flipCode} = 0`     ) to switch between top-left and bottom-left image origin. This is a typical operation in video processing on Microsoft Windows* OS.
+    Vertical flipping of the image (``flipCode == 0``) to switch between top-left and bottom-left image origin. This is a typical operation in video processing on Microsoft Windows* OS.
 
  *
-    Horizontal flipping of the image with the subsequent horizontal shift and absolute difference calculation to check for a vertical-axis symmetry (
-    :math:`\texttt{flipCode} > 0`     ).
+    Horizontal flipping of the image with the subsequent horizontal shift and absolute difference calculation to check for a vertical-axis symmetry (``flipCode > 0``).
 
  *
-    Simultaneous horizontal and vertical flipping of the image with the subsequent shift and absolute difference calculation to check for a central symmetry (
-    :math:`\texttt{flipCode} < 0`     ).
+    Simultaneous horizontal and vertical flipping of the image with the subsequent shift and absolute difference calculation to check for a central symmetry (``flipCode < 0``).
 
  *
-    Reversing the order of 1D point arrays (
-    :math:`\texttt{flipCode} > 0`     or
-    :math:`\texttt{flipCode} = 0`     ).
+    Reversing the order of point arrays (``flipCode > 0`` or ``flipCode == 0``).
 
-See Also: :cpp:func:`transpose`,
-:cpp:func:`repeat`,
-:cpp:func:`completeSymm`
+.. seealso:: :cpp:func:`transpose` , :cpp:func:`repeat` , :cpp:func:`completeSymm`
 
-.. index:: gemm
+
 
 gemm
 ----
@@ -1145,12 +1123,9 @@ The function can be replaced with a matrix expression. For example, the above ca
     dst = alpha*src1.t()*src2 + beta*src3.t();
 
 
-See Also:
-:cpp:func:`mulTransposed`,
-:cpp:func:`transform`,
-:ref:`MatrixExpressions`
+.. seealso::  :cpp:func:`mulTransposed` , :cpp:func:`transform` , :ref:`MatrixExpressions`
 
-.. index:: getConvertElem
+
 
 getConvertElem
 --------------
@@ -1181,11 +1156,9 @@ getConvertElem
 
 The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to the functions for converting individual pixels from one type to another. While the main function purpose is to convert single pixels (actually, for converting sparse matrices from one type to another), you can use them to convert the whole row of a dense matrix or the whole matrix at once, by setting ``cn = matrix.cols*matrix.rows*matrix.channels()`` if the matrix data is continuous.
 
-See Also:
-:cpp:func:`Mat::convertTo`,
-:cpp:func:`SparseMat::convertTo`
+.. seealso:: :cpp:func:`Mat::convertTo` , :cpp:func:`SparseMat::convertTo`
 
-.. index:: getOptimalDFTSize
+
 
 getOptimalDFTSize
 -----------------
@@ -1199,23 +1172,15 @@ getOptimalDFTSize
 DFT performance is not a monotonic function of a vector size. Therefore, when you compute convolution of two arrays or perform the spectral analysis of an array, it usually makes sense to pad the input data with zeros to get a bit larger array that can be transformed much faster than the original one.
 Arrays whose size is a power-of-two (2, 4, 8, 16, 32, ...) are the fastest to process. Though, the arrays whose size is a product of 2's, 3's, and 5's (for example, 300 = 5*5*3*2*2) are also processed quite efficiently.
 
-The function ``getOptimalDFTSize`` returns the minimum number ``N`` that is greater than or equal to ``vecsize``  so that the DFT
-of a vector of size ``N`` can be computed efficiently. In the current implementation
-:math:`N=2^p \times 3^q \times 5^r` , for some
-:math:`p`,:math:`q`,:math:`r` .
+The function ``getOptimalDFTSize`` returns the minimum number ``N`` that is greater than or equal to ``vecsize``  so that the DFT of a vector of size ``N`` can be computed efficiently. In the current implementation ``N`` = 2 :sup:`p` * 3 :sup:`q` * 5 :sup:`r` for some integer ``p``, ``q``, ``r``.
 
 The function returns a negative number if ``vecsize`` is too large (very close to ``INT_MAX`` ).
 
-While the function cannot be used directly to estimate the optimal vector size for DCT transform (since the current DCT implementation supports only even-size vectors), it can be easily computed as ``getOptimalDFTSize((vecsize+1)/2)*2`` .
+While the function cannot be used directly to estimate the optimal vector size for DCT transform (since the current DCT implementation supports only even-size vectors), it can be easily computed as ``getOptimalDFTSize((vecsize+1)/2)*2``.
 
-See Also:
-:cpp:func:`dft`,
-:cpp:func:`dct`,
-:cpp:func:`idft`,
-:cpp:func:`idct`,
-:cpp:func:`mulSpectrums`
+.. seealso:: :cpp:func:`dft` , :cpp:func:`dct` , :cpp:func:`idft` , :cpp:func:`idct` , :cpp:func:`mulSpectrums`
 
-.. index:: idct
+
 
 idct
 ----
@@ -1232,12 +1197,14 @@ idct
     
 ``idct(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DCT_INVERSE)``.
 
-See Also: :cpp:func:`dct`,
-:cpp:func:`dft`,
-:cpp:func:`idft`,
-:cpp:func:`getOptimalDFTSize`
+.. seealso::
 
-.. index:: idft
+    :cpp:func:`dct`,
+    :cpp:func:`dft`,
+    :cpp:func:`idft`,
+    :cpp:func:`getOptimalDFTSize`
+
+
 
 idft
 ----
@@ -1257,18 +1224,18 @@ idft
 ``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
 
 See :cpp:func:`dft` for details.
-**Note**:
 
-None of ``dft`` and ``idft`` scale the result by default.
-Thus, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
+.. note:: None of ``dft`` and ``idft`` scale the result by default. Thus, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
 
-See Also: :cpp:func:`dft`,
-:cpp:func:`dct`,
-:cpp:func:`idct`,
-:cpp:func:`mulSpectrums`,
-:cpp:func:`getOptimalDFTSize`
+.. seealso::
 
-.. index:: inRange
+    :cpp:func:`dft`,
+    :cpp:func:`dct`,
+    :cpp:func:`idct`,
+    :cpp:func:`mulSpectrums`,
+    :cpp:func:`getOptimalDFTSize`
+
+
 
 inRange
 -------
@@ -1305,7 +1272,7 @@ The function checks the range as follows:
 
 When the lower and/or upper bounary parameters are scalars, the indexes ``(I)`` at ``lowerb`` and ``upperb`` in the above formulas should be omitted.
 
-.. index:: invert
+
 
 invert
 ------
@@ -1327,8 +1294,7 @@ invert
             * **DECOMP_CHOLESKY** Cholesky decomposion. The matrix must be symmetrical and positively defined.
 
 The function ``invert`` inverts the matrix ``src`` and stores the result in ``dst`` .
-When the matrix ``src`` is singular or non-square, the function computes the pseudo-inverse matrix (the ``dst`` matrix) so that
-:math:`\|\texttt{src} \cdot \texttt{dst} - I\|` is minimal.
+When the matrix ``src`` is singular or non-square, the function computes the pseudo-inverse matrix (the ``dst`` matrix) so that ``norm(src*dst - I)`` is minimal, where I is an identity matrix.
 
 In case of the ``DECOMP_LU`` method, the function returns the ``src`` determinant ( ``src`` must be square). If it is 0, the matrix is not inverted and ``dst`` is filled with zeros.
 
@@ -1336,11 +1302,12 @@ In case of the ``DECOMP_SVD`` method, the function returns the inverse condition
 
 Similarly to ``DECOMP_LU`` , the method ``DECOMP_CHOLESKY`` works only with non-singular square matrices that should also be symmetrical and positively defined. In this case, the function stores the inverted matrix in ``dst`` and returns non-zero. Otherwise, it returns 0.
 
-See Also:
-:cpp:func:`solve`,
-:cpp:class:`SVD`
+.. seealso::
 
-.. index:: log
+    :cpp:func:`solve`,
+    :cpp:class:`SVD`
+
+
 
 log
 ---
@@ -1360,21 +1327,19 @@ The function ``log`` calculates the natural logarithm of the absolute value of e
     \texttt{dst} (I) =  \fork{\log |\texttt{src}(I)|}{if $\texttt{src}(I) \ne 0$ }{\texttt{C}}{otherwise}
 
 where ``C`` is a large negative number (about -700 in the current implementation).
-The maximum relative error is about
-:math:`7 \times 10^{-6}` for single-precision input and less than
-:math:`10^{-10}` for double-precision input. Special values (NaN,
-:math:`\pm \infty` ) are not handled.
+The maximum relative error is about ``7e-6`` for single-precision input and less than ``1e-10`` for double-precision input. Special values (NaN, Inf) are not handled.
 
-See Also:
-:cpp:func:`exp`,
-:cpp:func:`cartToPolar`,
-:cpp:func:`polarToCart`,
-:cpp:func:`phase`,
-:cpp:func:`pow`,
-:cpp:func:`sqrt`,
-:cpp:func:`magnitude`
+.. seealso::
 
-.. index:: LUT
+    :cpp:func:`exp`,
+    :cpp:func:`cartToPolar`,
+    :cpp:func:`polarToCart`,
+    :cpp:func:`phase`,
+    :cpp:func:`pow`,
+    :cpp:func:`sqrt`,
+    :cpp:func:`magnitude`
+
+
 
 LUT
 ---
@@ -1401,11 +1366,12 @@ where
 
     d =  \fork{0}{if \texttt{src} has depth \texttt{CV\_8U}}{128}{if \texttt{src} has depth \texttt{CV\_8S}}
 
-See Also:
-:cpp:func:`convertScaleAbs`,
-:cpp:func:`Mat::convertTo`
+.. seealso::
 
-.. index:: magnitude
+    :cpp:func:`convertScaleAbs`,
+    :cpp:func:`Mat::convertTo`
+
+
 
 magnitude
 ---------
@@ -1426,13 +1392,14 @@ The function ``magnitude`` calculates the magnitude of 2D vectors formed from th
 
     \texttt{dst} (I) =  \sqrt{\texttt{x}(I)^2 + \texttt{y}(I)^2}
 
-See Also:
-:cpp:func:`cartToPolar`,
-:cpp:func:`polarToCart`,
-:cpp:func:`phase`,
-:cpp:func:`sqrt`
+.. seealso::
 
-.. index:: Mahalanobis
+    :cpp:func:`cartToPolar`,
+    :cpp:func:`polarToCart`,
+    :cpp:func:`phase`,
+    :cpp:func:`sqrt`
+
+
 
 Mahalanobis
 -----------
@@ -1457,7 +1424,7 @@ The covariance matrix may be calculated using the
 :cpp:func:`calcCovarMatrix` function and then inverted using the
 :cpp:func:`invert` function (preferably using the ``DECOMP_SVD`` method, as the most accurate).
 
-.. index:: max
+
 
 max
 ---
@@ -1501,14 +1468,14 @@ In the second variant, when the source array is multi-channel, each channel is c
 The first 3 variants of the function listed above are actually a part of
 :ref:`MatrixExpressions` . They return an expression object that can be further either transformed/ assigned to a matrix, or passed to a function, and so on.
 
-See Also:
-:cpp:func:`min`,
-:cpp:func:`compare`,
-:cpp:func:`inRange`,
-:cpp:func:`minMaxLoc`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: mean
+    :cpp:func:`min`,
+    :cpp:func:`compare`,
+    :cpp:func:`inRange`,
+    :cpp:func:`minMaxLoc`,
+    :ref:`MatrixExpressions`
+
 
 mean
 ----
@@ -1529,13 +1496,14 @@ The functions ``mean`` compute mean value ``M`` of array elements, independently
 
 When all the mask elements are 0's, the functions return ``Scalar::all(0)`` .
 
-See Also:
-:cpp:func:`countNonZero`,
-:cpp:func:`meanStdDev`,
-:cpp:func:`norm`,
-:cpp:func:`minMaxLoc`
+.. seealso::
 
-.. index:: meanStdDev
+    :cpp:func:`countNonZero`,
+    :cpp:func:`meanStdDev`,
+    :cpp:func:`norm`,
+    :cpp:func:`minMaxLoc`
+
+
 
 meanStdDev
 ----------
@@ -1559,20 +1527,18 @@ The functions ``meanStdDev`` compute the mean and the standard deviation ``M`` o
     \begin{array}{l} N =  \sum _{I, \texttt{mask} (I)  \ne 0} 1 \\ \texttt{mean} _c =  \frac{\sum_{ I: \; \texttt{mask}(I) \ne 0} \texttt{src} (I)_c}{N} \\ \texttt{stddev} _c =  \sqrt{\sum_{ I: \; \texttt{mask}(I) \ne 0} \left ( \texttt{src} (I)_c -  \texttt{mean} _c \right )^2} \end{array}
 
 When all the mask elements are 0's, the functions return ``mean=stddev=Scalar::all(0)`` .
-**Note**:
-The computed standard deviation is only the diagonal of the complete normalized covariance matrix. If the full matrix is needed, you can reshape the multi-channel array
-:math:`M \times N` to the single-channel array
-:math:`M*N \times \texttt{mtx.channels}()` (only possible when the matrix is continuous) and then pass the matrix to
-:cpp:func:`calcCovarMatrix` .
 
-See Also:
-:cpp:func:`countNonZero`,
-:cpp:func:`mean`,
-:cpp:func:`norm`,
-:cpp:func:`minMaxLoc`,
-:cpp:func:`calcCovarMatrix`
+.. note:: The computed standard deviation is only the diagonal of the complete normalized covariance matrix. If the full matrix is needed, you can reshape the multi-channel array ``M x N`` to the single-channel array ``M*N x mtx.channels()`` (only possible when the matrix is continuous) and then pass the matrix to :cpp:func:`calcCovarMatrix` .
 
-.. index:: merge
+.. seealso::
+
+    :cpp:func:`countNonZero`,
+    :cpp:func:`mean`,
+    :cpp:func:`norm`,
+    :cpp:func:`minMaxLoc`,
+    :cpp:func:`calcCovarMatrix`
+
+
 
 merge
 -----
@@ -1595,12 +1561,13 @@ The function
 :cpp:func:`split` does the reverse operation. If you need to shuffle channels in some other advanced way, use
 :cpp:func:`mixChannels` .
 
-See Also:
-:cpp:func:`mixChannels`,
-:cpp:func:`split`,
-:cpp:func:`reshape`
+.. seealso::
 
-.. index:: min
+    :cpp:func:`mixChannels`,
+    :cpp:func:`split`,
+    :cpp:func:`reshape`
+
+
 
 min
 ---
@@ -1644,14 +1611,15 @@ In the second variant, when the source array is multi-channel, each channel is c
 The first three variants of the function listed above are actually a part of
 :ref:`MatrixExpressions` . They return the expression object that can be further either transformed/assigned to a matrix, or passed to a function, and so on.
 
-See Also:
-:cpp:func:`max`,
-:cpp:func:`compare`,
-:cpp:func:`inRange`,
-:cpp:func:`minMaxLoc`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: minMaxLoc
+    :cpp:func:`max`,
+    :cpp:func:`compare`,
+    :cpp:func:`inRange`,
+    :cpp:func:`minMaxLoc`,
+    :ref:`MatrixExpressions`
+
+
 
 minMaxLoc
 ---------
@@ -1689,17 +1657,18 @@ The functions do not work with multi-channel arrays. If you need to find minimum
 
 In case of a sparse matrix, the minimum is found among non-zero elements only.
 
-See Also:
-:cpp:func:`max`,
-:cpp:func:`min`,
-:cpp:func:`compare`,
-:cpp:func:`inRange`,
-:cpp:func:`extractImageCOI`,
-:cpp:func:`mixChannels`,
-:cpp:func:`split`,
-:cpp:func:`reshape` 
+.. seealso::
 
-.. index:: mixChannels
+    :cpp:func:`max`,
+    :cpp:func:`min`,
+    :cpp:func:`compare`,
+    :cpp:func:`inRange`,
+    :cpp:func:`extractImageCOI`,
+    :cpp:func:`mixChannels`,
+    :cpp:func:`split`,
+    :cpp:func:`reshape` 
+
+
 
 mixChannels
 -----------
@@ -1741,17 +1710,15 @@ As an example, this code splits a 4-channel RGBA image into a 3-channel BGR (wit
     mixChannels( &rgba, 1, out, 2, from_to, 4 );
 
 
-**Note**
+.. note:: Unlike many other new-style C++ functions in OpenCV (see the introduction section and :cpp:func:`Mat::create` ), ``mixChannels`` requires the destination arrays to be pre-allocated before calling the function.
 
-Unlike many other new-style C++ functions in OpenCV (see the introduction section and
-:cpp:func:`Mat::create` ), ``mixChannels`` requires the destination arrays to be pre-allocated before calling the function.
+.. seealso::
 
-See Also:
-:cpp:func:`split`,
-:cpp:func:`merge`,
-:cpp:func:`cvtColor`
+    :cpp:func:`split`,
+    :cpp:func:`merge`,
+    :cpp:func:`cvtColor`
 
-.. index:: mulSpectrums
+
 
 mulSpectrums
 ------------
@@ -1777,7 +1744,7 @@ The function, together with
 :cpp:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=false`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
 :cpp:func:`dft` for details).
 
-.. index:: multiply
+
 
 multiply
 --------
@@ -1807,19 +1774,20 @@ There is also
 For a not-per-element matrix product, see
 :cpp:func:`gemm` .
 
-See Also:
-:cpp:func:`add`,
-:cpp:func:`substract`,
-:cpp:func:`divide`,
-:ref:`MatrixExpressions`,
-:cpp:func:`scaleAdd`,
-:cpp:func:`addWeighted`,
-:cpp:func:`accumulate`,
-:cpp:func:`accumulateProduct`,
-:cpp:func:`accumulateSquare`,
-:cpp:func:`Mat::convertTo`
+.. seealso::
 
-.. index:: mulTransposed
+    :cpp:func:`add`,
+    :cpp:func:`substract`,
+    :cpp:func:`divide`,
+    :ref:`MatrixExpressions`,
+    :cpp:func:`scaleAdd`,
+    :cpp:func:`addWeighted`,
+    :cpp:func:`accumulate`,
+    :cpp:func:`accumulateProduct`,
+    :cpp:func:`accumulateSquare`,
+    :cpp:func:`Mat::convertTo`
+
+
 
 mulTransposed
 -------------
@@ -1852,17 +1820,16 @@ if ``aTa=true`` , and
 
     \texttt{dst} = \texttt{scale} ( \texttt{src} - \texttt{delta} ) ( \texttt{src} - \texttt{delta} )^T
 
-otherwise. The function is used to compute the covariance matrix. With zero delta, it can be used as a faster substitute for general matrix product
-:math:`A*B` when
-:math:`B=A^T` .
+otherwise. The function is used to compute the covariance matrix. With zero delta, it can be used as a faster substitute for general matrix product ``A*B`` when ``B=A'``
 
-See Also:
-:cpp:func:`calcCovarMatrix`,
-:cpp:func:`gemm`,
-:cpp:func:`repeat`,
-:cpp:func:`reduce`
+.. seealso::
 
-.. index:: norm
+    :cpp:func:`calcCovarMatrix`,
+    :cpp:func:`gemm`,
+    :cpp:func:`repeat`,
+    :cpp:func:`reduce`
+
+
 
 norm
 ----
@@ -1913,7 +1880,7 @@ When the ``mask`` parameter is specified and it is not empty, the norm is comput
 
 A multi-channel source arrays are treated as a single-channel, that is, the results for all channels are combined.
 
-.. index:: normalize
+
 
 normalize
 ---------
@@ -1940,65 +1907,43 @@ normalize
 
 The functions ``normalize`` scale and shift the source array elements, so that
 
-.. math::
+*
+    .. math::
 
-    \| \texttt{dst} \| _{L_p}= \texttt{alpha}
+        \| \texttt{dst} \| _{L_p}= \texttt{alpha}
 
-(where
-:math:`p=\infty` , 1 or 2) when ``normType=NORM_INF``,``NORM_L1`` or ``NORM_L2``,or so that
+    (where p=Inf, 1 or 2) when ``normType=NORM_INF``,``NORM_L1`` or ``NORM_L2``, respectively,
 
-.. math::
+*    
+    or so that
 
-    \min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}
+    .. math::
 
-when ``normType=NORM_MINMAX`` (for dense arrays only).
+        \min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}
+
+    when ``normType=NORM_MINMAX`` (for dense arrays only).
 
 The optional mask specifies a sub-array to be normalized. This means that the norm or min-n-max are computed over the sub-array, and then this sub-array is modified to be normalized. If you want to only use the mask to compute the norm or min-max but modify the whole array, you can use
 :cpp:func:`norm` and
-:cpp:func:`Mat::convertScale` /
+:cpp:func:`Mat::convertTo`
 
 In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this, the range transformation for sparse matrices is not allowed, since it can shift the zero level.
 
-See Also:
-:cpp:func:`norm`,
-:cpp:func:`Mat::convertScale`,
-:cpp:func:`SparseMat::convertScale`
+.. seealso::
 
-.. index:: PCA
+    :cpp:func:`norm`,
+    :cpp:func:`Mat::convertTo`,
+    :cpp:func:`SparseMat::convertTo`
+
+
 
 PCA
 ---
 .. cpp:class:: PCA
 
-Class for Principal Component Analysis ::
+for Principal Component Analysis.
 
-    class PCA
-    {
-    public:
-        // default constructor
-        PCA();
-        // computes PCA for a set of vectors stored as data rows or columns.
-        PCA(InputArray data, InputArray mean, int flags, int maxComponents=0);
-        // computes PCA for a set of vectors stored as data rows or columns
-        PCA& operator()(InputArray data, InputArray mean, int flags, int maxComponents=0);
-        // projects vector into the principal components space
-        Mat project(InputArray vec) const;
-        void project(InputArray vec, OutputArray result) const;
-        // reconstructs the vector from its PC projection
-        Mat backProject(InputArray vec) const;
-        void backProject(InputArray vec, OutputArray result) const;
-
-        // eigenvectors of the PC space, stored as the matrix rows
-        Mat eigenvectors;
-        // the corresponding eigenvalues; not used for PCA compression/decompression
-        Mat eigenvalues;
-        // mean vector, subtracted from the projected vector
-        // or added to the reconstructed vector
-        Mat mean;
-    };
-
-
-The class ``PCA`` is used to compute a special basis for a set of vectors. The basis will consist of eigenvectors of the covariance matrix computed from the input set of vectors. The class ``PCA`` can also transform vectors to/from the new coordinate space defined by the basis. Usually, in this new coordinate system, each vector from the original set (and any linear combination of such vectors) can be quite accurately approximated by taking just the first few its components, corresponding to the eigenvectors of the largest eigenvalues of the covariance matrix. Geometrically it means that you compute a projection of the vector to a subspace formed by a few eigenvectors corresponding to the dominant eigenvalues of the covariation matrix. And usually such a projection is very close to the original vector. That is, you can represent the original vector from a high-dimensional space with a much shorter vector consisting of the projected vector's coordinates in the subspace. Such a transformation is also known as Karhunen-Loeve Transform, or KLT. See
+The class is used to compute a special basis for a set of vectors. The basis will consist of eigenvectors of the covariance matrix computed from the input set of vectors. The class ``PCA`` can also transform vectors to/from the new coordinate space defined by the basis. Usually, in this new coordinate system, each vector from the original set (and any linear combination of such vectors) can be quite accurately approximated by taking just the first few its components, corresponding to the eigenvectors of the largest eigenvalues of the covariance matrix. Geometrically it means that you compute a projection of the vector to a subspace formed by a few eigenvectors corresponding to the dominant eigenvalues of the covariation matrix. And usually such a projection is very close to the original vector. That is, you can represent the original vector from a high-dimensional space with a much shorter vector consisting of the projected vector's coordinates in the subspace. Such a transformation is also known as Karhunen-Loeve Transform, or KLT. See
 http://en.wikipedia.org/wiki/Principal\_component\_analysis
 The sample below is the function that takes two matrices. The first one stores the set of vectors (a row per vector) that is used to compute PCA. The second one stores another "test" set of vectors (a row per vector) that are first compressed with PCA, then reconstructed back, and then the reconstruction error norm is computed and printed for each vector. ::
 
@@ -2037,14 +1982,15 @@ The sample below is the function that takes two matrices. The first one stores t
     }
 
 
-See Also:
-:cpp:func:`calcCovarMatrix`,
-:cpp:func:`mulTransposed`,
-:cpp:class:`SVD`,
-:cpp:func:`dft`,
-:cpp:func:`dct`
+.. seealso::
 
-.. index:: PCA::PCA
+    :cpp:func:`calcCovarMatrix`,
+    :cpp:func:`mulTransposed`,
+    :cpp:class:`SVD`,
+    :cpp:func:`dft`,
+    :cpp:func:`dct`
+
+
 
 PCA::PCA
 ------------
@@ -2069,7 +2015,7 @@ PCA::PCA
 The default constructor initializes empty PCA structure. The second constructor initializes the structure and calls
 :cpp:func:`PCA::operator ()` .
 
-.. index:: PCA::operator ()
+
 
 PCA::operator ()
 ----------------
@@ -2094,7 +2040,7 @@ The operator performs PCA of the supplied dataset. It is safe to reuse the same 
 
 The computed eigenvalues are sorted from the largest to the smallest and the corresponding eigenvectors are stored as ``PCA::eigenvectors`` rows.
 
-.. index:: PCA::project
+
 
 PCA::project
 ------------
@@ -2111,7 +2057,7 @@ PCA::project
 
 The methods project one or more vectors to the principal component subspace, where each vector projection is represented by coefficients in the principal component basis. The first form of the method returns the matrix that the second form writes to the result. So the first form can be used as a part of expression while the second form can be more efficient in a processing loop.
 
-.. index:: PCA::backProject
+
 
 PCA::backProject
 ----------------
@@ -2129,7 +2075,7 @@ PCA::backProject
 The methods are inverse operations to
 :cpp:func:`PCA::project` . They take PC coordinates of projected vectors and reconstruct the original vectors. Of course, unless all the principal components have been retained, the reconstructed vectors are different from the originals. But typically, the difference is small if the number of components is large enough (but still much smaller than the original vector dimensionality). As a result, PCA is used.
 
-.. index:: perspectiveTransform
+
 
 perspectiveTransform
 --------------------
@@ -2141,7 +2087,7 @@ perspectiveTransform
 
     :param dst: Destination array of the same size and type as  ``src`` .
     
-    :param mtx: :math:`3\times 3`  or  :math:`4 \times 4`  transformation matrix.
+    :param mtx: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
 The function ``perspectiveTransform`` transforms every element of ``src``by treating it as a 2D or 3D vector, in the following way:
 
@@ -2161,23 +2107,18 @@ and
 
     w =  \fork{w'}{if $w' \ne 0$}{\infty}{otherwise}
 
-Here a 3D vector transformation is shown. In case of a 2D vector transformation, the
-:math:`z` component is omitted.
+Here a 3D vector transformation is shown. In case of a 2D vector transformation, the ``z`` component is omitted.
 
-**Note**:
+.. note:: The function transforms a sparse set of 2D or 3D vectors. If you want to transform an image using perspective transformation, use :cpp:func:`warpPerspective` . If you have an inverse problem, that is, you want to compute the most probable perspective transformation out of several pairs of corresponding points, you can use :cpp:func:`getPerspectiveTransform` or :cpp:func:`findHomography` .
 
-The function transforms a sparse set of 2D or 3D vectors. If you want to transform an image using perspective transformation, use
-:cpp:func:`warpPerspective` . If you have an inverse task, that is, you want to compute the most probable perspective transformation out of several pairs of corresponding points, you can use
-:cpp:func:`getPerspectiveTransform` or
-:cpp:func:`findHomography` .
+.. seealso::
 
-See Also:
-:cpp:func:`transform`,
-:cpp:func:`warpPerspective`,
-:cpp:func:`getPerspectiveTransform`,
-:cpp:func:`findHomography`
+    :cpp:func:`transform`,
+    :cpp:func:`warpPerspective`,
+    :cpp:func:`getPerspectiveTransform`,
+    :cpp:func:`findHomography`
 
-.. index:: phase
+
 
 phase
 -----
@@ -2200,13 +2141,8 @@ The function ``phase`` computes the rotation angle of each 2D vector that is for
 
     \texttt{angle} (I) =  \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))
 
-The angle estimation accuracy is
-:math:`\sim\,0.3^\circ` , when ``x(I)=y(I)=0`` , the corresponding ``angle`` (I) is set to
-:math:`0` .
+The angle estimation accuracy is about 0.3 degrees. When ``x(I)=y(I)=0`` , the corresponding ``angle(I)`` is set to 0.
 
-See Also:
-
-.. index:: polarToCart
 
 polarToCart
 -----------
@@ -2231,19 +2167,19 @@ The function ``polarToCart`` computes the Cartesian coordinates of each 2D vecto
 
     \begin{array}{l} \texttt{x} (I) =  \texttt{magnitude} (I) \cos ( \texttt{angle} (I)) \\ \texttt{y} (I) =  \texttt{magnitude} (I) \sin ( \texttt{angle} (I)) \\ \end{array}
 
-The relative accuracy of the estimated coordinates is
-:math:`\sim\,10^{-6}` .
+The relative accuracy of the estimated coordinates is about ``1e-6``.
 
-See Also:
-:cpp:func:`cartToPolar`,
-:cpp:func:`magnitude`,
-:cpp:func:`phase`,
-:cpp:func:`exp`,
-:cpp:func:`log`,
-:cpp:func:`pow`,
-:cpp:func:`sqrt`
+.. seealso::
 
-.. index:: pow
+    :cpp:func:`cartToPolar`,
+    :cpp:func:`magnitude`,
+    :cpp:func:`phase`,
+    :cpp:func:`exp`,
+    :cpp:func:`log`,
+    :cpp:func:`pow`,
+    :cpp:func:`sqrt`
+
+
 
 pow
 ---
@@ -2273,69 +2209,28 @@ That is, for a non-integer power exponent, the absolute values of input array el
 
 For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized faster algorithms are used.
 
-See Also:
-:cpp:func:`sqrt`,
-:cpp:func:`exp`,
-:cpp:func:`log`,
-:cpp:func:`cartToPolar`,
-:cpp:func:`polarToCart`
+.. seealso::
 
-.. index:: RNG
+    :cpp:func:`sqrt`,
+    :cpp:func:`exp`,
+    :cpp:func:`log`,
+    :cpp:func:`cartToPolar`,
+    :cpp:func:`polarToCart`
+
+
 
 RNG
 ---
 
 .. cpp:class: RNG
 
-Random number generator class ::
-
-    class CV_EXPORTS RNG
-    {
-    public:
-        enum { UNIFORM=0, NORMAL=1 };
-
-        // constructors
-        RNG();
-        RNG(uint64 state);
-
-        // returns a 32-bit unsigned random number
-        unsigned next();
-
-        // return random numbers of the specified type
-        operator uchar();
-        operator schar();
-        operator ushort();
-        operator short();
-        operator unsigned();
-            // returns a random integer sampled uniformly from [0, N).
-            unsigned operator()(unsigned N);
-            unsigned operator()();
-        operator int();
-        operator float();
-        operator double();
-        // returns a random number sampled uniformly from [a, b) range
-        int uniform(int a, int b);
-        float uniform(float a, float b);
-        double uniform(double a, double b);
-
-        // returns the Gaussian random number with zero mean.
-            double gaussian(double sigma);
-
-        // fills thec array with random numbers sampled from the specified distribution
-        void fill( Mat& mat, int distType, const Scalar& a, const Scalar& b );
-
-        // internal state of the RNG (could change in the future)
-        uint64 state;
-    };
-
-
-The class ``RNG`` implements the random number generator. It encapsulates the RNG state (currently, a 64-bit integer) and  has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
+- Random number generator. It encapsulates the state (currently, a 64-bit integer) and has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
 http://en.wikipedia.org/wiki/Multiply-with-carry
 ). Gaussian-distribution random numbers are generated using the Ziggurat algorithm (
 http://en.wikipedia.org/wiki/Ziggurat_algorithm
 ), introduced by G. Marsaglia and W. W. Tsang.
 
-.. index:: RNG::RNG
+
 
 RNG::RNG
 ------------
@@ -2349,7 +2244,7 @@ RNG::RNG
 
 These are the RNG constructors. The first form sets the state to some pre-defined value, equal to ``2**32-1`` in the current implementation. The second form sets the state to the specified value. If you passed ``state=0`` , the constructor uses the above default value instead to avoid the singular random number sequence, consisting of all zeros.
 
-.. index:: RNG::next
+
 
 RNG::next
 -------------
@@ -2359,7 +2254,7 @@ RNG::next
 
 The method updates the state using the MWC algorithm and returns the next 32-bit random number.
 
-.. index:: RNG::operator T
+
 
 RNG::operator T
 ---------------
@@ -2374,6 +2269,8 @@ RNG::operator T
 
 .. cpp:function:: RNG::operator int()
 
+.. cpp:function:: RNG::operator unsigned()
+
 .. cpp:function:: RNG::operator float()
 
 .. cpp:function:: RNG::operator double()
@@ -2382,7 +2279,7 @@ RNG::operator T
 
 Each of the methods updates the state using the MWC algorithm and returns the next random number of the specified type. In case of integer types, the returned number is from the available value range for the specified type. In case of floating-point types, the returned value is from ``[0,1)`` range.
 
-.. index:: RNG::operator ()
+
 
 RNG::operator ()
 --------------------
@@ -2397,7 +2294,7 @@ RNG::operator ()
 The methods transform the state using the MWC algorithm and return the next random number. The first form is equivalent to
 :cpp:func:`RNG::next` . The second form returns the random number modulo ``N`` , which means that the result is in the range ``[0, N)`` .
 
-.. index:: RNG::uniform
+
 
 RNG::uniform
 ----------------
@@ -2436,7 +2333,7 @@ The methods transform the state using the MWC algorithm and return the next unif
 
 The compiler does not take into account the type of the variable to which you assign the result of ``RNG::uniform`` . The only thing that matters to the compiler is the type of ``a`` and ``b`` parameters. So, if you want a floating-point random number, but the range boundaries are integer numbers, either put dots in the end, if they are constants, or use explicit type cast operators, as in the ``a1`` initialization above.
 
-.. index:: RNG::gaussian
+
 
 RNG::gaussian
 -----------------
@@ -2448,7 +2345,7 @@ RNG::gaussian
 
 The method transforms the state using the MWC algorithm and returns the next random number from the Gaussian distribution ``N(0,sigma)`` . That is, the mean value of the returned random numbers is zero and the standard deviation is the specified ``sigma`` .
 
-.. index:: RNG::fill
+
 
 RNG::fill
 -------------
@@ -2464,11 +2361,7 @@ RNG::fill
 
     :param b: The second distribution parameter. In case of the uniform distribution, this is a non-inclusive upper boundary. In case of the normal distribution, this is a standard deviation (diagonal of the standard deviation matrix or the full standard deviation matrix).
 
-Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariation matrix directly. To do that, first, generate matrix from the distribution
-:math:`N(0, I_n)` (Gaussian distribution with zero mean and identity covariation matrix) and then transform it using
-:cpp:func:`transform` and the specific covariation matrix.
-
-.. index:: randu
+Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariation matrix directly. To do that, the method generates samples from multi-dimensional standard Gaussian distribution with zero mean and identity covariation matrix, and then transforms them using :cpp:func:`transform` to get samples from the specified Gaussian distribution.
 
 randu
 -----
@@ -2486,7 +2379,7 @@ randu
     :param high: Exclusive upper boundary of the generated random numbers.
 
 The template functions ``randu`` generate and return the next uniformly-distributed random value of the specified type. ``randu<int>()`` is an equivalent to ``(int)theRNG();`` , and so on. See
-:cpp:func:`RNG` description.
+:cpp:class:`RNG` description.
 
 The second non-template variant of the function fills the matrix ``mtx`` with uniformly-distributed random numbers from the specified range:
 
@@ -2494,12 +2387,13 @@ The second non-template variant of the function fills the matrix ``mtx`` with un
 
     \texttt{low} _c  \leq \texttt{mtx} (I)_c <  \texttt{high} _c
 
-See Also:
-:cpp:func:`RNG`,
-:cpp:func:`randn`,
-:cpp:func:`theRNG` 
+.. seealso::
 
-.. index:: randn
+    :cpp:class:`RNG`,
+    :cpp:func:`randn`,
+    :cpp:func:`theRNG` 
+
+
 
 randn
 -----
@@ -2516,11 +2410,12 @@ randn
 
 The function ``randn`` fills the matrix ``mtx`` with normally distributed random numbers with the specified mean vector and the standard deviation matrix. The generated random numbers are clipped to fit the value range of the destination array data type.
 
-See Also:
-:cpp:func:`RNG`,
-:cpp:func:`randu`
+.. seealso::
 
-.. index:: randShuffle
+    :cpp:class:`RNG`,
+    :cpp:func:`randu`
+
+
 
 randShuffle
 -----------
@@ -2537,11 +2432,12 @@ randShuffle
 
 The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``mtx.rows*mtx.cols*iterFactor`` .
 
-See Also:
-:cpp:func:`RNG`,
-:cpp:func:`sort`
+.. seealso::
 
-.. index:: reduce
+    :cpp:class:`RNG`,
+    :cpp:func:`sort`
+
+
 
 reduce
 ------
@@ -2570,9 +2466,9 @@ reduce
     
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
-See Also: :cpp:func:`repeat`
+.. seealso:: :cpp:func:`repeat`
 
-.. index:: repeat
+
 
 repeat
 ------
@@ -2601,30 +2497,17 @@ The functions
 The second variant of the function is more convenient to use with
 :ref:`MatrixExpressions` . 
 
-See Also:
-:cpp:func:`reduce`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: saturate_cast
+    :cpp:func:`reduce`,
+    :ref:`MatrixExpressions`
+
+
 
 saturate_cast
 -------------
 
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned char v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(signed char v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned short v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(signed short v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(int v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(unsigned int v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(float v)
-
-.. cpp:function:: template<typename _Tp> inline _Tp saturate_cast(double v)
+.. cpp:function:: template<...> _Tp saturate_cast(_Tp2 v)
 
     Template function for accurate conversion from one primitive type to another.
 
@@ -2635,21 +2518,21 @@ The functions ``saturate_cast`` resemble the standard C++ cast operations, such 
     uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
     short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
 
-
 Such clipping is done when the target type is ``unsigned char`` , ``signed char`` , ``unsigned short`` or ``signed short`` . For 32-bit integers, no clipping is done.
 
 When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit), the floating-point value is first rounded to the nearest integer and then clipped if needed (when the target type is 8- or 16-bit).
 
 This operation is used in the simplest or most complex image processing functions in OpenCV.
 
-See Also:
-:cpp:func:`add`,
-:cpp:func:`subtract`,
-:cpp:func:`multiply`,
-:cpp:func:`divide`,
-:cpp:func:`Mat::convertTo`
+.. seealso::
 
-.. index:: scaleAdd
+    :cpp:func:`add`,
+    :cpp:func:`subtract`,
+    :cpp:func:`multiply`,
+    :cpp:func:`divide`,
+    :cpp:func:`Mat::convertTo`
+
+
 
 scaleAdd
 --------
@@ -2679,15 +2562,16 @@ The function can also be emulated with a matrix expression, for example: ::
     A.row(0) = A.row(1)*2 + A.row(2);
 
 
-See Also:
-:cpp:func:`add`,
-:cpp:func:`addWeighted`,
-:cpp:func:`subtract`,
-:cpp:func:`Mat::dot`,
-:cpp:func:`Mat::convertTo`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: setIdentity
+    :cpp:func:`add`,
+    :cpp:func:`addWeighted`,
+    :cpp:func:`subtract`,
+    :cpp:func:`Mat::dot`,
+    :cpp:func:`Mat::convertTo`,
+    :ref:`MatrixExpressions`
+
+
 
 setIdentity
 -----------
@@ -2713,14 +2597,15 @@ The function can also be emulated using the matrix initializers and the matrix e
     // A will be set to [[5, 0, 0], [0, 5, 0], [0, 0, 5], [0, 0, 0]]
 
 
-See Also:
-:cpp:func:`Mat::zeros`,
-:cpp:func:`Mat::ones`,
-:ref:`MatrixExpressions`,
-:cpp:func:`Mat::setTo`,
-:cpp:func:`Mat::operator=`
+.. seealso::
 
-.. index:: solve
+    :cpp:func:`Mat::zeros`,
+    :cpp:func:`Mat::ones`,
+    :ref:`MatrixExpressions`,
+    :cpp:func:`Mat::setTo`,
+    :cpp:func:`Mat::operator=`
+
+
 
 solve
 -----
@@ -2758,18 +2643,15 @@ The function ``solve`` solves a linear system or least-squares problem (the latt
 If ``DECOMP_LU`` or ``DECOMP_CHOLESKY`` method is used, the function returns 1 if ``src1`` (or
 :math:`\texttt{src1}^T\texttt{src1}` ) is non-singular. Otherwise, it returns 0. In the latter case, ``dst`` is not valid. Other methods find a pseudo-solution in case of a singular left-hand side part.
 
-**Note** 
+.. note:: If you want to find a unity-norm solution of an under-defined singular system :math:`\texttt{src1}\cdot\texttt{dst}=0` , the function ``solve`` will not do the work. Use :cpp:func:`SVD::solveZ` instead.
 
-If you want to find a unity-norm solution of an under-defined singular system
-:math:`\texttt{src1}\cdot\texttt{dst}=0` , the function ``solve`` will not do the work. Use
-:cpp:func:`SVD::solveZ` instead.
+.. seealso::
 
-See Also:
-:cpp:func:`invert`,
-:cpp:class:`SVD`,
-:cpp:func:`eigen`
+    :cpp:func:`invert`,
+    :cpp:class:`SVD`,
+    :cpp:func:`eigen`
 
-.. index:: solveCubic
+
 
 solveCubic
 --------------
@@ -2797,7 +2679,7 @@ or (if ``coeffs`` is a 3-element vector):
 
 The roots are stored in the ``roots`` array.
 
-.. index:: solvePoly
+
 
 solvePoly
 ---------
@@ -2818,7 +2700,7 @@ The function ``solvePoly`` finds real and complex roots of a polynomial equation
 
     \texttt{coeffs} [n] x^{n} +  \texttt{coeffs} [n-1] x^{n-1} + ... +  \texttt{coeffs} [1] x +  \texttt{coeffs} [0] = 0
 
-.. index:: sort
+
 
 sort
 ----
@@ -2843,11 +2725,12 @@ sort
 
 The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. So you should pass two operation flags to get desirable behaviour. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
 
-See Also:
-:cpp:func:`sortIdx`,
-:cpp:func:`randShuffle`
+.. seealso::
 
-.. index:: sortIdx
+    :cpp:func:`sortIdx`,
+    :cpp:func:`randShuffle`
+
+
 
 sortIdx
 -------
@@ -2879,11 +2762,12 @@ The function ``sortIdx`` sorts each matrix row or each matrix column in the asce
     // [[1, 2, 0], [0, 2, 1], [0, 1, 2]]
 
 
-See Also:
-:cpp:func:`sort`,
-:cpp:func:`randShuffle`
+.. seealso::
 
-.. index:: split
+    :cpp:func:`sort`,
+    :cpp:func:`randShuffle`
+
+
 
 split
 -----
@@ -2907,12 +2791,13 @@ The functions ``split`` split a multi-channel array into separate single-channel
 If you need to extract a single channel or do some other sophisticated channel permutation, use
 :cpp:func:`mixChannels` .
 
-See Also:
-:cpp:func:`merge`,
-:cpp:func:`mixChannels`,
-:cpp:func:`cvtColor`
+.. seealso::
 
-.. index:: sqrt
+    :cpp:func:`merge`,
+    :cpp:func:`mixChannels`,
+    :cpp:func:`cvtColor`
+
+
 
 sqrt
 ----
@@ -2927,11 +2812,12 @@ sqrt
     
 The functions ``sqrt`` calculate a square root of each source array element. In case of multi-channel arrays, each channel is processed independently. The accuracy is approximately the same as of the built-in ``std::sqrt`` .
 
-See Also:
-:cpp:func:`pow`,
-:cpp:func:`magnitude`
+.. seealso::
 
-.. index:: subtract
+    :cpp:func:`pow`,
+    :cpp:func:`magnitude`
+
+
 
 subtract
 --------
@@ -2982,56 +2868,32 @@ The first function in the list above can be replaced with matrix expressions: ::
 
 The input arrays and the destination array can all have the same or different depths. For example, you can subtract to 8-bit unsigned arrays and store the difference in 16-bit signed array. Depth of the output array is determined by ``dtype`` parameter. In the 2nd and 3rd cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
 
-See Also:
-:cpp:func:`add`,
-:cpp:func:`addWeighted`,
-:cpp:func:`scaleAdd`,
-:cpp:func:`convertScale`,
-:ref:`MatrixExpressions`
+.. seealso::
 
-.. index:: SVD
+    :cpp:func:`add`,
+    :cpp:func:`addWeighted`,
+    :cpp:func:`scaleAdd`,
+    :cpp:func:`convertScale`,
+    :ref:`MatrixExpressions`
+
+
 
 SVD
 ---
 .. cpp:class:: SVD
 
-Class for computing Singular Value Decomposition ::
+for computing Singular Value Decomposition of a floating-point matrix. The Singular Value Decomposition is used to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers, and so on.
 
-    class SVD
-    {
-    public:
-        enum { MODIFY_A=1, NO_UV=2, FULL_UV=4 };
-        // default empty constructor
-        SVD();
-        // decomposes A into u, w and vt: A = u*w*vt;
-        // u and vt are orthogonal, w is diagonal
-        SVD( const Mat& A, int flags=0 );
-        // decomposes A into u, w and vt.
-        SVD& operator ()( const Mat& A, int flags=0 );
-
-        // finds vector x, norm(x)=1, so that A*x = 0,
-        // where A is a singular matrix
-        static void solveZ( const Mat& A, OutputArray x );
-        // does back-subsitution:
-        // x = vt.t()*inv(w)*u.t()*rhs ~ inv(A)*rhs
-        void backSubst( const Mat& rhs, OutputArray x ) const;
-
-        Mat u; // the left orthogonal matrix
-        Mat w; // vector of singular values
-        Mat vt; // the right orthogonal matrix
-    };
-
-
-The class ``SVD`` is used to compute Singular Value Decomposition of a floating-point matrix. The Singular Value Decomposition is used to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers, and so on.
 For a bit faster operation, you can pass ``flags=SVD::MODIFY_A|...`` to modify the decomposed matrix when it is not necessary to preserve it. If you want to compute a condition number of a matrix or an absolute value of its determinant, you do not need ``u`` and ``vt`` . You can pass ``flags=SVD::NO_UV|...`` . Another flag ``FULL_UV`` indicates that full-size ``u`` and ``vt`` must be computed, which is not necessary most of the time.
 
-See Also:
-:cpp:func:`invert`,
-:cpp:func:`solve`,
-:cpp:func:`eigen`,
-:cpp:func:`determinant`
+.. seealso::
 
-.. index:: SVD::SVD
+    :cpp:func:`invert`,
+    :cpp:func:`solve`,
+    :cpp:func:`eigen`,
+    :cpp:func:`determinant`
+
+
 
 SVD::SVD
 --------
@@ -3055,7 +2917,7 @@ SVD::SVD
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
 :cpp:func:`SVD::operator ()` .
 
-.. index:: SVD::operator ()
+
 
 SVD::operator ()
 ----------------
@@ -3077,7 +2939,7 @@ SVD::operator ()
 The operator performs the singular value decomposition of the supplied matrix. The ``u``,``vt`` , and the vector of singular values ``w`` are stored in the structure. The same ``SVD`` structure can be reused many times with different matrices. Each time, if needed, the previous ``u``,``vt`` , and ``w`` are reclaimed and the new matrices are created, which is all handled by
 :cpp:func:`Mat::create` .
 
-.. index:: SVD::solveZ
+
 
 SVD::solveZ
 -----------
@@ -3090,16 +2952,14 @@ SVD::solveZ
 
     :param x: Found solution.
 
-The method finds a unit-length solution
-**x**
-of the under-determined system
-:math:`A x = 0` . Theory says that such a system has an infinite number of solutions, so the algorithm finds a unit-length solution as the right singular vector corresponding to the smallest singular value (which should be 0). In practice, because of round errors and limited floating-point accuracy, the input matrix can appear to be close-to-singular rather than just singular. So, strictly speaking, the algorithm solves the following problem:
+The method finds a unit-length solution ``x`` of a singular linear system 
+``A*x = 0``. Depending on the rank of ``A``, there can be no solutions, a single solution or an infinite number of solutions. In general, the algorithm solves the following problem:
 
 .. math::
 
     x^* =  \arg \min _{x:  \| x \| =1}  \| A  \cdot x  \|
 
-.. index:: SVD::backSubst
+
 
 SVD::backSubst
 --------------
@@ -3108,7 +2968,7 @@ SVD::backSubst
 
     Performs a singular value back substitution.
 
-    :param rhs: Right-hand side of a linear system  :math:`\texttt{A} \texttt{x} = \texttt{rhs}`  to be solved, where  ``A``  is the matrix passed to  :cpp:func:`SVD::SVD`  or  :cpp:func:`SVD::operator ()` .
+    :param rhs: Right-hand side of a linear system  ``A*x = rhs`` to be solved, where ``A`` has been previously decomposed using :cpp:func:`SVD::SVD`  or  :cpp:func:`SVD::operator ()` .
     
     :param x: Found solution of the system.
 
@@ -3120,12 +2980,9 @@ The method computes a back substitution for the specified right-hand side:
 
 Using this technique you can either get a very accurate solution of the convenient linear system, or the best (in the least-squares terms) pseudo-solution of an overdetermined linear system. 
 
-**Note**
+.. note:: Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call :cpp:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
 
-Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call
-:cpp:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
 
-.. index:: sum
 
 sum
 ---
@@ -3138,15 +2995,16 @@ sum
 
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 
-See Also:
-:cpp:func:`countNonZero`,
-:cpp:func:`mean`,
-:cpp:func:`meanStdDev`,
-:cpp:func:`norm`,
-:cpp:func:`minMaxLoc`,
-:cpp:func:`reduce`
+.. seealso::
 
-.. index:: theRNG
+    :cpp:func:`countNonZero`,
+    :cpp:func:`mean`,
+    :cpp:func:`meanStdDev`,
+    :cpp:func:`norm`,
+    :cpp:func:`minMaxLoc`,
+    :cpp:func:`reduce`
+
+
 
 theRNG
 ------
@@ -3159,12 +3017,13 @@ The function ``theRNG`` returns the default random number generator. For each th
 :cpp:func:`randu` or
 :cpp:func:`randn` instead. But if you are going to generate many random numbers inside a loop, it is much faster to use this function to retrieve the generator and then use ``RNG::operator _Tp()`` .
 
-See Also:
-:cpp:func:`RNG`,
-:cpp:func:`randu`,
-:cpp:func:`randn`
+.. seealso::
 
-.. index:: trace
+    :cpp:class:`RNG`,
+    :cpp:func:`randu`,
+    :cpp:func:`randn`
+
+
 
 trace
 -----
@@ -3181,7 +3040,7 @@ The function ``trace`` returns the sum of the diagonal elements of the matrix ``
 
     \mathrm{tr} ( \texttt{mtx} ) =  \sum _i  \texttt{mtx} (i,i)
 
-.. index:: transform
+
 
 transform
 ---------
@@ -3211,24 +3070,22 @@ The function ``transform`` performs the matrix transformation of every element o
 (when ``mtx.cols=src.channels()+1`` )
 
 Every element of the ``N`` -channel array ``src`` is interpreted as ``N`` -element vector that is transformed using
-the
-:math:`\texttt{M} \times \texttt{N}` or
-:math:`\texttt{M} \times \texttt{N+1}` matrix ``mtx``
+the ``M x N`` or ``M x (N+1)`` matrix ``mtx``
 to ``M``-element vector - the corresponding element of the destination array ``dst`` .
 
 The function may be used for geometrical transformation of
-:math:`N` -dimensional
-points, arbitrary linear color space transformation (such as various kinds of RGB
-:math:`\rightarrow` YUV transforms), shuffling the image channels, and so forth.
+``N`` -dimensional
+points, arbitrary linear color space transformation (such as various kinds of RGB to YUV transforms), shuffling the image channels, and so forth.
 
-See Also:
-:cpp:func:`perspectiveTransform`,
-:cpp:func:`getAffineTransform`,
-:cpp:func:`estimateRigidTransform`,
-:cpp:func:`warpAffine`,
-:cpp:func:`warpPerspective`
+.. seealso::
 
-.. index:: transpose
+    :cpp:func:`perspectiveTransform`,
+    :cpp:func:`getAffineTransform`,
+    :cpp:func:`estimateRigidTransform`,
+    :cpp:func:`warpAffine`,
+    :cpp:func:`warpPerspective`
+
+
 
 transpose
 ---------
@@ -3247,6 +3104,4 @@ The function :cpp:func:`transpose` transposes the matrix ``src`` :
 
     \texttt{dst} (i,j) =  \texttt{src} (j,i)
 
-**Note**:
-
-No complex conjugation is done in case of a complex matrix. It it should be done separately if needed.
+.. note:: No complex conjugation is done in case of a complex matrix. It it should be done separately if needed.

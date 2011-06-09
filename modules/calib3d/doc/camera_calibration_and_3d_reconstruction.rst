@@ -103,8 +103,6 @@ The functions below use the above model to do the following:
 
 .. index:: calibrateCamera
 
-.. _calibrateCamera:
-
 calibrateCamera
 ---------------
 
@@ -186,8 +184,6 @@ See Also:
 
 .. index:: calibrationMatrixValues
 
-.. _calibrationMatrixValues:
-
 calibrationMatrixValues
 -----------------------
 .. cpp:function:: void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize, double apertureWidth, double apertureHeight, double& fovx, double& fovy, double& focalLength, Point2d& principalPoint, double& aspectRatio )
@@ -215,8 +211,6 @@ calibrationMatrixValues
 The function computes various useful camera characteristics from the previously estimated camera matrix.
 
 .. index:: composeRT
-
-.. _composeRT:
 
 composeRT
 -------------
@@ -252,8 +246,6 @@ Also, the functions can compute the derivatives of the output vectors with regar
 The functions are used inside :ref:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains a matrix multiplication.
 
 .. index:: computeCorrespondEpilines
-
-.. _computeCorrespondEpilines:
 
 computeCorrespondEpilines
 -----------------------------
@@ -374,8 +366,6 @@ The function is based on
 
 .. index:: drawChessboardCorners
 
-.. _drawChessboardCorners:
-
 drawChessboardCorners
 -------------------------
 .. cpp:function:: void drawChessboardCorners( InputOutputArray image, Size patternSize, InputArray corners, bool patternWasFound )
@@ -384,17 +374,15 @@ drawChessboardCorners
 
     :param image: Destination image. It must be an 8-bit color image.
 
-    :param patternSize: Number of inner corners per a chessboard row and column. ``(patternSize = cv::Size(points_per_row,points_per_column) = cv::Size(rows,columns) )``
+    :param patternSize: Number of inner corners per a chessboard row and column ``(patternSize = cv::Size(points_per_row,points_per_column))``
 
-    :param corners: Array of detected corners. This should be an output from ``findChessboardCorners`` wrapped in ``cv::Mat()`` .
+    :param corners: Array of detected corners, the output of ``findChessboardCorners``.
 
-    :param patternWasFound: Parameter indicating whether the complete board was found or not. The return value  :ref:`FindChessboardCorners`  may be passed here.
+    :param patternWasFound: Parameter indicating whether the complete board was found or not. The return value of :cpp:func:`findChessboardCorners` should be passed here.
 
 The function draws individual chessboard corners detected either as red circles if the board was not found, or as colored corners connected with lines if the board was found.
 
 .. index:: findChessboardCorners
-
-.. _findChessboardCorners:
 
 findChessboardCorners
 -------------------------
@@ -454,8 +442,6 @@ The function requires white space (like a square-thick border, the wider the bet
 
 .. index:: findCirclesGrid
 
-.. _findCirclesGrid:
-
 findCirclesGrid
 -------------------
 .. cpp:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
@@ -501,8 +487,6 @@ The function requires white space (like a square-thick border, the wider the bet
 
 .. index:: solvePnP
 
-.. _solvePnP:
-
 solvePnP
 ------------
 .. cpp:function:: void solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false )
@@ -527,8 +511,6 @@ The function estimates the object pose given a set of object points, their corre
 :ref:`projectPoints` ) ``objectPoints`` .
 
 .. index:: solvePnPRansac
-
-.. _solvePnPRansac:
 
 solvePnPRansac
 ------------------
@@ -563,8 +545,6 @@ The function estimates an object pose given a set of object points, their corres
 :ref:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
 
 .. index:: findFundamentalMat
-
-.. _findFundamentalMat:
 
 findFundamentalMat
 ----------------------
@@ -755,8 +735,6 @@ the optimal new camera matrix based on the free scaling parameter. By varying  t
 
 .. index:: initCameraMatrix2D
 
-.. _initCameraMatrix2D:
-
 initCameraMatrix2D
 ----------------------
 .. cpp:function:: Mat initCameraMatrix2D( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, double aspectRatio=1.)
@@ -775,8 +753,6 @@ The function estimates and returns an initial camera matrix for the camera calib
 Currently, the function only supports planar calibration patterns, which are patterns where each object point has z-coordinate =0.
 
 .. index:: matMulDeriv
-
-.. _matMulDeriv:
 
 matMulDeriv
 ---------------
@@ -798,8 +774,6 @@ The function computes partial derivatives of the elements of the matrix product
 :ref:`stereoCalibrate`  but can also be used in any other similar optimization function.
 
 .. index:: projectPoints
-
-.. _projectPoints:
 
 projectPoints
 -----------------
@@ -842,8 +816,6 @@ current intrinsic and extrinsic parameters.
 By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identity matrix, or by passing zero distortion coefficients, you can get various useful partial cases of the function. This means that you can compute the distorted coordinates for a sparse set of points or apply a perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
 
 .. index:: reprojectImageTo3D
-
-.. _reprojectImageTo3D:
 
 reprojectImageTo3D
 ----------------------
@@ -903,8 +875,6 @@ that could be used in OpenGL.
 
 .. index:: Rodrigues
 
-.. _Rodrigues:
-
 Rodrigues
 -------------
 .. cpp:function:: void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray())
@@ -935,8 +905,6 @@ used in the global 3D geometry optimization procedures like
 :ref:`solvePnP` .
 
 .. index:: StereoBM
-
-.. _StereoBM:
 
 StereoBM
 --------
@@ -973,8 +941,6 @@ The class is a C++ wrapper for the associated functions. In particular, ``Stereo
 
 .. index:: StereoBM::operator ()
 
-.. _StereoBM::operator ():
-
 StereoBM::operator ()
 -----------------------
 
@@ -994,8 +960,6 @@ The method executes the BM algorithm on a rectified stereo pair. See the ``stere
 
 
 .. index:: StereoSGBM
-
-.. _StereoSGBM:
 
 StereoSGBM
 ----------
@@ -1042,8 +1006,6 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
 .. index:: StereoSGBM::StereoSGBM
 
-.. _StereoSGBM::StereoSGBM:
-
 StereoSGBM::StereoSGBM
 --------------------------
 .. cpp:function:: StereoSGBM::StereoSGBM()
@@ -1076,8 +1038,6 @@ The first constructor initializes ``StereoSGBM`` with all the default parameters
 
 .. index:: StereoSGBM::operator ()
 
-.. _StereoSGBM::operator ():
-
 StereoSGBM::operator ()
 -----------------------
 
@@ -1098,8 +1058,6 @@ The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_
 The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
 
 .. index:: stereoCalibrate
-
-.. _stereoCalibrate:
 
 stereoCalibrate
 -------------------
@@ -1264,8 +1222,6 @@ See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizont
 .. image:: pics/stereo_undistort.jpg
 
 .. index:: stereoRectifyUncalibrated
-
-.. _stereoRectifyUncalibrated:
 
 stereoRectifyUncalibrated
 -----------------------------
