@@ -195,7 +195,7 @@ gpu::BruteForceMatcher_GPU::match
     Finds the best match for each descriptor from a query set with train descriptors.
 
 See Also:
-:c:cpp:func:`DescriptorMatcher::match` 
+:cpp:func:`DescriptorMatcher::match` 
 
 .. index:: gpu::BruteForceMatcher_GPU::matchSingle
 

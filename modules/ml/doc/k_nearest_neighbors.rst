@@ -22,15 +22,15 @@ K-Nearest Neighbors model ::
         CvKNearest();
         virtual ~CvKNearest();
 
-        CvKNearest( const CvMat* _train_data, const CvMat* _responses,
-                    const CvMat* _sample_idx=0, bool _is_regression=false, int max_k=32 );
+        CvKNearest( const Mat& _train_data, const Mat& _responses,
+                    const Mat& _sample_idx=Mat(), bool _is_regression=false, int max_k=32 );
 
-        virtual bool train( const CvMat* _train_data, const CvMat* _responses,
-                            const CvMat* _sample_idx=0, bool is_regression=false,
+        virtual bool train( const Mat& _train_data, const Mat& _responses,
+                            const Mat& _sample_idx=Mat(), bool is_regression=false,
                             int _max_k=32, bool _update_base=false );
 
-        virtual float find_nearest( const CvMat* _samples, int k, CvMat* results,
-            const float** neighbors=0, CvMat* neighbor_responses=0, CvMat* dist=0 ) const;
+        virtual float find_nearest( const Mat& _samples, int k, Mat* results=0,
+            const float** neighbors=0, Mat* neighbor_responses=0, Mat* dist=0 ) const;
 
         virtual void clear();
         int get_max_k() const;
@@ -49,7 +49,7 @@ K-Nearest Neighbors model ::
 
 CvKNearest::train
 -----------------
-.. cpp:function:: bool CvKNearest::train(  const CvMat* _train_data,  const CvMat* _responses,                          const CvMat* _sample_idx=0,  bool is_regression=false,                          int _max_k=32,  bool _update_base=false )
+.. cpp:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
 
     Trains the model.
 
@@ -70,7 +70,7 @@ The parameter ``_update_base`` specifies whether the model is trained from scrat
 
 CvKNearest::find_nearest
 ------------------------
-.. cpp:function:: float CvKNearest::find_nearest(  const CvMat* _samples,  int k, CvMat* results=0,          const float** neighbors=0,  CvMat* neighbor_responses=0,  CvMat* dist=0 ) const
+.. cpp:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
 
     Finds the neighbors for input vectors.
 
@@ -85,7 +85,9 @@ For a custom classification/regression prediction, the method can optionally ret
 
 For each input vector, the neighbors are sorted by their distances to the vector.
 
-If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method. ::
+If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method.
+
+The sample below (currently using the obsolete ``CvMat`` structures) demonstrates the use of the k-nearest classifier for 2D point classification ::
 
     #include "ml.h"
     #include "highgui.h"

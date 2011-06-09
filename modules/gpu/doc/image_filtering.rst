@@ -224,7 +224,7 @@ gpu::createBoxFilter_GPU
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`boxFilter`
+See Also: :cpp:func:`boxFilter`
 
 .. index:: gpu::boxFilter
 
@@ -248,7 +248,7 @@ gpu::boxFilter
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`boxFilter`
+See Also: :cpp:func:`boxFilter`
 
 .. index:: gpu::blur
 
@@ -270,7 +270,7 @@ gpu::blur
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`blur`, :cpp:func:`gpu::boxFilter`
+See Also: :cpp:func:`blur`, :cpp:func:`gpu::boxFilter`
 
 .. index:: gpu::createMorphologyFilter_GPU
 
@@ -296,7 +296,7 @@ gpu::createMorphologyFilter_GPU
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`createMorphologyFilter`
+See Also: :cpp:func:`createMorphologyFilter`
 
 .. index:: gpu::erode
 
@@ -320,7 +320,7 @@ gpu::erode
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`erode`
+See Also: :cpp:func:`erode`
 
 .. index:: gpu::dilate
 
@@ -344,7 +344,7 @@ gpu::dilate
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`dilate`
+See Also: :cpp:func:`dilate`
 
 .. index:: gpu::morphologyEx
 
@@ -381,7 +381,7 @@ gpu::morphologyEx
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`morphologyEx` 
+See Also: :cpp:func:`morphologyEx` 
 
 .. index:: gpu::createLinearFilter_GPU
 
@@ -407,7 +407,7 @@ gpu::createLinearFilter_GPU
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`createLinearFilter`
+See Also: :cpp:func:`createLinearFilter`
 
 .. index:: gpu::filter2D
 
@@ -431,7 +431,7 @@ gpu::filter2D
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`filter2D`
+See Also: :cpp:func:`filter2D`
 
 .. index:: gpu::Laplacian
 
@@ -447,15 +447,15 @@ gpu::Laplacian
 
     :param ddepth: Desired depth of the destination image. It supports only the same depth as the source image depth.
 
-    :param ksize: Aperture size used to compute the second-derivative filters (see :c:cpp:func:`getDerivKernels`). It must be positive and odd. Only  ``ksize``  = 1 and  ``ksize``  = 3 are supported.
+    :param ksize: Aperture size used to compute the second-derivative filters (see :cpp:func:`getDerivKernels`). It must be positive and odd. Only  ``ksize``  = 1 and  ``ksize``  = 3 are supported.
 
-    :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :c:cpp:func:`getDerivKernels` ).
+    :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :cpp:func:`getDerivKernels` ).
 
 	**Note:**
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :c:cpp:func:`Laplacian`,:cpp:func:`gpu::filter2D` .
+See Also: :cpp:func:`Laplacian`,:cpp:func:`gpu::filter2D` .
 
 .. index:: gpu::getLinearRowFilter_GPU
 
@@ -473,7 +473,7 @@ gpu::getLinearRowFilter_GPU
 
     :param anchor: Anchor position within the kernel. Negative values mean that the anchor is positioned at the aperture center.
 
-    :param borderType: Pixel extrapolation method. For details, see :c:cpp:func:`borderInterpolate`. For details on limitations, see below.
+    :param borderType: Pixel extrapolation method. For details, see :cpp:func:`borderInterpolate`. For details on limitations, see below.
 
 	There are two versions of the algorithm: NPP and OpenCV.
 	* NPP version is called when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
@@ -497,13 +497,13 @@ gpu::getLinearColumnFilter_GPU
 
     :param anchor: Anchor position within the kernel. Negative values mean that the anchor is positioned at the aperture center.
 
-    :param borderType: Pixel extrapolation method. For details, see  :c:cpp:func:`borderInterpolate` . For details on limitations, see below.
+    :param borderType: Pixel extrapolation method. For details, see  :cpp:func:`borderInterpolate` . For details on limitations, see below.
 
 	There are two versions of the algorithm: NPP and OpenCV.
 	* NPP version is called when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
 	* OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``, ``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside image.
 	
-See Also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :c:cpp:func:`createSeparableLinearFilter`
+See Also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :cpp:func:`createSeparableLinearFilter`
 
 .. index:: gpu::createSeparableLinearFilter_GPU
 
@@ -521,10 +521,10 @@ gpu::createSeparableLinearFilter_GPU
 
     :param anchor: Anchor position within the kernel. Negative values mean that anchor is positioned at the aperture center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and vertical directions For details, see  :c:cpp:func:`borderInterpolate`. For details on limitations, see :cpp:func:`gpu::getLinearRowFilter_GPU`, cpp:cpp:func:`gpu::getLinearColumnFilter_GPU`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and vertical directions For details, see  :cpp:func:`borderInterpolate`. For details on limitations, see :cpp:func:`gpu::getLinearRowFilter_GPU`, cpp:cpp:func:`gpu::getLinearColumnFilter_GPU`.
 
 
-See Also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :cpp:func:`gpu::getLinearColumnFilter_GPU`, :c:cpp:func:`createSeparableLinearFilter`
+See Also: :cpp:func:`gpu::getLinearRowFilter_GPU`, :cpp:func:`gpu::getLinearColumnFilter_GPU`, :cpp:func:`createSeparableLinearFilter`
 
 .. index:: gpu::sepFilter2D
 
@@ -544,9 +544,9 @@ gpu::sepFilter2D
 
     :param anchor: Anchor position within the kernel. The default value ``(-1, 1)`` means that the anchor is at the kernel center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :c:cpp:func:`borderInterpolate`.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :cpp:func:`borderInterpolate`.
 
-See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:cpp:func:`sepFilter2D`
+See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`sepFilter2D`
 
 .. index:: gpu::createDerivFilter_GPU
 
@@ -564,11 +564,11 @@ gpu::createDerivFilter_GPU
 
     :param dy: Derivative order in respect of y.
 
-    :param ksize: Aperture size. See  :c:cpp:func:`getDerivKernels` for details.
+    :param ksize: Aperture size. See  :cpp:func:`getDerivKernels` for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:cpp:func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
-See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:cpp:func:`createDerivFilter`
+See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`createDerivFilter`
 
 .. index:: gpu::Sobel
 
@@ -590,11 +590,11 @@ gpu::Sobel
 
     :param ksize: Size of the extended Sobel kernel. Possible valies are 1, 3, 5 or 7.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. For details, see  :c:cpp:func:`getDerivKernels` .
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. For details, see  :cpp:func:`getDerivKernels` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:cpp:func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
-See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:cpp:func:`Sobel`
+See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`Sobel`
 
 .. index:: gpu::Scharr
 
@@ -614,11 +614,11 @@ gpu::Scharr
 
     :param yorder: Order of the derivative y.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :c:cpp:func:`getDerivKernels`  for details.
+    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :cpp:func:`getDerivKernels`  for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :c:cpp:func:`borderInterpolate`  and :c:cpp:func:`Scharr` .
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :cpp:func:`borderInterpolate`  and :cpp:func:`Scharr` .
 
-See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:cpp:func:`Scharr`
+See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`Scharr`
 
 .. index:: gpu::createGaussianFilter_GPU
 
@@ -630,15 +630,15 @@ gpu::createGaussianFilter_GPU
 
     :param type: Source and destination image type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1`` are supported.
 
-    :param ksize: Aperture size. See  :c:cpp:func:`getGaussianKernel` for details.
+    :param ksize: Aperture size. See  :cpp:func:`getGaussianKernel` for details.
 
-    :param sigmaX: Gaussian sigma in the horizontal direction. See  :c:cpp:func:`getGaussianKernel` for details.
+    :param sigmaX: Gaussian sigma in the horizontal direction. See  :cpp:func:`getGaussianKernel` for details.
 
     :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
 
-    :param rowBorderType, columnBorderType: Border type to use. See  :c:cpp:func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Border type to use. See  :cpp:func:`borderInterpolate` for details.
 
-See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :c:cpp:func:`createGaussianFilter`
+See Also: :cpp:func:`gpu::createSeparableLinearFilter_GPU`, :cpp:func:`createGaussianFilter`
 
 .. index:: gpu::GaussianBlur
 
@@ -654,11 +654,11 @@ gpu::GaussianBlur
 
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
 
-    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :c:cpp:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize``, ``sigmaX``, and  ``sigmaY`` .
+    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :cpp:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize``, ``sigmaX``, and  ``sigmaY`` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :c:cpp:func:`borderInterpolate` for details.
+    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :cpp:func:`borderInterpolate` for details.
 
-See Also: :cpp:func:`gpu::createGaussianFilter_GPU`, :c:cpp:func:`GaussianBlur`
+See Also: :cpp:func:`gpu::createGaussianFilter_GPU`, :cpp:func:`GaussianBlur`
 
 .. index:: gpu::getMaxFilter_GPU
 

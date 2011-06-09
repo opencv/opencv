@@ -1283,7 +1283,7 @@ calcSparseBackProj_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 }
 
 void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
-                          const SparseMat& hist, Mat& backProject,
+                          const SparseMat& hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
     vector<uchar*> ptrs;
@@ -1293,7 +1293,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     int dims = hist.dims();
     
     CV_Assert( dims > 0 );
-    backProject.create( images[0].size(), images[0].depth() );
+    _backProject.create( images[0].size(), images[0].depth() );
+    Mat backProject = _backProject.getMat();
     histPrepareImages( images, nimages, channels, backProject,
                        dims, hist.hdr->size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );

@@ -14,6 +14,7 @@
 #    full declaration into the file
 #
 
+######################################### core #####################################
 cv::Mat::MSize
 cv::Mat::MStep
 cv::MatConstIterator
@@ -22,5 +23,59 @@ cv::Algorithm
 cv::_InputArray
 cv::_OutputArray
 
-CvLevMarq
+######################################## imgproc ###################################
+CvLSHOperations
+cv::FilterEngine
+cv::BaseFilter
+cv::BaseRowFilter
+cv::BaseColumnFilter
+cv::Moments
 
+######################################## calib3d ###################################
+CvLevMarq
+Mat cv::findFundamentalMat( InputArray points1, InputArray points2, OutputArray mask, int method=FM_RANSAC, double param1=3., double param2=0.99)
+Mat findHomography( InputArray srcPoints, InputArray dstPoints, OutputArray mask, int method=0, double ransacReprojThreshold=3);
+
+########################################## ml ######################################
+
+CvBoostTree
+CvForestTree
+CvSVMKernel
+CvSVMSolver
+CvDTreeTrainData
+CvERTreeTrainData
+CvKNearest::CvKNearest
+CvKNearest::clear
+CvDTree::CvDTree
+CvDTree::clear
+CvDTree::read
+CvDTree::write
+CvEM::CvEM
+CvEM::clear
+CvEM::read
+CvEM::write
+CvSVM::CvSVM
+CvSVM::clear
+CvSVM::read
+CvSVM::write
+CvRTrees::CvRTrees
+CvRTrees::clear
+CvRTrees::read
+CvRTrees::write
+CvBoost::CvBoost
+CvBoost::clear
+CvBoost::read
+CvBoost::write
+CvGBTrees::CvGBTrees
+CvGBTrees::clear
+CvGBTrees::read
+CvGBTrees::write
+CvNormalBayesClassifier::CvNormalBayerClassifier
+CvNormalBayesClassifier::clear
+CvNormalBayesClassifier::read
+CvNormalBayesClassifier::write
+CvANN_MLP::CvANN_MLP
+CvANN_MLP::clear
+CvANN_MLP::read
+CvANN_MLP::write
+CvTrainTestSplit

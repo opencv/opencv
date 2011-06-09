@@ -142,23 +142,23 @@ MLP model ::
     {
     public:
         CvANN_MLP();
-        CvANN_MLP( const CvMat* _layer_sizes,
+        CvANN_MLP( const Mat& _layer_sizes,
                    int _activ_func=SIGMOID_SYM,
                    double _f_param1=0, double _f_param2=0 );
 
         virtual ~CvANN_MLP();
 
-        virtual void create( const CvMat* _layer_sizes,
+        virtual void create( const Mat& _layer_sizes,
                              int _activ_func=SIGMOID_SYM,
                              double _f_param1=0, double _f_param2=0 );
 
-        virtual int train( const CvMat* _inputs, const CvMat* _outputs,
-                           const CvMat* _sample_weights,
-                           const CvMat* _sample_idx=0,
+        virtual int train( const Mat& _inputs, const Mat& _outputs,
+                           const Mat& _sample_weights,
+                           const Mat& _sample_idx=Mat(),
                            CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),
                            int flags=0 );
-        virtual float predict( const CvMat* _inputs,
-                               CvMat* _outputs ) const;
+        virtual float predict( const Mat& _inputs,
+                               Mat& _outputs ) const;
 
         virtual void clear();
 
@@ -172,12 +172,12 @@ MLP model ::
         virtual void write( CvFileStorage* storage, const char* name );
 
         int get_layer_count() { return layer_sizes ? layer_sizes->cols : 0; }
-        const CvMat* get_layer_sizes() { return layer_sizes; }
+        const Mat& get_layer_sizes() { return layer_sizes; }
 
     protected:
 
-        virtual bool prepare_to_train( const CvMat* _inputs, const CvMat* _outputs,
-                const CvMat* _sample_weights, const CvMat* _sample_idx,
+        virtual bool prepare_to_train( const Mat& _inputs, const Mat& _outputs,
+                const Mat& _sample_weights, const Mat& _sample_idx,
                 CvANN_MLP_TrainParams _params,
                 CvVectors* _ivecs, CvVectors* _ovecs, double** _sw, int _flags );
 
@@ -189,23 +189,23 @@ MLP model ::
         virtual int train_rprop( CvVectors _ivecs, CvVectors _ovecs,
                                                  const double* _sw );
 
-        virtual void calc_activ_func( CvMat* xf, const double* bias ) const;
-        virtual void calc_activ_func_deriv( CvMat* xf, CvMat* deriv,
+        virtual void calc_activ_func( Mat& xf, const double* bias ) const;
+        virtual void calc_activ_func_deriv( Mat& xf, Mat& deriv,
                                                  const double* bias ) const;
         virtual void set_activ_func( int _activ_func=SIGMOID_SYM,
                                      double _f_param1=0, double _f_param2=0 );
         virtual void init_weights();
-        virtual void scale_input( const CvMat* _src, CvMat* _dst ) const;
-        virtual void scale_output( const CvMat* _src, CvMat* _dst ) const;
+        virtual void scale_input( const Mat& _src, Mat& _dst ) const;
+        virtual void scale_output( const Mat& _src, Mat& _dst ) const;
         virtual void calc_input_scale( const CvVectors* vecs, int flags );
         virtual void calc_output_scale( const CvVectors* vecs, int flags );
 
         virtual void write_params( CvFileStorage* fs );
         virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
-        CvMat* layer_sizes;
-        CvMat* wbuf;
-        CvMat* sample_weights;
+        Mat& layer_sizes;
+        Mat& wbuf;
+        Mat& sample_weights;
         double** weights;
         double f_param1, f_param2;
         double min_val, max_val, min_val1, max_val1;
@@ -225,7 +225,7 @@ Unlike many other models in ML that are constructed and trained at once, in the 
 
 CvANN_MLP::create
 -----------------
-.. cpp:function:: void CvANN_MLP::create(  const CvMat* _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
+.. cpp:function:: void CvANN_MLP::create(  const Mat& _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
 
     Constructs MLP with the specified topology.
 
@@ -243,7 +243,7 @@ The method creates an MLP network with the specified topology and assigns the sa
 
 CvANN_MLP::train
 ----------------
-.. cpp:function:: int CvANN_MLP::train(  const CvMat* _inputs,  const CvMat* _outputs,                        const CvMat* _sample_weights,  const CvMat* _sample_idx=0,                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
+.. cpp:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(),                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
 
     Trains/updates MLP.
 

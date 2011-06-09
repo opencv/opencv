@@ -46,16 +46,16 @@ Support Vector Machines ::
         CvSVM();
         virtual ~CvSVM();
 
-        CvSVM( const CvMat* _train_data, const CvMat* _responses,
-               const CvMat* _var_idx=0, const CvMat* _sample_idx=0,
+        CvSVM( const Mat& _train_data, const Mat& _responses,
+               const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),
                CvSVMParams _params=CvSVMParams() );
 
-        virtual bool train( const CvMat* _train_data, const CvMat* _responses,
-                            const CvMat* _var_idx=0, const CvMat* _sample_idx=0,
+        virtual bool train( const Mat& _train_data, const Mat& _responses,
+                            const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),
                             CvSVMParams _params=CvSVMParams() );
 
-        virtual bool train_auto( const CvMat* _train_data, const CvMat* _responses,
-            const CvMat* _var_idx, const CvMat* _sample_idx, CvSVMParams _params,
+        virtual bool train_auto( const Mat& _train_data, const Mat& _responses,
+            const Mat& _var_idx, const Mat& _sample_idx, CvSVMParams _params,
             int k_fold = 10,
             CvParamGrid C_grid      = get_default_grid(CvSVM::C),
             CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),
@@ -64,7 +64,7 @@ Support Vector Machines ::
             CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),
             CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) );
 
-        virtual float predict( const CvMat* _sample ) const;
+        virtual float predict( const Mat& _sample ) const;
         virtual int get_support_vector_count() const;
         virtual const float* get_support_vector(int i) const;
         virtual CvSVMParams get_params() const { return params; };
@@ -100,7 +100,7 @@ SVM training parameters ::
         CvSVMParams( int _svm_type, int _kernel_type,
                      double _degree, double _gamma, double _coef0,
                      double _C, double _nu, double _p,
-                     CvMat* _class_weights, CvTermCriteria _term_crit );
+                     const CvMat* _class_weights, CvTermCriteria _term_crit );
 
         int         svm_type;
         int         kernel_type;
@@ -125,7 +125,7 @@ The structure must be initialized and passed to the training method of
 
 CvSVM::train
 ------------
-.. cpp:function:: bool CvSVM::train(  const CvMat* _train_data,  const CvMat* _responses,                     const CvMat* _var_idx=0,  const CvMat* _sample_idx=0,                     CvSVMParams _params=CvSVMParams() )
+.. cpp:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
 
     Trains SVM.
 
@@ -145,7 +145,7 @@ All the other parameters are gathered in the
 
 CvSVM::train_auto
 -----------------
-.. cpp:function:: train_auto(  const CvMat* _train_data,  const CvMat* _responses,          const CvMat* _var_idx,  const CvMat* _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
+.. cpp:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
 
     Trains SVM with optimal parameters.
 

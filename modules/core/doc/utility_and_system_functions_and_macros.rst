@@ -290,6 +290,6 @@ useOptimized
 -----------------
 .. cpp:function:: bool useOptimized()
 
-    Returns status if the optimized code use
+    Returns status of the optimized code use
 
 The function returns true if the optimized code is enabled, false otherwise.

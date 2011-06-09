@@ -108,8 +108,8 @@ Parameters of the EM algorithm ::
                     CvTermCriteria _term_crit=cvTermCriteria(
                                             CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,
                                             100, FLT_EPSILON),
-                    CvMat* _probs=0, CvMat* _weights=0,
-                    CvMat* _means=0, CvMat** _covs=0 ) :
+                    const CvMat* _probs=0, const CvMat* _weights=0,
+                    const CvMat* _means=0, const CvMat** _covs=0 ) :
                     nclusters(_nclusters), cov_mat_type(_cov_mat_type),
                     start_step(_start_step),
                     probs(_probs), weights(_weights), means(_means), covs(_covs),
@@ -149,21 +149,21 @@ EM model ::
         enum { START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0 };
 
         CvEM();
-        CvEM( const CvMat* samples, const CvMat* sample_idx=0,
-              CvEMParams params=CvEMParams(), CvMat* labels=0 );
+        CvEM( const Mat& samples, const Mat& sample_idx=Mat(),
+              CvEMParams params=CvEMParams(), Mat* labels=0 );
         virtual ~CvEM();
 
-        virtual bool train( const CvMat* samples, const CvMat* sample_idx=0,
-                            CvEMParams params=CvEMParams(), CvMat* labels=0 );
+        virtual bool train( const Mat& samples, const Mat& sample_idx=Mat(),
+                            CvEMParams params=CvEMParams(), Mat* labels=0 );
 
-        virtual float predict( const CvMat* sample, CvMat* probs ) const;
+        virtual float predict( const Mat& sample, Mat& probs ) const;
         virtual void clear();
 
         int get_nclusters() const { return params.nclusters; }
-        const CvMat* get_means() const { return means; }
-        const CvMat** get_covs() const { return covs; }
-        const CvMat* get_weights() const { return weights; }
-        const CvMat* get_probs() const { return probs; }
+        const Mat& get_means() const { return means; }
+        const Mat&* get_covs() const { return covs; }
+        const Mat& get_weights() const { return weights; }
+        const Mat& get_probs() const { return probs; }
 
     protected:
 
@@ -173,19 +173,19 @@ EM model ::
         virtual double run_em( const CvVectors& train_data );
         virtual void init_auto( const CvVectors& samples );
         virtual void kmeans( const CvVectors& train_data, int nclusters,
-                             CvMat* labels, CvTermCriteria criteria,
-                             const CvMat* means );
+                             Mat& labels, CvTermCriteria criteria,
+                             const Mat& means );
         CvEMParams params;
         double log_likelihood;
 
-        CvMat* means;
-        CvMat** covs;
-        CvMat* weights;
-        CvMat* probs;
+        Mat& means;
+        Mat&* covs;
+        Mat& weights;
+        Mat& probs;
 
-        CvMat* log_weight_div_det;
-        CvMat* inv_eigen_values;
-        CvMat** cov_rotate_mats;
+        Mat& log_weight_div_det;
+        Mat& inv_eigen_values;
+        Mat&* cov_rotate_mats;
     };
 
 
@@ -195,7 +195,7 @@ EM model ::
 
 CvEM::train
 -----------
-.. cpp:function:: void CvEM::train(  const CvMat* samples,  const CvMat*  sample_idx=0,                    CvEMParams params=CvEMParams(),  CvMat* labels=0 )
+.. cpp:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
 
     Estimates the Gaussian mixture parameters from a sample set.
 
@@ -210,110 +210,7 @@ Unlike many of the ML models, EM is an unsupervised learning algorithm and it do
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
 :ref:`Bayes classifier`.
 
-Example: Clustering random samples of multi-Gaussian distribution using EM ::
+For example of clustering random samples of multi-Gaussian distribution using EM see em.cpp sample in OpenCV distribution.
 
-    #include "ml.h"
-    #include "highgui.h"
-
-    int main( int argc, char** argv )
-    {
-        const int N = 4;
-        const int N1 = (int)sqrt((double)N);
-        const CvScalar colors[] = {{0,0,255}},{{0,255,0}},
-                                        {{0,255,255}},{{255,255,0}
-                                        ;
-        int i, j;
-        int nsamples = 100;
-        CvRNG rng_state = cvRNG(-1);
-        CvMat* samples = cvCreateMat( nsamples, 2, CV_32FC1 );
-        CvMat* labels = cvCreateMat( nsamples, 1, CV_32SC1 );
-        IplImage* img = cvCreateImage( cvSize( 500, 500 ), 8, 3 );
-        float _sample[2];
-        CvMat sample = cvMat( 1, 2, CV_32FC1, _sample );
-        CvEM em_model;
-        CvEMParams params;
-        CvMat samples_part;
-
-        cvReshape( samples, samples, 2, 0 );
-        for( i = 0; i < N; i++ )
-        {
-            CvScalar mean, sigma;
-
-            // form the training samples
-            cvGetRows( samples, &samples_part, i*nsamples/N,
-                                               (i+1)*nsamples/N );
-            mean = cvScalar(((i
-                           ((i/N1)+1.)*img->height/(N1+1));
-            sigma = cvScalar(30,30);
-            cvRandArr( &rng_state, &samples_part, CV_RAND_NORMAL,
-                                                            mean, sigma );
-        }
-        cvReshape( samples, samples, 1, 0 );
-
-        // initialize model parameters
-        params.covs      = NULL;
-        params.means     = NULL;
-        params.weights   = NULL;
-        params.probs     = NULL;
-        params.nclusters = N;
-        params.cov_mat_type       = CvEM::COV_MAT_SPHERICAL;
-        params.start_step         = CvEM::START_AUTO_STEP;
-        params.term_crit.max_iter = 10;
-        params.term_crit.epsilon  = 0.1;
-        params.term_crit.type     = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
-
-        // cluster the data
-        em_model.train( samples, 0, params, labels );
-
-    #if 0
-        // the piece of code shows how to repeatedly optimize the model
-        // with less-constrained parameters
-        //(COV_MAT_DIAGONAL instead of COV_MAT_SPHERICAL)
-        // when the output of the first stage is used as input for the second one.
-        CvEM em_model2;
-        params.cov_mat_type = CvEM::COV_MAT_DIAGONAL;
-        params.start_step = CvEM::START_E_STEP;
-        params.means = em_model.get_means();
-        params.covs = (const CvMat**)em_model.get_covs();
-        params.weights = em_model.get_weights();
-
-        em_model2.train( samples, 0, params, labels );
-        // to use em_model2, replace em_model.predict()
-        // with em_model2.predict() below
-    #endif
-        // classify every image pixel
-        cvZero( img );
-        for( i = 0; i < img->height; i++ )
-        {
-            for( j = 0; j < img->width; j++ )
-            {
-                CvPoint pt = cvPoint(j, i);
-                sample.data.fl[0] = (float)j;
-                sample.data.fl[1] = (float)i;
-                int response = cvRound(em_model.predict( &sample, NULL ));
-                CvScalar c = colors[response];
-
-                cvCircle( img, pt, 1, cvScalar(c.val[0]*0.75,
-                    c.val[1]*0.75,c.val[2]*0.75), CV_FILLED );
-            }
-        }
-
-        //draw the clustered samples
-        for( i = 0; i < nsamples; i++ )
-        {
-            CvPoint pt;
-            pt.x = cvRound(samples->data.fl[i*2]);
-            pt.y = cvRound(samples->data.fl[i*2+1]);
-            cvCircle( img, pt, 1, colors[labels->data.i[i]], CV_FILLED );
-        }
-
-        cvNamedWindow( "EM-clustering result", 1 );
-        cvShowImage( "EM-clustering result", img );
-        cvWaitKey(0);
-
-        cvReleaseMat( &samples );
-        cvReleaseMat( &labels );
-        return 0;
-    }
 
 

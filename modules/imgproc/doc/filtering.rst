@@ -697,7 +697,7 @@ createMorphologyFilter
 
 .. cpp:function:: Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type,                                                int esize, int anchor=-1)
 
-.. cpp:function:: static inline Scalar morphologyDefaultBorderValue(){ return Scalar::all(DBL_MAX) }
+.. cpp:function:: Scalar morphologyDefaultBorderValue()
 
     Creates an engine for non-separable morphological operations.
 

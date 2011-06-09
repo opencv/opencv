@@ -15,20 +15,20 @@ Base class for statistical models in ML ::
     {
     public:
         /* CvStatModel(); */
-        /* CvStatModel( const CvMat* train_data ... ); */
+        /* CvStatModel( const Mat& train_data ... ); */
 
         virtual ~CvStatModel();
 
         virtual void clear()=0;
 
-        /* virtual bool train( const CvMat* train_data, [int tflag,] ..., const
-            CvMat* responses, ...,
-         [const CvMat* var_idx,] ..., [const CvMat* sample_idx,] ...
-         [const CvMat* var_type,] ..., [const CvMat* missing_mask,]
+        /* virtual bool train( const Mat& train_data, [int tflag,] ..., const
+            Mat& responses, ...,
+         [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...
+         [const Mat& var_type,] ..., [const Mat& missing_mask,]
             <misc_training_alg_params> ... )=0;
           */
 
-        /* virtual float predict( const CvMat* sample ... ) const=0; */
+        /* virtual float predict( const Mat& sample ... ) const=0; */
 
         virtual void save( const char* filename, const char* name=0 )=0;
         virtual void load( const char* filename, const char* name=0 )=0;
@@ -58,7 +58,7 @@ Each statistical model class in ML has a default constructor without parameters.
 
 CvStatModel::CvStatModel(...)
 -----------------------------
-.. cpp:function:: CvStatModel::CvStatModel( const CvMat* train_data ... )
+.. cpp:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
 
     Serves as a training constructor.
 
@@ -161,7 +161,7 @@ The previous model state is cleared by ``clear()`` .
 
 CvStatModel::train
 ------------------
-.. cpp:function:: bool CvStatMode::train( const CvMat* train_data, [int tflag,] ..., const CvMat* responses, ...,     [const CvMat* var_idx,] ..., [const CvMat* sample_idx,] ...     [const CvMat* var_type,] ..., [const CvMat* missing_mask,] <misc_training_alg_params> ... )
+.. cpp:function:: bool CvStatMode::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
 
     Trains the model.
 
@@ -193,7 +193,7 @@ Usually, the previous model state is cleared by ``clear()`` before running the t
 
 CvStatModel::predict
 --------------------
-.. cpp:function:: float CvStatMode::predict( const CvMat* sample[, <prediction_params>] ) const
+.. cpp:function:: float CvStatMode::predict( const Mat& sample[, <prediction_params>] ) const
 
     Predicts the response for a sample.
 

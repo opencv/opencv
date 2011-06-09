@@ -127,7 +127,7 @@ Weak tree classifier ::
         virtual ~CvBoostTree();
 
         virtual bool train( CvDTreeTrainData* _train_data,
-                            const CvMat* subsample_idx, CvBoost* ensemble );
+                            const Mat& subsample_idx, CvBoost* ensemble );
         virtual void scale( double s );
         virtual void read( CvFileStorage* fs, CvFileNode* node,
                            CvBoost* ensemble, CvDTreeTrainData* _data );
@@ -173,21 +173,21 @@ Boosted tree classifier ::
         CvBoost();
         virtual ~CvBoost();
 
-        CvBoost( const CvMat* _train_data, int _tflag,
-                 const CvMat* _responses, const CvMat* _var_idx=0,
-                 const CvMat* _sample_idx=0, const CvMat* _var_type=0,
-                 const CvMat* _missing_mask=0,
+        CvBoost( const Mat& _train_data, int _tflag,
+                 const Mat& _responses, const Mat& _var_idx=0,
+                 const Mat& _sample_idx=0, const Mat& _var_type=0,
+                 const Mat& _missing_mask=0,
                  CvBoostParams params=CvBoostParams() );
 
-        virtual bool train( const CvMat* _train_data, int _tflag,
-                 const CvMat* _responses, const CvMat* _var_idx=0,
-                 const CvMat* _sample_idx=0, const CvMat* _var_type=0,
-                 const CvMat* _missing_mask=0,
+        virtual bool train( const Mat& _train_data, int _tflag,
+                 const Mat& _responses, const Mat& _var_idx=0,
+                 const Mat& _sample_idx=0, const Mat& _var_type=0,
+                 const Mat& _missing_mask=0,
                  CvBoostParams params=CvBoostParams(),
                  bool update=false );
 
-        virtual float predict( const CvMat* _sample, const CvMat* _missing=0,
-                               CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ,
+        virtual float predict( const Mat& _sample, const Mat& _missing=0,
+                               Mat& weak_responses=0, CvSlice slice=CV_WHOLE_SEQ,
                                bool raw_mode=false ) const;
 
         virtual void prune( CvSlice slice );
@@ -221,7 +221,7 @@ Boosted tree classifier ::
 
 CvBoost::train
 --------------
-.. cpp:function:: bool CvBoost::train(  const CvMat* _train_data,  int _tflag,               const CvMat* _responses,  const CvMat* _var_idx=0,               const CvMat* _sample_idx=0,  const CvMat* _var_type=0,               const CvMat* _missing_mask=0,               CvBoostParams params=CvBoostParams(),               bool update=false )
+.. cpp:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
     Trains a boosted tree classifier.
 
@@ -233,7 +233,7 @@ The train method follows the common template. The last parameter ``update`` spec
 
 CvBoost::predict
 ----------------
-.. cpp:function:: float CvBoost::predict(  const CvMat* sample,  const CvMat* missing=0,                          CvMat* weak_responses=0,  CvSlice slice=CV_WHOLE_SEQ,                          bool raw_mode=false ) const
+.. cpp:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
     Predicts a response for an input sample.
 

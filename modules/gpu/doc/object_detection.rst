@@ -324,5 +324,5 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     imshow("Faces", image_cpu);
 
 
-See Also: :c:cpp:func:`CascadeClassifier::detectMultiScale` 
+See Also: :cpp:func:`CascadeClassifier::detectMultiScale` 
 

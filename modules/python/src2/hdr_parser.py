@@ -270,30 +270,41 @@ class CppHeaderParser(object):
         if fname.endswith("operator"):
             fname += "()"
             apos = fdecl.find("(", apos+1)
-        args0 = fdecl[apos+1:fdecl.rfind(")")].strip().split(",")
-
-        args = []
-        narg = ""
-        for arg in args0:
-            narg += arg.strip()
-            balance_paren = narg.count("(") - narg.count(")")
-            balance_angle = narg.count("<") - narg.count(">")
-            if balance_paren == 0 and balance_angle == 0:
-                args.append(narg.strip())
-                narg = ""
+            
         fname = "cv." + fname.replace("::", ".")
         decl = [fname, rettype, [], []]
+        args0str = fdecl[apos+1:fdecl.rfind(")")].strip()
         
-        for arg in args:
-            dfpos = arg.find("=")
-            defval = ""
-            if dfpos >= 0:
-                defval = arg[dfpos+1:].strip()
-                arg = arg[:dfpos].strip()
-            pos = arg.rfind(" ")
-            aname = arg[pos+1:]
-            atype = arg[:pos]
-            decl[3].append([atype, aname, defval, []])
+        if args0str != "":
+            args0 = args0str.split(",")
+
+            args = []
+            narg = ""
+            for arg in args0:
+                narg += arg.strip()
+                balance_paren = narg.count("(") - narg.count(")")
+                balance_angle = narg.count("<") - narg.count(">")
+                if balance_paren == 0 and balance_angle == 0:
+                    args.append(narg.strip())
+                    narg = ""
+        
+            for arg in args:
+                dfpos = arg.find("=")
+                defval = ""
+                if dfpos >= 0:
+                    defval = arg[dfpos+1:].strip()
+                    arg = arg[:dfpos].strip()
+                pos = arg.rfind(" ")
+                if pos >= 0:
+                    aname = arg[pos+1:].strip()
+                    atype = arg[:pos].strip()
+                    if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "string", "Mat"]):
+                        atype = (atype + " " + aname).strip()
+                        aname = "param"
+                else:
+                    atype = arg
+                    aname = "param"
+                decl[3].append([atype, aname, defval, []])
         
         return decl
 

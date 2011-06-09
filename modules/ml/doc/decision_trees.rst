@@ -166,27 +166,27 @@ Decision tree training data and shared data for tree ensembles ::
     struct CvDTreeTrainData
     {
         CvDTreeTrainData();
-        CvDTreeTrainData( const CvMat* _train_data, int _tflag,
-                          const CvMat* _responses, const CvMat* _var_idx=0,
-                          const CvMat* _sample_idx=0, const CvMat* _var_type=0,
-                          const CvMat* _missing_mask=0,
+        CvDTreeTrainData( const Mat& _train_data, int _tflag,
+                          const Mat& _responses, const Mat& _var_idx=Mat(),
+                          const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
+                          const Mat& _missing_mask=Mat(),
                           const CvDTreeParams& _params=CvDTreeParams(),
                           bool _shared=false, bool _add_labels=false );
         virtual ~CvDTreeTrainData();
 
-        virtual void set_data( const CvMat* _train_data, int _tflag,
-                              const CvMat* _responses, const CvMat* _var_idx=0,
-                              const CvMat* _sample_idx=0, const CvMat* _var_type=0,
-                              const CvMat* _missing_mask=0,
+        virtual void set_data( const Mat& _train_data, int _tflag,
+                              const Mat& _responses, const Mat& _var_idx=Mat(),
+                              const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
+                              const Mat& _missing_mask=Mat(),
                               const CvDTreeParams& _params=CvDTreeParams(),
                               bool _shared=false, bool _add_labels=false,
                               bool _update_data=false );
 
-        virtual void get_vectors( const CvMat* _subsample_idx,
+        virtual void get_vectors( const Mat& _subsample_idx,
              float* values, uchar* missing, float* responses,
              bool get_class_idx=false );
 
-        virtual CvDTreeNode* subsample_data( const CvMat* _subsample_idx );
+        virtual CvDTreeNode* subsample_data( const Mat& _subsample_idx );
 
         virtual void write_params( CvFileStorage* fs );
         virtual void read_params( CvFileStorage* fs, CvFileNode* node );
@@ -226,20 +226,20 @@ Decision tree training data and shared data for tree ensembles ::
         int buf_count, buf_size;
         bool shared;
 
-        CvMat* cat_count;
-        CvMat* cat_ofs;
-        CvMat* cat_map;
+        Mat& cat_count;
+        Mat& cat_ofs;
+        Mat& cat_map;
 
-        CvMat* counts;
-        CvMat* buf;
-        CvMat* direction;
-        CvMat* split_buf;
+        Mat& counts;
+        Mat& buf;
+        Mat& direction;
+        Mat& split_buf;
 
-        CvMat* var_idx;
-        CvMat* var_type; // i-th element =
+        Mat& var_idx;
+        Mat& var_type; // i-th element =
                          //   k<0  - ordered
                          //   k>=0 - categorical, see k-th element of cat_* arrays
-        CvMat* priors;
+        Mat& priors;
 
         CvDTreeParams params;
 
@@ -294,19 +294,19 @@ Decision tree ::
         CvDTree();
         virtual ~CvDTree();
 
-        virtual bool train( const CvMat* _train_data, int _tflag,
-                            const CvMat* _responses, const CvMat* _var_idx=0,
-                            const CvMat* _sample_idx=0, const CvMat* _var_type=0,
-                            const CvMat* _missing_mask=0,
+        virtual bool train( const Mat& _train_data, int _tflag,
+                            const Mat& _responses, const Mat& _var_idx=Mat(),
+                            const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
+                            const Mat& _missing_mask=Mat(),
                             CvDTreeParams params=CvDTreeParams() );
 
         virtual bool train( CvDTreeTrainData* _train_data,
-                            const CvMat* _subsample_idx );
+                            const Mat& _subsample_idx );
 
-        virtual CvDTreeNode* predict( const CvMat* _sample,
-                                      const CvMat* _missing_data_mask=0,
+        virtual CvDTreeNode* predict( const Mat& _sample,
+                                      const Mat& _missing_data_mask=Mat(),
                                       bool raw_mode=false ) const;
-        virtual const CvMat* get_var_importance();
+        virtual const Mat& get_var_importance();
         virtual void clear();
 
         virtual void read( CvFileStorage* fs, CvFileNode* node );
@@ -323,7 +323,7 @@ Decision tree ::
 
     protected:
 
-        virtual bool do_train( const CvMat* _subsample_idx );
+        virtual bool do_train( const Mat& _subsample_idx );
 
         virtual void try_split_node( CvDTreeNode* n );
         virtual void split_node_data( CvDTreeNode* n );
@@ -359,7 +359,7 @@ Decision tree ::
         CvDTreeNode* root;
 
         int pruned_tree_idx;
-        CvMat* var_importance;
+        Mat& var_importance;
 
         CvDTreeTrainData* data;
     };
@@ -371,9 +371,9 @@ Decision tree ::
 
 CvDTree::train
 --------------
-.. cpp:function:: bool CvDTree::train(  const CvMat* _train_data,  int _tflag,                       const CvMat* _responses,  const CvMat* _var_idx=0,                       const CvMat* _sample_idx=0,  const CvMat* _var_type=0,                       const CvMat* _missing_mask=0,                       CvDTreeParams params=CvDTreeParams() )
+.. cpp:function:: bool CvDTree::train(  const Mat& _train_data,  int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),  const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
-.. cpp:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const CvMat* _subsample_idx )
+.. cpp:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const Mat& _subsample_idx )
 
     Trains a decision tree.
 
@@ -391,7 +391,7 @@ There are two ``train`` methods in ``CvDTree`` :
 
 CvDTree::predict
 ----------------
-.. cpp:function:: CvDTreeNode* CvDTree::predict(  const CvMat* _sample,  const CvMat* _missing_data_mask=0,                                 bool raw_mode=false ) const
+.. cpp:function:: CvDTreeNode* CvDTree::predict(  const Mat& _sample,  const Mat& _missing_data_mask=Mat(),                                 bool raw_mode=false ) const
 
     Returns the leaf node of a decision tree corresponding to the input vector.
 

@@ -345,9 +345,7 @@ The function converts 2D or 3D points from/to homogeneous coordinates by calling
 
 decomposeProjectionMatrix
 -----------------------------
-.. cpp:function:: void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix, OutputArray rotMatrix, OutputArray transVect )
-
-.. cpp:function:: void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix, OutputArray rotMatrix, OutputArray transVect, OutputArray rotMatrixX, OutputArray rotMatrixY, OutputArray rotMatrixZ, Vec3d& eulerAngles )
+.. cpp:function:: void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix, OutputArray rotMatrix, OutputArray transVect, OutputArray rotMatrixX=noArray(), OutputArray rotMatrixY=noArray(), OutputArray rotMatrixZ=noArray(), OutputArray eulerAngles=noArray() )
 
     Decomposes a projection matrix into a rotation matrix and a camera matrix.
 
@@ -365,7 +363,7 @@ decomposeProjectionMatrix
 
     :param rotMatrZ: Optional 3x3 rotation matrix around z-axis.
 
-    :param eulerAngles: Optional 3 points containing the three Euler angles of rotation.
+    :param eulerAngles: Optional 3-element vector containing the three Euler angles of rotation.
 
 The function computes a decomposition of a projection matrix into a calibration and a rotation matrix and the position of a camera.
 
@@ -628,8 +626,6 @@ corresponding to the specified points. It can also be passed to
 
 .. index:: findHomography
 
-.. _findHomography:
-
 findHomography
 ------------------
 .. cpp:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
@@ -707,9 +703,30 @@ See Also:
 :ref:`PerspectiveTransform`
 
 
-.. index:: getOptimalNewCameraMatrix
+.. index:: estimateAffine3D
 
-.. _getOptimalNewCameraMatrix:
+estimateAffine3D
+--------------------
+.. cpp:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
+
+    Computes an optimal affine transformation between two 3D point sets.
+
+    :param srcpt: The first input 3D point set.
+
+    :param dstpt: The second input 3D point set.
+
+    :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
+
+    :param outliers: Output vector indicating which points are outliers.
+
+    :param ransacThreshold: Maximum reprojection error in the RANSAC algorithm to consider a point as an inlier.
+
+    :param confidence: The confidence level, between 0 and 1, that the estimated transformation will have. Anything between 0.95 and 0.99 is usually good enough. Too close to 1 values can slow down the estimation too much, lower than 0.8-0.9 confidence values can result in an incorrectly estimated transformation.
+
+The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
+
+
+.. index:: getOptimalNewCameraMatrix
 
 getOptimalNewCameraMatrix
 -----------------------------
@@ -787,7 +804,7 @@ The function computes partial derivatives of the elements of the matrix product
 projectPoints
 -----------------
 
-.. cpp:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray dpdrot=noArray(), OutputArray dpdt=noArray(), OutputArray dpdf=noArray(), OutputArray dpdc=noArray(), OutputArray dpddist=noArray(), double aspectRatio=0 )
+.. cpp:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray jacobian=noArray(), double aspectRatio=0 )
 
     Projects 3D points to an image plane.
 
@@ -803,15 +820,9 @@ projectPoints
 
     :param imagePoints: Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or  ``vector<Point2f>`` .
 
-    :param dpdrot: Optional 2Nx3 matrix of derivatives of image points with respect to components of the rotation vector.
+    :param jacobian: Optional output 2Nx(10+<numDistCoeffs>) jacobian matrix of derivatives of image points with respect to components of the rotation vector, translation vector, focal lengths, coordinates of the principal point and the distortion coefficients.
 
-    :param dpdt: Optional 2Nx3 matrix of derivatives of image points with respect to components of the translation vector.
-
-    :param dpdf: Optional 2Nx2 matrix of derivatives of image points with respect to  :math:`f_x`  and  :math:`f_y` .
-    
-    :param dpdc: Optional 2Nx2 matrix of derivatives of image points with respect to  :math:`c_x`  and  :math:`c_y` .
-    
-    :param dpddist: Optional 2Nx4 matrix of derivatives of image points with respect to distortion coefficients.
+    :param aspectRatio: Optional "fixed aspect ratio" parameter. If the parameter is not 0, the function assumes that the aspect ratio (*fx/fy*) is fixed and correspondingly adjusts the jacobian matrix.
 
 The function computes projections of 3D
 points to the image plane given intrinsic and extrinsic camera
@@ -837,7 +848,7 @@ By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identi
 reprojectImageTo3D
 ----------------------
 
-.. cpp:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false )
+.. cpp:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int depth=-1 )
 
     Reprojects a disparity image to 3D space.
 
@@ -849,6 +860,8 @@ reprojectImageTo3D
     
     :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ref:`StereoBM::operator ()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
+    :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
+    
 The function transforms a single-channel disparity map to a 3-channel image representing a 3D surface. That is, for each pixel ``(x,y)`` andthe  corresponding disparity ``d=disparity(x,y)`` , it computes:
 
 .. math::
@@ -862,13 +875,10 @@ The matrix ``Q`` can be an arbitrary
 
 .. index:: RQDecomp3x3
 
-.. _RQDecomp3x3:
-
 RQDecomp3x3
 ---------------
-.. cpp:function:: void RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q )
 
-.. cpp:function:: Vec3d RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q, OutputArray Qx, OutputArray Qy, OutputArray Qz )
+.. cpp:function:: Vec3d RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q, OutputArray Qx=noArray(), OutputArray Qy=noArray(), OutputArray Qz=noArray() )
 
     Computes an RQ decomposition of 3x3 matrices.
 
@@ -878,11 +888,11 @@ RQDecomp3x3
 
     :param Q: Output 3x3 orthogonal matrix.
 
-    :param Qx: Optional 3x3 rotation matrix around x-axis.
+    :param Qx: Optional output 3x3 rotation matrix around x-axis.
 
-    :param Qy: Optional 3x3 rotation matrix around y-axis.
+    :param Qy: Optional output 3x3 rotation matrix around y-axis.
 
-    :param Qz: Optional 3x3 rotation matrix around z-axis.
+    :param Qz: Optional output 3x3 rotation matrix around z-axis.
 
 The function computes a RQ decomposition using the given rotations. This function is used in
 :ref:`DecomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.

@@ -21,13 +21,13 @@ Bayes classifier for normally distributed data ::
         CvNormalBayesClassifier();
         virtual ~CvNormalBayesClassifier();
 
-        CvNormalBayesClassifier( const CvMat* _train_data, const CvMat* _responses,
-            const CvMat* _var_idx=0, const CvMat* _sample_idx=0 );
+        CvNormalBayesClassifier( const Mat& _train_data, const Mat& _responses,
+            const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat() );
 
-        virtual bool train( const CvMat* _train_data, const CvMat* _responses,
-            const CvMat* _var_idx = 0, const CvMat* _sample_idx=0, bool update=false );
+        virtual bool train( const Mat& _train_data, const Mat& _responses,
+            const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), bool update=false );
 
-        virtual float predict( const CvMat* _samples, CvMat* results=0 ) const;
+        virtual float predict( const Mat& _samples, Mat* results=0 ) const;
         virtual void clear();
 
         virtual void save( const char* filename, const char* name=0 );
@@ -46,7 +46,7 @@ Bayes classifier for normally distributed data ::
 
 CvNormalBayesClassifier::train
 ------------------------------
-.. cpp:function:: bool CvNormalBayesClassifier::train(  const CvMat* _train_data,  const CvMat* _responses,                 const CvMat* _var_idx =0,  const CvMat* _sample_idx=0,  bool update=false )
+.. cpp:function:: bool CvNormalBayesClassifier::train(  const Mat& _train_data,  const Mat& _responses,                 const Mat& _var_idx =Mat(),  const Mat& _sample_idx=Mat(),  bool update=false )
 
     Trains the model.
 
@@ -65,7 +65,7 @@ In addition, there is an ``update`` flag that identifies whether the model shoul
 
 CvNormalBayesClassifier::predict
 --------------------------------
-.. cpp:function:: float CvNormalBayesClassifier::predict(  const CvMat* samples,  CvMat* results=0 ) const
+.. cpp:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
     Predicts the response for sample(s).
 

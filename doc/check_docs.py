@@ -17,13 +17,13 @@ opencv_hdr_list = [
 
 opencv_module_list = [
 "core",
-#"imgproc",
-#"calib3d",
-#"features2d",
-#"video",
-#"objdetect",
-#"highgui",
-#"ml"
+"imgproc",
+"calib3d",
+"features2d",
+"video",
+"objdetect",
+"highgui",
+"ml"
 ]
 
 class RSTParser(object):
@@ -49,6 +49,7 @@ class RSTParser(object):
                 continue
             rst_decl = None
             if "(" in l:
+                l = l.replace("cv::", "")
                 rst_decl = self.parser.parse_func_decl_no_wrap(l)
                 fname = rst_decl[0]
             else:
@@ -94,6 +95,9 @@ class RSTParser(object):
             fname = rst_decl[0]
             hdr_decls = self.fmap.get(fname, [])
             if not hdr_decls:
+                fname = fname.replace("cv.", "")
+                hdr_decls = self.fmap.get(fname, [])
+            if not hdr_decls:    
                 print "Documented function %s (%s) in %s:%d is not in the headers" % (fdecl, rst_decl[0].replace(".", "::"), docname, lineno)
                 continue
             decl_idx = 0
@@ -103,7 +107,7 @@ class RSTParser(object):
                     continue
                 idx = 0
                 for a in hd[3]:
-                    if a[0] != rst_decl[3][idx][0]:
+                    if a[0] != rst_decl[3][idx][0] and a[0].replace("cv::", "") != rst_decl[3][idx][0]:
                         break
                     idx += 1
                 if idx == len(hd[3]):
@@ -162,6 +166,9 @@ class RSTParser(object):
                 
             for d in decls:
                 dstr = self.decl2str(d)
+                # special hack for ML: skip old variants of the methods
+                if name == "ml" and ("CvMat" in dstr):
+                    continue
                 if dstr not in wlist_decls:
                     misscount += 1
                     print "%s %s(%s)" % (d[1], d[0].replace(".", "::"), ", ".join([a[0] + " " + a[1] for a in d[3]]))

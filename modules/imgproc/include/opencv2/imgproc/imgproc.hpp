@@ -669,7 +669,7 @@ CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
 //! computes back projection for the set of images
 CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
                                  const int* channels, const SparseMat& hist, 
-                                 Mat& backProject, const float** ranges,
+                                 OutputArray backProject, const float** ranges,
                                  double scale=1, bool uniform=true );
 
 //! compares two histograms stored in dense arrays

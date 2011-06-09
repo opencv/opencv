@@ -42,7 +42,7 @@ gpu::meanShiftProc
     :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
 
 See Also:
-:c:cpp:func:`gpu::meanShiftFiltering` 
+:cpp:func:`gpu::meanShiftFiltering` 
 
 .. index:: gpu::meanShiftSegmentation
 
@@ -81,7 +81,7 @@ gpu::integral
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
 See Also:
-:c:cpp:func:`integral` 
+:cpp:func:`integral` 
 
 .. index:: gpu::sqrIntegral
 
@@ -128,7 +128,7 @@ gpu::cornerHarris
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
 See Also:
-:c:cpp:func:`cornerHarris` 
+:cpp:func:`cornerHarris` 
 
 .. index:: gpu::cornerMinEigenVal
 
@@ -150,7 +150,7 @@ gpu::cornerMinEigenVal
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
-See also: :c:cpp:func:`cornerMinEigenVal`
+See also: :cpp:func:`cornerMinEigenVal`
 
 .. index:: gpu::mulSpectrums
 
@@ -173,7 +173,7 @@ gpu::mulSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:c:cpp:func:`mulSpectrums` 
+:cpp:func:`mulSpectrums` 
 
 .. index:: gpu::mulAndScaleSpectrums
 
@@ -198,7 +198,7 @@ gpu::mulAndScaleSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:c:cpp:func:`mulSpectrums` 
+:cpp:func:`mulSpectrums` 
 
 .. index:: gpu::dft
 
@@ -237,7 +237,7 @@ gpu::dft
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
 See Also:
-:c:cpp:func:`dft` 
+:cpp:func:`dft` 
 
 .. index:: gpu::convolve
 
@@ -268,7 +268,7 @@ gpu::ConvolveBuf
 .. cpp:class:: gpu::ConvolveBuf
 
 This class provides a memory buffer for the
-    :c:cpp:func:`gpu::convolve` function. 
+    :cpp:func:`gpu::convolve` function. 
 ::
 
     struct CV_EXPORTS ConvolveBuf
@@ -290,12 +290,12 @@ gpu::ConvolveBuf::ConvolveBuf
 .. cpp:function:: ConvolveBuf::ConvolveBuf()
 
     Constructs an empty buffer that is properly resized after the first call of the 
-    :c:cpp:func:`convolve` function.
+    :cpp:func:`convolve` function.
 
 .. cpp:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
     Constructs a buffer for the 
-    :c:cpp:func:`convolve` function with respective arguments.
+    :cpp:func:`convolve` function with respective arguments.
 
 .. index:: gpu::matchTemplate
 
@@ -328,7 +328,7 @@ gpu::matchTemplate
     * ``CV_TM_CCORR``
 
 See Also:
-:c:cpp:func:`matchTemplate` 
+:cpp:func:`matchTemplate` 
 
 .. index:: gpu::remap
 
@@ -354,7 +354,7 @@ gpu::remap
 
     Values of pixels with non-integer coordinates are computed using bilinear the interpolation.
 
-See Also: :c:cpp:func:`remap` 
+See Also: :cpp:func:`remap` 
 
 .. index:: gpu::cvtColor
 

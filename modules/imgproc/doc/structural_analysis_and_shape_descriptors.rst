@@ -107,9 +107,9 @@ See Also:
 
 findContours
 ----------------
-.. cpp:function:: void findContours( InputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
+.. cpp:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
 
-.. cpp:function:: void findContours( InputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
+.. cpp:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
     Finds contours in a binary image.
 
@@ -264,75 +264,17 @@ boundingRect
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
 
-.. index:: estimateRigidTransform
-
-estimateRigidTransform
---------------------------
-.. cpp:function:: Mat estimateRigidTransform( InputArray srcpt, InputArray dstpt, bool fullAffine )
-
-    Computes an optimal affine transformation between two 2D point sets.
-
-    :param srcpt: The first input 2D point set, stored in ``std::vector`` or ``Mat``.
-
-    :param dst: The second input 2D point set of the same size and the same type as  ``A`` .
-
-    :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
-
-The function finds an optimal affine transform
-:math:`[A|b]` (a
-:math:`2 \times 3` floating-point matrix) that approximates best the transformation from
-:math:`\texttt{srcpt}_i` to
-:math:`\texttt{dstpt}_i` : 
-
-.. math::
-
-    [A^*|b^*] = arg  \min _{[A|b]}  \sum _i  \| \texttt{dstpt} _i - A { \texttt{srcpt} _i}^T - b  \| ^2
-
-where
-:math:`[A|b]` can be either arbitrary (when ``fullAffine=true`` ) or have form
-
-.. math::
-
-    \begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}
-
-when ``fullAffine=false`` .
-
-See Also:
-:cpp:func:`getAffineTransform`,
-:cpp:func:`getPerspectiveTransform`,
-:cpp:func:`findHomography`
-
-.. index:: estimateAffine3D
-
-estimateAffine3D
---------------------
-.. cpp:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
-
-    Computes an optimal affine transformation between two 3D point sets.
-
-    :param srcpt: The first input 3D point set.
-
-    :param dstpt: The second input 3D point set.
-
-    :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
-
-    :param outliers: Output vector indicating which points are outliers.
-
-    :param ransacThreshold: Maximum reprojection error in the RANSAC algorithm to consider a point as an inlier.
-
-    :param confidence: The confidence level, between 0 and 1, that the estimated transformation will have. Anything between 0.95 and 0.99 is usually good enough. Too close to 1 values can slow down the estimation too much, lower than 0.8-0.9 confidence values can result in an incorrectly estimated transformation.
-
-The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
 
 .. index:: contourArea
 
 contourArea
 ---------------
-.. cpp:function:: double contourArea( InputArray contour )
+.. cpp:function:: double contourArea( InputArray contour, bool oriented=false )
 
     Calculates a contour area.
 
     :param contour: Input vector of 2d points (contour vertices), stored in ``std::vector`` or ``Mat``.
+    :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking sign of the area. By default the parameter is ``false``, which means that the absolute value is returned.
 
 The function computes a contour area. Similarly to
 :cpp:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
