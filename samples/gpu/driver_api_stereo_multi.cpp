@@ -32,7 +32,11 @@ int main()
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <GL/gl.h>
+#include <cudaGL.h>
 #include "opencv2/core/internal.hpp" // For TBB wrappers
+#include "tbb/tbb.h"
+#include "tbb/mutex.h"
 
 using namespace std;
 using namespace cv;
@@ -54,7 +58,7 @@ inline void safeCall_(int code, const char* expr, const char* file, int line)
 }
 
 // Each GPU is associated with its own context
-CUcontext contexts[2];
+CUcontext contexts[/*2*/1];
 
 void inline contextOn(int id) 
 {
@@ -76,6 +80,10 @@ GpuMat d_result[2];
 // CPU result
 Mat result;
 
+int some[2];
+
+tbb::mutex mutex;
+
 int main(int argc, char** argv)
 {
     if (argc < 3)
@@ -85,11 +93,11 @@ int main(int argc, char** argv)
     }
 
     int num_devices = getCudaEnabledDeviceCount();
-    if (num_devices < 2)
-    {
-        std::cout << "Two or more GPUs are required\n";
-        return -1;
-    }
+//    if (num_devices < 2)
+//    {
+//        std::cout << "Two or more GPUs are required\n";
+//        return -1;
+//    }
 
     for (int i = 0; i < num_devices; ++i)
     {
@@ -123,13 +131,14 @@ int main(int argc, char** argv)
     // Create context for GPU #0
     CUdevice device;
     safeCall(cuDeviceGet(&device, 0));
-    safeCall(cuCtxCreate(&contexts[0], 0, device));
+    safeCall(cuGLCtxCreate(&contexts[0], 0, device));
+    //safeCall(cuCtxCreate(&contexts[0], 0, device));
     contextOff();
 
-    // Create context for GPU #1
-    safeCall(cuDeviceGet(&device, 1));
-    safeCall(cuCtxCreate(&contexts[1], 0, device));
-    contextOff();
+//    // Create context for GPU #1
+//    safeCall(cuDeviceGet(&device, 0));
+//    safeCall(cuCtxCreate(&contexts[1], 0, device));
+//    contextOff();
 
     // Split source images for processing on GPU #0
     contextOn(0);
@@ -139,15 +148,20 @@ int main(int argc, char** argv)
     contextOff();
 
     // Split source images for processing on the GPU #1
-    contextOn(1);
+    contextOn(0);
     d_left[1].upload(left.rowRange(left.rows / 2, left.rows));
     d_right[1].upload(right.rowRange(right.rows / 2, right.rows));
     bm[1] = new StereoBM_GPU();
     contextOff();
 
+    some[0] = some[1] = 0;
     // Execute calculation in two threads using two GPUs
-    int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    vector<int> devices;
+    for (int i = 0; i < 4; ++i)
+        devices.push_back(rand()%2);
+    tbb::parallel_do(&devices[0], &devices[devices.size() - 1], Worker());
+
+    cout << some[0] << " " << some[1] << endl;
 
     // Release the first GPU resources
     contextOn(0);
@@ -159,7 +173,7 @@ int main(int argc, char** argv)
     contextOff();
 
     // Release the second GPU resources
-    contextOn(1);
+    contextOn(0);
     imshow("GPU #1 result", Mat(d_result[1]));
     d_left[1].release();
     d_right[1].release();
@@ -175,7 +189,9 @@ int main(int argc, char** argv)
 
 void Worker::operator()(int device_id) const
 {
-    contextOn(device_id);
+    mutex.lock();
+
+    contextOn(0);
 
     bm[device_id]->operator()(d_left[device_id], d_right[device_id],
                               d_result[device_id]);
@@ -184,13 +200,16 @@ void Worker::operator()(int device_id) const
         << "): finished\n";
 
     contextOff();
+
+    mutex.unlock();
 }
 
 
 void destroyContexts()
 {
     safeCall(cuCtxDestroy(contexts[0]));
-    safeCall(cuCtxDestroy(contexts[1]));
+    //safeCall(cuCtxDestroy(contexts[1]));
 }
 
 #endif
+

@@ -311,7 +311,7 @@ namespace
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
             {
-                matches_info.matches.push_back(m0);
+                //matches_info.matches.push_back(m0);
                 matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
             }
         }
@@ -326,7 +326,7 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
-                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) != matches.end())
                     matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }
@@ -352,7 +352,7 @@ namespace
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
             {
-                matches_info.matches.push_back(m0);
+                //matches_info.matches.push_back(m0);
                 matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
             }
         }
@@ -368,7 +368,7 @@ namespace
             const DMatch& m0 = pair_matches[i][0];
             const DMatch& m1 = pair_matches[i][1];
             if (m0.distance < (1.f - match_conf_) * m1.distance)
-                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) != matches.end())
                     matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
         }
     }

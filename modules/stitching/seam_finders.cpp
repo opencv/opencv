@@ -208,7 +208,7 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
     }
 
     // Set regular edge weights
-    const float weight_eps = 1e-3f;
+    const float weight_eps = 1.f;
     for (int y = 0; y < img_size.height; ++y)
     {
         for (int x = 0; x < img_size.width; ++x)
@@ -258,7 +258,7 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
     }
 
     // Set regular edge weights
-    const float weight_eps = 1e-3f;
+    const float weight_eps = 1.f;
     for (int y = 0; y < img_size.height; ++y)
     {
         for (int x = 0; x < img_size.width; ++x)

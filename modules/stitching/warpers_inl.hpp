@@ -79,6 +79,22 @@ cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R,
 
 
 template <class P>
+cv::Rect WarperBase<P>::warpRoi(const cv::Size &sz, float focal, const cv::Mat &R)
+{
+    src_size_ = sz;
+
+    projector_.size = sz;
+    projector_.focal = focal;
+    projector_.setTransformation(R);
+
+    cv::Point dst_tl, dst_br;
+    detectResultRoi(dst_tl, dst_br);
+
+    return cv::Rect(dst_tl, cv::Point(dst_br.x + 1, dst_br.y + 1));
+}
+
+
+template <class P>
 void WarperBase<P>::detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br)
 {
     float tl_uf = std::numeric_limits<float>::max();

@@ -75,7 +75,7 @@ void printUsage()
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
         "  --match_conf <float>\n"
-        "      Confidence for feature matching step. The default is 0.7.\n"
+        "      Confidence for feature matching step. The default is 0.65.\n"
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
@@ -320,11 +320,14 @@ int main(int argc, char* argv[])
     Mat full_img, img;
 
     vector<Mat> images(num_images);
+    vector<Size> full_img_sizes(num_images);
     double seam_work_aspect = 1;
 
     for (int i = 0; i < num_images; ++i)
     {
         full_img = imread(img_names[i]);
+        full_img_sizes[i] = full_img.size();
+
         if (full_img.empty())
         {
             LOGLN("Can't open image " << img_names[i]);
@@ -376,14 +379,17 @@ int main(int argc, char* argv[])
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
     vector<string> img_names_subset;
+    vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices.size(); ++i)
     {
         img_names_subset.push_back(img_names[indices[i]]);
         img_subset.push_back(images[indices[i]]);
+        full_img_sizes_subset.push_back(full_img_sizes[indices[i]]);
     }
 
     images = img_subset;
     img_names = img_names_subset;
+    full_img_sizes = full_img_sizes_subset;
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
@@ -519,16 +525,21 @@ int main(int argc, char* argv[])
             warper = Warper::createByCameraFocal(warped_image_scale, warp_type);
 
             // Update corners and sizes
-            Rect dst_roi = resultRoi(corners, sizes);
             for (int i = 0; i < num_images; ++i)
             {
                 // Update camera focal
                 cameras[i].focal *= compose_work_aspect;
 
                 // Update corner and size
-                corners[i] = dst_roi.tl() + (corners[i] - dst_roi.tl()) * compose_seam_aspect;
-                sizes[i] = Size(static_cast<int>((sizes[i].width + 1) * compose_seam_aspect), 
-                                static_cast<int>((sizes[i].height + 1) * compose_seam_aspect));
+                Size sz = full_img_sizes[i];
+                if (abs(compose_scale - 1) > 1e-1)
+                {
+                    sz.width = cvRound(full_img_sizes[i].width * compose_scale);
+                    sz.height = cvRound(full_img_sizes[i].height * compose_scale);
+                }
+                Rect roi = warper->warpRoi(sz, static_cast<float>(cameras[i].focal), cameras[i].R);
+                corners[i] = roi.tl();
+                sizes[i] = roi.size();
             }
         }
         if (abs(compose_scale - 1) > 1e-1)
@@ -539,7 +550,7 @@ int main(int argc, char* argv[])
         Size img_size = img.size();
 
         // Warp the current image
-        warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, 
+        warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R,
                      img_warped);
 
         // Warp the current image mask
@@ -587,7 +598,7 @@ int main(int argc, char* argv[])
     }
    
     Mat result, result_mask;
-    blender->blend(result, result_mask);
+    blender->blend(result, result_mask);    
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 

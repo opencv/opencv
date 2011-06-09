@@ -53,6 +53,7 @@ public:
     virtual ~Warper() {}
     virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat& R, cv::Mat &dst,
                            int interp_mode = cv::INTER_LINEAR, int border_mode = cv::BORDER_REFLECT) = 0;
+    virtual cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R) = 0;
 };
 
 
@@ -74,6 +75,8 @@ class WarperBase : public Warper
 public:
     cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
                    int interp_mode, int border_mode);
+
+    cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R);
 
 protected:
     // Detects ROI of the destination image. It's correct for any projection.
