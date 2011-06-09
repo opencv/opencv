@@ -9,69 +9,59 @@
 using namespace cv;
 using namespace std;
 
-const char * usage =
-" \nexample command line for calibration from a live feed.\n"
-"   calibration  -w 4 -h 5 -s 0.025 -o camera.yml -op -oe\n"
-" \n"
-" example command line for calibration from a list of stored images:\n"
-"   imagelist_creator image_list.xml *.png\n"
-"   calibration -w 4 -h 5 -s 0.025 -o camera.yml -op -oe image_list.xml\n"
-" where image_list.xml is the standard OpenCV XML/YAML\n"
-" use imagelist_creator to create the xml or yaml list\n"
-" file consisting of the list of strings, e.g.:\n"
-" \n"
-"<?xml version=\"1.0\"?>\n"
-"<opencv_storage>\n"
-"<images>\n"
-"view000.png\n"
-"view001.png\n"
-"<!-- view002.png -->\n"
-"view003.png\n"
-"view010.png\n"
-"one_extra_view.jpg\n"
-"</images>\n"
-"</opencv_storage>\n";
-
-
-
-
-const char* liveCaptureHelp =
-    "When the live video from camera is used as input, the following hot-keys may be used:\n"
-        "  <ESC>, 'q' - quit the program\n"
-        "  'g' - start capturing images\n"
-        "  'u' - switch undistortion on/off\n";
-
 void help()
 {
     printf( "This is a camera calibration sample.\n"
         "Usage: calibration\n"
-        "     -w <board_width>         # the number of inner corners per one of board dimension\n"
-        "     -h <board_height>        # the number of inner corners per another board dimension\n"
-        "     [-pt <pattern>]          # the type of pattern: chessboard or circles' grid\n"
-        "     [-n <number_of_frames>]  # the number of frames to use for calibration\n"
+        "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
+        "     -h=<board_height>        # the number of inner corners per another board dimension\n"
+        "     [-pt]=<pattern>          # the type of pattern: chessboard or circles' grid\n"
+        "     [-n]=<number_of_frames>  # the number of frames to use for calibration\n"
         "                              # (if not specified, it will be set to the number\n"
         "                              #  of board views actually available)\n"
-        "     [-d <delay>]             # a minimum delay in ms between subsequent attempts to capture a next view\n"
+        "     [-d]=<delay>             # a minimum delay in ms between subsequent attempts to capture a next view\n"
         "                              # (used only for video capturing)\n"
-        "     [-s <squareSize>]       # square size in some user-defined units (1 by default)\n"
-        "     [-o <out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
+        "     [-s]=<squareSize>       # square size in some user-defined units (1 by default)\n"
+        "     [-o]=<out_camera_params> # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
         "     [-zt]                    # assume zero tangential distortion\n"
-        "     [-a <aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+        "     [-a]=<aspectRatio>      # fix aspect ratio (fx/fy)\n"
         "     [-p]                     # fix the principal point at the center\n"
         "     [-v]                     # flip the captured images around the horizontal axis\n"
         "     [-V]                     # use a video file, and not an image list, uses\n"
         "                              # [input_data] string for the video file name\n"
         "     [-su]                    # show undistorted images after calibration\n"
-        "     [input_data]             # input data, one of the following:\n"
+        "     [-input_data]=<data file> # input data, one of the following:\n"
         "                              #  - text file with a list of the images of the board\n"
         "                              #    the text file can be generated with imagelist_creator\n"
         "                              #  - name of video file with a video of the board\n"
-        "                              # if input_data not specified, a live view from the camera is used\n"
-        "\n" );
-    printf("\n%s",usage);
-    printf( "\n%s", liveCaptureHelp );
+        "     [-cameraId]=<camera index># if input_data not specified, a live view from the camera is used\n"
+        " \nExample command line for calibration from a live feed:\n"
+        "   ./calibration  -w=4 -h=5 -s=0.025 -o=camera.yml -op -oe\n"
+        " \n"
+        " Example command line for calibration from a list of stored images:\n"
+        "   imagelist_creator image_list.xml *.png\n"
+        "   ./calibration -w=4 -h-5 -s=0.025 -o=camera.yml -op -oe -input_data=image_list.xml\n"
+        " where image_list.xml is the standard OpenCV XML/YAML\n"
+        " use imagelist_creator to create the xml or yaml list\n"
+        " file consisting of the list of strings, e.g.:\n"
+        " \n"
+        "<?xml version=\"1.0\"?>\n"
+        "<opencv_storage>\n"
+        "<images>\n"
+        "view000.png\n"
+        "view001.png\n"
+        "<!-- view002.png -->\n"
+        "view003.png\n"
+        "view010.png\n"
+        "one_extra_view.jpg\n"
+        "</images>\n"
+        "</opencv_storage>\n"
+        "\nWhen the live video from camera is used as input, the following hot-keys may be used:\n"
+            "  <ESC>, 'q' - quit the program\n"
+            "  'g' - start capturing images\n"
+            "  'u' - switch undistortion on/off\n");
 }
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
@@ -289,126 +279,74 @@ bool runAndSave(const string& outputFilename,
 }
 
 
-int main( int argc, char** argv )
+int main( int argc, const char** argv )
 {
+    help();
+    CommandLineParser parser(argc, argv);
+
     Size boardSize, imageSize;
-    float squareSize = 1.f, aspectRatio = 1.f;
+    boardSize.width = parser.get<int>("w");
+    boardSize.height = parser.get<int>("h");
+    float squareSize = parser.get<float>("s", 1.f);
+    float aspectRatio = parser.get<float>("a", 1.f);
     Mat cameraMatrix, distCoeffs;
-    const char* outputFilename = "out_camera_data.yml";
-    const char* inputFilename = 0;
-    
-    int i, nframes = 10;
-    bool writeExtrinsics = false, writePoints = false;
+    string outputFilename = parser.get<string>("o","out_camera_data.yml");
+    string inputFilename = parser.get<string>("input_data");
+    int nframes = parser.get<int>("n", 10);
+    bool writeExtrinsics = parser.get<bool>("oe");
+    bool writePoints = parser.get<bool>("op");
+    bool flipVertical = parser.get<bool>("v");
+    bool showUndistorted = parser.get<bool>("su");
+    bool videofile = parser.get<bool>("V");
+    unsigned int delay = parser.get<unsigned int>("d", 1000);
+    unsigned int cameraId = parser.get<unsigned int>("cameraId",0);
     bool undistortImage = false;
     int flags = 0;
     VideoCapture capture;
-    bool flipVertical = false;
-    bool showUndistorted = false;
-    bool videofile = false;
-    int delay = 1000;
     clock_t prevTimestamp = 0;
     int mode = DETECTION;
-    int cameraId = 0;
     vector<vector<Point2f> > imagePoints;
     vector<string> imageList;
     Pattern pattern = CHESSBOARD;
 
-    if( argc < 2 )
+    if( (boardSize.width < 1) || (boardSize.height < 1))
     {
         help();
-        return 0;
+        return fprintf( stderr, "Invalid board width or height. It must be more than zero\n" ), -1;
     }
 
-    for( i = 1; i < argc; i++ )
+    if(parser.get<string>("pt")=="circles")
+        pattern = CIRCLES_GRID;
+        else if(parser.get<string>("pt")=="acircles")
+            pattern = ASYMMETRIC_CIRCLES_GRID;
+    if(squareSize <= 0)
     {
-        const char* s = argv[i];
-        if( strcmp( s, "-w" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &boardSize.width ) != 1 || boardSize.width <= 0 )
-                return fprintf( stderr, "Invalid board width\n" ), -1;
-        }
-        else if( strcmp( s, "-h" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &boardSize.height ) != 1 || boardSize.height <= 0 )
-                return fprintf( stderr, "Invalid board height\n" ), -1;
-        }
-        else if( strcmp( s, "-pt" ) == 0 )
-        {
-            i++;
-            if( !strcmp( argv[i], "circles" ) )
-                pattern = CIRCLES_GRID;
-            else if( !strcmp( argv[i], "acircles" ) )
-                pattern = ASYMMETRIC_CIRCLES_GRID;
-            else if( !strcmp( argv[i], "chessboard" ) )
-                pattern = CHESSBOARD;
-            else
-                return fprintf( stderr, "Invalid pattern type: must be chessboard or circles\n" ), -1;
-        }
-        else if( strcmp( s, "-s" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%f", &squareSize ) != 1 || squareSize <= 0 )
-                return fprintf( stderr, "Invalid board square width\n" ), -1;
-        }
-        else if( strcmp( s, "-n" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &nframes ) != 1 || nframes <= 3 )
-                return printf("Invalid number of images\n" ), -1;
-        }
-        else if( strcmp( s, "-a" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%f", &aspectRatio ) != 1 || aspectRatio <= 0 )
-                return printf("Invalid aspect ratio\n" ), -1;
-            flags |= CV_CALIB_FIX_ASPECT_RATIO;
-        }
-        else if( strcmp( s, "-d" ) == 0 )
-        {
-            if( sscanf( argv[++i], "%u", &delay ) != 1 || delay <= 0 )
-                return printf("Invalid delay\n" ), -1;
-        }
-        else if( strcmp( s, "-op" ) == 0 )
-        {
-            writePoints = true;
-        }
-        else if( strcmp( s, "-oe" ) == 0 )
-        {
-            writeExtrinsics = true;
-        }
-        else if( strcmp( s, "-zt" ) == 0 )
-        {
-            flags |= CV_CALIB_ZERO_TANGENT_DIST;
-        }
-        else if( strcmp( s, "-p" ) == 0 )
-        {
-            flags |= CV_CALIB_FIX_PRINCIPAL_POINT;
-        }
-        else if( strcmp( s, "-v" ) == 0 )
-        {
-            flipVertical = true;
-        }
-        else if( strcmp( s, "-V" ) == 0 )
-        {
-            videofile = true;
-        }
-        else if( strcmp( s, "-o" ) == 0 )
-        {
-            outputFilename = argv[++i];
-        }
-        else if( strcmp( s, "-su" ) == 0 )
-        {
-            showUndistorted = true;
-        }
-        else if( s[0] != '-' )
-        {
-            if( isdigit(s[0]) )
-                sscanf(s, "%d", &cameraId);
-            else
-                inputFilename = s;
-        }
-        else
-            return fprintf( stderr, "Unknown option %s", s ), -1;
+        help();
+        return fprintf( stderr, "Invalid board square width. It must be more than zero.\n" ), -1;
     }
+    if(nframes < 4)
+    {
+        help();
+        return printf("Invalid number of images. It must be more than 3\n" ), -1;
+    }
+    if(aspectRatio <= 0)
+    {
+        help();
+        return printf("Invalid aspect ratio. It must be more than zero\n" ), -1;
+    }
+        else
+        flags |= CV_CALIB_FIX_ASPECT_RATIO;
+    if(!delay)
+    {
+        help();
+        return printf("Invalid delay. It must be more than zero.\n" ), -1;
+    }
+    if(parser.get<bool>("zt"))
+        flags |= CV_CALIB_ZERO_TANGENT_DIST;
+    if(parser.get<bool>("p"))
+        flags |= CV_CALIB_FIX_PRINCIPAL_POINT;
 
-    if( inputFilename )
+    if( !inputFilename.empty() )
     {
         if( !videofile && readStringList(inputFilename, imageList) )
             mode = CAPTURING;
@@ -424,11 +362,9 @@ int main( int argc, char** argv )
     if( !imageList.empty() )
         nframes = (int)imageList.size();
 
-    if( capture.isOpened() )
-        printf( "%s", liveCaptureHelp );
-
     namedWindow( "Image View", 1 );
 
+    int i;
     for(i = 0;;i++)
     {
         Mat view, viewGray;
