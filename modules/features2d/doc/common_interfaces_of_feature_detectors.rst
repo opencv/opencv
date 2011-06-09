@@ -358,6 +358,68 @@ Wrapping class for feature detection using the
     };
 
 
+.. index:: SimpleBlobDetector
+
+.. _SimpleBlobDetector:
+
+SimpleBlobDetector
+-------------------
+.. cpp:class:: SimpleBlobDetector
+
+Class for extracting blobs from an image ::
+
+    class SimpleBlobDetector : public FeatureDetector
+    {
+    public:
+    struct Params
+    {
+        Params();
+        float thresholdStep;
+        float minThreshold;
+        float maxThreshold;
+        size_t minRepeatability;
+        float minDistBetweenBlobs;
+
+        bool filterByColor;
+        uchar blobColor;
+
+        bool filterByArea;
+        float minArea, maxArea;
+
+        bool filterByCircularity;
+        float minCircularity, maxCircularity;
+
+        bool filterByInertia;
+        float minInertiaRatio, maxInertiaRatio;
+
+        bool filterByConvexity;
+        float minConvexity, maxConvexity;
+    };
+
+    SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+    protected:
+        ...
+    };
+
+The class implements a simple algorithm for extracting blobs from an image. It converts the source image to binary images by applying thresholding with several thresholds from ``minThreshold`` (inclusive) to ``maxThreshold`` (exclusive) with distance ``thresholdStep`` between neighboring thresholds. Then connected components are extracted from every binary image by  :cpp:func:`findContours`  and their centers are calculated. Centers from several binary images are grouped by their coordinates. Close centers form one group that corresponds to one blob and this is controled by the ``minDistBetweenBlobs`` parameter. Then final centers of blobs and their radiuses are estimated from these groups and returned as locations and sizes of keypoints.
+
+This class performs several filtrations of returned blobs. You should set ``filterBy*`` to true/false to turn on/off corresponding filtration. Available filtrations:
+
+ * By color. This filter compares the intensity of a binary image at the center of a blob to ``blobColor``. If they differ then the blob is filtered out. Use ``blobColor = 0`` to extract dark blobs and ``blobColor = 255`` to extract light blobs.
+
+ * By area. Extracted blobs will have area between ``minArea`` (inclusive) and ``maxArea`` (exclusive).
+
+ * By circularity. Extracted blobs will have circularity (:math:`\frac{4*\pi*Area}{perimeter * perimeter}`) between ``minCircularity`` (inclusive) and ``maxCircularity`` (exclusive).
+
+ * By ratio of the minimum inertia to maximum inertia. Extracted blobs will have this ratio between ``minInertiaRatio`` (inclusive) and ``maxInertiaRatio`` (exclusive).
+
+ * By convexity. Extracted blobs will have convexity (area / area of blob convex hull) between ``minConvexity`` (inclusive) and ``maxConvexity`` (exclusive).
+
+
+Default values of parameters are tuned to extract dark circular blobs.
+
+
 .. index:: GridAdaptedFeatureDetector
 
 .. _GridAdaptedFeatureDetector:
