@@ -30,17 +30,6 @@ int main( int argc, const char** argv )
     cvtColor(img, cimg, CV_GRAY2BGR);
     Mat tpl = imread(tempLate,0);
 
-//    Mat img = imread(argc == 3 ? argv[1] : "logo_in_clutter.png", 0);
-//    Mat cimg;
-//    cvtColor(img, cimg, CV_GRAY2BGR);
-//    Mat tpl = imread(argc == 3 ? argv[2] : "logo.png", 0);
-    
-//    if( argc != 1 && argc != 3 )
-//    {
-//        help();
-//        return 0;
-//    }
-
     // if the image and the template are not edge maps but normal grayscale images,
     // you might want to uncomment the lines below to produce the maps. You can also
     // run Sobel instead of Canny.
