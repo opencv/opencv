@@ -231,7 +231,7 @@ void SimpleBlobDetector::detectImpl(const cv::Mat& image, std::vector<cv::KeyPoi
       bool isNew = true;
       for (size_t j = 0; j < centers.size(); j++)
       {
-        double dist = norm(centers[j][0].location - curCenters[i].location);
+        double dist = norm(centers[j][ centers[j].size() / 2 ].location - curCenters[i].location);
         isNew = dist >= params.minDistBetweenBlobs && dist >= centers[j][ centers[j].size() / 2 ].radius && dist >= curCenters[i].radius;
         if (!isNew)
         {
