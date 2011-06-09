@@ -1566,20 +1566,23 @@ public:
       float thresholdStep;
       float minThreshold;
       float maxThreshold;
-      float maxCentersDist;
-      int defaultKeypointSize;
       size_t minRepeatability;
-      bool computeRadius;
-      bool isGrayscaleCentroid;
-      int centroidROIMargin;
+      float minDistBetweenBlobs;
 
-      bool filterByArea, filterByInertia, filterByCircularity, filterByColor, filterByConvexity;
-      float minArea;
-      float maxArea;
-      float minCircularity;
-      float minInertiaRatio;
-      float minConvexity;
+      bool filterByColor;
       uchar blobColor;
+
+      bool filterByArea;
+      float minArea, maxArea;
+
+      bool filterByCircularity;
+      float minCircularity, maxCircularity;
+
+      bool filterByInertia;
+      float minInertiaRatio, maxInertiaRatio;
+
+      bool filterByConvexity;
+      float minConvexity, maxConvexity;
   };
 
   SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
