@@ -88,7 +88,7 @@ public:
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
-    CvCapture_OpenNI();
+    CvCapture_OpenNI( int index=0 );
     virtual ~CvCapture_OpenNI();
 
     virtual double getProperty(int propIdx);
@@ -167,7 +167,7 @@ bool CvCapture_OpenNI::isOpened() const
     return m_isOpened;
 }
 
-CvCapture_OpenNI::CvCapture_OpenNI()
+CvCapture_OpenNI::CvCapture_OpenNI( int index )
 {
     XnStatus status = XN_STATUS_OK;
 
@@ -181,6 +181,21 @@ CvCapture_OpenNI::CvCapture_OpenNI()
     // Initialize and configure the context.
     if( context.Init() == XN_STATUS_OK )
     {
+        // Find devices
+        xn::NodeInfoList devicesList;
+        status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
+        if( status != XN_STATUS_OK )
+            CV_Error(CV_StsError, ("Failed to enumerate production trees: " + std::string(xnGetStatusString(status))).c_str() );
+
+        // Chose device according to index
+        xn::NodeInfoList::Iterator it = devicesList.Begin();
+        for( int i = 0; i < index; ++i ) it++;
+
+        xn::NodeInfo deviceNode = *it;
+        status = context.CreateProductionTree( deviceNode );
+        if( status != XN_STATUS_OK )
+            CV_Error(CV_StsError, ("Failed to create production tree: " + std::string(xnGetStatusString(status))).c_str() );
+
 #ifdef HACK_WITH_XML
         // Write configuration to the temporary file.
         // This is a hack, because there is a bug in RunXmlScript().
@@ -659,10 +674,9 @@ IplImage* CvCapture_OpenNI::retrieveFrame( int outputType )
 }
 
 
-CvCapture* cvCreateCameraCapture_OpenNI( int /*index*/ )
+CvCapture* cvCreateCameraCapture_OpenNI( int index )
 {
-    // TODO devices enumeration (if several Kinects)
-    CvCapture_OpenNI* capture = new CvCapture_OpenNI();
+    CvCapture_OpenNI* capture = new CvCapture_OpenNI( index );
 
     if( capture->isOpened() )
         return capture;
