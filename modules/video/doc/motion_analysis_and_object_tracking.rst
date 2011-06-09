@@ -77,6 +77,50 @@ The function finds an optical flow for each ``prevImg`` pixel using the alorithm
 
     \texttt{prevImg} (x,y)  \sim \texttt{nextImg} ( \texttt{flow} (x,y)[0],  \texttt{flow} (x,y)[1])
 
+
+.. index:: estimateRigidTransform
+
+estimateRigidTransform
+--------------------------
+.. cpp:function:: Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine )
+
+    Computes an optimal affine transformation between two 2D point sets.
+
+    :param src: The first input 2D point set, stored in ``std::vector`` or ``Mat``, or an image, stored in ``Mat``
+
+    :param dst: The second input 2D point set of the same size and the same type as ``A``, or another image.
+
+    :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
+
+The function finds an optimal affine transform *[A|b]* (a ``2 x 3`` floating-point matrix) that approximates best the affine transformation between:
+
+  #.
+      two point sets
+  #.
+      or between 2 raster images. In this case, the function first finds some features in the ``src`` image and finds the corresponding features in ``dst`` image, after which the problem is reduced to the first case.
+      
+In the case of point sets, the problem is formulated in the following way. We need to find such 2x2 matrix *A* and 2x1 vector *b*, such that:
+
+    .. math::
+
+        [A^*|b^*] = arg  \min _{[A|b]}  \sum _i  \| \texttt{dst}[i] - A { \texttt{src}[i]}^T - b  \| ^2
+
+    where ``src[i]`` and ``dst[i]`` are the i-th points in ``src`` and ``dst``, respectively
+    
+    :math:`[A|b]` can be either arbitrary (when ``fullAffine=true`` ) or have form
+
+    .. math::
+
+        \begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}
+
+    when ``fullAffine=false`` .
+
+    See Also:
+    :cpp:func:`getAffineTransform`,
+    :cpp:func:`getPerspectiveTransform`,
+    :cpp:func:`findHomography`
+
+
 .. index:: updateMotionHistory
 
 updateMotionHistory
