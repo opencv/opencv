@@ -3,7 +3,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#include <iostream>
+//#include <iostream>
 #include <stdio.h>
 #include <ctype.h>
 
@@ -78,16 +78,12 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
 
-//    if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
-//        cap.open(argc == 2 ? argv[1][0] - '0' : 0);
-//    else if( argc == 2 )
-//        cap.open(argv[1]);
     cap.open(cameraInd);
 
     if( !cap.isOpened() )
     {
     	help();
-        cout << "***Could not initialize capturing...***\n";
+        printf("***Could not initialize capturing...***\n");
         return 0;
     }
 
