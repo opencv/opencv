@@ -20,11 +20,13 @@ class VideoSynth(object):
     def read(self, dst=None):
         w, h = self.frame_size
 
-        buf = np.zeros((h, w, 3), np.uint8)
-        if self.bg is not None:
-            buf[:] = self.bg
+        if self.bg is None:
+            buf = np.zeros((h, w, 3), np.uint8)
+        else:
+            buf = self.bg.copy()
         if self.noise > 0.0:
-            noise = np.random.normal(scale = 255*self.noise, size=(h, w, 3))
+            noise = np.zeros((h, w, 3), np.int8)
+            cv2.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
             buf = cv2.add(buf, noise, dtype=cv2.CV_8UC3)
         return True, buf
 
