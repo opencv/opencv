@@ -360,8 +360,9 @@ public:
     //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
     CV_WRAP_AS(apply) virtual void operator()(InputArray image, OutputArray fgmask,
                                               double learningRate=0);
-					      
-    virtual void getBackgroundImage(OutputArray) const;
+
+    //! computes a background image
+    virtual void getBackgroundImage(OutputArray backgroundImage) const;
 };
 
 
@@ -414,7 +415,8 @@ public:
     //! the update operator
     virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1);
     
-    virtual void getBackgroundImage(OutputArray) const;
+    //! computes a background image which are the mean of all background gaussians
+    virtual void getBackgroundImage(OutputArray backgroundImage) const;
     
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
