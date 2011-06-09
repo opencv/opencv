@@ -3,7 +3,7 @@
 #pragma warning(disable : 4100)
 #endif
 
-#include "cvconfig.h"
+
 #include <iostream>
 #include <iomanip>
 #include "opencv2/contrib/contrib.hpp"
@@ -15,14 +15,6 @@
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
-
-#if !defined(HAVE_CUDA)
-int main(int argc, const char **argv)
-{
-    cout << "Please compile the library with CUDA support" << endl;
-    return -1;
-}
-#else
 
 
 void help()
@@ -105,7 +97,7 @@ void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bF
 
 
 int main(int argc, const char *argv[])
-{
+{	
     if (argc != 3)
     {
         return help(), -1;
@@ -278,5 +270,3 @@ int main(int argc, const char *argv[])
 
     return 0;
 }
-
-#endif //!defined(HAVE_CUDA)
