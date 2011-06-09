@@ -316,7 +316,7 @@ bool CvCapture_Android::grabFrame()
     }
 
     if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
-	    LOGD("CvCapture_Android::grabFrame: get new frame");
+            //LOGD("CvCapture_Android::grabFrame: get new frame");
 	    //swap current and new frames
 	    unsigned char* tmp = m_frameYUV420i;
 	    m_frameYUV420i = m_frameYUV420inext;
@@ -400,7 +400,7 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
 
     //copy data
     memcpy(m_frameYUV420inext, buffer, bufferSize);
-    LOGD("CvCapture_Android::setFrame -- memcpy is done");
+    //LOGD("CvCapture_Android::setFrame -- memcpy is done");
 
 #if 0 //moved this part of code into grabFrame
     //swap current and new frames
