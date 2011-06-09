@@ -185,7 +185,7 @@ CvCapture_OpenNI::CvCapture_OpenNI()
         // Write configuration to the temporary file.
         // This is a hack, because there is a bug in RunXmlScript().
         // TODO: remove hack when bug in RunXmlScript() will be fixed.
-        std::string xmlFilename = cv::tempfile();
+        std::string xmlFilename = "opencv_kinect_configure.xml";
         std::ofstream outfile( xmlFilename.c_str() );
         outfile.write( XMLConfig.c_str(), XMLConfig.length() );
         outfile.close();
@@ -213,6 +213,7 @@ CvCapture_OpenNI::CvCapture_OpenNI()
         // Set map output mode.
         CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
         CV_Assert( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK );
+        CV_Assert( depthGenerator.GetAlternativeViewPointCap().SetViewPoint( imageGenerator ) == XN_STATUS_OK );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
