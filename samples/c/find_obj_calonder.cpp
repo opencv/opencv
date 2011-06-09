@@ -11,17 +11,14 @@ using namespace cv;
 
 void help()
 {
-    printf("\n This program shows the use of the Calonder point descriptor classifier \n"
-           "SURF is used to detect interest points, Calonder is used to describe/match these points \n"
-           "Usage: \n"
-           "./find_obj_calonder --classifier_file=<classifier file, there is no default classifier file. You should create it at first and when you can use it for test> \n"
-           "        --test_image=<image file for test, lena.jpg as default> \n"
-           "        [--train_container]=<txt file with train images filenames> \n"
-           "Example: \n"
-           "    --classifier_file=test_classifier --test_image=lena.jpg --train_container=one_way_train_images.txt \n"
-           "                the test_classifier is created here using --train_container and tested witn --test_image at the end \n"
-           "    --classifier_file=test_classifier --test_image=lena.jpg \n"
-           "                the test classifier is tested here using lena.jpg \n");
+    cout << "This program shows the use of the Calonder point descriptor classifier"
+    		"SURF is used to detect interest points, Calonder is used to describe/match these points\n"
+    		"Format:" << endl <<
+            "   classifier_file(to write) test_image file_with_train_images_filenames(txt)" <<
+            "   or" << endl <<
+            "   classifier_file(to read) test_image"
+    		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+            << endl;
 }
 /*
  * Generates random perspective transform of image
@@ -147,27 +144,18 @@ void testCalonderClassifier( const string& classifierFilename, const string& img
     waitKey();
 }
 
-int main( int argc, const char **argv )
+int main( int argc, char **argv )
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    string classifierFileName = parser.get<string>("classifier_file");
-    string testImageFileName = parser.get<string>("test_image", "lena.jpg");
-    string trainContainerFileName = parser.get<string>("train_container");
-
-    if( classifierFileName.empty())
+    if( argc != 4 && argc != 3 )
     {
-        printf("\n Can't find classifier file, please select file for --classifier_file parameter \n");
     	help();
         return -1;
     }
 
-    if( !trainContainerFileName.empty())
-        trainCalonderClassifier( classifierFileName.c_str(), trainContainerFileName.c_str() );
+    if( argc == 4 )
+        trainCalonderClassifier( argv[1], argv[3] );
 
-    testCalonderClassifier( classifierFileName.c_str(), testImageFileName.c_str() );
+    testCalonderClassifier( argv[1], argv[2] );
 
     return 0;
 }

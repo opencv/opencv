@@ -25,13 +25,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "opencv2/core/core.hpp"
 #include "opencv2/video/background_segm.hpp"
-#include <opencv2/imgproc/imgproc_c.h>
+#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui.hpp"
-
-using namespace std;
-using namespace cv;
 
 //VARIABLES for CODEBOOK METHOD:
 CvBGCodeBookModel* model = 0;
@@ -42,28 +38,26 @@ void help(void)
 {
     printf("\nLearn background and find foreground using simple average and average difference learning method:\n"
     		"Originally from the book: Learning OpenCV by O'Reilly press\n"
-            "\nUsage:\n"
-            "./bgfg_codebook [--nframes]=<frames number, 300 as default> \n"
-            "       [--input]=<movie filename or camera index, zero camera index as default>\n"
-            "***Keep the focus on the video windows, NOT the consol***\n\n"
-            "INTERACTIVE PARAMETERS:\n"
-            "\tESC,q,Q  - quit the program\n"
-            "\th	- print this help\n"
-            "\tp	- pause toggle\n"
-            "\ts	- single step\n"
-            "\tr	- run mode (single step off)\n"
-            "=== AVG PARAMS ===\n"
-            "\t-    - bump high threshold UP by 0.25\n"
-            "\t=    - bump high threshold DOWN by 0.25\n"
-            "\t[    - bump low threshold UP by 0.25\n"
-            "\t]    - bump low threshold DOWN by 0.25\n"
-            "=== CODEBOOK PARAMS ===\n"
-            "\ty,u,v- only adjust channel 0(y) or 1(u) or 2(v) respectively\n"
-            "\ta	- adjust all 3 channels at once\n"
-            "\tb	- adjust both 2 and 3 at once\n"
-            "\ti,o	- bump upper threshold up,down by 1\n"
-            "\tk,l	- bump lower threshold up,down by 1\n"
-            "\tSPACE - reset the model\n"
+        "\nUSAGE:\nbgfg_codebook [--nframes=300] [movie filename, else from camera]\n"
+        "***Keep the focus on the video windows, NOT the consol***\n\n"
+        "INTERACTIVE PARAMETERS:\n"
+        "\tESC,q,Q  - quit the program\n"
+        "\th	- print this help\n"
+        "\tp	- pause toggle\n"
+        "\ts	- single step\n"
+        "\tr	- run mode (single step off)\n"
+        "=== AVG PARAMS ===\n"
+        "\t-    - bump high threshold UP by 0.25\n"
+        "\t=    - bump high threshold DOWN by 0.25\n"
+        "\t[    - bump low threshold UP by 0.25\n"
+        "\t]    - bump low threshold DOWN by 0.25\n"
+        "=== CODEBOOK PARAMS ===\n"
+        "\ty,u,v- only adjust channel 0(y) or 1(u) or 2(v) respectively\n"
+        "\ta	- adjust all 3 channels at once\n"
+        "\tb	- adjust both 2 and 3 at once\n"
+        "\ti,o	- bump upper threshold up,down by 1\n"
+        "\tk,l	- bump lower threshold up,down by 1\n"
+        "\tSPACE - reset the model\n"
         );
 }
 
@@ -71,20 +65,15 @@ void help(void)
 //USAGE:  ch9_background startFrameCollection# endFrameCollection# [movie filename, else from camera]
 //If from AVI, then optionally add HighAvg, LowAvg, HighCB_Y LowCB_Y HighCB_U LowCB_U HighCB_V LowCB_V
 //
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    string inputName = parser.get<string>("input", "0");
-    int nframesToLearnBG = parser.get<int>("nframes", 300);
-
+    const char* filename = 0;
     IplImage* rawImage = 0, *yuvImage = 0; //yuvImage is for codebook method
     IplImage *ImaskCodeBook = 0,*ImaskCodeBookCC = 0;
     CvCapture* capture = 0;
-    int c, n, nframes = 0;
 
+    int c, n, nframes = 0;
+    int nframesToLearnBG = 300;
 
     model = cvCreateBGCodeBookModel();
     
@@ -98,30 +87,38 @@ int main(int argc, const char** argv)
     bool pause = false;
     bool singlestep = false;
 
-    if( inputName.empty() || (isdigit(inputName.c_str()[0]) && inputName.c_str()[1] == '\0') )
+    for( n = 1; n < argc; n++ )
     {
-        printf("Capture from camera\n");
-        capture = cvCaptureFromCAM( inputName.empty() ? 0 : inputName.c_str()[0] - '0' );
-        int c = inputName.empty() ? 0 : inputName.c_str()[0] - '0' ;
-        if( !capture)
+        static const char* nframesOpt = "--nframes=";
+        if( strncmp(argv[n], nframesOpt, strlen(nframesOpt))==0 )
         {
-            printf ("Capture from CAM %d", c);
-            printf (" didn't work\n");
-        }
-    }
-        else
-        {
-            printf("Capture from file %s\n",inputName.c_str());
-            capture = cvCreateFileCapture(inputName.c_str());
-            if( !capture)
+            if( sscanf(argv[n] + strlen(nframesOpt), "%d", &nframesToLearnBG) == 0 )
             {
-                printf ("Capture from file %s", inputName.c_str());
-                printf (" didn't work\n");
                 help();
                 return -1;
             }
-
         }
+        else
+            filename = argv[n];
+    }
+
+    if( !filename )
+    {
+        printf("Capture from camera\n");
+        capture = cvCaptureFromCAM( 0 );
+    }
+    else
+    {
+        printf("Capture from file %s\n",filename);
+        capture = cvCreateFileCapture( filename );
+    }
+
+    if( !capture )
+    {
+        printf( "Can not initialize video capturing\n\n" );
+        help();
+        return -1;
+    }
 
     //MAIN PROCESSING LOOP:
     for(;;)

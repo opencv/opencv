@@ -1,9 +1,8 @@
-#include "opencv2/core/core.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#include <stdio.h>
+#include <iostream>
 #include <ctype.h>
 
 using namespace cv;
@@ -11,17 +10,19 @@ using namespace std;
 
 void help()
 {
-    printf("\nThis is a demo that shows mean-shift based tracking\n"
-           "You select a color objects such as your face and it tracks it.\n"
-           "This reads from video camera (0 by default, or the camera number the user enters\n"
-           "Usage:\n"
-           "./camshiftdemo [--cameraIndex]=<camera number, zero as default>\n"
-           "\nHot keys: \n"
-           "\tESC - quit the program\n"
-           "\tc - stop the tracking\n"
-           "\tb - switch to/from backprojection view\n"
-           "\th - show/hide object histogram\n"
-           "To initialize tracking, select the object with mouse\n");
+	cout << "\nThis is a demo that shows mean-shift based tracking\n"
+		 <<   "You select a color objects such as your face and it tracks it.\n"
+		 <<   "This reads from video camera (0 by default, or the camera number the user enters\n"
+		 << "Call:\n"
+		 << "\n./camshiftdemo [camera number]"
+		 << "\n" << endl;
+
+	cout << "\n\nHot keys: \n"
+        "\tESC - quit the program\n"
+        "\tc - stop the tracking\n"
+        "\tb - switch to/from backprojection view\n"
+        "\th - show/hide object histogram\n"
+        "To initialize tracking, select the object with mouse\n" << endl;
 }
 
 Mat image;
@@ -63,13 +64,8 @@ void onMouse( int event, int x, int y, int, void* )
 
 
 
-int main( int argc, const char** argv )
+int main( int argc, char** argv )
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    unsigned int cameraInd = parser.get<unsigned int>("cameraIndex", 0);
     VideoCapture cap;
     Rect trackWindow;
     RotatedRect trackBox;
@@ -77,14 +73,19 @@ int main( int argc, const char** argv )
     float hranges[] = {0,180};
     const float* phranges = hranges;
 
-    cap.open(cameraInd);
+    if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
+        cap.open(argc == 2 ? argv[1][0] - '0' : 0);
+    else if( argc == 2 )
+        cap.open(argv[1]);
 
     if( !cap.isOpened() )
     {
     	help();
-        printf("***Could not initialize capturing...***\n");
+        cout << "***Could not initialize capturing...***\n";
         return 0;
     }
+
+    help();
 
     namedWindow( "Histogram", 1 );
     namedWindow( "CamShift Demo", 1 );

@@ -1,26 +1,21 @@
-#include "opencv2/core/core.hpp"
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/core/core_c.h"
 #include <stdio.h>
 #include <map>
 
-using namespace std;
-using namespace cv;
-
 void help()
 {
-    printf(
-        "\nThis sample demonstrates how to use different decision trees and forests including boosting and random trees:\n"
-        "CvDTree dtree;\n"
-        "CvBoost boost;\n"
-        "CvRTrees rtrees;\n"
-        "CvERTrees ertrees;\n"
-        "CvGBTrees gbtrees;\n"
-        "Usage: \n"
-        "       ./tree_engine [--response_column]=<specified the 0-based index of the response, 0 as default> \n"
-        "[--categorical_response]=<specifies that the response is categorical, 0-false, 1-true, 0 as default> \n"
-        "[--csv_filename]=<is the name of training data file in comma-separated value format> \n"
-        );
+	printf(
+		"\nThis sample demonstrates how to use different decision trees and forests including boosting and random trees:\n"
+		"CvDTree dtree;\n"
+		"CvBoost boost;\n"
+		"CvRTrees rtrees;\n"
+		"CvERTrees ertrees;\n"
+		"CvGBTrees gbtrees;\n"
+		"Call:\n\t./tree_engine [-r <response_column>] [-c] <csv filename>\n"
+        "where -r <response_column> specified the 0-based index of the response (0 by default)\n"
+        "-c specifies that the response is categorical (it's ordered by default) and\n"
+        "<csv filename> is the name of training data file in comma-separated value format\n\n");
 }
 
 
@@ -64,24 +59,34 @@ void print_result(float train_err, float test_err, const CvMat* _var_imp)
     printf("\n");
 }
 
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    string filename = parser.get<string>("csv_filename");
-    int response_idx = parser.get<int>("response_column", 0);
-    bool categorical_response = (bool)parser.get<int>("categorical_response", 1);
-
-    if(filename.empty())
+    if(argc < 2)
     {
-        printf("\n Please, select value for --csv_filename key \n");
         help();
-        return -1;
+        return 0;
+    }
+    const char* filename = 0;
+    int response_idx = 0;
+    bool categorical_response = false;
+    
+    for(int i = 1; i < argc; i++)
+    {
+        if(strcmp(argv[i], "-r") == 0)
+            sscanf(argv[++i], "%d", &response_idx);
+        else if(strcmp(argv[i], "-c") == 0)
+            categorical_response = true;
+        else if(argv[i][0] != '-' )
+            filename = argv[i];
+        else
+        {
+            printf("Error. Invalid option %s\n", argv[i]);
+            help();
+            return -1;
+        }
     }
         
-    printf("\nReading in %s...\n\n",filename.c_str());
+    printf("\nReading in %s...\n\n",filename);
     CvDTree dtree;
     CvBoost boost;
     CvRTrees rtrees;
@@ -93,7 +98,7 @@ int main(int argc, const char** argv)
     
     CvTrainTestSplit spl( 0.5f );
     
-    if ( data.read_csv( filename.c_str() ) == 0)
+    if ( data.read_csv( filename ) == 0)
     {
         data.set_response_idx( response_idx );
         if(categorical_response)

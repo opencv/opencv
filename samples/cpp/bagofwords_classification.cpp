@@ -1,4 +1,3 @@
-#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -28,26 +27,29 @@ const string bowImageDescriptorsDir = "/bowImageDescriptors";
 const string svmsDir = "/svms";
 const string plotsDir = "/plots";
 
-void help()
+void help(char** argv)
 {
-    printf("\nThis program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
-           "It shows how to use detectors, descriptors and recognition methods \n"
-           "Usage: \n"
-           "Format:\n"
-           "./bagofwords_classification \n"
-           "--voc_path=<Path to Pascal VOC data (e.g. /home/my/VOCdevkit/VOC2010). \n"
-           "                               Note: VOC2007-VOC2010 are supported.> \n"
-           "--result_directory=<Path to result directory. Following folders will be created in [result directory]: \n"
-           "                                 bowImageDescriptors - to store image descriptors, \n"
-           "                                 svms - to store trained svms, \n"
-           "                                 plots - to store files for plots creating. \n"
-           "[--feature_detector]=<Feature detector name (e.g. SURF, FAST...) - see createFeatureDetector() function in detectors.cpp \n"
-           "                      Currently 12/2010, this is FAST, STAR, SIFT, SURF, MSER, GFTT, HARRIS> \n"
-           "[--descriptor_extractor]=<Descriptor extractor name (e.g. SURF, SIFT) - see createDescriptorExtractor() function in descriptors.cpp \n"
-           "                         Currently 12/2010, this is SURF, OpponentSIFT, SIFT, OpponentSURF, BRIEF> \n"
-           "[--descriptor_matcher]=<Descriptor matcher name (e.g. BruteForce) - see createDescriptorMatcher() function in matchers.cpp \n"
-           "                         Currently 12/2010, this is BruteForce, BruteForce-L1, FlannBased, BruteForce-Hamming, BruteForce-HammingLUT> \n"
-           "\n");
+	cout << "\nThis program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
+	 << "It shows how to use detectors, descriptors and recognition methods \n"
+		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+	 << "Call: \n"
+    << "Format:\n ./" << argv[0] << " [VOC path] [result directory]  \n"
+    << "       or:  \n"
+    << " ./" << argv[0] << " [VOC path] [result directory] [feature detector] [descriptor extractor] [descriptor matcher] \n"
+    << "\n"
+    << "Input parameters: \n"
+    << "[VOC path]             Path to Pascal VOC data (e.g. /home/my/VOCdevkit/VOC2010). Note: VOC2007-VOC2010 are supported. \n"
+    << "[result directory]     Path to result diractory. Following folders will be created in [result directory]: \n"
+    << "                         bowImageDescriptors - to store image descriptors, \n"
+    << "                         svms - to store trained svms, \n"
+    << "                         plots - to store files for plots creating. \n"
+    << "[feature detector]     Feature detector name (e.g. SURF, FAST...) - see createFeatureDetector() function in detectors.cpp \n"
+    << "                         Currently 12/2010, this is FAST, STAR, SIFT, SURF, MSER, GFTT, HARRIS \n"
+    << "[descriptor extractor] Descriptor extractor name (e.g. SURF, SIFT) - see createDescriptorExtractor() function in descriptors.cpp \n"
+    << "                         Currently 12/2010, this is SURF, OpponentSIFT, SIFT, OpponentSURF, BRIEF \n"
+    << "[descriptor matcher]   Descriptor matcher name (e.g. BruteForce) - see createDescriptorMatcher() function in matchers.cpp \n"
+    << "                         Currently 12/2010, this is BruteForce, BruteForce-L1, FlannBased, BruteForce-Hamming, BruteForce-HammingLUT \n"
+    << "\n";
 }
 
 
@@ -2505,24 +2507,16 @@ void computeGnuPlotOutput( const string& resPath, const string& objClassName, Vo
 
 
 
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    const string vocPath = parser.get<string>("--voc_path");
-    const string resPath = parser.get<string>("--result_directory");
-    const string featureDetectName = parser.get<string>("--feature_detector");
-    const string descExtName = parser.get<string>("--descriptor_extractor");
-    const string descMatchName = parser.get<string>("--descriptor_matcher");
-
-    if( vocPath.empty() || resPath.empty())
+    if( argc != 3 && argc != 6 )
     {
-        help();
-        printf("Cannot find --voc_path=%s or --result_directory=%s\n", vocPath.c_str(), resPath.c_str());
+    	help(argv);
         return -1;
     }
+
+    const string vocPath = argv[1], resPath = argv[2];
+
     // Read or set default parameters
     string vocName;
     DDMParams ddmParams;
@@ -2540,12 +2534,12 @@ int main(int argc, const char** argv)
     else
     {
         vocName = getVocName(vocPath);
-        if( featureDetectName.empty() || descExtName.empty() || descMatchName.empty())
+        if( argc!= 6 )
         {
             cout << "Feature detector, descriptor extractor, descriptor matcher must be set" << endl;
             return -1;
         }
-        ddmParams = DDMParams( featureDetectName.c_str(), descExtName.c_str(), descMatchName.c_str()); // from command line
+        ddmParams = DDMParams( argv[3], argv[4], argv[5] ); // from command line
         // vocabTrainParams and svmTrainParamsExt is set by defaults
         paramsFS.open( resPath + "/" + paramsFile, FileStorage::WRITE );
         if( paramsFS.isOpened() )

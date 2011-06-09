@@ -4,30 +4,26 @@
  * Author: Liu Liu
  * liuliu.1987+opencv@gmail.com
  */
-#include "opencv2/core/core.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-#include <opencv2/imgproc/imgproc_c.h>
+#include "opencv2/imgproc/imgproc_c.h"
 
 #include <iostream>
 #include <vector>
 
 using namespace std;
-using namespace cv;
-
 void help()
 {
-    printf( "\n This program demonstrated the use of the SURF Detector and Descriptor using\n"
-            "either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
-            "on planar objects.\n"
-            "Usage: \n"
-            "./find_obj [--object_filename]=<object_filename, box.png as default> \n"
-            "       [--scene_filename]=<scene_filename box_in_scene.png as default>] \n"
-            "Example: \n"
-            "./find_obj --object_filename=box.png --scene_filename=box_in_scene.png \n\n"
-            );
+	printf(
+			"This program demonstrated the use of the SURF Detector and Descriptor using\n"
+			"either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
+			"on planar objects.\n"
+			"Call:\n"
+			"./find_obj [<object_filename default box.png> <scene_filename default box_in_scene.png>]\n\n"
+			);
+
 }
 
 // define whether to use approximate nearest-neighbor search
@@ -213,16 +209,13 @@ locatePlanarObject( const CvSeq* objectKeypoints, const CvSeq* objectDescriptors
     return 1;
 }
 
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-    help();
-
-    CommandLineParser parser(argc, argv);
-
-    string objectFileName = parser.get<string>("object_filename", "box.png");
-    string sceneFileName = parser.get<string>("scene_filename", "box_in_scene.png");
+    const char* object_filename = argc == 3 ? argv[1] : "box.png";
+    const char* scene_filename = argc == 3 ? argv[2] : "box_in_scene.png";
 
     CvMemStorage* storage = cvCreateMemStorage(0);
+    help();
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
@@ -239,11 +232,13 @@ int main(int argc, const char** argv)
         {{255,255,255}}
     };
 
-    IplImage* object = cvLoadImage( objectFileName.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
-    IplImage* image = cvLoadImage( sceneFileName.c_str(), CV_LOAD_IMAGE_GRAYSCALE );
+    IplImage* object = cvLoadImage( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    IplImage* image = cvLoadImage( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
     if( !object || !image )
     {
-        fprintf( stderr, "Can not load %s and/or %s\n", objectFileName.c_str(), sceneFileName.c_str() );
+        fprintf( stderr, "Can not load %s and/or %s\n"
+            "Usage: find_obj [<object_filename> <scene_filename>]\n",
+            object_filename, scene_filename );
         exit(-1);
     }
     IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
