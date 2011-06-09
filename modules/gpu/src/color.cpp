@@ -411,7 +411,7 @@ namespace
                     bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
                         code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
                     int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
-                        code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 255;
+                        code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
                 
                     dst.create(sz, CV_MAKETYPE(depth, dcn));
 
