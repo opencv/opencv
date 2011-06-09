@@ -1598,8 +1598,6 @@ protected:
   virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
   virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const;
 
-  Point2d computeGrayscaleCentroid(const cv::Mat &image, const std::vector<cv::Point> &contour) const;
-
   Params params;
 };
 
