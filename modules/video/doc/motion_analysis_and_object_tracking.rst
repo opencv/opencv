@@ -378,9 +378,8 @@ BackgroundSubtractorMOG::operator()
 
 
 BackgroundSubtractorMOG::initialize
-------------------------------------------------
-
-.. cpp:function: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType)
+-----------------------------------
+.. cpp:function:: void BackgroundSubtractorMOG::initialize(int a)
 
     Re-initiaization method.
 
@@ -402,9 +401,9 @@ The class implements the Gaussian mixture model background subtraction from:
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
 --------------------------------------------------
 
-.. cpp:function: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
+.. cpp:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
 
-.. cpp:function: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
+.. cpp:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
 
     :param history: The length of the history.
 
@@ -447,15 +446,15 @@ BackgroundSubtractorMOG2::operator()
 BackgroundSubtractorMOG2::initialize
 ------------------------------------
 
-.. cpp:function: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
+.. cpp:function:: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
 
-     Re-initiaization method.
+    Re-initiaization method.
 
 
 BackgroundSubtractorMOG2::getBackgroundImage
 --------------------------------------------
 
-.. cpp:function: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
+.. cpp:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
 
     Computes a background image which are the mean of all background gaussians.
 
