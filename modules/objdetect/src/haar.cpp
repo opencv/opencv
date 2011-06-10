@@ -673,8 +673,8 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
             "Use cvSetImagesForHaarClassifierCascade" );
 
     if( pt.x < 0 || pt.y < 0 ||
-        pt.x + _cascade->real_window_size.width >= cascade->sum.width-2 ||
-        pt.y + _cascade->real_window_size.height >= cascade->sum.height-2 )
+        pt.x + _cascade->real_window_size.width >= cascade->sum.width ||
+        pt.y + _cascade->real_window_size.height >= cascade->sum.height )
         return -1;
 
     p_offset = pt.y * (cascade->sum.step/sizeof(sumtype)) + pt.x;
@@ -1095,7 +1095,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             CvSize winSize = { cvRound(winSize0.width*factor),
                                 cvRound(winSize0.height*factor) };
             CvSize sz = { cvRound( img->cols/factor ), cvRound( img->rows/factor ) };
-            CvSize sz1 = { sz.width - winSize0.width, sz.height - winSize0.height };
+            CvSize sz1 = { sz.width - winSize0.width + 1, sz.height - winSize0.height + 1 };
 
             CvRect equRect = { icv_object_win_border, icv_object_win_border,
                 winSize0.width - icv_object_win_border*2,

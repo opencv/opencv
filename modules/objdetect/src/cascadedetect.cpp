@@ -649,8 +649,8 @@ bool HaarEvaluator::setImage( const Mat &image, Size _origWinSize )
 bool  HaarEvaluator::setWindow( Point pt )
 {
     if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width >= sum.cols-2 ||
-        pt.y + origWinSize.height >= sum.rows-2 )
+        pt.x + origWinSize.width >= sum.cols ||
+        pt.y + origWinSize.height >= sum.rows )
         return false;
 
     size_t pOffset = pt.y * (sum.step/sizeof(int)) + pt.x;
@@ -812,8 +812,8 @@ bool LBPEvaluator::setImage( const Mat& image, Size _origWinSize )
 bool LBPEvaluator::setWindow( Point pt )
 {
     if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width >= sum.cols-2 ||
-        pt.y + origWinSize.height >= sum.rows-2 )
+        pt.x + origWinSize.width >= sum.cols ||
+        pt.y + origWinSize.height >= sum.rows )
         return false;
     offset = pt.y * ((int)sum.step/sizeof(int)) + pt.x;
     return true;
@@ -1203,7 +1203,7 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
 
         Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
         Size scaledImageSize( cvRound( grayImage.cols/factor ), cvRound( grayImage.rows/factor ) );
-        Size processingRectSize( scaledImageSize.width - originalWindowSize.width, scaledImageSize.height - originalWindowSize.height );
+        Size processingRectSize( scaledImageSize.width - originalWindowSize.width + 1, scaledImageSize.height - originalWindowSize.height + 1 );
         
         if( processingRectSize.width <= 0 || processingRectSize.height <= 0 )
             break;
