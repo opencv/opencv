@@ -717,11 +717,12 @@ waits for key event infinitely (
 ``delay``
 milliseconds. Returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
 
-**Note:**
-This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing.
-\
-\
+**Notes:**
+
+* This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing, unless HighGUI is used within some environment that takes care of event processing.
 **[Qt Backend Only]**
 qt-specific details:
 With this current Qt implementation, this is the only way to process event such as repaint for the windows, and so on 
 ldots
+
+* The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
