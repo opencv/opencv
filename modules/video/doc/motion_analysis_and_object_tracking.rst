@@ -232,7 +232,7 @@ segmentMotion
     :param segThresh: Segmentation threshold; recommended to be equal to the interval between motion history "steps" or greater.
  
 
-    The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :cpp:func:`calcGlobalOrientation` using the extracted mask of the particular component.
+The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :cpp:func:`calcGlobalOrientation` using the extracted mask of the particular component.
 
 
 .. index:: CamShift
