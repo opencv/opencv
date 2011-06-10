@@ -617,9 +617,12 @@ class PythonWrapperGenerator(object):
         self.code_func_tab = cStringIO.StringIO()
         self.code_type_reg = cStringIO.StringIO()
         self.code_const_reg = cStringIO.StringIO()
+        self.class_idx = 0
 
     def add_class(self, stype, name, decl):
         classinfo = ClassInfo(name, decl)
+        classinfo.decl_idx = self.class_idx
+        self.class_idx += 1
         
         if self.classes.has_key(classinfo.name):
             print "Generator error: class %s (cname=%s) already exists" \
@@ -719,7 +722,12 @@ class PythonWrapperGenerator(object):
                     templ = gen_template_type_decl
                 self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname))
         
-        for name, classinfo in classlist:
+        # register classes in the same order as they have been declared.
+        # this way, base classes will be registered in Python before their derivatives.
+        classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]
+        classlist1.sort()
+        
+        for decl_idx, name, classinfo in classlist1:
             code = classinfo.gen_code(self.classes)
             self.code_types.write(code)
             if not classinfo.ismap:
