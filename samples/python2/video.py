@@ -49,13 +49,30 @@ def create_capture(source):
 
 if __name__ == '__main__':
     import sys
-    try: fn = sys.argv[1]
-    except: fn = 'synth:bg=../cpp/lena.jpg:noise=0.1'
+    import argparse
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sources', nargs='*', default=['synth:bg=../cpp/lena.jpg:noise=0.1'])
+    parser.add_argument('-shotdir', nargs=1, default='.')
+    args = parser.parse_args()
+    print args
 
-    cap = create_capture(fn)
+    print 'Press SPACE to save current frame'
+
+    caps = map(create_capture, args.sources)
+    shot_idx = 0
     while True:
-        ret, img = cap.read()
-        cv2.imshow('img', img)
+        imgs = []
+        for i, cap in enumerate(caps):
+            ret, img = cap.read()
+            imgs.append(img)
+            cv2.imshow('capture %d' % i, img)
         ch = cv2.waitKey(1)
         if ch == 27:
             break
+        if ch == ord(' '):
+            for i, img in enumerate(imgs):
+                fn = '%s/shot_%d_%03d.bmp' % (args.shotdir[0], i, shot_idx)
+                cv2.imwrite(fn, img)
+                print fn, 'saved'
+            shot_idx += 1

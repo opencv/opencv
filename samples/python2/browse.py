@@ -16,7 +16,7 @@ if len(sys.argv) > 1:
     img = cv2.imread(fn)
 else:
     sz = 4096
-    print 'generating %dx%d procudural image ...' % (sz, sz)
+    print 'generating %dx%d procedural image ...' % (sz, sz)
     img = np.zeros((sz, sz), np.uint8)
     track = np.cumsum(np.random.rand(500000, 2)-0.5, axis=0)
     track = np.int32(track*10 + (sz/2, sz/2))
