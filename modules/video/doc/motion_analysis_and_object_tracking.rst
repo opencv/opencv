@@ -379,7 +379,8 @@ BackgroundSubtractorMOG::operator()
 
 BackgroundSubtractorMOG::initialize
 -----------------------------------
-.. cpp:function:: void BackgroundSubtractorMOG::initialize(int a)
+
+.. cpp:function:: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType) 
 
     Re-initiaization method.
 
