@@ -19,6 +19,7 @@ public:
     
     virtual void init( const CvFeatureParams& fp );
     virtual void write( FileStorage &fs ) const;
+    virtual bool read( const FileNode &node );
 
     virtual void printDefaults() const;  
     virtual void printAttrs() const;

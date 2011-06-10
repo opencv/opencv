@@ -29,6 +29,22 @@ void CvHaarFeatureParams::write( FileStorage &fs ) const
     fs << CC_MODE << modeStr;
 }
 
+bool CvHaarFeatureParams::read( const FileNode &node )
+{
+    if( !CvFeatureParams::read( node ) )
+        return false;
+
+    FileNode rnode = node[CC_MODE];
+    if( !rnode.isString() )
+        return false;
+    String modeStr;
+    rnode >> modeStr;
+    mode = !modeStr.compare( CC_MODE_BASIC ) ? BASIC :
+           !modeStr.compare( CC_MODE_CORE ) ? CORE :
+           !modeStr.compare( CC_MODE_ALL ) ? ALL : -1;
+    return (mode >= 0);
+}
+
 void CvHaarFeatureParams::printDefaults() const
 {
     CvFeatureParams::printDefaults();
