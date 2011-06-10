@@ -885,7 +885,7 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
     {
         len *= cn;
         for( int i = 0; i < len; i++ )
-            result = std::max(result, std::abs(src1[i] - src2[i]));
+            result = std::max(result, (ST)std::abs(src1[i] - src2[i]));
     }
     else
     {
@@ -893,7 +893,7 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, std::abs(src1[k] - src2[k]));
+                    result = std::max(result, (ST)std::abs(src1[k] - src2[k]));
             }
     }
     *_result = result;
