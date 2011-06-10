@@ -300,3 +300,163 @@ Kalman filter class ::
 The class implements a standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter
 . However, you can modify ``transitionMatrix``,``controlMatrix`` , and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.c`` .
+
+
+
+BackgroundSubtractor
+--------------------
+
+.. cpp:class: BackgroundSubtractor
+
+The base class for background/foreground segmentation. ::
+
+    class BackgroundSubtractor
+    {
+    public:
+        virtual ~BackgroundSubtractor();
+        virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=0);
+        virtual void getBackgroundImage(OutputArray backgroundImage) const;
+    };
+
+
+The class is only used to define the common interface for the whole family of background/foreground segmentation algorithms.
+
+BackgroundSubtractor::operator()
+-------------------------------
+
+.. cpp:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+
+    Computes foreground mask.
+
+    :param image: The next video frame.
+
+    :param fgmask: The foreground mask as 8-bit binary image
+
+
+BackgroundSubtractor::getBackgroundImage
+----------------------------------------
+
+.. cpp:function:: virtual void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
+
+This method computes a background image.
+
+
+BackgroundSubtractorMOG
+-----------------------
+
+.. cpp:class: BackgroundSubtractorMOG : public BackgroundSubtractor
+
+    Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+
+The class implements the following algorithm: P. KadewTraKuPong and R. Bowden, An improved adaptive background mixture model for real-time tracking with shadow detection, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+
+
+BackgroundSubtractorMOG::BackgroundSubtractorMOG
+------------------------------------------------
+
+.. cpp:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
+
+.. cpp:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
+
+    :param history: The length of the history.
+
+    :param nmixtures: The number of gaussian mixtures.
+
+    :param backgroundRatio: Background ratio.
+
+    :param noiseSigma: The noise strength.
+
+Default constructor sets all parameters to some default values.
+
+
+BackgroundSubtractorMOG::operator()
+-----------------------------------
+
+.. cpp:function:: virtual void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+
+    The update operator.
+
+
+BackgroundSubtractorMOG::initialize
+------------------------------------------------
+
+.. cpp:function: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType)
+
+    Re-initiaization method.
+
+
+BackgroundSubtractorMOG2
+------------------------
+
+.. cpp:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
+
+    Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+
+The class implements the Gaussian mixture model background subtraction from: 
+
+  * Z.Zivkovic, Improved adaptive Gausian mixture model for background subtraction, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
+
+  * Z.Zivkovic, F. van der Heijden, Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction, Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006. The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on: Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004.
+
+
+BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
+--------------------------------------------------
+
+.. cpp:function: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
+
+.. cpp:function: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
+
+    :param history: The length of the history.
+
+    :param varThreshold: Threshold on the squared Mahalanobis distance to decide if it is well described by the background model or not. Related to Cthr from the paper. This does not influence the update of the background. A typical value could be 4 sigma and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
+
+    :param bShadowDetection: Do shadow detection (true) or not (false).
+
+
+The class has an important public parameter:
+
+    :param nmixtures: The maximum allowed number of mixture comonents. Actual number is determined dynamically per pixel.
+
+Also the class has several less important parameters - things you might change but be carefull:
+
+    :param backgroundRatio: Corresponds to fTB=1-cf from the paper. TB - threshold when the component becomes significant enough to be included into the background model. It is the TB=1-cf from the paper. Default is cf=0.1 => TB=0.9. For alpha=0.001 it means that the mode should exist for approximately 105 frames before it is considered foreground.
+
+    :param varThresholdGen: Correspondts to Tg - threshold on the squared Mahalanobis distance to decide when a sample is close to the existing components. If it is not close to any a new component will be generated. Default is 3 sigma => Tg=3*3=9. Smaller Tg leads to more generated components and higher Tg might make lead to small number of components but they can grow too large.
+
+    :param fVarInit: Initial variance for the newly generated components. It will will influence the speed of adaptation. A good guess should be made. A simple way is to estimate the typical standard deviation from the images. OpenCV uses here 15 as a reasonable value.
+
+    :param fVarMin: Used to further control the variance.
+
+    :param fVarMax: Used to further control the variance.
+
+    :param fCT: Complexity reduction prior. This is related to the number of samples needed to accept that a component actually exists. Default is CT=0.05 of all the samples. By setting CT=0 you get the standard Stauffer&Grimson algorithm (maybe not exact but very similar).
+
+    :param nShadowDetection: This value is inserted as the shadow detection result. Default value is 127.
+
+    :param fTau: Shadow threshold. The shadow is detected if the pixel is darker version of the background. Tau is a threshold on how much darker the shadow can be. Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow. See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+                 
+
+BackgroundSubtractorMOG2::operator()
+-----------------------------------
+
+.. cpp:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
+
+    The update operator.
+
+
+BackgroundSubtractorMOG2::initialize
+------------------------------------
+
+.. cpp:function: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
+
+     Re-initiaization method
+
+
+BackgroundSubtractorMOG2::getBackgroundImage
+--------------------------------------------
+
+.. cpp:function: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
+
+The method computes a background image which are the mean of all background gaussians
+
+
