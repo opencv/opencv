@@ -2275,7 +2275,7 @@ inline RNG::operator double()
 }
 inline int RNG::uniform(int a, int b) { return a == b ? a : next()%(b - a) + a; }
 inline float RNG::uniform(float a, float b) { return ((float)*this)*(b - a) + a; }
-inline double RNG::uniform(double a, double b) { return ((float)*this)*(b - a) + a; }
+inline double RNG::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
 
 inline TermCriteria::TermCriteria() : type(0), maxCount(0), epsilon(0) {}
 inline TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
