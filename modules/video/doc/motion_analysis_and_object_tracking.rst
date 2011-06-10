@@ -263,44 +263,61 @@ KalmanFilter
 ------------
 .. c:type:: KalmanFilter
 
-Kalman filter class ::
-
-    class KalmanFilter
-    {
-    public:
-        KalmanFilter();
-        KalmanFilter(int dynamParams, int measureParams, int controlParams=0);
-        void init(int dynamParams, int measureParams, int controlParams=0);
-        // predicts statePre from statePost
-        const Mat& predict(const Mat& control=Mat());
-        // corrects statePre based on the input measurement vector
-        // and stores the result in statePost.
-        const Mat& correct(const Mat& measurement);
-
-        Mat statePre;           // predicted state (x'(k)):
-                                //    x(k)=A*x(k-1)+B*u(k)
-        Mat statePost;          // corrected state (x(k)):
-                                //    x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
-        Mat transitionMatrix;   // state transition matrix (A)
-        Mat controlMatrix;      // control matrix (B)
-                                //   (it is not used if there is no control)
-        Mat measurementMatrix;  // measurement matrix (H)
-        Mat processNoiseCov;    // process noise covariance matrix (Q)
-        Mat measurementNoiseCov;// measurement noise covariance matrix (R)
-        Mat errorCovPre;        // priori error estimate covariance matrix (P'(k)):
-                                //    P'(k)=A*P(k-1)*At + Q)*/
-        Mat gain;               // Kalman gain matrix (K(k)):
-                                //    K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
-        Mat errorCovPost;       // posteriori error estimate covariance matrix (P(k)):
-                                //    P(k)=(I-K(k)*H)*P'(k)
-        ...
-    };
-
+    Kalman filter class.
 
 The class implements a standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter
-. However, you can modify ``transitionMatrix``,``controlMatrix`` , and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.c`` .
+. However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
 
+KalmanFilter::KalmanFilter
+--------------------------
+
+.. cpp:function:: KalmanFilter::KalmanFilter()
+
+    Creates an empty object that can be initialized later by the function :cpp:func:`KalmanFilter::init`.
+
+.. cpp:function:: KalmanFilter::KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
+
+    The full constructor.
+    
+    :param dynamParams: The dimensionality of the state.
+    
+    :param measureParams: The dimensionality of the measurement.
+    
+    :param controlParams: The dimensionality of the control vector.
+
+    :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
+ 
+
+KalmanFilter::init
+------------------
+
+.. cpp:function:: void KalmanFilter::init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
+
+    Re-initializes Kalman filter. The previous content is destroyed.
+
+    :param dynamParams: The dimensionality of the state.
+    
+    :param measureParams: The dimensionality of the measurement.
+    
+    :param controlParams: The dimensionality of the control vector.
+
+    :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
+
+KalmanFilter::predict
+---------------------
+
+.. cpp:function:: const Mat& KalmanFilter::predict(const Mat& control=Mat())
+
+    Computes predicted state
+
+
+KalmanFilter::correct
+---------------------
+
+.. cpp:function:: const Mat& KalmanFilter::correct(const Mat& measurement)
+
+    Updates the predicted state from the measurement
 
 
 BackgroundSubtractor
@@ -330,7 +347,7 @@ BackgroundSubtractor::operator()
 
     :param image: The next video frame.
 
-    :param fgmask: The foreground mask as 8-bit binary image
+    :param fgmask: The foreground mask as 8-bit binary image.
 
 
 BackgroundSubtractor::getBackgroundImage
