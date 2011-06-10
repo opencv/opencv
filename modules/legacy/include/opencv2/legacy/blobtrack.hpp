@@ -56,7 +56,7 @@
 #define strdup _strdup
 #define stricmp _stricmp
 #endif
-#elif defined __GNUC__
+#elif defined __GNUC__ || defined __sun
 #define cv_stricmp strcasecmp
 #define cv_strnicmp strncasecmp
 #else
