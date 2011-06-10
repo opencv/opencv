@@ -449,7 +449,7 @@ BackgroundSubtractorMOG2::initialize
 
 .. cpp:function: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
 
-     Re-initiaization method
+     Re-initiaization method.
 
 
 BackgroundSubtractorMOG2::getBackgroundImage
@@ -457,6 +457,6 @@ BackgroundSubtractorMOG2::getBackgroundImage
 
 .. cpp:function: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
 
-The method computes a background image which are the mean of all background gaussians
+    Computes a background image which are the mean of all background gaussians.
 
 
