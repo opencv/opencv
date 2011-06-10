@@ -1284,7 +1284,7 @@ void CvEM::getCovs(vector<Mat>& _covs) const
     int i, n = params.nclusters;
     _covs.resize(n);
     for( i = 0; i < n; i++ )
-        _covs[i] = Mat(covs[i]);
+        Mat(covs[i]).copyTo(_covs[i]);
 }
 
 Mat CvEM::getWeights() const

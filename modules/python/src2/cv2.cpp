@@ -237,7 +237,7 @@ static PyObject* pyopencv_from(const Mat& m)
     Mat temp, *p = (Mat*)&m;
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
-        pyopencv_to(Py_None, temp);
+        temp.allocator = &g_numpyAllocator;
         m.copyTo(temp);
         p = &temp;
     }
@@ -484,7 +484,7 @@ template<typename _Tp> struct pyopencvVecConverter
     static bool to(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
     {
         typedef typename DataType<_Tp>::channel_type _Cp;
-        if(!obj)
+        if(!obj || obj == Py_None)
             return true;
         if (PyArray_Check(obj))
         {
@@ -596,6 +596,8 @@ static PyObject* pyopencv_from(const KeyPoint&);
 
 template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
 {
+    if(!obj || obj == Py_None)
+       return true;
     if (!PySequence_Check(obj))
         return false;
     PyObject *seq = PySequence_Fast(obj, name);
@@ -619,13 +621,13 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
 template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const vector<_Tp>& value)
 {
     int i, n = (int)value.size();
-    PyObject* seq = PyTuple_New(n);
+    PyObject* seq = PyList_New(n);
     for( i = 0; i < n; i++ )
     {        
         PyObject* item = pyopencv_from(value[i]);
         if(!item)
             break;
-        PyTuple_SET_ITEM(seq, i, item);
+        PyList_SET_ITEM(seq, i, item);
     }
     if( i < n )
     {

@@ -2860,10 +2860,6 @@ static PyObject *fromarray(PyObject *o, int allowND)
       type = CV_16SC1;
     else if (pai->itemsize == 4)
       type = CV_32SC1;
-    else if (pai->itemsize == 8) {
-      PyErr_SetString(PyExc_TypeError, "OpenCV cannot handle 64-bit integer arrays");
-      return NULL;
-    }
     break;
 
   case 'u':
@@ -2879,9 +2875,12 @@ static PyObject *fromarray(PyObject *o, int allowND)
     else if (pai->itemsize == 8)
       type = CV_64FC1;
     break;
-
+    
   }
-  assert(type != -1);
+  if (type == -1) {
+     PyErr_SetString(PyExc_TypeError, "the array type is not supported by OpenCV");
+     return NULL;
+  }
 
   if (!allowND) {
     cvmat_t *m = PyObject_NEW(cvmat_t, &cvmat_Type);
