@@ -211,6 +211,30 @@ motion direction in the selected region and returns the angle between
 the weighted orientation histogram, where a recent motion has a larger
 weight and the motion occurred in the past has a smaller weight, as recorded in ``mhi`` .
 
+
+.. index:: segmentMotion
+
+segmentMotion
+-------------
+
+.. cpp:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
+
+    Splits a motion history image into a few parts corresponding to separate independent motions (e.g. left hand, right hand).
+
+    :param mhi: Motion history image.
+
+    :param segmask: Image where the mask found should be stored, single-channel, 32-bit floating-point.
+
+    :param boundingRects: Vector that will contain ROIs of motion connected components.
+
+    :param timestamp: Current time in milliseconds or other units.
+
+    :param segThresh: Segmentation threshold; recommended to be equal to the interval between motion history "steps" or greater.
+ 
+
+    The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :cpp:func:`calcGlobalOrientation` using the extracted mask of the particular component.
+
+
 .. index:: CamShift
 
 CamShift
@@ -269,6 +293,9 @@ The class implements a standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter
 . However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
 
+
+.. index:: KalmanFilter::KalmanFilter
+
 KalmanFilter::KalmanFilter
 --------------------------
 
@@ -289,6 +316,8 @@ KalmanFilter::KalmanFilter
     :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
  
 
+.. index:: KalmanFilter::init
+
 KalmanFilter::init
 ------------------
 
@@ -304,6 +333,9 @@ KalmanFilter::init
 
     :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
 
+
+.. index:: KalmanFilter::predict
+
 KalmanFilter::predict
 ---------------------
 
@@ -312,6 +344,8 @@ KalmanFilter::predict
     Computes predicted state
 
 
+.. index:: KalmanFilter::correct
+
 KalmanFilter::correct
 ---------------------
 
@@ -319,6 +353,8 @@ KalmanFilter::correct
 
     Updates the predicted state from the measurement
 
+
+.. index:: BackgroundSubtractor
 
 BackgroundSubtractor
 --------------------
@@ -338,6 +374,9 @@ The base class for background/foreground segmentation. ::
 
 The class is only used to define the common interface for the whole family of background/foreground segmentation algorithms.
 
+
+.. index:: BackgroundSubtractor::operator()
+
 BackgroundSubtractor::operator()
 -------------------------------
 
@@ -350,6 +389,8 @@ BackgroundSubtractor::operator()
     :param fgmask: The foreground mask as 8-bit binary image.
 
 
+.. index:: BackgroundSubtractor::getBackgroundImage
+
 BackgroundSubtractor::getBackgroundImage
 ----------------------------------------
 
@@ -357,6 +398,8 @@ BackgroundSubtractor::getBackgroundImage
 
 This method computes a background image.
 
+
+.. index:: BackgroundSubtractorMOG
 
 BackgroundSubtractorMOG
 -----------------------
@@ -367,6 +410,8 @@ BackgroundSubtractorMOG
 
 The class implements the following algorithm: P. KadewTraKuPong and R. Bowden, An improved adaptive background mixture model for real-time tracking with shadow detection, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
 
+
+.. index:: BackgroundSubtractorMOG::BackgroundSubtractorMOG
 
 BackgroundSubtractorMOG::BackgroundSubtractorMOG
 ------------------------------------------------
@@ -386,6 +431,8 @@ BackgroundSubtractorMOG::BackgroundSubtractorMOG
 Default constructor sets all parameters to some default values.
 
 
+.. index:: BackgroundSubtractorMOG::operator()
+
 BackgroundSubtractorMOG::operator()
 -----------------------------------
 
@@ -394,6 +441,8 @@ BackgroundSubtractorMOG::operator()
     The update operator.
 
 
+.. index:: BackgroundSubtractorMOG::initialize
+
 BackgroundSubtractorMOG::initialize
 -----------------------------------
 
@@ -401,6 +450,8 @@ BackgroundSubtractorMOG::initialize
 
     Re-initiaization method.
 
+
+.. index:: BackgroundSubtractorMOG2
 
 BackgroundSubtractorMOG2
 ------------------------
@@ -415,6 +466,8 @@ The class implements the Gaussian mixture model background subtraction from:
 
   * Z.Zivkovic, F. van der Heijden, Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction, Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006. The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on: Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004.
 
+
+.. index:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
 
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
 --------------------------------------------------
@@ -453,6 +506,8 @@ Also the class has several less important parameters - things you might change b
     :param fTau: Shadow threshold. The shadow is detected if the pixel is darker version of the background. Tau is a threshold on how much darker the shadow can be. Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow. See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
                  
 
+.. index:: BackgroundSubtractorMOG2::operator()
+
 BackgroundSubtractorMOG2::operator()
 -----------------------------------
 
@@ -461,6 +516,8 @@ BackgroundSubtractorMOG2::operator()
     The update operator.
 
 
+.. index:: BackgroundSubtractorMOG2::initialize
+
 BackgroundSubtractorMOG2::initialize
 ------------------------------------
 
@@ -468,6 +525,8 @@ BackgroundSubtractorMOG2::initialize
 
     Re-initiaization method.
 
+
+.. index:: BackgroundSubtractorMOG2::getBackgroundImage
 
 BackgroundSubtractorMOG2::getBackgroundImage
 --------------------------------------------
