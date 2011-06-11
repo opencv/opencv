@@ -1176,7 +1176,7 @@ namespace cv
 
         /////////////////////////// DisparityBilateralFilter ///////////////////////////
         // Disparity map refinement using joint bilateral filtering given a single color image.
-        // Qingxiong Yang, Liang Wang�, Narendra Ahuja
+        // Qingxiong Yang, Liang Wang, Narendra Ahuja
         // http://vision.ai.uiuc.edu/~qyang6/
 
         class CV_EXPORTS DisparityBilateralFilter

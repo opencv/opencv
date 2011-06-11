@@ -32,7 +32,7 @@
  * script.
  */
 #ifdef PNG_CONFIGURE_LIBPNG
-#  ifdef HAVE_CONFIG_H
+#  ifdef HAVE_CVCONFIG_H
 #    include "config.h"
 #  endif
 #endif

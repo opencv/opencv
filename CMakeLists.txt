@@ -683,7 +683,7 @@ if (WITH_TBB)
     endif()    
     
     if (NOT HAVE_TBB)
-        set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB")
+        set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB")
         
         find_path(TBB_INCLUDE_DIR "tbb/tbb.h" PATHS ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
         if (TBB_INCLUDE_DIR)
@@ -913,7 +913,7 @@ set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Reference Manual")
 #  A directory will be created for each platform so the "cvconfig.h" file is
 #   not overwritten if cmake generates code in the same path.
 # ----------------------------------------------------------------------------
-add_definitions(-DHAVE_CONFIG_H)
+add_definitions(-DHAVE_CVCONFIG_H)
 
 set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
 

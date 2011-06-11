@@ -3,7 +3,7 @@
 
 using namespace cv;
 
-int main( int argc, char** argv )
+int main( int /*argc*/, char** /*argv*/ )
 {
     const int N = 4;
     const int N1 = (int)sqrt((double)N);

@@ -1047,7 +1047,7 @@ TEST( Features2d_DescriptorExtractor_SURF, regression )
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below
-    CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",  1.0f,
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)1.0f,
                                                  DescriptorExtractor::create("ORB"), 0.010f );
     test.safe_run();
 }

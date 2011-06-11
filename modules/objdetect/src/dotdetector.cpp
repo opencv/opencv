@@ -277,6 +277,8 @@ struct TrainImageQuantizer
 
     // Result matrix
     Mat* quantizedImage;
+
+	TrainImageQuantizer& operator=(const TrainImageQuantizer&);
 };
 
 static void quantizeToTrain( const Mat& _magnitudesExt, const Mat& _anglesExt, const Mat& maskExt,
@@ -360,6 +362,8 @@ struct DetectImageQuantizer
 
     // Result matrix
     Mat* quantizedImage;
+
+	DetectImageQuantizer& operator=(const DetectImageQuantizer&);
 };
 
 static void quantizeToDetect( const Mat& _magnitudes, const Mat& angles,
@@ -902,6 +906,8 @@ struct TemplateComparator
     vector<ConcurrentRectVector>* concurrRectsPtr;
     vector<ConcurrentFloatVector>* concurrRatiosPtr;
     vector<ConcurrentIntVector>* concurrTemplateIndicesPtr;
+
+	TemplateComparator& operator=(const TemplateComparator&);
 };
 
 void DOTDetector::detectQuantized( const Mat& queryQuantizedImage, float minRatio,

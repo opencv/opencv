@@ -244,10 +244,6 @@ set(lib_srcs ${highgui_srcs} ${grfmt_srcs})
 # ----------------------------------------------------------------------------------
 set(the_target "opencv_highgui")
 
-if (BUILD_SHARED_LIBS)
-    add_definitions(-DHIGHGUI_EXPORTS -DCVAPI_EXPORTS)
-endif()
-
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/../core/include"
                     "${CMAKE_CURRENT_SOURCE_DIR}/../imgproc/include"
@@ -259,6 +255,15 @@ if(WIN32)
 endif()
 
 add_library(${the_target} ${lib_srcs} ${highgui_hdrs} ${grfmt_hdrs} ${highgui_ext_hdrs})
+
+if (BUILD_SHARED_LIBS)
+	add_definitions(-DHIGHGUI_EXPORTS)
+	if(MSVC)
+		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
+	else()
+		add_definitions(-DCVAPI_EXPORTS) 		
+	endif()
+endif()
 
 if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
     set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)

@@ -532,6 +532,8 @@ namespace
       putText(image, code_text, code.corners[0], CV_FONT_HERSHEY_SIMPLEX, 0.8, c2, 1, CV_AA, false);
     }
     cv::Mat& image;
+
+    DrawDataMatrixCode& operator=(const DrawDataMatrixCode&);
   };
 }
 

@@ -87,6 +87,8 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step ); }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step ); }            
 
+			__CV_GPU_HOST_DEVICE__ operator T*() const { return data; }
+
 #if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)    
             thrust::device_ptr<T> begin() const { return thrust::device_ptr<T>(data); }
             thrust::device_ptr<T> end() const { return thrust::device_ptr<T>(data) + cols * rows; }

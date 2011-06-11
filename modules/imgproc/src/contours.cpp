@@ -1469,7 +1469,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return count;
 }
 
-void cv::findContours( const InputOutputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     Mat image = _image.getMat();

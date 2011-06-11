@@ -2,7 +2,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
 
-#ifdef HAVE_CONFIG_H 
+#ifdef HAVE_CVCONFIG_H 
 #include <cvconfig.h> 
 #endif
 #ifdef HAVE_TBB

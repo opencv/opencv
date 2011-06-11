@@ -847,7 +847,7 @@ void CvEM::init_auto( const CvVectors& train_data )
 
 
 void CvEM::kmeans( const CvVectors& train_data, int nclusters, CvMat* labels,
-                   CvTermCriteria termcrit, const CvMat* centers0 )
+                   CvTermCriteria termcrit, const CvMat* /*centers0*/ )
 {
     int i, nsamples = train_data.count, dims = train_data.dims;
     cv::Ptr<CvMat> temp_mat = cvCreateMat(nsamples, dims, CV_32F);

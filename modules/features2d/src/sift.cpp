@@ -1111,7 +1111,7 @@ static double*** descr_hist( IplImage* img, int r, int c, double ori,
   bins_per_rad = n / PI2;
   exp_denom = d * d * 0.5;
   hist_width = SIFT_DESCR_SCL_FCTR * scl;
-  radius = hist_width * sqrt(2.0) * ( d + 1.0 ) * 0.5 + 0.5;
+  radius = (int)(hist_width * sqrt(2.0) * ( d + 1.0 ) * 0.5 + 0.5);
   for( i = -radius; i <= radius; i++ )
     for( j = -radius; j <= radius; j++ )
       {
@@ -1191,7 +1191,7 @@ static void hist_to_descr( double*** hist, int d, int n, struct feature* feat )
   /* convert floating-point descriptor to integer valued descriptor */
   for( i = 0; i < k; i++ )
     {
-      int_val = SIFT_INT_DESCR_FCTR * feat->descr[i];
+      int_val = (int)(SIFT_INT_DESCR_FCTR * feat->descr[i]);
       feat->descr[i] = MIN( 255, int_val );
     }
 }
@@ -1207,7 +1207,7 @@ static void hist_to_descr( double*** hist, int d, int n, struct feature* feat )
   @return Returns 1 if feat1's scale is greater than feat2's, -1 if vice versa,
     and 0 if their scales are equal
 */
-static int feature_cmp( void* feat1, void* feat2, void* param )
+static int feature_cmp( void* feat1, void* feat2, void* /*param*/ )
 {
   struct feature* f1 = (struct feature*) feat1;
   struct feature* f2 = (struct feature*) feat2;
@@ -1478,9 +1478,9 @@ struct SiftParams
 
 inline KeyPoint featureToKeyPoint( const feature& feat )
 {
-    float size = feat.scl * SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION() * 4; // 4==NBP
-    float angle = feat.ori * a_180divPI;
-    return KeyPoint( feat.x, feat.y, size, angle, 0, feat.feature_data->octv, 0 );
+    float size = (float)(feat.scl * SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION() * 4); // 4==NBP
+    float angle = (float)(feat.ori * a_180divPI);
+    return KeyPoint( (float)feat.x, (float)feat.y, size, angle, 0, feat.feature_data->octv, 0 );
 }
 
 static void fillFeatureData( feature& feat, const SiftParams& params )
@@ -1551,7 +1551,7 @@ static void fillFeatureData( feature& feat, const SiftParams& params )
   float s, phi;
 
   phi = static_cast<float>(log( sigma / params.sigma0 ) / log(2.0));
-  o = std::floor( phi -  (float(params.smin)+.5)/params.S );
+  o = (int)std::floor( phi -  (float(params.smin)+.5)/params.S );
   o = std::min(o, params.omin+params.O-1);
   o = std::max(o, params.omin);
   s = params.S * (phi - o);
@@ -1640,7 +1640,7 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
     ImagePyrData pyrImages( &img, commParams.nOctaves, commParams.nOctaveLayers, SIFT_SIGMA, SIFT_IMG_DBL );
 
     int feature_count = 0;
-    compute_features( &pyrImages, &features, feature_count, detectorParams.threshold, detectorParams.edgeThreshold );
+    compute_features( &pyrImages, &features, feature_count, detectorParams.threshold, (int)detectorParams.edgeThreshold );
 
     // convert to KeyPoint structure
     keypoints.resize( feature_count );

@@ -235,7 +235,7 @@ static _Tp fromStringNumber(const std::string& str)//the default conversion func
 }
 
 template<>
-bool CommandLineParser::get<bool>(const std::string& name, const bool& default_value)
+bool CommandLineParser::get<bool>(const std::string& name, const bool& /*default_value*/)
 {
     if (!has(name))
         return false;

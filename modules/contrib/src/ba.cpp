@@ -344,60 +344,65 @@ void LevMarqSparse::run( int num_points_, //number of points
   errNorm = cvNorm( err, 0,  CV_L2 );
 }
 
-void LevMarqSparse::ask_for_proj(CvMat &_vis,bool once) {
-  //given parameter P, compute measurement hX
-  int ind = 0;
-  for (int i = 0; i < num_points; i++ ) {
-    CvMat point_mat;
-    cvGetSubRect( P, &point_mat, cvRect( 0, num_cams * num_cam_param + num_point_param * i, 1, num_point_param ));
-    for (int j = 0; j < num_cams; j++ ) {
-      //CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
-      CvMat* Aij = A[j+i*num_cams];
-      if (Aij ) { //visible
-	CvMat cam_mat;
-	cvGetSubRect( P, &cam_mat, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
-	CvMat measur_mat;
-	cvGetSubRect( hX, &measur_mat, cvRect( 0, ind * num_err_param, 1, num_err_param ));
-	Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _measur_mat(&measur_mat);
-	func( i, j, _point_mat, _cam_mat, _measur_mat, data);
-	assert( ind*num_err_param == ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j]);
-	ind+=1;
-      }  
-    } 
-  }
+void LevMarqSparse::ask_for_proj(CvMat &/*_vis*/,bool once) {
+    (void)once;
+    //given parameter P, compute measurement hX
+    int ind = 0;
+    for (int i = 0; i < num_points; i++ ) {
+        CvMat point_mat;
+        cvGetSubRect( P, &point_mat, cvRect( 0, num_cams * num_cam_param + num_point_param * i, 1, num_point_param ));
+        for (int j = 0; j < num_cams; j++ ) {
+            //CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
+            CvMat* Aij = A[j+i*num_cams];
+            if (Aij ) { //visible
+                CvMat cam_mat;
+                cvGetSubRect( P, &cam_mat, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
+                CvMat measur_mat;
+                cvGetSubRect( hX, &measur_mat, cvRect( 0, ind * num_err_param, 1, num_err_param ));
+                Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _measur_mat(&measur_mat);
+                func( i, j, _point_mat, _cam_mat, _measur_mat, data);
+                assert( ind*num_err_param == ((int*)(Vis_index->data.ptr + i * Vis_index->step))[j]);
+                ind+=1;
+            }  
+        } 
+    }
 }
 
 //iteratively asks for Jacobians for every camera_point pair
-void LevMarqSparse::ask_for_projac(CvMat &_vis) {  //should be evaluated at point prevP
-  // compute jacobians Aij and Bij
-  for (int i = 0; i < num_points; i++ ) {
-    CvMat point_mat;
-    cvGetSubRect( prevP, &point_mat, cvRect( 0, num_cams * num_cam_param + num_point_param * i, 1, num_point_param ));
+void LevMarqSparse::ask_for_projac(CvMat &/*_vis*/)   //should be evaluated at point prevP
+{
+    // compute jacobians Aij and Bij
+    for (int i = 0; i < num_points; i++ ) 
+    {
+        CvMat point_mat;
+        cvGetSubRect( prevP, &point_mat, cvRect( 0, num_cams * num_cam_param + num_point_param * i, 1, num_point_param ));
 
-    //CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
-    //CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
-    for( int j = 0; j < num_cams; j++ ) {
-      //CvMat* Aij = A_line[j];
-      //if( Aij ) //Aij is not zero
-      CvMat* Aij = A[j+i*num_cams];
-      CvMat* Bij = B[j+i*num_cams];
-      if(Aij) {
-	//CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
-	//CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
+        //CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
+        //CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
+        for( int j = 0; j < num_cams; j++ ) 
+        {
+            //CvMat* Aij = A_line[j];
+            //if( Aij ) //Aij is not zero
+            CvMat* Aij = A[j+i*num_cams];
+            CvMat* Bij = B[j+i*num_cams];
+            if(Aij) 
+            {
+                //CvMat** A_line = (CvMat**)(A->data.ptr + A->step * i);
+                //CvMat** B_line = (CvMat**)(B->data.ptr + B->step * i);
 
-	//CvMat* Aij = A_line[j];
-	//CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
+                //CvMat* Aij = A_line[j];
+                //CvMat* Aij = ((CvMat**)(A->data.ptr + A->step * i))[j];
 
-	CvMat cam_mat;
-	cvGetSubRect( prevP, &cam_mat, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
-                
-	//CvMat* Bij = B_line[j];
-	//CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
-	Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _Aij(Aij), _Bij(Bij);
-	(*fjac)(i, j, _point_mat, _cam_mat, _Aij, _Bij, data);
-      }
+                CvMat cam_mat;
+                cvGetSubRect( prevP, &cam_mat, cvRect( 0, j * num_cam_param, 1, num_cam_param ));
+
+                //CvMat* Bij = B_line[j];
+                //CvMat* Bij = ((CvMat**)(B->data.ptr + B->step * i))[j];
+                Mat _point_mat(&point_mat), _cam_mat(&cam_mat), _Aij(Aij), _Bij(Bij);
+                (*fjac)(i, j, _point_mat, _cam_mat, _Aij, _Bij, data);
+            }
+        }
     }
-  }
 }  
 
 void LevMarqSparse::optimize(CvMat &_vis) { //main function that runs minimization
@@ -1086,7 +1091,7 @@ void LevMarqSparse::bundleAdjust( vector<Point3d>& points, //positions of points
     CvMat point_mat;
     cvGetSubRect( levmar.P, &point_mat, cvRect( 0, levmar.num_cams * levmar.num_cam_param+ levmar.num_point_param * i, 1, levmar.num_point_param ));
     CvScalar x = cvGet2D(&point_mat,0,0); CvScalar y = cvGet2D(&point_mat,1,0); CvScalar z = cvGet2D(&point_mat,2,0);
-    points.push_back(Point3f(x.val[0],y.val[0],z.val[0]));
+    points.push_back(Point3d(x.val[0],y.val[0],z.val[0]));
     //std::cerr<<"point"<<points[points.size()-1].x<<","<<points[points.size()-1].y<<","<<points[points.size()-1].z<<std::endl;
   }
   //fill camera params

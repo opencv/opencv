@@ -44,7 +44,7 @@
 
 #include <string>
 
-#ifdef HAVE_CONFIG_H 
+#ifdef HAVE_CVCONFIG_H 
 #include "cvconfig.h"
 #endif
 

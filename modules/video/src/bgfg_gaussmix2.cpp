@@ -1293,7 +1293,14 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
 
 void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
 {
+#if _MSC_VER >= 1200
+    #pragma warning( push )
+    #pragma warning( disable : 4127 )  
+#endif
     CV_Assert(CV_BGFG_MOG2_NDMAX == 3);
+#if _MSC_VER >= 1200
+    #pragma warning( pop )
+#endif
     Mat meanBackground(frameSize, CV_8UC3, Scalar::all(0));
 
     int firstGaussianIdx = 0;

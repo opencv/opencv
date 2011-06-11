@@ -2023,7 +2023,14 @@ void Core_GraphScanTest::run( int )
                             event = "End of procedure";
                             break;
                         default:
+#if _MSC_VER >= 1200
+    #pragma warning( push )
+    #pragma warning( disable : 4127 )    
+#endif
                             CV_TS_SEQ_CHECK_CONDITION( 0, "Invalid code appeared during graph scan" );
+#if _MSC_VER >= 1200
+    #pragma warning( pop )
+#endif
                     }
                     
                     ts->printf( cvtest::TS::LOG, "%s", event );
