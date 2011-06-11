@@ -47,19 +47,27 @@ def create_capture(source):
     return cv2.VideoCapture(source)
 
 
+presets = dict(
+    lena = 'synth:bg=../cpp/lena.jpg:noise=0.1'
+)
+
 if __name__ == '__main__':
     import sys
-    import argparse
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('sources', nargs='*', default=['synth:bg=../cpp/lena.jpg:noise=0.1'])
-    parser.add_argument('-shotdir', nargs=1, default='.')
-    args = parser.parse_args()
-    print args
+    import getopt
+
+    print 'USAGE: video.py [--shotdir <dir>] [source0] [source1] ...'
+    print "source: '<int>' or '<filename>' or 'synth:<params>'"
+    print
+
+    args, sources = getopt.getopt(sys.argv[1:], '', 'shotdir=')
+    args = dict(args)
+    shotdir = args.get('--shotdir', '.')
+    if len(sources) == 0:
+        sources = [ presets['lena'] ]
 
     print 'Press SPACE to save current frame'
 
-    caps = map(create_capture, args.sources)
+    caps = map(create_capture, sources)
     shot_idx = 0
     while True:
         imgs = []
@@ -72,7 +80,7 @@ if __name__ == '__main__':
             break
         if ch == ord(' '):
             for i, img in enumerate(imgs):
-                fn = '%s/shot_%d_%03d.bmp' % (args.shotdir[0], i, shot_idx)
+                fn = '%s/shot_%d_%03d.bmp' % (shotdir, i, shot_idx)
                 cv2.imwrite(fn, img)
                 print fn, 'saved'
             shot_idx += 1

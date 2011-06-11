@@ -3,7 +3,7 @@ import video
 import sys
 
 try: fn = sys.argv[1]
-except: fn = 'synth:bg=../cpp/lena.jpg:noise=0.1'
+except: fn = video.presets['lena']
 
 def nothing(*arg):
     pass
