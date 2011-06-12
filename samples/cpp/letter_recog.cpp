@@ -610,7 +610,7 @@ int build_nbayes_classifier( char* data_filename )
         true_results[j - ntrain_samples] = responses->data.fl[j];
     }
     CvMat *result = cvCreateMat(1, nsamples_all - ntrain_samples, CV_32FC1);
-    (int)nbayes.predict(&sample, result);
+    nbayes.predict(&sample, result);
     int true_resp = 0;
     //int accuracy = 0;
     for (int i = 0; i < nsamples_all - ntrain_samples; i++)

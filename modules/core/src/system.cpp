@@ -72,7 +72,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#ifdef __MACH__ && defined __APPLE__
+#if defined __MACH__ && defined __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #endif

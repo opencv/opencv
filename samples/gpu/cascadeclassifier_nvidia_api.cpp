@@ -1,4 +1,6 @@
+#if _MSC_VER >= 1400
 #pragma warning( disable : 4201 4408 4127 4100)
+#endif
 
 #include "cvconfig.h"
 #include <iostream>

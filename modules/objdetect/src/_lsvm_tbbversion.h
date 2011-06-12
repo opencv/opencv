@@ -2,7 +2,6 @@
 #define _LSVM_TBBVERSION_H
 
 #include "_lsvm_matching.h"
-#include "precomp.hpp"
 
 /*
 // Computation score function using TBB tasks

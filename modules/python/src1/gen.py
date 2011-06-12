@@ -325,7 +325,7 @@ for nm,args,ty,flags in sorted(api):
   ds_args += o2s(optional)
 
   ds = "%s(%s) -> %s" % (nm, ds_args, str(ty))
-  print ds
+  #print ds
 
   if has_optional(args):
       entry = '{"%%s", (PyCFunction)pycv%s, METH_KEYWORDS, "%s"},' % (cname(nm), ds)
