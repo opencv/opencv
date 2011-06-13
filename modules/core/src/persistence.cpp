@@ -4790,9 +4790,12 @@ cvTypeOf( const void* struct_ptr )
 {
     CvTypeInfo* info = 0;
 
-    for( info = CvType::first; info != 0; info = info->next )
-        if( info->is_instance( struct_ptr ))
-            break;
+    if( struct_ptr )
+    {
+        for( info = CvType::first; info != 0; info = info->next )
+            if( info->is_instance( struct_ptr ))
+                break;
+    }
 
     return info;
 }
