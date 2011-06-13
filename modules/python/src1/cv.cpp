@@ -2616,11 +2616,12 @@ static PyObject *FROM_CvRNG(CvRNG r)
 
 static PyObject *FROM_generic(generic r)
 {
-  CvTypeInfo* t = cvTypeOf(r);
   if (r == NULL) {
     failmsg("OpenCV returned NULL");
     return NULL;
-  } if (strcmp(t->type_name, "opencv-image") == 0)
+  }
+  CvTypeInfo* t = cvTypeOf(r);
+  if (strcmp(t->type_name, "opencv-image") == 0)
     return FROM_IplImagePTR((IplImage*)r);
   else if (strcmp(t->type_name, "opencv-matrix") == 0)
     return FROM_CvMat((CvMat*)r);
