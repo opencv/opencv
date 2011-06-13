@@ -42,6 +42,15 @@
 #if defined(HAVE_QT)
 
 #include <window_QT.h>
+#include <math.h>
+#ifdef _WIN32
+#include <windows.h>
+#define usleep Sleep
+#endif
+
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
 
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;

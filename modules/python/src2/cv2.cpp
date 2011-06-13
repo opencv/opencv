@@ -525,10 +525,10 @@ template<typename _Tp> struct pyopencvVecConverter
             }
             if( channels > 1 )
             {
-                if( PyArray_Check(obj))
+                if( PyArray_Check(item))
                 {
                     Mat src;
-                    pyopencv_to(obj, src, name);
+                    pyopencv_to(item, src, name);
                     if( src.dims != 2 || src.channels() != 1 ||
                        ((src.cols != 1 || src.rows != channels) &&
                         (src.cols != channels || src.rows != 1)))
