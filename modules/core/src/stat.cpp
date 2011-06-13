@@ -1164,8 +1164,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
     bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
     (normType == NORM_L2 && depth <= CV_8S);
-    uint isum = 0;
-    uint *ibuf = (uint*)&result;
+    unsigned int isum = 0;
+    unsigned int *ibuf = (unsigned int*)&result;
     size_t esz = 0;
     
     if( blockSum )
