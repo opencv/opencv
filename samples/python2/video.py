@@ -1,5 +1,9 @@
 import numpy as np
 import cv2
+from time import clock
+
+def lookat(cam_pos, target_pos, up = ()):
+    dp = cam_pos - target_pos
 
 class VideoSynth(object):
     def __init__(self, size=None, noise=0.0, bg = None, **params):
@@ -17,6 +21,15 @@ class VideoSynth(object):
 
         self.noise = float(noise)
 
+        w, h = self.frame_size
+        self.K = np.float64([[1.0/w,   0.0, 0.5*(w-1)], 
+                             [  0.0, 1.0/w, 0.5*(h-1)],
+                             [  0.0,   0.0,       1.0]])
+
+    def draw_layers(self, dst):
+        pass
+        
+
     def read(self, dst=None):
         w, h = self.frame_size
 
@@ -24,6 +37,9 @@ class VideoSynth(object):
             buf = np.zeros((h, w, 3), np.uint8)
         else:
             buf = self.bg.copy()
+
+        self.draw_layers(buf)
+
         if self.noise > 0.0:
             noise = np.zeros((h, w, 3), np.int8)
             cv2.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
