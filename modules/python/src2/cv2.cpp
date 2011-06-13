@@ -234,6 +234,11 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
 
 static PyObject* pyopencv_from(const Mat& m)
 {
+    if( !m.data )
+    {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
     Mat temp, *p = (Mat*)&m;
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
