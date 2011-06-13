@@ -723,7 +723,7 @@ Mat::Mat
                   
 .. cpp:function:: Mat::Mat(const IplImage* img, bool copyData=false)
                   
-.. cpp:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
+.. cpp:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)??output is broken for these 3 methods??
 
 .. cpp:function:: template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
 
@@ -1574,7 +1574,7 @@ Mat::ptr
 
 .. cpp:function:: const uchar* Mat::ptr(int i=0) const
 
-.. cpp:function:: template<typename _Tp> _Tp* Mat::ptr(int i=0)
+.. cpp:function:: template<typename _Tp> _Tp* Mat::ptr(int i=0)??again broken output??
 
 .. cpp:function:: template<typename _Tp> const _Tp* Mat::ptr(int i=0) const
 
@@ -1588,7 +1588,7 @@ The methods return ``uchar*`` or typed pointer to the specified matrix row. See 
 
 Mat::at
 -----------
-.. cpp:function:: template<typename T> T& Mat::at(int i) const
+.. cpp:function:: template<typename T> T& Mat::at(int i) const??again, is this the expected output??
 
 .. cpp:function:: template<typename T> const T& Mat::at(int i) const
 
@@ -1614,7 +1614,7 @@ Mat::at
 
     :param pt: Element position specified as  ``Point(j,i)`` .    
 	
-	:param idx: Array of  ``Mat::dims``  indices.
+    :param idx: Array of  ``Mat::dims``  indices.
 
 The template methods return a reference to the specified array element. For the sake of higher performance, the index range checks are only performed in the Debug configuration.
 
@@ -1631,7 +1631,7 @@ The example below initializes a Hilbert matrix: ::
 
 Mat::begin
 --------------
-.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
+.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const??see output??
 
     Returns the matrix iterator and sets it to the first matrix element.
 
@@ -1670,7 +1670,7 @@ The methods return the matrix read-only or read-write iterators. The use of matr
 
 Mat::end
 ------------
-.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end()
+.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end() ??output??
 .. cpp:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
     Returns the matrix iterator and sets it to the after-last matrix element.
