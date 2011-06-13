@@ -443,7 +443,8 @@ void CV_StereoMatchingTest::run(int)
     for( int ci = 0; ci < caseCount; ci++)
     {
         progress = update_progress( progress, ci, caseCount, 0 );
-
+        printf("progress: %d%%\n", progress);
+        fflush(stdout);
         string datasetName = caseDatasets[ci];
         string datasetFullDirName = dataPath + DATASETS_DIR + datasetName + "/";
         Mat leftImg = imread(datasetFullDirName + LEFT_IMG_NAME);
