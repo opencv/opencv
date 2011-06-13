@@ -235,10 +235,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
 static PyObject* pyopencv_from(const Mat& m)
 {
     if( !m.data )
-    {
-        Py_INCREF(Py_None);
-        return Py_None;
-    }
+        Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
@@ -738,6 +735,80 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
     return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void OnMouse(int event, int x, int y, int flags, void* param)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+    
+    PyObject *o = (PyObject*)param;
+    PyObject *args = Py_BuildValue("iiiiO", event, x, y, flags, PyTuple_GetItem(o, 1));
+    
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
+    if (r == NULL)
+        PyErr_Print();
+    else
+        Py_DECREF(r);
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+}
+
+static PyObject *pycvSetMouseCallback(PyObject *self, PyObject *args, PyObject *kw)
+{
+    const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
+    char* name;
+    PyObject *on_mouse;
+    PyObject *param = NULL;
+    
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|O", (char**)keywords, &name, &on_mouse, &param))
+        return NULL;
+    if (!PyCallable_Check(on_mouse)) {
+        PyErr_SetString(PyExc_TypeError, "on_mouse must be callable");
+        return NULL;
+    }
+    if (param == NULL) {
+        param = Py_None;
+    }
+    ERRWRAP2(cvSetMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
+    Py_RETURN_NONE;
+}
+
+void OnChange(int pos, void *param)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+    
+    PyObject *o = (PyObject*)param;
+    PyObject *args = Py_BuildValue("(i)", pos);
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
+    if (r == NULL)
+        PyErr_Print();
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+}
+
+static PyObject *pycvCreateTrackbar(PyObject *self, PyObject *args)
+{
+    PyObject *on_change;
+    char* trackbar_name;
+    char* window_name;
+    int *value = new int;
+    int count;
+    
+    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
+        return NULL;
+    if (!PyCallable_Check(on_change)) {
+        PyErr_SetString(PyExc_TypeError, "on_change must be callable");
+        return NULL;
+    }
+    ERRWRAP2(cvCreateTrackbar2(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
+    Py_RETURN_NONE;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
 #define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
 
 #include "pyopencv_generated_types.h"
@@ -746,7 +817,8 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
 static PyMethodDef methods[] = {
 
 #include "pyopencv_generated_func_tab.h"
-
+  {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
+  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
   {NULL, NULL},
 };
 
