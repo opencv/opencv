@@ -1996,7 +1996,7 @@ CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
                       int interpolation=0);
 
 //! computes sum of array elements
-CV_EXPORTS_W Scalar sum(InputArray src); 
+CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src); 
 //! computes the number of nonzero array elements
 CV_EXPORTS_W int countNonZero( InputArray src );
 //! computes mean value of selected array elements
