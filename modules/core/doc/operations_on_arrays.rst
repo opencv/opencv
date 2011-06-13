@@ -3,13 +3,13 @@ Operations on Arrays
 
 .. highlight:: cpp
 
-.. list-table:: **Arithmetical Operations**
+.. list-table:: **Arithmetical Operations**??output is not in bold, why??
 
    * -
      -
-   * - :cpp:funcx:`abs` (src)
+   * - :cpp:func:`abs` (src)
      - Computes an absolute value of each matrix element.
-   * - :cpp:funcx:`absdiff` (src1, src2, dst)
+   * - :cpp:func:`absdiff` (src1, src2, dst)
      - Computes the per-element absolute difference between 2 arrays or between an array and a scalar.
 
 abs
@@ -25,45 +25,52 @@ abs
 
     * ``C = abs(A-B)``     is equivalent to ``absdiff(A, B, C)``     
 
-    * ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``     .
+    * ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``     
 
     * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to ``convertScaleAbs(A, C, alpha, beta)``
     
-    The output matrix has the same size and the same type as the input one (except for the last case, where ``C`` will be ``depth=CV_8U`` ).
+    The output matrix has the same size and the same type as the input one except for the last case, where ``C`` is ``depth=CV_8U`` .
 
     .. seealso:: :ref:`MatrixExpressions`, :cpp:func:`absdiff`
 
 
 absdiff
 -----------
-
 .. cpp:function:: void absdiff(InputArray src1, InputArray src2, OutputArray dst)
 
-    Computes the per-element absolute difference between 2 arrays or between an array and a scalar.
+    Computes the per-element absolute difference between two arrays or between an array and a scalar.
 
-    :param src1: The first input array or a scalar.
-    :param src2: The second input array or a scalar.
-    :param dst: The destination array. It will have the same size and type as ``src1`` (or ``src2``).
+    :param src1: First input array or a scalar.
     
-    The function ``absdiff`` computes:
+    :param src2: Second input array or a scalar.
+    
+    :param dst: Destination array that has the same size and type as ``src1`` (or ``src2``).
+    
+The function ``absdiff`` computes:
 
-    #. absolute difference between two arrays when they have the same size and type:
+ *
+    Absolute difference between two arrays when they have the same size and type:
 
-        .. math::
-            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2}(I)|)
+    .. math::
 
-    #. absolute difference between an array and a scalar, when the second array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src1``:
+        \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2}(I)|)
 
-        .. math::
-            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2} |)
+ *
+    Absolute difference between an array and a scalar when the second array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src1``:
 
-    #. or absolute difference between a scalar and an array, when the first array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src2``:
+    .. math::
 
-        .. math::
-            \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1} -  \texttt{src2}(I) |)
+        \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1}(I) -  \texttt{src2} |)
 
+ *
+    Absolute difference between a scalar and an array when the first array is constructed from ``Scalar`` or has as many elements as the number of channels in ``src2``:
+
+    .. math::
+
+        \texttt{dst}(I) =  \texttt{saturate} (| \texttt{src1} -  \texttt{src2}(I) |)
 
     where  ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
+
 
     .. seealso:: :cpp:func:`abs`
 
@@ -74,11 +81,11 @@ add
 
     Computes the per-element sum of two arrays or an array and a scalar.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
     
-    :param dst: Destination array. It will have the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1``/``src2``.
+    :param dst: Destination array that has the same size and number of channels as the input array(s). The depth is defined by ``dtype`` or ``src1``/``src2``.
     
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
     
@@ -86,35 +93,35 @@ add
 
 The function ``add`` computes:
 
- #.
-    the sum of two arrays, when both input arrays have the same size and the same number of channels:
+ *
+    Sum of two arrays when both input arrays have the same size and the same number of channels:
 
     .. math::
 
         \texttt{dst}(I) =  \texttt{saturate} ( \texttt{src1}(I) +  \texttt{src2}(I)) \quad \texttt{if mask}(I) \ne0
 
- #.
-    the sum of an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
+ *
+    Sum of an array and a scalar when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
 
     .. math::
 
         \texttt{dst}(I) =  \texttt{saturate} ( \texttt{src1}(I) +  \texttt{src2} ) \quad \texttt{if mask}(I) \ne0
 
- #.
-    or the sum of a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
+ *
+    Sum of a scalar and an array when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
 
     .. math::
 
         \texttt{dst}(I) =  \texttt{saturate} ( \texttt{src1} +  \texttt{src2}(I) ) \quad \texttt{if mask}(I) \ne0
 
-where ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
+    where ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
 
 The first function in the list above can be replaced with matrix expressions: ::
 
     dst = src1 + src2;
     dst += src1; // equivalent to add(dst, src1, dst);
 
-The input arrays and the destination array can all have the same or different depths. For example, you can add 16-bit unsigned array to 8-bit signed array and store the sum as 32-bit floating-point array. Depth of the output array is determined by ``dtype`` parameter. In the 2nd and 3rd cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
+The input arrays and the destination array can all have the same or different depths. For example, you can add a 16-bit unsigned array to a 8-bit signed array and store the sum as a 32-bit floating-point array. Depth of the output array is determined by the ``dtype`` parameter. In the second and third cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case, the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
 
 .. seealso::
    
@@ -132,21 +139,21 @@ addWeighted
 
     Computes the weighted sum of two arrays.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
     :param alpha: Weight for the first array elements.
 
-    :param src2: The second source array of the same size and channel number as  ``src1`` .
+    :param src2: Second source array of the same size and channel number as  ``src1`` .
     
     :param beta: Weight for the second array elements.
 
-    :param dst: Destination array. It will have the same size and number of channels as the input arrays.
+    :param dst: Destination array that has the same size and number of channels as the input arrays.
     
     :param gamma: Scalar added to each sum.
     
     :param dtype: Optional depth of the destination array. When both input arrays have the same depth, ``dtype`` can be set to ``-1``, which will be equivalent to ``src1.depth()``.
 
-The functions ``addWeighted`` calculate the weighted sum of two arrays as follows:
+The function ``addWeighted`` calculates the weighted sum of two arrays as follows:
 
 .. math::
 
@@ -175,39 +182,39 @@ bitwise_and
 
     Calculates the per-element bit-wise conjunction of two arrays or an array and a scalar.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
 
-    :param dst: Destination array. It will have the same size and type as the input array(s).
+    :param dst: Destination arrayb that has the same size and type as the input array(s).
     
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
-The function computes the per-element bit-wise logical conjunction:
+The function computes the per-element bit-wise logical conjunction for:
 
- #.
-    of two arrays, when ``src1`` and ``src2`` have the same size:
+ *
+    Two arrays when ``src1`` and ``src2`` have the same size:
 
     .. math::
 
         \texttt{dst} (I) =  \texttt{src1} (I)  \wedge \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
- #.
-    an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
+ *
+    An array and a scalar when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
 
     .. math::
 
         \texttt{dst} (I) =  \texttt{src1} (I)  \wedge \texttt{src2} \quad \texttt{if mask} (I) \ne0
 
- #.
-    or a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
+ *
+    A scalar and an array when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
 
     .. math::
 
         \texttt{dst} (I) =  \texttt{src1}  \wedge \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
 
-In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
+In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the second and third cases above, the scalar is first converted to the array type.
 
 
 
@@ -219,7 +226,7 @@ bitwise_not
 
     :param src: Source array.
 
-    :param dst: Destination array. It will have the same size and type as the input array.
+    :param dst: Destination array that has the same size and type as the input array.
     
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
@@ -239,39 +246,39 @@ bitwise_or
 
     Calculates the per-element bit-wise disjunction of two arrays or an array and a scalar.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
 
-    :param dst: Destination array. It will have the same size and type as the input array(s).
+    :param dst: Destination array that has the same size and type as the input array(s).
 
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
-The function computes the per-element bit-wise logical disjunction:
+The function computes the per-element bit-wise logical disjunction for:
 
-     #.
-        of two arrays, when ``src1`` and ``src2`` have the same size:
+ *
+    Two arrays when ``src1`` and ``src2`` have the same size:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1} (I)  \vee \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
-     #.
-        an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
+ *
+    An array and a scalar when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1} (I)  \vee \texttt{src2} \quad \texttt{if mask} (I) \ne0
 
-     #.
-        or a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
+ *
+    A scalar and an array when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1}  \vee \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
 
-    In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
+In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the second and third cases above, the scalar is first converted to the array type.
     
 
 
@@ -282,42 +289,40 @@ bitwise_xor
 
     Calculates the per-element bit-wise "exclusive or" operation on two arrays or an array and a scalar.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
 
-    :param dst: Destination array. It will have the same size and type as the input array(s).
+    :param dst: Destination array that has the same size and type as the input array(s).
 
     :param mask: Optional operation mask, 8-bit single channel array, that specifies elements of the destination array to be changed.
 
-The function computes the per-element bit-wise logical "exclusive-or" operation:
+The function computes the per-element bit-wise logical "exclusive-or" operation for:
 
-     #.
-        on two arrays, when ``src1`` and ``src2`` have the same size:
+ *
+    Two arrays when ``src1`` and ``src2`` have the same size:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1} (I)  \oplus \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
-     #.
-        an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
+ *
+    An array and a scalar when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1} (I)  \oplus \texttt{src2} \quad \texttt{if mask} (I) \ne0
 
-     #.
-        or a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
+ *
+    A scalar and an array when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
 
         .. math::
 
             \texttt{dst} (I) =  \texttt{src1}  \oplus \texttt{src2} (I) \quad \texttt{if mask} (I) \ne0
 
 
-    In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
+In case of floating-point arrays, their machine-specific bit representations (usually IEEE754-compliant) are used for the operation. In case of multi-channel arrays, each channel is processed independently. In the 2nd and 3rd cases above, the scalar is first converted to the array type.
     
-
-
 
 calcCovarMatrix
 ---------------
@@ -330,13 +335,13 @@ calcCovarMatrix
 
     :param samples: Samples stored either as separate matrices or as rows/columns of a single matrix.
 
-    :param nsamples: The number of samples when they are stored separately.
+    :param nsamples: Number of samples when they are stored separately.
 
-    :param covar: The output covariance matrix of the type ``ctype``  and square size.
+    :param covar: Output covariance matrix of the type ``ctype``  and square size.
 
-    :param mean: The input or output (depending on the flags) array - the average of the input vectors.
+    :param mean: Input or output (depending on the flags) array as the average value of the input vectors.
 
-    :param flags: Operation flags, a combination of the following values:
+    :param flags: Operation flags as a combination of the following values:
 
             * **CV_COVAR_SCRAMBLED** The output covariance matrix is calculated as:
 
@@ -379,15 +384,15 @@ cartToPolar
 
     Calculates the magnitude and angle of 2D vectors.
 
-    :param x: The array of x-coordinates. This must be a single-precision or double-precision floating-point array.
+    :param x: Array of x-coordinates. This must be a single-precision or double-precision floating-point array.
 
-    :param y: The array of y-coordinates. It must have the same size and same type as  ``x`` .
+    :param y: Array of y-coordinates that must have the same size and same type as  ``x`` .
     
-    :param magnitude: The destination array of magnitudes of the same size and type as  ``x`` .
+    :param magnitude: Destination array of magnitudes of the same size and type as  ``x`` .
     
-    :param angle: The destination array of angles of the same size and type as  ``x`` . The angles are measured in radians  (from 0 to 2*Pi) or in degrees (0 to 360 degrees).
+    :param angle: Destination array of angles that has the same size and type as  ``x`` . The angles are measured in radians  (from 0 to 2*Pi) or in degrees (0 to 360 degrees).
 
-    :param angleInDegrees: The flag indicating whether the angles are measured in radians, which is a default mode, or in degrees.
+    :param angleInDegrees: Flag indicating whether the angles are measured in radians, which is the default mode, or in degrees.
 
 The function ``cartToPolar`` calculates either the magnitude, angle, or both for every 2D vector (x(I),y(I)):
 
@@ -395,7 +400,7 @@ The function ``cartToPolar`` calculates either the magnitude, angle, or both for
 
     \begin{array}{l} \texttt{magnitude} (I)= \sqrt{\texttt{x}(I)^2+\texttt{y}(I)^2} , \\ \texttt{angle} (I)= \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))[ \cdot180 / \pi ] \end{array}
 
-The angles are calculated with accuracy about 0.3 degrees. For the point (0,0) the angle is set to 0.
+The angles are calculated with accuracy about 0.3 degrees. For the point (0,0), the angle is set to 0.
 
 
 
@@ -406,15 +411,15 @@ checkRange
 
     Checks every element of an input array for invalid values.
 
-    :param src: The array to check.
+    :param src: Array to check.
 
-    :param quiet: The flag indicating whether the functions quietly return false when the array elements are out of range or they throw an exception.
+    :param quiet: Flag indicating whether the functions quietly return false when the array elements are out of range or they throw an exception.
 
-    :param pos: An optional output parameter, where the position of the first outlier is stored. In the second function  ``pos`` , when not NULL, must be a pointer to array of  ``src.dims``  elements.
+    :param pos: Optional output parameter, where the position of the first outlier is stored. In the second function  ``pos`` , when not NULL, must be a pointer to array of  ``src.dims``  elements.
 
-    :param minVal: The inclusive lower boundary of valid values range.
+    :param minVal: Inclusive lower boundary of valid values range.
 
-    :param maxVal: The exclusive upper boundary of valid values range.
+    :param maxVal: Exclusive upper boundary of valid values range.
 
 The functions ``checkRange`` check that every array element is neither NaN nor
 infinite. When ``minVal < -DBL_MAX`` and ``maxVal < DBL_MAX`` , the functions also check that each value is between ``minVal`` and ``maxVal`` . In case of multi-channel arrays, each channel is processed independently.
@@ -430,11 +435,11 @@ compare
 
     Performs the per-element comparison of two arrays or an array and scalar value.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
     
-    :param dst: Destination array. It will have the same size as the input array(s) and type= ``CV_8UC1`` .
+    :param dst: Destination array that has the same size as the input array(s) and type= ``CV_8UC1`` .
     
     :param cmpop: Flag specifying the relation between the elements to be checked.
 
@@ -448,22 +453,22 @@ compare
 The function compares:
 
 
- #.
-   elements of two arrays, when ``src1`` and ``src2`` have the same size:
+ *
+   Elements of two arrays when ``src1`` and ``src2`` have the same size:
 
    .. math::
 
        \texttt{dst} (I) =  \texttt{src1} (I)  \,cmpop\, \texttt{src2} (I)
 
- #.
-   elements of ``src1`` with a scalar ``src2`, when ``src2`` is constructed from ``Scalar`` or has a single element:
+ *
+   Elements of ``src1`` with a scalar ``src2` when ``src2`` is constructed from ``Scalar`` or has a single element:
 
    .. math::
 
        \texttt{dst} (I) =  \texttt{src1}(I) \,cmpop\,  \texttt{src2}
 
- #.
-   or ``src1`` with elements of ``src2``, when ``src1`` is constructed from ``Scalar`` or has a single element:
+ *
+   ``src1`` with elements of ``src2`` when ``src1`` is constructed from ``Scalar`` or has a single element:
 
    .. math::
 
@@ -497,7 +502,7 @@ completeSymm
 
     :param mtx: Input-output floating-point square matrix.
 
-    :param lowerToUpper: The operation flag. If it is true, the lower half is copied to the upper half. Otherwise, the upper half is copied to the lower half.
+    :param lowerToUpper: Operation flag. If it is true, the lower half is copied to the upper half. Otherwise, the upper half is copied to the lower half.
 
 The function ``completeSymm`` copies the lower half of a square matrix to its another half. The matrix diagonal remains unchanged:
 
@@ -600,24 +605,24 @@ cvarrToMat
 
     Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
-    :param src: The source ``CvMat``, ``IplImage`` , or  ``CvMatND`` .
+    :param src: Source ``CvMat``, ``IplImage`` , or  ``CvMatND`` .
     
     :param copyData: When it is false (default value), no data is copied and only the new header is created. In this case, the original array should not be deallocated while the new matrix header is used. If the parameter is true, all the data is copied and you may deallocate the original array right after the conversion.
 
     :param allowND: When it is true (default value), ``CvMatND`` is converted to 2-dimensional ``Mat``, if it is possible (see the discussion below). If it is not possible, or when the parameter is false, the function will report an error.
 
-    :param coiMode: The parameter specifies how the IplImage COI (when set) is handled.
+    :param coiMode: Parameter specifying how the IplImage COI (when set) is handled.
 
-        *  If  ``coiMode=0`` , the function reports an error if COI is set.
+        *  If  ``coiMode=0`` and COI is set, the function reports an error.
 
         *  If  ``coiMode=1`` , the function never reports an error. Instead, it returns the header to the whole original image and you will have to check and process COI manually. See  :cpp:func:`extractImageCOI` .
 
 The function ``cvarrToMat`` converts ``CvMat``, ``IplImage`` , or ``CvMatND`` header to
-:cpp:func:`Mat` header, and optionally duplicates the underlying data. The constructed header is returned by the function.
+:cpp:class:`Mat` header, and optionally duplicates the underlying data. The constructed header is returned by the function.
 
 When ``copyData=false`` , the conversion is done really fast (in O(1) time) and the newly created matrix header will have ``refcount=0`` , which means that no reference counting is done for the matrix data. In this case, you have to preserve the data until the new header is destructed. Otherwise, when ``copyData=true`` , the new buffer is allocated and managed as if you created a new matrix from scratch and copied the data there. That is, ``cvarrToMat(src, true)`` is equivalent to ``cvarrToMat(src, false).clone()`` (assuming that COI is not set). The function provides a uniform way of supporting
 ``CvArr`` paradigm in the code that is migrated to use new-style data structures internally. The reverse transformation, from
-:cpp:func:`Mat` to
+``Mat`` to
 ``CvMat`` or
 ``IplImage`` can be done by a simple assignment: ::
 
@@ -664,15 +669,15 @@ dct
 
     Performs a forward or inverse discrete Cosine transform of 1D or 2D array.
 
-    :param src: The source floating-point array.
+    :param src: Source floating-point array.
 
-    :param dst: The destination array of the same size and type as  ``src`` .
+    :param dst: Destination array of the same size and type as  ``src`` .
     
-    :param flags: Transformation flags, a combination of the following values:
+    :param flags: Transformation flags as a combination of the following values:
 
-            * **DCT_INVERSE** Perform an inverse 1D or 2D transform instead of the default forward transform.
+            * **DCT_INVERSE** performs an inverse 1D or 2D transform instead of the default forward transform.
 
-            * **DCT_ROWS** Perform a forward or inverse transform of every individual row of the input matrix. This flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transforms and so forth.
+            * **DCT_ROWS** performs a forward or inverse transform of every individual row of the input matrix. This flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transforms and so forth.
 
 The function ``dct`` performs a forward or inverse discrete Cosine transform (DCT) of a 1D or 2D floating-point array:
 
@@ -760,14 +765,14 @@ dft
     
     :param flags: Transformation flags representing a combination of the following values:
 
-            * **DFT_INVERSE** Perform an inverse 1D or 2D transform instead of the default forward transform.
+            * **DFT_INVERSE** performs an inverse 1D or 2D transform instead of the default forward transform.
 
-            * **DFT_SCALE** Scale the result: divide it by the number of array elements. Normally, it is combined with  ``DFT_INVERSE`` .             .
-            * **DFT_ROWS** Perform a forward or inverse transform of every individual row of the input matrix. This flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transforms and so forth.
+            * **DFT_SCALE** scales the result: divide it by the number of array elements. Normally, it is combined with  ``DFT_INVERSE`` .             
+            * **DFT_ROWS** performs a forward or inverse transform of every individual row of the input matrix. This flag enables you to transform multiple vectors simultaneously and can be used to decrease the overhead (which is sometimes several times larger than the processing itself) to perform 3D and higher-dimensional transforms and so forth.
 
-            * **DFT_COMPLEX_OUTPUT** Perform a forward transformation of 1D or 2D real array. The result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details). Such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default. However, you may wish to get a full complex array (for simpler spectrum analysis, and so on). Pass the flag to enable the function to produce a full-size complex output array.
+            * **DFT_COMPLEX_OUTPUT** performs a forward transformation of 1D or 2D real array. The result, though being a complex array, has complex-conjugate symmetry (*CCS*, see the function description below for details). Such an array can be packed into a real array of the same size as input, which is the fastest option and which is what the function does by default. However, you may wish to get a full complex array (for simpler spectrum analysis, and so on). Pass the flag to enable the function to produce a full-size complex output array.
 
-            * **DFT_REAL_OUTPUT** Perform an inverse transformation of 1D or 2D complex array. The result is normally a complex array of the same size. However, if the source array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array. While the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array. Note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array. So, the output will also be a real array.
+            * **DFT_REAL_OUTPUT** performs an inverse transformation of a 1D or 2D complex array. The result is normally a complex array of the same size. However, if the source array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array. While the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array. Note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array. So, the output will also be a real array.
 
     :param nonzeroRows: When the parameter is not zero, the function assumes that only the first  ``nonzeroRows``  rows of the input array ( ``DFT_INVERSE``  is not set) or only the first  ``nonzeroRows``  of the output array ( ``DFT_INVERSE``  is set) contain non-zeros. Thus, the function can handle the rest of the rows more efficiently and save some time. This technique is very useful for computing array cross-correlation or convolution using DFT.
 
@@ -775,7 +780,7 @@ dft
 The function performs one of the following:
 
 *
-    Forward Fourier transform of 1D vector of ``N`` elements:
+    Forward the Fourier transform of a 1D vector of ``N`` elements:
 
     .. math::
 
@@ -786,7 +791,7 @@ The function performs one of the following:
     :math:`i=\sqrt{-1}`
     
 *
-    Inverse Fourier transform of 1D vector of ``N`` elements:
+    Inverse the Fourier transform of a 1D vector of ``N`` elements:
 
     .. math::
 
@@ -796,21 +801,21 @@ The function performs one of the following:
     :math:`F^*=\left(\textrm{Re}(F^{(N)})-\textrm{Im}(F^{(N)})\right)^T`
 
 *    
-    Forward 2D Fourier transform of ``M x N`` matrix:
+    Forward the 2D Fourier transform of a ``M x N`` matrix:
 
     .. math::
 
         Y = F^{(M)}  \cdot X  \cdot F^{(N)}
 
 *
-    Inverse 2D Fourier transform of ``M x N`` matrix:
+    Inverse the 2D Fourier transform of a ``M x N`` matrix:
 
     .. math::
 
         \begin{array}{l} X'=  \left (F^{(M)} \right )^*  \cdot Y  \cdot \left (F^{(N)} \right )^* \\ X =  \frac{1}{M \cdot N} \cdot X' \end{array}
 
 
-In case of real (single-channel) data, the output spectrum of the forward Fourier transform or input spectrum of the inverse Fourier transform can be represented in a packed format called *CCS* (complex-conjugate-symmetrical). It was borrowed from IPL (Intel Image Processing Library). Here is how 2D *CCS* spectrum looks:
+In case of real (single-channel) data, the output spectrum of the forward Fourier transform or input spectrum of the inverse Fourier transform can be represented in a packed format called *CCS* (complex-conjugate-symmetrical). It was borrowed from IPL (Intel* Image Processing Library). Here is how 2D *CCS* spectrum looks:
 
 .. math::
 
@@ -836,7 +841,7 @@ If ``DFT_SCALE`` is set, the scaling is done after the transformation.
 
 Unlike :cpp:func:`dct` , the function supports arrays of arbitrary size. But only those arrays are processed efficiently, whose sizes can be factorized in a product of small prime numbers (2, 3, and 5 in the current implementation). Such an efficient DFT size can be computed using the :cpp:func:`getOptimalDFTSize` method.
 
-Here is a sample illustrating how to compute a DFT-based convolution of two 2D real arrays: ::
+The sample below illustrates how to compute a DFT-based convolution of two 2D real arrays: ::
 
     void convolveDFT(InputArray A, InputArray B, OutputArray C)
     {
@@ -904,15 +909,15 @@ divide
 
     Performs per-element division of two arrays or a scalar by an array.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and type as  ``src1`` .
+    :param src2: Second source array of the same size and type as  ``src1`` .
     
     :param scale: Scalar factor.
 
-    :param dst: The destination array of the same size and type as  ``src2`` .
+    :param dst: Destination array of the same size and type as  ``src2`` .
     
-    :param dtype: Optional depth of the destination array. If it is ``-1``, ``dst`` will have depth ``src2.depth()``. In the case of array by array division, you can only pass ``-1`` when ``src1.depth()==src2.depth()``.
+    :param dtype: Optional depth of the destination array. If it is ``-1``, ``dst`` will have depth ``src2.depth()``. In case of an array-by-array division, you can only pass ``-1`` when ``src1.depth()==src2.depth()``.
     
 The functions ``divide`` divide one array by another:
 
@@ -920,7 +925,7 @@ The functions ``divide`` divide one array by another:
 
     \texttt{dst(I) = saturate(src1(I)*scale/src2(I))}
 
-or a scalar by array, when there is no ``src1`` :
+or a scalar by an array when there is no ``src1`` :
 
 .. math::
 
@@ -944,7 +949,7 @@ determinant
 
     Returns the determinant of a square floating-point matrix.
 
-    :param mtx: The input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type and square size.
+    :param mtx: Input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type and square size.
 
 The function ``determinant`` computes and returns the determinant of the specified matrix. For small matrices ( ``mtx.cols=mtx.rows<=3`` ),
 the direct method is used. For larger matrices, the function uses LU factorization with partial pivoting.
@@ -970,15 +975,15 @@ eigen
 
     Computes eigenvalues and eigenvectors of a symmetric matrix.
 
-    :param src: The input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetrical (``src`` :sup:`T` == ``src``).
+    :param src: Input matrix that must have  ``CV_32FC1``  or  ``CV_64FC1``  type, square size and be symmetrical (``src`` :sup:`T` == ``src``).
     
-    :param eigenvalues: The output vector of eigenvalues of the same type as  ``src`` . The eigenvalues are stored in the descending order.
+    :param eigenvalues: Output vector of eigenvalues of the same type as  ``src`` . The eigenvalues are stored in the descending order.
 
-    :param eigenvectors: The output matrix of eigenvectors. It has the same size and type as  ``src`` . The eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues.
+    :param eigenvectors: Output matrix of eigenvectors. It has the same size and type as  ``src`` . The eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues.
 
-    :param lowindex: Optional index of largest eigenvalue/-vector to calculate. Ignored in the current implementation.
+    :param lowindex: Optional index of largest eigenvalue/-vector to calculate. The parameter is ignored in the current implementation.
 
-    :param highindex: Optional index of smallest eigenvalue/-vector to calculate. Ignored in the current implementation.
+    :param highindex: Optional index of smallest eigenvalue/-vector to calculate. The parameter is ignored in the current implementation.
 
 The functions ``eigen`` compute just eigenvalues, or eigenvalues and eigenvectors of the symmetric matrix ``src`` : ::
 
@@ -997,7 +1002,7 @@ exp
 
     :param src: Source array.
 
-    :param dst: Destination array; will have the same size and same type as ``src``.
+    :param dst: Destination array of the same size and type as ``src``.
 
 The function ``exp`` calculates the exponent of every element of the input array:
 
@@ -1030,7 +1035,7 @@ To extract a channel from a new-style matrix, use
 :cpp:func:`mixChannels` or
 :cpp:func:`split` .
 
-.. seealso::  :cpp:func:`mixChannels` , :cpp:func:`split` , :cpp:func:`merge` , :cpp:func:`cvarrToMat` , :c:func:`cvSetImageCOI` , :c:func:`cvGetImageCOI`
+.. seealso::  :cpp:func:`mixChannels` , :cpp:func:`split` , :cpp:func:`merge` , :cpp:func:`cvarrToMat` , :cpp:func:`cvSetImageCOI` , :cpp:func:`cvGetImageCOI`
 
 
 
@@ -1094,17 +1099,17 @@ gemm
 
     Performs generalized matrix multiplication.
 
-    :param src1: The first multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
+    :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
-    :param src2: The second multiplied input matrix of the same type as  ``src1`` .
+    :param src2: Second multiplied input matrix of the same type as  ``src1`` .
     
     :param alpha: Weight of the matrix product.
 
-    :param src3: The third optional delta matrix added to the matrix product. It should have the same type as  ``src1``  and  ``src2`` .
+    :param src3: Third optional delta matrix added to the matrix product. It should have the same type as  ``src1``  and  ``src2`` .
     
     :param beta: Weight of  ``src3`` .
     
-    :param dst: The destination matrix. It has the proper size and the same type as input matrices.
+    :param dst: Destination matrix. It has the proper size and the same type as input matrices.
 
     :param flags: Operation flags:
 
@@ -1112,7 +1117,7 @@ gemm
             * **GEMM_2_T** transpose  ``src2``
             * **GEMM_3_T** transpose  ``src3``
             
-The function performs generalized matrix multiplication and similar to the corresponding functions ``*gemm`` in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
+The function performs generalized matrix multiplication similar?? to the corresponding functions ``*gemm`` in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
 
 .. math::
 
@@ -1134,15 +1139,15 @@ getConvertElem
 
 .. cpp:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
 
-.. cpp:function:: typedef void (*ConvertData)(const void* from, void* to, int cn)
+.. cpp:function:: typedef void (*ConvertData)(const void* from, void* to, int cn)??broken output??
 
 .. cpp:function:: typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alpha, double beta)
 
     Returns a conversion function for a single pixel.
 
-    :param fromType: The source pixel type.
+    :param fromType: Source pixel type.
 
-    :param toType: The destination pixel type.
+    :param toType: Destination pixel type.
 
     :param from: Callback parameter: pointer to the input pixel.
 
@@ -1189,11 +1194,11 @@ idct
 
     Computes the inverse Discrete Cosine Transform of a 1D or 2D array.
 
-    :param src: The source floating-point single-channel array.
+    :param src: Source floating-point single-channel array.
 
-    :param dst: The destination array of the same size and type as  ``src`` .
+    :param dst: Destination array of the same size and type as  ``src`` .
     
-    :param flags: The operation flags.
+    :param flags: Operation flags.
     
 ``idct(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DCT_INVERSE)``.
 
@@ -1213,19 +1218,19 @@ idft
 
     Computes the inverse Discrete Fourier Transform of a 1D or 2D array.
 
-    :param src: The source floating-point real or complex array.
+    :param src: Source floating-point real or complex array.
 
-    :param dst: The destination array whose size and type depend on the  ``flags`` .
+    :param dst: Destination array whose size and type depend on the  ``flags`` .
     
-    :param flags: The operation flags. See  :cpp:func:`dft` .
+    :param flags: Operation flags. See  :cpp:func:`dft` .
     
-    :param nonzeroRows: The number of  ``dst``  rows to compute. The rest of the rows have undefined content. See the convolution sample in  :cpp:func:`dft`  description.
+    :param nonzeroRows: Number of  ``dst``  rows to compute. The rest of the rows have undefined content. See the convolution sample in  :cpp:func:`dft`  description.
     
 ``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
 
 See :cpp:func:`dft` for details.
 
-.. note:: None of ``dft`` and ``idft`` scale the result by default. Thus, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
+.. note:: None of ``dft`` and ``idft`` scales the result by default. So, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
 
 .. seealso::
 
@@ -1244,7 +1249,7 @@ inRange
 
     Checks if array elements lie between the elements of two other arrays.
 
-    :param src: The first source array.
+    :param src: First source array.
 
     :param lowerb: Inclusive lower boundary array or a scalar.
     
@@ -1254,19 +1259,19 @@ inRange
 
 The function checks the range as follows:
 
- * for every element of the input array:
+ * For every element of the input array:
 
    .. math::
 
       \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 <  \texttt{upperb} (I)_0
 
- * for single-channel arrays:
+ * For single-channel arrays:
 
    .. math::
 
       \texttt{dst} (I)= \texttt{lowerb} (I)_0  \leq \texttt{src} (I)_0 <  \texttt{upperb} (I)_0  \land \texttt{lowerb} (I)_1  \leq \texttt{src} (I)_1 <  \texttt{upperb} (I)_1
 
-   for two-channel arrays and so forth. 
+ * For two-channel arrays and so forth. 
 
 ``dst`` (I) is set to 255 (all ``1`` -bits) if ``src`` (I) is within the specified range and 0 otherwise.
 
@@ -1281,11 +1286,11 @@ invert
 
     Finds the inverse or pseudo-inverse of a matrix.
 
-    :param src: The source floating-point  ``M x N``  matrix.
+    :param src: Source floating-point  ``M x N``  matrix.
 
-    :param dst: The destination matrix of  ``N x M``  size and the same type as  ``src`` .
+    :param dst: Destination matrix of  ``N x M``  size and the same type as  ``src`` .
     
-    :param flags: The inversion method :
+    :param flags: Inversion method :
 
             * **DECOMP_LU** Gaussian elimination with the optimal pivot element chosen.
 
@@ -1408,9 +1413,9 @@ Mahalanobis
 
     Calculates the Mahalanobis distance between two vectors.
 
-    :param vec1: The first 1D source vector.
+    :param vec1: First 1D source vector.
 
-    :param vec2: The second 1D source vector.
+    :param vec2: Second 1D source vector.
 
     :param icovar: Inverse covariance matrix.
 
@@ -1441,11 +1446,11 @@ max
 
 .. cpp:function:: void max(const Mat& src1, double value, Mat& dst)
 
-    Calculates per-element maximum of two arrays or array and a scalar.
+    Calculates per-element maximum of two arrays or an array and a scalar.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and type as  ``src1`` .
+    :param src2: Second source array of the same size and type as  ``src1`` .
     
     :param value: Real scalar value.
 
@@ -1488,7 +1493,7 @@ mean
 
     :param mask: Optional operation mask.
 
-The functions ``mean`` compute mean value ``M`` of array elements, independently for each channel, and return it:
+The function ``mean`` computes the mean value ``M`` of array elements, independently for each channel, and return it:
 
 .. math::
 
@@ -1510,7 +1515,7 @@ meanStdDev
 
 .. cpp:function:: void meanStdDev(InputArray mtx, OutputArray mean, OutputArray stddev, InputArray mask=noArray())
 
-    Calculates mean and standard deviation of array elements.
+    Calculates a mean and standard deviation of array elements.
 
     :param mtx: Source array that should have from 1 to 4 channels so that the results can be stored in  :cpp:func:`Scalar` 's.
 
@@ -1520,7 +1525,7 @@ meanStdDev
 
     :param mask: Optional operation mask.
 
-The functions ``meanStdDev`` compute the mean and the standard deviation ``M`` of array elements independently for each channel and return it via the output parameters:
+The function ``meanStdDev`` computes the mean and the standard deviation ``M`` of array elements independently for each channel and returns it via the output parameters:
 
 .. math::
 
