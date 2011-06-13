@@ -95,71 +95,25 @@ copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep
     }
 }
     
-template<typename T> static void
-setMask_(T value, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
-{
-    for( ; size.height--; mask += mstep, _dst += dstep )
-    {
-        T* dst = (T*)_dst;
-        int x = 0;
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            if( mask[x] )
-                dst[x] = value;
-            if( mask[x+1] )
-                dst[x+1] = value;
-            if( mask[x+2] )
-                dst[x+2] = value;
-            if( mask[x+3] )
-                dst[x+3] = value;
-        }
-        for( ; x < size.width; x++ )
-            if( mask[x] )
-                dst[x] = value;
-    }
-}
-
-static void
-setMaskGeneric(const uchar* value, size_t, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
-{
-    size_t k, esz = *(size_t*)_esz;
-    for( ; size.height--; mask += mstep, _dst += dstep )
-    {
-        uchar* dst = _dst;
-        int x = 0;
-        for( ; x < size.width; x++, dst += esz )
-        {
-            if( !mask[x] )
-                continue;
-            for( k = 0; k < esz; k++ )
-                dst[k] = value[k];
-        }
-    }
-}
     
-#define DEF_COPY_SET_MASK(suffix, type) \
+#define DEF_COPY_MASK(suffix, type) \
 static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
                              uchar* dst, size_t dstep, Size size, void*) \
 { \
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
-} \
-static void setMask##suffix( const uchar* src, size_t, const uchar* mask, size_t mstep, \
-                             uchar* dst, size_t dstep, Size size, void*) \
-{ \
-    setMask_<type>(*(const type*)src, mask, mstep, dst, dstep, size); \
 }
     
     
-DEF_COPY_SET_MASK(8u, uchar);
-DEF_COPY_SET_MASK(16u, ushort);
-DEF_COPY_SET_MASK(8uC3, Vec3b);
-DEF_COPY_SET_MASK(32s, int);
-DEF_COPY_SET_MASK(16uC3, Vec3s);
-DEF_COPY_SET_MASK(32sC2, Vec2i);
-DEF_COPY_SET_MASK(32sC3, Vec3i);
-DEF_COPY_SET_MASK(32sC4, Vec4i);
-DEF_COPY_SET_MASK(32sC6, Vec6i);
-DEF_COPY_SET_MASK(32sC8, Vec8i);
+DEF_COPY_MASK(8u, uchar);
+DEF_COPY_MASK(16u, ushort);
+DEF_COPY_MASK(8uC3, Vec3b);
+DEF_COPY_MASK(32s, int);
+DEF_COPY_MASK(16uC3, Vec3s);
+DEF_COPY_MASK(32sC2, Vec2i);
+DEF_COPY_MASK(32sC3, Vec3i);
+DEF_COPY_MASK(32sC4, Vec4i);
+DEF_COPY_MASK(32sC6, Vec6i);
+DEF_COPY_MASK(32sC8, Vec8i);
     
 BinaryFunc copyMaskTab[] =
 {
@@ -181,27 +135,6 @@ BinaryFunc copyMaskTab[] =
     0, 0, 0, 0, 0, 0, 0,
     copyMask32sC8
 };
-
-BinaryFunc setMaskTab[] =
-{
-    0,
-    setMask8u,
-    setMask16u,
-    setMask8uC3,
-    setMask32s,
-    0,
-    setMask16uC3,
-    0,
-    setMask32sC2,
-    0, 0, 0,
-    setMask32sC3,
-    0, 0, 0,
-    setMask32sC4,
-    0, 0, 0, 0, 0, 0, 0,
-    setMask32sC6,
-    0, 0, 0, 0, 0, 0, 0,
-    setMask32sC8
-};    
     
 BinaryFunc getCopyMaskFunc(size_t esz)
 {
@@ -236,7 +169,11 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
             
-            Size sz = getContinuousSize(*this, dst, (int)elemSize());            
+            // to handle the copying 1xn matrix => nx1 std vector.
+            Size sz = size() == dst.size() ?
+                getContinuousSize(*this, dst, (int)elemSize()) :
+                getContinuousSize(*this, (int)elemSize());
+            
             for( ; sz.height--; sptr += step, dptr += dst.step )
                 memcpy( dptr, sptr, sz.width );
         }
@@ -333,26 +270,43 @@ Mat& Mat::operator = (const Scalar& s)
     return *this;
 }
 
-Mat& Mat::setTo(const Scalar& s, InputArray _mask)
+    
+Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
-    Mat mask = _mask.getMat();
-    if( !mask.data )
-        *this = s;
-    else
+    if( !data )
+        return *this;
+    
+    Mat value = _value.getMat(), mask = _mask.getMat();
+    
+    CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    
+    size_t esz = elemSize();
+    BinaryFunc copymask = getCopyMaskFunc(esz);
+    
+    const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
+    uchar* ptrs[2]={0,0};
+    NAryMatIterator it(arrays, ptrs);
+    int total = (int)it.size, blockSize0 = std::min(total, (int)((BLOCK_SIZE + esz-1)/esz));
+    AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
+    uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
+    convertAndUnrollScalar( value, type(), scbuf, blockSize0 );
+    
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
-        CV_Assert( channels() <= 4 && mask.type() == CV_8U );
-        size_t esz = elemSize();
-        BinaryFunc func = esz <= 32 ? setMaskTab[esz] : setMaskGeneric;
-        double buf[4];
-        scalarToRawData(s, buf, type(), 0);
-        
-        const Mat* arrays[] = { this, &mask, 0 };
-        uchar* ptrs[2];
-        NAryMatIterator it(arrays, ptrs);
-        Size sz((int)it.size, 1);
-        
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func((const uchar*)buf, 0, ptrs[1], 0, ptrs[0], 0, sz, &esz);
+        for( int j = 0; j < total; j += blockSize0 )
+        {
+            Size sz(std::min(blockSize0, total - j), 1);
+            size_t blockSize = sz.width*esz;
+            if( ptrs[1] )
+            {
+                copymask(scbuf, 0, ptrs[1], 0, ptrs[0], 0, sz, &esz);
+                ptrs[1] += sz.width;
+            }
+            else
+                memcpy(ptrs[0], scbuf, blockSize);
+            ptrs[0] += blockSize;
+        }
     }
     return *this;
 }
@@ -566,7 +520,7 @@ cvSet( void* arr, CvScalar value, const void* maskarr )
     if( !maskarr )
         m = value;
     else
-        m.setTo(value, cv::cvarrToMat(maskarr));
+        m.setTo(cv::Scalar(value), cv::cvarrToMat(maskarr));
 }
 
 CV_IMPL void

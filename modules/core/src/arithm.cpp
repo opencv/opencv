@@ -946,18 +946,7 @@ static void not8u( const uchar* src1, size_t step1,
 *                                   logical operations                                   *
 \****************************************************************************************/
 
-static inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
-{
-    if( sc.dims > 2 || (sc.cols != 1 && sc.rows != 1) || !sc.isContinuous() )
-        return false;
-    int cn = CV_MAT_CN(atype);
-    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
-        return false;
-    return sc.size() == Size(1, 1) || sc.size() == Size(1, cn) || sc.size() == Size(cn, 1) ||
-        (sc.size() == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
-}
-
-static void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize )
+void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize )
 {
     int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
     size_t esz = CV_ELEM_SIZE(buftype);
@@ -972,7 +961,6 @@ static void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, si
     }
     for( size_t i = esz; i < blocksize*esz; i++ )
         scbuf[i] = scbuf[i - esz];
-
 }
 
 void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,

@@ -531,7 +531,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 int v = type == THRESH_BINARY ? (ithresh >= 255 ? 0 : imaxval) :
                         type == THRESH_BINARY_INV ? (ithresh >= 255 ? imaxval : 0) :
                         type == THRESH_TRUNC ? imaxval : 0;
-                dst = Scalar::all(v);
+                dst.setTo(v);
             }
             else
                 src.copyTo(dst);

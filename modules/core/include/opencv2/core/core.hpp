@@ -1649,7 +1649,7 @@ public:
     //! sets every matrix element to s
     Mat& operator = (const Scalar& s);
     //! sets some of the matrix elements to s, according to the mask
-    Mat& setTo(const Scalar& s, InputArray mask=noArray());
+    Mat& setTo(InputArray value, InputArray mask=noArray());
     //! creates alternative matrix header for the same data, with different
     // number of channels and/or different number of rows. see cvReshape.
     Mat reshape(int _cn, int _rows=0) const;
@@ -4198,9 +4198,6 @@ class CV_EXPORTS CommandLineParser
         std::string getString(const std::string& name) const;
 
         bool has(const std::string& keys) const;
-
-        template<typename _Tp>
-        _Tp analizeValue(const std::string& str);
 
         template<typename _Tp>
         static _Tp getData(const std::string& str)
