@@ -67,9 +67,8 @@ CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 //*** end IphoneOS Stubs ***/
 #else
 
-
-#import <Cocoa/Cocoa.h>
 #include "precomp.hpp"
+#import <Cocoa/Cocoa.h>
 
 #include <iostream>
 using namespace std; 
