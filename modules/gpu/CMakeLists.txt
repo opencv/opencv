@@ -194,7 +194,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
 	
 	source_group("Src" FILES ${test_hdrs} ${test_srcs})
     if(HAVE_CUDA)
-            include_directories(${CUDA_INCLUDE_DIRS} ${OPENCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OPENCV_SOURCE_DIR}/modules/gpu/src/nvidia/core ${OPENCV_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
+            include_directories(${CUDA_INCLUDE_DIRS} ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core ${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/NPP_staging)
     
             file(GLOB nvidia "test/nvidia/*.cpp" "test/nvidia/*.h*")            
             source_group("Src\\NVidia" FILES ${nvidia})

@@ -2,18 +2,18 @@ project(stitching)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${OPENCV_SOURCE_DIR}/modules/core/include"
-    "${OPENCV_SOURCE_DIR}/modules/imgproc/include"
-    "${OPENCV_SOURCE_DIR}/modules/objdetect/include"
-    "${OPENCV_SOURCE_DIR}/modules/ml/include"
-    "${OPENCV_SOURCE_DIR}/modules/highgui/include"
-    "${OPENCV_SOURCE_DIR}/modules/video/include"
-    "${OPENCV_SOURCE_DIR}/modules/features2d/include"
-    "${OPENCV_SOURCE_DIR}/modules/flann/include"
-    "${OPENCV_SOURCE_DIR}/modules/calib3d/include"
-    "${OPENCV_SOURCE_DIR}/modules/legacy/include"
-    "${OPENCV_SOURCE_DIR}/modules/imgproc/src" # for gcgraph.hpp
-    "${OPENCV_SOURCE_DIR}/modules/gpu/include"
+    "${OpenCV_SOURCE_DIR}/modules/core/include"
+    "${OpenCV_SOURCE_DIR}/modules/imgproc/include"
+    "${OpenCV_SOURCE_DIR}/modules/objdetect/include"
+    "${OpenCV_SOURCE_DIR}/modules/ml/include"
+    "${OpenCV_SOURCE_DIR}/modules/highgui/include"
+    "${OpenCV_SOURCE_DIR}/modules/video/include"
+    "${OpenCV_SOURCE_DIR}/modules/features2d/include"
+    "${OpenCV_SOURCE_DIR}/modules/flann/include"
+    "${OpenCV_SOURCE_DIR}/modules/calib3d/include"
+    "${OpenCV_SOURCE_DIR}/modules/legacy/include"
+    "${OpenCV_SOURCE_DIR}/modules/imgproc/src" # for gcgraph.hpp
+    "${OpenCV_SOURCE_DIR}/modules/gpu/include"
     )
 
 set(stitching_libs opencv_core opencv_imgproc opencv_highgui opencv_features2d opencv_calib3d opencv_gpu)

@@ -7,31 +7,31 @@ include_directories(${PYTHON_INCLUDE_PATH})
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src1"
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
-    "${OPENCV_SOURCE_DIR}/modules/core/include"
-    "${OPENCV_SOURCE_DIR}/modules/imgproc/include"
-    "${OPENCV_SOURCE_DIR}/modules/video/include"
-    "${OPENCV_SOURCE_DIR}/modules/highgui/include"
-    "${OPENCV_SOURCE_DIR}/modules/ml/include"
-    "${OPENCV_SOURCE_DIR}/modules/features2d/include"
-    "${OPENCV_SOURCE_DIR}/modules/flann/include"
-    "${OPENCV_SOURCE_DIR}/modules/calib3d/include"
-    "${OPENCV_SOURCE_DIR}/modules/objdetect/include"
-    "${OPENCV_SOURCE_DIR}/modules/legacy/include"
-    "${OPENCV_SOURCE_DIR}/modules/contrib/include"
+    "${OpenCV_SOURCE_DIR}/modules/core/include"
+    "${OpenCV_SOURCE_DIR}/modules/imgproc/include"
+    "${OpenCV_SOURCE_DIR}/modules/video/include"
+    "${OpenCV_SOURCE_DIR}/modules/highgui/include"
+    "${OpenCV_SOURCE_DIR}/modules/ml/include"
+    "${OpenCV_SOURCE_DIR}/modules/features2d/include"
+    "${OpenCV_SOURCE_DIR}/modules/flann/include"
+    "${OpenCV_SOURCE_DIR}/modules/calib3d/include"
+    "${OpenCV_SOURCE_DIR}/modules/objdetect/include"
+    "${OpenCV_SOURCE_DIR}/modules/legacy/include"
+    "${OpenCV_SOURCE_DIR}/modules/contrib/include"
     )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(opencv_hdrs "${OPENCV_SOURCE_DIR}/modules/core/include/opencv2/core/core.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/imgproc/include/opencv2/imgproc/imgproc.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/video/include/opencv2/video/background_segm.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/video/include/opencv2/video/tracking.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/highgui/include/opencv2/highgui/highgui.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/ml/include/opencv2/ml/ml.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/features2d/include/opencv2/features2d/features2d.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/calib3d/include/opencv2/calib3d/calib3d.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp"
-    "${OPENCV_SOURCE_DIR}/modules/python/src2/opencv_extra_api.hpp")
+set(opencv_hdrs "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/core.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/imgproc/include/opencv2/imgproc/imgproc.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/video/include/opencv2/video/background_segm.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/video/include/opencv2/video/tracking.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/highgui/include/opencv2/highgui/highgui.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/ml/include/opencv2/ml/ml.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/features2d/include/opencv2/features2d/features2d.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/calib3d/include/opencv2/calib3d/calib3d.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/python/src2/opencv_extra_api.hpp")
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")

@@ -57,7 +57,7 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
   ENDFOREACH(item)
 
   GET_DIRECTORY_PROPERTY(_directory_flags DEFINITIONS)
-  GET_DIRECTORY_PROPERTY(_global_definitions DIRECTORY ${OPENCV_SOURCE_DIR} DEFINITIONS)
+  GET_DIRECTORY_PROPERTY(_global_definitions DIRECTORY ${OpenCV_SOURCE_DIR} DEFINITIONS)
   #MESSAGE("_directory_flags ${_directory_flags} ${_global_definitions}" )
   LIST(APPEND ${_out_compile_flags} ${_directory_flags})
   LIST(APPEND ${_out_compile_flags} ${_global_definitions})

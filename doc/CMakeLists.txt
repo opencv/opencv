@@ -76,7 +76,7 @@ set(DOXYGEN_SOURCE_DIR)
 set(doxy_html_dep_list)
 
 foreach(m ${module_names})
-    set(module_hdr_path "${OPENCV_SOURCE_DIR}/modules/${m}/include/opencv2/${m}")
+    set(module_hdr_path "${OpenCV_SOURCE_DIR}/modules/${m}/include/opencv2/${m}")
     set(DOXYGEN_SOURCE_DIR ${DOXYGEN_SOURCE_DIR} ${module_hdr_path})
     file(GLOB module_hdrs "${module_hdr_path}/*.h*")
     set(doxy_html_dep_list ${doxy_html_dep_list} ${module_hdrs})
