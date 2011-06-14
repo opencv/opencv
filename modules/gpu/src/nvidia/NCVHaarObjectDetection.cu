@@ -71,6 +71,9 @@
 //==============================================================================
 
 
+NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of the loop in warpScanInclusive
+
+
 //Almost the same as naive scan1Inclusive, but doesn't need __syncthreads()
 //assuming size <= WARP_SIZE and size is power of 2
 template <class T>
@@ -81,10 +84,16 @@ inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
     pos += K_WARP_SIZE;
     s_Data[pos] = idata;
 
-    for(Ncv32u offset = 1; offset < K_WARP_SIZE; offset <<= 1)
-    {
-        s_Data[pos] += s_Data[pos - offset];
-    }
+    //for(Ncv32u offset = 1; offset < K_WARP_SIZE; offset <<= 1)
+    //{
+    //    s_Data[pos] += s_Data[pos - offset];
+    //}
+
+    s_Data[pos] += s_Data[pos - 1];
+    s_Data[pos] += s_Data[pos - 2];
+    s_Data[pos] += s_Data[pos - 4];
+    s_Data[pos] += s_Data[pos - 8];
+    s_Data[pos] += s_Data[pos - 16];
 
     return s_Data[pos];
 }
