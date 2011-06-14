@@ -36,9 +36,10 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/stat.h>
 
-#ifdef HAVE_UNISTD_H
+#if defined HAVE_UNISTD_H || defined __linux__
 # include <unistd.h>
 #endif
 

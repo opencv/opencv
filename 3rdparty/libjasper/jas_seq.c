@@ -423,10 +423,10 @@ int jas_seq2d_output(jas_matrix_t *matrix, FILE *out)
 	char sbuf[MAXLINELEN + 1];
 	int n;
 
-	fprintf(out, "%d %d\n", jas_seq2d_xstart(matrix),
-	  jas_seq2d_ystart(matrix));
-	fprintf(out, "%d %d\n", jas_matrix_numcols(matrix),
-	  jas_matrix_numrows(matrix));
+	fprintf(out, "%d %d\n", (int)jas_seq2d_xstart(matrix),
+	  (int)jas_seq2d_ystart(matrix));
+	fprintf(out, "%d %d\n", (int)jas_matrix_numcols(matrix),
+	  (int)jas_matrix_numrows(matrix));
 
 	buf[0] = '\0';
 	for (i = 0; i < jas_matrix_numrows(matrix); ++i) {

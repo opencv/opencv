@@ -214,7 +214,7 @@ int CV_SubdivTest::validate_test_results( int /*test_case_idx*/ )
     double xrange = img_size.width*(1 - FLT_EPSILON);
     double yrange = img_size.height*(1 - FLT_EPSILON);
     
-    subdiv = subdiv = cvCreateSubdivDelaunay2D(
+    subdiv = cvCreateSubdivDelaunay2D(
         cvRect( 0, 0, img_size.width, img_size.height ), storage );
     
     CvSeq* seq = cvCreateSeq( 0, sizeof(*seq), sizeof(CvPoint2D32f), storage );

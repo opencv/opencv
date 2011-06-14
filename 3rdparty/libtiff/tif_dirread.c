@@ -1420,7 +1420,7 @@ TIFFFetchShortPair(TIFF* tif, TIFFDirEntry* dir)
 		case TIFF_SHORT:
 		case TIFF_SSHORT:
 			{
-			uint16 v[2];
+			uint16 v[2]={0,0};
 			return TIFFFetchShortArray(tif, dir, v)
 				&& TIFFSetField(tif, dir->tdir_tag, v[0], v[1]);
 			}

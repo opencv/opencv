@@ -150,7 +150,7 @@ static void translate_error_to_exception(void)
   cvSetErrStatus(0);
 }
 
-#define ERRCHK do { if (cvGetErrStatus() != 0) { translate_error_to_exception(); return NULL; } } while (0)
+#define ERRCHK do { if (cvGetErrStatus() != 0) { translate_error_to_exception(); return 0; } } while (0)
 #define ERRWRAPN(F, N) \
     do { \
         try \
@@ -3355,7 +3355,7 @@ static PyObject *pycvReshapeMatND(PyObject *self, PyObject *args)
   CvMatND *cva;
   if (!convert_to_CvMatND(o, &cva, "src"))
     return NULL;
-  ints dims;
+  ints dims={0,0};
   if (new_dims != NULL) {
     if (!convert_to_ints(new_dims, &dims, "new_dims"))
       return NULL;

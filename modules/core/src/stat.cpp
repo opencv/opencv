@@ -466,8 +466,7 @@ int cv::countNonZero( InputArray _src )
 cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
-    if( !mask.empty() )
-        CV_Assert( mask.type() == CV_8U );
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
     
     int k, cn = src.channels(), depth = src.depth();
     SumFunc func = sumTab[depth];
@@ -526,8 +525,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
-    if( !mask.empty() )
-        CV_Assert( mask.type() == CV_8U );
+    CV_Assert( mask.empty() || mask.type() == CV_8U );
     
     int k, cn = src.channels(), depth = src.depth();
     SumSqrFunc func = sumSqrTab[depth];
@@ -1059,13 +1057,20 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2];
-    double result = 0;
+    union
+    {
+        double d;
+        int i;
+        float f;
+    }
+    result;
+    result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
     bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
                     (normType == NORM_L2 && depth <= CV_8S);
     int isum = 0;
-    int *ibuf = (int*)&result;
+    int *ibuf = &result.i;
     size_t esz = 0;
     
     if( blockSum )
@@ -1085,7 +1090,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             count += bsz;
             if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
-                result += isum;
+                result.d += isum;
                 isum = 0;
                 count = 0;
             }
@@ -1100,14 +1105,14 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         if( depth == CV_64F )
             ;
         else if( depth == CV_32F )
-            result = (float&)result;
+            result.d = result.f;
         else
-            result = (int&)result;
+            result.d = result.i;
     }
     else if( normType == NORM_L2 )
-        result = std::sqrt(result);
+        result.d = std::sqrt(result.d);
     
-    return result;
+    return result.d;
 }
 
     
@@ -1159,13 +1164,21 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
     uchar* ptrs[3];
-    double result = 0;
+    union
+    {
+        double d;
+        float f;
+        int i;
+        unsigned u;
+    }
+    result;
+    result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
     bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
     (normType == NORM_L2 && depth <= CV_8S);
-    unsigned int isum = 0;
-    unsigned int *ibuf = (unsigned int*)&result;
+    unsigned isum = 0;
+    unsigned *ibuf = &result.u;
     size_t esz = 0;
     
     if( blockSum )
@@ -1185,7 +1198,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             count += bsz;
             if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
-                result += isum;
+                result.d += isum;
                 isum = 0;
                 count = 0;
             }
@@ -1201,14 +1214,14 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         if( depth == CV_64F )
             ;
         else if( depth == CV_32F )
-            result = (float&)result;
+            result.d = result.f;
         else
-            result = (int&)result;
+            result.d = result.u;
     }
     else if( normType == NORM_L2 )
-        result = std::sqrt(result);
+        result.d = std::sqrt(result.d);
     
-    return result;
+    return result.d;
 }
 
 

@@ -161,7 +161,7 @@ simple_argtype_mapping = {
     "int": ("int", "i", "0"),
     "float": ("float", "f", "0.f"),
     "double": ("double", "d", "0"),
-    "c_string": ("char*", "s", '""')
+    "c_string": ("char*", "s", '(char*)""')
 }
 
 class ClassProp(object):

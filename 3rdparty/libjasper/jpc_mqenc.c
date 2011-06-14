@@ -384,7 +384,7 @@ static void jpc_mqenc_setbits(jpc_mqenc_t *mqenc)
 int jpc_mqenc_dump(jpc_mqenc_t *mqenc, FILE *out)
 {
 	fprintf(out, "AREG = %08x, CREG = %08x, CTREG = %d\n",
-	  mqenc->areg, mqenc->creg, mqenc->ctreg);
+	  (unsigned)mqenc->areg, (unsigned)mqenc->creg, (int)mqenc->ctreg);
 	fprintf(out, "IND = %02d, MPS = %d, QEVAL = %04x\n",
 	  (int)(*mqenc->curctx - jpc_mqstates), (int)(*mqenc->curctx)->mps,
 	  (int)(*mqenc->curctx)->qeval);

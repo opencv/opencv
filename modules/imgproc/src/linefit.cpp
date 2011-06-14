@@ -494,13 +494,11 @@ icvFitLine3D( CvPoint3D32f * points, int count, int dist,
     float *w;                   /* weights */
     float *r;                   /* square distances */
     int i, j, k;
-    float _line[6], _lineprev[6];
+    float _line[6]={0,0,0,0,0,0}, _lineprev[6]={0,0,0,0,0,0};
     float rdelta = reps != 0 ? reps : 1.0f;
     float adelta = aeps != 0 ? aeps : 0.01f;
     double min_err = DBL_MAX, err = 0;
     CvRNG rng = cvRNG(-1);
-
-    memset( line, 0, 6*sizeof(line[0]) );
 
     switch (dist)
     {

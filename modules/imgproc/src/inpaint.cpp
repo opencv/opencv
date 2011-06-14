@@ -103,7 +103,7 @@ public:
         for (i=1; i<=num; i++) {
             mem[i].prev   = mem+i-1;
             mem[i].next   = mem+i+1;
-            mem[i].i      = mem[i].i = -1;
+            mem[i].i      = -1;
             mem[i].T      = FLT_MAX;
         }
         tail       = mem+i;

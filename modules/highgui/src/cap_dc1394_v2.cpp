@@ -352,7 +352,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
     {
         dc1394video_modes_t videoModes;
         dc1394_video_get_supported_modes(dcCam, &videoModes);
-        if (userMode < videoModes.num)
+        if (userMode < (int)videoModes.num)
         {
             dc1394video_mode_t mode = videoModes.modes[userMode];
             code = dc1394_video_set_mode(dcCam, mode);
@@ -665,14 +665,15 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                  && dcCam)
              {
                  if (cvRound(value) == CV_CAP_PROP_DC1394_OFF)
+                 {
                      if ((feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].on_off_capable)
                          && (dc1394_feature_set_power(dcCam, (dc1394feature_t)dc1394properties[propId], DC1394_OFF)==DC1394_SUCCESS))
-                         {
+                     {
                          feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].is_on=DC1394_OFF;
                          return true;
-                         }
-                 else
+                     }
                      return false;
+                 }
                  //try to turn the feature ON, feature can be ON and at the same time it can be not capable to change state to OFF
                  if ( feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].is_on == DC1394_OFF &&
                       (feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].on_off_capable == DC1394_TRUE))

@@ -797,7 +797,11 @@ void CV_MinCircleTest::run_func()
     if(!test_cpp)
         cvMinEnclosingCircle( points, &center, &radius );
     else
-        cv::minEnclosingCircle(cv::cvarrToMat(points), (cv::Point2f&)center, radius);
+    {
+        cv::Point2f tmpcenter;
+        cv::minEnclosingCircle(cv::cvarrToMat(points), tmpcenter, radius);
+        center = tmpcenter;
+    }
 }
 
 

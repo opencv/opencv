@@ -822,7 +822,7 @@ void jas_image_dump(jas_image_t *image, FILE *out)
 	for (cmptno = 0; cmptno < image->numcmpts_; ++cmptno) {
 		cmpt = image->cmpts_[cmptno];
 		fprintf(out, "prec=%d, sgnd=%d, cmpttype=%d\n", cmpt->prec_,
-		  cmpt->sgnd_, cmpt->type_);
+		  cmpt->sgnd_, (int)cmpt->type_);
 		width = jas_image_cmptwidth(image, cmptno);
 		height = jas_image_cmptheight(image, cmptno);
 		n = JAS_MIN(16, width);

@@ -3433,7 +3433,14 @@ public:
     static int isInstance(const void* ptr)
     {
         static _ClsName dummy;
-        return *(const void**)&dummy == *(const void**)ptr;
+        union
+        {
+            const void* p;
+            const void** pp;
+        } a, b;
+        a.p = &dummy;
+        b.p = ptr;
+        return *a.pp == *b.pp;
     }
     static void release(void** dbptr)
     {

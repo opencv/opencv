@@ -715,8 +715,6 @@ cvContourFromContourTree( const CvContourTree*  tree,
     criteria = cvCheckTermCriteria( criteria, 0., 100 );
 
     lpt = tree->total;
-    ptr_buf = NULL;
-    level_buf = NULL;
     i_buf = 0;
     cur_level = 0;
     log_iter = (char) (criteria.type == CV_TERMCRIT_ITER ||

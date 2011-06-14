@@ -558,8 +558,7 @@ void polarToCart( InputArray src1, InputArray src2,
 {
     Mat Mag = src1.getMat(), Angle = src2.getMat();
     int type = Angle.type(), depth = Angle.depth(), cn = Angle.channels();
-    if( !Mag.empty() )
-        CV_Assert( Angle.size == Mag.size && type == Mag.type() && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( Mag.empty() || (Angle.size == Mag.size && type == Mag.type() && (depth == CV_32F || depth == CV_64F)));
     dst1.create( Angle.dims, Angle.size, type );
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();

@@ -356,9 +356,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
     
     CV_Assert( dst.size == src.size && dst.channels() == cn );
-    
-    if( !mask.empty() )
-        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
     
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
@@ -380,9 +378,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
     
     CV_Assert( dst.size == src.size && dst.channels() == cn );
-    
-    if( !mask.empty() )
-        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
     
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accSqrTab[fidx] : 0;
@@ -405,9 +401,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     
     CV_Assert( src2.size && src1.size && src2.type() == src1.type() );
     CV_Assert( dst.size == src1.size && dst.channels() == cn );
-    
-    if( !mask.empty() )
-        CV_Assert( mask.size == src1.size && mask.type() == CV_8U );
+    CV_Assert( mask.empty() || (mask.size == src1.size && mask.type() == CV_8U) );
     
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccProdFunc func = fidx >= 0 ? accProdTab[fidx] : 0;
@@ -430,9 +424,7 @@ void cv::accumulateWeighted( InputArray _src, CV_IN_OUT InputOutputArray _dst,
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
     
     CV_Assert( dst.size == src.size && dst.channels() == cn );
-    
-    if( !mask.empty() )
-        CV_Assert( mask.size == src.size && mask.type() == CV_8U );
+    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
     
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;

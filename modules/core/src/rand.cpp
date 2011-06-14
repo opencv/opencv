@@ -801,7 +801,7 @@ cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar para
     // !!! this will only work for current 64-bit MWC RNG !!!
     cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
     rng.fill(mat, disttype == CV_RAND_NORMAL ?
-        cv::RNG::NORMAL : cv::RNG::UNIFORM, (cv::Scalar&)param1, (cv::Scalar&)param2 );
+        cv::RNG::NORMAL : cv::RNG::UNIFORM, cv::Scalar(param1), cv::Scalar(param2) );
 }
 
 CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
