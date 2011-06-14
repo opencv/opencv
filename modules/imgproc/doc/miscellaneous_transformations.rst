@@ -384,9 +384,7 @@ The function can do the following transformations:
 *
     Bayer :math:`\rightarrow`     RGB ( ``CV_BayerBG2BGR, CV_BayerGB2BGR, CV_BayerRG2BGR, CV_BayerGR2BGR, CV_BayerBG2RGB, CV_BayerGB2RGB, CV_BayerRG2RGB, CV_BayerGR2RGB``     ). The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get color pictures from a single plane where R,G, and B pixels (sensors of a particular component) are interleaved as follows:
 
-    .. math::
-
-        \newcommand{\Rcell}{\color{red}R} \newcommand{\Gcell}{\color{green}G} \newcommand{\Bcell}{\color{blue}B} \definecolor{BackGray}{rgb}{0.8,0.8,0.8} \begin{array}{ c c c c c } \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \\ \Gcell & \colorbox{BackGray}{\Bcell} & \colorbox{BackGray}{\Gcell} & \Bcell & \Gcell \\ \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \\ \Gcell & \Bcell & \Gcell & \Bcell & \Gcell \\ \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \end{array}
+    .. image:: pics/bayer.png
 
     The output RGB components of a pixel are interpolated from 1, 2, or
     4 neighbors of the pixel having the same color. There are several
@@ -642,11 +640,7 @@ It makes possible to do a fast blurring or fast block correlation with a variabl
 
 As a practical example, the next figure shows the calculation of the integral of a straight rectangle ``Rect(3,3,3,2)`` and of a tilted rectangle ``Rect(5,1,2,3)`` . The selected pixels in the original ``image`` are shown, as well as the relative pixels in the integral images ``sum`` and ``tilted`` .
 
-\begin{center}
-
 .. image:: pics/integral.png
-
-\end{center}
 
 .. index:: threshold
 

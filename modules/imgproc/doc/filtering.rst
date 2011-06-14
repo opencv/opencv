@@ -949,7 +949,7 @@ getGaussianKernel
 
     :param ksize: Aperture size. It should be odd ( :math:`\texttt{ksize} \mod 2 = 1` ) and positive.
 
-    :param sigma: Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*(ksize/2 - 1) + 0.8`` .
+    :param sigma: Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`` .
     :param ktype: Type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F`` .
 
 The function computes and returns the
