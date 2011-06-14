@@ -11,9 +11,7 @@ add_subdirectory(features2d)
 add_subdirectory(flann)
 
 if(MSVC OR MINGW)
-   if(NOT CMAKE_CL_64)
-      add_subdirectory(ffmpeg)
-   endif()
+  add_subdirectory(ffmpeg)
 endif()
 
 if(BUILD_TESTS)

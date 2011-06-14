@@ -26,8 +26,10 @@ if (NOT MSVC)
     if(WIN32 AND MINGW64)
         target_link_libraries(${the_target} ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavformat64.a
                               ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavcodec64.a
+                              ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavdevice64.a
                               ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavutil64.a
                               ${CMAKE_SOURCE_DIR}/3rdparty/lib/libswscale64.a
+                              ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavcore64.a
                               libws2_32.a)
     else()
         target_link_libraries(${the_target} ${CMAKE_SOURCE_DIR}/3rdparty/lib/libavformat.a

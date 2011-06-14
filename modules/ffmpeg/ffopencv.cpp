@@ -531,21 +531,30 @@ That's all there is to it!
 #if !defined(_MT) || defined(_DLL) 
 extern "C" { __declspec(dllexport) unsigned int __lc_codepage = 0; }
 #endif
-
+#ifdef _M_X64
+#pragma comment(lib, "libgcc64.a")
+#pragma comment(lib, "libmingwex64.a")
+#else
 #pragma comment(lib, "libgcc_.a")
 #pragma comment(lib, "libmingwex_.a")
 #pragma comment(lib, "libcoldname_.a")
+#endif
+
 #ifdef _M_X64
 #pragma comment(lib, "libavformat64.a")
 #pragma comment(lib, "libavcodec64.a")
 #pragma comment(lib, "libavutil64.a")
+#pragma comment(lib, "libavcore64.a")
+#pragma comment(lib, "libswscale64.a")
+#pragma comment(lib, "libwsock3264.a")
 #else
 #pragma comment(lib, "libavformat.a")
 #pragma comment(lib, "libavcodec.a")
 #pragma comment(lib, "libavutil.a")
 #pragma comment(lib, "libswscale.a")
-#endif
 #pragma comment(lib, "libwsock32_.a")
+#endif
+
 
 #endif
 
