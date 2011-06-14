@@ -2107,8 +2107,8 @@ class DocumentFragmentTests(OpenCVTests):
         sys.path.append("../doc/python_fragments")
 
     def test_precornerdetect(self):
-        from precornerdetect import precornerdetect
-        im = self.get_sample("samples/c/right01.jpg", 0)
+        from test_functions import precornerdetect
+        im = self.get_sample("samples/cpp/right01.jpg", 0)
         imf = cv.CreateMat(im.rows, im.cols, cv.CV_32FC1)
         cv.ConvertScale(im, imf)
         (r0,r1) = precornerdetect(imf)
@@ -2117,7 +2117,7 @@ class DocumentFragmentTests(OpenCVTests):
             self.assertEqual(im.rows, r.rows)
 
     def test_findstereocorrespondence(self):
-        from findstereocorrespondence import findstereocorrespondence
+        from test_functions import findstereocorrespondence
         (l,r) = [self.get_sample("doc/pics/tsukuba_%s.png" % c, cv.CV_LOAD_IMAGE_GRAYSCALE) for c in "lr"]
 
         (disparity_left, disparity_right) = findstereocorrespondence(l, r)
@@ -2127,7 +2127,7 @@ class DocumentFragmentTests(OpenCVTests):
         # self.snap(disparity_left_visual)
 
     def test_calchist(self):
-        from calchist import hs_histogram
+        from test_functions import hs_histogram
         i1 = self.get_sample("samples/c/lena.jpg")
         i2 = self.get_sample("doc/pics/building.jpg")
         i3 = cv.CloneMat(i1)
