@@ -25,7 +25,7 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo']
+extensions = ['sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'sphinx.ext.extlinks']
 doctest_test_doctest_blocks = 'block'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -269,3 +269,29 @@ man_pages = [
     ('index', 'opencv', u'The OpenCV Reference Manual',
      [u'opencv-dev@itseez.com'], 1)
 ]
+
+# ---- My addings (achq June 13 2011) -----------------
+# To remember: Do not use capitalized letters in the name of the link, it gives you an error. You can use "_", though.
+extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_miscellaneous_image_transformations.html#cv-cvtcolor%s', None),
+            'imread': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
+            'imwrite': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#cv-imwrite%s', None),
+            'imshow': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=imshow#imshow%s', None),
+            'named_window': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=namedwindow#namedWindow%s', None),
+            'wait_key': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=namedwindow#cv-waitkey%s', None),
+            'add_weighted': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?highlight=addweighted#addWeighted%s', None),
+            'saturate_cast': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?highlight=saturate_cast#saturate_cast%s', None),
+            'mat_zeros': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?highlight=zeros#Mat::zeros%s', None),
+            'convert_to': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?#Mat::convertTo%s', None),
+            'create_trackbar': ('http://opencv.willowgarage.com/documentation/cpp/user_interface.html%s', None),
+            'point': ('http://opencv.willowgarage.com/documentation/cpp/basic_structures.html?#point%s', None),
+            'scalar': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?#scalar%s', None),
+            'line': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-line%s', None),
+            'ellipse': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-ellipse%s', None),
+            'rectangle': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-rectangle%s', None),
+            'circle': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-circle%s', None),
+            'fill_poly': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-fillpoly%s', None),
+            'rng': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#rng%s', None),
+            'put_text': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#putText%s', None)
+           }
+
+
