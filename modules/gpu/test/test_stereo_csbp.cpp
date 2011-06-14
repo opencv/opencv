@@ -47,7 +47,14 @@ struct CV_GpuStereoCSBPTest : public cvtest::BaseTest
     {
         cv::Mat img_l = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-L.png");
         cv::Mat img_r = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-R.png");
-        cv::Mat img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", 0);
+
+        cv::Mat img_template;
+
+        if (cv::gpu::TargetArchs::builtWith(cv::gpu::FEATURE_SET_COMPUTE_20) &&
+            cv::gpu::DeviceInfo().supports(cv::gpu::FEATURE_SET_COMPUTE_20))
+            img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
+        else
+            img_template = cv::imread(std::string(ts->get_data_path()) + "csstereobp/aloe-disp_CC1X.png", CV_LOAD_IMAGE_GRAYSCALE);
 
         if (img_l.empty() || img_r.empty() || img_template.empty())
         {
@@ -63,7 +70,7 @@ struct CV_GpuStereoCSBPTest : public cvtest::BaseTest
 
         bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
 
-        //cv::imwrite(std::string(ts->get_data_path()) + "csstereobp/aloe-disp.png", disp);
+        //cv::imwrite(std::string(ts->get_data_path()) + "csstereobp/aloe-disp_CC1X.png", cv::Mat(disp));
 
         disp.convertTo(disp, img_template.type());
 
