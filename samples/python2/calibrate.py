@@ -51,7 +51,7 @@ if __name__ == '__main__':
             cv2.imwrite('%s/%s_chess.bmp' % (debug_dir, name), vis)
         if not found:
             print 'chessboard not found'
-            break
+            continue
         img_points.append(corners.reshape(-1, 2))
         obj_points.append(pattern_points)
         
@@ -59,5 +59,8 @@ if __name__ == '__main__':
 
     camera_matrix = np.zeros((3, 3))
     dist_coefs = np.zeros(4)
-    rms = cv2.calibrateCamera(obj_points, img_points, (w, h), camera_matrix, dist_coefs)
+    img_n = len(img_points)
+    rvecs = [np.zeros(3) for i in xrange(img_n)]
+    tvecs = [np.zeros(3) for i in xrange(img_n)]
+    rms = cv2.calibrateCamera(obj_points, img_points, (w, h), camera_matrix, dist_coefs) #, rvecs, tvecs)
     print rms
