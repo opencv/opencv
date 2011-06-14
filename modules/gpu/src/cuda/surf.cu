@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace surf
     __constant__ float c_DY [3][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
     __constant__ float c_DXY[4][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
 
-    __host__ __device__ int calcSize(int octave, int layer)
+    __host__ __device__ __forceinline__ int calcSize(int octave, int layer)
     {
         /* Wavelet size at first layer of first octave. */
         const int HAAR_SIZE0 = 9;
@@ -189,7 +189,7 @@ namespace cv { namespace gpu { namespace surf
     
     struct WithOutMask
     {
-        static __device__ bool check(int, int, int)
+        static __device__ __forceinline__ bool check(int, int, int)
         {
             return true;
         }
@@ -708,7 +708,7 @@ namespace cv { namespace gpu { namespace surf
         3.695352233989979e-006f, 8.444558261544444e-006f, 1.760426494001877e-005f, 3.34794785885606e-005f, 5.808438800158911e-005f, 9.193058212986216e-005f, 0.0001327334757661447f, 0.0001748319627949968f, 0.0002100782439811155f, 0.0002302826324012131f, 0.0002302826324012131f, 0.0002100782439811155f, 0.0001748319627949968f, 0.0001327334757661447f, 9.193058212986216e-005f, 5.808438800158911e-005f, 3.34794785885606e-005f, 1.760426494001877e-005f, 8.444558261544444e-006f, 3.695352233989979e-006f
     };
 
-    __device__ unsigned char calcWin(int i, int j, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir)
+    __device__ __forceinline__ unsigned char calcWin(int i, int j, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir)
     {
         float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
         float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;

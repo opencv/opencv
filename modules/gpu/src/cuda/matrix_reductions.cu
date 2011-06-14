@@ -78,7 +78,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         explicit Mask8U(PtrStep mask): mask(mask) {}
 
-        __device__ bool operator()(int y, int x) const 
+        __device__ __forceinline__ bool operator()(int y, int x) const 
         { 
             return mask.ptr(y)[x]; 
         }
@@ -89,7 +89,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     struct MaskTrue 
     { 
-        __device__ bool operator()(int y, int x) const 
+        __device__ __forceinline__ bool operator()(int y, int x) const 
         { 
             return true; 
         } 
@@ -153,7 +153,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     // Does min and max in shared memory
     template <typename T>
-    __device__ void merge(uint tid, uint offset, volatile T* minval, volatile T* maxval)
+    __device__ __forceinline__ void merge(uint tid, uint offset, volatile T* minval, volatile T* maxval)
     {
         minval[tid] = min(minval[tid], minval[tid + offset]);
         maxval[tid] = max(maxval[tid], maxval[tid + offset]);
@@ -976,16 +976,16 @@ namespace cv { namespace gpu { namespace mathfunc
     template <> struct SumType<double> { typedef double R; };
 
     template <typename R> 
-    struct IdentityOp { static __device__ R call(R x) { return x; } };
+    struct IdentityOp { static __device__ __forceinline__ R call(R x) { return x; } };
 
     template <typename R> 
-    struct AbsOp { static __device__ R call(R x) { return abs(x); } };
+    struct AbsOp { static __device__ __forceinline__ R call(R x) { return abs(x); } };
 
     template <>
-    struct AbsOp<uint> { static __device__ uint call(uint x) { return x; } };
+    struct AbsOp<uint> { static __device__ __forceinline__ uint call(uint x) { return x; } };
 
     template <typename R> 
-    struct SqrOp { static __device__ R call(R x) { return x * x; } };
+    struct SqrOp { static __device__ __forceinline__ R call(R x) { return x * x; } };
 
     __constant__ int ctwidth;
     __constant__ int ctheight;

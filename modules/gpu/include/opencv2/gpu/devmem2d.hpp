@@ -56,7 +56,7 @@ namespace cv
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
 #if defined(__CUDACC__) 
-    #define __CV_GPU_HOST_DEVICE__ __host__ __device__ 
+    #define __CV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__ 
 #else
     #define __CV_GPU_HOST_DEVICE__
 #endif

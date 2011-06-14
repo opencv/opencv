@@ -57,7 +57,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T1, typename T2>
     struct NotEqual
     {
-        __device__ uchar operator()(const T1& src1, const T2& src2)
+        __device__ __forceinline__ uchar operator()(const T1& src1, const T2& src2)
         {
             return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
         }
@@ -91,7 +91,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     struct UnOp<T, UN_OP_NOT>
     { 
-        static __device__ T call(T v) { return ~v; }
+        static __device__ __forceinline__ T call(T v) { return ~v; }
     };
 
 
@@ -199,20 +199,20 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     struct BinOp<T, BIN_OP_OR>
     { 
-        static __device__ T call(T a, T b) { return a | b; } 
+        static __device__ __forceinline__ T call(T a, T b) { return a | b; } 
     };
 
 
     template <typename T>
     struct BinOp<T, BIN_OP_AND>
     { 
-        static __device__ T call(T a, T b) { return a & b; } 
+        static __device__ __forceinline__ T call(T a, T b) { return a & b; } 
     };
 
     template <typename T>
     struct BinOp<T, BIN_OP_XOR>
     { 
-        static __device__ T call(T a, T b) { return a ^ b; } 
+        static __device__ __forceinline__ T call(T a, T b) { return a ^ b; } 
     };
 
 
@@ -357,15 +357,15 @@ namespace cv { namespace gpu { namespace mathfunc
     struct MinOp
     {        
         template <typename T>
-        __device__ T operator()(T a, T b)
+        __device__ __forceinline__ T operator()(T a, T b)
         {
             return min(a, b);
         }
-        __device__ float operator()(float a, float b)
+        __device__ __forceinline__ float operator()(float a, float b)
         {
             return fmin(a, b);
         }
-        __device__ double operator()(double a, double b)
+        __device__ __forceinline__ double operator()(double a, double b)
         {
             return fmin(a, b);
         }
@@ -374,15 +374,15 @@ namespace cv { namespace gpu { namespace mathfunc
     struct MaxOp
     {        
         template <typename T>
-        __device__ T operator()(T a, T b)
+        __device__ __forceinline__ T operator()(T a, T b)
         {
             return max(a, b);
         }
-        __device__ float operator()(float a, float b)
+        __device__ __forceinline__ float operator()(float a, float b)
         {
             return fmax(a, b);
         }
-        __device__ double operator()(double a, double b)
+        __device__ __forceinline__ double operator()(double a, double b)
         {
             return fmax(a, b);
         }
@@ -394,7 +394,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMinOp(T s_) : s(s_) {}
 
-        __device__ T operator()(T a)
+        __device__ __forceinline__ T operator()(T a)
         {
             return min(a, s);
         }
@@ -405,7 +405,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMinOp(float s_) : s(s_) {}
 
-        __device__ float operator()(float a)
+        __device__ __forceinline__ float operator()(float a)
         {
             return fmin(a, s);
         }
@@ -416,7 +416,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMinOp(double s_) : s(s_) {}
 
-        __device__ double operator()(double a)
+        __device__ __forceinline__ double operator()(double a)
         {
             return fmin(a, s);
         }
@@ -428,7 +428,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMaxOp(T s_) : s(s_) {}
 
-        __device__ T operator()(T a)
+        __device__ __forceinline__ T operator()(T a)
         {
             return max(a, s);
         }
@@ -439,7 +439,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMaxOp(float s_) : s(s_) {}
 
-        __device__ float operator()(float a)
+        __device__ __forceinline__ float operator()(float a)
         {
             return fmax(a, s);
         }
@@ -450,7 +450,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         explicit ScalarMaxOp(double s_) : s(s_) {}
 
-        __device__ double operator()(double a)
+        __device__ __forceinline__ double operator()(double a)
         {
             return fmax(a, s);
         }
@@ -524,7 +524,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         ThreshBinary(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
 
-        __device__ T operator()(const T& src) const
+        __device__ __forceinline__ T operator()(const T& src) const
         {
             return src > thresh ? maxVal : 0;
         }
@@ -538,7 +538,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         ThreshBinaryInv(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
 
-        __device__ T operator()(const T& src) const
+        __device__ __forceinline__ T operator()(const T& src) const
         {
             return src > thresh ? 0 : maxVal;
         }
@@ -552,7 +552,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         ThreshTrunc(T thresh_, T) : thresh(thresh_) {}
 
-        __device__ T operator()(const T& src) const
+        __device__ __forceinline__ T operator()(const T& src) const
         {
             return min(src, thresh);
         }
@@ -564,7 +564,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         ThreshTrunc(float thresh_, float) : thresh(thresh_) {}
 
-        __device__ float operator()(const float& src) const
+        __device__ __forceinline__ float operator()(const float& src) const
         {
             return fmin(src, thresh);
         }
@@ -576,7 +576,7 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         ThreshTrunc(double thresh_, double) : thresh(thresh_) {}
 
-        __device__ double operator()(const double& src) const
+        __device__ __forceinline__ double operator()(const double& src) const
         {
             return fmin(src, thresh);
         }
@@ -590,7 +590,7 @@ namespace cv { namespace gpu { namespace mathfunc
     public:
         ThreshToZero(T thresh_, T) : thresh(thresh_) {}
 
-        __device__ T operator()(const T& src) const
+        __device__ __forceinline__ T operator()(const T& src) const
         {
             return src > thresh ? src : 0;
         }
@@ -604,7 +604,7 @@ namespace cv { namespace gpu { namespace mathfunc
     public:
         ThreshToZeroInv(T thresh_, T) : thresh(thresh_) {}
 
-        __device__ T operator()(const T& src) const
+        __device__ __forceinline__ T operator()(const T& src) const
         {
             return src > thresh ? 0 : src;
         }

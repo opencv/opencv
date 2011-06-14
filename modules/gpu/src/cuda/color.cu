@@ -59,38 +59,38 @@ namespace cv { namespace gpu { namespace color
     template<> struct ColorChannel<uchar>
     {
         typedef float worktype_f;
-        static __device__ uchar max() { return UCHAR_MAX; }
-        static __device__ uchar half() { return (uchar)(max()/2 + 1); }
+        static __device__ __forceinline__ uchar max() { return UCHAR_MAX; }
+        static __device__ __forceinline__ uchar half() { return (uchar)(max()/2 + 1); }
     };
     template<> struct ColorChannel<ushort>
     {
         typedef float worktype_f;
-        static __device__ ushort max() { return USHRT_MAX; }
-        static __device__ ushort half() { return (ushort)(max()/2 + 1); }
+        static __device__ __forceinline__ ushort max() { return USHRT_MAX; }
+        static __device__ __forceinline__ ushort half() { return (ushort)(max()/2 + 1); }
     };
     template<> struct ColorChannel<float>
     {
         typedef float worktype_f;
-        static __device__ float max() { return 1.f; }
-        static __device__ float half() { return 0.5f; }
+        static __device__ __forceinline__ float max() { return 1.f; }
+        static __device__ __forceinline__ float half() { return 0.5f; }
     };
 
     template <typename T>
-    __device__ void setAlpha(typename TypeVec<T, 3>::vec_t& vec, T val)
+    __device__ __forceinline__ void setAlpha(typename TypeVec<T, 3>::vec_t& vec, T val)
     {
     }
     template <typename T>
-    __device__ void setAlpha(typename TypeVec<T, 4>::vec_t& vec, T val)
+    __device__ __forceinline__ void setAlpha(typename TypeVec<T, 4>::vec_t& vec, T val)
     {
         vec.w = val;
     }
     template <typename T>
-    __device__ T getAlpha(const typename TypeVec<T, 3>::vec_t& vec)
+    __device__ __forceinline__ T getAlpha(const typename TypeVec<T, 3>::vec_t& vec)
     {
         return ColorChannel<T>::max();
     }
     template <typename T>
-    __device__ T getAlpha(const typename TypeVec<T, 4>::vec_t& vec)
+    __device__ __forceinline__ T getAlpha(const typename TypeVec<T, 4>::vec_t& vec)
     {
         return vec.w;
     }
@@ -114,7 +114,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2RGB(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
 
@@ -179,7 +179,7 @@ namespace cv { namespace gpu { namespace color
     template <> struct RGB5x52RGBConverter<5>
     {
         template <typename D>
-        static __device__ void cvt(uint src, D& dst, int bidx)
+        static __device__ __forceinline__ void cvt(uint src, D& dst, int bidx)
         {            
             (&dst.x)[bidx] = (uchar)(src << 3);
             dst.y = (uchar)((src >> 2) & ~7);
@@ -190,7 +190,7 @@ namespace cv { namespace gpu { namespace color
     template <> struct RGB5x52RGBConverter<6>
     {
         template <typename D>
-        static __device__ void cvt(uint src, D& dst, int bidx)
+        static __device__ __forceinline__ void cvt(uint src, D& dst, int bidx)
         {            
             (&dst.x)[bidx] = (uchar)(src << 3);
             dst.y = (uchar)((src >> 3) & ~3);
@@ -206,7 +206,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB5x52RGB(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(ushort src) const
+        __device__ __forceinline__ dst_t operator()(ushort src) const
         {
             dst_t dst;
             RGB5x52RGBConverter<GREEN_BITS>::cvt((uint)src, dst, bidx);
@@ -221,18 +221,18 @@ namespace cv { namespace gpu { namespace color
     template<> struct RGB2RGB5x5Converter<6> 
     {
         template <typename T>
-        static __device__ ushort cvt(const T& src, int bidx)
+        static __device__ __forceinline__ ushort cvt(const T& src, int bidx)
         {
             return (ushort)(((&src.x)[bidx] >> 3) | ((src.y & ~3) << 3) | (((&src.x)[bidx^2] & ~7) << 8));
         }
     };
     template<> struct RGB2RGB5x5Converter<5> 
     {
-        static __device__ ushort cvt(const uchar3& src, int bidx)
+        static __device__ __forceinline__ ushort cvt(const uchar3& src, int bidx)
         {
             return (ushort)(((&src.x)[bidx] >> 3) | ((src.y & ~7) << 2) | (((&src.x)[bidx^2] & ~7) << 7));
         }
-        static __device__ ushort cvt(const uchar4& src, int bidx)
+        static __device__ __forceinline__ ushort cvt(const uchar4& src, int bidx)
         {
             return (ushort)(((&src.x)[bidx] >> 3) | ((src.y & ~7) << 2) | (((&src.x)[bidx^2] & ~7) << 7) | (src.w ? 0x8000 : 0));
         }
@@ -245,7 +245,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2RGB5x5(int bidx) : bidx(bidx) {}
 
-        __device__ ushort operator()(const src_t& src)
+        __device__ __forceinline__ ushort operator()(const src_t& src)
         {
             return RGB2RGB5x5Converter<GREEN_BITS>::cvt(src, bidx);
         }
@@ -299,7 +299,7 @@ namespace cv { namespace gpu { namespace color
         typedef T src_t;
         typedef typename TypeVec<T, DSTCN>::vec_t dst_t;
 
-        __device__ dst_t operator()(const T& src) const
+        __device__ __forceinline__ dst_t operator()(const T& src) const
         {
             dst_t dst;
 
@@ -313,14 +313,14 @@ namespace cv { namespace gpu { namespace color
     template <int GREEN_BITS> struct Gray2RGB5x5Converter;
     template<> struct Gray2RGB5x5Converter<6> 
     {
-        static __device__ ushort cvt(uint t)
+        static __device__ __forceinline__ ushort cvt(uint t)
         {
             return (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
         }
     };
     template<> struct Gray2RGB5x5Converter<5> 
     {
-        static __device__ ushort cvt(uint t)
+        static __device__ __forceinline__ ushort cvt(uint t)
         {
             t >>= 3;
             return (ushort)(t | (t << 5) | (t << 10));
@@ -332,7 +332,7 @@ namespace cv { namespace gpu { namespace color
         typedef uchar src_t;
         typedef ushort dst_t;
 
-        __device__ ushort operator()(uchar src) const
+        __device__ __forceinline__ ushort operator()(uchar src) const
         {
             return Gray2RGB5x5Converter<GREEN_BITS>::cvt((uint)src);
         }
@@ -406,14 +406,14 @@ namespace cv { namespace gpu { namespace color
     template <int GREEN_BITS> struct RGB5x52GrayConverter;
     template<> struct RGB5x52GrayConverter<6> 
     {
-        static __device__ uchar cvt(uint t)
+        static __device__ __forceinline__ uchar cvt(uint t)
         {
             return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 3) & 0xfc) * G2Y + ((t >> 8) & 0xf8) * R2Y, yuv_shift);
         }
     };
     template<> struct RGB5x52GrayConverter<5> 
     {
-        static __device__ uchar cvt(uint t)
+        static __device__ __forceinline__ uchar cvt(uint t)
         {
             return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 2) & 0xf8) * G2Y + ((t >> 7) & 0xf8) * R2Y, yuv_shift);
         }
@@ -424,18 +424,18 @@ namespace cv { namespace gpu { namespace color
         typedef ushort src_t;
         typedef uchar dst_t;
 
-        __device__ uchar operator()(ushort src) const
+        __device__ __forceinline__ uchar operator()(ushort src) const
         {
             return RGB5x52GrayConverter<GREEN_BITS>::cvt((uint)src);
         }
     };
 
     template <typename T>
-    __device__ T RGB2GrayConvert(const T* src, int bidx)
+    __device__ __forceinline__ T RGB2GrayConvert(const T* src, int bidx)
     {
         return (T)CV_DESCALE((unsigned)(src[bidx] * B2Y + src[1] * G2Y + src[bidx^2] * R2Y), yuv_shift);
     }
-     __device__ float RGB2GrayConvert(const float* src, int bidx)
+     __device__ __forceinline__ float RGB2GrayConvert(const float* src, int bidx)
     {
         const float cr = 0.299f;
         const float cg = 0.587f;
@@ -451,7 +451,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2Gray(int bidx) : bidx(bidx) {}
 
-        __device__ T operator()(const src_t& src)
+        __device__ __forceinline__ T operator()(const src_t& src)
         {
             return RGB2GrayConvert(&src.x, bidx);
         }
@@ -515,7 +515,7 @@ namespace cv { namespace gpu { namespace color
     __constant__ float cYCrCbCoeffs_f[5];
     
     template <typename T, typename D>
-    __device__ void RGB2YCrCbConvert(const T* src, D& dst, int bidx)
+    __device__ __forceinline__ void RGB2YCrCbConvert(const T* src, D& dst, int bidx)
     {
         const int delta = ColorChannel<T>::half() * (1 << yuv_shift);
 
@@ -528,7 +528,7 @@ namespace cv { namespace gpu { namespace color
         dst.z = saturate_cast<T>(Cb);
     }
     template <typename D>
-    static __device__ void RGB2YCrCbConvert(const float* src, D& dst, int bidx)
+    static __device__ __forceinline__ void RGB2YCrCbConvert(const float* src, D& dst, int bidx)
     {
         dst.x = src[0] * cYCrCbCoeffs_f[0] + src[1] * cYCrCbCoeffs_f[1] + src[2] * cYCrCbCoeffs_f[2];
         dst.y = (src[bidx^2] - dst.x) * cYCrCbCoeffs_f[3] + ColorChannel<float>::half();
@@ -561,7 +561,7 @@ namespace cv { namespace gpu { namespace color
 
         RGB2YCrCb(int bidx, const coeff_t coeffs[5]) : RGB2YCrCbBase<T>(coeffs), bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             RGB2YCrCbConvert(&src.x, dst, bidx);
@@ -573,7 +573,7 @@ namespace cv { namespace gpu { namespace color
     };
     
     template <typename T, typename D>
-    __device__ void YCrCb2RGBConvert(const T& src, D* dst, int bidx)
+    __device__ __forceinline__ void YCrCb2RGBConvert(const T& src, D* dst, int bidx)
     {
         const int b = src.x + CV_DESCALE((src.z - ColorChannel<D>::half()) * cYCrCbCoeffs_i[3], yuv_shift);
         const int g = src.x + CV_DESCALE((src.z - ColorChannel<D>::half()) * cYCrCbCoeffs_i[2] + (src.y - ColorChannel<D>::half()) * cYCrCbCoeffs_i[1], yuv_shift);
@@ -584,7 +584,7 @@ namespace cv { namespace gpu { namespace color
         dst[bidx^2] = saturate_cast<D>(r);
     }
     template <typename T>
-    __device__ void YCrCb2RGBConvert(const T& src, float* dst, int bidx)
+    __device__ __forceinline__ void YCrCb2RGBConvert(const T& src, float* dst, int bidx)
     {
         dst[bidx] = src.x + (src.z - ColorChannel<float>::half()) * cYCrCbCoeffs_f[3];
         dst[1] = src.x + (src.z - ColorChannel<float>::half()) * cYCrCbCoeffs_f[2] + (src.y - ColorChannel<float>::half()) * cYCrCbCoeffs_f[1];
@@ -617,7 +617,7 @@ namespace cv { namespace gpu { namespace color
 
         YCrCb2RGB(int bidx, const coeff_t coeffs[4]) : YCrCb2RGBBase<T>(coeffs), bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
 
@@ -725,14 +725,14 @@ namespace cv { namespace gpu { namespace color
     __constant__ float cXYZ_D65f[9];
 
     template <typename T, typename D>
-    __device__ void RGB2XYZConvert(const T* src, D& dst)
+    __device__ __forceinline__ void RGB2XYZConvert(const T* src, D& dst)
     {
         dst.x = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[0] + src[1] * cXYZ_D65i[1] + src[2] * cXYZ_D65i[2], xyz_shift));
         dst.y = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[3] + src[1] * cXYZ_D65i[4] + src[2] * cXYZ_D65i[5], xyz_shift));
         dst.z = saturate_cast<T>(CV_DESCALE(src[0] * cXYZ_D65i[6] + src[1] * cXYZ_D65i[7] + src[2] * cXYZ_D65i[8], xyz_shift));
     }
     template <typename D>
-    __device__ void RGB2XYZConvert(const float* src, D& dst)
+    __device__ __forceinline__ void RGB2XYZConvert(const float* src, D& dst)
     {
         dst.x = src[0] * cXYZ_D65f[0] + src[1] * cXYZ_D65f[1] + src[2] * cXYZ_D65f[2];
         dst.y = src[0] * cXYZ_D65f[3] + src[1] * cXYZ_D65f[4] + src[2] * cXYZ_D65f[5];
@@ -765,7 +765,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2XYZ(const coeff_t coeffs[9]) : RGB2XYZBase<T>(coeffs) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             RGB2XYZConvert(&src.x, dst);
@@ -774,14 +774,14 @@ namespace cv { namespace gpu { namespace color
     };
 
     template <typename T, typename D>
-    __device__ void XYZ2RGBConvert(const T& src, D* dst)
+    __device__ __forceinline__ void XYZ2RGBConvert(const T& src, D* dst)
     {
         dst[0] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[0] + src.y * cXYZ_D65i[1] + src.z * cXYZ_D65i[2], xyz_shift));
 	    dst[1] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[3] + src.y * cXYZ_D65i[4] + src.z * cXYZ_D65i[5], xyz_shift));
 	    dst[2] = saturate_cast<D>(CV_DESCALE(src.x * cXYZ_D65i[6] + src.y * cXYZ_D65i[7] + src.z * cXYZ_D65i[8], xyz_shift));
     }
     template <typename T>
-    __device__ void XYZ2RGBConvert(const T& src, float* dst)
+    __device__ __forceinline__ void XYZ2RGBConvert(const T& src, float* dst)
     {
         dst[0] = src.x * cXYZ_D65f[0] + src.y * cXYZ_D65f[1] + src.z * cXYZ_D65f[2];
 	    dst[1] = src.x * cXYZ_D65f[3] + src.y * cXYZ_D65f[4] + src.z * cXYZ_D65f[5];
@@ -814,7 +814,7 @@ namespace cv { namespace gpu { namespace color
         
         explicit XYZ2RGB(const coeff_t coeffs[9]) : XYZ2RGBBase<T>(coeffs) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             XYZ2RGBConvert(src, &dst.x);
@@ -987,7 +987,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2HSV(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             RGB2HSVConvert<HR>(&src.x, dst, bidx);
@@ -1062,7 +1062,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit HSV2RGB(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             HSV2RGBConvert<HR>(src, &dst.x, bidx);
@@ -1214,7 +1214,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit RGB2HLS(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             RGB2HLSConvert<HR>(&src.x, dst, bidx);
@@ -1295,7 +1295,7 @@ namespace cv { namespace gpu { namespace color
 
         explicit HLS2RGB(int bidx) : bidx(bidx) {}
 
-        __device__ dst_t operator()(const src_t& src) const
+        __device__ __forceinline__ dst_t operator()(const src_t& src) const
         {
             dst_t dst;
             HLS2RGBConvert<HR>(src, &dst.x, bidx);

@@ -76,11 +76,11 @@ namespace cv { namespace gpu { namespace bp
     template <int cn> struct PixDiff;
     template <> struct PixDiff<1>
     {
-        __device__ PixDiff(const uchar* ls)
+        __device__ __forceinline__ PixDiff(const uchar* ls)
         {
             l = *ls;
         }
-        __device__ float operator()(const uchar* rs) const
+        __device__ __forceinline__ float operator()(const uchar* rs) const
         {
             return abs((int)l - *rs);
         }
@@ -88,11 +88,11 @@ namespace cv { namespace gpu { namespace bp
     };
     template <> struct PixDiff<3>
     {
-        __device__ PixDiff(const uchar* ls)
+        __device__ __forceinline__ PixDiff(const uchar* ls)
         {
             l = *((uchar3*)ls);
         }
-        __device__ float operator()(const uchar* rs) const
+        __device__ __forceinline__ float operator()(const uchar* rs) const
         {
             const float tr = 0.299f;
             const float tg = 0.587f;
@@ -108,11 +108,11 @@ namespace cv { namespace gpu { namespace bp
     };
     template <> struct PixDiff<4>
     {
-        __device__ PixDiff(const uchar* ls)
+        __device__ __forceinline__ PixDiff(const uchar* ls)
         {
             l = *((uchar4*)ls);
         }
-        __device__ float operator()(const uchar* rs) const
+        __device__ __forceinline__ float operator()(const uchar* rs) const
         {
             const float tr = 0.299f;
             const float tg = 0.587f;

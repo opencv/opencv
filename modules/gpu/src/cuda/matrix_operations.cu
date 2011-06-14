@@ -123,14 +123,14 @@ namespace cv { namespace gpu { namespace matrix_operations {
     __constant__ float scalar_32f[4]; 
     __constant__ double scalar_64f[4];
 
-    template <typename T> __device__ T readScalar(int i);
-    template <> __device__ uchar readScalar<uchar>(int i) {return scalar_8u[i];}
-    template <> __device__ schar readScalar<schar>(int i) {return scalar_8s[i];}
-    template <> __device__ ushort readScalar<ushort>(int i) {return scalar_16u[i];}
-    template <> __device__ short readScalar<short>(int i) {return scalar_16s[i];}
-    template <> __device__ int readScalar<int>(int i) {return scalar_32s[i];}
-    template <> __device__ float readScalar<float>(int i) {return scalar_32f[i];}
-    template <> __device__ double readScalar<double>(int i) {return scalar_64f[i];}
+    template <typename T> __device__ __forceinline__ T readScalar(int i);
+    template <> __device__ __forceinline__ uchar readScalar<uchar>(int i) {return scalar_8u[i];}
+    template <> __device__ __forceinline__ schar readScalar<schar>(int i) {return scalar_8s[i];}
+    template <> __device__ __forceinline__ ushort readScalar<ushort>(int i) {return scalar_16u[i];}
+    template <> __device__ __forceinline__ short readScalar<short>(int i) {return scalar_16s[i];}
+    template <> __device__ __forceinline__ int readScalar<int>(int i) {return scalar_32s[i];}
+    template <> __device__ __forceinline__ float readScalar<float>(int i) {return scalar_32f[i];}
+    template <> __device__ __forceinline__ double readScalar<double>(int i) {return scalar_64f[i];}
 
     void writeScalar(const uchar* vals)
     {
@@ -243,7 +243,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     public:
         Convertor(double alpha_, double beta_) : alpha(alpha_), beta(beta_) {}
 
-        __device__ D operator()(const T& src)
+        __device__ __forceinline__ D operator()(const T& src)
         {
             return saturate_cast<D>(alpha * src + beta);
         }

@@ -40,181 +40,179 @@
 //
 //M*/
 
+#ifndef __OPENCV_GPU_LIMITS_GPU_HPP__
+#define __OPENCV_GPU_LIMITS_GPU_HPP__
 
-namespace cv
-{
-    namespace gpu
-    {
-        namespace device
-        {     
-            template<class T> struct numeric_limits_gpu
-            {	        
-                typedef T type;
-                __device__ static type min()  { return type(); };            
-                __device__ static type max() { return type(); };
-                __device__ static type epsilon() { return type(); }
-                __device__ static type round_error() { return type(); }
-                __device__ static type denorm_min()  { return type(); }
-                __device__ static type infinity() { return type(); }
-                __device__ static type quiet_NaN() { return type(); }
-                __device__ static type signaling_NaN() { return T(); }
-                static const bool is_signed;
-            };
+namespace cv { namespace gpu { namespace device
+{     
+    template<class T> struct numeric_limits_gpu
+    {	        
+        typedef T type;
+        __device__ __forceinline__ static type min()  { return type(); };            
+        __device__ __forceinline__ static type max() { return type(); };
+        __device__ __forceinline__ static type epsilon() { return type(); }
+        __device__ __forceinline__ static type round_error() { return type(); }
+        __device__ __forceinline__ static type denorm_min()  { return type(); }
+        __device__ __forceinline__ static type infinity() { return type(); }
+        __device__ __forceinline__ static type quiet_NaN() { return type(); }
+        __device__ __forceinline__ static type signaling_NaN() { return T(); }
+        static const bool is_signed;
+    };
 
-            template<> struct numeric_limits_gpu<bool>
-            {	        
-                typedef bool type;
-                __device__ static type min() { return false; };            
-                __device__ static type max() { return true;  };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = false;
-            };
+    template<> struct numeric_limits_gpu<bool>
+    {	        
+        typedef bool type;
+        __device__ __forceinline__ static type min() { return false; };            
+        __device__ __forceinline__ static type max() { return true;  };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = false;
+    };
 
-            template<> struct numeric_limits_gpu<char>
-            {	        
-                typedef char type;
-                __device__ static type min() { return CHAR_MIN; };            
-                __device__ static type max() { return CHAR_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = (char)-1 == -1;
-            };
+    template<> struct numeric_limits_gpu<char>
+    {	        
+        typedef char type;
+        __device__ __forceinline__ static type min() { return CHAR_MIN; };            
+        __device__ __forceinline__ static type max() { return CHAR_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = (char)-1 == -1;
+    };
 
-            template<> struct numeric_limits_gpu<unsigned char>
-            {	        
-                typedef unsigned char type;
-                __device__ static type min() { return 0; };            
-                __device__ static type max() { return UCHAR_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = false;
-            };
+    template<> struct numeric_limits_gpu<unsigned char>
+    {	        
+        typedef unsigned char type;
+        __device__ __forceinline__ static type min() { return 0; };            
+        __device__ __forceinline__ static type max() { return UCHAR_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = false;
+    };
 
-            template<> struct numeric_limits_gpu<short>
-            {	
-                typedef short type;
-                __device__ static type min() { return SHRT_MIN; };            
-                __device__ static type max() { return SHRT_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = true;
-            };
+    template<> struct numeric_limits_gpu<short>
+    {	
+        typedef short type;
+        __device__ __forceinline__ static type min() { return SHRT_MIN; };            
+        __device__ __forceinline__ static type max() { return SHRT_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = true;
+    };
 
-            template<> struct numeric_limits_gpu<unsigned short>
-            {	        
-                typedef unsigned short type;
-                __device__ static type min() { return 0; };            
-                __device__ static type max() { return USHRT_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = false;
-            };
+    template<> struct numeric_limits_gpu<unsigned short>
+    {	        
+        typedef unsigned short type;
+        __device__ __forceinline__ static type min() { return 0; };            
+        __device__ __forceinline__ static type max() { return USHRT_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = false;
+    };
 
-            template<> struct numeric_limits_gpu<int>
-            {	  
-                typedef int type;
-                __device__ static type min() { return INT_MIN; };            
-                __device__ static type max() { return INT_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = true;
-            };
+    template<> struct numeric_limits_gpu<int>
+    {	  
+        typedef int type;
+        __device__ __forceinline__ static type min() { return INT_MIN; };            
+        __device__ __forceinline__ static type max() { return INT_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = true;
+    };
 
 
-            template<> struct numeric_limits_gpu<unsigned int>
-            {	        
-                typedef unsigned int type;
-                __device__ static type min() { return 0; };            
-                __device__ static type max() { return UINT_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = false;
-            };
+    template<> struct numeric_limits_gpu<unsigned int>
+    {	        
+        typedef unsigned int type;
+        __device__ __forceinline__ static type min() { return 0; };            
+        __device__ __forceinline__ static type max() { return UINT_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = false;
+    };
 
-            template<> struct numeric_limits_gpu<long>
-            {	        
-                typedef long type;
-                __device__ static type min() { return LONG_MIN; };            
-                __device__ static type max() { return LONG_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = true;
-            };
+    template<> struct numeric_limits_gpu<long>
+    {	        
+        typedef long type;
+        __device__ __forceinline__ static type min() { return LONG_MIN; };            
+        __device__ __forceinline__ static type max() { return LONG_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = true;
+    };
 
-            template<> struct numeric_limits_gpu<unsigned long>
-            {	        
-                typedef unsigned long type;
-                __device__ static type min() { return 0; };            
-                __device__ static type max() { return ULONG_MAX; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = false;
-            };
-                        
-            template<> struct numeric_limits_gpu<float>
-            {	        
-                typedef float type;
-                __device__ static type min() { return 1.175494351e-38f/*FLT_MIN*/; };            
-                __device__ static type max() { return 3.402823466e+38f/*FLT_MAX*/; };
-                __device__ static type epsilon() { return 1.192092896e-07f/*FLT_EPSILON*/; };
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = true;
-            };
+    template<> struct numeric_limits_gpu<unsigned long>
+    {	        
+        typedef unsigned long type;
+        __device__ __forceinline__ static type min() { return 0; };            
+        __device__ __forceinline__ static type max() { return ULONG_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = false;
+    };
+                
+    template<> struct numeric_limits_gpu<float>
+    {	        
+        typedef float type;
+        __device__ __forceinline__ static type min() { return 1.175494351e-38f/*FLT_MIN*/; };            
+        __device__ __forceinline__ static type max() { return 3.402823466e+38f/*FLT_MAX*/; };
+        __device__ __forceinline__ static type epsilon() { return 1.192092896e-07f/*FLT_EPSILON*/; };
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = true;
+    };
 
-            template<> struct numeric_limits_gpu<double>
-            {	        
-                typedef double type;
-                __device__ static type min() { return 2.2250738585072014e-308/*DBL_MIN*/; };            
-                __device__ static type max() { return 1.7976931348623158e+308/*DBL_MAX*/; };
-                __device__ static type epsilon();
-                __device__ static type round_error();
-                __device__ static type denorm_min();
-                __device__ static type infinity();
-                __device__ static type quiet_NaN();
-                __device__ static type signaling_NaN();
-                static const bool is_signed = true;
-            };            
-        }
-    }
-}
+    template<> struct numeric_limits_gpu<double>
+    {	        
+        typedef double type;
+        __device__ __forceinline__ static type min() { return 2.2250738585072014e-308/*DBL_MIN*/; };            
+        __device__ __forceinline__ static type max() { return 1.7976931348623158e+308/*DBL_MAX*/; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = true;
+    };            
+}}}
+
+#endif // __OPENCV_GPU_LIMITS_GPU_HPP__

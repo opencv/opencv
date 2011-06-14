@@ -68,7 +68,7 @@ __constant__ size_t cminSSD_step;
 __constant__ int cwidth;
 __constant__ int cheight;
 
-__device__ int SQ(int a)
+__device__ __forceinline__ int SQ(int a)
 {
     return a * a;
 }
@@ -419,7 +419,7 @@ extern "C" void prefilter_xsobel(const DevMem2D& input, const DevMem2D& output, 
 
 texture<unsigned char, 2, cudaReadModeNormalizedFloat> texForTF;
 
-__device__ float sobel(int x, int y)
+__device__ __forceinline__ float sobel(int x, int y)
 {
     float conv = tex2D(texForTF, x - 1, y - 1) * (-1) + tex2D(texForTF, x + 1, y - 1) * (1) +
                  tex2D(texForTF, x - 1, y    ) * (-2) + tex2D(texForTF, x + 1, y    ) * (2) +

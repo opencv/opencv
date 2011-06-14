@@ -60,27 +60,27 @@ namespace cv { namespace gpu { namespace mathfunc
 {
     struct Nothing
     {
-        static __device__ void calc(int, int, float, float, float*, size_t, float)
+        static __device__ __forceinline__ void calc(int, int, float, float, float*, size_t, float)
         {
         }
     };
     struct Magnitude
     {
-        static __device__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
+        static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
         {
             dst[y * dst_step + x] = sqrtf(x_data * x_data + y_data * y_data);
         }
     };
     struct MagnitudeSqr
     {
-        static __device__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
+        static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float)
         {
             dst[y * dst_step + x] = x_data * x_data + y_data * y_data;
         }
     };
     struct Atan2
     {
-        static __device__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
+        static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
         {
             dst[y * dst_step + x] = scale * atan2f(y_data, x_data);
         }
@@ -104,14 +104,14 @@ namespace cv { namespace gpu { namespace mathfunc
 
     struct NonEmptyMag
     {
-        static __device__ float get(const float* mag, size_t mag_step, int x, int y)
+        static __device__ __forceinline__ float get(const float* mag, size_t mag_step, int x, int y)
         {
             return mag[y * mag_step + x];
         }
     };
     struct EmptyMag
     {
-        static __device__ float get(const float*, size_t, int, int)
+        static __device__ __forceinline__ float get(const float*, size_t, int, int)
         {
             return 1.0f;
         }

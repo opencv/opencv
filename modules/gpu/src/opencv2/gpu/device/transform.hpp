@@ -55,7 +55,7 @@ namespace cv { namespace gpu { namespace device
     public:
         explicit MaskReader(const PtrStep& mask_): mask(mask_) {}
 
-        __device__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
+        __device__ __forceinline__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
 
     private:
         PtrStep mask;
@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace device
 
     struct NoMask 
     {
-        __device__ bool operator()(int y, int x) const { return true; } 
+        __device__ __forceinline__ bool operator()(int y, int x) const { return true; } 
     };
 
     //! Read Write Traits
@@ -121,14 +121,14 @@ namespace cv { namespace gpu { namespace device
     template <> struct OpUnroller<1>
     {
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __device__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src.x);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __device__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src1.x, src2.x);
@@ -137,7 +137,7 @@ namespace cv { namespace gpu { namespace device
     template <> struct OpUnroller<2>
     {
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __device__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src.x);
@@ -146,7 +146,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __device__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src1.x, src2.x);
@@ -157,7 +157,7 @@ namespace cv { namespace gpu { namespace device
     template <> struct OpUnroller<3>
     {
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __device__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src.x);
@@ -168,7 +168,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __device__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src1.x, src2.x);
@@ -181,7 +181,7 @@ namespace cv { namespace gpu { namespace device
     template <> struct OpUnroller<4>
     {
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __device__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src.x);
@@ -194,7 +194,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __device__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+        static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
         {
             if (mask(y, x_shifted))
                 dst.x = op(src1.x, src2.x);

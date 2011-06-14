@@ -48,35 +48,35 @@ using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace imgproc {
 
-__device__ float sum(float v) { return v; }
-__device__ float sum(float2 v) { return v.x + v.y; }
-__device__ float sum(float3 v) { return v.x + v.y + v.z; }
-__device__ float sum(float4 v) { return v.x + v.y + v.z + v.w; }
+__device__ __forceinline__ float sum(float v) { return v; }
+__device__ __forceinline__ float sum(float2 v) { return v.x + v.y; }
+__device__ __forceinline__ float sum(float3 v) { return v.x + v.y + v.z; }
+__device__ __forceinline__ float sum(float4 v) { return v.x + v.y + v.z + v.w; }
 
-__device__ float first(float v) { return v; }
-__device__ float first(float2 v) { return v.x; }
-__device__ float first(float3 v) { return v.x; }
-__device__ float first(float4 v) { return v.x; }
+__device__ __forceinline__ float first(float v) { return v; }
+__device__ __forceinline__ float first(float2 v) { return v.x; }
+__device__ __forceinline__ float first(float3 v) { return v.x; }
+__device__ __forceinline__ float first(float4 v) { return v.x; }
 
-__device__ float mul(float a, float b) { return a * b; }
-__device__ float2 mul(float2 a, float2 b) { return make_float2(a.x * b.x, a.y * b.y); }
-__device__ float3 mul(float3 a, float3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
-__device__ float4 mul(float4 a, float4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
+__device__ __forceinline__ float mul(float a, float b) { return a * b; }
+__device__ __forceinline__ float2 mul(float2 a, float2 b) { return make_float2(a.x * b.x, a.y * b.y); }
+__device__ __forceinline__ float3 mul(float3 a, float3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
+__device__ __forceinline__ float4 mul(float4 a, float4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
 
-__device__ float mul(uchar a, uchar b) { return a * b; }
-__device__ float2 mul(uchar2 a, uchar2 b) { return make_float2(a.x * b.x, a.y * b.y); }
-__device__ float3 mul(uchar3 a, uchar3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
-__device__ float4 mul(uchar4 a, uchar4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
+__device__ __forceinline__ float mul(uchar a, uchar b) { return a * b; }
+__device__ __forceinline__ float2 mul(uchar2 a, uchar2 b) { return make_float2(a.x * b.x, a.y * b.y); }
+__device__ __forceinline__ float3 mul(uchar3 a, uchar3 b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); }
+__device__ __forceinline__ float4 mul(uchar4 a, uchar4 b) { return make_float4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
 
-__device__ float sub(float a, float b) { return a - b; }
-__device__ float2 sub(float2 a, float2 b) { return make_float2(a.x - b.x, a.y - b.y); }
-__device__ float3 sub(float3 a, float3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
-__device__ float4 sub(float4 a, float4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
+__device__ __forceinline__ float sub(float a, float b) { return a - b; }
+__device__ __forceinline__ float2 sub(float2 a, float2 b) { return make_float2(a.x - b.x, a.y - b.y); }
+__device__ __forceinline__ float3 sub(float3 a, float3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
+__device__ __forceinline__ float4 sub(float4 a, float4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
 
-__device__ float sub(uchar a, uchar b) { return a - b; }
-__device__ float2 sub(uchar2 a, uchar2 b) { return make_float2(a.x - b.x, a.y - b.y); }
-__device__ float3 sub(uchar3 a, uchar3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
-__device__ float4 sub(uchar4 a, uchar4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
+__device__ __forceinline__ float sub(uchar a, uchar b) { return a - b; }
+__device__ __forceinline__ float2 sub(uchar2 a, uchar2 b) { return make_float2(a.x - b.x, a.y - b.y); }
+__device__ __forceinline__ float3 sub(uchar3 a, uchar3 b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); }
+__device__ __forceinline__ float4 sub(uchar4 a, uchar4 b) { return make_float4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
 
 
 template <typename T, int cn>

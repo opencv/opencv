@@ -40,208 +40,207 @@
 //
 //M*/
 
+#ifndef __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+#define __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vecmath.hpp"
 
-namespace cv 
-{ 
-    namespace gpu 
+namespace cv { namespace gpu { namespace device
+{
+    struct BrdReflect101 
     {
-        namespace device
+        explicit BrdReflect101(int len): last(len - 1) {}
+
+        __device__ __forceinline__ int idx_low(int i) const
         {
-            struct BrdReflect101 
-            {
-                explicit BrdReflect101(int len): last(len - 1) {}
-
-                __device__ int idx_low(int i) const
-                {
-                    return abs(i);
-                }
-
-                __device__ int idx_high(int i) const 
-                {
-                    return last - abs(last - i);
-                }
-
-                __device__ int idx(int i) const
-                {
-                    return idx_low(idx_high(i));
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return -last <= mini && maxi <= 2 * last;
-                }
-
-            private:
-                int last;
-            };
-
-
-            template <typename D>
-            struct BrdRowReflect101: BrdReflect101
-            {
-                explicit BrdRowReflect101(int len): BrdReflect101(len) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i)]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i)]);
-                }
-            };
-
-
-            template <typename D>
-            struct BrdColReflect101: BrdReflect101
-            {
-                BrdColReflect101(int len, int step): BrdReflect101(len), step(step) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i) * step]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i) * step]);
-                }
-
-            private:
-                int step;
-            };
-
-
-            struct BrdReplicate
-            {
-                explicit BrdReplicate(int len): last(len - 1) {}
-
-                __device__ int idx_low(int i) const
-                {
-                    return max(i, 0);
-                }
-
-                __device__ int idx_high(int i) const 
-                {
-                    return min(i, last);
-                }
-
-                __device__ int idx(int i) const
-                {
-                    return idx_low(idx_high(i));
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-            private:
-                int last;
-            };
-
-
-            template <typename D>
-            struct BrdRowReplicate: BrdReplicate
-            {
-                explicit BrdRowReplicate(int len): BrdReplicate(len) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i)]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i)]);
-                }
-            };
-
-
-            template <typename D>
-            struct BrdColReplicate: BrdReplicate
-            {
-                BrdColReplicate(int len, int step): BrdReplicate(len), step(step) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_low(i) * step]);
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return saturate_cast<D>(data[idx_high(i) * step]);
-                }
-
-            private:
-                int step;
-            };
-
-            template <typename D>
-            struct BrdRowConstant
-            {
-                explicit BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return i >= 0 ? saturate_cast<D>(data[i]) : val;
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return i < len ? saturate_cast<D>(data[i]) : val;
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-            private:
-                int len;
-                D val;
-            };
-
-            template <typename D>
-            struct BrdColConstant
-            {
-                BrdColConstant(int len_, int step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
-
-                template <typename T>
-                __device__ D at_low(int i, const T* data) const 
-                {
-                    return i >= 0 ? saturate_cast<D>(data[i * step]) : val;
-                }
-
-                template <typename T>
-                __device__ D at_high(int i, const T* data) const 
-                {
-                    return i < len ? saturate_cast<D>(data[i * step]) : val;
-                }
-
-                bool is_range_safe(int mini, int maxi) const 
-                {
-                    return true;
-                }
-
-            private:
-                int len;
-                int step;
-                D val;
-            };
+            return abs(i);
         }
-    }
-}
+
+        __device__ __forceinline__ int idx_high(int i) const 
+        {
+            return last - abs(last - i);
+        }
+
+        __device__ __forceinline__ int idx(int i) const
+        {
+            return idx_low(idx_high(i));
+        }
+
+        bool is_range_safe(int mini, int maxi) const 
+        {
+            return -last <= mini && maxi <= 2 * last;
+        }
+
+    private:
+        int last;
+    };
+
+
+    template <typename D>
+    struct BrdRowReflect101: BrdReflect101
+    {
+        explicit BrdRowReflect101(int len): BrdReflect101(len) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_low(i)]);
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_high(i)]);
+        }
+    };
+
+
+    template <typename D>
+    struct BrdColReflect101: BrdReflect101
+    {
+        BrdColReflect101(int len, int step): BrdReflect101(len), step(step) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_low(i) * step]);
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_high(i) * step]);
+        }
+
+    private:
+        int step;
+    };
+
+
+    struct BrdReplicate
+    {
+        explicit BrdReplicate(int len): last(len - 1) {}
+
+        __device__ __forceinline__ int idx_low(int i) const
+        {
+            return max(i, 0);
+        }
+
+        __device__ __forceinline__ int idx_high(int i) const 
+        {
+            return min(i, last);
+        }
+
+        __device__ __forceinline__ int idx(int i) const
+        {
+            return idx_low(idx_high(i));
+        }
+
+        bool is_range_safe(int mini, int maxi) const 
+        {
+            return true;
+        }
+
+    private:
+        int last;
+    };
+
+
+    template <typename D>
+    struct BrdRowReplicate: BrdReplicate
+    {
+        explicit BrdRowReplicate(int len): BrdReplicate(len) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_low(i)]);
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_high(i)]);
+        }
+    };
+
+
+    template <typename D>
+    struct BrdColReplicate: BrdReplicate
+    {
+        BrdColReplicate(int len, int step): BrdReplicate(len), step(step) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_low(i) * step]);
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return saturate_cast<D>(data[idx_high(i) * step]);
+        }
+
+    private:
+        int step;
+    };
+
+    template <typename D>
+    struct BrdRowConstant
+    {
+        explicit BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return i >= 0 ? saturate_cast<D>(data[i]) : val;
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return i < len ? saturate_cast<D>(data[i]) : val;
+        }
+
+        bool is_range_safe(int mini, int maxi) const 
+        {
+            return true;
+        }
+
+    private:
+        int len;
+        D val;
+    };
+
+    template <typename D>
+    struct BrdColConstant
+    {
+        BrdColConstant(int len_, int step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
+
+        template <typename T>
+        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        {
+            return i >= 0 ? saturate_cast<D>(data[i * step]) : val;
+        }
+
+        template <typename T>
+        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        {
+            return i < len ? saturate_cast<D>(data[i * step]) : val;
+        }
+
+        bool is_range_safe(int mini, int maxi) const 
+        {
+            return true;
+        }
+
+    private:
+        int len;
+        int step;
+        D val;
+    };
+}}}
+
+#endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

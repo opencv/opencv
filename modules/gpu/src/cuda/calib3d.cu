@@ -56,7 +56,7 @@ namespace cv { namespace gpu
 
         struct TransformOp
         {
-            __device__ float3 operator()(float3 p) const
+            __device__ __forceinline__ float3 operator()(float3 p) const
             {
                 return make_float3(
                         crot0.x * p.x + crot0.y * p.y + crot0.z * p.z + ctransl.x,
@@ -89,7 +89,7 @@ namespace cv { namespace gpu
 
         struct ProjectOp
         {
-            __device__ float2 operator()(float3 p) const
+            __device__ __forceinline__ float2 operator()(float3 p) const
             {
                 // Rotate and translate in 3D
                 float3 t = make_float3(
@@ -128,7 +128,7 @@ namespace cv { namespace gpu
             return SOLVE_PNP_RANSAC_MAX_NUM_ITERS;
         }
 
-        __device__ float sqr(float x)
+        __device__ __forceinline__ float sqr(float x)
         {
             return x * x;
         }

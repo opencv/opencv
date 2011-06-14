@@ -42,6 +42,7 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/datamov_utils.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -60,7 +61,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     public:
         explicit SingleMask(const PtrStep& mask_) : mask(mask_) {}
         
-        __device__ bool operator()(int queryIdx, int trainIdx) const
+        __device__ __forceinline__ bool operator()(int queryIdx, int trainIdx) const
         {            
             return mask.ptr(queryIdx)[trainIdx] != 0;
         }
@@ -74,14 +75,15 @@ namespace cv { namespace gpu { namespace bfmatcher
     public:
         explicit MaskCollection(PtrStep* maskCollection_) : maskCollection(maskCollection_) {}
 
-        __device__ void nextMask()
+        __device__ __forceinline__ void nextMask()
         {
             curMask = *maskCollection++;
         }
         
-        __device__ bool operator()(int queryIdx, int trainIdx) const
-        {            
-            return curMask.data == 0 || curMask.ptr(queryIdx)[trainIdx] != 0;
+        __device__ __forceinline__ bool operator()(int queryIdx, int trainIdx) const
+        {
+            uchar val;
+            return curMask.data == 0 || (ForceGlob<uchar>::Load(curMask.ptr(queryIdx), trainIdx, val), (val != 0));
         }
 
     private:
@@ -92,10 +94,10 @@ namespace cv { namespace gpu { namespace bfmatcher
     class WithOutMask
     {
     public:
-        __device__ void nextMask()
+        __device__ __forceinline__ void nextMask()
         {
         }
-        __device__ bool operator()(int queryIdx, int trainIdx) const
+        __device__ __forceinline__ bool operator()(int queryIdx, int trainIdx) const
         {
             return true;
         }
@@ -132,19 +134,19 @@ namespace cv { namespace gpu { namespace bfmatcher
         typedef int ResultType;
         typedef int ValueType;
 
-        __device__ L1Dist() : mySum(0) {}
+        __device__ __forceinline__ L1Dist() : mySum(0) {}
 
-        __device__ void reduceIter(int val1, int val2)
+        __device__ __forceinline__ void reduceIter(int val1, int val2)
         {
             mySum = __sad(val1, val2, mySum);
         }
 
-        template <int BLOCK_DIM_X> __device__ void reduceAll(int* sdiff_row)
+        template <int BLOCK_DIM_X> __device__ __forceinline__ void reduceAll(int* sdiff_row)
         {
             SumReductor<BLOCK_DIM_X>::reduce(sdiff_row, mySum);
         }
 
-        __device__ operator int() const
+        __device__ __forceinline__ operator int() const
         {
             return mySum;
         }
@@ -158,19 +160,19 @@ namespace cv { namespace gpu { namespace bfmatcher
         typedef float ResultType;
         typedef float ValueType;
 
-        __device__ L1Dist() : mySum(0.0f) {}
+        __device__ __forceinline__ L1Dist() : mySum(0.0f) {}
 
-        __device__ void reduceIter(float val1, float val2)
+        __device__ __forceinline__ void reduceIter(float val1, float val2)
         {
             mySum += fabs(val1 - val2);
         }
 
-        template <int BLOCK_DIM_X> __device__ void reduceAll(float* sdiff_row)
+        template <int BLOCK_DIM_X> __device__ __forceinline__ void reduceAll(float* sdiff_row)
         {
             SumReductor<BLOCK_DIM_X>::reduce(sdiff_row, mySum);
         }
 
-        __device__ operator float() const
+        __device__ __forceinline__ operator float() const
         {
             return mySum;
         }
@@ -185,20 +187,20 @@ namespace cv { namespace gpu { namespace bfmatcher
         typedef float ResultType;
         typedef float ValueType;
 
-        __device__ L2Dist() : mySum(0.0f) {}
+        __device__ __forceinline__ L2Dist() : mySum(0.0f) {}
 
-        __device__ void reduceIter(float val1, float val2)
+        __device__ __forceinline__ void reduceIter(float val1, float val2)
         {
             float reg = val1 - val2;
             mySum += reg * reg;
         }
 
-        template <int BLOCK_DIM_X> __device__ void reduceAll(float* sdiff_row)
+        template <int BLOCK_DIM_X> __device__ __forceinline__ void reduceAll(float* sdiff_row)
         {
             SumReductor<BLOCK_DIM_X>::reduce(sdiff_row, mySum);
         }
 
-        __device__ operator float() const
+        __device__ __forceinline__ operator float() const
         {
             return sqrtf(mySum);
         }
@@ -213,19 +215,19 @@ namespace cv { namespace gpu { namespace bfmatcher
         typedef int ResultType;
         typedef int ValueType;
 
-        __device__ HammingDist() : mySum(0) {}
+        __device__ __forceinline__ HammingDist() : mySum(0) {}
 
-        __device__ void reduceIter(int val1, int val2)
+        __device__ __forceinline__ void reduceIter(int val1, int val2)
         {
             mySum += __popc(val1 ^ val2);
         }
 
-        template <int BLOCK_DIM_X> __device__ void reduceAll(int* sdiff_row)
+        template <int BLOCK_DIM_X> __device__ __forceinline__ void reduceAll(int* sdiff_row)
         {
             SumReductor<BLOCK_DIM_X>::reduce(sdiff_row, mySum);
         }
 
-        __device__ operator int() const
+        __device__ __forceinline__ operator int() const
         {
             return mySum;
         }
@@ -241,7 +243,11 @@ namespace cv { namespace gpu { namespace bfmatcher
     __device__ void reduceDescDiff(const T* queryDescs, const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row)
     {
         for (int i = threadIdx.x; i < desc_len; i += BLOCK_DIM_X)
-            dist.reduceIter(queryDescs[i], trainDescs[i]);
+        {
+            T trainVal;
+            ForceGlob<T>::Load(trainDescs, i, trainVal);
+            dist.reduceIter(queryDescs[i], trainVal);
+        }
 
         dist.reduceAll<BLOCK_DIM_X>(sdiff_row);
     }
@@ -282,7 +288,9 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             if (ind < desc_len)
             {
-                dist.reduceIter(*queryVals, trainDescs[ind]);
+                T trainVal;
+                ForceGlob<T>::Load(trainDescs, ind, trainVal);
+                dist.reduceIter(*queryVals, trainVal);
 
                 ++queryVals;
 
@@ -293,7 +301,9 @@ namespace cv { namespace gpu { namespace bfmatcher
         template <typename Dist, typename T>
         static __device__ void calcWithoutCheck(const typename Dist::ValueType* queryVals, const T* trainDescs, Dist& dist)
         {
-            dist.reduceIter(*queryVals, *trainDescs);
+            T trainVal;
+            ForceGlob<T>::Load(trainDescs, 0, trainVal);
+            dist.reduceIter(*queryVals, trainVal);
 
             ++queryVals;
             trainDescs += blockDim.x;
@@ -304,13 +314,13 @@ namespace cv { namespace gpu { namespace bfmatcher
     template <> struct UnrollDescDiff<0>
     {
         template <typename Dist, typename T>
-        static __device__ void calcCheck(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, 
+        static __device__ __forceinline__ void calcCheck(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, 
             Dist& dist, int ind)
         {
         }
 
         template <typename Dist, typename T>
-        static __device__ void calcWithoutCheck(const typename Dist::ValueType* queryVals, const T* trainDescs, Dist& dist)
+        static __device__ __forceinline__ void calcWithoutCheck(const typename Dist::ValueType* queryVals, const T* trainDescs, Dist& dist)
         {
         }
     };
@@ -320,7 +330,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     struct DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, false>
     {
         template <typename Dist, typename T>
-        static __device__ void calc(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist)
+        static __device__ __forceinline__ void calc(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist)
         {
             UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcCheck(queryVals, trainDescs, desc_len, dist, threadIdx.x);
         }
@@ -329,14 +339,14 @@ namespace cv { namespace gpu { namespace bfmatcher
     struct DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, true>
     {
         template <typename Dist, typename T>
-        static __device__ void calc(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist)
+        static __device__ __forceinline__ void calc(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist)
         {
             UnrollDescDiff<MAX_DESCRIPTORS_LEN / BLOCK_DIM_X>::calcWithoutCheck(queryVals, trainDescs + threadIdx.x, dist);
         }
     };
 
     template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, typename Dist, typename T>
-    __device__ void reduceDescDiffCached(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row)
+    __device__ __forceinline__ void reduceDescDiffCached(const typename Dist::ValueType* queryVals, const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row)
     {        
         DescDiffCalculator<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>::calc(queryVals, trainDescs, desc_len, dist);
         
@@ -419,13 +429,13 @@ namespace cv { namespace gpu { namespace bfmatcher
     class ReduceDescCalculatorSimple
     {
     public:
-        __device__ void prepare(const T* queryDescs_, int, void*)
+        __device__ __forceinline__ void prepare(const T* queryDescs_, int, void*)
         {
             queryDescs = queryDescs_;
         }
 
         template <typename Dist>
-        __device__ void calc(const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row) const
+        __device__ __forceinline__ void calc(const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row) const
         {
             reduceDescDiff<BLOCK_DIM_X>(queryDescs, trainDescs, desc_len, dist, sdiff_row);
         }
@@ -438,13 +448,13 @@ namespace cv { namespace gpu { namespace bfmatcher
     class ReduceDescCalculatorCached
     {
     public:
-        __device__ void prepare(const T* queryDescs, int desc_len, U* smem)
+        __device__ __forceinline__ void prepare(const T* queryDescs, int desc_len, U* smem)
         {
             loadDescsVals<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN>(queryDescs, desc_len, queryVals, smem);
         }
 
         template <typename Dist>
-        __device__ void calc(const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row) const
+        __device__ __forceinline__ void calc(const T* trainDescs, int desc_len, Dist& dist, typename Dist::ResultType* sdiff_row) const
         {
             reduceDescDiffCached<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>(queryVals, trainDescs, desc_len, dist, sdiff_row);
         }
@@ -496,13 +506,13 @@ namespace cv { namespace gpu { namespace bfmatcher
         }
 
         template <typename Dist, typename ReduceDescCalculator, typename Mask>
-        __device__ void loop(int queryIdx, Mask& m, const ReduceDescCalculator& reduceDescCalc, 
+        __device__ __forceinline__ void loop(int queryIdx, Mask& m, const ReduceDescCalculator& reduceDescCalc, 
             typename Dist::ResultType& myMin, int& myBestTrainIdx, int& myBestImgIdx, typename Dist::ResultType* sdiff_row) const
         {
             matchDescs<Dist>(queryIdx, 0, trainDescs, m, reduceDescCalc, myMin, myBestTrainIdx, myBestImgIdx, sdiff_row);
         }
 
-        __device__ int desc_len() const
+        __device__ __forceinline__ int desc_len() const
         {
             return trainDescs.cols;
         }
@@ -532,7 +542,7 @@ namespace cv { namespace gpu { namespace bfmatcher
             }
         }
 
-        __device__ int desc_len() const
+        __device__ __forceinline__ int desc_len() const
         {
             return desclen;
         }

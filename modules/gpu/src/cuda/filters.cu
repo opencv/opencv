@@ -406,7 +406,7 @@ namespace bf_krnls
     template <int channels>
     struct DistRgbMax
     {
-        static __device__ uchar calc(const uchar* a, const uchar* b)
+        static __device__ __forceinline__ uchar calc(const uchar* a, const uchar* b)
         {
             uchar x = abs(a[0] - b[0]);
             uchar y = abs(a[1] - b[1]);
@@ -418,7 +418,7 @@ namespace bf_krnls
     template <>
     struct DistRgbMax<1>
     {
-        static __device__ uchar calc(const uchar* a, const uchar* b)
+        static __device__ __forceinline__ uchar calc(const uchar* a, const uchar* b)
         {
             return abs(a[0] - b[0]);
         }

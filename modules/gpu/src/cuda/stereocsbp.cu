@@ -102,14 +102,14 @@ namespace cv { namespace gpu { namespace csbp
     template <int channels> struct DataCostPerPixel;
     template <> struct DataCostPerPixel<1>
     {
-        static __device__ float compute(const uchar* left, const uchar* right)
+        static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
         {
             return fmin(cdata_weight * abs((int)*left - *right), cdata_weight * cmax_data_term);
         }
     };
     template <> struct DataCostPerPixel<3>
     {
-        static __device__ float compute(const uchar* left, const uchar* right)
+        static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
         {
             float tb = 0.114f * abs((int)left[0] - right[0]);
             float tg = 0.587f * abs((int)left[1] - right[1]);
@@ -120,7 +120,7 @@ namespace cv { namespace gpu { namespace csbp
     };
     template <> struct DataCostPerPixel<4>
     {
-        static __device__ float compute(const uchar* left, const uchar* right)
+        static __device__ __forceinline__ float compute(const uchar* left, const uchar* right)
         {
             uchar4 l = *((const uchar4*)left);
             uchar4 r = *((const uchar4*)right);
