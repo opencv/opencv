@@ -28,8 +28,11 @@ macro(define_opencv_module name)
     source_group("Include" FILES ${lib_hdrs})
 
     set(the_target "opencv_${name}")
-
-    add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
+    if (${name} MATCHES "ts" AND MINGW)
+        add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
+    else()
+        add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs})
+    endif()
 
     # For dynamic link numbering convenions
     if(NOT ANDROID)
