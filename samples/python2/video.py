@@ -64,6 +64,7 @@ def create_capture(source):
 
 
 presets = dict(
+    empty = 'synth:',
     lena = 'synth:bg=../cpp/lena.jpg:noise=0.1'
 )
 

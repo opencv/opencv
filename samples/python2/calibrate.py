@@ -26,8 +26,7 @@ if __name__ == '__main__':
     try: img_mask = img_mask[0]
     except: img_mask = '../cpp/left*.jpg'
     img_names = glob(img_mask)
-    try: debug_dir = args['--debug']
-    except: debug_dir = None
+    debug_dir = args.get('--debug')
 
     pattern_size = (9, 6)
     pattern_points = np.zeros( (np.prod(pattern_size), 3), np.float32 )
