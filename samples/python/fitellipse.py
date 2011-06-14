@@ -67,7 +67,6 @@ class FitEllipse:
                 # Convert ellipse data from float to integer representation.
                 center = (cv.Round(center[0]), cv.Round(center[1]))
                 size = (cv.Round(size[0] * 0.5), cv.Round(size[1] * 0.5))
-                angle = -angle
                 
                 # Draw ellipse in random color
                 color = cv.CV_RGB(random.randrange(256),random.randrange(256),random.randrange(256))
