@@ -52,7 +52,7 @@ namespace cv { namespace gpu { namespace device
 	    // for Fermi memory space is detected automatically
 	    template <typename T> struct ForceGlob
 	    {
-		    __device__ __forceinline__ static void Load(const T* ptr, int offset, T& val)  { val = d_ptr[offset];  }
+		    __device__ __forceinline__ static void Load(const T* ptr, int offset, T& val)  { val = ptr[offset];  }
 	    };
     		
     #else // __CUDA_ARCH__ >= 200
