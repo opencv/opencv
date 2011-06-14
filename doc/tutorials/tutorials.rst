@@ -160,5 +160,5 @@ As always, we would be happy to hear your comments and receive your contribution
     
      =============== ======================================================
     
-     .. |Beginners_7| image:: images/Drawing_1_Tutorial_Result_0.png
+     .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.png
                       :height: 200px
