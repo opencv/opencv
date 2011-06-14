@@ -270,8 +270,7 @@ man_pages = [
      [u'opencv-dev@itseez.com'], 1)
 ]
 
-# ---- My addings (achq June 13 2011) -----------------
-# To remember: Do not use capitalized letters in the name of the link, it gives you an error. You can use "_", though.
+# ---- External links for tutorials -----------------
 extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_miscellaneous_image_transformations.html#cv-cvtcolor%s', None),
             'imread': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
             'imwrite': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#cv-imwrite%s', None),
