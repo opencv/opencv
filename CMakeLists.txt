@@ -9,8 +9,9 @@
 #
 # ----------------------------------------------------------------------------
 
-set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
+set(OPENCV_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 
+set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
@@ -166,7 +167,7 @@ find_program(SVNVERSION_PATH svnversion)
 mark_as_advanced(force SVNVERSION_PATH)
 if(SVNVERSION_PATH)
     message(STATUS "Extracting svn version, please wait...")
-    execute_process(COMMAND ${SVNVERSION_PATH} -n ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE SVNVERSION_RESULT)
+    execute_process(COMMAND ${SVNVERSION_PATH} -n ${OPENCV_SOURCE_DIR} OUTPUT_VARIABLE SVNVERSION_RESULT)
 
     if(SVNVERSION_RESULT MATCHES "exported")
        # This is NOT a svn repository:
@@ -556,7 +557,7 @@ endif()
 
 if (ANDROID)
   #android camera support
-  set(NativeCamera_DIR "${CMAKE_SOURCE_DIR}/android/native-camera/build")
+  set(NativeCamera_DIR "${OPENCV_SOURCE_DIR}/android/native-camera/build")
   FIND_PACKAGE(NativeCamera QUIET)
   if(NativeCamera_FOUND)
     set(HAVE_ANDROID_NATIVE_CAMERA TRUE)
@@ -732,8 +733,8 @@ endif(WITH_TBB)
 
 #Threading Framework -- temporary decision for ARM-s instead of TBB
 if (NOT HAVE_TBB)
-    file(GLOB THREADING_FRAMEWORK_HEADER "${CMAKE_SOURCE_DIR}/modules/core/include/opencv2/core/threading_framework.hpp")
-    file(GLOB THREADING_FRAMEWORK_SOURCE "${CMAKE_SOURCE_DIR}/modules/core/src/threading_framework.cpp")
+    file(GLOB THREADING_FRAMEWORK_HEADER "${OPENCV_SOURCE_DIR}/modules/core/include/opencv2/core/threading_framework.hpp")
+    file(GLOB THREADING_FRAMEWORK_SOURCE "${OPENCV_SOURCE_DIR}/modules/core/src/threading_framework.cpp")
     if(THREADING_FRAMEWORK_HEADER AND THREADING_FRAMEWORK_SOURCE)
         set(HAVE_THREADING_FRAMEWORK 1)
     endif()
@@ -863,11 +864,11 @@ if(WIN32)
 		if (NOT BUILD_SHARED_LIBS)
 	            if (MSVC64)
 	                if(HAVE_VIDEOINPUT)
-	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${CMAKE_SOURCE_DIR}/3rdparty/lib/videoInput64.lib strmiids)
+	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENCV_SOURCE_DIR}/3rdparty/lib/videoInput64.lib strmiids)
 	                endif()
 	            elseif (MSVC)
 	                if(HAVE_VIDEOINPUT)
-	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${CMAKE_SOURCE_DIR}/3rdparty/lib/videoInput.lib strmiids)
+	                    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OPENCV_SOURCE_DIR}/3rdparty/lib/videoInput.lib strmiids)
 	                endif()
 	            endif()
 		endif()

@@ -2,20 +2,20 @@ project(haartraining)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${CMAKE_SOURCE_DIR}/modules/core/include"
-    "${CMAKE_SOURCE_DIR}/modules/imgproc/include"
-    "${CMAKE_SOURCE_DIR}/modules/objdetect/include"
-    "${CMAKE_SOURCE_DIR}/modules/ml/include"
-    "${CMAKE_SOURCE_DIR}/modules/highgui/include"
-    "${CMAKE_SOURCE_DIR}/modules/video/include"
-    "${CMAKE_SOURCE_DIR}/modules/features2d/include"
-    "${CMAKE_SOURCE_DIR}/modules/flann/include"
-    "${CMAKE_SOURCE_DIR}/modules/calib3d/include"
-    "${CMAKE_SOURCE_DIR}/modules/legacy/include"
+    "${OPENCV_SOURCE_DIR}/modules/core/include"
+    "${OPENCV_SOURCE_DIR}/modules/imgproc/include"
+    "${OPENCV_SOURCE_DIR}/modules/objdetect/include"
+    "${OPENCV_SOURCE_DIR}/modules/ml/include"
+    "${OPENCV_SOURCE_DIR}/modules/highgui/include"
+    "${OPENCV_SOURCE_DIR}/modules/video/include"
+    "${OPENCV_SOURCE_DIR}/modules/features2d/include"
+    "${OPENCV_SOURCE_DIR}/modules/flann/include"
+    "${OPENCV_SOURCE_DIR}/modules/calib3d/include"
+    "${OPENCV_SOURCE_DIR}/modules/legacy/include"
     )
 
 if(WIN32)
-    link_directories(${CMAKE_SOURCE_DIR}/lib ${CMAKE_SOURCE_DIR}/bin ${CMAKE_CURRENT_BINARY_DIR})
+    link_directories(${OPENCV_SOURCE_DIR}/lib ${OPENCV_SOURCE_DIR}/bin ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 set(haartraining_libs opencv_core opencv_imgproc opencv_highgui opencv_objdetect opencv_calib3d opencv_haartraining_engine)
