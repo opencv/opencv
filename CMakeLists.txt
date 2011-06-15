@@ -194,7 +194,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
                   OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-
+	
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+                  ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)			  
+    	
     # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
     #  Look for the version number
     string(REGEX MATCH "[0-9].[0-9].[0-9]" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
@@ -362,7 +366,11 @@ set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
 set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
 
 if(WIN32)
-    set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
+    if (MINGW AND ${CMAKE_OPENCV_GCC_INFO_FULL} MATCHES "--with-dwarf2")
+		set(WITH_VIDEOINPUT OFF CACHE BOOL "Enable VideoInput support")
+	else()
+		set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
+	endif()
 endif()
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
