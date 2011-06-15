@@ -394,7 +394,10 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
     Mat mergedDescriptors( (int)keypoints.size(), 3*descriptorSize, descriptorExtractor->descriptorType() );
     int mergedCount = 0;
     // cp - current channel position
-    for( size_t cp[] = {0, 0, 0}; cp[0] < channelKeypoints[0].size() && cp[1] < channelKeypoints[1].size() && cp[2] < channelKeypoints[2].size(); )
+    size_t cp[] = {0, 0, 0}; 
+    while( cp[0] < channelKeypoints[0].size() && 
+                                  cp[1] < channelKeypoints[1].size() && 
+                                  cp[2] < channelKeypoints[2].size() )
     {
         const int maxInitIdx = std::max( channelKeypoints[0][idxs[0][cp[0]]].class_id,
                                          std::max( channelKeypoints[1][idxs[1][cp[1]]].class_id,
