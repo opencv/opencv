@@ -2511,7 +2511,7 @@ void ViewPort::scaleView(qreal factor,QPointF center)
 
 void ViewPort::wheelEvent(QWheelEvent *event)
 {
-	scaleView( -event->delta() / 240.0,event->pos());
+	scaleView( event->delta() / 240.0,event->pos());
 	viewport()->update();
 }
 
