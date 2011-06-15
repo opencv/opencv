@@ -1,8 +1,11 @@
 import numpy as np
 import cv2
+import os
 
-def to_list(a):
-    return [tuple(p) for p in a]
+def splitfn(fn):
+    path, fn = os.path.split(fn)
+    name, ext = os.path.splitext(fn)
+    return path, name, ext
 
 def anorm2(a):
     return (a*a).sum(-1)
@@ -37,36 +40,15 @@ def lookat(eye, target, up = (0, 0, 1)):
     right = np.cross(fwd, up)
     right /= anorm(right)
     down = np.cross(fwd, right)
-    Rt = np.zeros((3, 4))
-    Rt[:,:3] = [right, down, fwd]
-    Rt[:,3] = -np.dot(Rt[:,:3], eye)
-    return Rt
+    R = np.float64([right, down, fwd])
+    tvec = -np.dot(R, eye)
+    return R, tvec
 
 def mtx2rvec(R):
-    pass
-    
-
-if __name__ == '__main__':
-    import cv2
-    from time import clock
-
-    '''
-    w, h = 640, 480
-    while True:
-        img = np.zeros((h, w, 3), np.uint8)
-        t = clock()
-        eye = [5*cos(t), 5*sin(t), 3]
-        Rt = lookat(eye, [0, 0, 0])
-    '''
-
-
-
-    eye = [1, -4, 3]
-    target = [0, 0, 0]
-    Rt = lookat(eye, [0, 0, 0])
-    print Rt
-    p = [0, 0, 0]
-    print cv2.transform(np.float64([[p]]), Rt)
-
-    print cv2.SVDecomp(Rt[:,:3])
+    w, u, vt = cv2.SVDecomp(R - np.eye(3))
+    p = vt[0] + u[:,0]*w[0]    # same as np.dot(R, vt[0])
+    c = np.dot(vt[0], p)
+    s = np.dot(vt[1], p)
+    axis = np.cross(vt[0], vt[1])
+    return axis * np.arctan2(s, c)
 

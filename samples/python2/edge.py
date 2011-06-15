@@ -3,14 +3,14 @@ import video
 import sys
 
 try: fn = sys.argv[1]
-except: fn = video.presets['lena']
+except: fn = video.presets['chess']
 
 def nothing(*arg):
     pass
 
 cv2.namedWindow('edge')
-cv.CreateTrackbar('thrs1', 'edge', 2000, 5000, nothing)
-cv.CreateTrackbar('thrs2', 'edge', 4000, 5000, nothing)
+cv2.createTrackbar('thrs1', 'edge', 2000, 5000, nothing)
+cv2.createTrackbar('thrs2', 'edge', 4000, 5000, nothing)
 
 cap = video.create_capture(fn)
 while True:

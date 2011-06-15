@@ -3,7 +3,7 @@ browse.py shows how to implement a simple hi resolution image navigation
 '''
 
 import numpy as np
-import cv2, cv
+import cv2
 import sys
 
 print 'This sample shows how to implement a simple hi resolution image navigation.'
@@ -20,7 +20,7 @@ else:
     img = np.zeros((sz, sz), np.uint8)
     track = np.cumsum(np.random.rand(500000, 2)-0.5, axis=0)
     track = np.int32(track*10 + (sz/2, sz/2))
-    cv2.polylines(img, [track], 0, 255, 1, cv.CV_AA)
+    cv2.polylines(img, [track], 0, 255, 1, cv2.CV_AA)
 
 small = img
 for i in xrange(3):
@@ -34,5 +34,5 @@ def onmouse(event, x, y, flags, param):
     cv2.imshow('zoom', zoom)
 
 cv2.imshow('preview', small)
-cv.SetMouseCallback('preview', onmouse, None)
+cv2.setMouseCallback('preview', onmouse, None)
 cv2.waitKey()

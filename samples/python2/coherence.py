@@ -7,7 +7,7 @@
 '''
 
 import numpy as np
-import cv, cv2
+import cv2, cv
 
 
 def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
@@ -55,9 +55,9 @@ if __name__ == '__main__':
         cv2.imshow('dst', dst)
 
     cv2.namedWindow('control', 0)
-    cv.CreateTrackbar('sigma', 'control', 9, 15, nothing)
-    cv.CreateTrackbar('blend', 'control', 7, 10, nothing)
-    cv.CreateTrackbar('str_sigma', 'control', 9, 15, nothing)
+    cv2.createTrackbar('sigma', 'control', 9, 15, nothing)
+    cv2.createTrackbar('blend', 'control', 7, 10, nothing)
+    cv2.createTrackbar('str_sigma', 'control', 9, 15, nothing)
 
 
     print 'Press SPACE to update the image\n'

@@ -1,20 +1,12 @@
 import numpy as np
 import cv2, cv
 import os
+from common import splitfn
 
 USAGE = '''
 USAGE: calib.py [--save <filename>] [--debug <output path>] [<image mask>] 
 '''
 
-class Bunch:
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
-
-
-def splitfn(fn):
-    path, fn = os.path.split(fn)
-    name, ext = os.path.splitext(fn)
-    return path, name, ext
 
 
 if __name__ == '__main__':
@@ -42,7 +34,7 @@ if __name__ == '__main__':
         found, corners = cv2.findChessboardCorners(img, pattern_size)
         if found:
             term = ( cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1 )
-            cv2.cornerSubPix(img, corners, (11, 11), (-1, -1), term)
+            cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
         if debug_dir:
             vis = cv2.cvtColor(img, cv.CV_GRAY2BGR)
             cv2.drawChessboardCorners(vis, pattern_size, corners, found)
