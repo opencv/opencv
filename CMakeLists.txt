@@ -365,20 +365,6 @@ set(WITH_IPP OFF CACHE BOOL "Include Intel IPP support")
 set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
 set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
 
-if(WIN32)
-    set(MINGW_DWARF2 0)
-    if (MINGW)
-        if(${CMAKE_OPENCV_GCC_INFO_FULL} MATCHES "--with-dwarf2")
-            set(MINGW_DWARF2 1)
-        endif()
-    endif()
-    if (MINGW_DWARF2)
-		set(WITH_VIDEOINPUT OFF CACHE BOOL "Enable VideoInput support")
-	else()
-		set(WITH_VIDEOINPUT ON CACHE BOOL "Enable VideoInput support")
-	endif()
-endif()
-
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
 
 # ===================================================
@@ -833,17 +819,6 @@ if(WITH_CUDA)
 endif()
 
 
-############################### VideoInput ################################
-
-if (WIN32 AND WITH_VIDEOINPUT)
-    if(CMAKE_CXX_COMPILER MATCHES "dw2")
-    else()
-        if(NOT MINGW64)
-            set(HAVE_VIDEOINPUT 1)
-        endif()
-    endif()
-endif()
-
 ############################### OpenNI ################################
 set(HAVE_OPENNI FALSE)
 set(HAVE_OPENNI_PRIME_SENSOR_MODULE FALSE)
@@ -869,34 +844,18 @@ endif()
 ################## Extra HighGUI libs on Windows ###################
 
 if(WIN32)
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
+    set(HAVE_VIDEOINPUT 1)
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32 strmiids)
     
     if (MSVC)
         set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
-		if (NOT BUILD_SHARED_LIBS)
-	            if (MSVC64)
-	                if(HAVE_VIDEOINPUT)
-                            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OpenCV_SOURCE_DIR}/3rdparty/lib/videoInput64.lib strmiids)
-	                endif()
-	            elseif (MSVC)
-	                if(HAVE_VIDEOINPUT)
-                            set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${OpenCV_SOURCE_DIR}/3rdparty/lib/videoInput.lib strmiids)
-	                endif()
-	            endif()
-		endif()
     endif()
 
     if(MINGW)
         if(MINGW64)
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} msvfw32 avifil32 avicap32 winmm)
-            if(HAVE_VIDEOINPUT)
-                set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} videoInput64 strmiids)
-            endif()
         else()
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32 winmm)
-            if(HAVE_VIDEOINPUT)
-                set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} videoInput strmiids)
-            endif()
         endif()  
     endif()
 endif()
@@ -1253,15 +1212,6 @@ if(WIN32)
     # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory 
     install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/") 
 
-    # if videoInput support is enabled (which is by default on WIN32) copy the static library required to the installation path
-    # DESTINATION could also be "${CMAKE_INSTALL_PREFIX}/lib") to simplify dev environment setup of client applications
-    IF(HAVE_VIDEOINPUT)
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lib/videoInput.lib" "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lib/videoInput64.lib"
-                DESTINATION "${CMAKE_INSTALL_PREFIX}/3rdparty/lib")
-
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/include/videoInput.h" DESTINATION "${CMAKE_INSTALL_PREFIX}/3rdparty/include")
-    ENDIF()
-
     # Add the OpenCV configuration header to the install path
     # Useful for instance if a client application checks against the features OpenCV has been compiled with
     install(FILES "${CMAKE_BINARY_DIR}/cvconfig.h" DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
@@ -1526,12 +1476,7 @@ endif()
 
 if(WIN32)
 message(STATUS "")
-message(STATUS "  Video I/O: ")
-if(HAVE_VIDEOINPUT)
-message(STATUS "    VideoInput:                 YES")
-else()
-message(STATUS "    VideoInput:                 NO")
-endif()
+message(STATUS "  Video I/O:                    DirectShow")
 endif()
 
 message(STATUS "")
