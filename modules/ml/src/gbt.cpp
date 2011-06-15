@@ -59,7 +59,7 @@ CvGBTrees::CvGBTrees()
     weak = 0;
     default_model_name = "my_boost_tree";
     orig_response = sum_response = sum_response_tmp = 0;
-    weak_eval = subsample_train = subsample_test = 0;
+    subsample_train = subsample_test = 0;
     missing = sample_idx = 0;
     class_labels = 0;
     class_count = 1;
@@ -117,7 +117,6 @@ void CvGBTrees::clear()
     cvReleaseMat( &orig_response );
     cvReleaseMat( &sum_response );
     cvReleaseMat( &sum_response_tmp );
-    cvReleaseMat( &weak_eval );
     cvReleaseMat( &subsample_train );
     cvReleaseMat( &subsample_test );
     cvReleaseMat( &sample_idx );
@@ -143,7 +142,7 @@ CvGBTrees::CvGBTrees( const CvMat* _train_data, int _tflag,
     data = 0;
     default_model_name = "my_boost_tree";
     orig_response = sum_response = sum_response_tmp = 0;
-    weak_eval = subsample_train = subsample_test = 0;
+    subsample_train = subsample_test = 0;
     missing = sample_idx = 0;
     class_labels = 0;
     class_count = 1;
@@ -276,7 +275,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     {
         int sample_idx_len = get_len(_sample_idx);
         
-        switch (CV_ELEM_SIZE(_sample_idx->type))
+        switch (CV_MAT_TYPE(_sample_idx->type))
         {
             case CV_32SC1:
             {
@@ -818,20 +817,31 @@ void CvGBTrees::do_subsample()
 
 //===========================================================================
 
-float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
-        CvMat* /*weak_responses*/, CvSlice slice, int k) const 
+float CvGBTrees::predict_serial( const CvMat* _sample, const CvMat* _missing,
+        CvMat* weak_responses, CvSlice slice, int k) const 
 {
     float result = 0.0f;
 
     if (!weak) return 0.0f;
 
-    float* sum = new float[class_count];
-    for (int i=0; i<class_count; ++i)
-        sum[i] = base_value;
-
     CvSeqReader reader;
     int weak_count = cvSliceLength( slice, weak[class_count-1] );
     CvDTree* tree;
+    
+    if (weak_responses)
+    {
+		if (CV_MAT_TYPE(weak_responses->type) != CV_32F)
+            return 0.0f;
+        if ((k >= 0) && (k<class_count) && (weak_responses->rows != 1))
+            return 0.0f;
+        if ((k == -1) && (weak_responses->rows != class_count))
+            return 0.0f;
+        if (weak_responses->cols != weak_count)
+            return 0.0f;
+    }
+    
+    float* sum = new float[class_count];
+    memset(sum, 0, class_count*sizeof(float));
 
     for (int i=0; i<class_count; ++i)
     {
@@ -842,11 +852,16 @@ float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
             for (int j=0; j<weak_count; ++j)
             {
                 CV_READ_SEQ_ELEM( tree, reader );
-                sum[i] += params.shrinkage *
-                         (float)(tree->predict(_sample, _missing)->value);
+                float p = (float)(tree->predict(_sample, _missing)->value);
+                sum[i] += params.shrinkage * p;
+                if (weak_responses)
+                    weak_responses->data.fl[i*weak_count+j] = p;
             }
         }
     }
+    
+    for (int i=0; i<class_count; ++i)
+        sum[i] += base_value;
 
     if (class_count == 1)
     {
@@ -883,6 +898,137 @@ float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
 
     return float(orig_class_label);
 }
+
+
+class Tree_predictor
+{
+private:
+	pCvSeq* weak;
+	float* sum;
+	const int k;
+	const CvMat* sample;
+	const CvMat* missing;
+    const float shrinkage;
+    
+#ifdef HAVE_TBB
+    static tbb::spin_mutex SumMutex;
+#endif
+
+
+public:
+	Tree_predictor() : weak(0), sum(0), k(0), sample(0), missing(0), shrinkage(1.0f) {}
+	Tree_predictor(pCvSeq* _weak, const int _k, const float _shrinkage,
+				   const CvMat* _sample, const CvMat* _missing, float* _sum ) :
+				   weak(_weak), k(_k), sample(_sample),
+                   missing(_missing), sum(_sum), shrinkage(_shrinkage)
+	{}
+	
+    Tree_predictor( const Tree_predictor& p, cv::Split ) :
+			weak(p.weak), k(p.k), sample(p.sample),
+            missing(p.missing), sum(p.sum), shrinkage(p.shrinkage)
+	{}
+
+	Tree_predictor& operator=( const Tree_predictor& )
+	{}
+	
+    virtual void operator()(const cv::BlockedRange& range) const
+	{
+#ifdef HAVE_TBB
+        tbb::spin_mutex::scoped_lock lock;
+#endif
+        CvSeqReader reader;
+		int begin = range.begin();
+		int end = range.end();
+		
+		int weak_count = end - begin;
+		CvDTree* tree;
+
+		for (int i=0; i<k; ++i)
+		{
+			float tmp_sum = 0.0f;
+			if ((weak[i]) && (weak_count))
+			{
+				cvStartReadSeq( weak[i], &reader ); 
+				cvSetSeqReaderPos( &reader, begin );
+				for (int j=0; j<weak_count; ++j)
+				{
+					CV_READ_SEQ_ELEM( tree, reader );
+					tmp_sum += shrinkage*(float)(tree->predict(sample, missing)->value);
+				}
+			}
+#ifdef HAVE_TBB
+            lock.acquire(SumMutex);
+			sum[i] += tmp_sum;
+            lock.release();
+#else
+            sum[i] += tmp_sum;
+#endif
+		}
+	} // Tree_predictor::operator()
+    
+}; // class Tree_predictor
+
+
+#ifdef HAVE_TBB
+tbb::spin_mutex Tree_predictor::SumMutex;
+#endif
+
+
+
+float CvGBTrees::predict( const CvMat* _sample, const CvMat* _missing,
+            CvMat* /*weak_responses*/, CvSlice slice, int k) const 
+    {
+        float result = 0.0f;
+	    if (!weak) return 0.0f;
+        float* sum = new float[class_count];
+        for (int i=0; i<class_count; ++i)
+            sum[i] = 0.0f;
+	    int begin = slice.start_index;
+	    int end = begin + cvSliceLength( slice, weak[0] );
+    	
+        pCvSeq* weak_seq = weak;
+	    Tree_predictor predictor = Tree_predictor(weak_seq, class_count,
+                                    params.shrinkage, _sample, _missing, sum);
+        
+//#ifdef HAVE_TBB
+//		tbb::parallel_for(cv::BlockedRange(begin, end), predictor,
+//                          tbb::auto_partitioner());
+//#else
+        cv::parallel_for(cv::BlockedRange(begin, end), predictor);
+//#endif
+
+	    for (int i=0; i<class_count; ++i)
+            sum[i] = sum[i] /** params.shrinkage*/ + base_value;
+
+        if (class_count == 1)
+        {
+            result = sum[0];
+            delete[] sum;
+            return result;
+        }
+
+        if ((k>=0) && (k<class_count))
+        {
+            result = sum[k];
+            delete[] sum;
+            return result;
+        }
+
+        float max = sum[0];
+        int class_label = 0;
+        for (int i=1; i<class_count; ++i)
+            if (sum[i] > max)
+            {
+                max = sum[i];
+                class_label = i;
+            }
+
+        delete[] sum;
+        int orig_class_label = class_labels->data.i[class_label];
+
+        return float(orig_class_label);
+    }
+
 
 //===========================================================================
 
@@ -1080,69 +1226,126 @@ void CvGBTrees::read( CvFileStorage* fs, CvFileNode* node )
 
 //===========================================================================
 
+class Sample_predictor
+{
+private:
+	const CvGBTrees* gbt;
+	float* predictions;
+	const CvMat* samples;
+	const CvMat* missing;
+    const CvMat* idx;
+    CvSlice slice;
+
+public:
+	Sample_predictor() : gbt(0), predictions(0), samples(0), missing(0),
+                         idx(0), slice(CV_WHOLE_SEQ)
+    {}
+
+	Sample_predictor(const CvGBTrees* _gbt, float* _predictions,
+				   const CvMat* _samples, const CvMat* _missing,
+                   const CvMat* _idx, CvSlice _slice=CV_WHOLE_SEQ) :
+				   gbt(_gbt), predictions(_predictions), samples(_samples),
+                   missing(_missing), idx(_idx), slice(_slice)
+	{}
+	
+
+    Sample_predictor( const Sample_predictor& p, cv::Split ) :
+			gbt(p.gbt), predictions(p.predictions),
+            samples(p.samples), missing(p.missing), idx(p.idx),
+            slice(p.slice)
+	{}
+
+
+    virtual void operator()(const cv::BlockedRange& range) const
+	{
+		int begin = range.begin();
+		int end = range.end();
+
+		CvMat x;
+        CvMat miss;
+
+        for (int i=begin; i<end; ++i)
+        {
+            int j = idx ? idx->data.i[i] : i;
+            cvGetRow(samples, &x, j);
+            if (!missing)
+            {
+                predictions[i] = gbt->predict_serial(&x,0,0,slice);
+            }
+            else
+            {
+                cvGetRow(missing, &miss, j);
+                predictions[i] = gbt->predict_serial(&x,&miss,0,slice);
+            }
+        }
+	} // Sample_predictor::operator()
+
+}; // class Sample_predictor
+
+
+
 // type in {CV_TRAIN_ERROR, CV_TEST_ERROR}
 float 
 CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
 {
-    float err = 0;
-    const CvMat* values = _data->get_values();
+
+    float err = 0.0f;
+    const CvMat* sample_idx = (type == CV_TRAIN_ERROR) ?
+                              _data->get_train_sample_idx() :
+                              _data->get_test_sample_idx();
     const CvMat* response = _data->get_responses();
-    const CvMat* missing = _data->get_missing();
-    const CvMat* sample_idx = (type == CV_TEST_ERROR) ?
-                              _data->get_test_sample_idx() :
-                              _data->get_train_sample_idx();
-    //const CvMat* var_types = _data->get_var_types();
+                              
+    int n = sample_idx ? get_len(sample_idx) : 0;
+    n = (type == CV_TRAIN_ERROR && n == 0) ? _data->get_values()->rows : n;
+    
+    if (!n)
+        return -FLT_MAX;
+    
+    float* pred_resp = 0;  
+    if (resp)
+    {
+        resp->resize(n);
+        pred_resp = &((*resp)[0]);
+    }
+    else
+        pred_resp = new float[n];
+
+    Sample_predictor predictor = Sample_predictor(this, pred_resp, _data->get_values(),
+            _data->get_missing(), sample_idx);
+        
+//#ifdef HAVE_TBB
+//    tbb::parallel_for(cv::BlockedRange(0,n), predictor, tbb::auto_partitioner());
+//#else
+    cv::parallel_for(cv::BlockedRange(0,n), predictor);
+//#endif
+        
     int* sidx = sample_idx ? sample_idx->data.i : 0;
     int r_step = CV_IS_MAT_CONT(response->type) ?
                 1 : response->step / CV_ELEM_SIZE(response->type);
-    //bool is_classifier = 
-    //            var_types->data.ptr[var_types->cols-1] == CV_VAR_CATEGORICAL;
-    int sample_count = sample_idx ? sample_idx->cols : 0;
-    sample_count = (type == CV_TRAIN_ERROR && sample_count == 0) ?
-                                        values->rows :
-                                        sample_count;
-    float* pred_resp = 0;
-    if( resp && (sample_count > 0) )
-    {
-        resp->resize( sample_count );
-        pred_resp = &((*resp)[0]);
-    }
+    
+
     if ( !problem_type() )
     {
-        for( int i = 0; i < sample_count; i++ )
+        for( int i = 0; i < n; i++ )
         {
-            CvMat sample, miss;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( values, &sample, si ); 
-            if( missing ) 
-                cvGetRow( missing, &miss, si );             
-            float r = (float)predict( &sample, missing ? &miss : 0 );
-            if( pred_resp )
-                pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = fabs((double)pred_resp[i] - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
-        err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
+        err = err / (float)n * 100.0f;
     }
     else
     {
-        for( int i = 0; i < sample_count; i++ )
+        for( int i = 0; i < n; i++ )
         {
-            CvMat sample, miss;
             int si = sidx ? sidx[i] : i;
-            cvGetRow( values, &sample, si );
-            if( missing ) 
-                cvGetRow( missing, &miss, si );             
-            float r = (float)predict( &sample, missing ? &miss : 0 );
-            if( pred_resp )
-                pred_resp[i] = r;
-            float d = r - response->data.fl[si*r_step];
+            float d = pred_resp[i] - response->data.fl[si*r_step];
             err += d*d;
         }
-        err = sample_count ? err / (float)sample_count : -FLT_MAX;    
+        err = err / (float)n;    
     }
+    
     return err;
-
 }
 
 
@@ -1156,7 +1359,7 @@ CvGBTrees::CvGBTrees( const cv::Mat& trainData, int tflag,
     weak = 0;
     default_model_name = "my_boost_tree";
     orig_response = sum_response = sum_response_tmp = 0;
-    weak_eval = subsample_train = subsample_test = 0;
+    subsample_train = subsample_test = 0;
     missing = sample_idx = 0;
     class_labels = 0;
     class_count = 1;
