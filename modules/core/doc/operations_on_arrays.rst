@@ -3,7 +3,7 @@ Operations on Arrays
 
 .. highlight:: cpp
 
-.. list-table:: **Arithmetical Operations**??output is not in bold, why??
+.. list-table:: **Arithmetical Operations**
 
    * -
      -
@@ -1117,7 +1117,7 @@ gemm
             * **GEMM_2_T** transpose  ``src2``
             * **GEMM_3_T** transpose  ``src3``
             
-The function performs generalized matrix multiplication similar?? to the corresponding functions ``*gemm`` in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
+The function performs generalized matrix multiplication similar to the ``gemm`` functions in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
 
 .. math::
 
@@ -1139,10 +1139,6 @@ getConvertElem
 
 .. cpp:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
 
-.. cpp:function:: typedef void (*ConvertData)(const void* from, void* to, int cn)??broken output??
-
-.. cpp:function:: typedef void (*ConvertScaleData)(const void* from, void* to, int cn, double alpha, double beta)
-
     Returns a conversion function for a single pixel.
 
     :param fromType: Source pixel type.
@@ -1160,6 +1156,12 @@ getConvertElem
     :param beta: ``ConvertScaleData`` callback optional parameter: the delta or offset.
 
 The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to the functions for converting individual pixels from one type to another. While the main function purpose is to convert single pixels (actually, for converting sparse matrices from one type to another), you can use them to convert the whole row of a dense matrix or the whole matrix at once, by setting ``cn = matrix.cols*matrix.rows*matrix.channels()`` if the matrix data is continuous.
+
+``ConvertData`` and ``ConvertScaleData`` are defined as: ::
+
+    typedef void (*ConvertData)(const void* from, void* to, int cn)
+    typedef void (*ConvertScaleData)(const void* from, void* to,
+                                     int cn, double alpha, double beta)
 
 .. seealso:: :cpp:func:`Mat::convertTo` , :cpp:func:`SparseMat::convertTo`
 

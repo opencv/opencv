@@ -123,10 +123,6 @@ CvStatModel::load
 
 The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by ``clear()`` .
 
-**Note**:
-
-The method is virtual, so any model can be loaded using this virtual method. However, unlike the C types of OpenCV that can be loaded using the generic
-``cross{cvLoad}`` , the model type is required here to enable constructing an empty model beforehand.?? This limitation will be removed in the later ML versions.
 
 .. index:: CvStatModel::write
 

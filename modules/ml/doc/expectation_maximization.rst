@@ -3,8 +3,8 @@ Expectation Maximization
 
 The EM (Expectation Maximization) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
 
-Consider the set of the
-:math:`x_1, x_2,...,x_{N}` : N feature vectors?? from a d-dimensional Euclidean space drawn from a Gaussian mixture:
+Consider the set of the N feature vectors
+{ :math:`x_1, x_2,...,x_{N}` } from a d-dimensional Euclidean space drawn from a Gaussian mixture:
 
 .. math::
 
@@ -62,7 +62,7 @@ Alternatively, the algorithm may start with the M-step when the initial values f
 :math:`p_{i,k}` . Often (including ML) the
 :ref:`kmeans` algorithm is used for that purpose.
 
-One of the main problems?? the EM algorithm should deal with is a large number
+One of the main problems of the EM algorithm is a large number
 of parameters to estimate. The majority of the parameters reside in
 covariance matrices, which are
 :math:`d \times d` elements each

@@ -62,11 +62,13 @@ FeatureEvaluator::setImage
 ------------------------------
 .. cpp:function:: bool FeatureEvaluator::setImage(const Mat& img, Size origWinSize)
 
-    Sets an image where the features are computed??.
+    Assigns an image to feature evaluator.
 
     :param img: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
 
     :param origWinSize: Size of training images.
+
+The method assigns an image, where the features will be computed, to the feature evaluator.
 
 .. index:: FeatureEvaluator::setWindow
 
@@ -74,7 +76,7 @@ FeatureEvaluator::setWindow
 -------------------------------
 .. cpp:function:: bool FeatureEvaluator::setWindow(Point p)
 
-    Sets a window in the current image where the features are computed (called by ??).
+    Assigns a window in the current image where the features will be computed.
 
     :param p: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
 
@@ -128,7 +130,7 @@ The cascade classifier class for object detection ::
             // structure for storing a tree node
         struct CV_EXPORTS DTreeNode
         {
-            int featureIdx; // feature index on which is a split??
+            int featureIdx; // index of the feature on which we perform the split
             float threshold; // split threshold of ordered features only
             int left; // left child index in the tree nodes array
             int right; // right child index in the tree nodes array
@@ -270,7 +272,7 @@ CascadeClassifier::runAt
     :param pt: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
 
 The function returns 1 if the cascade classifier detects an object in the given location.
-Otherwise, it returns ``si``, which is an index of the stage that first predicted that the given window is a background image.??
+Otherwise, it returns negated index of the stage at which the candidate has been rejected.
 
 .. index:: groupRectangles
 

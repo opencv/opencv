@@ -7,7 +7,7 @@ DataType
 --------
 .. cpp:class:: DataType
 
-Template "trait" class for other??sounds strange since we haven't introduced any typs before that?? OpenCV primitive data types. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double``, or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C(<number_of_channels>)``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
+Template "trait" class for OpenCV primitive data types. A primitive OpenCV data type is one of ``unsigned char``, ``bool``, ``signed char``, ``unsigned short``, ``signed short``, ``int``, ``float``, ``double``, or a tuple of values of one of these types, where all the values in the tuple have the same type. Any primitive type from the list can be defined by an identifier in the form ``CV_<bit-depth>{U|S|F}C(<number_of_channels>)``, for example: ``uchar`` ~ ``CV_8UC1``, 3-element floating-point tuple ~ ``CV_32FC3``, and so on. A universal OpenCV structure that is able to store a single instance of such a primitive data type is
 :cpp:class:`Vec`. Multiple instances of such a type can be stored in a ``std::vector``, ``Mat``, ``Mat_``, ``SparseMat``, ``SparseMat_``, or any other container that is able to store ``Vec`` instances.
 
 The ``DataType`` class is basically used to provide a description of such primitive data types without adding any fields or methods to the corresponding classes (and it is actually impossible to add anything to primitive C/C++ data types). This technique is known in C++ as class traits. It is not ``DataType`` itself that is used but its specialized versions, such as: ::
@@ -552,7 +552,7 @@ There are many different ways to create a ``Mat`` object. The most popular optio
 
         ..
 
-        ??is the indent required here? does it apply to step 2 but not to the whole bulleted item??Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
+    Partial yet very common cases of this *user-allocated data* case are conversions from ``CvMat``     and ``IplImage`` to ``Mat``. For this purpose, there are special constructors taking pointers to ``CvMat``     or ``IplImage`` and the optional flag indicating whether to copy the data or not.
 
         Backward conversion from ``Mat`` to ``CvMat`` or ``IplImage`` is provided via cast operators ``Mat::operator CvMat() const`` and ``Mat::operator IplImage()``. The operators do NOT copy the data.
 
@@ -723,7 +723,7 @@ Mat::Mat
                   
 .. cpp:function:: Mat::Mat(const IplImage* img, bool copyData=false)
                   
-.. cpp:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)??output is broken for these 3 methods??
+.. cpp:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
 .. cpp:function:: template<typename T, int m, int n> explicit Mat::Mat(const Matx<T, m, n>& vec, bool copyData=true)
 
@@ -1477,8 +1477,7 @@ The method is used in quite a few of OpenCV functions. The point is that element
 This approach, while being very simple, can boost the performance of a simple element-operation by 10-20 percents, especially if the image is rather small and the operation is quite simple.
 
 Another OpenCV idiom in this function, a call of
-:cpp:func:`Mat::create` for the destination array, already has the proper size and type.?? And while the newly allocated arrays are always continuous, you still check the destination array because
-:cpp:func:`create` does not always allocate a new matrix.
+:cpp:func:`Mat::create` for the destination array, that allocates the destination array unless it already has the proper size and type. And while the newly allocated arrays are always continuous, you still need to check the destination array because :cpp:func:`create` does not always allocate a new matrix.
 
 
 Mat::elemSize
@@ -1574,7 +1573,7 @@ Mat::ptr
 
 .. cpp:function:: const uchar* Mat::ptr(int i=0) const
 
-.. cpp:function:: template<typename _Tp> _Tp* Mat::ptr(int i=0)??again broken output??
+.. cpp:function:: template<typename _Tp> _Tp* Mat::ptr(int i=0)
 
 .. cpp:function:: template<typename _Tp> const _Tp* Mat::ptr(int i=0) const
 
@@ -1588,7 +1587,7 @@ The methods return ``uchar*`` or typed pointer to the specified matrix row. See 
 
 Mat::at
 -----------
-.. cpp:function:: template<typename T> T& Mat::at(int i) const??again, is this the expected output??
+.. cpp:function:: template<typename T> T& Mat::at(int i) const
 
 .. cpp:function:: template<typename T> const T& Mat::at(int i) const
 
@@ -1631,7 +1630,7 @@ The example below initializes a Hilbert matrix: ::
 
 Mat::begin
 --------------
-.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const??see output??
+.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
 
     Returns the matrix iterator and sets it to the first matrix element.
 
@@ -1670,7 +1669,7 @@ The methods return the matrix read-only or read-write iterators. The use of matr
 
 Mat::end
 ------------
-.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end() ??output??
+.. cpp:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end()
 .. cpp:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
     Returns the matrix iterator and sets it to the after-last matrix element.
@@ -2081,7 +2080,7 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
 
 SparseMat\_
 -----------
-.. cpp:class:: SparseMat_??
+.. cpp:class:: SparseMat_
 
 Template sparse n-dimensional array class derived from
 :cpp:class:`SparseMat` ::
