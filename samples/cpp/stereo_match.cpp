@@ -10,6 +10,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/contrib/contrib.hpp"
 
 #include <stdio.h>
 
@@ -18,7 +19,7 @@ using namespace cv;
 void print_help()
 {
 	printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
-    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh] [--blocksize=<block_size>]\n"
+    printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh|var] [--blocksize=<block_size>]\n"
            "[--max-disparity=<max_disparity>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
            "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
 }
@@ -59,13 +60,14 @@ int main(int argc, char** argv)
     const char* disparity_filename = 0;
     const char* point_cloud_filename = 0;
     
-    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2 };
+    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2, STEREO_VAR=3 };
     int alg = STEREO_SGBM;
     int SADWindowSize = 0, numberOfDisparities = 0;
     bool no_display = false;
     
     StereoBM bm;
     StereoSGBM sgbm;
+    StereoVar var;
     
     for( int i = 1; i < argc; i++ )
     {
@@ -81,7 +83,8 @@ int main(int argc, char** argv)
             char* _alg = argv[i] + strlen(algorithm_opt);
             alg = strcmp(_alg, "bm") == 0 ? STEREO_BM :
                   strcmp(_alg, "sgbm") == 0 ? STEREO_SGBM :
-                  strcmp(_alg, "hh") == 0 ? STEREO_HH : -1;
+                  strcmp(_alg, "hh") == 0 ? STEREO_HH :
+                  strcmp(_alg, "var") == 0 ? STEREO_VAR : -1;
             if( alg < 0 )
             {
                 printf("Command-line parameter error: Unknown stereo algorithm\n\n");
@@ -192,7 +195,7 @@ int main(int argc, char** argv)
         img2 = img2r;
     }
     
-    numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : img_size.width/8;
+    numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width/8) + 15) & -16;
     
     bm.state->roi1 = roi1;
     bm.state->roi2 = roi2;
@@ -221,6 +224,19 @@ int main(int argc, char** argv)
     sgbm.disp12MaxDiff = 1;
     sgbm.fullDP = alg == STEREO_HH;
     
+    var.levels = 6;
+	var.pyrScale = 0.6;
+	var.nIt = 3;
+	var.minDisp = -numberOfDisparities;
+	var.maxDisp = 0;
+	var.poly_n = 3;
+	var.poly_sigma = 0.0;
+	var.fi = 5.0f;
+	var.lambda = 0.1;
+	var.penalization = var.PENALIZATION_TICHONOV;
+	var.cycle = var.CYCLE_V;
+	var.flags = var.USE_SMART_ID | var.USE_INITIAL_DISPARITY | 1 * var.USE_MEDIAN_FILTERING ;
+    
     Mat disp, disp8;
     //Mat img1p, img2p, dispp;
     //copyMakeBorder(img1, img1p, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
@@ -229,13 +245,18 @@ int main(int argc, char** argv)
     int64 t = getTickCount();
     if( alg == STEREO_BM )
         bm(img1, img2, disp);
-    else
+    else if( alg == STEREO_VAR )
+        var(img1, img2, disp);
+    else if( alg == STEREO_SGBM || alg == STEREO_HH )
         sgbm(img1, img2, disp);
     t = getTickCount() - t;
     printf("Time elapsed: %fms\n", t*1000/getTickFrequency());
 
     //disp = dispp.colRange(numberOfDisparities, img1p.cols);
-    disp.convertTo(disp8, CV_8U, 255/(numberOfDisparities*16.));
+    if( alg != STEREO_VAR )
+        disp.convertTo(disp8, CV_8U, 255/(numberOfDisparities*16.));
+    else
+        disp.convertTo(disp8, CV_8U);
     if( !no_display )
     {
         namedWindow("left", 1);

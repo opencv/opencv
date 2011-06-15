@@ -431,137 +431,179 @@ namespace cv
             DEFAULT_NUM_DISTANCE_BUCKETS = 7 };
     };
     
-
-  typedef bool (*BundleAdjustCallback)(int iteration, double norm_error, void* user_data);
-
-  class LevMarqSparse {
-  public:
-    LevMarqSparse();
-    LevMarqSparse(int npoints, // number of points
-		  int ncameras, // number of cameras
-		  int nPointParams, // number of params per one point  (3 in case of 3D points)
-		  int nCameraParams, // number of parameters per one camera
-		  int nErrParams, // number of parameters in measurement vector
-		  // for 1 point at one camera (2 in case of 2D projections)
-		  Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
-		  // 1 - point is visible for the camera, 0 - invisible
-		  Mat& P0, // starting vector of parameters, first cameras then points
-		  Mat& X, // measurements, in order of visibility. non visible cases are skipped 
-		  TermCriteria criteria, // termination criteria
-            
-		  // callback for estimation of Jacobian matrices
-		  void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
-					 Mat& cam_params, Mat& A, Mat& B, void* data),
-		  // callback for estimation of backprojection errors
-		  void (CV_CDECL * func)(int i, int j, Mat& point_params,
-					 Mat& cam_params, Mat& estim, void* data),
-		  void* data, // user-specific data passed to the callbacks
-		  BundleAdjustCallback cb, void* user_data
-		  );
-
-    virtual ~LevMarqSparse();
     
-    virtual void run( int npoints, // number of points
-		      int ncameras, // number of cameras
-		      int nPointParams, // number of params per one point  (3 in case of 3D points)
-		      int nCameraParams, // number of parameters per one camera
-		      int nErrParams, // number of parameters in measurement vector
-		      // for 1 point at one camera (2 in case of 2D projections)
-		      Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
-		      // 1 - point is visible for the camera, 0 - invisible
-		      Mat& P0, // starting vector of parameters, first cameras then points
-		      Mat& X, // measurements, in order of visibility. non visible cases are skipped 
-		      TermCriteria criteria, // termination criteria
-            
-		      // callback for estimation of Jacobian matrices
-		      void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
-					     Mat& cam_params, Mat& A, Mat& B, void* data),
-		      // callback for estimation of backprojection errors
-		      void (CV_CDECL * func)(int i, int j, Mat& point_params,
-					     Mat& cam_params, Mat& estim, void* data),
-		      void* data // user-specific data passed to the callbacks
-		      );
-
-    virtual void clear();
+    typedef bool (*BundleAdjustCallback)(int iteration, double norm_error, void* user_data);
     
-    // useful function to do simple bundle adjustment tasks
-    static void bundleAdjust(vector<Point3d>& points, // positions of points in global coordinate system (input and output)
-			     const vector<vector<Point2d> >& imagePoints, // projections of 3d points for every camera
-			     const vector<vector<int> >& visibility, // visibility of 3d points for every camera 
-			     vector<Mat>& cameraMatrix, // intrinsic matrices of all cameras (input and output)
-			     vector<Mat>& R, // rotation matrices of all cameras (input and output)
-			     vector<Mat>& T, // translation vector of all cameras (input and output)
-			     vector<Mat>& distCoeffs, // distortion coefficients of all cameras (input and output)
-			     const TermCriteria& criteria=
-			     TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON),
-			     BundleAdjustCallback cb = 0, void* user_data = 0);
-    
-  public:
-    virtual void optimize(CvMat &_vis); //main function that runs minimization
-    
-    //iteratively asks for measurement for visible camera-point pairs
-    void ask_for_proj(CvMat &_vis,bool once=false);
-    //iteratively asks for Jacobians for every camera_point pair
-    void ask_for_projac(CvMat &_vis);
+    class LevMarqSparse {
+    public:
+        LevMarqSparse();
+        LevMarqSparse(int npoints, // number of points
+                      int ncameras, // number of cameras
+                      int nPointParams, // number of params per one point  (3 in case of 3D points)
+                      int nCameraParams, // number of parameters per one camera
+                      int nErrParams, // number of parameters in measurement vector
+                      // for 1 point at one camera (2 in case of 2D projections)
+                      Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
+                      // 1 - point is visible for the camera, 0 - invisible
+                      Mat& P0, // starting vector of parameters, first cameras then points
+                      Mat& X, // measurements, in order of visibility. non visible cases are skipped 
+                      TermCriteria criteria, // termination criteria
+                      
+                      // callback for estimation of Jacobian matrices
+                      void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
+                                             Mat& cam_params, Mat& A, Mat& B, void* data),
+                      // callback for estimation of backprojection errors
+                      void (CV_CDECL * func)(int i, int j, Mat& point_params,
+                                             Mat& cam_params, Mat& estim, void* data),
+                      void* data, // user-specific data passed to the callbacks
+                      BundleAdjustCallback cb, void* user_data
+                      );
         
-    CvMat* err; //error X-hX
-    double prevErrNorm, errNorm;
-    double lambda;
-    CvTermCriteria criteria;
-    int iters;
-    
-    CvMat** U; //size of array is equal to number of cameras
-    CvMat** V; //size of array is equal to number of points
-    CvMat** inv_V_star; //inverse of V*
-
-    CvMat** A;
-    CvMat** B;
-    CvMat** W;
-
-    CvMat* X; //measurement 
-    CvMat* hX; //current measurement extimation given new parameter vector 
-    
-    CvMat* prevP; //current already accepted parameter. 
-    CvMat* P; // parameters used to evaluate function with new params
-    // this parameters may be rejected 
-    
-    CvMat* deltaP; //computed increase of parameters (result of normal system solution )
-
-    CvMat** ea; // sum_i  AijT * e_ij , used as right part of normal equation
-    // length of array is j = number of cameras  
-    CvMat** eb; // sum_j  BijT * e_ij , used as right part of normal equation
-    // length of array is i = number of points
-
-    CvMat** Yj; //length of array is i = num_points
-
-    CvMat* S; //big matrix of block Sjk  , each block has size num_cam_params x num_cam_params 
-
-    CvMat* JtJ_diag; //diagonal of JtJ,  used to backup diagonal elements before augmentation
-
-    CvMat* Vis_index; // matrix which element is index of measurement for point i and camera j
-               
-    int num_cams;
-    int num_points;
-    int num_err_param;
-    int num_cam_param;
-    int num_point_param;
-
-    //target function and jacobian pointers, which needs to be initialized 
-    void (*fjac)(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data);
-    void (*func)(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data);
-
-    void* data;
-
-    BundleAdjustCallback cb;
-    void* user_data;
-  };   
+        virtual ~LevMarqSparse();
+        
+        virtual void run( int npoints, // number of points
+                         int ncameras, // number of cameras
+                         int nPointParams, // number of params per one point  (3 in case of 3D points)
+                         int nCameraParams, // number of parameters per one camera
+                         int nErrParams, // number of parameters in measurement vector
+                         // for 1 point at one camera (2 in case of 2D projections)
+                         Mat& visibility, // visibility matrix. rows correspond to points, columns correspond to cameras
+                         // 1 - point is visible for the camera, 0 - invisible
+                         Mat& P0, // starting vector of parameters, first cameras then points
+                         Mat& X, // measurements, in order of visibility. non visible cases are skipped 
+                         TermCriteria criteria, // termination criteria
+                         
+                         // callback for estimation of Jacobian matrices
+                         void (CV_CDECL * fjac)(int i, int j, Mat& point_params,
+                                                Mat& cam_params, Mat& A, Mat& B, void* data),
+                         // callback for estimation of backprojection errors
+                         void (CV_CDECL * func)(int i, int j, Mat& point_params,
+                                                Mat& cam_params, Mat& estim, void* data),
+                         void* data // user-specific data passed to the callbacks
+                         );
+        
+        virtual void clear();
+        
+        // useful function to do simple bundle adjustment tasks
+        static void bundleAdjust(vector<Point3d>& points, // positions of points in global coordinate system (input and output)
+                                 const vector<vector<Point2d> >& imagePoints, // projections of 3d points for every camera
+                                 const vector<vector<int> >& visibility, // visibility of 3d points for every camera 
+                                 vector<Mat>& cameraMatrix, // intrinsic matrices of all cameras (input and output)
+                                 vector<Mat>& R, // rotation matrices of all cameras (input and output)
+                                 vector<Mat>& T, // translation vector of all cameras (input and output)
+                                 vector<Mat>& distCoeffs, // distortion coefficients of all cameras (input and output)
+                                 const TermCriteria& criteria=
+                                 TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, DBL_EPSILON),
+                                 BundleAdjustCallback cb = 0, void* user_data = 0);
+        
+    public:
+        virtual void optimize(CvMat &_vis); //main function that runs minimization
+        
+        //iteratively asks for measurement for visible camera-point pairs
+        void ask_for_proj(CvMat &_vis,bool once=false);
+        //iteratively asks for Jacobians for every camera_point pair
+        void ask_for_projac(CvMat &_vis);
+        
+        CvMat* err; //error X-hX
+        double prevErrNorm, errNorm;
+        double lambda;
+        CvTermCriteria criteria;
+        int iters;
+        
+        CvMat** U; //size of array is equal to number of cameras
+        CvMat** V; //size of array is equal to number of points
+        CvMat** inv_V_star; //inverse of V*
+        
+        CvMat** A;
+        CvMat** B;
+        CvMat** W;
+        
+        CvMat* X; //measurement 
+        CvMat* hX; //current measurement extimation given new parameter vector 
+        
+        CvMat* prevP; //current already accepted parameter. 
+        CvMat* P; // parameters used to evaluate function with new params
+        // this parameters may be rejected 
+        
+        CvMat* deltaP; //computed increase of parameters (result of normal system solution )
+        
+        CvMat** ea; // sum_i  AijT * e_ij , used as right part of normal equation
+        // length of array is j = number of cameras  
+        CvMat** eb; // sum_j  BijT * e_ij , used as right part of normal equation
+        // length of array is i = number of points
+        
+        CvMat** Yj; //length of array is i = num_points
+        
+        CvMat* S; //big matrix of block Sjk  , each block has size num_cam_params x num_cam_params 
+        
+        CvMat* JtJ_diag; //diagonal of JtJ,  used to backup diagonal elements before augmentation
+        
+        CvMat* Vis_index; // matrix which element is index of measurement for point i and camera j
+        
+        int num_cams;
+        int num_points;
+        int num_err_param;
+        int num_cam_param;
+        int num_point_param;
+        
+        //target function and jacobian pointers, which needs to be initialized 
+        void (*fjac)(int i, int j, Mat& point_params, Mat& cam_params, Mat& A, Mat& B, void* data);
+        void (*func)(int i, int j, Mat& point_params, Mat& cam_params, Mat& estim, void* data);
+        
+        void* data;
+        
+        BundleAdjustCallback cb;
+        void* user_data;
+    };   
     
     CV_EXPORTS int chamerMatching( Mat& img, Mat& templ,
-                                   vector<vector<Point> >& results, vector<float>& cost,
-                                   double templScale=1, int maxMatches = 20,
-                                   double minMatchDistance = 1.0, int padX = 3,
-                                   int padY = 3, int scales = 5, double minScale = 0.6, double maxScale = 1.6,
-                                   double orientationWeight = 0.5, double truncate = 20);
+                                  vector<vector<Point> >& results, vector<float>& cost,
+                                  double templScale=1, int maxMatches = 20,
+                                  double minMatchDistance = 1.0, int padX = 3,
+                                  int padY = 3, int scales = 5, double minScale = 0.6, double maxScale = 1.6,
+                                  double orientationWeight = 0.5, double truncate = 20);
+    
+    
+    class CV_EXPORTS StereoVar
+    {
+    public:
+        // Flags	
+        enum {USE_INITIAL_DISPARITY = 1, USE_EQUALIZE_HIST = 2, USE_SMART_ID = 4, USE_MEDIAN_FILTERING = 8};
+        enum {CYCLE_O, CYCLE_V};
+        enum {PENALIZATION_TICHONOV, PENALIZATION_CHARBONNIER, PENALIZATION_PERONA_MALIK};
+        
+        //! the default constructor
+        CV_WRAP StereoVar();
+        
+        //! the full constructor taking all the necessary algorithm parameters
+        CV_WRAP StereoVar(int levels, double pyrScale, int nIt, int minDisp, int maxDisp, int poly_n, double poly_sigma, float fi, float lambda, int penalization, int cycle, int flags);
+        
+        //! the destructor
+        virtual ~StereoVar();
+        
+        //! the stereo correspondence operator that computes disparity map for the specified rectified stereo pair
+        CV_WRAP_AS(compute) virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
+        
+        CV_PROP_RW int		levels;
+        CV_PROP_RW double	pyrScale;
+        CV_PROP_RW int		nIt;
+        CV_PROP_RW int		minDisp;
+        CV_PROP_RW int		maxDisp;
+        CV_PROP_RW int		poly_n;
+        CV_PROP_RW double	poly_sigma;
+        CV_PROP_RW float	fi;
+        CV_PROP_RW float	lambda;
+        CV_PROP_RW int		penalization;
+        CV_PROP_RW int		cycle;
+        CV_PROP_RW int		flags;
+        
+    private:
+        void FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level);
+        void VCycle_MyFAS(Mat &I1_h, Mat &I2_h, Mat &I2x_h, Mat &u_h, int level);
+        void VariationalSolver(Mat &I1_h, Mat &I2_h, Mat &I2x_h, Mat &u_h, int level);
+    };
+    
+    CV_EXPORTS void polyfit(const Mat& srcx, const Mat& srcy, Mat& dst, int order);
 }
 
 
