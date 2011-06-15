@@ -350,21 +350,79 @@ void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& oppo
     }
 }
 
+struct KP_LessThan
+{
+    KP_LessThan(const vector<KeyPoint>& _kp) : kp(&_kp) {}
+    bool operator()(int i, int j) const
+    {
+        return (*kp)[i].class_id < (*kp)[j].class_id;
+    }
+    const vector<KeyPoint>* kp;
+};
+
 void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 {
     vector<Mat> opponentChannels;
     convertBGRImageToOpponentColorSpace( bgrImage, opponentChannels );
 
-    // Compute descriptors three times, once for each Opponent channel
-    // and concatenate into a single color surf descriptor
-    int descriptorSize = descriptorExtractor->descriptorSize();
-    descriptors.create( static_cast<int>(keypoints.size()), 3*descriptorSize, descriptorExtractor->descriptorType() );
-    for( int i = 0; i < 3/*channel count*/; i++ )
+    const int N = 3; // channels count
+    vector<KeyPoint> channelKeypoints[N];
+    Mat channelDescriptors[N];
+    vector<int> idxs[N];
+
+    // Compute descriptors three times, once for each Opponent channel to concatenate into a single color descriptor
+    for( int ci = 0; ci < N; ci++ )
     {
-        CV_Assert( opponentChannels[i].type() == CV_8UC1 );
-        Mat opponentDescriptors = descriptors.colRange( i*descriptorSize, (i+1)*descriptorSize );
-        descriptorExtractor->compute( opponentChannels[i], keypoints, opponentDescriptors );
+        channelKeypoints[ci].insert( channelKeypoints[ci].begin(), keypoints.begin(), keypoints.end() );
+        // Use class_id member to get indices into initial keypoints vector
+        for( size_t ki = 0; ki < channelKeypoints[ci].size(); ki++ )
+            channelKeypoints[ci][ki].class_id = ki;
+
+        descriptorExtractor->compute( opponentChannels[ci], channelKeypoints[ci], channelDescriptors[ci] );
+        idxs[ci].resize( channelKeypoints[ci].size() );
+        for( size_t ki = 0; ki < channelKeypoints[ci].size(); ki++ )
+        {
+            idxs[ci][ki] = ki;
+        }
+        std::sort( idxs[ci].begin(), idxs[ci].end(), KP_LessThan(channelKeypoints[ci]) );
     }
+
+    vector<KeyPoint> outKeypoints;
+    outKeypoints.reserve( keypoints.size() );
+
+    int descriptorSize = descriptorExtractor->descriptorSize();
+    Mat mergedDescriptors( (int)keypoints.size(), 3*descriptorSize, descriptorExtractor->descriptorType() );
+    int mergedCount = 0;
+    // cp - current channel position
+    for( size_t cp[] = {0, 0, 0}; cp[0] < channelKeypoints[0].size() && cp[1] < channelKeypoints[1].size() && cp[2] < channelKeypoints[2].size(); )
+    {
+        const int maxInitIdx = std::max( channelKeypoints[0][idxs[0][cp[0]]].class_id,
+                                         std::max( channelKeypoints[1][idxs[1][cp[1]]].class_id,
+                                                   channelKeypoints[2][idxs[2][cp[2]]].class_id ) );
+
+        while( channelKeypoints[0][idxs[0][cp[0]]].class_id < maxInitIdx && cp[0] < channelKeypoints[0].size() ) { cp[0]++; }
+        while( channelKeypoints[1][idxs[1][cp[1]]].class_id < maxInitIdx && cp[1] < channelKeypoints[1].size() ) { cp[1]++; }
+        while( channelKeypoints[2][idxs[2][cp[2]]].class_id < maxInitIdx && cp[2] < channelKeypoints[2].size() ) { cp[2]++; }
+        if( cp[0] >= channelKeypoints[0].size() || cp[1] >= channelKeypoints[1].size() || cp[2] >= channelKeypoints[2].size() )
+            break;
+
+        if( channelKeypoints[0][idxs[0][cp[0]]].class_id == maxInitIdx &&
+            channelKeypoints[1][idxs[1][cp[1]]].class_id == maxInitIdx &&
+            channelKeypoints[2][idxs[2][cp[2]]].class_id == maxInitIdx )
+        {
+            outKeypoints.push_back( keypoints[maxInitIdx] );
+            // merge descriptors
+            for( int ci = 0; ci < N; ci++ )
+            {
+                Mat dst = mergedDescriptors(Range(mergedCount, mergedCount+1), Range(ci*descriptorSize, (ci+1)*descriptorSize));
+                channelDescriptors[ci].row( idxs[ci][cp[ci]] ).copyTo( dst );
+                cp[ci]++;
+            }
+            mergedCount++;
+        }
+    }
+    mergedDescriptors.rowRange(0, mergedCount).copyTo( descriptors );
+    std::swap( outKeypoints, keypoints );
 }
 
 void OpponentColorDescriptorExtractor::read( const FileNode& fn )
