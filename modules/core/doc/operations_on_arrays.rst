@@ -1593,9 +1593,9 @@ min
 
     Calculates per-element minimum of two arrays or array and a scalar.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and type as  ``src1`` .
+    :param src2: Second source array of the same size and type as  ``src1`` .
     
     :param value: Real scalar value.
 
@@ -1647,13 +1647,13 @@ minMaxLoc
 
     :param maxLoc: Pointer to the returned maximum location (in 2D case).  ``NULL`` is used if not required.
 
-    :param minIdx: Pointer to the returned minimum location (in nD case). ``NULL`` is used if not required. Otherwise, it must point to an array of  ``src.dims``  elements. The coordinates of minimum element in each dimensions will be stored sequentially there.
+    :param minIdx: Pointer to the returned minimum location (in nD case). ``NULL`` is used if not required. Otherwise, it must point to an array of  ``src.dims``  elements. The coordinates of the minimum element in each dimension are stored there sequentially.
 
     :param maxIdx: Pointer to the returned maximum location (in nD case).  ``NULL`` is used if not required.
 
     :param mask: Optional mask used to select a sub-array.
 
-The functions ``ninMaxLoc`` find minimum and maximum element values and their positions. The extremums are searched across the whole array or,
+The functions ``ninMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
 if ``mask`` is not an empty array, in the specified array region.
 
 The functions do not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
@@ -1694,7 +1694,7 @@ mixChannels
         
     :param ndst: Number of elements in  ``dstv`` .
     
-    :param fromTo: Array of index pairs specifying which channels are copied and where. ``fromTo[k*2]``  is a 0-based index of the input channel in  ``srcv`` . ``fromTo[k*2+1]``  is an index of the output channel in  ``dstv`` . The continuous channel numbering is used: the first input image channels are indexed from  ``0``  to  ``srcv[0].channels()-1`` , the second input image channels are indexed from  ``srcv[0].channels()``  to ``srcv[0].channels() + srcv[1].channels()-1``  and so on. The same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero ``npairs`` .
+    :param fromTo: Array of index pairs specifying which channels are copied and where. ``fromTo[k*2]``  is a 0-based index of the input channel in  ``srcv`` . ``fromTo[k*2+1]``  is an index of the output channel in  ``dstv`` . The continuous channel numbering is used: the first input image channels are indexed from  ``0``  to  ``srcv[0].channels()-1`` , the second input image channels are indexed from  ``srcv[0].channels()``  to ``srcv[0].channels() + srcv[1].channels()-1``,  and so on. The same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero ``npairs`` .
     
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
     
@@ -1702,7 +1702,7 @@ The functions ``mixChannels`` provide an advanced mechanism for shuffling image 
 :cpp:func:`merge` and some forms of
 :cpp:func:`cvtColor` are partial cases of ``mixChannels`` .
 
-As an example, this code splits a 4-channel RGBA image into a 3-channel BGR (with R and B channels swapped) and separate alpha channel image: ::
+In the example below, the code splits a 4-channel RGBA image into a 3-channel BGR (with R and B channels swapped) and a separate alpha-channel image: ::
 
     Mat rgba( 100, 100, CV_8UC4, Scalar(1,2,3,4) );
     Mat bgr( rgba.rows, rgba.cols, CV_8UC3 );
@@ -1734,13 +1734,13 @@ mulSpectrums
 
     Performs the per-element multiplication of two Fourier spectrums.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and type as  ``src1`` .
+    :param src2: Second source array of the same size and type as  ``src1`` .
     
-    :param dst: Destination array. It has the same size and type as  ``src1`` .
+    :param dst: Destination array of the same size and type as  ``src1`` .
     
-    :param flags: The operation flags. Currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is independent 1D Fourier spectrum.
+    :param flags: Operation flags. Currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
 
     :param conj: Optional flag that conjugates the second source array before the multiplication (true) or not (false).
 
@@ -1760,9 +1760,9 @@ multiply
 
     Calculates the per-element scaled product of two arrays.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and the same type as  ``src1`` .
+    :param src2: Second source array of the same size and the same type as  ``src1`` .
     
     :param dst: Destination array of the same size and type as  ``src1`` .
     
@@ -1774,7 +1774,7 @@ The function ``multiply`` calculates the per-element product of two arrays:
 
     \texttt{dst} (I)= \texttt{saturate} ( \texttt{scale} \cdot \texttt{src1} (I)  \cdot \texttt{src2} (I))
 
-There is also
+There is also a
 :ref:`MatrixExpressions` -friendly variant of the first function. See
 :cpp:func:`Mat::mul` .
 
@@ -1809,7 +1809,7 @@ mulTransposed
 
     :param aTa: Flag specifying the multiplication ordering. See the description below.
 
-    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :cpp:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  description.
+    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :cpp:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  parameter description below.
 
     :param scale: Optional scale factor for the matrix product.
 
@@ -1849,9 +1849,9 @@ norm
 
     Calculates an absolute array norm, an absolute difference norm, or a relative difference norm.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
-    :param src2: The second source array of the same size and the same type as  ``src1`` .
+    :param src2: Second source array of the same size and the same type as  ``src1`` .
     
     :param normType: Type of the norm. See the details below.
 
@@ -1896,7 +1896,7 @@ normalize
 
 .. cpp:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 
-    Normalizes norm or value range of an array
+    Normalizes the norm or value range of an array.
 
     :param src: Source array.
 
@@ -1906,35 +1906,31 @@ normalize
 
     :param beta: Upper range boundary in case ofthe range normalization. It is not used for the norm normalization.
 
-    :param normType: Normalization type. See the discussion.
+    :param normType: Normalization type. See the details below.
 
-    :param rtype: When the parameter is negative, the destination array has the same type as  ``src`` . Otherwise, it has the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(rtype)`` .
+    :param rtype: When the parameter is negative, the destination array has the same type as  ``src``. Otherwise, it has the same number of channels as  ``src``  and the depth ``=CV_MAT_DEPTH(rtype)`` .
     
     :param mask: Optional operation mask.
 
-The functions ``normalize`` scale and shift the source array elements, so that
 
-*
-    .. math::
+The functions ``normalize`` scale and shift the source array elements so that
 
-        \| \texttt{dst} \| _{L_p}= \texttt{alpha}
+.. math::
 
-    (where p=Inf, 1 or 2) when ``normType=NORM_INF``,``NORM_L1`` or ``NORM_L2``, respectively,
+    \| \texttt{dst} \| _{L_p}= \texttt{alpha}
 
-*    
-    or so that
+(where p=Inf, 1 or 2) when ``normType=NORM_INF``, ``NORM_L1``, or ``NORM_L2``, respectively; or so that
 
-    .. math::
+.. math::
 
-        \min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}
+    \min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}
 
-    when ``normType=NORM_MINMAX`` (for dense arrays only).
-
+when ``normType=NORM_MINMAX`` (for dense arrays only).
 The optional mask specifies a sub-array to be normalized. This means that the norm or min-n-max are computed over the sub-array, and then this sub-array is modified to be normalized. If you want to only use the mask to compute the norm or min-max but modify the whole array, you can use
 :cpp:func:`norm` and
-:cpp:func:`Mat::convertTo`
+:cpp:func:`Mat::convertTo`.
 
-In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this, the range transformation for sparse matrices is not allowed, since it can shift the zero level.
+In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this, the range transformation for sparse matrices is not allowed since it can shift the zero level.
 
 .. seealso::
 
@@ -1948,11 +1944,12 @@ PCA
 ---
 .. cpp:class:: PCA
 
-for Principal Component Analysis.
+Principal Component Analysis class.
 
-The class is used to compute a special basis for a set of vectors. The basis will consist of eigenvectors of the covariance matrix computed from the input set of vectors. The class ``PCA`` can also transform vectors to/from the new coordinate space defined by the basis. Usually, in this new coordinate system, each vector from the original set (and any linear combination of such vectors) can be quite accurately approximated by taking just the first few its components, corresponding to the eigenvectors of the largest eigenvalues of the covariance matrix. Geometrically it means that you compute a projection of the vector to a subspace formed by a few eigenvectors corresponding to the dominant eigenvalues of the covariation matrix. And usually such a projection is very close to the original vector. That is, you can represent the original vector from a high-dimensional space with a much shorter vector consisting of the projected vector's coordinates in the subspace. Such a transformation is also known as Karhunen-Loeve Transform, or KLT. See
-http://en.wikipedia.org/wiki/Principal\_component\_analysis
-The sample below is the function that takes two matrices. The first one stores the set of vectors (a row per vector) that is used to compute PCA. The second one stores another "test" set of vectors (a row per vector) that are first compressed with PCA, then reconstructed back, and then the reconstruction error norm is computed and printed for each vector. ::
+The class is used to compute a special basis for a set of vectors. The basis will consist of eigenvectors of the covariance matrix computed from the input set of vectors. The class ``PCA`` can also transform vectors to/from the new coordinate space defined by the basis. Usually, in this new coordinate system, each vector from the original set (and any linear combination of such vectors) can be quite accurately approximated by taking its first few components, corresponding to the eigenvectors of the largest eigenvalues of the covariance matrix. Geometrically it means that you compute a projection of the vector to a subspace formed by a few eigenvectors corresponding to the dominant eigenvalues of the covariance matrix. And usually such a projection is very close to the original vector. So, you can represent the original vector from a high-dimensional space with a much shorter vector consisting of the projected vector's coordinates in the subspace. Such a transformation is also known as Karhunen-Loeve Transform, or KLT. See
+http://en.wikipedia.org/wiki/Principal\_component\_analysis .
+
+The sample below is the function that takes two matrices. The first function stores a set of vectors (a row per vector) that is used to compute PCA. The second function stores another "test" set of vectors (a row per vector). First, these vectors are compressed with PCA, then reconstructed back, and then the reconstruction error norm is computed and printed for each vector. ::
 
     PCA compressPCA(InputArray pcaset, int maxComponents,
                     const Mat& testset, OutputArray compressed)
@@ -2013,13 +2010,13 @@ PCA::PCA
 
     :param flags: Operation flags. Currently the parameter is only used to specify the data layout.
 
-        * **CV_PCA_DATA_AS_ROWS** Indicate that the input samples are stored as matrix rows.
+        * **CV_PCA_DATA_AS_ROWS** indicates that the input samples are stored as matrix rows.
 
-        * **CV_PCA_DATA_AS_COLS** Indicate that the input samples are stored as matrix columns.
+        * **CV_PCA_DATA_AS_COLS** indicates that the input samples are stored as matrix columns.
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
-The default constructor initializes empty PCA structure. The second constructor initializes the structure and calls
+The default constructor initializes an empty PCA structure. The second constructor initializes the structure and calls
 :cpp:func:`PCA::operator ()` .
 
 
@@ -2037,13 +2034,13 @@ PCA::operator ()
 
     :param flags: Operation flags. Currently the parameter is only used to specify the data layout.
 
-        * **CV_PCA_DATA_AS_ROWS** Indicate that the input samples are stored as matrix rows.
+        * **CV_PCA_DATA_AS_ROWS** indicates that the input samples are stored as matrix rows.
 
-        * **CV_PCA_DATA_AS_COLS** Indicate that the input samples are stored as matrix columns.
+        * **CV_PCA_DATA_AS_COLS** indicates that the input samples are stored as matrix columns.
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
-The operator performs PCA of the supplied dataset. It is safe to reuse the same PCA structure for multiple datasets. That is, if the  structure has been previously used with another dataset, the existing internal data is reclaimed and the new ``eigenvalues``,``eigenvectors`` , and ``mean`` are allocated and computed.
+The operator performs PCA of the supplied dataset. It is safe to reuse the same PCA structure for multiple datasets. That is, if the  structure has been previously used with another dataset, the existing internal data is reclaimed and the new ``eigenvalues``, ``eigenvectors`` , and ``mean`` are allocated and computed.
 
 The computed eigenvalues are sorted from the largest to the smallest and the corresponding eigenvectors are stored as ``PCA::eigenvectors`` rows.
 
@@ -2058,7 +2055,7 @@ PCA::project
 
     Projects vector(s) to the principal component subspace.
 
-    :param vec: Input vector(s). They must have the same dimensionality and the same layout as the input data used at PCA phase. That is, if  ``CV_PCA_DATA_AS_ROWS``  are specified, then  ``vec.cols==data.cols``  (vectors' dimensionality) and  ``vec.rows``  is the number of vectors to project. The same is true for the  ``CV_PCA_DATA_AS_COLS``  case.
+    :param vec: Input vector(s). They must have the same dimensionality and the same layout as the input data used at PCA phase. That is, if  ``CV_PCA_DATA_AS_ROWS``  are specified, then  ``vec.cols==data.cols``  (vector dimensionality) and  ``vec.rows``  is the number of vectors to project. The same is true for the  ``CV_PCA_DATA_AS_COLS``  case.
 
     :param result: Output vectors. In case of  ``CV_PCA_DATA_AS_COLS``  , the output matrix has as many columns as the number of input vectors. This means that  ``result.cols==vec.cols``  and the number of rows match the number of principal components (for example,  ``maxComponents``  parameter passed to the constructor).
 
@@ -2080,7 +2077,7 @@ PCA::backProject
     :param result: Reconstructed vectors. The layout and size are the same as of  ``PCA::project``  input vectors.
 
 The methods are inverse operations to
-:cpp:func:`PCA::project` . They take PC coordinates of projected vectors and reconstruct the original vectors. Of course, unless all the principal components have been retained, the reconstructed vectors are different from the originals. But typically, the difference is small if the number of components is large enough (but still much smaller than the original vector dimensionality). As a result, PCA is used.
+:cpp:func:`PCA::project` . They take PC coordinates of projected vectors and reconstruct the original vectors. Unless all the principal components have been retained, the reconstructed vectors are different from the originals. But typically, the difference is small if the number of components is large enough (but still much smaller than the original vector dimensionality). As a result, PCA is used.
 
 
 
@@ -2096,7 +2093,7 @@ perspectiveTransform
     
     :param mtx: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
-The function ``perspectiveTransform`` transforms every element of ``src``by treating it as a 2D or 3D vector, in the following way:
+The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
 .. math::
 
@@ -2132,7 +2129,7 @@ phase
 
 .. cpp:function:: void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees=false)
 
-    Calculates the rotation angle of 2d vectors.
+    Calculates the rotation angle of 2D vectors.
 
     :param x: Source floating-point array of x-coordinates of 2D vectors.
 
@@ -2160,11 +2157,11 @@ polarToCart
 
     :param magnitude: Source floating-point array of magnitudes of 2D vectors. It can be an empty matrix ( ``=Mat()`` ). In this case, the function assumes that all the magnitudes are =1. If it is not empty, it must have the same size and type as  ``angle`` .
     
-    :param angle: Source floating-point array of angles of the 2D vectors.
+    :param angle: Source floating-point array of angles of 2D vectors.
 
-    :param x: Destination array of x-coordinates of 2D vectors. It has the same size and type as  ``angle`` .
+    :param x: Destination array of x-coordinates of 2D vectors. It has the same size and type as  ``angle``.
     
-    :param y: Destination array of y-coordinates of 2D vectors. It has the same size and type as  ``angle`` .
+    :param y: Destination array of y-coordinates of 2D vectors. It has the same size and type as  ``angle``.
     
     :param angleInDegrees: When it is true, the input angles are measured in degrees. Otherwise. they are measured in radians.
 
@@ -2207,7 +2204,7 @@ The function ``pow`` raises every element of the input array to ``p`` :
 
     \texttt{dst} (I) =  \fork{\texttt{src}(I)^p}{if \texttt{p} is integer}{|\texttt{src}(I)|^p}{otherwise}
 
-That is, for a non-integer power exponent, the absolute values of input array elements are used. However, it is possible to get true values for negative values using some extra operations. In the example below, computing the 5th root of array ``src``  shows: ::
+So, for a non-integer power exponent, the absolute values of input array elements are used. However, it is possible to get true values for negative values using some extra operations. In the example below, computing the 5th root of array ``src``  shows: ::
 
     Mat mask = src < 0;
     pow(src, 1./5, dst);
@@ -2231,7 +2228,7 @@ RNG
 
 .. cpp:class: RNG
 
-- Random number generator. It encapsulates the state (currently, a 64-bit integer) and has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
+Random number generator. It encapsulates the state (currently, a 64-bit integer) and has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
 http://en.wikipedia.org/wiki/Multiply-with-carry
 ). Gaussian-distribution random numbers are generated using the Ziggurat algorithm (
 http://en.wikipedia.org/wiki/Ziggurat_algorithm
@@ -2245,7 +2242,7 @@ RNG::RNG
 
 .. cpp:function:: RNG::RNG(uint64 state)
 
-    RNG constructors
+    Introduces RNG constructors.
 
     :param state: 64-bit value used to initialize the RNG.
 
@@ -2364,11 +2361,11 @@ RNG::fill
 
     :param distType: Distribution type, ``RNG::UNIFORM``  or  ``RNG::NORMAL`` .
     
-    :param a: The first distribution parameter. In case of the uniform distribution, this is an inclusive lower boundary. In case of the normal distribution, this is a mean value.
+    :param a: First distribution parameter. In case of the uniform distribution, this is an inclusive lower boundary. In case of the normal distribution, this is a mean value.
 
-    :param b: The second distribution parameter. In case of the uniform distribution, this is a non-inclusive upper boundary. In case of the normal distribution, this is a standard deviation (diagonal of the standard deviation matrix or the full standard deviation matrix).
+    :param b: Second distribution parameter. In case of the uniform distribution, this is a non-inclusive upper boundary. In case of the normal distribution, this is a standard deviation (diagonal of the standard deviation matrix or the full standard deviation matrix).
 
-Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariation matrix directly. To do that, the method generates samples from multi-dimensional standard Gaussian distribution with zero mean and identity covariation matrix, and then transforms them using :cpp:func:`transform` to get samples from the specified Gaussian distribution.
+Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariance matrix directly. To do that, the method generates samples from multi-dimensional standard Gaussian distribution with zero mean and identity covariation matrix, and then transforms them using :cpp:func:`transform` to get samples from the specified Gaussian distribution.
 
 randu
 -----
@@ -2548,11 +2545,11 @@ scaleAdd
 
     Calculates the sum of a scaled array and another array.
 
-    :param src1: The first source array.
+    :param src1: First source array.
 
     :param scale: Scale factor for the first array.
 
-    :param src2: The second source array of the same size and type as  ``src1`` .
+    :param src2: Second source array of the same size and type as  ``src1`` .
     
     :param dst: Destination array of the same size and type as  ``src1`` .
     
@@ -2672,13 +2669,13 @@ solveCubic
 
 The function ``solveCubic`` finds the real roots of a cubic equation:
 
-(if ``coeffs`` is a 4-element vector)
+* if ``coeffs`` is a 4-element vector:
 
 .. math::
 
     \texttt{coeffs} [0] x^3 +  \texttt{coeffs} [1] x^2 +  \texttt{coeffs} [2] x +  \texttt{coeffs} [3] = 0
 
-or (if ``coeffs`` is a 3-element vector):
+* if ``coeffs`` is a 3-element vector:
 
 .. math::
 
@@ -2730,7 +2727,7 @@ sort
 
             * **CV_SORT_DESCENDING** Each matrix row is sorted in the descending order. This flag and the previous one are also mutually exclusive.
 
-The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. So you should pass two operation flags to get desirable behaviour. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
+The function ``sort`` sorts each matrix row or each matrix column in ascending or descending order. So you should pass two operation flags to get desired behaviour. If you want to sort matrix rows or columns lexicographically, you can use STL ``std::sort`` generic function with the proper comparison predicate.
 
 .. seealso::
 
@@ -2760,7 +2757,7 @@ sortIdx
 
             * **CV_SORT_DESCENDING** Each matrix row is sorted in the descending order. This flag and the previous one are also mutually exclusive.
 
-The function ``sortIdx`` sorts each matrix row or each matrix column in the ascending or descending order. So you should pass two operation flags to get desirable behaviour. Instead of reordering the elements themselves, it stores the indices of sorted elements in the destination array. For example: ::
+The function ``sortIdx`` sorts each matrix row or each matrix column in the ascending or descending order. So you should pass two operation flags to get desired behaviour. Instead of reordering the elements themselves, it stores the indices of sorted elements in the destination array. For example: ::
 
     Mat A = Mat::eye(3,3,CV_32F), B;
     sortIdx(A, B, CV_SORT_EVERY_ROW + CV_SORT_ASCENDING);
@@ -2833,34 +2830,34 @@ subtract
 
     Calculates the per-element difference between two arrays or array and a scalar.
 
-    :param src1: The first source array or a scalar.
+    :param src1: First source array or a scalar.
 
-    :param src2: The second source array or a scalar.
+    :param src2: Second source array or a scalar.
     
     :param dst: Destination array of the same size and the same number of channels as the input array.   
     
     :param mask: Optional operation mask. This is an 8-bit single channel array that specifies elements of the destination array to be changed.
     
-    :param dtype: Optional depth of the output array. See the discussion below.
+    :param dtype: Optional depth of the output array. See the details below.
 
 The function ``subtract`` computes:
 
- #.
-    the difference between two arrays, when both input arrays have the same size and the same number of channels:
+ *
+    Difference between two arrays, when both input arrays have the same size and the same number of channels:
 
     .. math::
 
         \texttt{dst}(I) =  \texttt{saturate} ( \texttt{src1}(I) -  \texttt{src2}(I)) \quad \texttt{if mask}(I) \ne0
 
- #.
-    the difference between an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
+ *
+    Difference between an array and a scalar, when ``src2`` is constructed from ``Scalar`` or has the same number of elements as ``src1.channels()``:
 
     .. math::
 
         \texttt{dst}(I) =  \texttt{saturate} ( \texttt{src1}(I) -  \texttt{src2} ) \quad \texttt{if mask}(I) \ne0
 
- #.
-    or the difference between a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
+ *
+    Difference between a scalar and an array, when ``src1`` is constructed from ``Scalar`` or has the same number of elements as ``src2.channels()``:
 
     .. math::
 
@@ -2873,7 +2870,7 @@ The first function in the list above can be replaced with matrix expressions: ::
     dst = src1 - src2;
     dst -= src1; // equivalent to subtract(dst, src1, dst);
 
-The input arrays and the destination array can all have the same or different depths. For example, you can subtract to 8-bit unsigned arrays and store the difference in 16-bit signed array. Depth of the output array is determined by ``dtype`` parameter. In the 2nd and 3rd cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
+The input arrays and the destination array can all have the same or different depths. For example, you can subtract to 8-bit unsigned arrays and store the difference in a 16-bit signed array. Depth of the output array is determined by ``dtype`` parameter. In the second and third cases above, as well as in the first case, when ``src1.depth() == src2.depth()``, ``dtype`` can be set to the default ``-1``. In this case the output array will have the same depth as the input array, be it ``src1``, ``src2`` or both.
 
 .. seealso::
 
@@ -2889,9 +2886,9 @@ SVD
 ---
 .. cpp:class:: SVD
 
-for computing Singular Value Decomposition of a floating-point matrix. The Singular Value Decomposition is used to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers, and so on.
+Class for computing Singular Value Decomposition of a floating-point matrix. The Singular Value Decomposition is used to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers, and so on.
 
-For a bit faster operation, you can pass ``flags=SVD::MODIFY_A|...`` to modify the decomposed matrix when it is not necessary to preserve it. If you want to compute a condition number of a matrix or an absolute value of its determinant, you do not need ``u`` and ``vt`` . You can pass ``flags=SVD::NO_UV|...`` . Another flag ``FULL_UV`` indicates that full-size ``u`` and ``vt`` must be computed, which is not necessary most of the time.
+For a faster operation, you can pass ``flags=SVD::MODIFY_A|...`` to modify the decomposed matrix when it is not necessary to preserve it. If you want to compute a condition number of a matrix or an absolute value of its determinant, you do not need ``u`` and ``vt`` . You can pass ``flags=SVD::NO_UV|...`` . Another flag ``FULL_UV`` indicates that full-size ``u`` and ``vt`` must be computed, which is not necessary most of the time.
 
 .. seealso::
 
@@ -2909,13 +2906,13 @@ SVD::SVD
 
 .. cpp:function:: SVD::SVD( InputArray A, int flags=0 )
 
-    SVD constructors
+    Introduces SVD constructors.
 
     :param A: Decomposed matrix.
 
     :param flags: Operation flags.
 
-        * **SVD::MODIFY_A** Use the algorithm to modify the decomposed matrix. It can save some space and speed-up processing a bit.
+        * **SVD::MODIFY_A** Use the algorithm to modify the decomposed matrix. It can save space and speed up processing.
 
         * **SVD::NO_UV** Indicate that only a vector of singular values  ``w``  is to be computed, while  ``u``  and  ``vt``  will be set to empty matrices.
 
@@ -2937,7 +2934,7 @@ SVD::operator ()
 
     :param flags: Operation flags.
 
-        * **SVD::MODIFY_A** Use the algorithm to modify the decomposed matrix. It can save some space and speed-up processing a bit.
+        * **SVD::MODIFY_A** Use the algorithm to modify the decomposed matrix. It can save space and speed up processing.
 
         * **SVD::NO_UV** Use only singular values. The algorithm does not compute  ``u``  and  ``vt``  matrices.
 
