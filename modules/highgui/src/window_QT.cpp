@@ -2773,11 +2773,11 @@ void ViewPort::drawStatusBar()
 	if (nbChannelOriginImage!=CV_8UC1 && nbChannelOriginImage!=CV_8UC3)
 		return;
 
-	//if (mouseCoordinate.x()>=0 &&
-	//	mouseCoordinate.y()>=0 &&
-	//	mouseCoordinate.x()<image2Draw_qt.width() &&
-	//	mouseCoordinate.y()<image2Draw_qt.height())
-	if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
+	if (mouseCoordinate.x()>=0 &&
+		mouseCoordinate.y()>=0 &&
+		mouseCoordinate.x()<image2Draw_qt.width() &&
+		mouseCoordinate.y()<image2Draw_qt.height())
+//	if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
 	{
 		QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
 
