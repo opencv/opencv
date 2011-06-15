@@ -165,6 +165,9 @@ struct feature
     double descr[FEATURE_MAX_D];   /**< descriptor */
 
     detection_data* feature_data;            /**< user-definable data */
+
+    int class_id;
+    float response;
 };
 
 /******************************* Defs and macros *****************************/
@@ -1480,7 +1483,7 @@ inline KeyPoint featureToKeyPoint( const feature& feat )
 {
     float size = (float)(feat.scl * SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION() * 4); // 4==NBP
     float angle = (float)(feat.ori * a_180divPI);
-    return KeyPoint( (float)feat.x, (float)feat.y, size, angle, 0, feat.feature_data->octv, 0 );
+    return KeyPoint( (float)feat.x, (float)feat.y, size, angle, feat.response, feat.feature_data->octv, feat.class_id );
 }
 
 static void fillFeatureData( feature& feat, const SiftParams& params )
@@ -1584,6 +1587,9 @@ inline void keyPointToFeature( const KeyPoint& keypoint, feature& feat, const Si
 
     feat.scl = keypoint.size / (SIFT::DescriptorParams::GET_DEFAULT_MAGNIFICATION()*4); // 4==NBP
     feat.ori = keypoint.angle * a_PIdiv180;
+
+    feat.response = keypoint.response;
+    feat.class_id = keypoint.class_id;
 
     feat.feature_data = (detection_data*) calloc( 1, sizeof( detection_data ) );
     fillFeatureData( feat, params );
