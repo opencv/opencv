@@ -27,6 +27,19 @@ As always, we would be happy to hear your comments and receive your contribution
      .. |Install_1| image:: images/ubuntu_logo.jpeg
                     :height: 120px
 
+  * :ref:`Windows_Installation`
+  
+     =========== ======================================================
+     |Install_2| *Title:* **Installation steps in Windows**
+
+		 *Compatibility:* > OpenCV 2.0
+
+		 You will learn how to setup OpenCV in your Windows Operating System!
+
+     =========== ======================================================
+
+     .. |Install_2| image:: images/windows_logo.jpg
+                    :height: 120px
 
 
 * **USAGE AND COMPILATION**
