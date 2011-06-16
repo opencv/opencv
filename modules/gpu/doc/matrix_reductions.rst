@@ -7,7 +7,7 @@ Matrix Reductions
 
 gpu::meanStdDev
 -------------------
-.. cpp:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. ocv:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes a mean value and a standard deviation of matrix elements.
 
@@ -17,15 +17,15 @@ gpu::meanStdDev
 
     :param stddev: Standard deviation value.
 
-See Also: :cpp:func:`meanStdDev` 
+See Also: :ocv:func:`meanStdDev` 
 
 .. index:: gpu::norm
 
 gpu::norm
 -------------
-.. cpp:function:: double gpu::norm(const GpuMat\& src1, int normType=NORM_L2)
-.. cpp:function:: double gpu::norm(const GpuMat\& src1, int normType, GpuMat\& buf)
-.. cpp:function:: double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM_L2)
+.. ocv:function:: double gpu::norm(const GpuMat\& src1, int normType=NORM_L2)
+.. ocv:function:: double gpu::norm(const GpuMat\& src1, int normType, GpuMat\& buf)
+.. ocv:function:: double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM_L2)
 
     Returns the norm of matrix (or difference of two matrices).
 
@@ -37,15 +37,15 @@ gpu::norm
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :cpp:func:`norm`
+See Also: :ocv:func:`norm`
 
 .. index:: gpu::sum
 
 gpu::sum
 ------------
-.. cpp:function:: Scalar gpu::sum(const GpuMat\& src)
+.. ocv:function:: Scalar gpu::sum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::sum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::sum(const GpuMat\& src, GpuMat\& buf)
 
     Returns the sum of matrix elements.
 
@@ -53,15 +53,15 @@ gpu::sum
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :cpp:func:`sum` 
+See Also: :ocv:func:`sum` 
 
 .. index:: gpu::absSum
 
 gpu::absSum
 ---------------
-.. cpp:function:: Scalar gpu::absSum(const GpuMat\& src)
+.. ocv:function:: Scalar gpu::absSum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::absSum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::absSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns the sum of absolute values for matrix elements.
 
@@ -73,9 +73,9 @@ gpu::absSum
 
 gpu::sqrSum
 ---------------
-.. cpp:function:: Scalar gpu::sqrSum(const GpuMat\& src)
+.. ocv:function:: Scalar gpu::sqrSum(const GpuMat\& src)
 
-.. cpp:function:: Scalar gpu::sqrSum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::sqrSum(const GpuMat\& src, GpuMat\& buf)
 
     Returns the squared sum of matrix elements.
 
@@ -87,9 +87,9 @@ gpu::sqrSum
 
 gpu::minMax
 ---------------
-.. cpp:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal=0, const GpuMat\& mask=GpuMat())
+.. ocv:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal=0, const GpuMat\& mask=GpuMat())
 
-.. cpp:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal, const GpuMat\& mask, GpuMat\& buf)
+.. ocv:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal, const GpuMat\& mask, GpuMat\& buf)
 
     Finds global minimum and maximum matrix elements and returns their values.
 
@@ -105,15 +105,15 @@ gpu::minMax
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-See Also: :cpp:func:`minMaxLoc` 
+See Also: :ocv:func:`minMaxLoc` 
 
 .. index:: gpu::minMaxLoc
 
 gpu::minMaxLoc
 ------------------
-.. cpp:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, const GpuMat& mask=GpuMat())
+.. ocv:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, const GpuMat& mask=GpuMat())
 
-.. cpp:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf)
+.. ocv:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf)
 
     Finds global minimum and maximum matrix elements and returns their values with locations.
 
@@ -135,15 +135,15 @@ gpu::minMaxLoc
 
 	The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
-See Also: :cpp:func:`minMaxLoc` 
+See Also: :ocv:func:`minMaxLoc` 
 
 .. index:: gpu::countNonZero
 
 gpu::countNonZero
 ---------------------
-.. cpp:function:: int gpu::countNonZero(const GpuMat\& src)
+.. ocv:function:: int gpu::countNonZero(const GpuMat\& src)
 
-.. cpp:function:: int gpu::countNonZero(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: int gpu::countNonZero(const GpuMat\& src, GpuMat\& buf)
 
     Counts non-zero matrix elements.
 
@@ -153,4 +153,4 @@ gpu::countNonZero
 
 	The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-	See Also: :cpp:func:`countNonZero` 
+	See Also: :ocv:func:`countNonZero` 

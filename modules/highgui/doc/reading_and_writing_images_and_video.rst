@@ -9,7 +9,7 @@ Reading and Writing Images and Video
 
 imdecode
 ------------
-.. cpp:function:: Mat imdecode( InputArray buf,  int flags )
+.. ocv:function:: Mat imdecode( InputArray buf,  int flags )
 
     Reads an image from a buffer in memory.
 
@@ -29,7 +29,7 @@ See
 
 imencode
 ------------
-.. cpp:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+.. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
 
     Encode an image into a memory buffer.
 
@@ -51,7 +51,7 @@ See
 
 imread
 ----------
-.. cpp:function:: Mat imread( const string& filename, int flags=1 )
+.. ocv:function:: Mat imread( const string& filename, int flags=1 )
 
     Loads an image from a file.
 
@@ -95,7 +95,7 @@ The function ``imread`` loads an image from the specified file and returns it. I
 
 imwrite
 -----------
-.. cpp:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
+.. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
 
     Saves an image to a specified file.
 
@@ -208,11 +208,11 @@ The class provides C++ video capturing API. Here is how the class can be used: :
 
 VideoCapture::VideoCapture
 ------------------------------
-.. cpp:function:: VideoCapture::VideoCapture()
+.. ocv:function:: VideoCapture::VideoCapture()
 
-.. cpp:function:: VideoCapture::VideoCapture(const string& filename)
+.. ocv:function:: VideoCapture::VideoCapture(const string& filename)
 
-.. cpp:function:: VideoCapture::VideoCapture(int device)
+.. ocv:function:: VideoCapture::VideoCapture(int device)
 
 VideoCapture constructors.
 
@@ -226,7 +226,7 @@ VideoCapture constructors.
 
 VideoCapture::get
 ---------------------
-.. cpp:function:: double VideoCapture::get(int property_id)
+.. ocv:function:: double VideoCapture::get(int property_id)
 
     :param property_id: Property identifier. It can be one of the following:
 
@@ -277,7 +277,7 @@ VideoCapture::get
 
 VideoCapture::set
 ---------------------
-.. cpp:function:: bool VideoCapture::set(int property_id, double value)
+.. ocv:function:: bool VideoCapture::set(int property_id, double value)
 
     Sets a property in the VideoCapture backend.
 

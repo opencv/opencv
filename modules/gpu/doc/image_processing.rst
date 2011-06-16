@@ -7,7 +7,7 @@ Image Processing
 
 gpu::meanShiftFiltering
 ---------------------------
-.. cpp:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
 
@@ -19,13 +19,13 @@ gpu::meanShiftFiltering
 
     :param sr: Color window radius.
 
-    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
 .. index:: gpu::meanShiftProc
 
 gpu::meanShiftProc
 ----------------------
-.. cpp:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
@@ -39,16 +39,16 @@ gpu::meanShiftProc
 
     :param sr: Color window radius.
 
-    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
 See Also:
-:cpp:func:`gpu::meanShiftFiltering` 
+:ocv:func:`gpu::meanShiftFiltering` 
 
 .. index:: gpu::meanShiftSegmentation
 
 gpu::meanShiftSegmentation
 ------------------------------
-.. cpp:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     Performs a mean-shift segmentation of the source image and eliminates small segments.
 
@@ -62,15 +62,15 @@ gpu::meanShiftSegmentation
 
     :param minsize: Minimum segment size. Smaller segements are merged.
 
-    :param criteria: Termination criteria. See :cpp:class:`TermCriteria`.
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
 .. index:: gpu::integral
 
 gpu::integral
 -----------------
-.. cpp:function:: void gpu::integral(const GpuMat& src, GpuMat& sum)
+.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum)
 
-.. cpp:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum)
+.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum)
 
     Computes an integral image and a squared integral image.
 
@@ -81,13 +81,13 @@ gpu::integral
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
 See Also:
-:cpp:func:`integral` 
+:ocv:func:`integral` 
 
 .. index:: gpu::sqrIntegral
 
 gpu::sqrIntegral
 --------------------
-.. cpp:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum)
+.. ocv:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum)
 
     Computes a squared integral image.
 
@@ -99,7 +99,7 @@ gpu::sqrIntegral
 
 gpu::columnSum
 ------------------
-.. cpp:function:: void gpu::columnSum(const GpuMat& src, GpuMat& sum)
+.. ocv:function:: void gpu::columnSum(const GpuMat& src, GpuMat& sum)
 
     Computes a vertical (column) sum.
 
@@ -111,7 +111,7 @@ gpu::columnSum
 
 gpu::cornerHarris
 ---------------------
-.. cpp:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
+.. ocv:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
 
     Computes the Harris cornerness criteria at each image pixel.
 
@@ -128,13 +128,13 @@ gpu::cornerHarris
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
 See Also:
-:cpp:func:`cornerHarris` 
+:ocv:func:`cornerHarris` 
 
 .. index:: gpu::cornerMinEigenVal
 
 gpu::cornerMinEigenVal
 --------------------------
-.. cpp:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
+.. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
 
     Computes the minimum eigen value of 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
 
@@ -150,13 +150,13 @@ gpu::cornerMinEigenVal
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
-See also: :cpp:func:`cornerMinEigenVal`
+See also: :ocv:func:`cornerMinEigenVal`
 
 .. index:: gpu::mulSpectrums
 
 gpu::mulSpectrums
 ---------------------
-.. cpp:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
+.. ocv:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
 
     Performs a per-element multiplication of two Fourier spectrums.
 
@@ -173,13 +173,13 @@ gpu::mulSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:cpp:func:`mulSpectrums` 
+:ocv:func:`mulSpectrums` 
 
 .. index:: gpu::mulAndScaleSpectrums
 
 gpu::mulAndScaleSpectrums
 -----------------------------
-.. cpp:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
+.. ocv:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
 
     Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
@@ -198,13 +198,13 @@ gpu::mulAndScaleSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 See Also:
-:cpp:func:`mulSpectrums` 
+:ocv:func:`mulSpectrums` 
 
 .. index:: gpu::dft
 
 gpu::dft
 ------------
-.. cpp:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
+.. ocv:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
 
     Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix. Use to handle real matrices (``CV32FC1``) and complex matrices in the interleaved format (``CV32FC2``).
 
@@ -237,15 +237,15 @@ gpu::dft
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
 See Also:
-:cpp:func:`dft` 
+:ocv:func:`dft` 
 
 .. index:: gpu::convolve
 
 gpu::convolve
 -----------------
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
+.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
 
-.. cpp:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
+.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
 
     Computes a convolution (or cross-correlation) of two images.
 
@@ -265,10 +265,10 @@ gpu::convolve
 
 gpu::ConvolveBuf
 ----------------
-.. cpp:class:: gpu::ConvolveBuf
+.. ocv:class:: gpu::ConvolveBuf
 
 This class provides a memory buffer for the
-    :cpp:func:`gpu::convolve` function. 
+    :ocv:func:`gpu::convolve` function. 
 ::
 
     struct CV_EXPORTS ConvolveBuf
@@ -287,21 +287,21 @@ This class provides a memory buffer for the
 
 gpu::ConvolveBuf::ConvolveBuf
 ---------------------------------
-.. cpp:function:: ConvolveBuf::ConvolveBuf()
+.. ocv:function:: ConvolveBuf::ConvolveBuf()
 
     Constructs an empty buffer that is properly resized after the first call of the 
-    :cpp:func:`convolve` function.
+    :ocv:func:`convolve` function.
 
-.. cpp:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
+.. ocv:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
     Constructs a buffer for the 
-    :cpp:func:`convolve` function with respective arguments.
+    :ocv:func:`convolve` function with respective arguments.
 
 .. index:: gpu::matchTemplate
 
 gpu::matchTemplate
 ----------------------
-.. cpp:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
+.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
 
     Computes a proximity map for a raster template and an image where the template is searched for.
 
@@ -328,13 +328,13 @@ gpu::matchTemplate
     * ``CV_TM_CCORR``
 
 See Also:
-:cpp:func:`matchTemplate` 
+:ocv:func:`matchTemplate` 
 
 .. index:: gpu::remap
 
 gpu::remap
 --------------
-.. cpp:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
+.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
 
     Applies a generic geometrical transformation to an image.
 
@@ -354,15 +354,15 @@ gpu::remap
 
     Values of pixels with non-integer coordinates are computed using bilinear the interpolation.
 
-See Also: :cpp:func:`remap` 
+See Also: :ocv:func:`remap` 
 
 .. index:: gpu::cvtColor
 
 gpu::cvtColor
 -----------------
-.. cpp:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0)
+.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0)
 
-.. cpp:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
+.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
 
     Converts an image from one color space to another.
 
@@ -370,7 +370,7 @@ gpu::cvtColor
 
     :param dst: Destination image with the same size and depth as  ``src`` .
 
-    :param code: Color space conversion code. For details, see  :cpp:func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
+    :param code: Color space conversion code. For details, see  :ocv:func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
 
     :param dcn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src`` and the  ``code`` .
 
@@ -379,15 +379,15 @@ gpu::cvtColor
     3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
 See Also:
-:cpp:func:`cvtColor` 
+:ocv:func:`cvtColor` 
 
 .. index:: gpu::threshold
 
 gpu::threshold
 ------------------
-.. cpp:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type)
+.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type)
 
-.. cpp:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, const Stream& stream)
+.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, const Stream& stream)
 
     Applies a fixed-level threshold to each array element.
 
@@ -399,18 +399,18 @@ gpu::threshold
 
     :param maxVal: Maximum value to use with  ``THRESH_BINARY`` and  ``THRESH_BINARY_INV`` threshold types.
 
-    :param thresholdType: Threshold type. For details, see  :cpp:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
+    :param thresholdType: Threshold type. For details, see  :ocv:func:`threshold` . The ``THRESH_OTSU`` threshold type is not supported.
 
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:cpp:func:`threshold` 
+:ocv:func:`threshold` 
 
 .. index:: gpu::resize
 
 gpu::resize
 ---------------
-.. cpp:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR)
+.. ocv:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR)
 
     Resizes an image.
 
@@ -439,13 +439,13 @@ gpu::resize
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
 
-See Also: :cpp:func:`resize` 
+See Also: :ocv:func:`resize` 
 
 .. index:: gpu::warpAffine
 
 gpu::warpAffine
 -------------------
-.. cpp:function:: void gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
+.. ocv:function:: void gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
 
     Applies an affine transformation to an image.
 
@@ -457,16 +457,16 @@ gpu::warpAffine
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :cpp:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 See Also:
-:cpp:func:`warpAffine` 
+:ocv:func:`warpAffine` 
 
 .. index:: gpu::warpPerspective
 
 gpu::warpPerspective
 ------------------------
-.. cpp:function:: void gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
+.. ocv:function:: void gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
 
     Applies a perspective transformation to an image.
 
@@ -478,16 +478,16 @@ gpu::warpPerspective
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 See Also:
-:cpp:func:`warpPerspective` 
+:ocv:func:`warpPerspective` 
 
 .. index:: gpu::rotate
 
 gpu::rotate
 ---------------
-.. cpp:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR)
+.. ocv:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR)
 
     Rotates an image around the origin (0,0) and then shifts it.
 
@@ -506,13 +506,13 @@ gpu::rotate
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
 See Also:
-:cpp:func:`gpu::warpAffine` 
+:ocv:func:`gpu::warpAffine` 
 
 .. index:: gpu::copyMakeBorder
 
 gpu::copyMakeBorder
 -----------------------
-.. cpp:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar())
+.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar())
 
     Copies a 2D array to a larger destination array and pads borders with the given constant.
 
@@ -525,13 +525,13 @@ gpu::copyMakeBorder
     :param value: Border value.
 
 See Also:
-:cpp:func:`copyMakeBorder`
+:ocv:func:`copyMakeBorder`
 
 .. index:: gpu::rectStdDev
 
 gpu::rectStdDev
 -------------------
-.. cpp:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)
+.. ocv:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)
 
     Computes a standard deviation of integral images.
 
@@ -547,7 +547,7 @@ gpu::rectStdDev
 
 gpu::evenLevels
 -------------------
-.. cpp:function:: void gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
+.. ocv:function:: void gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
 
     Computes levels with even distribution.
 
@@ -563,9 +563,9 @@ gpu::evenLevels
 
 gpu::histEven
 -----------------
-.. cpp:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
 
-.. cpp:function:: void gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
 
     Calculates a histogram with evenly distributed bins.
 
@@ -583,9 +583,9 @@ gpu::histEven
 
 gpu::histRange
 ------------------
-.. cpp:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 
-.. cpp:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 
     Calculates a histogram with bins determined by the `levels` array.
 

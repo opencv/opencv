@@ -7,15 +7,15 @@ Matchers of keypoint descriptors in OpenCV have wrappers with a common interface
 between different algorithms solving the same problem. This section is devoted to matching descriptors
 that cannot be represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. It does not make any assumptions about descriptor representation.
 Every descriptor with the
-:cpp:class:`DescriptorExtractor` interface has a wrapper with the ``GenericDescriptorMatcher`` interface (see
-:cpp:class:`VectorDescriptorMatcher` ).
+:ocv:class:`DescriptorExtractor` interface has a wrapper with the ``GenericDescriptorMatcher`` interface (see
+:ocv:class:`VectorDescriptorMatcher` ).
 There are descriptors such as the One-way descriptor and Ferns that have the ``GenericDescriptorMatcher`` interface implemented but do not support ``DescriptorExtractor``.
 
 .. index:: GenericDescriptorMatcher
 
 GenericDescriptorMatcher
 ------------------------
-.. cpp:class:: GenericDescriptorMatcher
+.. ocv:class:: GenericDescriptorMatcher
 
 Abstract interface for extracting and matching a keypoint descriptor. There are also :ref:`DescriptorExtractor` and :ref:`DescriptorMatcher` for these purposes but their interfaces are intended for descriptors represented as vectors in a multidimensional space. ``GenericDescriptorMatcher`` is a more generic interface for descriptors. :ref:`DescriptorMatcher` and ``GenericDescriptorMatcher`` have two groups of match methods: for matching keypoints of an image with another image or with an image set. ::
 
@@ -83,7 +83,7 @@ Abstract interface for extracting and matching a keypoint descriptor. There are 
 
 GenericDescriptorMatcher::add
 ---------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::add( const vector<Mat>& images,                        vector<vector<KeyPoint> >& keypoints )
+.. ocv:function:: void GenericDescriptorMatcher::add( const vector<Mat>& images,                        vector<vector<KeyPoint> >& keypoints )
 
     Adds images and their keypoints to the training collection stored in the class instance.
 
@@ -95,7 +95,7 @@ GenericDescriptorMatcher::add
 
 GenericDescriptorMatcher::getTrainImages
 --------------------------------------------
-.. cpp:function:: const vector<Mat>& GenericDescriptorMatcher::getTrainImages() const
+.. ocv:function:: const vector<Mat>& GenericDescriptorMatcher::getTrainImages() const
 
     Returns a train image collection.
 
@@ -103,7 +103,7 @@ GenericDescriptorMatcher::getTrainImages
 
 GenericDescriptorMatcher::getTrainKeypoints
 -----------------------------------------------
-.. cpp:function:: const vector<vector<KeyPoint> >&  GenericDescriptorMatcher::getTrainKeypoints() const
+.. ocv:function:: const vector<vector<KeyPoint> >&  GenericDescriptorMatcher::getTrainKeypoints() const
 
     Returns a train keypoints collection.
 
@@ -111,7 +111,7 @@ GenericDescriptorMatcher::getTrainKeypoints
 
 GenericDescriptorMatcher::clear
 -----------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::clear()
+.. ocv:function:: void GenericDescriptorMatcher::clear()
 
     Clears a train collection (images and keypoints).
 
@@ -119,7 +119,7 @@ GenericDescriptorMatcher::clear
 
 GenericDescriptorMatcher::train
 -----------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::train()
+.. ocv:function:: void GenericDescriptorMatcher::train()
 
     Trains an object, for example, a tree-based structure, to extract descriptors or to optimize descriptors matching.
 
@@ -127,7 +127,7 @@ GenericDescriptorMatcher::train
 
 GenericDescriptorMatcher::isMaskSupported
 ---------------------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::isMaskSupported()
+.. ocv:function:: void GenericDescriptorMatcher::isMaskSupported()
 
     Returns true if a generic descriptor matcher supports masking permissible matches.
 
@@ -135,9 +135,9 @@ GenericDescriptorMatcher::isMaskSupported
 
 GenericDescriptorMatcher::classify
 --------------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::classify(  const Mat& queryImage,           vector<KeyPoint>& queryKeypoints,           const Mat& trainImage,           vector<KeyPoint>& trainKeypoints ) const
+.. ocv:function:: void GenericDescriptorMatcher::classify(  const Mat& queryImage,           vector<KeyPoint>& queryKeypoints,           const Mat& trainImage,           vector<KeyPoint>& trainKeypoints ) const
 
-.. cpp:function:: void GenericDescriptorMatcher::classify( const Mat& queryImage,           vector<KeyPoint>& queryKeypoints )
+.. ocv:function:: void GenericDescriptorMatcher::classify( const Mat& queryImage,           vector<KeyPoint>& queryKeypoints )
 
     Classify keypoints from a query set.
 
@@ -163,9 +163,9 @@ GenericDescriptorMatcher::classify
 
 GenericDescriptorMatcher::match
 -----------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::match(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<DMatch>& matches, const Mat& mask=Mat() ) const
+.. ocv:function:: void GenericDescriptorMatcher::match(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<DMatch>& matches, const Mat& mask=Mat() ) const
 
-.. cpp:function:: void GenericDescriptorMatcher::match(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,          vector<DMatch>& matches,           const vector<Mat>& masks=vector<Mat>() )
+.. ocv:function:: void GenericDescriptorMatcher::match(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,          vector<DMatch>& matches,           const vector<Mat>& masks=vector<Mat>() )
 
     Find the best match in the training set for each keypoint from the query set.
 
@@ -189,9 +189,9 @@ The methods find the best match for each query keypoint. In the first variant of
 
 GenericDescriptorMatcher::knnMatch
 --------------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, int k,       const Mat& mask=Mat(), bool compactResult=false ) const
+.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, int k,       const Mat& mask=Mat(), bool compactResult=false ) const
 
-.. cpp:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, int k,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, int k,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
     Find the ``k`` best matches for each query keypoint.
     
@@ -201,9 +201,9 @@ The methods are extended variants of ``GenericDescriptorMatch::match``. The para
 
 GenericDescriptorMatcher::radiusMatch
 -----------------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const Mat& mask=Mat(), bool compactResult=false ) const
+.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const Mat& mask=Mat(), bool compactResult=false ) const
 
-.. cpp:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
     For each query keypoint, find the training keypoints not farther than the specified distance.
 
@@ -213,7 +213,7 @@ The methods are similar to ``DescriptorMatcher::radiusM. But this class does not
 
 GenericDescriptorMatcher::read
 ----------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::read( const FileNode& fn )
+.. ocv:function:: void GenericDescriptorMatcher::read( const FileNode& fn )
 
     Reads a matcher object from a file node.
 
@@ -221,7 +221,7 @@ GenericDescriptorMatcher::read
 
 GenericDescriptorMatcher::write
 -----------------------------------
-.. cpp:function:: void GenericDescriptorMatcher::write( FileStorage& fs ) const
+.. ocv:function:: void GenericDescriptorMatcher::write( FileStorage& fs ) const
 
     Writes a match object to a file storage.
 
@@ -229,7 +229,7 @@ GenericDescriptorMatcher::write
 
 GenericDescriptorMatcher::clone
 -----------------------------------
-.. cpp:function:: Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::clone( bool emptyTrainData ) const
+.. ocv:function:: Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::clone( bool emptyTrainData ) const
 
     Clones the matcher.
 
@@ -243,7 +243,7 @@ GenericDescriptorMatcher::clone
 
 OneWayDescriptorMatcher
 -----------------------
-.. cpp:class:: OneWayDescriptorMatcher
+.. ocv:class:: OneWayDescriptorMatcher
 
 Wrapping class for computing, matching, and classifying descriptors using the
 :ref:`OneWayDescriptorBase` class ::
@@ -302,7 +302,7 @@ Wrapping class for computing, matching, and classifying descriptors using the
 
 FernDescriptorMatcher
 ---------------------
-.. cpp:class:: FernDescriptorMatcher
+.. ocv:class:: FernDescriptorMatcher
 
 Wrapping class for computing, matching, and classifying descriptors using the
 :ref:`FernClassifier` class ::
@@ -361,7 +361,7 @@ Wrapping class for computing, matching, and classifying descriptors using the
 
 VectorDescriptorMatcher
 -----------------------
-.. cpp:class:: VectorDescriptorMatcher
+.. ocv:class:: VectorDescriptorMatcher
 
 Class used for matching descriptors that can be described as vectors in a finite-dimensional space ::
 

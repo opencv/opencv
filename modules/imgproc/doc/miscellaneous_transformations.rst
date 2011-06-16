@@ -9,7 +9,7 @@ Miscellaneous Image Transformations
 
 adaptiveThreshold
 ---------------------
-.. cpp:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
+.. ocv:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
 
     Applies an adaptive threshold to an array.
 
@@ -54,14 +54,14 @@ where
     :math:`T(x, y)`     is a weighted sum (cross-correlation with a Gaussian window) of the
     :math:`\texttt{blockSize} \times \texttt{blockSize}`     neighborhood of
     :math:`(x, y)`      minus ``C``     . The default sigma (standard deviation) is used for the specified ``blockSize``   . See
-    :cpp:func:`getGaussianKernel`     .
+    :ocv:func:`getGaussianKernel`     .
 
 The function can process the image in-place.
 
 See Also:
-:cpp:func:`threshold`,
-:cpp:func:`blur`,
-:cpp:func:`GaussianBlur`
+:ocv:func:`threshold`,
+:ocv:func:`blur`,
+:ocv:func:`GaussianBlur`
 
 
 .. index:: cvtColor
@@ -70,7 +70,7 @@ See Also:
 
 cvtColor
 ------------
-.. cpp:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
+.. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
 
     Converts an image from one color space to another.
 
@@ -127,7 +127,7 @@ The function can do the following transformations:
     ..
 
     More advanced channel reordering can also be done with
-    :cpp:func:`mixChannels`     .
+    :ocv:func:`mixChannels`     .
 
 *
     RGB
@@ -402,9 +402,9 @@ The function can do the following transformations:
 
 distanceTransform
 ---------------------
-.. cpp:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
+.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
 
-.. cpp:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize )
+.. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize )
 
     Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -470,9 +470,9 @@ Currently, the second variant can use only the approximate distance transform al
 
 floodFill
 -------------
-.. cpp:function:: int floodFill( InputOutputArray image, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
+.. ocv:function:: int floodFill( InputOutputArray image, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
 
-.. cpp:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
+.. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
 
     Fills a connected component with the given color.
 
@@ -564,7 +564,7 @@ where
 Use these functions to either mark a connected component with the specified color in-place, or build a mask and then extract the contour, or copy the region to another image, and so on. Various modes of the function are demonstrated in the ``floodfill.cpp`` sample.
 
 See Also:
-:cpp:func:`findContours`
+:ocv:func:`findContours`
 
 .. index:: inpaint
 
@@ -572,7 +572,7 @@ See Also:
 
 inpaint
 -----------
-.. cpp:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
+.. ocv:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
 
     Restores the selected region in an image using the region neighborhood.
 
@@ -598,11 +598,11 @@ for more details.
 
 integral
 ------------
-.. cpp:function:: void integral( InputArray image, OutputArray sum, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray image, OutputArray sum, int sdepth=-1 )
 
-.. cpp:function:: void integral( InputArray image, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray image, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
 
-.. cpp:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
 
     Calculates the integral of an image.
 
@@ -648,7 +648,7 @@ As a practical example, the next figure shows the calculation of the integral of
 
 threshold
 -------------
-.. cpp:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
+.. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
 
     Applies a fixed-level threshold to each array element.
 
@@ -665,7 +665,7 @@ threshold
 The function applies fixed-level thresholding
 to a single-channel array. The function is typically used to get a
 bi-level (binary) image out of a grayscale image (
-:cpp:func:`compare` could
+:ocv:func:`compare` could
 be also used for this purpose) or for removing a noise, that is, filtering
 out pixels with too small or too large values. There are several
 types of thresholding supported by the function. They are determined by ``thresholdType`` :
@@ -709,17 +709,17 @@ Currently, Otsu's method is implemented only for 8-bit images.
 .. image:: pics/threshold.png
 
 See Also:
-:cpp:func:`adaptiveThreshold`,
-:cpp:func:`findContours`,
-:cpp:func:`compare`,
-:cpp:func:`min`,
-:cpp:func:`max`
+:ocv:func:`adaptiveThreshold`,
+:ocv:func:`findContours`,
+:ocv:func:`compare`,
+:ocv:func:`min`,
+:ocv:func:`max`
 
 .. index:: watershed
 
 watershed
 -------------
-.. cpp:function:: void watershed( InputArray image, InputOutputArray markers )
+.. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 
     Performs a marker-based image segmentation using the watershed algrorithm.
 
@@ -735,8 +735,8 @@ function, you have to roughly outline the desired regions in the image ``markers
 represented as one or more connected components with the pixel values
 1, 2, 3, and so on. Such markers can be retrieved from a binary mask
 using
-:cpp:func:`findContours` and
-:cpp:func:`drawContours` (see the ``watershed.cpp`` demo).
+:ocv:func:`findContours` and
+:ocv:func:`drawContours` (see the ``watershed.cpp`` demo).
 The markers are "seeds" of the future image
 regions. All the other pixels in ``markers`` , whose relation to the
 outlined regions is not known and should be defined by the algorithm,
@@ -751,14 +751,14 @@ marker image. Visual demonstration and usage example of the function
 can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
 
 See Also:
-:cpp:func:`findContours`
+:ocv:func:`findContours`
 
 .. index:: grabCut
 
 grabCut
 -------
 
-.. cpp:function:: void grabCut(InputArray image, InputOutputArray mask, Rect rect, InputOutputArray bgdModel, InputOutputArray fgdModel, int iterCount, int mode )
+.. ocv:function:: void grabCut(InputArray image, InputOutputArray mask, Rect rect, InputOutputArray bgdModel, InputOutputArray fgdModel, int iterCount, int mode )
 
     Runs the GrabCut algorithm.
 

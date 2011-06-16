@@ -7,7 +7,7 @@ Motion Analysis and Object Tracking
 
 calcOpticalFlowPyrLK
 ------------------------
-.. cpp:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), double derivLambda=0.5, int flags=0 )
+.. ocv:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(15,15), int maxLevel=3,        TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), double derivLambda=0.5, int flags=0 )
 
     Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids.
 
@@ -43,7 +43,7 @@ Bouguet00
 
 calcOpticalFlowFarneback
 ----------------------------
-.. cpp:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
+.. ocv:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 
     Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
@@ -82,7 +82,7 @@ The function finds an optical flow for each ``prevImg`` pixel using the alorithm
 
 estimateRigidTransform
 --------------------------
-.. cpp:function:: Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine )
+.. ocv:function:: Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine )
 
     Computes an optimal affine transformation between two 2D point sets.
 
@@ -116,16 +116,16 @@ In the case of point sets, the problem is formulated in the following way. We ne
     when ``fullAffine=false`` .
 
     See Also:
-    :cpp:func:`getAffineTransform`,
-    :cpp:func:`getPerspectiveTransform`,
-    :cpp:func:`findHomography`
+    :ocv:func:`getAffineTransform`,
+    :ocv:func:`getPerspectiveTransform`,
+    :ocv:func:`findHomography`
 
 
 .. index:: updateMotionHistory
 
 updateMotionHistory
 -----------------------
-.. cpp:function:: void updateMotionHistory( InputArray silhouette, InputOutputArray mhi, double timestamp, double duration )
+.. ocv:function:: void updateMotionHistory( InputArray silhouette, InputOutputArray mhi, double timestamp, double duration )
 
     Updates the motion history image by a moving silhouette.
 
@@ -146,8 +146,8 @@ The function updates the motion history image as follows:
 That is, MHI pixels where the motion occurs are set to the current ``timestamp`` , while the pixels where the motion happened last time a long time ago are cleared.
 
 The function, together with
-:cpp:func:`calcMotionGradient` and
-:cpp:func:`calcGlobalOrientation` , implements a motion templates technique described in
+:ocv:func:`calcMotionGradient` and
+:ocv:func:`calcGlobalOrientation` , implements a motion templates technique described in
 Davis97
 and
 Bradski00
@@ -158,7 +158,7 @@ See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the mo
 
 calcMotionGradient
 ----------------------
-.. cpp:function:: void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,                         double delta1, double delta2, int apertureSize=3 )
+.. ocv:function:: void calcMotionGradient( InputArray mhi, OutputArray mask, OutputArray orientation,                         double delta1, double delta2, int apertureSize=3 )
 
     Calculates a gradient orientation of a motion history image.
 
@@ -174,7 +174,7 @@ calcMotionGradient
 
             \min ( \texttt{delta1}  ,  \texttt{delta2}  )  \le  M(x,y)-m(x,y)  \le   \max ( \texttt{delta1}  , \texttt{delta2} ).
 
-    :param apertureSize: Aperture size of  the :cpp:func:`Sobel`  operator.
+    :param apertureSize: Aperture size of  the :ocv:func:`Sobel`  operator.
 
 The function calculates a gradient orientation at each pixel
 :math:`(x, y)` as:
@@ -184,26 +184,26 @@ The function calculates a gradient orientation at each pixel
     \texttt{orientation} (x,y)= \arctan{\frac{d\texttt{mhi}/dy}{d\texttt{mhi}/dx}}
 
 In fact,
-:cpp:func:`fastArctan` and
-:cpp:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
+:ocv:func:`fastArctan` and
+:ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
 .. index:: calcGlobalOrientation
 
 calcGlobalOrientation
 -------------------------
-.. cpp:function:: double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi, double timestamp, double duration )
+.. ocv:function:: double calcGlobalOrientation( InputArray orientation, InputArray mask, InputArray mhi, double timestamp, double duration )
 
     Calculates a global motion orientation in a selected region.
 
-    :param orientation: Motion gradient orientation image calculated by the function  :cpp:func:`calcMotionGradient` .
+    :param orientation: Motion gradient orientation image calculated by the function  :ocv:func:`calcMotionGradient` .
     
-    :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :cpp:func:`calcMotionGradient` , and the mask of a region whose direction needs to be calculated.
+    :param mask: Mask image. It may be a conjunction of a valid gradient mask, also calculated by  :ocv:func:`calcMotionGradient` , and the mask of a region whose direction needs to be calculated.
 
-    :param mhi: Motion history image calculated by  :cpp:func:`updateMotionHistory` .
+    :param mhi: Motion history image calculated by  :ocv:func:`updateMotionHistory` .
     
-    :param timestamp: Timestamp passed to  :cpp:func:`updateMotionHistory` .
+    :param timestamp: Timestamp passed to  :ocv:func:`updateMotionHistory` .
     
-    :param duration: Maximum duration of a motion track in milliseconds, passed to  :cpp:func:`updateMotionHistory` .
+    :param duration: Maximum duration of a motion track in milliseconds, passed to  :ocv:func:`updateMotionHistory` .
 
 The function calculates an average
 motion direction in the selected region and returns the angle between
@@ -217,7 +217,7 @@ weight and the motion occurred in the past has a smaller weight, as recorded in 
 segmentMotion
 -------------
 
-.. cpp:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
+.. ocv:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
 
     Splits a motion history image into a few parts corresponding to separate independent motions (e.g. left hand, right hand).
 
@@ -232,28 +232,28 @@ segmentMotion
     :param segThresh: Segmentation threshold; recommended to be equal to the interval between motion history "steps" or greater.
  
 
-The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :cpp:func:`calcGlobalOrientation` using the extracted mask of the particular component.
+The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :ocv:func:`calcGlobalOrientation` using the extracted mask of the particular component.
 
 
 .. index:: CamShift
 
 CamShift
 ------------
-.. cpp:function:: RotatedRect CamShift( InputArray probImage, Rect& window, TermCriteria criteria )
+.. ocv:function:: RotatedRect CamShift( InputArray probImage, Rect& window, TermCriteria criteria )
 
     Finds an object center, size, and orientation.
 
-    :param probImage: Back projection of the object histogram. See  :cpp:func:`calcBackProject` .
+    :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` .
     
     :param window: Initial search window.
 
-    :param criteria: Stop criteria for the underlying  :cpp:func:`meanShift` .
+    :param criteria: Stop criteria for the underlying  :ocv:func:`meanShift` .
 
 The function implements the CAMSHIFT object tracking algrorithm
 Bradski98
 .
 First, it finds an object center using
-:cpp:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
+:ocv:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
 
 See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
@@ -261,23 +261,23 @@ See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
 meanShift
 -------------
-.. cpp:function:: int meanShift( InputArray probImage, Rect& window, TermCriteria criteria )
+.. ocv:function:: int meanShift( InputArray probImage, Rect& window, TermCriteria criteria )
 
     Finds an object on a back projection image.
 
-    :param probImage: Back projection of the object histogram. See  :cpp:func:`calcBackProject` for details.
+    :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` for details.
 	
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
 
 The function implements the iterative object search algorithm. It takes the input back projection of an object and the initial position. The mass center in ``window`` of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations ``criteria.maxCount`` is done or until the window center shifts by less than ``criteria.epsilon`` . The algorithm is used inside
-:cpp:func:`CamShift` and, unlike
-:cpp:func:`CamShift` , the search window size or orientation do not change during the search. You can simply pass the output of
-:cpp:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise (for example, by retrieving connected components with
-:cpp:func:`findContours` , throwing away contours with small area (
-:cpp:func:`contourArea` ), and rendering the  remaining contours with
-:cpp:func:`drawContours` ).
+:ocv:func:`CamShift` and, unlike
+:ocv:func:`CamShift` , the search window size or orientation do not change during the search. You can simply pass the output of
+:ocv:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise (for example, by retrieving connected components with
+:ocv:func:`findContours` , throwing away contours with small area (
+:ocv:func:`contourArea` ), and rendering the  remaining contours with
+:ocv:func:`drawContours` ).
 
 .. index:: KalmanFilter
 
@@ -299,11 +299,11 @@ http://en.wikipedia.org/wiki/Kalman_filter
 KalmanFilter::KalmanFilter
 --------------------------
 
-.. cpp:function:: KalmanFilter::KalmanFilter()
+.. ocv:function:: KalmanFilter::KalmanFilter()
 
-    Creates an empty object that can be initialized later by the function :cpp:func:`KalmanFilter::init`.
+    Creates an empty object that can be initialized later by the function :ocv:func:`KalmanFilter::init`.
 
-.. cpp:function:: KalmanFilter::KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
+.. ocv:function:: KalmanFilter::KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
 
     The full constructor.
     
@@ -321,7 +321,7 @@ KalmanFilter::KalmanFilter
 KalmanFilter::init
 ------------------
 
-.. cpp:function:: void KalmanFilter::init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
+.. ocv:function:: void KalmanFilter::init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
 
     Re-initializes Kalman filter. The previous content is destroyed.
 
@@ -339,7 +339,7 @@ KalmanFilter::init
 KalmanFilter::predict
 ---------------------
 
-.. cpp:function:: const Mat& KalmanFilter::predict(const Mat& control=Mat())
+.. ocv:function:: const Mat& KalmanFilter::predict(const Mat& control=Mat())
 
     Computes predicted state
 
@@ -349,7 +349,7 @@ KalmanFilter::predict
 KalmanFilter::correct
 ---------------------
 
-.. cpp:function:: const Mat& KalmanFilter::correct(const Mat& measurement)
+.. ocv:function:: const Mat& KalmanFilter::correct(const Mat& measurement)
 
     Updates the predicted state from the measurement
 
@@ -359,7 +359,7 @@ KalmanFilter::correct
 BackgroundSubtractor
 --------------------
 
-.. cpp:class: BackgroundSubtractor
+.. ocv:class: BackgroundSubtractor
 
 The base class for background/foreground segmentation. ::
 
@@ -380,7 +380,7 @@ The class is only used to define the common interface for the whole family of ba
 BackgroundSubtractor::operator()
 -------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+.. ocv:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
     Computes foreground mask.
 
@@ -394,7 +394,7 @@ BackgroundSubtractor::operator()
 BackgroundSubtractor::getBackgroundImage
 ----------------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
+.. ocv:function:: virtual void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
 
 This method computes a background image.
 
@@ -404,7 +404,7 @@ This method computes a background image.
 BackgroundSubtractorMOG
 -----------------------
 
-.. cpp:class: BackgroundSubtractorMOG : public BackgroundSubtractor
+.. ocv:class: BackgroundSubtractorMOG : public BackgroundSubtractor
 
     Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
@@ -416,9 +416,9 @@ The class implements the following algorithm: P. KadewTraKuPong and R. Bowden, A
 BackgroundSubtractorMOG::BackgroundSubtractorMOG
 ------------------------------------------------
 
-.. cpp:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
+.. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 
-.. cpp:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
+.. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
 
     :param history: The length of the history.
 
@@ -436,7 +436,7 @@ Default constructor sets all parameters to some default values.
 BackgroundSubtractorMOG::operator()
 -----------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+.. ocv:function:: virtual void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
     The update operator.
 
@@ -446,7 +446,7 @@ BackgroundSubtractorMOG::operator()
 BackgroundSubtractorMOG::initialize
 -----------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType) 
+.. ocv:function:: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType) 
 
     Re-initiaization method.
 
@@ -456,7 +456,7 @@ BackgroundSubtractorMOG::initialize
 BackgroundSubtractorMOG2
 ------------------------
 
-.. cpp:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
+.. ocv:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
     Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
@@ -472,9 +472,9 @@ The class implements the Gaussian mixture model background subtraction from:
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
 --------------------------------------------------
 
-.. cpp:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
+.. ocv:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
 
-.. cpp:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
+.. ocv:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
 
     :param history: The length of the history.
 
@@ -511,7 +511,7 @@ Also the class has several less important parameters - things you might change b
 BackgroundSubtractorMOG2::operator()
 -----------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
+.. ocv:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
 
     The update operator.
 
@@ -521,7 +521,7 @@ BackgroundSubtractorMOG2::operator()
 BackgroundSubtractorMOG2::initialize
 ------------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
+.. ocv:function:: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
 
     Re-initiaization method.
 
@@ -531,7 +531,7 @@ BackgroundSubtractorMOG2::initialize
 BackgroundSubtractorMOG2::getBackgroundImage
 --------------------------------------------
 
-.. cpp:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
+.. ocv:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
 
     Computes a background image which are the mean of all background gaussians.
 

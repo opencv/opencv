@@ -7,7 +7,7 @@ Initalization and Information
 gpu::getCudaEnabledDeviceCount
 ----------------------------------
 
-.. cpp:function:: int getCudaEnabledDeviceCount()
+.. ocv:function:: int getCudaEnabledDeviceCount()
 
     Returns the number of installed CUDA-enabled devices. Use this function before any other GPU functions calls. If OpenCV is compiled without GPU support, this function returns 0.
 
@@ -15,7 +15,7 @@ gpu::getCudaEnabledDeviceCount
 
 gpu::setDevice
 ------------------
-.. cpp:function:: void setDevice(int device)
+.. ocv:function:: void setDevice(int device)
 
     Sets a device and initializes it for the current thread. If the call of this function is omitted, a default device is initialized at the fist GPU usage.
 
@@ -25,7 +25,7 @@ gpu::setDevice
 
 gpu::getDevice
 ------------------
-.. cpp:function:: int getDevice()
+.. ocv:function:: int getDevice()
 
     Returns the current device index that was set by ``{gpu::getDevice}`` or initialized by default.
 
@@ -33,7 +33,7 @@ gpu::getDevice
 
 gpu::GpuFeature
 ---------------
-.. cpp:class:: gpu::GpuFeature
+.. ocv:class:: gpu::GpuFeature
     
 This class provides GPU computing features. 
 ::
@@ -51,7 +51,7 @@ This class provides GPU computing features.
 
 gpu::DeviceInfo
 ---------------
-.. cpp:class:: gpu::DeviceInfo
+.. ocv:class:: gpu::DeviceInfo
 
 This class provides functionality for querying the specified GPU properties. 
 ::
@@ -82,9 +82,9 @@ This class provides functionality for querying the specified GPU properties.
 
 gpu::DeviceInfo::DeviceInfo
 ------------------------------- 
-.. cpp:function:: gpu::DeviceInfo::DeviceInfo()
+.. ocv:function:: gpu::DeviceInfo::DeviceInfo()
 
-.. cpp:function:: gpu::DeviceInfo::DeviceInfo(int device_id)
+.. ocv:function:: gpu::DeviceInfo::DeviceInfo(int device_id)
 
     Constructs the ``DeviceInfo`` object for the specified device. If ``device_id`` parameter is missed, it constructs an object for the current device.
 
@@ -94,7 +94,7 @@ gpu::DeviceInfo::DeviceInfo
 
 gpu::DeviceInfo::name
 -------------------------
-.. cpp:function:: string gpu::DeviceInfo::name()
+.. ocv:function:: string gpu::DeviceInfo::name()
 
     Returns the device name.
 
@@ -102,7 +102,7 @@ gpu::DeviceInfo::name
 
 gpu::DeviceInfo::majorVersion
 ---------------------------------
-.. cpp:function:: int gpu::DeviceInfo::majorVersion()
+.. ocv:function:: int gpu::DeviceInfo::majorVersion()
 
     Returns the major compute capability version.
 
@@ -110,7 +110,7 @@ gpu::DeviceInfo::majorVersion
 
 gpu::DeviceInfo::minorVersion
 ---------------------------------
-.. cpp:function:: int gpu::DeviceInfo::minorVersion()
+.. ocv:function:: int gpu::DeviceInfo::minorVersion()
 
     Returns the minor compute capability version.
 
@@ -118,7 +118,7 @@ gpu::DeviceInfo::minorVersion
 
 gpu::DeviceInfo::multiProcessorCount
 ----------------------------------------
-.. cpp:function:: int gpu::DeviceInfo::multiProcessorCount()
+.. ocv:function:: int gpu::DeviceInfo::multiProcessorCount()
 
     Returns the number of streaming multiprocessors.
 
@@ -126,7 +126,7 @@ gpu::DeviceInfo::multiProcessorCount
 
 gpu::DeviceInfo::freeMemory
 -------------------------------
-.. cpp:function:: size_t gpu::DeviceInfo::freeMemory()
+.. ocv:function:: size_t gpu::DeviceInfo::freeMemory()
 
     Returns the amount of free memory in bytes.
 
@@ -134,7 +134,7 @@ gpu::DeviceInfo::freeMemory
 
 gpu::DeviceInfo::totalMemory
 --------------------------------
-.. cpp:function:: size_t gpu::DeviceInfo::totalMemory()
+.. ocv:function:: size_t gpu::DeviceInfo::totalMemory()
 
     Returns the amount of total memory in bytes.
 
@@ -142,17 +142,17 @@ gpu::DeviceInfo::totalMemory
 
 gpu::DeviceInfo::supports
 -----------------------------
-.. cpp:function:: bool gpu::DeviceInfo::supports(GpuFeature feature)
+.. ocv:function:: bool gpu::DeviceInfo::supports(GpuFeature feature)
 
     Provides information on GPU feature support. This function returns true if the device has the specified GPU feature. Otherwise, it returns false.
 
-    :param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
+    :param feature: Feature to be checked. See :ocv:class:`gpu::GpuFeature`.
 
 .. index:: gpu::DeviceInfo::isCompatible
 
 gpu::DeviceInfo::isCompatible
 ---------------------------------
-.. cpp:function:: bool gpu::DeviceInfo::isCompatible()
+.. ocv:function:: bool gpu::DeviceInfo::isCompatible()
 
     Checks the GPU module and device compatibility. This function returns ``true`` if the GPU module can be run on the specified device. Otherwise, it returns false.
 
@@ -162,31 +162,31 @@ gpu::DeviceInfo::isCompatible
 
 gpu::TargetArchs
 ----------------
-.. cpp:class:: gpu::TargetArchs
+.. ocv:class:: gpu::TargetArchs
 
 This class provides a set of static methods to check what NVIDIA* card architecture the GPU module was built for.
 
 The following method checks whether the module was built with the support of the given feature:
 
-	.. cpp:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
+	.. ocv:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
 
-		:param feature: Feature to be checked. See :cpp:class:`gpu::GpuFeature`.
+		:param feature: Feature to be checked. See :ocv:class:`gpu::GpuFeature`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 
-    .. cpp:function:: static bool gpu::TargetArchs::has(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::has(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasPtx(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasPtx(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasBin(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasBin(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 
-    .. cpp:function:: static bool gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
+    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 
         :param major: Major compute capability version.
 

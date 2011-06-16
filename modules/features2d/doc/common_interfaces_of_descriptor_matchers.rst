@@ -15,7 +15,7 @@ descriptor matchers inherit
 
 DMatch
 ------
-.. cpp:class:: DMatch
+.. ocv:class:: DMatch
 
 Class for matching keypoint descriptors: query descriptor index,
 train descriptor index, train image index, and distance between descriptors ::
@@ -108,7 +108,7 @@ with an image set. ::
 
 DescriptorMatcher::add
 --------------------------
-.. cpp:function:: void add( const vector<Mat>& descriptors )
+.. ocv:function:: void add( const vector<Mat>& descriptors )
 
     Adds descriptors to train a descriptor collection. If the collection ``trainDescCollectionis`` is not empty, the new descriptors are added to existing train descriptors.
 
@@ -118,7 +118,7 @@ DescriptorMatcher::add
 
 DescriptorMatcher::getTrainDescriptors
 ------------------------------------------
-.. cpp:function:: const vector<Mat>& getTrainDescriptors() const
+.. ocv:function:: const vector<Mat>& getTrainDescriptors() const
 
     Returns a constant link to the train descriptor collection ``trainDescCollection`` .
 
@@ -126,7 +126,7 @@ DescriptorMatcher::getTrainDescriptors
 
 DescriptorMatcher::clear
 ----------------------------
-.. cpp:function:: void DescriptorMatcher::clear()
+.. ocv:function:: void DescriptorMatcher::clear()
 
     Clears the train descriptor collection.
 
@@ -134,7 +134,7 @@ DescriptorMatcher::clear
 
 DescriptorMatcher::empty
 ----------------------------
-.. cpp:function:: bool DescriptorMatcher::empty() const
+.. ocv:function:: bool DescriptorMatcher::empty() const
 
     Returns true if there are no train descriptors in the collection.
 
@@ -142,7 +142,7 @@ DescriptorMatcher::empty
 
 DescriptorMatcher::isMaskSupported
 --------------------------------------
-.. cpp:function:: bool DescriptorMatcher::isMaskSupported()
+.. ocv:function:: bool DescriptorMatcher::isMaskSupported()
 
     Returns true if the descriptor matcher supports masking permissible matches.
 
@@ -150,7 +150,7 @@ DescriptorMatcher::isMaskSupported
 
 DescriptorMatcher::train
 ----------------------------
-.. cpp:function:: void DescriptorMatcher::train()
+.. ocv:function:: void DescriptorMatcher::train()
 
     Trains a descriptor matcher (for example, the flann index). In all methods to match, the method ``train()`` is run every time before matching. Some descriptor matchers (for example, ``BruteForceMatcher``) have an empty implementation of this method. Other matchers really train their inner structures (for example, ``FlannBasedMatcher`` trains ``flann::Index`` ).
 
@@ -158,9 +158,9 @@ DescriptorMatcher::train
 
 DescriptorMatcher::match
 ----------------------------
-.. cpp:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                           const Mat& trainDescriptors, vector<DMatch>& matches, const Mat& mask=Mat() ) const
+.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                           const Mat& trainDescriptors, vector<DMatch>& matches, const Mat& mask=Mat() ) const
 
-.. cpp:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                                   vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
+.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                                   vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
 
     Finds the best match for each descriptor from a query set.
 
@@ -180,9 +180,9 @@ In the first variant of this method, the train descriptors are passed as an inpu
 
 DescriptorMatcher::knnMatch
 -------------------------------
-.. cpp:function:: void DescriptorMatcher::knnMatch( const Mat& queryDescriptors,       const Mat& trainDescriptors,       vector<vector<DMatch> >& matches,       int k, const Mat& mask=Mat(),       bool compactResult=false ) const
+.. ocv:function:: void DescriptorMatcher::knnMatch( const Mat& queryDescriptors,       const Mat& trainDescriptors,       vector<vector<DMatch> >& matches,       int k, const Mat& mask=Mat(),       bool compactResult=false ) const
 
-.. cpp:function:: void DescriptorMatcher::knnMatch( const Mat& queryDescriptors,           vector<vector<DMatch> >& matches, int k,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void DescriptorMatcher::knnMatch( const Mat& queryDescriptors,           vector<vector<DMatch> >& matches, int k,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
     Finds the k best matches for each descriptor from a query set.
 
@@ -200,15 +200,15 @@ DescriptorMatcher::knnMatch
 
     :param compactResult: Parameter that is used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
-These extended variants of :cpp:func:`DescriptorMatcher::match` methods find several best matches for each query descriptor. The matches are returned in the distance increasing order. See :cpp:func:`DescriptorMatcher::match` for the details about query and train descriptors. 
+These extended variants of :ocv:func:`DescriptorMatcher::match` methods find several best matches for each query descriptor. The matches are returned in the distance increasing order. See :ocv:func:`DescriptorMatcher::match` for the details about query and train descriptors. 
 
 .. index:: DescriptorMatcher::radiusMatch
 
 DescriptorMatcher::radiusMatch
 ----------------------------------
-.. cpp:function:: void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors,           const Mat& trainDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance, const Mat& mask=Mat(),           bool compactResult=false ) const
+.. ocv:function:: void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors,           const Mat& trainDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance, const Mat& mask=Mat(),           bool compactResult=false ) const
 
-.. cpp:function:: void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
     For each query descriptor, finds the training descriptors not farther than the specified distance.
 
@@ -232,7 +232,7 @@ For each query descriptor, the methods find such training descriptors that the d
 
 DescriptorMatcher::clone
 ----------------------------
-.. cpp:function:: Ptr<DescriptorMatcher> DescriptorMatcher::clone( bool emptyTrainData ) const
+.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::clone( bool emptyTrainData ) const
 
     Clones the matcher.
 
@@ -242,7 +242,7 @@ DescriptorMatcher::clone
 
 DescriptorMatcher::create
 -----------------------------
-.. cpp:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
 
     Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
@@ -353,7 +353,7 @@ FlannBasedMatcher
 -----------------
 .. c:type:: FlannBasedMatcher
 
-Flann-based descriptor matcher. This matcher trains :ref:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because :cpp:func:`flann::Index` does not support this. ::
+Flann-based descriptor matcher. This matcher trains :ref:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because :ocv:func:`flann::Index` does not support this. ::
 
     class FlannBasedMatcher : public DescriptorMatcher
     {

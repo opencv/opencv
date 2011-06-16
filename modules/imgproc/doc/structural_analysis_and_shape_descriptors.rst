@@ -7,7 +7,7 @@ Structural Analysis and Shape Descriptors
 
 moments
 -----------
-.. cpp:function:: Moments moments( InputArray array, bool binaryImage=false )
+.. ocv:function:: Moments moments( InputArray array, bool binaryImage=false )
 
     Calculates all of the moments up to the third order of a polygon or rasterized shape where the class ``Moments`` is defined as: ::
 
@@ -72,18 +72,18 @@ http://en.wikipedia.org/wiki/Green_theorem
 ). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
 
 See Also:
-:cpp:func:`contourArea`,
-:cpp:func:`arcLength`
+:ocv:func:`contourArea`,
+:ocv:func:`arcLength`
 
 .. index:: HuMoments
 
 HuMoments
 -------------
-.. cpp:function:: void HuMoments( const Moments& moments, double h[7] )
+.. ocv:function:: void HuMoments( const Moments& moments, double h[7] )
 
     Calculates the seven Hu invariants.
 
-    :param moments: Input moments computed with  :cpp:func:`moments` .
+    :param moments: Input moments computed with  :ocv:func:`moments` .
     :param h: Output Hu invariants.
 
 The function calculates the seven Hu invariants (see
@@ -101,19 +101,19 @@ where
 These values are proved to be invariants to the image scale, rotation, and reflection except the seventh one, whose sign is changed by reflection. This invariance is proved with the assumption of infinite image resolution. In case of raster images, the computed Hu invariants for the original and transformed images are a bit different.
 
 See Also:
-:cpp:func:`matchShapes`
+:ocv:func:`matchShapes`
 
 .. index:: findContours
 
 findContours
 ----------------
-.. cpp:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
+.. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
 
-.. cpp:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
+.. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
     Finds contours in a binary image.
 
-    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :cpp:func:`compare` ,  :cpp:func:`inRange` ,  :cpp:func:`threshold` ,  :cpp:func:`adaptiveThreshold` ,  :cpp:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
+    :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
 
@@ -150,7 +150,7 @@ Source ``image`` is modified by this function.
 
 drawContours
 ----------------
-.. cpp:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
 
     Draws contours outlines or filled contours.
 
@@ -165,7 +165,7 @@ drawContours
     :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
         drawn.
 
-    :param lineType: Line connectivity. See  :cpp:func:`line`  for details.
+    :param lineType: Line connectivity. See  :ocv:func:`line`  for details.
 
     :param hierarchy: Optional information about hierarchy. It is only needed if you want to draw only some of the  contours (see  ``maxLevel`` ).
 
@@ -221,7 +221,7 @@ The function draws contour outlines in the image if
 
 approxPolyDP
 ----------------
-.. cpp:function:: void approxPolyDP( InputArray curve, OutputArray approxCurve, double epsilon, bool closed )
+.. ocv:function:: void approxPolyDP( InputArray curve, OutputArray approxCurve, double epsilon, bool closed )
 
     Approximates a polygonal curve(s) with the specified precision.
 
@@ -242,7 +242,7 @@ See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp on how 
 
 arcLength
 -------------
-.. cpp:function:: double arcLength( InputArray curve, bool closed )
+.. ocv:function:: double arcLength( InputArray curve, bool closed )
 
     Calculates a contour perimeter or a curve length.
 
@@ -256,7 +256,7 @@ The function computes a curve length or a closed contour perimeter.
 
 boundingRect
 ----------------
-.. cpp:function:: Rect boundingRect( InputArray points )
+.. ocv:function:: Rect boundingRect( InputArray points )
 
     Calculates the up-right bounding rectangle of a point set.
 
@@ -269,7 +269,7 @@ The function calculates and returns the minimal up-right bounding rectangle for 
 
 contourArea
 ---------------
-.. cpp:function:: double contourArea( InputArray contour, bool oriented=false )
+.. ocv:function:: double contourArea( InputArray contour, bool oriented=false )
 
     Calculates a contour area.
 
@@ -277,9 +277,9 @@ contourArea
     :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking sign of the area. By default the parameter is ``false``, which means that the absolute value is returned.
 
 The function computes a contour area. Similarly to
-:cpp:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
-:cpp:func:`drawContours` or
-:cpp:func:`fillPoly` , can be different.
+:ocv:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
+:ocv:func:`drawContours` or
+:ocv:func:`fillPoly` , can be different.
 Here is a short example: ::
 
     vector<Point> contour;
@@ -301,7 +301,7 @@ Here is a short example: ::
 
 convexHull
 --------------
-.. cpp:function:: void convexHull( InputArray points, OutputArray hull, bool clockwise=false, bool returnPoints=true )
+.. ocv:function:: void convexHull( InputArray points, OutputArray hull, bool clockwise=false, bool returnPoints=true )
 
     Finds the convex hull of a point set.
 
@@ -322,7 +322,7 @@ that has
 
 fitEllipse
 --------------
-.. cpp:function:: RotatedRect fitEllipse( InputArray points )
+.. ocv:function:: RotatedRect fitEllipse( InputArray points )
 
     Fits an ellipse around a set of 2D points.
 
@@ -334,7 +334,7 @@ The function calculates the ellipse that fits (in least-squares sense) a set of 
 
 fitLine
 -----------
-.. cpp:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
+.. ocv:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
 
     Fits a line to a 2D or 3D point set.
 
@@ -400,7 +400,7 @@ http://en.wikipedia.org/wiki/M-estimator
 
 isContourConvex
 -------------------
-.. cpp:function:: bool isContourConvex( InputArray contour )
+.. ocv:function:: bool isContourConvex( InputArray contour )
 
     Tests a contour convexity.
 
@@ -412,7 +412,7 @@ The function tests whether the input contour is convex or not. The contour must 
 
 minAreaRect
 ---------------
-.. cpp:function:: RotatedRect minAreaRect( InputArray points )
+.. ocv:function:: RotatedRect minAreaRect( InputArray points )
 
     Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
@@ -424,7 +424,7 @@ The function calculates and returns the minimum-area bounding rectangle (possibl
 
 minEnclosingCircle
 ----------------------
-.. cpp:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
+.. ocv:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
 
     Finds a circle of the minimum area enclosing a 2D point set.
 
@@ -440,7 +440,7 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 
 matchShapes
 ---------------
-.. cpp:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
+.. ocv:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
 
     Compares two shapes.
 
@@ -454,7 +454,7 @@ matchShapes
     :param parameter: Method-specific parameter (not supported now).
 
 The function compares two shapes. All three implemented methods use the Hu invariants (see
-:cpp:func:`HuMoments` ) as follows (
+:ocv:func:`HuMoments` ) as follows (
 :math:`A` denotes ``object1``,:math:`B` denotes ``object2`` ):
 
 * method=CV\_CONTOUR\_MATCH\_I1
@@ -490,7 +490,7 @@ and
 
 pointPolygonTest
 --------------------
-.. cpp:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
+.. ocv:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
 
     Performs a point-in-contour test.
 

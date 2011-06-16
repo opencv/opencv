@@ -7,7 +7,7 @@ Motion Analysis and Object Tracking
 
 accumulate
 --------------
-.. cpp:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
+.. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
     Adds an image to the accumulator.
 
@@ -28,15 +28,15 @@ The function supports multi-channel images. Each channel is processed independen
 The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
 See Also:
-:cpp:func:`accumulateSquare`,
-:cpp:func:`accumulateProduct`,
-:cpp:func:`accumulateWeighted`
+:ocv:func:`accumulateSquare`,
+:ocv:func:`accumulateProduct`,
+:ocv:func:`accumulateWeighted`
 
 .. index:: accumulateSquare
 
 accumulateSquare
 --------------------
-.. cpp:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
+.. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
     Adds the square of a source image to the accumulator.
 
@@ -55,15 +55,15 @@ The function adds the input image ``src`` or its selected region, raised to powe
 The function supports multi-channel images Each channel is processed independently.
 
 See Also:
-:cpp:func:`accumulateSquare`,
-:cpp:func:`accumulateProduct`,
-:cpp:func:`accumulateWeighted`
+:ocv:func:`accumulateSquare`,
+:ocv:func:`accumulateProduct`,
+:ocv:func:`accumulateWeighted`
 
 .. index:: accumulateProduct
 
 accumulateProduct
 ---------------------
-.. cpp:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
+.. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
     Adds the per-element product of two input images to the accumulator.
 
@@ -84,15 +84,15 @@ The function adds the product of 2 images or their selected regions to the accum
 The function supports multi-channel images. Each channel is processed independently.
 
 See Also:
-:cpp:func:`accumulate`,
-:cpp:func:`accumulateSquare`,
-:cpp:func:`accumulateWeighted`
+:ocv:func:`accumulate`,
+:ocv:func:`accumulateSquare`,
+:ocv:func:`accumulateWeighted`
 
 .. index:: accumulateWeighted
 
 accumulateWeighted
 ----------------------
-.. cpp:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
+.. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
     Updates a running average.
 
@@ -114,6 +114,6 @@ That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets
 The function supports multi-channel images. Each channel is processed independently.
 
 See Also:
-:cpp:func:`accumulate`,
-:cpp:func:`accumulateSquare`,
-:cpp:func:`accumulateProduct` 
+:ocv:func:`accumulate`,
+:ocv:func:`accumulateSquare`,
+:ocv:func:`accumulateProduct` 

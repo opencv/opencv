@@ -125,7 +125,7 @@ The structure must be initialized and passed to the training method of
 
 CvSVM::train
 ------------
-.. cpp:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
+.. ocv:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
 
     Trains SVM.
 
@@ -145,7 +145,7 @@ All the other parameters are gathered in the
 
 CvSVM::train_auto
 -----------------
-.. cpp:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
+.. ocv:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
 
     Trains SVM with optimal parameters.
 
@@ -189,7 +189,7 @@ as well as for the regression
 
 CvSVM::get_default_grid
 -----------------------
-.. cpp:function:: CvParamGrid CvSVM::get_default_grid( int param_id )
+.. ocv:function:: CvParamGrid CvSVM::get_default_grid( int param_id )
 
     Generates a grid for SVM parameters.
 
@@ -217,7 +217,7 @@ The function generates a grid for the specified parameter of the SVM algorithm. 
 
 CvSVM::get_params
 -----------------
-.. cpp:function:: CvSVMParams CvSVM::get_params() const
+.. ocv:function:: CvSVMParams CvSVM::get_params() const
 
     Returns the current SVM parameters.
 
@@ -229,9 +229,9 @@ This function may be used to get the optimal parameters obtained while automatic
 
 CvSVM::get_support_vector*
 --------------------------
-.. cpp:function:: int CvSVM::get_support_vector_count() const
+.. ocv:function:: int CvSVM::get_support_vector_count() const
 
-.. cpp:function:: const float* CvSVM::get_support_vector(int i) const
+.. ocv:function:: const float* CvSVM::get_support_vector(int i) const
 
     Retrieves a number of support vectors and the particular vector.
 

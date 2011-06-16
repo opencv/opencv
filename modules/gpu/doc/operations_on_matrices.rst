@@ -7,7 +7,7 @@ Operations on Matrices
 
 gpu::transpose
 ------------------
-.. cpp:function:: void gpu::transpose(const GpuMat& src, GpuMat& dst)
+.. ocv:function:: void gpu::transpose(const GpuMat& src, GpuMat& dst)
 
     Transposes a matrix.
 
@@ -16,13 +16,13 @@ gpu::transpose
     :param dst: Destination matrix.
 
 See Also:
-:cpp:func:`transpose` 
+:ocv:func:`transpose` 
 
 .. index:: gpu::flip
 
 gpu::flip
 -------------
-.. cpp:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
+.. ocv:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
 
     Flips a 2D matrix around vertical, horizontal, or both axes.
 
@@ -40,13 +40,13 @@ gpu::flip
             
 
 See Also:
-:cpp:func:`flip` 
+:ocv:func:`flip` 
 
 .. index:: gpu::LUT
 
 gpu::LUT
 ------------
-.. cpp:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
+.. ocv:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
 
     Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))``
 
@@ -57,19 +57,19 @@ gpu::LUT
     :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src``.
             
 
-See Also: :cpp:func:`LUT` 
+See Also: :ocv:func:`LUT` 
 
 .. index:: gpu::merge
 
 gpu::merge
 --------------
-.. cpp:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst)
+.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst)
 
-.. cpp:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream)
+.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream)
 
-.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst)
+.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst)
 
-.. cpp:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream)
+.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream)
 
     Makes a multi-channel matrix out of several single-channel matrices.
 
@@ -81,19 +81,19 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :cpp:func:`merge` 
+See Also: :ocv:func:`merge` 
 
 .. index:: gpu::split
 
 gpu::split
 --------------
-.. cpp:function:: void gpu::split(const GpuMat& src, GpuMat* dst)
+.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst)
 
-.. cpp:function:: void gpu::split(const GpuMat& src, GpuMat* dst, const Stream& stream)
+.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst, const Stream& stream)
 
-.. cpp:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst)
+.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst)
 
-.. cpp:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream)
+.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream)
 
     Copies each plane of a multi-channel matrix into an array.
 
@@ -103,17 +103,17 @@ gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :cpp:func:`split`
+See Also: :ocv:func:`split`
 
 .. index:: gpu::magnitude
 
 gpu::magnitude
 ------------------
-.. cpp:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude)
 
-.. cpp:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
 
-.. cpp:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
+.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
 
     Computes magnitudes of complex matrix elements.
 
@@ -128,17 +128,17 @@ gpu::magnitude
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:cpp:func:`magnitude` 
+:ocv:func:`magnitude` 
 
 .. index:: gpu::magnitudeSqr
 
 gpu::magnitudeSqr
 ---------------------
-.. cpp:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude)
 
-.. cpp:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
 
-.. cpp:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
 
     Computes squared magnitudes of complex matrix elements.
 
@@ -156,9 +156,9 @@ gpu::magnitudeSqr
 
 gpu::phase
 --------------
-.. cpp:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees=false)
+.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees=false)
 
-.. cpp:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, const Stream& stream)
 
     Computes polar angles of complex matrix elements.
 
@@ -173,15 +173,15 @@ gpu::phase
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:cpp:func:`phase` 
+:ocv:func:`phase` 
 
 .. index:: gpu::cartToPolar
 
 gpu::cartToPolar
 --------------------
-.. cpp:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees=false)
+.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees=false)
 
-.. cpp:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees, const Stream& stream)
 
     Converts Cartesian coordinates into polar.
 
@@ -198,15 +198,15 @@ gpu::cartToPolar
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:cpp:func:`cartToPolar` 
+:ocv:func:`cartToPolar` 
 
 .. index:: gpu::polarToCart
 
 gpu::polarToCart
 --------------------
-.. cpp:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees=false)
+.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees=false)
 
-.. cpp:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream)
 
     Converts polar coordinates into Cartesian.
 
@@ -223,4 +223,4 @@ gpu::polarToCart
     :param stream: Stream for the asynchronous version.
 
 See Also:
-:cpp:func:`polarToCart` 
+:ocv:func:`polarToCart` 

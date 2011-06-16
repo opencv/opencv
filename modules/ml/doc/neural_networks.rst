@@ -225,7 +225,7 @@ Unlike many other models in ML that are constructed and trained at once, in the 
 
 CvANN_MLP::create
 -----------------
-.. cpp:function:: void CvANN_MLP::create(  const Mat& _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
+.. ocv:function:: void CvANN_MLP::create(  const Mat& _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
 
     Constructs MLP with the specified topology.
 
@@ -243,7 +243,7 @@ The method creates an MLP network with the specified topology and assigns the sa
 
 CvANN_MLP::train
 ----------------
-.. cpp:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(),                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
+.. ocv:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(),                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
 
     Trains/updates MLP.
 

@@ -7,7 +7,7 @@ Utility and System Functions and Macros
 
 alignPtr
 ------------
-.. cpp:function:: template<typename _Tp> _Tp* alignPtr(_Tp* ptr, int n=sizeof(_Tp))
+.. ocv:function:: template<typename _Tp> _Tp* alignPtr(_Tp* ptr, int n=sizeof(_Tp))
 
     Aligns a pointer to the specified number of bytes.
 
@@ -25,7 +25,7 @@ The function returns the aligned pointer of the same type as the input pointer:
 
 alignSize
 -------------
-.. cpp:function:: size_t alignSize(size_t sz, int n)
+.. ocv:function:: size_t alignSize(size_t sz, int n)
 
     Aligns a buffer size to the specified number of bytes.
 
@@ -43,7 +43,7 @@ The function returns the minimum number that is greater or equal to ``sz`` and i
 
 allocate
 ------------
-.. cpp:function:: template<typename _Tp> _Tp* allocate(size_t n)
+.. ocv:function:: template<typename _Tp> _Tp* allocate(size_t n)
 
     Allocates an array of elements.
 
@@ -55,7 +55,7 @@ The generic function ``allocate`` allocates a buffer for the specified number of
 
 deallocate
 --------------
-.. cpp:function:: template<typename _Tp> void deallocate(_Tp* ptr, size_t n)
+.. ocv:function:: template<typename _Tp> void deallocate(_Tp* ptr, size_t n)
 
     Deallocates an array of elements.
 
@@ -64,8 +64,8 @@ deallocate
     :param n: Number of elements in the buffer.
 
 The generic function ``deallocate`` deallocates the buffer allocated with
-:cpp:func:`allocate` . The number of elements must match the number passed to
-:cpp:func:`allocate` .
+:ocv:func:`allocate` . The number of elements must match the number passed to
+:ocv:func:`allocate` .
 
 .. index:: CV_Assert
 
@@ -73,7 +73,7 @@ The generic function ``deallocate`` deallocates the buffer allocated with
 
 CV_Assert
 ---------
-.. cpp:function:: CV_Assert(expr)
+.. ocv:function:: CV_Assert(expr)
 
     Checks a condition at runtime. ::
 
@@ -84,17 +84,17 @@ CV_Assert
     :param expr: Expression to check.
 
 The macros ``CV_Assert`` and ``CV_DbgAssert`` evaluate the specified expression. If it is 0, the macros raise an error (see
-:cpp:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations, while ``CV_DbgAssert`` is only retained in the Debug configuration.
+:ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations, while ``CV_DbgAssert`` is only retained in the Debug configuration.
 
 .. index:: error
 
 error
 ---------
-.. cpp:function:: void error( const Exception& exc )
+.. ocv:function:: void error( const Exception& exc )
 
-.. cpp:function:: #define CV_Error( code, msg ) <...>
+.. ocv:function:: #define CV_Error( code, msg ) <...>
 
-.. cpp:function:: #define CV_Error_( code, args ) <...>
+.. ocv:function:: #define CV_Error_( code, args ) <...>
 
     Signals an error and raises an exception.
 
@@ -148,13 +148,13 @@ Exception class passed to error ::
     };
 
 The class ``Exception`` encapsulates all or almost all the necessary information about the error happened in the program. The exception is usually constructed and thrown implicitly via ``CV_Error`` and ``CV_Error_`` macros. See
-:cpp:func:`error` .
+:ocv:func:`error` .
 
 .. index:: fastMalloc
 
 fastMalloc
 --------------
-.. cpp:function:: void* fastMalloc(size_t size)
+.. ocv:function:: void* fastMalloc(size_t size)
 
     Allocates an aligned memory buffer.
 
@@ -166,74 +166,74 @@ The function allocates the buffer of the specified size and returns it. When the
 
 fastFree
 ------------
-.. cpp:function:: void fastFree(void* ptr)
+.. ocv:function:: void fastFree(void* ptr)
 
     Deallocates a memory buffer.
 
     :param ptr: Pointer to the allocated buffer.
 
 The function deallocates the buffer allocated with
-:cpp:func:`fastMalloc` .
+:ocv:func:`fastMalloc` .
 If NULL pointer is passed, the function does nothing.
 
 .. index:: format
 
 format
 ----------
-.. cpp:function:: string format( const char* fmt, ... )
+.. ocv:function:: string format( const char* fmt, ... )
 
     Returns a text string formatted using the ``printf`` -like expression.
 
     :param fmt: ``printf`` -compatible formatting specifiers.
 
 The function acts like ``sprintf``  but forms and returns an STL string. It can be used to form an error message in the
-:cpp:func:`Exception` constructor.
+:ocv:func:`Exception` constructor.
 
 .. index:: getNumThreads
 
 getNumThreads
 -----------------
-.. cpp:function:: int getNumThreads()
+.. ocv:function:: int getNumThreads()
 
     Returns the number of threads used by OpenCV.
 
 The function returns the number of threads that is used by OpenCV.
 
 See Also:
-:cpp:func:`setNumThreads`,
-:cpp:func:`getThreadNum` 
+:ocv:func:`setNumThreads`,
+:ocv:func:`getThreadNum` 
 
 .. index:: getThreadNum
 
 getThreadNum
 ----------------
-.. cpp:function:: int getThreadNum()
+.. ocv:function:: int getThreadNum()
 
     Returns the index of the currently executed thread.
 
 The function returns a 0-based index of the currently executed thread. The function is only valid inside a parallel OpenMP region. When OpenCV is built without OpenMP support, the function always returns 0.
 
 See Also:
-:cpp:func:`setNumThreads`,
-:cpp:func:`getNumThreads` .
+:ocv:func:`setNumThreads`,
+:ocv:func:`getNumThreads` .
 
 .. index:: getTickCount
 
 getTickCount
 ----------------
-.. cpp:function:: int64 getTickCount()
+.. ocv:function:: int64 getTickCount()
 
     Returns the number of ticks.
 
 The function returns the number of ticks after the certain event (for example, when the machine was turned on).
 It can be used to initialize
-:cpp:func:`RNG` or to measure a function execution time by reading the tick count before and after the function call. See also the tick frequency.
+:ocv:func:`RNG` or to measure a function execution time by reading the tick count before and after the function call. See also the tick frequency.
 
 .. index:: getTickFrequency
 
 getTickFrequency
 --------------------
-.. cpp:function:: double getTickFrequency()
+.. ocv:function:: double getTickFrequency()
 
     Returns the number of ticks per second.
 
@@ -248,7 +248,7 @@ That is, the following code computes the execution time in seconds: ::
 
 getCPUTickCount
 ----------------
-.. cpp:function:: int64 getCPUTickCount()
+.. ocv:function:: int64 getCPUTickCount()
 
     Returns the number of CPU ticks.
 
@@ -258,7 +258,7 @@ The function returns the current number of CPU ticks on some architectures (such
 
 setNumThreads
 -----------------
-.. cpp:function:: void setNumThreads(int nthreads)
+.. ocv:function:: void setNumThreads(int nthreads)
 
     Sets the number of threads used by OpenCV.
 
@@ -267,14 +267,14 @@ setNumThreads
 The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the processing cores.
 
 See Also:
-:cpp:func:`getNumThreads`,
-:cpp:func:`getThreadNum` 
+:ocv:func:`getNumThreads`,
+:ocv:func:`getThreadNum` 
 
 .. index:: setUseOptimized
 
 setUseOptimized
 -----------------
-.. cpp:function:: void setUseOptimized(bool onoff)
+.. ocv:function:: void setUseOptimized(bool onoff)
 
     Enables or disables the optimized code.
 
@@ -288,7 +288,7 @@ By default, the optimized code is enabled (unless you disable it in CMake). The 
 
 useOptimized
 -----------------
-.. cpp:function:: bool useOptimized()
+.. ocv:function:: bool useOptimized()
 
     Returns status of the optimized code use
 

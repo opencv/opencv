@@ -7,21 +7,21 @@ Operations on Arrays
 
    * -
      -
-   * - :cpp:func:`abs` (src)
+   * - :ocv:func:`abs` (src)
      - Computes an absolute value of each matrix element.
-   * - :cpp:func:`absdiff` (src1, src2, dst)
+   * - :ocv:func:`absdiff` (src1, src2, dst)
      - Computes the per-element absolute difference between 2 arrays or between an array and a scalar.
 
 abs
 ---
-.. cpp:function:: MatExpr abs(const Mat& src)
-.. cpp:function:: MatExpr abs(const MatExpr& src)
+.. ocv:function:: MatExpr abs(const Mat& src)
+.. ocv:function:: MatExpr abs(const MatExpr& src)
 
     Computes an absolute value of each matrix element.
 
     :param src: Matrix or matrix expression.
     
-``abs`` is a meta-function that is expanded to one of :cpp:func:`absdiff` forms:
+``abs`` is a meta-function that is expanded to one of :ocv:func:`absdiff` forms:
 
     * ``C = abs(A-B)``     is equivalent to ``absdiff(A, B, C)``     
 
@@ -31,12 +31,12 @@ abs
     
     The output matrix has the same size and the same type as the input one except for the last case, where ``C`` is ``depth=CV_8U`` .
 
-    .. seealso:: :ref:`MatrixExpressions`, :cpp:func:`absdiff`
+    .. seealso:: :ref:`MatrixExpressions`, :ocv:func:`absdiff`
 
 
 absdiff
 -----------
-.. cpp:function:: void absdiff(InputArray src1, InputArray src2, OutputArray dst)
+.. ocv:function:: void absdiff(InputArray src1, InputArray src2, OutputArray dst)
 
     Computes the per-element absolute difference between two arrays or between an array and a scalar.
 
@@ -72,12 +72,12 @@ The function ``absdiff`` computes:
     where  ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
 
 
-    .. seealso:: :cpp:func:`abs`
+    .. seealso:: :ocv:func:`abs`
 
 
 add
 -------
-.. cpp:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
+.. ocv:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 
     Computes the per-element sum of two arrays or an array and a scalar.
 
@@ -125,17 +125,17 @@ The input arrays and the destination array can all have the same or different de
 
 .. seealso::
    
-    :cpp:func:`subtract`,
-    :cpp:func:`addWeighted`,
-    :cpp:func:`scaleAdd`,
-    :cpp:func:`convertScale`,
+    :ocv:func:`subtract`,
+    :ocv:func:`addWeighted`,
+    :ocv:func:`scaleAdd`,
+    :ocv:func:`convertScale`,
     :ref:`MatrixExpressions`
 
 
 
 addWeighted
 ---------------
-.. cpp:function:: void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst, int dtype=-1)
+.. ocv:function:: void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst, int dtype=-1)
 
     Computes the weighted sum of two arrays.
 
@@ -168,17 +168,17 @@ The function can be replaced with a matrix expression: ::
 
 .. seealso::
 
-    :cpp:func:`add`,
-    :cpp:func:`subtract`,
-    :cpp:func:`scaleAdd`,
-    :cpp:func:`convertScale`,
+    :ocv:func:`add`,
+    :ocv:func:`subtract`,
+    :ocv:func:`scaleAdd`,
+    :ocv:func:`convertScale`,
     :ref:`MatrixExpressions`
 
 
 
 bitwise_and
 -----------
-.. cpp:function:: void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
+.. ocv:function:: void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise conjunction of two arrays or an array and a scalar.
 
@@ -220,7 +220,7 @@ In case of floating-point arrays, their machine-specific bit representations (us
 
 bitwise_not
 -----------
-.. cpp:function:: void bitwise_not(InputArray src, OutputArray dst, InputArray mask=noArray())
+.. ocv:function:: void bitwise_not(InputArray src, OutputArray dst, InputArray mask=noArray())
 
     Inverts every bit of an array.
 
@@ -242,7 +242,7 @@ In case of a floating-point source array, its machine-specific bit representatio
 
 bitwise_or
 ----------
-.. cpp:function:: void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
+.. ocv:function:: void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise disjunction of two arrays or an array and a scalar.
 
@@ -285,7 +285,7 @@ In case of floating-point arrays, their machine-specific bit representations (us
 
 bitwise_xor
 -----------
-.. cpp:function:: void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
+.. ocv:function:: void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
     Calculates the per-element bit-wise "exclusive or" operation on two arrays or an array and a scalar.
 
@@ -327,9 +327,9 @@ In case of floating-point arrays, their machine-specific bit representations (us
 calcCovarMatrix
 ---------------
 
-.. cpp:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
+.. ocv:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
 
-.. cpp:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
+.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
 
     Calculates the covariance matrix of a set of vectors.
 
@@ -371,16 +371,16 @@ The functions ``calcCovarMatrix`` calculate the covariance matrix and, optionall
 
 .. seealso::
 
-    :cpp:class:`PCA`,
-    :cpp:func:`mulTransposed`,
-    :cpp:func:`Mahalanobis`
+    :ocv:class:`PCA`,
+    :ocv:func:`mulTransposed`,
+    :ocv:func:`Mahalanobis`
 
 
 
 cartToPolar
 -----------
 
-.. cpp:function:: void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees=false)
+.. ocv:function:: void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees=false)
 
     Calculates the magnitude and angle of 2D vectors.
 
@@ -407,7 +407,7 @@ The angles are calculated with accuracy about 0.3 degrees. For the point (0,0), 
 checkRange
 ----------
 
-.. cpp:function:: bool checkRange(InputArray src, bool quiet=true, Point* pos=0, double minVal=-DBL_MAX, double maxVal=DBL_MAX)
+.. ocv:function:: bool checkRange(InputArray src, bool quiet=true, Point* pos=0, double minVal=-DBL_MAX, double maxVal=DBL_MAX)
 
     Checks every element of an input array for invalid values.
 
@@ -431,7 +431,7 @@ If some values are out of range, position of the first outlier is stored in ``po
 compare
 -------
 
-.. cpp:function:: void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop)
+.. ocv:function:: void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop)
 
     Performs the per-element comparison of two arrays or an array and scalar value.
 
@@ -485,10 +485,10 @@ The comparison operations can be replaced with the equivalent matrix expressions
 
 .. seealso::
 
-    :cpp:func:`checkRange`,
-    :cpp:func:`min`,
-    :cpp:func:`max`,
-    :cpp:func:`threshold`,
+    :ocv:func:`checkRange`,
+    :ocv:func:`min`,
+    :ocv:func:`max`,
+    :ocv:func:`threshold`,
     :ref:`MatrixExpressions`
 
 
@@ -496,7 +496,7 @@ The comparison operations can be replaced with the equivalent matrix expressions
 completeSymm
 ------------
 
-.. cpp:function:: void completeSymm(InputOutputArray mtx, bool lowerToUpper=false)
+.. ocv:function:: void completeSymm(InputOutputArray mtx, bool lowerToUpper=false)
 
     Copies the lower or the upper half of a square matrix to another half.
 
@@ -516,15 +516,15 @@ The function ``completeSymm`` copies the lower half of a square matrix to its an
     
 .. seealso::
 
-    :cpp:func:`flip`,
-    :cpp:func:`transpose`
+    :ocv:func:`flip`,
+    :ocv:func:`transpose`
 
 
 
 convertScaleAbs
 ---------------
 
-.. cpp:function:: void convertScaleAbs(InputArray src, OutputArray dst, double alpha=1, double beta=0)
+.. ocv:function:: void convertScaleAbs(InputArray src, OutputArray dst, double alpha=1, double beta=0)
 
     Scales, computes absolute values, and converts the result to 8-bit.
 
@@ -555,15 +555,15 @@ In case of multi-channel arrays, the function processes each channel independent
 
 .. seealso::
 
-    :cpp:func:`Mat::convertTo`,
-    :cpp:func:`abs`
+    :ocv:func:`Mat::convertTo`,
+    :ocv:func:`abs`
 
 
 
 countNonZero
 ------------
 
-.. cpp:function:: int countNonZero( InputArray mtx )
+.. ocv:function:: int countNonZero( InputArray mtx )
 
     Counts non-zero array elements.
 
@@ -577,18 +577,18 @@ The function returns the number of non-zero elements in ``mtx`` :
 
 .. seealso::
 
-    :cpp:func:`mean`,
-    :cpp:func:`meanStdDev`,
-    :cpp:func:`norm`,
-    :cpp:func:`minMaxLoc`,
-    :cpp:func:`calcCovarMatrix`
+    :ocv:func:`mean`,
+    :ocv:func:`meanStdDev`,
+    :ocv:func:`norm`,
+    :ocv:func:`minMaxLoc`,
+    :ocv:func:`calcCovarMatrix`
 
 
 
 cubeRoot
 --------
 
-.. cpp:function:: float cubeRoot(float val)
+.. ocv:function:: float cubeRoot(float val)
 
     Computes the cube root of an argument.
 
@@ -601,7 +601,7 @@ The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative argu
 cvarrToMat
 ----------
 
-.. cpp:function:: Mat cvarrToMat(const CvArr* src, bool copyData=false, bool allowND=true, int coiMode=0)
+.. ocv:function:: Mat cvarrToMat(const CvArr* src, bool copyData=false, bool allowND=true, int coiMode=0)
 
     Converts ``CvMat``, ``IplImage`` , or ``CvMatND`` to ``Mat``.
 
@@ -615,10 +615,10 @@ cvarrToMat
 
         *  If  ``coiMode=0`` and COI is set, the function reports an error.
 
-        *  If  ``coiMode=1`` , the function never reports an error. Instead, it returns the header to the whole original image and you will have to check and process COI manually. See  :cpp:func:`extractImageCOI` .
+        *  If  ``coiMode=1`` , the function never reports an error. Instead, it returns the header to the whole original image and you will have to check and process COI manually. See  :ocv:func:`extractImageCOI` .
 
 The function ``cvarrToMat`` converts ``CvMat``, ``IplImage`` , or ``CvMatND`` header to
-:cpp:class:`Mat` header, and optionally duplicates the underlying data. The constructed header is returned by the function.
+:ocv:class:`Mat` header, and optionally duplicates the underlying data. The constructed header is returned by the function.
 
 When ``copyData=false`` , the conversion is done really fast (in O(1) time) and the newly created matrix header will have ``refcount=0`` , which means that no reference counting is done for the matrix data. In this case, you have to preserve the data until the new header is destructed. Otherwise, when ``copyData=true`` , the new buffer is allocated and managed as if you created a new matrix from scratch and copied the data there. That is, ``cvarrToMat(src, true)`` is equivalent to ``cvarrToMat(src, false).clone()`` (assuming that COI is not set). The function provides a uniform way of supporting
 ``CvArr`` paradigm in the code that is migrated to use new-style data structures internally. The reverse transformation, from
@@ -643,29 +643,29 @@ Normally, the function is used to convert an old-style 2D array (
 ``CvMat`` or
 ``IplImage`` ) to ``Mat`` . However, the function can also take
 ``CvMatND`` as an input and create
-:cpp:func:`Mat` for it, if it is possible. And, for ``CvMatND A`` , it is possible if and only if ``A.dim[i].size*A.dim.step[i] == A.dim.step[i-1]`` for all or for all but one ``i, 0 < i < A.dims`` . That is, the matrix data should be continuous or it should be representable as a sequence of continuous matrices. By using this function in this way, you can process
+:ocv:func:`Mat` for it, if it is possible. And, for ``CvMatND A`` , it is possible if and only if ``A.dim[i].size*A.dim.step[i] == A.dim.step[i-1]`` for all or for all but one ``i, 0 < i < A.dims`` . That is, the matrix data should be continuous or it should be representable as a sequence of continuous matrices. By using this function in this way, you can process
 ``CvMatND`` using an arbitrary element-wise function.
 
 The last parameter, ``coiMode`` , specifies how to deal with an image with COI set. By default, it is 0 and the function reports an error when an image with COI comes in. And ``coiMode=1`` means that no error is signalled. You have to check COI presence and handle it manually. The modern structures, such as
-:cpp:func:`Mat` and
-:cpp:func:`MatND` do not support COI natively. To process an individual channel of a new-style array, you need either to organize a loop over the array (for example, using matrix iterators) where the channel of interest will be processed, or extract the COI using
-:cpp:func:`mixChannels` (for new-style arrays) or
-:cpp:func:`extractImageCOI` (for old-style arrays), process this individual channel, and insert it back to the destination array if needed (using
-:cpp:func:`mixChannel` or
-:cpp:func:`insertImageCOI` , respectively).
+:ocv:func:`Mat` and
+:ocv:func:`MatND` do not support COI natively. To process an individual channel of a new-style array, you need either to organize a loop over the array (for example, using matrix iterators) where the channel of interest will be processed, or extract the COI using
+:ocv:func:`mixChannels` (for new-style arrays) or
+:ocv:func:`extractImageCOI` (for old-style arrays), process this individual channel, and insert it back to the destination array if needed (using
+:ocv:func:`mixChannel` or
+:ocv:func:`insertImageCOI` , respectively).
 
 .. seealso::
 
     :c:func:`cvGetImage`,
     :c:func:`cvGetMat`,
     :c:func:`cvGetMatND`,
-    :cpp:func:`extractImageCOI`,
-    :cpp:func:`insertImageCOI`,
-    :cpp:func:`mixChannels` 
+    :ocv:func:`extractImageCOI`,
+    :ocv:func:`insertImageCOI`,
+    :ocv:func:`mixChannels` 
 
 dct
 -------
-.. cpp:function:: void dct(InputArray src, OutputArray dst, int flags=0)
+.. ocv:function:: void dct(InputArray src, OutputArray dst, int flags=0)
 
     Performs a forward or inverse discrete Cosine transform of 1D or 2D array.
 
@@ -743,19 +743,19 @@ The function chooses the mode of operation by looking at the flags and size of t
     Currently ``dct`` supports even-size arrays (2, 4, 6 ...). For data analysis and approximation, you can pad the array when necessary.
 
     Also, the function performance depends very much, and not monotonically, on the array size (see
-    :cpp:func:`getOptimalDFTSize` ). In the current implementation DCT of a vector of size ``N`` is computed via DFT of a vector of size ``N/2`` . Thus, the optimal DCT size ``N1 >= N`` can be computed as: ::
+    :ocv:func:`getOptimalDFTSize` ). In the current implementation DCT of a vector of size ``N`` is computed via DFT of a vector of size ``N/2`` . Thus, the optimal DCT size ``N1 >= N`` can be computed as: ::
 
         size_t getOptimalDCTSize(size_t N) { return 2*getOptimalDFTSize((N+1)/2); }
         N1 = getOptimalDCTSize(N);
 
-.. seealso:: :cpp:func:`dft` , :cpp:func:`getOptimalDFTSize` , :cpp:func:`idct`
+.. seealso:: :ocv:func:`dft` , :ocv:func:`getOptimalDFTSize` , :ocv:func:`idct`
 
 
 
 dft
 ---
 
-.. cpp:function:: void dft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0)
+.. ocv:function:: void dft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0)
 
     Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
 
@@ -839,7 +839,7 @@ So, the function chooses an operation mode depending on the flags and size of th
 
 If ``DFT_SCALE`` is set, the scaling is done after the transformation.
 
-Unlike :cpp:func:`dct` , the function supports arrays of arbitrary size. But only those arrays are processed efficiently, whose sizes can be factorized in a product of small prime numbers (2, 3, and 5 in the current implementation). Such an efficient DFT size can be computed using the :cpp:func:`getOptimalDFTSize` method.
+Unlike :ocv:func:`dct` , the function supports arrays of arbitrary size. But only those arrays are processed efficiently, whose sizes can be factorized in a product of small prime numbers (2, 3, and 5 in the current implementation). Such an efficient DFT size can be computed using the :ocv:func:`getOptimalDFTSize` method.
 
 The sample below illustrates how to compute a DFT-based convolution of two 2D real arrays: ::
 
@@ -895,17 +895,17 @@ To optimize this sample, consider the following approaches:
 *
     If different tiles in ``C``     can be computed in parallel and, thus, the convolution is done by parts, the loop can be threaded.
 
-All of the above improvements have been implemented in :cpp:func:`matchTemplate` and :cpp:func:`filter2D` . Therefore, by using them, you can get the performance even better than with the above theoretically optimal implementation. Though, those two functions actually compute cross-correlation, not convolution, so you need to "flip" the second convolution operand ``B`` vertically and horizontally using :cpp:func:`flip` .
+All of the above improvements have been implemented in :ocv:func:`matchTemplate` and :ocv:func:`filter2D` . Therefore, by using them, you can get the performance even better than with the above theoretically optimal implementation. Though, those two functions actually compute cross-correlation, not convolution, so you need to "flip" the second convolution operand ``B`` vertically and horizontally using :ocv:func:`flip` .
 
-.. seealso:: :cpp:func:`dct` , :cpp:func:`getOptimalDFTSize` , :cpp:func:`mulSpectrums`, :cpp:func:`filter2D` , :cpp:func:`matchTemplate` , :cpp:func:`flip` , :cpp:func:`cartToPolar` , :cpp:func:`magnitude` , :cpp:func:`phase`
+.. seealso:: :ocv:func:`dct` , :ocv:func:`getOptimalDFTSize` , :ocv:func:`mulSpectrums`, :ocv:func:`filter2D` , :ocv:func:`matchTemplate` , :ocv:func:`flip` , :ocv:func:`cartToPolar` , :ocv:func:`magnitude` , :ocv:func:`phase`
 
 
 
 divide
 ----------
-.. cpp:function:: void divide(InputArray src1, InputArray src2, OutputArray dst, double scale=1, int dtype=-1)
+.. ocv:function:: void divide(InputArray src1, InputArray src2, OutputArray dst, double scale=1, int dtype=-1)
 
-.. cpp:function:: void divide(double scale, InputArray src2, OutputArray dst, int dtype=-1)
+.. ocv:function:: void divide(double scale, InputArray src2, OutputArray dst, int dtype=-1)
 
     Performs per-element division of two arrays or a scalar by an array.
 
@@ -935,9 +935,9 @@ When ``src2(I)`` is zero, ``dst(I)`` will also be zero. Different channels of mu
 
 .. seealso::
 
-    :cpp:func:`multiply`,
-    :cpp:func:`add`,
-    :cpp:func:`subtract`,
+    :ocv:func:`multiply`,
+    :ocv:func:`add`,
+    :ocv:func:`subtract`,
     :ref:`MatrixExpressions`
 
 
@@ -945,7 +945,7 @@ When ``src2(I)`` is zero, ``dst(I)`` will also be zero. Different channels of mu
 determinant
 -----------
 
-.. cpp:function:: double determinant(InputArray mtx)
+.. ocv:function:: double determinant(InputArray mtx)
 
     Returns the determinant of a square floating-point matrix.
 
@@ -954,14 +954,14 @@ determinant
 The function ``determinant`` computes and returns the determinant of the specified matrix. For small matrices ( ``mtx.cols=mtx.rows<=3`` ),
 the direct method is used. For larger matrices, the function uses LU factorization with partial pivoting.
 
-For symmetric positively-determined matrices, it is also possible to use :cpp:func:`eigen` decomposition to compute the determinant.
+For symmetric positively-determined matrices, it is also possible to use :ocv:func:`eigen` decomposition to compute the determinant.
 
 .. seealso::
 
-    :cpp:func:`trace`,
-    :cpp:func:`invert`,
-    :cpp:func:`solve`,
-    :cpp:func:`eigen`,
+    :ocv:func:`trace`,
+    :ocv:func:`invert`,
+    :ocv:func:`solve`,
+    :ocv:func:`eigen`,
     :ref:`MatrixExpressions`
 
 
@@ -969,9 +969,9 @@ For symmetric positively-determined matrices, it is also possible to use :cpp:fu
 eigen
 -----
 
-.. cpp:function:: bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1, int highindex=-1)
+.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1, int highindex=-1)
 
-.. cpp:function:: bool eigen(InputArray src, OutputArray eigenvalues, OutputArray eigenvectors, int lowindex=-1,int highindex=-1)
+.. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, OutputArray eigenvectors, int lowindex=-1,int highindex=-1)
 
     Computes eigenvalues and eigenvectors of a symmetric matrix.
 
@@ -989,14 +989,14 @@ The functions ``eigen`` compute just eigenvalues, or eigenvalues and eigenvector
 
     src*eigenvectors.row(i).t() = eigenvalues.at<srcType>(i)*eigenvectors.row(i).t()
 
-.. seealso:: :cpp:func:`completeSymm` , :cpp:class:`PCA`
+.. seealso:: :ocv:func:`completeSymm` , :ocv:class:`PCA`
 
 
 
 exp
 ---
 
-.. cpp:function:: void exp(InputArray src, OutputArray dst)
+.. ocv:function:: void exp(InputArray src, OutputArray dst)
 
     Calculates the exponent of every array element.
 
@@ -1012,14 +1012,14 @@ The function ``exp`` calculates the exponent of every element of the input array
 
 The maximum relative error is about ``7e-6`` for single-precision input and less than ``1e-10`` for double-precision input. Currently, the function converts denormalized values to zeros on output. Special values (NaN, Inf) are not handled.
 
-.. seealso::  :cpp:func:`log` , :cpp:func:`cartToPolar` , :cpp:func:`polarToCart` , :cpp:func:`phase` , :cpp:func:`pow` , :cpp:func:`sqrt` , :cpp:func:`magnitude`
+.. seealso::  :ocv:func:`log` , :ocv:func:`cartToPolar` , :ocv:func:`polarToCart` , :ocv:func:`phase` , :ocv:func:`pow` , :ocv:func:`sqrt` , :ocv:func:`magnitude`
 
 
 
 extractImageCOI
 ---------------
 
-.. cpp:function:: void extractImageCOI(const CvArr* src, OutputArray dst, int coi=-1)
+.. ocv:function:: void extractImageCOI(const CvArr* src, OutputArray dst, int coi=-1)
 
     Extracts the selected image channel.
 
@@ -1032,17 +1032,17 @@ extractImageCOI
 The function ``extractImageCOI`` is used to extract an image COI from an old-style array and put the result to the new-style C++ matrix. As usual, the destination matrix is reallocated using ``Mat::create`` if needed.
 
 To extract a channel from a new-style matrix, use
-:cpp:func:`mixChannels` or
-:cpp:func:`split` .
+:ocv:func:`mixChannels` or
+:ocv:func:`split` .
 
-.. seealso::  :cpp:func:`mixChannels` , :cpp:func:`split` , :cpp:func:`merge` , :cpp:func:`cvarrToMat` , :cpp:func:`cvSetImageCOI` , :cpp:func:`cvGetImageCOI`
+.. seealso::  :ocv:func:`mixChannels` , :ocv:func:`split` , :ocv:func:`merge` , :ocv:func:`cvarrToMat` , :ocv:func:`cvSetImageCOI` , :ocv:func:`cvGetImageCOI`
 
 
 
 fastAtan2
 ---------
 
-.. cpp:function:: float fastAtan2(float y, float x)
+.. ocv:function:: float fastAtan2(float y, float x)
 
     Calculates the angle of a 2D vector in degrees.
 
@@ -1056,7 +1056,7 @@ The function ``fastAtan2`` calculates the full-range angle of an input 2D vector
 
 flip
 --------
-.. cpp:function:: void flip(InputArray src, OutputArray dst, int flipCode)
+.. ocv:function:: void flip(InputArray src, OutputArray dst, int flipCode)
 
     Flips a 2D array around vertical, horizontal, or both axes.
 
@@ -1088,14 +1088,14 @@ The example scenarios of using the function are the following:
  *
     Reversing the order of point arrays (``flipCode > 0`` or ``flipCode == 0``).
 
-.. seealso:: :cpp:func:`transpose` , :cpp:func:`repeat` , :cpp:func:`completeSymm`
+.. seealso:: :ocv:func:`transpose` , :ocv:func:`repeat` , :ocv:func:`completeSymm`
 
 
 
 gemm
 ----
 
-.. cpp:function:: void gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0)
+.. ocv:function:: void gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0)
 
     Performs generalized matrix multiplication.
 
@@ -1128,16 +1128,16 @@ The function can be replaced with a matrix expression. For example, the above ca
     dst = alpha*src1.t()*src2 + beta*src3.t();
 
 
-.. seealso::  :cpp:func:`mulTransposed` , :cpp:func:`transform` , :ref:`MatrixExpressions`
+.. seealso::  :ocv:func:`mulTransposed` , :ocv:func:`transform` , :ref:`MatrixExpressions`
 
 
 
 getConvertElem
 --------------
 
-.. cpp:function:: ConvertData getConvertElem(int fromType, int toType)
+.. ocv:function:: ConvertData getConvertElem(int fromType, int toType)
 
-.. cpp:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
+.. ocv:function:: ConvertScaleData getConvertScaleElem(int fromType, int toType)
 
     Returns a conversion function for a single pixel.
 
@@ -1163,14 +1163,14 @@ The functions ``getConvertElem`` and ``getConvertScaleElem`` return pointers to 
     typedef void (*ConvertScaleData)(const void* from, void* to,
                                      int cn, double alpha, double beta)
 
-.. seealso:: :cpp:func:`Mat::convertTo` , :cpp:func:`SparseMat::convertTo`
+.. seealso:: :ocv:func:`Mat::convertTo` , :ocv:func:`SparseMat::convertTo`
 
 
 
 getOptimalDFTSize
 -----------------
 
-.. cpp:function:: int getOptimalDFTSize(int vecsize)
+.. ocv:function:: int getOptimalDFTSize(int vecsize)
 
     Returns the optimal DFT size for a given vector size.
 
@@ -1185,14 +1185,14 @@ The function returns a negative number if ``vecsize`` is too large (very close t
 
 While the function cannot be used directly to estimate the optimal vector size for DCT transform (since the current DCT implementation supports only even-size vectors), it can be easily computed as ``getOptimalDFTSize((vecsize+1)/2)*2``.
 
-.. seealso:: :cpp:func:`dft` , :cpp:func:`dct` , :cpp:func:`idft` , :cpp:func:`idct` , :cpp:func:`mulSpectrums`
+.. seealso:: :ocv:func:`dft` , :ocv:func:`dct` , :ocv:func:`idft` , :ocv:func:`idct` , :ocv:func:`mulSpectrums`
 
 
 
 idct
 ----
 
-.. cpp:function:: void idct(InputArray src, OutputArray dst, int flags=0)
+.. ocv:function:: void idct(InputArray src, OutputArray dst, int flags=0)
 
     Computes the inverse Discrete Cosine Transform of a 1D or 2D array.
 
@@ -1206,17 +1206,17 @@ idct
 
 .. seealso::
 
-    :cpp:func:`dct`,
-    :cpp:func:`dft`,
-    :cpp:func:`idft`,
-    :cpp:func:`getOptimalDFTSize`
+    :ocv:func:`dct`,
+    :ocv:func:`dft`,
+    :ocv:func:`idft`,
+    :ocv:func:`getOptimalDFTSize`
 
 
 
 idft
 ----
 
-.. cpp:function:: void idft(InputArray src, OutputArray dst, int flags=0, int outputRows=0)
+.. ocv:function:: void idft(InputArray src, OutputArray dst, int flags=0, int outputRows=0)
 
     Computes the inverse Discrete Fourier Transform of a 1D or 2D array.
 
@@ -1224,30 +1224,30 @@ idft
 
     :param dst: Destination array whose size and type depend on the  ``flags`` .
     
-    :param flags: Operation flags. See  :cpp:func:`dft` .
+    :param flags: Operation flags. See  :ocv:func:`dft` .
     
-    :param nonzeroRows: Number of  ``dst``  rows to compute. The rest of the rows have undefined content. See the convolution sample in  :cpp:func:`dft`  description.
+    :param nonzeroRows: Number of  ``dst``  rows to compute. The rest of the rows have undefined content. See the convolution sample in  :ocv:func:`dft`  description.
     
 ``idft(src, dst, flags)`` is equivalent to ``dct(src, dst, flags | DFT_INVERSE)`` .
 
-See :cpp:func:`dft` for details.
+See :ocv:func:`dft` for details.
 
 .. note:: None of ``dft`` and ``idft`` scales the result by default. So, you should pass ``DFT_SCALE`` to one of ``dft`` or ``idft`` explicitly to make these transforms mutually inverse.
 
 .. seealso::
 
-    :cpp:func:`dft`,
-    :cpp:func:`dct`,
-    :cpp:func:`idct`,
-    :cpp:func:`mulSpectrums`,
-    :cpp:func:`getOptimalDFTSize`
+    :ocv:func:`dft`,
+    :ocv:func:`dct`,
+    :ocv:func:`idct`,
+    :ocv:func:`mulSpectrums`,
+    :ocv:func:`getOptimalDFTSize`
 
 
 
 inRange
 -------
 
-.. cpp:function:: void inRange(InputArray src, InputArray lowerb, InputArray upperb, OutputArray dst)
+.. ocv:function:: void inRange(InputArray src, InputArray lowerb, InputArray upperb, OutputArray dst)
 
     Checks if array elements lie between the elements of two other arrays.
 
@@ -1284,7 +1284,7 @@ When the lower and/or upper bounary parameters are scalars, the indexes ``(I)`` 
 invert
 ------
 
-.. cpp:function:: double invert(InputArray src, OutputArray dst, int method=DECOMP_LU)
+.. ocv:function:: double invert(InputArray src, OutputArray dst, int method=DECOMP_LU)
 
     Finds the inverse or pseudo-inverse of a matrix.
 
@@ -1311,15 +1311,15 @@ Similarly to ``DECOMP_LU`` , the method ``DECOMP_CHOLESKY`` works only with non-
 
 .. seealso::
 
-    :cpp:func:`solve`,
-    :cpp:class:`SVD`
+    :ocv:func:`solve`,
+    :ocv:class:`SVD`
 
 
 
 log
 ---
 
-.. cpp:function:: void log(InputArray src, OutputArray dst)
+.. ocv:function:: void log(InputArray src, OutputArray dst)
 
     Calculates the natural logarithm of every array element.
 
@@ -1338,20 +1338,20 @@ The maximum relative error is about ``7e-6`` for single-precision input and less
 
 .. seealso::
 
-    :cpp:func:`exp`,
-    :cpp:func:`cartToPolar`,
-    :cpp:func:`polarToCart`,
-    :cpp:func:`phase`,
-    :cpp:func:`pow`,
-    :cpp:func:`sqrt`,
-    :cpp:func:`magnitude`
+    :ocv:func:`exp`,
+    :ocv:func:`cartToPolar`,
+    :ocv:func:`polarToCart`,
+    :ocv:func:`phase`,
+    :ocv:func:`pow`,
+    :ocv:func:`sqrt`,
+    :ocv:func:`magnitude`
 
 
 
 LUT
 ---
 
-.. cpp:function:: void LUT(InputArray src, InputArray lut, OutputArray dst)
+.. ocv:function:: void LUT(InputArray src, InputArray lut, OutputArray dst)
 
     Performs a look-up table transform of an array.
 
@@ -1375,15 +1375,15 @@ where
 
 .. seealso::
 
-    :cpp:func:`convertScaleAbs`,
-    :cpp:func:`Mat::convertTo`
+    :ocv:func:`convertScaleAbs`,
+    :ocv:func:`Mat::convertTo`
 
 
 
 magnitude
 ---------
 
-.. cpp:function:: void magnitude(InputArray x, InputArray y, OutputArray magnitude)
+.. ocv:function:: void magnitude(InputArray x, InputArray y, OutputArray magnitude)
 
     Calculates the magnitude of 2D vectors.
 
@@ -1401,17 +1401,17 @@ The function ``magnitude`` calculates the magnitude of 2D vectors formed from th
 
 .. seealso::
 
-    :cpp:func:`cartToPolar`,
-    :cpp:func:`polarToCart`,
-    :cpp:func:`phase`,
-    :cpp:func:`sqrt`
+    :ocv:func:`cartToPolar`,
+    :ocv:func:`polarToCart`,
+    :ocv:func:`phase`,
+    :ocv:func:`sqrt`
 
 
 
 Mahalanobis
 -----------
 
-.. cpp:function:: double Mahalanobis(InputArray vec1, InputArray vec2, InputArray icovar)
+.. ocv:function:: double Mahalanobis(InputArray vec1, InputArray vec2, InputArray icovar)
 
     Calculates the Mahalanobis distance between two vectors.
 
@@ -1428,25 +1428,25 @@ The function ``Mahalonobis`` calculates and returns the weighted distance betwee
     d( \texttt{vec1} , \texttt{vec2} )= \sqrt{\sum_{i,j}{\texttt{icovar(i,j)}\cdot(\texttt{vec1}(I)-\texttt{vec2}(I))\cdot(\texttt{vec1(j)}-\texttt{vec2(j)})} }
 
 The covariance matrix may be calculated using the
-:cpp:func:`calcCovarMatrix` function and then inverted using the
-:cpp:func:`invert` function (preferably using the ``DECOMP_SVD`` method, as the most accurate).
+:ocv:func:`calcCovarMatrix` function and then inverted using the
+:ocv:func:`invert` function (preferably using the ``DECOMP_SVD`` method, as the most accurate).
 
 
 
 max
 ---
 
-.. cpp:function:: MatExpr max(const Mat& src1, const Mat& src2)
+.. ocv:function:: MatExpr max(const Mat& src1, const Mat& src2)
 
-.. cpp:function:: MatExpr max(const Mat& src1, double value)
+.. ocv:function:: MatExpr max(const Mat& src1, double value)
 
-.. cpp:function:: MatExpr max(double value, const Mat& src1)
+.. ocv:function:: MatExpr max(double value, const Mat& src1)
 
-.. cpp:function:: void max(InputArray src1, InputArray src2, OutputArray dst)
+.. ocv:function:: void max(InputArray src1, InputArray src2, OutputArray dst)
 
-.. cpp:function:: void max(const Mat& src1, const Mat& src2, Mat& dst)
+.. ocv:function:: void max(const Mat& src1, const Mat& src2, Mat& dst)
 
-.. cpp:function:: void max(const Mat& src1, double value, Mat& dst)
+.. ocv:function:: void max(const Mat& src1, double value, Mat& dst)
 
     Calculates per-element maximum of two arrays or an array and a scalar.
 
@@ -1477,21 +1477,21 @@ The first 3 variants of the function listed above are actually a part of
 
 .. seealso::
 
-    :cpp:func:`min`,
-    :cpp:func:`compare`,
-    :cpp:func:`inRange`,
-    :cpp:func:`minMaxLoc`,
+    :ocv:func:`min`,
+    :ocv:func:`compare`,
+    :ocv:func:`inRange`,
+    :ocv:func:`minMaxLoc`,
     :ref:`MatrixExpressions`
 
 
 mean
 ----
 
-.. cpp:function:: Scalar mean(InputArray mtx, InputArray mask=noArray())
+.. ocv:function:: Scalar mean(InputArray mtx, InputArray mask=noArray())
 
     Calculates an average (mean) of array elements.
 
-    :param mtx: Source array that should have from 1 to 4 channels so that the result can be stored in  :cpp:func:`Scalar` .
+    :param mtx: Source array that should have from 1 to 4 channels so that the result can be stored in  :ocv:func:`Scalar` .
 
     :param mask: Optional operation mask.
 
@@ -1505,21 +1505,21 @@ When all the mask elements are 0's, the functions return ``Scalar::all(0)`` .
 
 .. seealso::
 
-    :cpp:func:`countNonZero`,
-    :cpp:func:`meanStdDev`,
-    :cpp:func:`norm`,
-    :cpp:func:`minMaxLoc`
+    :ocv:func:`countNonZero`,
+    :ocv:func:`meanStdDev`,
+    :ocv:func:`norm`,
+    :ocv:func:`minMaxLoc`
 
 
 
 meanStdDev
 ----------
 
-.. cpp:function:: void meanStdDev(InputArray mtx, OutputArray mean, OutputArray stddev, InputArray mask=noArray())
+.. ocv:function:: void meanStdDev(InputArray mtx, OutputArray mean, OutputArray stddev, InputArray mask=noArray())
 
     Calculates a mean and standard deviation of array elements.
 
-    :param mtx: Source array that should have from 1 to 4 channels so that the results can be stored in  :cpp:func:`Scalar` 's.
+    :param mtx: Source array that should have from 1 to 4 channels so that the results can be stored in  :ocv:func:`Scalar` 's.
 
     :param mean: Output parameter: computed mean value.
 
@@ -1535,24 +1535,24 @@ The function ``meanStdDev`` computes the mean and the standard deviation ``M`` o
 
 When all the mask elements are 0's, the functions return ``mean=stddev=Scalar::all(0)`` .
 
-.. note:: The computed standard deviation is only the diagonal of the complete normalized covariance matrix. If the full matrix is needed, you can reshape the multi-channel array ``M x N`` to the single-channel array ``M*N x mtx.channels()`` (only possible when the matrix is continuous) and then pass the matrix to :cpp:func:`calcCovarMatrix` .
+.. note:: The computed standard deviation is only the diagonal of the complete normalized covariance matrix. If the full matrix is needed, you can reshape the multi-channel array ``M x N`` to the single-channel array ``M*N x mtx.channels()`` (only possible when the matrix is continuous) and then pass the matrix to :ocv:func:`calcCovarMatrix` .
 
 .. seealso::
 
-    :cpp:func:`countNonZero`,
-    :cpp:func:`mean`,
-    :cpp:func:`norm`,
-    :cpp:func:`minMaxLoc`,
-    :cpp:func:`calcCovarMatrix`
+    :ocv:func:`countNonZero`,
+    :ocv:func:`mean`,
+    :ocv:func:`norm`,
+    :ocv:func:`minMaxLoc`,
+    :ocv:func:`calcCovarMatrix`
 
 
 
 merge
 -----
 
-.. cpp:function:: void merge(const Mat* mv, size_t count, OutputArray dst)
+.. ocv:function:: void merge(const Mat* mv, size_t count, OutputArray dst)
 
-.. cpp:function:: void merge(const vector<Mat>& mv, OutputArray dst)
+.. ocv:function:: void merge(const vector<Mat>& mv, OutputArray dst)
 
     Composes a multi-channel array from several single-channel arrays.
 
@@ -1565,31 +1565,31 @@ merge
 The functions ``merge`` merge several arrays to make a single multi-channel array. That is, each element of the output array will be a concatenation of the elements of the input arrays, where elements of i-th input array are treated as ``mv[i].channels()``-element vectors.
 
 The function
-:cpp:func:`split` does the reverse operation. If you need to shuffle channels in some other advanced way, use
-:cpp:func:`mixChannels` .
+:ocv:func:`split` does the reverse operation. If you need to shuffle channels in some other advanced way, use
+:ocv:func:`mixChannels` .
 
 .. seealso::
 
-    :cpp:func:`mixChannels`,
-    :cpp:func:`split`,
-    :cpp:func:`reshape`
+    :ocv:func:`mixChannels`,
+    :ocv:func:`split`,
+    :ocv:func:`reshape`
 
 
 
 min
 ---
 
-.. cpp:function:: MatExpr min(const Mat& src1, const Mat& src2)
+.. ocv:function:: MatExpr min(const Mat& src1, const Mat& src2)
 
-.. cpp:function:: MatExpr min(const Mat& src1, double value)
+.. ocv:function:: MatExpr min(const Mat& src1, double value)
 
-.. cpp:function:: MatExpr min(double value, const Mat& src1)
+.. ocv:function:: MatExpr min(double value, const Mat& src1)
 
-.. cpp:function:: void min(InputArray src1, InputArray src2, OutputArray dst)
+.. ocv:function:: void min(InputArray src1, InputArray src2, OutputArray dst)
 
-.. cpp:function:: void min(const Mat& src1, const Mat& src2, Mat& dst)
+.. ocv:function:: void min(const Mat& src1, const Mat& src2, Mat& dst)
 
-.. cpp:function:: void min(const Mat& src1, double value, Mat& dst)
+.. ocv:function:: void min(const Mat& src1, double value, Mat& dst)
 
     Calculates per-element minimum of two arrays or array and a scalar.
 
@@ -1620,10 +1620,10 @@ The first three variants of the function listed above are actually a part of
 
 .. seealso::
 
-    :cpp:func:`max`,
-    :cpp:func:`compare`,
-    :cpp:func:`inRange`,
-    :cpp:func:`minMaxLoc`,
+    :ocv:func:`max`,
+    :ocv:func:`compare`,
+    :ocv:func:`inRange`,
+    :ocv:func:`minMaxLoc`,
     :ref:`MatrixExpressions`
 
 
@@ -1631,9 +1631,9 @@ The first three variants of the function listed above are actually a part of
 minMaxLoc
 ---------
 
-.. cpp:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
+.. ocv:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 
-.. cpp:function:: void minMaxLoc(const SparseMat& src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0)
+.. ocv:function:: void minMaxLoc(const SparseMat& src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0)
 
     Finds the global minimum and maximum in a whole array or sub-array.
 
@@ -1657,32 +1657,32 @@ The functions ``ninMaxLoc`` find the minimum and maximum element values and thei
 if ``mask`` is not an empty array, in the specified array region.
 
 The functions do not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
-:cpp:func:`reshape` first to reinterpret the array as single-channel. Or you may extract the particular channel using either
-:cpp:func:`extractImageCOI` , or
-:cpp:func:`mixChannels` , or
-:cpp:func:`split` .
+:ocv:func:`reshape` first to reinterpret the array as single-channel. Or you may extract the particular channel using either
+:ocv:func:`extractImageCOI` , or
+:ocv:func:`mixChannels` , or
+:ocv:func:`split` .
 
 In case of a sparse matrix, the minimum is found among non-zero elements only.
 
 .. seealso::
 
-    :cpp:func:`max`,
-    :cpp:func:`min`,
-    :cpp:func:`compare`,
-    :cpp:func:`inRange`,
-    :cpp:func:`extractImageCOI`,
-    :cpp:func:`mixChannels`,
-    :cpp:func:`split`,
-    :cpp:func:`reshape` 
+    :ocv:func:`max`,
+    :ocv:func:`min`,
+    :ocv:func:`compare`,
+    :ocv:func:`inRange`,
+    :ocv:func:`extractImageCOI`,
+    :ocv:func:`mixChannels`,
+    :ocv:func:`split`,
+    :ocv:func:`reshape` 
 
 
 
 mixChannels
 -----------
 
-.. cpp:function:: void mixChannels(const Mat* srcv, int nsrc, Mat* dstv, int ndst, const int* fromTo, size_t npairs)
+.. ocv:function:: void mixChannels(const Mat* srcv, int nsrc, Mat* dstv, int ndst, const int* fromTo, size_t npairs)
 
-.. cpp:function:: void mixChannels(const vector<Mat>& srcv, vector<Mat>& dstv, const int* fromTo, int npairs)
+.. ocv:function:: void mixChannels(const vector<Mat>& srcv, vector<Mat>& dstv, const int* fromTo, int npairs)
 
     Copies specified channels from input arrays to the specified channels of output arrays.
 
@@ -1698,9 +1698,9 @@ mixChannels
     
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
     
-:cpp:func:`split` and
-:cpp:func:`merge` and some forms of
-:cpp:func:`cvtColor` are partial cases of ``mixChannels`` .
+:ocv:func:`split` and
+:ocv:func:`merge` and some forms of
+:ocv:func:`cvtColor` are partial cases of ``mixChannels`` .
 
 In the example below, the code splits a 4-channel RGBA image into a 3-channel BGR (with R and B channels swapped) and a separate alpha-channel image: ::
 
@@ -1717,20 +1717,20 @@ In the example below, the code splits a 4-channel RGBA image into a 3-channel BG
     mixChannels( &rgba, 1, out, 2, from_to, 4 );
 
 
-.. note:: Unlike many other new-style C++ functions in OpenCV (see the introduction section and :cpp:func:`Mat::create` ), ``mixChannels`` requires the destination arrays to be pre-allocated before calling the function.
+.. note:: Unlike many other new-style C++ functions in OpenCV (see the introduction section and :ocv:func:`Mat::create` ), ``mixChannels`` requires the destination arrays to be pre-allocated before calling the function.
 
 .. seealso::
 
-    :cpp:func:`split`,
-    :cpp:func:`merge`,
-    :cpp:func:`cvtColor`
+    :ocv:func:`split`,
+    :ocv:func:`merge`,
+    :ocv:func:`cvtColor`
 
 
 
 mulSpectrums
 ------------
 
-.. cpp:function:: void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conj=false)
+.. ocv:function:: void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conj=false)
 
     Performs the per-element multiplication of two Fourier spectrums.
 
@@ -1747,16 +1747,16 @@ mulSpectrums
 The function ``mulSpectrums`` performs the per-element multiplication of the two CCS-packed or complex matrices that are results of a real or complex Fourier transform.
 
 The function, together with
-:cpp:func:`dft` and
-:cpp:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=false`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
-:cpp:func:`dft` for details).
+:ocv:func:`dft` and
+:ocv:func:`idft` , may be used to calculate convolution (pass ``conj=false`` ) or correlation (pass ``conj=false`` ) of two arrays rapidly. When the arrays are complex, they are simply multiplied (per element) with an optional conjugation of the second-array elements. When the arrays are real, they are assumed to be CCS-packed (see
+:ocv:func:`dft` for details).
 
 
 
 multiply
 --------
 
-.. cpp:function:: void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale=1)
+.. ocv:function:: void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale=1)
 
     Calculates the per-element scaled product of two arrays.
 
@@ -1776,40 +1776,40 @@ The function ``multiply`` calculates the per-element product of two arrays:
 
 There is also a
 :ref:`MatrixExpressions` -friendly variant of the first function. See
-:cpp:func:`Mat::mul` .
+:ocv:func:`Mat::mul` .
 
 For a not-per-element matrix product, see
-:cpp:func:`gemm` .
+:ocv:func:`gemm` .
 
 .. seealso::
 
-    :cpp:func:`add`,
-    :cpp:func:`substract`,
-    :cpp:func:`divide`,
+    :ocv:func:`add`,
+    :ocv:func:`substract`,
+    :ocv:func:`divide`,
     :ref:`MatrixExpressions`,
-    :cpp:func:`scaleAdd`,
-    :cpp:func:`addWeighted`,
-    :cpp:func:`accumulate`,
-    :cpp:func:`accumulateProduct`,
-    :cpp:func:`accumulateSquare`,
-    :cpp:func:`Mat::convertTo`
+    :ocv:func:`scaleAdd`,
+    :ocv:func:`addWeighted`,
+    :ocv:func:`accumulate`,
+    :ocv:func:`accumulateProduct`,
+    :ocv:func:`accumulateSquare`,
+    :ocv:func:`Mat::convertTo`
 
 
 
 mulTransposed
 -------------
 
-.. cpp:function:: void mulTransposed(InputArray src, OutputArray dst, bool aTa, InputArray delta=noArray(), double scale=1, int rtype=-1)
+.. ocv:function:: void mulTransposed(InputArray src, OutputArray dst, bool aTa, InputArray delta=noArray(), double scale=1, int rtype=-1)
 
     Calculates the product of a matrix and its transposition.
 
-    :param src: Source single-channel matrix. Note that unlike :cpp:func:`gemm`, the function can multiply not only floating-point matrices.
+    :param src: Source single-channel matrix. Note that unlike :ocv:func:`gemm`, the function can multiply not only floating-point matrices.
 
     :param dst: Destination square matrix.
 
     :param aTa: Flag specifying the multiplication ordering. See the description below.
 
-    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :cpp:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  parameter description below.
+    :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :ocv:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created destination matrix. See the  ``rtype``  parameter description below.
 
     :param scale: Optional scale factor for the matrix product.
 
@@ -1831,21 +1831,21 @@ otherwise. The function is used to compute the covariance matrix. With zero delt
 
 .. seealso::
 
-    :cpp:func:`calcCovarMatrix`,
-    :cpp:func:`gemm`,
-    :cpp:func:`repeat`,
-    :cpp:func:`reduce`
+    :ocv:func:`calcCovarMatrix`,
+    :ocv:func:`gemm`,
+    :ocv:func:`repeat`,
+    :ocv:func:`reduce`
 
 
 
 norm
 ----
 
-.. cpp:function:: double norm(InputArray src1, int normType=NORM_L2, InputArray mask=noArray())
+.. ocv:function:: double norm(InputArray src1, int normType=NORM_L2, InputArray mask=noArray())
 
-.. cpp:function:: double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray())
+.. ocv:function:: double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray())
 
-.. cpp:function:: double norm( const SparseMat& src, int normType )
+.. ocv:function:: double norm( const SparseMat& src, int normType )
 
     Calculates an absolute array norm, an absolute difference norm, or a relative difference norm.
 
@@ -1892,9 +1892,9 @@ A multi-channel source arrays are treated as a single-channel, that is, the resu
 normalize
 ---------
 
-.. cpp:function:: void normalize(const InputArray src, OutputArray dst, double alpha=1, double beta=0, int normType=NORM_L2, int rtype=-1, InputArray mask=noArray())
+.. ocv:function:: void normalize(const InputArray src, OutputArray dst, double alpha=1, double beta=0, int normType=NORM_L2, int rtype=-1, InputArray mask=noArray())
 
-.. cpp:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
+.. ocv:function:: void normalize(const SparseMat& src, SparseMat& dst, double alpha, int normType)
 
     Normalizes the norm or value range of an array.
 
@@ -1927,22 +1927,22 @@ The functions ``normalize`` scale and shift the source array elements so that
 
 when ``normType=NORM_MINMAX`` (for dense arrays only).
 The optional mask specifies a sub-array to be normalized. This means that the norm or min-n-max are computed over the sub-array, and then this sub-array is modified to be normalized. If you want to only use the mask to compute the norm or min-max but modify the whole array, you can use
-:cpp:func:`norm` and
-:cpp:func:`Mat::convertTo`.
+:ocv:func:`norm` and
+:ocv:func:`Mat::convertTo`.
 
 In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this, the range transformation for sparse matrices is not allowed since it can shift the zero level.
 
 .. seealso::
 
-    :cpp:func:`norm`,
-    :cpp:func:`Mat::convertTo`,
-    :cpp:func:`SparseMat::convertTo`
+    :ocv:func:`norm`,
+    :ocv:func:`Mat::convertTo`,
+    :ocv:func:`SparseMat::convertTo`
 
 
 
 PCA
 ---
-.. cpp:class:: PCA
+.. ocv:class:: PCA
 
 Principal Component Analysis class.
 
@@ -1988,19 +1988,19 @@ The sample below is the function that takes two matrices. The first function sto
 
 .. seealso::
 
-    :cpp:func:`calcCovarMatrix`,
-    :cpp:func:`mulTransposed`,
-    :cpp:class:`SVD`,
-    :cpp:func:`dft`,
-    :cpp:func:`dct`
+    :ocv:func:`calcCovarMatrix`,
+    :ocv:func:`mulTransposed`,
+    :ocv:class:`SVD`,
+    :ocv:func:`dft`,
+    :ocv:func:`dct`
 
 
 
 PCA::PCA
 ------------
-.. cpp:function:: PCA::PCA()
+.. ocv:function:: PCA::PCA()
 
-.. cpp:function:: PCA::PCA(InputArray data, InputArray mean, int flags, int maxComponents=0)
+.. ocv:function:: PCA::PCA(InputArray data, InputArray mean, int flags, int maxComponents=0)
 
     PCA constructors
 
@@ -2017,14 +2017,14 @@ PCA::PCA
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
 The default constructor initializes an empty PCA structure. The second constructor initializes the structure and calls
-:cpp:func:`PCA::operator ()` .
+:ocv:func:`PCA::operator ()` .
 
 
 
 PCA::operator ()
 ----------------
 
-.. cpp:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, int maxComponents=0)
+.. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, int maxComponents=0)
 
     Performs Principal Component Analysis of the supplied dataset.
 
@@ -2049,9 +2049,9 @@ The computed eigenvalues are sorted from the largest to the smallest and the cor
 PCA::project
 ------------
 
-.. cpp:function:: Mat PCA::project(InputArray vec) const
+.. ocv:function:: Mat PCA::project(InputArray vec) const
 
-.. cpp:function:: void PCA::project(InputArray vec, OutputArray result) const
+.. ocv:function:: void PCA::project(InputArray vec, OutputArray result) const
 
     Projects vector(s) to the principal component subspace.
 
@@ -2066,9 +2066,9 @@ The methods project one or more vectors to the principal component subspace, whe
 PCA::backProject
 ----------------
 
-.. cpp:function:: Mat PCA::backProject(InputArray vec) const
+.. ocv:function:: Mat PCA::backProject(InputArray vec) const
 
-.. cpp:function:: void PCA::backProject(InputArray vec, OutputArray result) const
+.. ocv:function:: void PCA::backProject(InputArray vec, OutputArray result) const
 
     Reconstructs vectors from their PC projections.
 
@@ -2077,13 +2077,13 @@ PCA::backProject
     :param result: Reconstructed vectors. The layout and size are the same as of  ``PCA::project``  input vectors.
 
 The methods are inverse operations to
-:cpp:func:`PCA::project` . They take PC coordinates of projected vectors and reconstruct the original vectors. Unless all the principal components have been retained, the reconstructed vectors are different from the originals. But typically, the difference is small if the number of components is large enough (but still much smaller than the original vector dimensionality). As a result, PCA is used.
+:ocv:func:`PCA::project` . They take PC coordinates of projected vectors and reconstruct the original vectors. Unless all the principal components have been retained, the reconstructed vectors are different from the originals. But typically, the difference is small if the number of components is large enough (but still much smaller than the original vector dimensionality). As a result, PCA is used.
 
 
 
 perspectiveTransform
 --------------------
-.. cpp:function:: void perspectiveTransform(InputArray src, OutputArray dst, InputArray mtx)
+.. ocv:function:: void perspectiveTransform(InputArray src, OutputArray dst, InputArray mtx)
 
     Performs the perspective matrix transformation of vectors.
 
@@ -2113,21 +2113,21 @@ and
 
 Here a 3D vector transformation is shown. In case of a 2D vector transformation, the ``z`` component is omitted.
 
-.. note:: The function transforms a sparse set of 2D or 3D vectors. If you want to transform an image using perspective transformation, use :cpp:func:`warpPerspective` . If you have an inverse problem, that is, you want to compute the most probable perspective transformation out of several pairs of corresponding points, you can use :cpp:func:`getPerspectiveTransform` or :cpp:func:`findHomography` .
+.. note:: The function transforms a sparse set of 2D or 3D vectors. If you want to transform an image using perspective transformation, use :ocv:func:`warpPerspective` . If you have an inverse problem, that is, you want to compute the most probable perspective transformation out of several pairs of corresponding points, you can use :ocv:func:`getPerspectiveTransform` or :ocv:func:`findHomography` .
 
 .. seealso::
 
-    :cpp:func:`transform`,
-    :cpp:func:`warpPerspective`,
-    :cpp:func:`getPerspectiveTransform`,
-    :cpp:func:`findHomography`
+    :ocv:func:`transform`,
+    :ocv:func:`warpPerspective`,
+    :ocv:func:`getPerspectiveTransform`,
+    :ocv:func:`findHomography`
 
 
 
 phase
 -----
 
-.. cpp:function:: void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees=false)
+.. ocv:function:: void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees=false)
 
     Calculates the rotation angle of 2D vectors.
 
@@ -2151,7 +2151,7 @@ The angle estimation accuracy is about 0.3 degrees. When ``x(I)=y(I)=0`` , the c
 polarToCart
 -----------
 
-.. cpp:function:: void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees=false)
+.. ocv:function:: void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees=false)
 
     Computes x and y coordinates of 2D vectors from their magnitude and angle.
 
@@ -2175,20 +2175,20 @@ The relative accuracy of the estimated coordinates is about ``1e-6``.
 
 .. seealso::
 
-    :cpp:func:`cartToPolar`,
-    :cpp:func:`magnitude`,
-    :cpp:func:`phase`,
-    :cpp:func:`exp`,
-    :cpp:func:`log`,
-    :cpp:func:`pow`,
-    :cpp:func:`sqrt`
+    :ocv:func:`cartToPolar`,
+    :ocv:func:`magnitude`,
+    :ocv:func:`phase`,
+    :ocv:func:`exp`,
+    :ocv:func:`log`,
+    :ocv:func:`pow`,
+    :ocv:func:`sqrt`
 
 
 
 pow
 ---
 
-.. cpp:function:: void pow(InputArray src, double p, OutputArray dst)
+.. ocv:function:: void pow(InputArray src, double p, OutputArray dst)
 
     Raises every array element to a power.
 
@@ -2215,18 +2215,18 @@ For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized fas
 
 .. seealso::
 
-    :cpp:func:`sqrt`,
-    :cpp:func:`exp`,
-    :cpp:func:`log`,
-    :cpp:func:`cartToPolar`,
-    :cpp:func:`polarToCart`
+    :ocv:func:`sqrt`,
+    :ocv:func:`exp`,
+    :ocv:func:`log`,
+    :ocv:func:`cartToPolar`,
+    :ocv:func:`polarToCart`
 
 
 
 RNG
 ---
 
-.. cpp:class: RNG
+.. ocv:class: RNG
 
 Random number generator. It encapsulates the state (currently, a 64-bit integer) and has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
 http://en.wikipedia.org/wiki/Multiply-with-carry
@@ -2238,9 +2238,9 @@ http://en.wikipedia.org/wiki/Ziggurat_algorithm
 
 RNG::RNG
 ------------
-.. cpp:function:: RNG::RNG()
+.. ocv:function:: RNG::RNG()
 
-.. cpp:function:: RNG::RNG(uint64 state)
+.. ocv:function:: RNG::RNG(uint64 state)
 
     Introduces RNG constructors.
 
@@ -2252,7 +2252,7 @@ These are the RNG constructors. The first form sets the state to some pre-define
 
 RNG::next
 -------------
-.. cpp:function:: unsigned RNG::next()
+.. ocv:function:: unsigned RNG::next()
 
     Returns the next random number.
 
@@ -2263,21 +2263,21 @@ The method updates the state using the MWC algorithm and returns the next 32-bit
 RNG::operator T
 ---------------
 
-.. cpp:function:: RNG::operator uchar()
+.. ocv:function:: RNG::operator uchar()
 
-.. cpp:function:: RNG::operator schar()
+.. ocv:function:: RNG::operator schar()
 
-.. cpp:function:: RNG::operator ushort()
+.. ocv:function:: RNG::operator ushort()
 
-.. cpp:function:: RNG::operator short()
+.. ocv:function:: RNG::operator short()
 
-.. cpp:function:: RNG::operator int()
+.. ocv:function:: RNG::operator int()
 
-.. cpp:function:: RNG::operator unsigned()
+.. ocv:function:: RNG::operator unsigned()
 
-.. cpp:function:: RNG::operator float()
+.. ocv:function:: RNG::operator float()
 
-.. cpp:function:: RNG::operator double()
+.. ocv:function:: RNG::operator double()
 
     Returns the next random number of the specified type.
 
@@ -2287,26 +2287,26 @@ Each of the methods updates the state using the MWC algorithm and returns the ne
 
 RNG::operator ()
 --------------------
-.. cpp:function:: unsigned RNG::operator ()()
+.. ocv:function:: unsigned RNG::operator ()()
 
-.. cpp:function:: unsigned RNG::operator ()(unsigned N)
+.. ocv:function:: unsigned RNG::operator ()(unsigned N)
 
     Returns the next random number.
 
     :param N: Upper non-inclusive boundary of the returned random number.
 
 The methods transform the state using the MWC algorithm and return the next random number. The first form is equivalent to
-:cpp:func:`RNG::next` . The second form returns the random number modulo ``N`` , which means that the result is in the range ``[0, N)`` .
+:ocv:func:`RNG::next` . The second form returns the random number modulo ``N`` , which means that the result is in the range ``[0, N)`` .
 
 
 
 RNG::uniform
 ----------------
-.. cpp:function:: int RNG::uniform(int a, int b)
+.. ocv:function:: int RNG::uniform(int a, int b)
 
-.. cpp:function:: float RNG::uniform(float a, float b)
+.. ocv:function:: float RNG::uniform(float a, float b)
 
-.. cpp:function:: double RNG::uniform(double a, double b)
+.. ocv:function:: double RNG::uniform(double a, double b)
 
     Returns the next random number sampled from the uniform distribution.
 
@@ -2341,7 +2341,7 @@ The compiler does not take into account the type of the variable to which you as
 
 RNG::gaussian
 -----------------
-.. cpp:function:: double RNG::gaussian(double sigma)
+.. ocv:function:: double RNG::gaussian(double sigma)
 
     Returns the next random number sampled from the Gaussian distribution.
 
@@ -2353,11 +2353,11 @@ The method transforms the state using the MWC algorithm and returns the next ran
 
 RNG::fill
 -------------
-.. cpp:function:: void RNG::fill( InputOutputArray mat, int distType, InputArray a, InputArray b )
+.. ocv:function:: void RNG::fill( InputOutputArray mat, int distType, InputArray a, InputArray b )
 
     Fills arrays with random numbers.
 
-    :param mat: 2D or N-dimensional matrix. Currently matrices with more than 4 channels are not supported by the methods. Use  :cpp:func:`reshape`  as a possible workaround.
+    :param mat: 2D or N-dimensional matrix. Currently matrices with more than 4 channels are not supported by the methods. Use  :ocv:func:`reshape`  as a possible workaround.
 
     :param distType: Distribution type, ``RNG::UNIFORM``  or  ``RNG::NORMAL`` .
     
@@ -2365,14 +2365,14 @@ RNG::fill
 
     :param b: Second distribution parameter. In case of the uniform distribution, this is a non-inclusive upper boundary. In case of the normal distribution, this is a standard deviation (diagonal of the standard deviation matrix or the full standard deviation matrix).
 
-Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariance matrix directly. To do that, the method generates samples from multi-dimensional standard Gaussian distribution with zero mean and identity covariation matrix, and then transforms them using :cpp:func:`transform` to get samples from the specified Gaussian distribution.
+Each of the methods fills the matrix with the random values from the specified distribution. As the new numbers are generated, the RNG state is updated accordingly. In case of multiple-channel images, every channel is filled independently, which means that RNG cannot generate samples from the multi-dimensional Gaussian distribution with non-diagonal covariance matrix directly. To do that, the method generates samples from multi-dimensional standard Gaussian distribution with zero mean and identity covariation matrix, and then transforms them using :ocv:func:`transform` to get samples from the specified Gaussian distribution.
 
 randu
 -----
 
-.. cpp:function:: template<typename _Tp> _Tp randu()
+.. ocv:function:: template<typename _Tp> _Tp randu()
 
-.. cpp:function:: void randu(InputOutputArray mtx, InputArray low, InputArray high)
+.. ocv:function:: void randu(InputOutputArray mtx, InputArray low, InputArray high)
 
     Generates a single uniformly-distributed random number or an array of random numbers.
 
@@ -2383,7 +2383,7 @@ randu
     :param high: Exclusive upper boundary of the generated random numbers.
 
 The template functions ``randu`` generate and return the next uniformly-distributed random value of the specified type. ``randu<int>()`` is an equivalent to ``(int)theRNG();`` , and so on. See
-:cpp:class:`RNG` description.
+:ocv:class:`RNG` description.
 
 The second non-template variant of the function fills the matrix ``mtx`` with uniformly-distributed random numbers from the specified range:
 
@@ -2393,16 +2393,16 @@ The second non-template variant of the function fills the matrix ``mtx`` with un
 
 .. seealso::
 
-    :cpp:class:`RNG`,
-    :cpp:func:`randn`,
-    :cpp:func:`theRNG` 
+    :ocv:class:`RNG`,
+    :ocv:func:`randn`,
+    :ocv:func:`theRNG` 
 
 
 
 randn
 -----
 
-.. cpp:function:: void randn(InputOutputArray mtx, InputArray mean, InputArray stddev)
+.. ocv:function:: void randn(InputOutputArray mtx, InputArray mean, InputArray stddev)
 
     Fills the array with normally distributed random numbers.
 
@@ -2416,15 +2416,15 @@ The function ``randn`` fills the matrix ``mtx`` with normally distributed random
 
 .. seealso::
 
-    :cpp:class:`RNG`,
-    :cpp:func:`randu`
+    :ocv:class:`RNG`,
+    :ocv:func:`randu`
 
 
 
 randShuffle
 -----------
 
-.. cpp:function:: void randShuffle(InputOutputArray mtx, double iterFactor=1., RNG* rng=0)
+.. ocv:function:: void randShuffle(InputOutputArray mtx, double iterFactor=1., RNG* rng=0)
 
     Shuffles the array elements randomly.
 
@@ -2432,21 +2432,21 @@ randShuffle
 
     :param iterFactor: Scale factor that determines the number of random swap operations. See the details below.
 
-    :param rng: Optional random number generator used for shuffling. If it is zero, :cpp:func:`theRNG` () is used instead.
+    :param rng: Optional random number generator used for shuffling. If it is zero, :ocv:func:`theRNG` () is used instead.
 
 The function ``randShuffle`` shuffles the specified 1D array by randomly choosing pairs of elements and swapping them. The number of such swap operations will be ``mtx.rows*mtx.cols*iterFactor`` .
 
 .. seealso::
 
-    :cpp:class:`RNG`,
-    :cpp:func:`sort`
+    :ocv:class:`RNG`,
+    :ocv:func:`sort`
 
 
 
 reduce
 ------
 
-.. cpp:function:: void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype=-1)
+.. ocv:function:: void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype=-1)
 
     Reduces a matrix to a vector.
 
@@ -2470,16 +2470,16 @@ reduce
     
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
-.. seealso:: :cpp:func:`repeat`
+.. seealso:: :ocv:func:`repeat`
 
 
 
 repeat
 ------
 
-.. cpp:function:: void repeat(InputArray src, int ny, int nx, OutputArray dst)
+.. ocv:function:: void repeat(InputArray src, int ny, int nx, OutputArray dst)
 
-.. cpp:function:: Mat repeat(InputArray src, int ny, int nx)
+.. ocv:function:: Mat repeat(InputArray src, int ny, int nx)
 
     Fills the destination array with repeated copies of the source array.
 
@@ -2492,7 +2492,7 @@ repeat
     :param nx: Flag to specify how many times the  ``src``  is repeated along the horizontal axis.
 
 The functions
-:cpp:func:`repeat` duplicate the source array one or more times along each of the two axes:
+:ocv:func:`repeat` duplicate the source array one or more times along each of the two axes:
 
 .. math::
 
@@ -2503,7 +2503,7 @@ The second variant of the function is more convenient to use with
 
 .. seealso::
 
-    :cpp:func:`reduce`,
+    :ocv:func:`reduce`,
     :ref:`MatrixExpressions`
 
 
@@ -2511,7 +2511,7 @@ The second variant of the function is more convenient to use with
 saturate_cast
 -------------
 
-.. cpp:function:: template<...> _Tp saturate_cast(_Tp2 v)
+.. ocv:function:: template<...> _Tp saturate_cast(_Tp2 v)
 
     Template function for accurate conversion from one primitive type to another.
 
@@ -2530,18 +2530,18 @@ This operation is used in the simplest or most complex image processing function
 
 .. seealso::
 
-    :cpp:func:`add`,
-    :cpp:func:`subtract`,
-    :cpp:func:`multiply`,
-    :cpp:func:`divide`,
-    :cpp:func:`Mat::convertTo`
+    :ocv:func:`add`,
+    :ocv:func:`subtract`,
+    :ocv:func:`multiply`,
+    :ocv:func:`divide`,
+    :ocv:func:`Mat::convertTo`
 
 
 
 scaleAdd
 --------
 
-.. cpp:function:: void scaleAdd(InputArray src1, double scale, InputArray src2, OutputArray dst)
+.. ocv:function:: void scaleAdd(InputArray src1, double scale, InputArray src2, OutputArray dst)
 
     Calculates the sum of a scaled array and another array.
 
@@ -2568,11 +2568,11 @@ The function can also be emulated with a matrix expression, for example: ::
 
 .. seealso::
 
-    :cpp:func:`add`,
-    :cpp:func:`addWeighted`,
-    :cpp:func:`subtract`,
-    :cpp:func:`Mat::dot`,
-    :cpp:func:`Mat::convertTo`,
+    :ocv:func:`add`,
+    :ocv:func:`addWeighted`,
+    :ocv:func:`subtract`,
+    :ocv:func:`Mat::dot`,
+    :ocv:func:`Mat::convertTo`,
     :ref:`MatrixExpressions`
 
 
@@ -2580,7 +2580,7 @@ The function can also be emulated with a matrix expression, for example: ::
 setIdentity
 -----------
 
-.. cpp:function:: void setIdentity(InputOutputArray dst, const Scalar& value=Scalar(1))
+.. ocv:function:: void setIdentity(InputOutputArray dst, const Scalar& value=Scalar(1))
 
     Initializes a scaled identity matrix.
 
@@ -2589,7 +2589,7 @@ setIdentity
     :param value: Value to assign to diagonal elements.
 
 The function
-:cpp:func:`setIdentity` initializes a scaled identity matrix:
+:ocv:func:`setIdentity` initializes a scaled identity matrix:
 
 .. math::
 
@@ -2603,18 +2603,18 @@ The function can also be emulated using the matrix initializers and the matrix e
 
 .. seealso::
 
-    :cpp:func:`Mat::zeros`,
-    :cpp:func:`Mat::ones`,
+    :ocv:func:`Mat::zeros`,
+    :ocv:func:`Mat::ones`,
     :ref:`MatrixExpressions`,
-    :cpp:func:`Mat::setTo`,
-    :cpp:func:`Mat::operator=`
+    :ocv:func:`Mat::setTo`,
+    :ocv:func:`Mat::operator=`
 
 
 
 solve
 -----
 
-.. cpp:function:: bool solve(InputArray src1, InputArray src2, OutputArray dst, int flags=DECOMP_LU)
+.. ocv:function:: bool solve(InputArray src1, InputArray src2, OutputArray dst, int flags=DECOMP_LU)
 
     Solves one or more linear systems or least-squares problems.
 
@@ -2647,19 +2647,19 @@ The function ``solve`` solves a linear system or least-squares problem (the latt
 If ``DECOMP_LU`` or ``DECOMP_CHOLESKY`` method is used, the function returns 1 if ``src1`` (or
 :math:`\texttt{src1}^T\texttt{src1}` ) is non-singular. Otherwise, it returns 0. In the latter case, ``dst`` is not valid. Other methods find a pseudo-solution in case of a singular left-hand side part.
 
-.. note:: If you want to find a unity-norm solution of an under-defined singular system :math:`\texttt{src1}\cdot\texttt{dst}=0` , the function ``solve`` will not do the work. Use :cpp:func:`SVD::solveZ` instead.
+.. note:: If you want to find a unity-norm solution of an under-defined singular system :math:`\texttt{src1}\cdot\texttt{dst}=0` , the function ``solve`` will not do the work. Use :ocv:func:`SVD::solveZ` instead.
 
 .. seealso::
 
-    :cpp:func:`invert`,
-    :cpp:class:`SVD`,
-    :cpp:func:`eigen`
+    :ocv:func:`invert`,
+    :ocv:class:`SVD`,
+    :ocv:func:`eigen`
 
 
 
 solveCubic
 --------------
-.. cpp:function:: void solveCubic(InputArray coeffs, OutputArray roots)
+.. ocv:function:: void solveCubic(InputArray coeffs, OutputArray roots)
 
     Finds the real roots of a cubic equation.
 
@@ -2688,7 +2688,7 @@ The roots are stored in the ``roots`` array.
 solvePoly
 ---------
 
-.. cpp:function:: void solvePoly(InputArray coeffs, OutputArray roots, int maxIters=300)
+.. ocv:function:: void solvePoly(InputArray coeffs, OutputArray roots, int maxIters=300)
 
     Finds the real or complex roots of a polynomial equation.
 
@@ -2709,7 +2709,7 @@ The function ``solvePoly`` finds real and complex roots of a polynomial equation
 sort
 ----
 
-.. cpp:function:: void sort(InputArray src, OutputArray dst, int flags)
+.. ocv:function:: void sort(InputArray src, OutputArray dst, int flags)
 
     Sorts each row or each column of a matrix.
 
@@ -2731,15 +2731,15 @@ The function ``sort`` sorts each matrix row or each matrix column in ascending o
 
 .. seealso::
 
-    :cpp:func:`sortIdx`,
-    :cpp:func:`randShuffle`
+    :ocv:func:`sortIdx`,
+    :ocv:func:`randShuffle`
 
 
 
 sortIdx
 -------
 
-.. cpp:function:: void sortIdx(InputArray src, OutputArray dst, int flags)
+.. ocv:function:: void sortIdx(InputArray src, OutputArray dst, int flags)
 
     Sorts each row or each column of a matrix.
 
@@ -2768,17 +2768,17 @@ The function ``sortIdx`` sorts each matrix row or each matrix column in the asce
 
 .. seealso::
 
-    :cpp:func:`sort`,
-    :cpp:func:`randShuffle`
+    :ocv:func:`sort`,
+    :ocv:func:`randShuffle`
 
 
 
 split
 -----
 
-.. cpp:function:: void split(const Mat& mtx, Mat* mv)
+.. ocv:function:: void split(const Mat& mtx, Mat* mv)
 
-.. cpp:function:: void split(const Mat& mtx, vector<Mat>& mv)
+.. ocv:function:: void split(const Mat& mtx, vector<Mat>& mv)
 
     Divides a multi-channel array into several single-channel arrays.
 
@@ -2793,20 +2793,20 @@ The functions ``split`` split a multi-channel array into separate single-channel
     \texttt{mv} [c](I) =  \texttt{mtx} (I)_c
 
 If you need to extract a single channel or do some other sophisticated channel permutation, use
-:cpp:func:`mixChannels` .
+:ocv:func:`mixChannels` .
 
 .. seealso::
 
-    :cpp:func:`merge`,
-    :cpp:func:`mixChannels`,
-    :cpp:func:`cvtColor`
+    :ocv:func:`merge`,
+    :ocv:func:`mixChannels`,
+    :ocv:func:`cvtColor`
 
 
 
 sqrt
 ----
 
-.. cpp:function:: void sqrt(InputArray src, OutputArray dst)
+.. ocv:function:: void sqrt(InputArray src, OutputArray dst)
 
     Calculates a quare root of array elements.
 
@@ -2818,15 +2818,15 @@ The functions ``sqrt`` calculate a square root of each source array element. In 
 
 .. seealso::
 
-    :cpp:func:`pow`,
-    :cpp:func:`magnitude`
+    :ocv:func:`pow`,
+    :ocv:func:`magnitude`
 
 
 
 subtract
 --------
 
-.. cpp:function:: void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
+.. ocv:function:: void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 
     Calculates the per-element difference between two arrays or array and a scalar.
 
@@ -2874,17 +2874,17 @@ The input arrays and the destination array can all have the same or different de
 
 .. seealso::
 
-    :cpp:func:`add`,
-    :cpp:func:`addWeighted`,
-    :cpp:func:`scaleAdd`,
-    :cpp:func:`convertScale`,
+    :ocv:func:`add`,
+    :ocv:func:`addWeighted`,
+    :ocv:func:`scaleAdd`,
+    :ocv:func:`convertScale`,
     :ref:`MatrixExpressions`
 
 
 
 SVD
 ---
-.. cpp:class:: SVD
+.. ocv:class:: SVD
 
 Class for computing Singular Value Decomposition of a floating-point matrix. The Singular Value Decomposition is used to solve least-square problems, under-determined linear systems, invert matrices, compute condition numbers, and so on.
 
@@ -2892,19 +2892,19 @@ For a faster operation, you can pass ``flags=SVD::MODIFY_A|...`` to modify the d
 
 .. seealso::
 
-    :cpp:func:`invert`,
-    :cpp:func:`solve`,
-    :cpp:func:`eigen`,
-    :cpp:func:`determinant`
+    :ocv:func:`invert`,
+    :ocv:func:`solve`,
+    :ocv:func:`eigen`,
+    :ocv:func:`determinant`
 
 
 
 SVD::SVD
 --------
 
-.. cpp:function:: SVD::SVD()
+.. ocv:function:: SVD::SVD()
 
-.. cpp:function:: SVD::SVD( InputArray A, int flags=0 )
+.. ocv:function:: SVD::SVD( InputArray A, int flags=0 )
 
     Introduces SVD constructors.
 
@@ -2919,14 +2919,14 @@ SVD::SVD
         * **SVD::FULL_UV** When the matrix is not square, by default the algorithm produces  ``u``  and  ``vt``  matrices of sufficiently large size for the further  ``A``  reconstruction. If, however, ``FULL_UV``  flag is specified, ``u``  and  ``vt``  will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
-:cpp:func:`SVD::operator ()` .
+:ocv:func:`SVD::operator ()` .
 
 
 
 SVD::operator ()
 ----------------
 
-.. cpp:function:: SVD& SVD::operator ()( InputArray A, int flags=0 )
+.. ocv:function:: SVD& SVD::operator ()( InputArray A, int flags=0 )
 
     Performs SVD of a matrix.
 
@@ -2941,14 +2941,14 @@ SVD::operator ()
         * **SVD::FULL_UV** When the matrix is not square, by default the algorithm produces  ``u``  and  ``vt``  matrices of sufficiently large size for the further  ``A``  reconstruction. If, however, the ``FULL_UV``  flag is specified, ``u``  and  ``vt``  are full-size square orthogonal matrices.
 
 The operator performs the singular value decomposition of the supplied matrix. The ``u``,``vt`` , and the vector of singular values ``w`` are stored in the structure. The same ``SVD`` structure can be reused many times with different matrices. Each time, if needed, the previous ``u``,``vt`` , and ``w`` are reclaimed and the new matrices are created, which is all handled by
-:cpp:func:`Mat::create` .
+:ocv:func:`Mat::create` .
 
 
 
 SVD::solveZ
 -----------
 
-.. cpp:function:: static void SVD::solveZ( InputArray A, OutputArray x )
+.. ocv:function:: static void SVD::solveZ( InputArray A, OutputArray x )
 
     Solves an under-determined singular linear system.
 
@@ -2968,11 +2968,11 @@ The method finds a unit-length solution ``x`` of a singular linear system
 SVD::backSubst
 --------------
 
-.. cpp:function:: void SVD::backSubst( InputArray rhs, OutputArray x ) const
+.. ocv:function:: void SVD::backSubst( InputArray rhs, OutputArray x ) const
 
     Performs a singular value back substitution.
 
-    :param rhs: Right-hand side of a linear system  ``A*x = rhs`` to be solved, where ``A`` has been previously decomposed using :cpp:func:`SVD::SVD`  or  :cpp:func:`SVD::operator ()` .
+    :param rhs: Right-hand side of a linear system  ``A*x = rhs`` to be solved, where ``A`` has been previously decomposed using :ocv:func:`SVD::SVD`  or  :ocv:func:`SVD::operator ()` .
     
     :param x: Found solution of the system.
 
@@ -2984,14 +2984,14 @@ The method computes a back substitution for the specified right-hand side:
 
 Using this technique you can either get a very accurate solution of the convenient linear system, or the best (in the least-squares terms) pseudo-solution of an overdetermined linear system. 
 
-.. note:: Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call :cpp:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
+.. note:: Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call :ocv:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
 
 
 
 sum
 ---
 
-.. cpp:function:: Scalar sum(InputArray mtx)
+.. ocv:function:: Scalar sum(InputArray mtx)
 
     Calculates the sum of array elements.
 
@@ -3001,38 +3001,38 @@ The functions ``sum`` calculate and return the sum of array elements, independen
 
 .. seealso::
 
-    :cpp:func:`countNonZero`,
-    :cpp:func:`mean`,
-    :cpp:func:`meanStdDev`,
-    :cpp:func:`norm`,
-    :cpp:func:`minMaxLoc`,
-    :cpp:func:`reduce`
+    :ocv:func:`countNonZero`,
+    :ocv:func:`mean`,
+    :ocv:func:`meanStdDev`,
+    :ocv:func:`norm`,
+    :ocv:func:`minMaxLoc`,
+    :ocv:func:`reduce`
 
 
 
 theRNG
 ------
 
-.. cpp:function:: RNG& theRNG()
+.. ocv:function:: RNG& theRNG()
 
     Returns the default random number generator.
 
 The function ``theRNG`` returns the default random number generator. For each thread, there is a separate random number generator, so you can use the function safely in multi-thread environments. If you just need to get a single random number using this generator or initialize an array, you can use
-:cpp:func:`randu` or
-:cpp:func:`randn` instead. But if you are going to generate many random numbers inside a loop, it is much faster to use this function to retrieve the generator and then use ``RNG::operator _Tp()`` .
+:ocv:func:`randu` or
+:ocv:func:`randn` instead. But if you are going to generate many random numbers inside a loop, it is much faster to use this function to retrieve the generator and then use ``RNG::operator _Tp()`` .
 
 .. seealso::
 
-    :cpp:class:`RNG`,
-    :cpp:func:`randu`,
-    :cpp:func:`randn`
+    :ocv:class:`RNG`,
+    :ocv:func:`randu`,
+    :ocv:func:`randn`
 
 
 
 trace
 -----
 
-.. cpp:function:: Scalar trace(InputArray mtx)
+.. ocv:function:: Scalar trace(InputArray mtx)
 
     Returns the trace of a matrix.
 
@@ -3049,7 +3049,7 @@ The function ``trace`` returns the sum of the diagonal elements of the matrix ``
 transform
 ---------
 
-.. cpp:function:: void transform(InputArray src, OutputArray dst, InputArray mtx )
+.. ocv:function:: void transform(InputArray src, OutputArray dst, InputArray mtx )
 
     Performs the matrix transformation of every array element.
 
@@ -3083,18 +3083,18 @@ points, arbitrary linear color space transformation (such as various kinds of RG
 
 .. seealso::
 
-    :cpp:func:`perspectiveTransform`,
-    :cpp:func:`getAffineTransform`,
-    :cpp:func:`estimateRigidTransform`,
-    :cpp:func:`warpAffine`,
-    :cpp:func:`warpPerspective`
+    :ocv:func:`perspectiveTransform`,
+    :ocv:func:`getAffineTransform`,
+    :ocv:func:`estimateRigidTransform`,
+    :ocv:func:`warpAffine`,
+    :ocv:func:`warpPerspective`
 
 
 
 transpose
 ---------
 
-.. cpp:function:: void transpose(InputArray src, OutputArray dst)
+.. ocv:function:: void transpose(InputArray src, OutputArray dst)
 
     Transposes a matrix.
 
@@ -3102,7 +3102,7 @@ transpose
 
     :param dst: Destination array of the same type as  ``src`` .
     
-The function :cpp:func:`transpose` transposes the matrix ``src`` :
+The function :ocv:func:`transpose` transposes the matrix ``src`` :
 
 .. math::
 

@@ -10,7 +10,7 @@ with ``CV_RGB`` or the  :ref:`Scalar`  constructor
 ) for color
 images and brightness for grayscale images. For color images, the channel ordering
 is normally *Blue, Green, Red*.
-This is what :cpp:func:`imshow`, :cpp:func:`imread`, and :cpp:func:`imwrite` expect.
+This is what :ocv:func:`imshow`, :ocv:func:`imread`, and :ocv:func:`imwrite` expect.
 So, if you form a color using the
 :ref:`Scalar` constructor, it should look like:
 
@@ -19,7 +19,7 @@ So, if you form a color using the
     \texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])
 
 If you are using your own image rendering and I/O functions, you can use any channel ordering. The drawing functions process each channel independently and do not depend on the channel order or even on the used color space. The whole image can be converted from BGR to RGB or to a different color space using
-:cpp:func:`cvtColor` .
+:ocv:func:`cvtColor` .
 
 If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also, many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means that the coordinates can be passed as fixed-point numbers encoded as integers. The number of fractional bits is specified by the ``shift`` parameter and the real point coordinates are calculated as
 :math:`\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})` . This feature is especially effective when rendering antialiased shapes.
@@ -32,7 +32,7 @@ The functions do not support alpha-transparency when the target image is 4-chann
 
 circle
 ----------
-.. cpp:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
+.. ocv:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
 
     Draws a circle.
 
@@ -46,7 +46,7 @@ circle
 
     :param thickness: Thickness of the circle outline if positive. Negative thickness means that a filled circle is to be drawn.
 
-    :param lineType: Type of the circle boundary. See  :cpp:func:`line`  description.
+    :param lineType: Type of the circle boundary. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the center's coordinates and in the radius value.
 
@@ -56,9 +56,9 @@ The function ``circle`` draws a simple or filled circle with a given center and 
 
 clipLine
 ------------
-.. cpp:function:: bool clipLine(Size imgSize, Point& pt1, Point& pt2)
+.. ocv:function:: bool clipLine(Size imgSize, Point& pt1, Point& pt2)
 
-.. cpp:function:: bool clipLine(Rect imgRect, Point& pt1, Point& pt2)
+.. ocv:function:: bool clipLine(Rect imgRect, Point& pt1, Point& pt2)
 
     Clips the line against the image rectangle.
 
@@ -77,9 +77,9 @@ They return ``false`` if the line segment is completely outside the rectangle. O
 
 ellipse
 -----------
-.. cpp:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
+.. ocv:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
 
-.. cpp:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
+.. ocv:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
 
     Draws a simple or thick elliptic arc or fills an ellipse sector.
 
@@ -101,15 +101,15 @@ ellipse
 
     :param thickness: Thickness of the ellipse arc outline, if positive. Otherwise, this indicates that a filled ellipse sector is to be drawn.
 
-    :param lineType: Type of the ellipse boundary. See  :cpp:func:`line`  description.
+    :param lineType: Type of the ellipse boundary. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the center's coordinates and axes' values.
 
 The functions ``ellipse`` with less parameters draw an ellipse outline, a filled ellipse, an elliptic arc, or a filled ellipse sector.
 A piecewise-linear curve is used to approximate the elliptic arc boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
-:cpp:func:`ellipse2Poly` and then render it with
-:cpp:func:`polylines` or fill it with
-:cpp:func:`fillPoly` . If you use the first variant of the function and want to draw the whole ellipse, not an arc, pass ``startAngle=0`` and ``endAngle=360`` . The picture below explains the meaning of the parameters.
+:ocv:func:`ellipse2Poly` and then render it with
+:ocv:func:`polylines` or fill it with
+:ocv:func:`fillPoly` . If you use the first variant of the function and want to draw the whole ellipse, not an arc, pass ``startAngle=0`` and ``endAngle=360`` . The picture below explains the meaning of the parameters.
 
 **Figure 1. Parameters of Elliptic Arc**
 
@@ -119,15 +119,15 @@ A piecewise-linear curve is used to approximate the elliptic arc boundary. If yo
 
 ellipse2Poly
 ----------------
-.. cpp:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
+.. ocv:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
 
     Approximates an elliptic arc with a polyline.
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See  :cpp:func:`ellipse`  for details.   
+    :param axes: Half-sizes of the arc. See  :ocv:func:`ellipse`  for details.   
 	
-	:param angle: Rotation angle of the ellipse in degrees. See  :cpp:func:`ellipse`  for details.   
+	:param angle: Rotation angle of the ellipse in degrees. See  :ocv:func:`ellipse`  for details.   
 	
 	:param startAngle: Starting angle of the elliptic arc in degrees.
 
@@ -138,13 +138,13 @@ ellipse2Poly
     :param pts: Output vector of polyline vertices.
 
 The function ``ellipse2Poly`` computes the vertices of a polyline that approximates the specified elliptic arc. It is used by
-:cpp:func:`ellipse` .
+:ocv:func:`ellipse` .
 
 .. index:: fillConvexPoly
 
 fillConvexPoly
 ------------------
-.. cpp:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
+.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
 
     Fills a convex polygon.
 
@@ -156,7 +156,7 @@ fillConvexPoly
 
     :param color: Polygon color.
 
-    :param lineType: Type of the polygon boundaries. See  :cpp:func:`line`  description.
+    :param lineType: Type of the polygon boundaries. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -168,7 +168,7 @@ that is, a polygon whose contour intersects every horizontal line (scan line) tw
 
 fillPoly
 ------------
-.. cpp:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
+.. ocv:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
 
     Fills the area bounded by one or more polygons.
 
@@ -182,7 +182,7 @@ fillPoly
 
     :param color: Polygon color.
 
-    :param lineType: Type of the polygon boundaries. See  :cpp:func:`line`  description.
+    :param lineType: Type of the polygon boundaries. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -193,17 +193,17 @@ areas with holes, contours with self-intersections (some of thier parts), and so
 
 getTextSize
 ---------------
-.. cpp:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
+.. ocv:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
 
     Calculates the width and height of a text string.
 
     :param text: Input text string.
 
-    :param fontFace: Font to use. See  :cpp:func:`putText` for details.    
+    :param fontFace: Font to use. See  :ocv:func:`putText` for details.    
 	
-	:param fontScale: Font scale. See  :cpp:func:`putText`  for details.   
+	:param fontScale: Font scale. See  :ocv:func:`putText`  for details.   
 	
-	:param thickness: Thickness of lines used to render the text. See  :cpp:func:`putText`  for details.   
+	:param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
 	
 	:param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
 
@@ -244,7 +244,7 @@ That is, the following code renders some text, the tight box surrounding it, and
 
 line
 --------
-.. cpp:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
+.. ocv:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
 
     Draws a line segment connecting two points.
 
@@ -321,9 +321,9 @@ The number of pixels along the line is stored in ``LineIterator::count`` . ::
 
 rectangle
 -------------
-.. cpp:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
+.. ocv:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
 
-.. cpp:function:: void rectangle(Mat& img, Rect r, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
+.. ocv:function:: void rectangle(Mat& img, Rect r, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
 
     Draws a simple, thick, or filled up-right rectangle.
 
@@ -339,7 +339,7 @@ rectangle
 
     :param thickness: Thickness of lines that make up the rectangle. Negative values, like  ``CV_FILLED`` , mean that the function has to draw a filled rectangle.
 
-    :param lineType: Type of the line. See  :cpp:func:`line`  description.
+    :param lineType: Type of the line. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the point coordinates.
 
@@ -349,7 +349,7 @@ The function ``rectangle`` draws a rectangle outline or a filled rectangle whose
 
 polylines
 -------------
-.. cpp:function:: void polylines(Mat& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar& color,               int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void polylines(Mat& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar& color,               int thickness=1, int lineType=8, int shift=0 )
 
     Draws several polygonal curves.
 
@@ -367,7 +367,7 @@ polylines
 
     :param thickness: Thickness of the polyline edges.
 
-    :param lineType: Type of the line segments. See  :cpp:func:`line`  description.
+    :param lineType: Type of the line segments. See  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -377,7 +377,7 @@ The function ``polylines`` draws one or more polygonal curves.
 
 putText
 -----------
-.. cpp:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
 
     Draws a text string.
 
@@ -403,5 +403,5 @@ putText
 The function ``putText`` renders the specified text string in the image.
 Symbols that cannot be rendered using the specified font are
 replaced by question marks. See
-:cpp:func:`getTextSize` for a text rendering code example.
+:ocv:func:`getTextSize` for a text rendering code example.
 

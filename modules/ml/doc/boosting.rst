@@ -155,9 +155,9 @@ In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression t
 
 CvBoost
 -------
-.. cpp:class:: CvBoost
+.. ocv:class:: CvBoost
 
-Boosted tree classifier, derived from :cpp:class:`CvStatModel`
+Boosted tree classifier, derived from :ocv:class:`CvStatModel`
 
 .. index:: CvBoost::train
 
@@ -165,7 +165,7 @@ Boosted tree classifier, derived from :cpp:class:`CvStatModel`
 
 CvBoost::train
 --------------
-.. cpp:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
+.. ocv:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
     Trains a boosted tree classifier.
 
@@ -177,7 +177,7 @@ The train method follows the common template. The last parameter ``update`` spec
 
 CvBoost::predict
 ----------------
-.. cpp:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
+.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
     Predicts a response for an input sample.
 
@@ -189,7 +189,7 @@ The method ``CvBoost::predict`` runs the sample through the trees in the ensembl
 
 CvBoost::prune
 --------------
-.. cpp:function:: void CvBoost::prune( CvSlice slice )
+.. ocv:function:: void CvBoost::prune( CvSlice slice )
 
     Removes the specified weak classifiers.
 
@@ -205,7 +205,7 @@ Do not confuse this method with the pruning of individual decision trees, which 
 
 CvBoost::get_weak_predictors
 ----------------------------
-.. cpp:function:: CvSeq* CvBoost::get_weak_predictors()
+.. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
 
     Returns the sequence of weak tree classifiers.
 

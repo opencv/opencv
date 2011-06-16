@@ -39,7 +39,7 @@ The actual implementations of the geometrical transformations, from the most gen
 convertMaps
 -----------
 
-.. cpp:function:: void convertMaps( InputArray map1, InputArray map2, OutputArray dstmap1, OutputArray dstmap2, int dstmap1type, bool nninterpolation=false )
+.. ocv:function:: void convertMaps( InputArray map1, InputArray map2, OutputArray dstmap1, OutputArray dstmap2, int dstmap1type, bool nninterpolation=false )
 
     Converts image transformation maps from one representation to another.
 
@@ -56,11 +56,11 @@ convertMaps
     :param nninterpolation: Flag indicating whether the fixed-point maps are used for the nearest-neighbor or for a more complex interpolation.
 
 The function converts a pair of maps for
-:cpp:func:`remap` from one representation to another. The following options ( ``(map1.type(), map2.type())`` :math:`\rightarrow` ``(dstmap1.type(), dstmap2.type())`` ) are supported:
+:ocv:func:`remap` from one representation to another. The following options ( ``(map1.type(), map2.type())`` :math:`\rightarrow` ``(dstmap1.type(), dstmap2.type())`` ) are supported:
 
 *
     :math:`\texttt{(CV\_32FC1, CV\_32FC1)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}`     . This is the most frequently used conversion operation, in which the original floating-point maps (see
-    :cpp:func:`remap`     ) are converted to a more compact and much faster fixed-point representation. The first output array contains the rounded coordinates and the second array (created only when ``nninterpolation=false``     ) contains indices in the interpolation tables.
+    :ocv:func:`remap`     ) are converted to a more compact and much faster fixed-point representation. The first output array contains the rounded coordinates and the second array (created only when ``nninterpolation=false``     ) contains indices in the interpolation tables.
 
 *
     :math:`\texttt{(CV\_32FC2)} \rightarrow \texttt{(CV\_16SC2, CV\_16UC1)}`     . The same as above but the original maps are stored in one 2-channel matrix.
@@ -69,15 +69,15 @@ The function converts a pair of maps for
     Reverse conversion. Obviously, the reconstructed floating-point maps will not be exactly the same as the originals.
 
 See Also:
-:cpp:func:`remap`,
-:cpp:func:`undisort`,
-:cpp:func:`initUndistortRectifyMap`
+:ocv:func:`remap`,
+:ocv:func:`undisort`,
+:ocv:func:`initUndistortRectifyMap`
 
 .. index:: getAffineTransform
 
 getAffineTransform
 ----------------------
-.. cpp:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+.. ocv:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates an affine transform from three pairs of the corresponding points.
 
@@ -100,8 +100,8 @@ where
     i=0,1,2
 
 See Also:
-:cpp:func:`warpAffine`,
-:cpp:func:`transform`
+:ocv:func:`warpAffine`,
+:ocv:func:`transform`
 
 
 .. index:: getPerspectiveTransform
@@ -110,7 +110,7 @@ See Also:
 
 getPerspectiveTransform
 ---------------------------
-.. cpp:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+.. ocv:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
     Calculates a perspective transform from four pairs of the corresponding points.
 
@@ -133,9 +133,9 @@ where
     i=0,1,2
 
 See Also:
-:cpp:func:`findHomography`,
-:cpp:func:`warpPerspective`,
-:cpp:func:`perspectiveTransform`
+:ocv:func:`findHomography`,
+:ocv:func:`warpPerspective`,
+:ocv:func:`perspectiveTransform`
 
 .. index:: getRectSubPix
 
@@ -143,7 +143,7 @@ See Also:
 
 getRectSubPix
 -----------------
-.. cpp:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
+.. ocv:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
 
     Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
@@ -168,12 +168,12 @@ using bilinear interpolation. Every channel of multi-channel
 images is processed independently. While the center of the rectangle
 must be inside the image, parts of the rectangle may be
 outside. In this case, the replication border mode (see
-:cpp:func:`borderInterpolate` ) is used to extrapolate
+:ocv:func:`borderInterpolate` ) is used to extrapolate
 the pixel values outside of the image.
 
 See Also:
-:cpp:func:`warpAffine`,
-:cpp:func:`warpPerspective`
+:ocv:func:`warpAffine`,
+:ocv:func:`warpPerspective`
 
 .. index:: getRotationMatrix2D
 
@@ -181,7 +181,7 @@ See Also:
 
 getRotationMatrix2D
 -----------------------
-.. cpp:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
+.. ocv:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
 
     Calculates an affine matrix of 2D rotation.
 
@@ -206,9 +206,9 @@ where
 The transformation maps the rotation center to itself. If this is not the target, adjust the shift.
 
 See Also:
-:cpp:func:`getAffineTransform`,
-:cpp:func:`warpAffine`,
-:cpp:func:`transform`
+:ocv:func:`getAffineTransform`,
+:ocv:func:`warpAffine`,
+:ocv:func:`transform`
 
 .. index:: invertAffineTransform
 
@@ -216,7 +216,7 @@ See Also:
 
 invertAffineTransform
 -------------------------
-.. cpp:function:: void invertAffineTransform(InputArray M, OutputArray iM)
+.. ocv:function:: void invertAffineTransform(InputArray M, OutputArray iM)
 
     Inverts an affine transformation.
 
@@ -241,20 +241,20 @@ The result is also a
 remap
 -----
 
-.. cpp:function:: void remap( InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. ocv:function:: void remap( InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a generic geometrical transformation to an image.
 
     :param src: Source image.
 
     :param dst: Destination image. It has the same size as  ``map1``  and the same type as  ``src`` .
-    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having the type  ``CV_16SC2`` , ``CV_32FC1`` , or  ``CV_32FC2`` . See  :cpp:func:`convertMaps`  for details on converting a floating point representation to fixed-point for speed.
+    :param map1: The first map of either  ``(x,y)``  points or just  ``x``  values having the type  ``CV_16SC2`` , ``CV_32FC1`` , or  ``CV_32FC2`` . See  :ocv:func:`convertMaps`  for details on converting a floating point representation to fixed-point for speed.
 
     :param map2: The second map of  ``y``  values having the type  ``CV_16UC1`` , ``CV_32FC1`` , or none (empty map if ``map1`` is  ``(x,y)``  points), respectively.
 
-    :param interpolation: Interpolation method (see  :cpp:func:`resize` ). The method  ``INTER_AREA``  is not supported by this function.
+    :param interpolation: Interpolation method (see  :ocv:func:`resize` ). The method  ``INTER_AREA``  is not supported by this function.
 
-    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). When \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -272,7 +272,7 @@ where values of pixels with non-integer coordinates are computed using one of av
 :math:`(x,y)` in
 :math:`map_1` , or
 fixed-point maps created by using
-:cpp:func:`convertMaps` . The reason you might want to convert from floating to fixed-point
+:ocv:func:`convertMaps` . The reason you might want to convert from floating to fixed-point
 representations of a map is that they can yield much faster (~2x) remapping operations. In the converted case,
 :math:`map_1` contains pairs ``(cvFloor(x), cvFloor(y))`` and
 :math:`map_2` contains indices in a table of interpolation coefficients.
@@ -286,7 +286,7 @@ This function cannot operate in-place.
 resize
 ----------
 
-.. cpp:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
+.. ocv:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
 
     Resizes an image.
 
@@ -341,9 +341,9 @@ If you want to decimate the image by factor of 2 in each direction, you can call
 
 
 See Also:
-:cpp:func:`warpAffine`,
-:cpp:func:`warpPerspective`,
-:cpp:func:`remap` 
+:ocv:func:`warpAffine`,
+:ocv:func:`warpPerspective`,
+:ocv:func:`remap` 
 
 .. index:: warpAffine
 
@@ -351,7 +351,7 @@ See Also:
 
 warpAffine
 --------------
-.. cpp:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. ocv:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies an affine transformation to an image.
 
@@ -363,9 +363,9 @@ warpAffine
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -376,21 +376,21 @@ The function ``warpAffine`` transforms the source image using the specified matr
     \texttt{dst} (x,y) =  \texttt{src} ( \texttt{M} _{11} x +  \texttt{M} _{12} y +  \texttt{M} _{13}, \texttt{M} _{21} x +  \texttt{M} _{22} y +  \texttt{M} _{23})
 
 when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is first inverted with
-:cpp:func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
+:ocv:func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
 See Also:
-:cpp:func:`warpPerspective`,
-:cpp:func:`resize`,
-:cpp:func:`remap`,
-:cpp:func:`getRectSubPix`,
-:cpp:func:`transform`
+:ocv:func:`warpPerspective`,
+:ocv:func:`resize`,
+:ocv:func:`remap`,
+:ocv:func:`getRectSubPix`,
+:ocv:func:`transform`
 
 .. index:: warpPerspective
 
 warpPerspective
 -------------------
-.. cpp:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+.. ocv:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     Applies a perspective transformation to an image.
 
@@ -402,9 +402,9 @@ warpPerspective
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :cpp:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :cpp:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
+    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
 
     :param borderValue: Value used in case of a constant border. By default, it is 0.
 
@@ -416,15 +416,15 @@ The function ``warpPerspective`` transforms the source image using the specified
          \frac{M_{21} x + M_{22} y + M_{23}}{M_{31} x + M_{32} y + M_{33}} \right )
 
 when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is first inverted with
-:cpp:func:`invert` and then put in the formula above instead of ``M`` .
+:ocv:func:`invert` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
 See Also:
-:cpp:func:`warpAffine`,
-:cpp:func:`resize`,
-:cpp:func:`remap`,
-:cpp:func:`getRectSubPix`,
-:cpp:func:`perspectiveTransform`
+:ocv:func:`warpAffine`,
+:ocv:func:`resize`,
+:ocv:func:`remap`,
+:ocv:func:`getRectSubPix`,
+:ocv:func:`perspectiveTransform`
 
 
 .. index:: initUndistortRectifyMap
@@ -432,7 +432,7 @@ See Also:
 initUndistortRectifyMap
 ---------------------------
 
-.. cpp:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )
+.. ocv:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )
 
     Computes the undistortion and rectification transformation map.
 
@@ -486,7 +486,7 @@ where ``cameraMatrix`` can be chosen arbitrarily.
 
 getDefaultNewCameraMatrix
 -----------------------------
-.. cpp:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
+.. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
 
     Returns the default new camera matrix.
 
@@ -519,7 +519,7 @@ By default, the undistortion functions in OpenCV (see
 
 undistort
 -------------
-.. cpp:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
+.. ocv:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
 
     Transforms an image to compensate for lens distortion.
 
@@ -554,7 +554,7 @@ The camera matrix and the distortion parameters can be determined using
 
 undistortPoints
 -------------------
-.. cpp:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
+.. ocv:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
 
     Computes the ideal point coordinates from the observed point coordinates.
 

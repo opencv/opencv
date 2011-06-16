@@ -11,7 +11,7 @@ This section describes approaches based on local 2D features and used to categor
 
 BOWTrainer
 ----------
-.. cpp:class:: BOWTrainer
+.. ocv:class:: BOWTrainer
 
 Abstract base class for training the *bag of visual words* vocabulary from a set of descriptors.
 For details, see, for example, *Visual Categorization with Bags of Keypoints* by Gabriella Csurka, Christopher R. Dance,
@@ -41,7 +41,7 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
 BOWTrainer::add
 -------------------
-.. cpp:function:: void BOWTrainer::add( const Mat& descriptors )
+.. ocv:function:: void BOWTrainer::add( const Mat& descriptors )
 
     Adds descriptors to a training set. The training set is clustered using ``clustermethod`` to construct the vocabulary.
 
@@ -51,7 +51,7 @@ BOWTrainer::add
 
 BOWTrainer::getDescriptors
 ------------------------------
-.. cpp:function:: const vector<Mat>& BOWTrainer::getDescriptors() const
+.. ocv:function:: const vector<Mat>& BOWTrainer::getDescriptors() const
 
     Returns a training set of descriptors.
 
@@ -59,7 +59,7 @@ BOWTrainer::getDescriptors
 
 BOWTrainer::descripotorsCount
 ---------------------------------
-.. cpp:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
+.. ocv:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
 
     Returns the count of all descriptors stored in the training set.
 
@@ -67,11 +67,11 @@ BOWTrainer::descripotorsCount
 
 BOWTrainer::cluster
 -----------------------
-.. cpp:function:: Mat BOWTrainer::cluster() const
+.. ocv:function:: Mat BOWTrainer::cluster() const
 
     Clusters train descriptors. The vocabulary consists of cluster centers. So, this method returns the vocabulary. In the first variant of the method, train descriptors stored in the object are clustered. In the second variant, input descriptors are clustered.
 
-.. cpp:function:: Mat BOWTrainer::cluster( const Mat& descriptors ) const
+.. ocv:function:: Mat BOWTrainer::cluster( const Mat& descriptors ) const
 
     :param descriptors: Descriptors to cluster. Each row of  the ``descriptors``  matrix is a descriptor. Descriptors are not added to the inner train descriptor set.
 
@@ -81,7 +81,7 @@ BOWTrainer::cluster
 
 BOWKMeansTrainer
 ----------------
-.. cpp:class:: BOWKMeansTrainer
+.. ocv:class:: BOWKMeansTrainer
 
 :ref:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach ::
 
@@ -111,7 +111,7 @@ arguments.
 
 BOWImgDescriptorExtractor
 -------------------------
-.. cpp:class:: BOWImgDescriptorExtractor
+.. ocv:class:: BOWImgDescriptorExtractor
 
 Class to compute an image descriptor using the ''bag of visual words''. Such a computation consists of the following steps:
 
@@ -146,7 +146,7 @@ Here is the class declaration ::
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 --------------------------------------------------------
-.. cpp:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
+.. ocv:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
 
     The class constructor.
 
@@ -158,7 +158,7 @@ BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 
 BOWImgDescriptorExtractor::setVocabulary
 --------------------------------------------
-.. cpp:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
+.. ocv:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
 
     Sets a visual vocabulary.
 
@@ -168,7 +168,7 @@ BOWImgDescriptorExtractor::setVocabulary
 
 BOWImgDescriptorExtractor::getVocabulary
 --------------------------------------------
-.. cpp:function:: const Mat& BOWImgDescriptorExtractor::getVocabulary() const
+.. ocv:function:: const Mat& BOWImgDescriptorExtractor::getVocabulary() const
 
     Returns the set vocabulary.
 
@@ -176,7 +176,7 @@ BOWImgDescriptorExtractor::getVocabulary
 
 BOWImgDescriptorExtractor::compute
 --------------------------------------
-.. cpp:function:: void BOWImgDescriptorExtractor::compute( const Mat& image,           vector<KeyPoint>& keypoints, Mat& imgDescriptor,           vector<vector<int> >* pointIdxsOfClusters=0,           Mat* descriptors=0 )
+.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& image,           vector<KeyPoint>& keypoints, Mat& imgDescriptor,           vector<vector<int> >* pointIdxsOfClusters=0,           Mat* descriptors=0 )
 
     Computes an image descriptor using the set visual vocabulary.
 
@@ -194,7 +194,7 @@ BOWImgDescriptorExtractor::compute
 
 BOWImgDescriptorExtractor::descriptorSize
 ---------------------------------------------
-.. cpp:function:: int BOWImgDescriptorExtractor::descriptorSize() const
+.. ocv:function:: int BOWImgDescriptorExtractor::descriptorSize() const
 
     Returns an image discriptor size if the vocabulary is set. Otherwise, it returns 0.
 
@@ -202,7 +202,7 @@ BOWImgDescriptorExtractor::descriptorSize
 
 BOWImgDescriptorExtractor::descriptorType
 ---------------------------------------------
-.. cpp:function:: int BOWImgDescriptorExtractor::descriptorType() const
+.. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const
 
     Returns an image descriptor type.
 

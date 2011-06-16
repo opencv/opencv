@@ -46,7 +46,7 @@ Bayes classifier for normally distributed data ::
 
 CvNormalBayesClassifier::train
 ------------------------------
-.. cpp:function:: bool CvNormalBayesClassifier::train(  const Mat& _train_data,  const Mat& _responses,                 const Mat& _var_idx =Mat(),  const Mat& _sample_idx=Mat(),  bool update=false )
+.. ocv:function:: bool CvNormalBayesClassifier::train(  const Mat& _train_data,  const Mat& _responses,                 const Mat& _var_idx =Mat(),  const Mat& _sample_idx=Mat(),  bool update=false )
 
     Trains the model.
 
@@ -65,7 +65,7 @@ In addition, there is an ``update`` flag that identifies whether the model shoul
 
 CvNormalBayesClassifier::predict
 --------------------------------
-.. cpp:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
+.. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
     Predicts the response for sample(s).
 

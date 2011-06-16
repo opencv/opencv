@@ -7,7 +7,7 @@ Object Detection
 
 gpu::HOGDescriptor
 ------------------
-.. cpp:class:: gpu::HOGDescriptor
+.. ocv:class:: gpu::HOGDescriptor
 
 This class provides a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
 ::
@@ -67,7 +67,7 @@ Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and det
 
 gpu::HOGDescriptor::HOGDescriptor
 -------------------------------------
-.. cpp:function:: gpu::HOGDescriptor::HOGDescriptor(Size win_size=Size(64, 128),
+.. ocv:function:: gpu::HOGDescriptor::HOGDescriptor(Size win_size=Size(64, 128),
    Size block_size=Size(16, 16), Size block_stride=Size(8, 8),
    Size cell_size=Size(8, 8), int nbins=9,
    double win_sigma=DEFAULT_WIN_SIGMA,
@@ -98,7 +98,7 @@ gpu::HOGDescriptor::HOGDescriptor
 
 gpu::HOGDescriptor::getDescriptorSize
 -----------------------------------------
-.. cpp:function:: size_t gpu::HOGDescriptor::getDescriptorSize() const
+.. ocv:function:: size_t gpu::HOGDescriptor::getDescriptorSize() const
 
     Returns the number of coefficients required for the classification.
 
@@ -106,7 +106,7 @@ gpu::HOGDescriptor::getDescriptorSize
 
 gpu::HOGDescriptor::getBlockHistogramSize
 ---------------------------------------------
-.. cpp:function:: size_t gpu::HOGDescriptor::getBlockHistogramSize() const
+.. ocv:function:: size_t gpu::HOGDescriptor::getBlockHistogramSize() const
 
     Returns the block histogram size.
 
@@ -114,7 +114,7 @@ gpu::HOGDescriptor::getBlockHistogramSize
 
 gpu::HOGDescriptor::setSVMDetector
 --------------------------------------
-.. cpp:function:: void gpu::HOGDescriptor::setSVMDetector(const vector<float>\& detector)
+.. ocv:function:: void gpu::HOGDescriptor::setSVMDetector(const vector<float>\& detector)
 
     Sets coefficients for the linear SVM classifier.
 
@@ -122,7 +122,7 @@ gpu::HOGDescriptor::setSVMDetector
 
 gpu::HOGDescriptor::getDefaultPeopleDetector
 ------------------------------------------------
-.. cpp:function:: static vector<float> gpu::HOGDescriptor::getDefaultPeopleDetector()
+.. ocv:function:: static vector<float> gpu::HOGDescriptor::getDefaultPeopleDetector()
 
     Returns coefficients of the classifier trained for people detection (for default window size).
 
@@ -130,7 +130,7 @@ gpu::HOGDescriptor::getDefaultPeopleDetector
 
 gpu::HOGDescriptor::getPeopleDetector48x96
 ----------------------------------------------
-.. cpp:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector48x96()
+.. ocv:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector48x96()
 
     Returns coefficients of the classifier trained for people detection (for 48x96 windows).
 
@@ -138,7 +138,7 @@ gpu::HOGDescriptor::getPeopleDetector48x96
 
 gpu::HOGDescriptor::getPeopleDetector64x128
 -----------------------------------------------
-.. cpp:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector64x128()
+.. ocv:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector64x128()
 
     Returns coefficients of the classifier trained for people detection (for 64x128 windows).
 
@@ -146,7 +146,7 @@ gpu::HOGDescriptor::getPeopleDetector64x128
 
 gpu::HOGDescriptor::detect
 ------------------------------
-.. cpp:function:: void gpu::HOGDescriptor::detect(const GpuMat\& img,
+.. ocv:function:: void gpu::HOGDescriptor::detect(const GpuMat\& img,
    vector<Point>\& found_locations, double hit_threshold=0,
    Size win_stride=Size(), Size padding=Size())
 
@@ -166,18 +166,18 @@ gpu::HOGDescriptor::detect
 
 gpu::HOGDescriptor::detectMultiScale
 ----------------------------------------
-.. cpp:function:: void gpu::HOGDescriptor::detectMultiScale(const GpuMat\& img,
+.. ocv:function:: void gpu::HOGDescriptor::detectMultiScale(const GpuMat\& img,
    vector<Rect>\& found_locations, double hit_threshold=0,
    Size win_stride=Size(), Size padding=Size(),
    double scale0=1.05, int group_threshold=2)
 
 	Performs object detection with a multi-scale window.
 
-    :param img: Source image. See  :cpp:func:`gpu::HOGDescriptor::detect`  for type limitations.
+    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
     :param found_locations: Detected objects boundaries.
 
-    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :cpp:func:`gpu::HOGDescriptor::detect`  for details.
+    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :ocv:func:`gpu::HOGDescriptor::detect`  for details.
 
     :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -185,19 +185,19 @@ gpu::HOGDescriptor::detectMultiScale
 
     :param scale0: Coefficient of the detection window increase.
 
-    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :cpp:func:`groupRectangles` .
+    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :ocv:func:`groupRectangles` .
 
 .. index:: gpu::HOGDescriptor::getDescriptors
 
 gpu::HOGDescriptor::getDescriptors
 --------------------------------------
-.. cpp:function:: void gpu::HOGDescriptor::getDescriptors(const GpuMat\& img,
+.. ocv:function:: void gpu::HOGDescriptor::getDescriptors(const GpuMat\& img,
    Size win_stride, GpuMat\& descriptors,
    int descr_format=DESCR_FORMAT_COL_BY_COL)
 
     Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
 
-    :param img: Source image. See  :cpp:func:`gpu::HOGDescriptor::detect`  for type limitations.
+    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
     :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -214,7 +214,7 @@ gpu::HOGDescriptor::getDescriptors
 
 gpu::CascadeClassifier_GPU
 --------------------------
-.. cpp:class:: gpu::CascadeClassifier_GPU
+.. ocv:class:: gpu::CascadeClassifier_GPU
 
 This cascade classifier class is used for object detection. 
 ::
@@ -247,7 +247,7 @@ This cascade classifier class is used for object detection.
 
 gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 -----------------------------------------------------
-.. cpp:function:: gpu::CascadeClassifier_GPU(const string\& filename)
+.. ocv:function:: gpu::CascadeClassifier_GPU(const string\& filename)
 
     Loads the classifier from a file.
 
@@ -259,7 +259,7 @@ gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 
 gpu::CascadeClassifier_GPU::empty
 -------------------------------------
-.. cpp:function:: bool gpu::CascadeClassifier_GPU::empty() const
+.. ocv:function:: bool gpu::CascadeClassifier_GPU::empty() const
 
     Checks whether the classifier is loaded or not.
 
@@ -269,7 +269,7 @@ gpu::CascadeClassifier_GPU::empty
 
 gpu::CascadeClassifier_GPU::load
 ------------------------------------
-.. cpp:function:: bool gpu::CascadeClassifier_GPU::load(const string\& filename)
+.. ocv:function:: bool gpu::CascadeClassifier_GPU::load(const string\& filename)
 
     Loads the classifier from a file. The previous content is destroyed.
 
@@ -279,7 +279,7 @@ gpu::CascadeClassifier_GPU::load
 
 gpu::CascadeClassifier_GPU::release
 ---------------------------------------
-.. cpp:function:: void gpu::CascadeClassifier_GPU::release()
+.. ocv:function:: void gpu::CascadeClassifier_GPU::release()
 
     Destroys the loaded classifier.
 
@@ -287,7 +287,7 @@ gpu::CascadeClassifier_GPU::release
 
 gpu::CascadeClassifier_GPU::detectMultiScale
 ------------------------------------------------
-.. cpp:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat\& image, GpuMat\& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
+.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat\& image, GpuMat\& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
 
     Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
@@ -324,5 +324,5 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     imshow("Faces", image_cpu);
 
 
-See Also: :cpp:func:`CascadeClassifier::detectMultiScale` 
+See Also: :ocv:func:`CascadeClassifier::detectMultiScale` 
 

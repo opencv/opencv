@@ -49,7 +49,7 @@ K-Nearest Neighbors model ::
 
 CvKNearest::train
 -----------------
-.. cpp:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
+.. ocv:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
 
     Trains the model.
 
@@ -70,7 +70,7 @@ The parameter ``_update_base`` specifies whether the model is trained from scrat
 
 CvKNearest::find_nearest
 ------------------------
-.. cpp:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
+.. ocv:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
 
     Finds the neighbors for input vectors.
 

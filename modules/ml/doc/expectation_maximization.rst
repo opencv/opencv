@@ -195,7 +195,7 @@ EM model ::
 
 CvEM::train
 -----------
-.. cpp:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
+.. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
 
     Estimates the Gaussian mixture parameters from a sample set.
 

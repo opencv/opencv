@@ -13,7 +13,7 @@ descriptor extractors inherit the
 
 DescriptorExtractor
 -------------------
-.. cpp:class:: DescriptorExtractor
+.. ocv:class:: DescriptorExtractor
 
 Abstract base class for computing descriptors for image keypoints ::
 
@@ -51,7 +51,7 @@ descriptors is represented as
 
 DescriptorExtractor::compute
 --------------------------------
-.. cpp:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 
     Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
@@ -61,7 +61,7 @@ DescriptorExtractor::compute
 
     :param descriptors: Descriptors. Row i is the descriptor for keypoint i.
 
-.. cpp:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
 
     :param images: Image set.
 
@@ -75,7 +75,7 @@ DescriptorExtractor::compute
 
 DescriptorExtractor::read
 -----------------------------
-.. cpp:function:: void DescriptorExtractor::read( const FileNode& fn )
+.. ocv:function:: void DescriptorExtractor::read( const FileNode& fn )
 
     Reads the object of a descriptor extractor from a file node.
 
@@ -85,7 +85,7 @@ DescriptorExtractor::read
 
 DescriptorExtractor::write
 ------------------------------
-.. cpp:function:: void DescriptorExtractor::write( FileStorage& fs ) const
+.. ocv:function:: void DescriptorExtractor::write( FileStorage& fs ) const
 
     Writes the object of a descriptor extractor to a file storage.
 
@@ -95,7 +95,7 @@ DescriptorExtractor::write
 
 DescriptorExtractor::create
 -------------------------------
-.. cpp:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
+.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
 
     Creates a descriptor extractor by name.
 
@@ -118,7 +118,7 @@ for example: ``"OpponentSIFT"`` .
 
 SiftDescriptorExtractor
 -----------------------
-.. cpp:class:: SiftDescriptorExtractor
+.. ocv:class:: SiftDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`SIFT` class ::
@@ -150,7 +150,7 @@ Wrapping class for computing descriptors by using the
 
 SurfDescriptorExtractor
 -----------------------
-.. cpp:class:: SurfDescriptorExtractor
+.. ocv:class:: SurfDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`SURF` class ::
@@ -176,7 +176,7 @@ Wrapping class for computing descriptors by using the
 
 OrbDescriptorExtractor
 ---------------------------
-.. cpp:class:: OrbDescriptorExtractor
+.. ocv:class:: OrbDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`ORB` class ::
@@ -200,7 +200,7 @@ Wrapping class for computing descriptors by using the
 
 CalonderDescriptorExtractor
 ---------------------------
-.. cpp:class:: CalonderDescriptorExtractor
+.. ocv:class:: CalonderDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
 :ref:`RTreeClassifier` class ::
@@ -226,7 +226,7 @@ Wrapping class for computing descriptors by using the
 
 OpponentColorDescriptorExtractor
 --------------------------------
-.. cpp:class:: OpponentColorDescriptorExtractor
+.. ocv:class:: OpponentColorDescriptorExtractor
 
 Class adapting a descriptor extractor to compute descriptors in the Opponent Color Space
 (refer to Van de Sande et al., CGIV 2008 *Color Descriptors for Object Category Recognition*).
@@ -254,7 +254,7 @@ them into a single color descriptor. ::
 
 BriefDescriptorExtractor
 ------------------------
-.. cpp:class:: BriefDescriptorExtractor
+.. ocv:class:: BriefDescriptorExtractor
 
 Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
 Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,

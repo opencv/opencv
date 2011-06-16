@@ -136,7 +136,7 @@ Random trees ::
 
 CvRTrees::train
 ---------------
-.. cpp:function:: bool CvRTrees::train(  const Mat& train_data,  int tflag,                      const Mat& responses,  const Mat& comp_idx=Mat(),                      const Mat& sample_idx=Mat(),  const Mat& var_type=Mat(),                      const Mat& missing_mask=Mat(),                      CvRTParams params=CvRTParams() )
+.. ocv:function:: bool CvRTrees::train(  const Mat& train_data,  int tflag,                      const Mat& responses,  const Mat& comp_idx=Mat(),                      const Mat& sample_idx=Mat(),  const Mat& var_type=Mat(),                      const Mat& missing_mask=Mat(),                      CvRTParams params=CvRTParams() )
 
     Trains the Random Tree model.
 
@@ -149,7 +149,7 @@ The method ``CvRTrees::train`` is very similar to the first form of ``CvDTree::t
 
 CvRTrees::predict
 -----------------
-.. cpp:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
+.. ocv:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
 
     Predicts the output for an input sample.
 
@@ -161,7 +161,7 @@ The input parameters of the prediction method are the same as in ``CvDTree::pred
 
 CvRTrees::get_var_importance
 ----------------------------
-.. cpp:function:: const Mat& CvRTrees::get_var_importance() const
+.. ocv:function:: const Mat& CvRTrees::get_var_importance() const
 
     Retrieves the variable importance array.
 
@@ -173,7 +173,7 @@ The method returns the variable importance vector, computed at the training stag
 
 CvRTrees::get_proximity
 -----------------------
-.. cpp:function:: float CvRTrees::get_proximity(  const Mat& sample_1,  const Mat& sample_2 ) const
+.. ocv:function:: float CvRTrees::get_proximity(  const Mat& sample_1,  const Mat& sample_2 ) const
 
     Retrieves the proximity measure between two training samples.
 

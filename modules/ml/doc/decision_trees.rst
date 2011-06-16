@@ -371,9 +371,9 @@ Decision tree ::
 
 CvDTree::train
 --------------
-.. cpp:function:: bool CvDTree::train(  const Mat& _train_data,  int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),  const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
+.. ocv:function:: bool CvDTree::train(  const Mat& _train_data,  int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),  const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
-.. cpp:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const Mat& _subsample_idx )
+.. ocv:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const Mat& _subsample_idx )
 
     Trains a decision tree.
 
@@ -391,7 +391,7 @@ There are two ``train`` methods in ``CvDTree`` :
 
 CvDTree::predict
 ----------------
-.. cpp:function:: CvDTreeNode* CvDTree::predict(  const Mat& _sample,  const Mat& _missing_data_mask=Mat(),                                 bool raw_mode=false ) const
+.. ocv:function:: CvDTreeNode* CvDTree::predict(  const Mat& _sample,  const Mat& _missing_data_mask=Mat(),                                 bool raw_mode=false ) const
 
     Returns the leaf node of a decision tree corresponding to the input vector.
 

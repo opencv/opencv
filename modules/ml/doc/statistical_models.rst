@@ -46,7 +46,7 @@ In this declaration, some methods are commented off. These are methods for which
 
 CvStatModel::CvStatModel
 ------------------------
-.. cpp:function:: CvStatModel::CvStatModel()
+.. ocv:function:: CvStatModel::CvStatModel()
 
     Serves as a default constructor.
 
@@ -58,7 +58,7 @@ Each statistical model class in ML has a default constructor without parameters.
 
 CvStatModel::CvStatModel(...)
 -----------------------------
-.. cpp:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
+.. ocv:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
 
     Serves as a training constructor.
 
@@ -70,7 +70,7 @@ Most ML classes provide a single-step constructor and train constructors. This c
 
 CvStatModel::~CvStatModel
 -------------------------
-.. cpp:function:: CvStatModel::~CvStatModel()
+.. ocv:function:: CvStatModel::~CvStatModel()
 
     Serves as a virtual destructor.
 
@@ -93,7 +93,7 @@ Normally, the destructor of each derived class does nothing. But in this instanc
 
 CvStatModel::clear
 ------------------
-.. cpp:function:: void CvStatModel::clear()
+.. ocv:function:: void CvStatModel::clear()
 
     Deallocates memory and resets the model state.
 
@@ -105,7 +105,7 @@ The method ``clear`` does the same job as the destructor: it deallocates all the
 
 CvStatModel::save
 -----------------
-.. cpp:function:: void CvStatModel::save( const char* filename, const char* name=0 )
+.. ocv:function:: void CvStatModel::save( const char* filename, const char* name=0 )
 
     Saves the model to a file.
 
@@ -117,7 +117,7 @@ The method ``save`` saves the complete model state to the specified XML or YAML 
 
 CvStatModel::load
 -----------------
-.. cpp:function:: void CvStatModel::load( const char* filename, const char* name=0 )
+.. ocv:function:: void CvStatModel::load( const char* filename, const char* name=0 )
 
     Loads the model from a file.
 
@@ -130,7 +130,7 @@ The method ``load`` loads the complete model state with the specified name (or d
 
 CvStatModel::write
 ------------------
-.. cpp:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
+.. ocv:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
 
     Writes the model to the file storage.
 
@@ -142,7 +142,7 @@ The method ``write`` stores the complete model state in the file storage with th
 
 CvStatModel::read
 -----------------
-.. cpp:function:: void CvStatMode::read( CvFileStorage* storage, CvFileNode* node )
+.. ocv:function:: void CvStatMode::read( CvFileStorage* storage, CvFileNode* node )
 
     Reads the model from the file storage.
 
@@ -157,7 +157,7 @@ The previous model state is cleared by ``clear()`` .
 
 CvStatModel::train
 ------------------
-.. cpp:function:: bool CvStatMode::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
+.. ocv:function:: bool CvStatMode::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
 
     Trains the model.
 
@@ -189,7 +189,7 @@ Usually, the previous model state is cleared by ``clear()`` before running the t
 
 CvStatModel::predict
 --------------------
-.. cpp:function:: float CvStatMode::predict( const Mat& sample[, <prediction_params>] ) const
+.. ocv:function:: float CvStatMode::predict( const Mat& sample[, <prediction_params>] ) const
 
     Predicts the response for a sample.
 

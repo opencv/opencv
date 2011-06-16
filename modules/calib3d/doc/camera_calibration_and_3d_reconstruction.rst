@@ -106,7 +106,7 @@ The functions below use the above model to do the following:
 calibrateCamera
 ---------------
 
-.. cpp:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArray rvecs, OutputArray tvecs, int flags=0 )
+.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArray rvecs, OutputArray tvecs, int flags=0 )
 
     Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
@@ -186,7 +186,7 @@ See Also:
 
 calibrationMatrixValues
 -----------------------
-.. cpp:function:: void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize, double apertureWidth, double apertureHeight, double& fovx, double& fovy, double& focalLength, Point2d& principalPoint, double& aspectRatio )
+.. ocv:function:: void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize, double apertureWidth, double apertureHeight, double& fovx, double& fovy, double& focalLength, Point2d& principalPoint, double& aspectRatio )
 
     Computes useful camera characteristics from the camera matrix.
 
@@ -215,7 +215,7 @@ The function computes various useful camera characteristics from the previously 
 composeRT
 -------------
 
-.. cpp:function:: void composeRT( InputArray rvec1, InputArray tvec1, InputArray rvec2, InputArray tvec2, OutputArray rvec3, OutputArray tvec3, OutputArray dr3dr1=noArray(), OutputArray dr3dt1=noArray(), OutputArray dr3dr2=noArray(), OutputArray dr3dt2=noArray(), OutputArray dt3dr1=noArray(), OutputArray dt3dt1=noArray(), OutputArray dt3dr2=noArray(), OutputArray dt3dt2=noArray() )
+.. ocv:function:: void composeRT( InputArray rvec1, InputArray tvec1, InputArray rvec2, InputArray tvec2, OutputArray rvec3, OutputArray tvec3, OutputArray dr3dr1=noArray(), OutputArray dr3dt1=noArray(), OutputArray dr3dr2=noArray(), OutputArray dr3dt2=noArray(), OutputArray dt3dr1=noArray(), OutputArray dt3dt1=noArray(), OutputArray dt3dr2=noArray(), OutputArray dt3dt2=noArray() )
 
     Combines two rotation-and-shift transformations.
 
@@ -249,7 +249,7 @@ The functions are used inside :ref:`stereoCalibrate` but can also be used in you
 
 computeCorrespondEpilines
 -----------------------------
-.. cpp:function:: void computeCorrespondEpilines( InputArray points, int whichImage, InputArray F, OutputArray lines )
+.. ocv:function:: void computeCorrespondEpilines( InputArray points, int whichImage, InputArray F, OutputArray lines )
 
     For points in an image of a stereo pair, computes the corresponding epilines in the other image.
 
@@ -291,7 +291,7 @@ Line coefficients are defined up to a scale. They are normalized so that
 convertPointsToHomogeneous
 ------------------------
 
-.. cpp:function:: void convertPointsToHomogeneous( InputArray src, OutputArray dst )
+.. ocv:function:: void convertPointsToHomogeneous( InputArray src, OutputArray dst )
 
     Converts points from Euclidean to homogeneous space.
 
@@ -306,7 +306,7 @@ The function converts points from Euclidean to homogeneous space by appending 1'
 convertPointsFromHomogeneous
 ------------------------
 
-.. cpp:function:: void convertPointsFromHomogeneous( InputArray src, OutputArray dst )
+.. ocv:function:: void convertPointsFromHomogeneous( InputArray src, OutputArray dst )
 
     Converts points from homogeneous to Euclidean space.
 
@@ -321,7 +321,7 @@ The function converts points homogeneous to Euclidean space using perspective pr
 convertPointsHomogeneous
 ------------------------
 
-.. cpp:function:: void convertPointsHomogeneous( InputArray src, OutputArray dst )
+.. ocv:function:: void convertPointsHomogeneous( InputArray src, OutputArray dst )
 
     Converts points to/from homogeneous coordinates.
 
@@ -329,7 +329,7 @@ convertPointsHomogeneous
 
     :param dst: Output vector of 2D, 3D or 4D points.
 
-The function converts 2D or 3D points from/to homogeneous coordinates by calling either :cpp:func:`convertPointsToHomogeneous` or :cpp:func:`convertPointsFromHomogeneous`. The function is obsolete; use one of the previous two instead.
+The function converts 2D or 3D points from/to homogeneous coordinates by calling either :ocv:func:`convertPointsToHomogeneous` or :ocv:func:`convertPointsFromHomogeneous`. The function is obsolete; use one of the previous two instead.
 
 .. index:: decomposeProjectionMatrix
 
@@ -337,7 +337,7 @@ The function converts 2D or 3D points from/to homogeneous coordinates by calling
 
 decomposeProjectionMatrix
 -----------------------------
-.. cpp:function:: void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix, OutputArray rotMatrix, OutputArray transVect, OutputArray rotMatrixX=noArray(), OutputArray rotMatrixY=noArray(), OutputArray rotMatrixZ=noArray(), OutputArray eulerAngles=noArray() )
+.. ocv:function:: void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix, OutputArray rotMatrix, OutputArray transVect, OutputArray rotMatrixX=noArray(), OutputArray rotMatrixY=noArray(), OutputArray rotMatrixZ=noArray(), OutputArray eulerAngles=noArray() )
 
     Decomposes a projection matrix into a rotation matrix and a camera matrix.
 
@@ -368,7 +368,7 @@ The function is based on
 
 drawChessboardCorners
 -------------------------
-.. cpp:function:: void drawChessboardCorners( InputOutputArray image, Size patternSize, InputArray corners, bool patternWasFound )
+.. ocv:function:: void drawChessboardCorners( InputOutputArray image, Size patternSize, InputArray corners, bool patternWasFound )
 
     Renders the detected chessboard corners.
 
@@ -378,7 +378,7 @@ drawChessboardCorners
 
     :param corners: Array of detected corners, the output of ``findChessboardCorners``.
 
-    :param patternWasFound: Parameter indicating whether the complete board was found or not. The return value of :cpp:func:`findChessboardCorners` should be passed here.
+    :param patternWasFound: Parameter indicating whether the complete board was found or not. The return value of :ocv:func:`findChessboardCorners` should be passed here.
 
 The function draws individual chessboard corners detected either as red circles if the board was not found, or as colored corners connected with lines if the board was found.
 
@@ -386,7 +386,7 @@ The function draws individual chessboard corners detected either as red circles 
 
 findChessboardCorners
 -------------------------
-.. cpp:function:: bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners, int flags=CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE )
+.. ocv:function:: bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners, int flags=CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE )
 
     Finds the positions of internal corners of the chessboard.
 
@@ -444,7 +444,7 @@ The function requires white space (like a square-thick border, the wider the bet
 
 findCirclesGrid
 -------------------
-.. cpp:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
+.. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
 
     Finds the centers in the grid of circles.
 
@@ -489,7 +489,7 @@ The function requires white space (like a square-thick border, the wider the bet
 
 solvePnP
 ------------
-.. cpp:function:: void solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false )
+.. ocv:function:: void solvePnP( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false )
 
     Finds an object pose from 3D-2D point correspondences.
 
@@ -515,7 +515,7 @@ The function estimates the object pose given a set of object points, their corre
 solvePnPRansac
 ------------------
 
-.. cpp:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray()  )
+.. ocv:function:: void solvePnPRansac( InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess=false, int iterationsCount = 100, float reprojectionError = 8.0, int minInliersCount = 100, OutputArray inliers = noArray()  )
 
     Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
@@ -548,7 +548,7 @@ The function estimates an object pose given a set of object points, their corres
 
 findFundamentalMat
 ----------------------
-.. cpp:function:: Mat findFundamentalMat( InputArray points1, InputArray points2, int method=FM_RANSAC, double param1=3., double param2=0.99, OutputArray mask=noArray() )
+.. ocv:function:: Mat findFundamentalMat( InputArray points1, InputArray points2, int method=FM_RANSAC, double param1=3., double param2=0.99, OutputArray mask=noArray() )
 
     Calculates a fundamental matrix from the corresponding points in two images.
 
@@ -608,7 +608,7 @@ corresponding to the specified points. It can also be passed to
 
 findHomography
 ------------------
-.. cpp:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
+.. ocv:function:: Mat findHomography( InputArray srcPoints, InputArray dstPoints, int method=0, double ransacReprojThreshold=3, OutputArray mask=noArray() )
 
     Finds a perspective transformation between two planes.
 
@@ -687,7 +687,7 @@ See Also:
 
 estimateAffine3D
 --------------------
-.. cpp:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
+.. ocv:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
 
     Computes an optimal affine transformation between two 3D point sets.
 
@@ -710,7 +710,7 @@ The function estimates an optimal 3D affine transformation between two 3D point 
 
 getOptimalNewCameraMatrix
 -----------------------------
-.. cpp:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0)
+.. ocv:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0)
 
     Returns the new camera matrix based on the free scaling parameter.
 
@@ -737,7 +737,7 @@ the optimal new camera matrix based on the free scaling parameter. By varying  t
 
 initCameraMatrix2D
 ----------------------
-.. cpp:function:: Mat initCameraMatrix2D( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, double aspectRatio=1.)
+.. ocv:function:: Mat initCameraMatrix2D( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, double aspectRatio=1.)
 
     Finds an initial camera matrix from 3D-2D point correspondences.
 
@@ -757,7 +757,7 @@ Currently, the function only supports planar calibration patterns, which are pat
 matMulDeriv
 ---------------
 
-.. cpp:function:: void matMulDeriv( InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB )
+.. ocv:function:: void matMulDeriv( InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB )
 
     Computes partial derivatives of the matrix product for each multiplied matrix.
 
@@ -778,7 +778,7 @@ The function computes partial derivatives of the elements of the matrix product
 projectPoints
 -----------------
 
-.. cpp:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray jacobian=noArray(), double aspectRatio=0 )
+.. ocv:function:: void projectPoints( InputArray objectPoints, InputArray rvec, InputArray tvec, InputArray cameraMatrix, InputArray distCoeffs, OutputArray imagePoints, OutputArray jacobian=noArray(), double aspectRatio=0 )
 
     Projects 3D points to an image plane.
 
@@ -820,7 +820,7 @@ By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identi
 reprojectImageTo3D
 ----------------------
 
-.. cpp:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int depth=-1 )
+.. ocv:function:: void reprojectImageTo3D( InputArray disparity, OutputArray _3dImage, InputArray Q, bool handleMissingValues=false, int depth=-1 )
 
     Reprojects a disparity image to 3D space.
 
@@ -850,7 +850,7 @@ The matrix ``Q`` can be an arbitrary
 RQDecomp3x3
 ---------------
 
-.. cpp:function:: Vec3d RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q, OutputArray Qx=noArray(), OutputArray Qy=noArray(), OutputArray Qz=noArray() )
+.. ocv:function:: Vec3d RQDecomp3x3( InputArray M, OutputArray R, OutputArray Q, OutputArray Qx=noArray(), OutputArray Qy=noArray(), OutputArray Qz=noArray() )
 
     Computes an RQ decomposition of 3x3 matrices.
 
@@ -877,7 +877,7 @@ that could be used in OpenGL.
 
 Rodrigues
 -------------
-.. cpp:function:: void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray())
+.. ocv:function:: void Rodrigues(InputArray src, OutputArray dst, OutputArray jacobian=noArray())
 
     Converts a rotation matrix to a rotation vector or vice versa.
 
@@ -944,7 +944,7 @@ The class is a C++ wrapper for the associated functions. In particular, ``Stereo
 StereoBM::operator ()
 -----------------------
 
-.. cpp:function:: void StereoBM::operator()(InputArray left, InputArray right, OutputArray disp, int disptype=CV_16S )
+.. ocv:function:: void StereoBM::operator()(InputArray left, InputArray right, OutputArray disp, int disptype=CV_16S )
 
     Computes disparity using the BM algorithm for a rectified stereo pair.
 
@@ -1008,9 +1008,9 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
 StereoSGBM::StereoSGBM
 --------------------------
-.. cpp:function:: StereoSGBM::StereoSGBM()
+.. ocv:function:: StereoSGBM::StereoSGBM()
 
-.. cpp:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
+.. ocv:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
 
     The constructor.
 
@@ -1041,7 +1041,7 @@ The first constructor initializes ``StereoSGBM`` with all the default parameters
 StereoSGBM::operator ()
 -----------------------
 
-.. cpp:function:: void StereoSGBM::operator()(InputArray left, InputArray right, OutputArray disp)
+.. ocv:function:: void StereoSGBM::operator()(InputArray left, InputArray right, OutputArray disp)
 
     Computes disparity using the SGBM algorithm for a rectified stereo pair.
 
@@ -1061,7 +1061,7 @@ The method is not constant, so you should not use the same ``StereoSGBM`` instan
 
 stereoCalibrate
 -------------------
-.. cpp:function:: double stereoCalibrate( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1, InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2, Size imageSize, OutputArray R, OutputArray T, OutputArray E, OutputArray F, TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
+.. ocv:function:: double stereoCalibrate( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1, InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2, Size imageSize, OutputArray R, OutputArray T, OutputArray E, OutputArray F, TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
 
     Calibrates the stereo camera.
 
@@ -1148,7 +1148,7 @@ Similarly to :ref:`calibrateCamera` , the function minimizes the total re-projec
 stereoRectify
 -----------------
 
-.. cpp:function:: void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1, InputArray cameraMatrix2, InputArray distCoeffs2, Size imageSize, InputArray R, InputArray T, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags=CALIB_ZERO_DISPARITY, double alpha, Size newImageSize=Size(), Rect* roi1=0, Rect* roi2=0 )
+.. ocv:function:: void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1, InputArray cameraMatrix2, InputArray distCoeffs2, Size imageSize, InputArray R, InputArray T, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags=CALIB_ZERO_DISPARITY, double alpha, Size newImageSize=Size(), Rect* roi1=0, Rect* roi2=0 )
 
     Computes rectification transforms for each head of a calibrated stereo camera.
 
@@ -1225,7 +1225,7 @@ See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizont
 
 stereoRectifyUncalibrated
 -----------------------------
-.. cpp:function:: bool stereoRectifyUncalibrated( InputArray points1, InputArray points2, InputArray F, Size imgSize, OutputArray H1, OutputArray H2, double threshold=5 )
+.. ocv:function:: bool stereoRectifyUncalibrated( InputArray points1, InputArray points2, InputArray F, Size imgSize, OutputArray H1, OutputArray H2, double threshold=5 )
 
     Computes a rectification transform for an uncalibrated stereo camera.
 

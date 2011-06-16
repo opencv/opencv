@@ -34,7 +34,7 @@ Base class for computing feature values in cascade classifiers ::
 
 FeatureEvaluator::read
 --------------------------
-.. cpp:function:: bool FeatureEvaluator::read(const FileNode& node)
+.. ocv:function:: bool FeatureEvaluator::read(const FileNode& node)
 
     Reads parameters of features from the ``FileStorage`` node.
 
@@ -44,7 +44,7 @@ FeatureEvaluator::read
 
 FeatureEvaluator::clone
 ---------------------------
-.. cpp:function:: Ptr<FeatureEvaluator> FeatureEvaluator::clone() const
+.. ocv:function:: Ptr<FeatureEvaluator> FeatureEvaluator::clone() const
 
     Returns a full copy of the feature evaluator.
 
@@ -52,7 +52,7 @@ FeatureEvaluator::clone
 
 FeatureEvaluator::getFeatureType
 ------------------------------------
-.. cpp:function:: int FeatureEvaluator::getFeatureType() const
+.. ocv:function:: int FeatureEvaluator::getFeatureType() const
 
     Returns the feature type (``HAAR`` or ``LBP`` for now).
 
@@ -60,7 +60,7 @@ FeatureEvaluator::getFeatureType
 
 FeatureEvaluator::setImage
 ------------------------------
-.. cpp:function:: bool FeatureEvaluator::setImage(const Mat& img, Size origWinSize)
+.. ocv:function:: bool FeatureEvaluator::setImage(const Mat& img, Size origWinSize)
 
     Assigns an image to feature evaluator.
 
@@ -74,7 +74,7 @@ The method assigns an image, where the features will be computed, to the feature
 
 FeatureEvaluator::setWindow
 -------------------------------
-.. cpp:function:: bool FeatureEvaluator::setWindow(Point p)
+.. ocv:function:: bool FeatureEvaluator::setWindow(Point p)
 
     Assigns a window in the current image where the features will be computed.
 
@@ -84,7 +84,7 @@ FeatureEvaluator::setWindow
 
 FeatureEvaluator::calcOrd
 -----------------------------
-.. cpp:function:: double FeatureEvaluator::calcOrd(int featureIdx) const
+.. ocv:function:: double FeatureEvaluator::calcOrd(int featureIdx) const
 
     Computes the value of an ordered (numerical) feature.
 
@@ -96,7 +96,7 @@ The function returns the computed value of an ordered feature.
 
 FeatureEvaluator::calcCat
 -----------------------------
-.. cpp:function:: int FeatureEvaluator::calcCat(int featureIdx) const
+.. ocv:function:: int FeatureEvaluator::calcCat(int featureIdx) const
 
     Computes the value of a categorical feature.
 
@@ -108,7 +108,7 @@ The function returns the computed label of a categorical feature, that is, the v
 
 FeatureEvaluator::create
 ----------------------------
-.. cpp:function:: static Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
+.. ocv:function:: static Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
 
     Constructs the feature evaluator.
 
@@ -195,7 +195,7 @@ The cascade classifier class for object detection ::
 
 CascadeClassifier::CascadeClassifier
 ----------------------------------------
-.. cpp:function:: CascadeClassifier::CascadeClassifier(const string& filename)
+.. ocv:function:: CascadeClassifier::CascadeClassifier(const string& filename)
 
     Loads a classifier from a file.
 
@@ -205,7 +205,7 @@ CascadeClassifier::CascadeClassifier
 
 CascadeClassifier::empty
 ----------------------------
-.. cpp:function:: bool CascadeClassifier::empty() const
+.. ocv:function:: bool CascadeClassifier::empty() const
 
     Checks if the classifier has been loaded or not.
 
@@ -213,7 +213,7 @@ CascadeClassifier::empty
 
 CascadeClassifier::load
 ---------------------------
-.. cpp:function:: bool CascadeClassifier::load(const string& filename)
+.. ocv:function:: bool CascadeClassifier::load(const string& filename)
 
     Loads a classifier from a file. The previous content is destroyed.
 
@@ -223,7 +223,7 @@ CascadeClassifier::load
 
 CascadeClassifier::read
 ---------------------------
-.. cpp:function:: bool CascadeClassifier::read(const FileNode& node)
+.. ocv:function:: bool CascadeClassifier::read(const FileNode& node)
 
     Reads a classifier from a FileStorage node. The file may contain a new cascade classifier (trained traincascade application) only.
 
@@ -231,7 +231,7 @@ CascadeClassifier::read
 
 CascadeClassifier::detectMultiScale
 ---------------------------------------
-.. cpp:function:: void CascadeClassifier::detectMultiScale( const Mat& image,                            vector<Rect>& objects,                            double scaleFactor=1.1,                            int minNeighbors=3, int flags=0,                            Size minSize=Size())
+.. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image,                            vector<Rect>& objects,                            double scaleFactor=1.1,                            int minNeighbors=3, int flags=0,                            Size minSize=Size())
 
     Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
@@ -251,7 +251,7 @@ CascadeClassifier::detectMultiScale
 
 CascadeClassifier::setImage
 -------------------------------
-.. cpp:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
+.. ocv:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
 
     Sets an image for detection, which is called by ``detectMultiScale`` at each image level.
 
@@ -263,7 +263,7 @@ CascadeClassifier::setImage
 
 CascadeClassifier::runAt
 ----------------------------
-.. cpp:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt )
+.. ocv:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt )
 
     Runs the detector at the specified point. Use ``setImage`` to set the image that the detector is working with.
 
@@ -278,7 +278,7 @@ Otherwise, it returns negated index of the stage at which the candidate has been
 
 groupRectangles
 -------------------
-.. cpp:function:: void groupRectangles(vector<Rect>& rectList,                     int groupThreshold, double eps=0.2)
+.. ocv:function:: void groupRectangles(vector<Rect>& rectList,                     int groupThreshold, double eps=0.2)
 
     Groups the object candidate rectangles.
 

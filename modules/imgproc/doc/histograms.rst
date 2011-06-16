@@ -7,9 +7,9 @@ Histograms
 
 calcHist
 ------------
-.. cpp:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform=true,               bool accumulate=false )
+.. ocv:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform=true,               bool accumulate=false )
 
-.. cpp:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               SparseMat& hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
+.. ocv:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               SparseMat& hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
 
     Calculates a histogram of a set of arrays.
 
@@ -99,9 +99,9 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
 
 calcBackProject
 -------------------
-.. cpp:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, InputArray hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
+.. ocv:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, InputArray hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
-.. cpp:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, const SparseMat& hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
+.. ocv:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, const SparseMat& hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
     Calculates the back projection of a histogram.
 
@@ -115,7 +115,7 @@ calcBackProject
 
     :param backProject: Destination back projection aray that is a single-channel array of the same size and depth as  ``arrays[0]`` .
 	
-    :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :cpp:func:`calcHist` .
+    :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :ocv:func:`calcHist` .
 	
     :param scale: Optional scale factor for the output back projection.
 
@@ -133,19 +133,19 @@ The functions ``calcBackProject`` calculate the back project of the histogram. T
     Find connected components in the resulting picture and choose, for example, the largest component.
 
 This is an approximate algorithm of the
-:cpp:func:`CAMShift` color object tracker.
+:ocv:func:`CAMShift` color object tracker.
 
 See Also:
-:cpp:func:`calcHist`
+:ocv:func:`calcHist`
 
 .. index:: compareHist
 
 compareHist
 -----------
 
-.. cpp:function:: double compareHist( InputArray H1, InputArray H2, int method )
+.. ocv:function:: double compareHist( InputArray H1, InputArray H2, int method )
 
-.. cpp:function:: double compareHist( const SparseMat& H1,  const SparseMat& H2, int method )
+.. ocv:function:: double compareHist( const SparseMat& H1,  const SparseMat& H2, int method )
 
     Compares two histograms.
 
@@ -201,14 +201,14 @@ The function returns
 :math:`d(H_1, H_2)` .
 
 While the function works well with 1-, 2-, 3-dimensional dense histograms, it may not be suitable for high-dimensional sparse histograms. In such histograms,  because of aliasing and sampling problems, the coordinates of non-zero histogram bins can slightly shift. To compare such histograms or more general sparse configurations of weighted points, consider using the
-:cpp:func:`EMD` function.
+:ocv:func:`EMD` function.
 
 
 .. index:: EMD
 
 EMD
 ------
-.. cpp:function:: float EMD( InputArray signature1, InputArray signature2, int distType, InputArray cost=noArray(), float* lowerBound=0, OutputArray flow=noArray() )
+.. ocv:function:: float EMD( InputArray signature1, InputArray signature2, int distType, InputArray cost=noArray(), float* lowerBound=0, OutputArray flow=noArray() )
 
     Computes the "minimal work" distance between two weighted point configurations.
 
@@ -232,7 +232,7 @@ The function computes the earth mover distance and/or a lower boundary of the di
 
 equalizeHist
 ----------------
-.. cpp:function:: void equalizeHist( InputArray src, OutputArray dst )
+.. ocv:function:: void equalizeHist( InputArray src, OutputArray dst )
 
     Equalizes the histogram of a grayscale image.
 
