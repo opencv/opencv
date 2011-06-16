@@ -46,7 +46,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pthread.h>
 #include <android/log.h>
-#include "camera_activity.h"
+#include <camera_activity.hpp>
 
 #if !defined(LOGD) && !defined(LOGI) && !defined(LOGE)
 #define LOG_TAG "CV_CAP"

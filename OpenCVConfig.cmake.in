@@ -58,6 +58,9 @@ if(NOT ANDROID)
 else()
     #libraries order is very important because linker from Android NDK is one-pass linker
     set(OPENCV_LIB_COMPONENTS opencv_contrib opencv_calib3d opencv_objdetect opencv_features2d opencv_imgproc opencv_video  opencv_highgui opencv_ml opencv_legacy  opencv_flann opencv_core )
+    IF (NOT @BUILD_SHARED_LIBS@)
+        set(OPENCV_LIB_COMPONENTS opencv_androidcamera ${OPENCV_LIB_COMPONENTS})
+    ENDIF()
 endif()
 
 SET(OpenCV_LIBS "")
@@ -114,6 +117,23 @@ IF (NOT @BUILD_SHARED_LIBS@)
 
 ENDIF(NOT @BUILD_SHARED_LIBS@)
 
+# ======================================================
+#  Android camera helper macro
+# ======================================================
+IF (ANDROID)
+  macro( COPY_NATIVE_CAMERA_LIBS target )
+    get_target_property(target_location ${target} LOCATION)
+    get_filename_component(target_location "${target_location}" PATH)
+    file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
+    foreach(wrapper ${camera_wrappers})
+        ADD_CUSTOM_COMMAND(
+          TARGET ${target}
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
+          )
+    endforeach()
+  endmacro()
+ENDIF(ANDROID)
 
 # ======================================================
 #  Version variables:

@@ -211,9 +211,11 @@ if(APPLE)
     endif()
 endif(APPLE)
 
-if(HAVE_ANDROID_NATIVE_CAMERA)
+if(ANDROID)
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
   set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
+  set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} opencv_androidcamera)
 endif()
 
 if(COMMAND get_module_external_sources)
@@ -331,6 +333,10 @@ if(NOT ZLIB_FOUND)
     add_dependencies(${the_target} zlib)
 endif()
 
+if(ANDROID)
+    add_dependencies(${the_target} opencv_androidcamera)
+endif()
+
 #message(STATUS "GRFMT: ${GRFMT_LIBS}")
 #message(STATUS "HIGHGUI_LIBS: ${HIGHGUI_LIBRARIES}")
 #message(STATUS "OPENCV_LIBS: ${OPENCV_LINKER_LIBS}")
@@ -371,6 +377,9 @@ if(BUILD_TESTS)
                       "${CMAKE_CURRENT_BINARY_DIR}")
 
   set(test_deps opencv_ts opencv_highgui opencv_imgproc)
+  if(ANDROID)
+    set(test_deps ${test_deps} opencv_androidcamera)
+  endif()
 
   foreach(d ${test_deps})
       if(${d} MATCHES "opencv_")

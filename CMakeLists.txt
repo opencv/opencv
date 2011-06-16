@@ -553,19 +553,6 @@ if(WITH_JASPER AND NOT JASPER_FOUND)
     set(JASPER_LIBRARIES libjasper)
 endif()
 
-if (ANDROID)
-  #android camera support
-  set(NativeCamera_DIR "${OpenCV_SOURCE_DIR}/android/native-camera/build")
-  FIND_PACKAGE(NativeCamera QUIET)
-  if(NativeCamera_FOUND)
-    set(HAVE_ANDROID_NATIVE_CAMERA TRUE)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${NativeCamera_LIBS})
-  else()
-    set(HAVE_ANDROID_NATIVE_CAMERA FALSE)
-    message(STATUS "Could NOT find NativeCamera for Android")
-  endif()
-endif()
-
 #message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
 
 if(WITH_OPENEXR)
@@ -667,7 +654,7 @@ endif()
 ############################### TBB ################################
 
 if (WITH_TBB)
-    if (UNIX AND NOT APPLE)
+    if (UNIX AND NOT APPLE AND NOT ANDROID)
         PKG_CHECK_MODULES(TBB tbb)
         message(STATUS "TBB detected: ${TBBLIB_FOUND}")
 
@@ -682,7 +669,7 @@ if (WITH_TBB)
     endif()    
     
     if (NOT HAVE_TBB)
-        set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB")
+        set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB" "${CMAKE_INSTALL_PREFIX}/include")
         
         find_path(TBB_INCLUDE_DIR "tbb/tbb.h" PATHS ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
         if (TBB_INCLUDE_DIR)
@@ -692,6 +679,9 @@ if (WITH_TBB)
             endif()
             if (APPLE)
                 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} libtbb.dylib)
+            elseif (ANDROID)
+                set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbbmalloc tbb)
+                add_definitions(-DTBB_USE_GCC_BUILTINS)
             elseif (UNIX)
                 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
             elseif (WIN32)
@@ -1170,10 +1160,6 @@ set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
 
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
 
-if( HAVE_ANDROID_NATIVE_CAMERA )
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE ${CMAKE_LIB_DIRS_CONFIGCMAKE} ${NativeCamera_LIB_DIR})
-endif()
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
 # --------------------------------------------------------------------------------------------
@@ -1467,7 +1453,7 @@ message(STATUS "    V4L/V4L2:                   ${HAVE_CAMV4L}/${HAVE_CAMV4L2}")
 endif()
 message(STATUS "    Xine:                       ${HAVE_XINE}")
 if(ANDROID)
-message(STATUS "    AndroidNativeCamera:        ${HAVE_ANDROID_NATIVE_CAMERA}")
+message(STATUS "    AndroidNativeCamera:        build")
 endif()
 endif() #if(UNIX AND NOT APPLE)
 
