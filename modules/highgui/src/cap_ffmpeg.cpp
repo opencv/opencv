@@ -1307,6 +1307,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 		CV_Error(CV_StsBadArg, "codec not found");
     }
 
+	c->bit_rate_tolerance = c->bit_rate;
+
     /* open the codec */
     if ( (err=avcodec_open(c, codec)) < 0) {
 		char errtext[256];
