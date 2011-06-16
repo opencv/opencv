@@ -16,13 +16,13 @@
 #     You need native port of make to build your project.
 #     For example this one: http://gnuwin32.sourceforge.net/packages/make.htm
 #
-#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r5b
+#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r5c
 #   $ cmake.exe -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=C:\<absolute path to make>\make.exe ..
 #   $ C:\<absolute path to make>\make.exe
 #
 #
 #  Toolchain options (can be set as cmake parameters: -D<option_name>=<value>):
-#    ANDROID_NDK=/opt/android-ndk-r5b - path to NDK root.
+#    ANDROID_NDK=/opt/android-ndk-r5c - path to NDK root.
 #      Can be set as environment variable.
 #
 #    ANDROID_NDK_TOOLCHAIN_ROOT=/opt/android-toolchain - path to standalone toolchain.
@@ -90,6 +90,10 @@
 #     [+] ANDROID_API_LEVEL is detected by toolchain if not specified
 #     [~] added guard to prevent changing of output directories on first cmake pass
 #     [~] toolchain exits with error if ARM_TARGET is not recognized
+#   - modified June 2011 Andrey Kamaev andrey.kamaev@itseez.com
+#     [~] default NDK path is updated for version r5c 
+#     [+] variable CMAKE_SYSTEM_PROCESSOR is set based on ARM_TARGET
+#     [~] toolchain install directory is added to linker paths
 # ----------------------------------------------------------------------------
 
 # this one is important
@@ -97,7 +101,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk-r5b )
+set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk-r5c )
 set( ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH /opt/android-toolchain )
 set( TOOL_OS_SUFFIX "" )
 
