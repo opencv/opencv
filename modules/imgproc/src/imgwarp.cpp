@@ -159,7 +159,7 @@ static const void* initInterTab2D( int method, bool fixpt )
 
     if( !inittab[method] )
     {
-        AutoBuffer<float> _tab(INTER_TAB_SIZE);
+        AutoBuffer<float> _tab(8*INTER_TAB_SIZE);
         int i, j, k1, k2;
         initInterTab1D(method, _tab, INTER_TAB_SIZE);
         for( i = 0; i < INTER_TAB_SIZE; i++ )
