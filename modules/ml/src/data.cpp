@@ -44,7 +44,7 @@
 #define MISS_VAL    FLT_MAX 
 #define CV_VAR_MISS    0
 
-CvTrainTestSplit :: CvTrainTestSplit()
+CvTrainTestSplit::CvTrainTestSplit()
 {
     train_sample_part_mode = CV_COUNT;
     train_sample_part.count = -1;
@@ -52,7 +52,7 @@ CvTrainTestSplit :: CvTrainTestSplit()
     mix = false;
 }
 
-CvTrainTestSplit :: CvTrainTestSplit( int _train_sample_count, bool _mix )
+CvTrainTestSplit::CvTrainTestSplit( int _train_sample_count, bool _mix )
 {
     train_sample_part_mode = CV_COUNT;
     train_sample_part.count = _train_sample_count;
@@ -60,7 +60,7 @@ CvTrainTestSplit :: CvTrainTestSplit( int _train_sample_count, bool _mix )
     mix = _mix;
 }
     
-CvTrainTestSplit :: CvTrainTestSplit( float _train_sample_portion, bool _mix )
+CvTrainTestSplit::CvTrainTestSplit( float _train_sample_portion, bool _mix )
 {
     train_sample_part_mode = CV_PORTION;
     train_sample_part.portion = _train_sample_portion;
@@ -70,7 +70,7 @@ CvTrainTestSplit :: CvTrainTestSplit( float _train_sample_portion, bool _mix )
 
 ////////////////
 
-CvMLData :: CvMLData()
+CvMLData::CvMLData()
 {
     values = missing = var_types = var_idx_mask = response_out = var_idx_out = var_types_out = 0;
     train_sample_idx = test_sample_idx = 0;
@@ -87,20 +87,20 @@ CvMLData :: CvMLData()
     rng = &cv::theRNG();
 }
 
-CvMLData :: ~CvMLData()
+CvMLData::~CvMLData()
 {
     clear();
     delete class_map;
 }
 
-void CvMLData :: free_train_test_idx()
+void CvMLData::free_train_test_idx()
 {
     cvReleaseMat( &train_sample_idx );
     cvReleaseMat( &test_sample_idx );
     sample_idx = 0;
 }
 
-void CvMLData :: clear()
+void CvMLData::clear()
 {
     if ( !class_map->empty() )
         class_map->clear();
@@ -244,7 +244,17 @@ int CvMLData::read_csv(const char* filename)
     return 0;
 }
 
-void CvMLData :: str_to_flt_elem( const char* token, float& flt_elem, int& type)
+const CvMat* CvMLData::get_values()
+{
+    return values;
+}
+
+const CvMat* CvMLData::get_missing()
+{
+    return missing;
+}
+
+void CvMLData::str_to_flt_elem( const char* token, float& flt_elem, int& type)
 {
     
     char* stopstring = NULL;
@@ -273,9 +283,9 @@ void CvMLData :: str_to_flt_elem( const char* token, float& flt_elem, int& type)
     }
 }
 
-void CvMLData :: set_delimiter(char ch)
+void CvMLData::set_delimiter(char ch)
 {
-    CV_FUNCNAME( "CvMLData :: set_delimited" );
+    CV_FUNCNAME( "CvMLData::set_delimited" );
     __BEGIN__;
 
     if (ch == miss_ch /*|| ch == flt_separator*/)
@@ -286,9 +296,14 @@ void CvMLData :: set_delimiter(char ch)
     __END__;
 }
 
-void CvMLData :: set_miss_ch(char ch)
+char CvMLData::get_delimiter()
 {
-    CV_FUNCNAME( "CvMLData :: set_miss_ch" );
+    return delimiter;
+}
+
+void CvMLData::set_miss_ch(char ch)
+{
+    CV_FUNCNAME( "CvMLData::set_miss_ch" );
     __BEGIN__;
 
     if (ch == delimiter/* || ch == flt_separator*/)
@@ -299,9 +314,14 @@ void CvMLData :: set_miss_ch(char ch)
     __END__;
 }
 
-void CvMLData :: set_response_idx( int idx )
+char CvMLData::get_miss_ch()
 {
-    CV_FUNCNAME( "CvMLData :: set_response_idx" );
+    return miss_ch;
+}
+
+void CvMLData::set_response_idx( int idx )
+{
+    CV_FUNCNAME( "CvMLData::set_response_idx" );
     __BEGIN__;
 
     if ( !values )
@@ -319,9 +339,14 @@ void CvMLData :: set_response_idx( int idx )
     __END__;    
 }
 
-void CvMLData :: change_var_type( int var_idx, int type )
+int CvMLData::get_response_idx()
 {
-    CV_FUNCNAME( "CvMLData :: change_var_type" );
+    return response_idx;
+}
+
+void CvMLData::change_var_type( int var_idx, int type )
+{
+    CV_FUNCNAME( "CvMLData::change_var_type" );
     __BEGIN__;
     
     int var_count = 0;
@@ -347,9 +372,9 @@ void CvMLData :: change_var_type( int var_idx, int type )
     return;
 }
 
-void CvMLData :: set_var_types( const char* str )
+void CvMLData::set_var_types( const char* str )
 {
-    CV_FUNCNAME( "CvMLData :: set_var_types" );
+    CV_FUNCNAME( "CvMLData::set_var_types" );
     __BEGIN__;
 
     const char* ord = 0, *cat = 0;
@@ -472,9 +497,9 @@ void CvMLData :: set_var_types( const char* str )
      __END__;
 }
 
-const CvMat* CvMLData :: get_var_types()
+const CvMat* CvMLData::get_var_types()
 {
-    CV_FUNCNAME( "CvMLData :: get_var_types" );
+    CV_FUNCNAME( "CvMLData::get_var_types" );
     __BEGIN__;
 
     uchar *var_types_out_ptr = 0;
@@ -511,9 +536,14 @@ const CvMat* CvMLData :: get_var_types()
     return var_types_out;
 }
 
-const CvMat* CvMLData :: get_responses()
+int CvMLData::get_var_type( int var_idx )
 {
-    CV_FUNCNAME( "CvMLData :: get_responses_ptr" );
+    return var_types->data.ptr[var_idx];
+}
+
+const CvMat* CvMLData::get_responses()
+{
+    CV_FUNCNAME( "CvMLData::get_responses_ptr" );
     __BEGIN__;
 
     int var_count = 0;
@@ -535,9 +565,9 @@ const CvMat* CvMLData :: get_responses()
     return response_out;
 }
 
-void CvMLData :: set_train_test_split( const CvTrainTestSplit * spl)
+void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
 {
-    CV_FUNCNAME( "CvMLData :: set_division" );
+    CV_FUNCNAME( "CvMLData::set_division" );
     __BEGIN__;
 
     int sample_count = 0;
@@ -597,7 +627,17 @@ void CvMLData :: set_train_test_split( const CvTrainTestSplit * spl)
     __END__;
 }
 
-void CvMLData :: mix_train_and_test_idx()
+const CvMat* CvMLData::get_train_sample_idx()
+{
+    return train_sample_idx;
+}
+
+const CvMat* CvMLData::get_test_sample_idx()
+{
+    return test_sample_idx;
+}
+
+void CvMLData::mix_train_and_test_idx()
 {
     if ( !values || !sample_idx) return;
 
@@ -614,9 +654,9 @@ void CvMLData :: mix_train_and_test_idx()
     }
 }
 
-const CvMat* CvMLData :: get_var_idx()
+const CvMat* CvMLData::get_var_idx()
 {
-     CV_FUNCNAME( "CvMLData :: get_var_idx" );
+     CV_FUNCNAME( "CvMLData::get_var_idx" );
     __BEGIN__;
 
     int avcount = 0;
@@ -654,9 +694,9 @@ const CvMat* CvMLData :: get_var_idx()
     return var_idx_out;
 }
 
-void CvMLData :: chahge_var_idx( int vi, bool state )
+void CvMLData::chahge_var_idx( int vi, bool state )
 {
-     CV_FUNCNAME( "CvMLData :: get_responses_ptr" );
+     CV_FUNCNAME( "CvMLData::get_responses_ptr" );
     __BEGIN__;
 
     int var_count = 0;

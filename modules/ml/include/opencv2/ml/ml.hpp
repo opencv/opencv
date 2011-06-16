@@ -2092,28 +2092,26 @@ public:
     // returns:
     // 0 - OK  
     // 1 - file can not be opened or is not correct
-    int read_csv(const char* filename);
+    int read_csv( const char* filename );
 
-    const CvMat* get_values(){ return values; }
-
+    const CvMat* get_values();
     const CvMat* get_responses();
-
-    const CvMat* get_missing(){ return missing; }
+    const CvMat* get_missing();
 
     void set_response_idx( int idx ); // old response become predictors, new response_idx = idx
                                       // if idx < 0 there will be no response
-    int get_response_idx() { return response_idx; }
+    int get_response_idx();
 
-    const CvMat* get_train_sample_idx() { return train_sample_idx; }
-    const CvMat* get_test_sample_idx() { return test_sample_idx; }
+    const CvMat* get_train_sample_idx();
+    const CvMat* get_test_sample_idx();
     void mix_train_and_test_idx();
-    void set_train_test_split( const CvTrainTestSplit * spl);
+    void set_train_test_split( const CvTrainTestSplit * spl );
     
     const CvMat* get_var_idx();
     void chahge_var_idx( int vi, bool state ); // state == true to set vi-variable as predictor
 
     const CvMat* get_var_types();
-    int get_var_type( int var_idx ) { return var_types->data.ptr[var_idx]; }
+    int get_var_type( int var_idx );
     // following 2 methods enable to change vars type
     // use these methods to assign CV_VAR_CATEGORICAL type for categorical variable
     // with numerical labels; in the other cases var types are correctly determined automatically
@@ -2123,10 +2121,10 @@ public:
     void change_var_type( int var_idx, int type); // type in { CV_VAR_ORDERED, CV_VAR_CATEGORICAL }    
  
     void set_delimiter( char ch );
-    char get_delimiter() { return delimiter; }
+    char get_delimiter();
 
     void set_miss_ch( char ch );
-    char get_miss_ch() { return miss_ch; }
+    char get_miss_ch();
     
 protected:
     virtual void clear();
