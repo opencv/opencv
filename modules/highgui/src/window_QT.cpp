@@ -1020,7 +1020,10 @@ void GuiReceiver::resizeWindow(QString name, int width, int height)
 	QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
 	if (w)
+	{
+		w->showNormal();
 		w->resize(width, height);
+	}
 }
 
 void GuiReceiver::enablePropertiesButtonEachWindow()
