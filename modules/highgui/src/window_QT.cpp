@@ -988,16 +988,25 @@ void GuiReceiver::destroyAllWindow()
 		//#TODO check externalQAppExists and in case it does, close windows carefully,
 		//      i.e. apply the className-check from below...
 		qApp->closeAllWindows();
-	}else{
-
-		foreach (QObject *obj, QApplication::topLevelWidgets())
+	}
+	else
+	{
+		bool isWidgetDeleted = true;
+		while(isWidgetDeleted)
 		{
-			if (obj->metaObject ()->className () == QString("CvWindow"))
+			isWidgetDeleted = false;
+			QWidgetList list = QApplication::topLevelWidgets();
+			for (int i = 0; i < list.count(); i++)
 			{
-				delete obj;
+				QObject *obj = list.at(i);
+				if (obj->metaObject ()->className () == QString("CvWindow"))
+				{
+					delete obj;
+					isWidgetDeleted = true;
+					break;
+				}
 			}
 		}
-
 	}
 
 }
