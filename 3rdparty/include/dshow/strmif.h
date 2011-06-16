@@ -8372,7 +8372,7 @@ typedef LONGLONG REFERENCE_TIME;
 #endif
 
 #ifdef MINGW_HAS_DDRAW_H
-#include <ddraw.h>
+#include <dshow/ddraw.h>
 #endif
 
   typedef enum __MIDL___MIDL_itf_strmif_0397_0002 {
