@@ -46,7 +46,7 @@
 #include <dshow/control.h>
 #include <dshow/evcode.h>
 #include <dshow/uuids.h>
-#include <errors.h>
+#include <dshow/errors.h>
 /* FIXME: #include <edevdefs.h> */
 #include <audevcod.h>
 /* FIXME: #include <dvdevcod.h> */
