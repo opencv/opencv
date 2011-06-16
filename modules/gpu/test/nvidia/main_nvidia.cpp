@@ -314,7 +314,7 @@ bool main_nvidia(const std::string& test_data_path)
     printf("Initializing data source providers\n");
     NCVTestSourceProvider<Ncv32u> testSrcRandom_32u(2010, 0, 0xFFFFFFFF, 4096, 4096);
     NCVTestSourceProvider<Ncv8u> testSrcRandom_8u(2010, 0, 255, 4096, 4096);
-    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, 0xFFFFFFFFFFFFFFFF, 4096, 4096);
+    NCVTestSourceProvider<Ncv64u> testSrcRandom_64u(2010, 0, -1, 4096, 4096);
     NCVTestSourceProvider<Ncv8u> testSrcFacesVGA_8u(path + "group_1_640x480_VGA.pgm");
     NCVTestSourceProvider<Ncv32f> testSrcRandom_32f(2010, -1.0f, 1.0f, 4096, 4096);
 

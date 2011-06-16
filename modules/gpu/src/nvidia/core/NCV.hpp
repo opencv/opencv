@@ -112,7 +112,13 @@ namespace NcvCTprep
 
 typedef               bool NcvBool;
 typedef          long long Ncv64s;
-typedef unsigned long long Ncv64u;
+
+#if defined(__APPLE__) && !defined(__CUDACC__)
+    typedef uint64_t Ncv64u;
+#else
+    typedef unsigned long long Ncv64u;
+#endif
+
 typedef                int Ncv32s;
 typedef       unsigned int Ncv32u;
 typedef              short Ncv16s;
