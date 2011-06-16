@@ -44,7 +44,7 @@
 /* FIXME: #include <amaudio.h>*/
 #endif
 #include <dshow/control.h>
-#include <evcode.h>
+#include <dshow/evcode.h>
 #include <dshow/uuids.h>
 #include <errors.h>
 /* FIXME: #include <edevdefs.h> */

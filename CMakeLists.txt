@@ -844,8 +844,14 @@ endif()
 ################## Extra HighGUI libs on Windows ###################
 
 if(WIN32)
-    set(HAVE_VIDEOINPUT 1)
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32 strmiids)
+    set(WITH_VIDEOINPUT ON CACHE BOOL "Build HighGUI with DirectShow support")
+    
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} comctl32 gdi32 ole32)
+
+    if(WITH_VIDEOINPUT)
+        set(HAVE_VIDEOINPUT 1)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} strmiids)
+    endif()
     
     if (MSVC)
         set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} vfw32)
@@ -1474,7 +1480,7 @@ message(STATUS "  Video I/O:                    QTKit")
 endif()
 endif()
 
-if(WIN32)
+if(WIN32 and HAVE_VIDEOINPUT)
 message(STATUS "")
 message(STATUS "  Video I/O:                    DirectShow")
 endif()

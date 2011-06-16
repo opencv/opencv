@@ -41,7 +41,7 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined _WIN32
+#if (defined WIN32 || defined _WIN32) && defined HAVE_VIDEOINPUT
 
 /*
    DirectShow-based Video Capturing module is based on
