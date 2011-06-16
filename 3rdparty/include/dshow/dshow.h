@@ -48,7 +48,7 @@
 #include <dshow/uuids.h>
 #include <dshow/errors.h>
 /* FIXME: #include <edevdefs.h> */
-#include <audevcod.h>
+#include <dshow/audevcod.h>
 /* FIXME: #include <dvdevcod.h> */
 
 #ifndef OATRUE
