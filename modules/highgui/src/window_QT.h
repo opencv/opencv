@@ -121,6 +121,7 @@ public:
 
 private:
 	int nb_windows;
+	bool doesExternalQAppExist;
 
 public slots:
     void createWindow( QString name, int flags = 0 );

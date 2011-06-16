@@ -442,14 +442,11 @@ CvButtonbar* icvFindButtonbarByName( const char* button_name,QBoxLayout* layout)
 
 int icvInitSystem(int *c, char** v)
 {
-	static int wasInitialized = 0;
-
-	// check initialization status
-	if( !wasInitialized)
+	//"For any GUI application using Qt, there is precisely one QApplication object"
+	if(!QApplication::instance())
 	{
 		new QApplication(*c,v);
 
-		wasInitialized = 1;
 		qDebug()<<"init done";
 
 #if defined( HAVE_QT_OPENGL )
@@ -700,6 +697,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr )
 
 GuiReceiver::GuiReceiver() : _bTimeOut(false), nb_windows(0)
 {
+	doesExternalQAppExist = (QApplication::instance() != 0);
 	icvInitSystem(&parameterSystemC, parameterSystemV);
 
 	timer = new QTimer;
@@ -714,7 +712,10 @@ void GuiReceiver::isLastWindow()
 	{
 		delete guiMainThread;//delete global_control_panel too
 		guiMainThread = NULL;
-		qApp->quit();
+		if(!doesExternalQAppExist)
+		{
+			qApp->quit();
+		}
 	}
 }
 
@@ -983,6 +984,9 @@ void GuiReceiver::destroyAllWindow()
 
 	if (multiThreads)
 	{
+		// WARNING: this could even close windows from an external parent app
+		//#TODO check externalQAppExists and in case it does, close windows carefully,
+		//      i.e. apply the className-check from below...
 		qApp->closeAllWindows();
 	}else{
 
