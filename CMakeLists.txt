@@ -1480,7 +1480,7 @@ message(STATUS "  Video I/O:                    QTKit")
 endif()
 endif()
 
-if(WIN32 and HAVE_VIDEOINPUT)
+if(WIN32 AND HAVE_VIDEOINPUT)
 message(STATUS "")
 message(STATUS "  Video I/O:                    DirectShow")
 endif()
