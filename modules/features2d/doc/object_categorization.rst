@@ -5,10 +5,6 @@ Object Categorization
 
 This section describes approaches based on local 2D features and used to categorize objects.
 
-.. index:: BOWTrainer
-
-.. _BOWTrainer:
-
 BOWTrainer
 ----------
 .. ocv:class:: BOWTrainer
@@ -36,9 +32,6 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
         ...
     };
 
-
-.. index:: BOWTrainer::add
-
 BOWTrainer::add
 -------------------
 .. ocv:function:: void BOWTrainer::add( const Mat& descriptors )
@@ -47,7 +40,6 @@ BOWTrainer::add
 
     :param descriptors: Descriptors to add to a training set. Each row of  the ``descriptors``  matrix is a descriptor.
 
-.. index:: BOWTrainer::getDescriptors
 
 BOWTrainer::getDescriptors
 ------------------------------
@@ -83,7 +75,8 @@ BOWKMeansTrainer
 ----------------
 .. ocv:class:: BOWKMeansTrainer
 
-:ref:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach ::
+:ref:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach.
+::
 
     class BOWKMeansTrainer : public BOWTrainer
     {
@@ -100,14 +93,11 @@ BOWKMeansTrainer
         ...
     };
 
+BOWKMeansTrainer::BOWKMeansTrainer
+----------------
+.. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
 
-To understand constructor parameters, see
-:ref:`kmeans` function
-arguments.
-
-.. index:: BOWImgDescriptorExtractor
-
-.. _BOWImgDescriptorExtractor:
+    To understand constructor parameters, see :ref:`kmeans` function arguments.
 
 BOWImgDescriptorExtractor
 -------------------------

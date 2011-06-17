@@ -57,7 +57,7 @@ DescriptorExtractor::compute
 
     :param image: Image.
 
-    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed.
+    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed. Somtimes new keypoints can be added, eg SIFT duplicates keypoint with several dominant orientations (for each orientation).
 
     :param descriptors: Descriptors. Row i is the descriptor for keypoint i.
 

@@ -31,6 +31,12 @@ cv::BaseRowFilter
 cv::BaseColumnFilter
 cv::Moments
 
+###################################### features2d###################################
+cv::BOWKMeansTrainer::cluster
+cv::BOWTrainer::BOWTrainer
+cv::BOWTrainer::clear
+cv::AdjusterAdapter::clone
+
 ######################################## calib3d ###################################
 CvLevMarq
 Mat cv::findFundamentalMat( InputArray points1, InputArray points2, OutputArray mask, int method=FM_RANSAC, double param1=3., double param2=0.99)

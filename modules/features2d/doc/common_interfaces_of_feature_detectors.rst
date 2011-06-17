@@ -8,10 +8,6 @@ between different algorithms solving the same problem. All objects that implemen
 inherit the
 :ref:`FeatureDetector` interface.
 
-.. index:: KeyPoint
-
-.. KeyPoint:
-
 KeyPoint
 --------
 .. ocv:class:: KeyPoint
@@ -68,11 +64,6 @@ Data structure for salient point detectors ::
 
 ..
 
-
-.. index:: FeatureDetector
-
-.. _FeatureDetector:
-
 FeatureDetector
 ---------------
 .. ocv:class:: FeatureDetector
@@ -100,9 +91,6 @@ Abstract base class for 2D image feature detectors ::
     ...
     };
 
-
-.. index:: FeatureDetector::detect
-
 FeatureDetector::detect
 ---------------------------
 .. ocv:function:: void FeatureDetector::detect( const Mat& image,                                vector<KeyPoint>& keypoints,                                 const Mat& mask=Mat() ) const
@@ -123,8 +111,6 @@ FeatureDetector::detect
 
     :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]`` .                     Each element of the ``masks``  vector must be a char matrix with non-zero values in the region of interest.
 
-.. index:: FeatureDetector::read
-
 FeatureDetector::read
 -------------------------
 .. ocv:function:: void FeatureDetector::read( const FileNode& fn )
@@ -133,8 +119,6 @@ FeatureDetector::read
 
     :param fn: File node from which the detector is read.
 
-.. index:: FeatureDetector::write
-
 FeatureDetector::write
 --------------------------
 .. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
@@ -142,8 +126,6 @@ FeatureDetector::write
     Writes a feature detector object to a file storage.
 
     :param fs: File storage where the detector is written.
-
-.. index:: FeatureDetector::create
 
 FeatureDetector::create
 ---------------------------
@@ -169,10 +151,6 @@ Also a combined format is supported: feature detector adapter name ( ``"Grid"`` 
 :ref:`PyramidAdaptedFeatureDetector` ) + feature detector name (see above),
 for example: ``"GridFAST"``, ``"PyramidSTAR"`` .
 
-.. index:: FastFeatureDetector
-
-.. _FastFeatureDetector:
-
 FastFeatureDetector
 -------------------
 .. ocv:class:: FastFeatureDetector
@@ -189,11 +167,6 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
-
-
-.. index:: GoodFeaturesToTrackDetector
-
-.. _GoodFeaturesToTrackDetector:
 
 GoodFeaturesToTrackDetector
 ---------------------------
@@ -233,11 +206,6 @@ Wrapping class for feature detection using the
         ...
     };
 
-
-.. index:: MserFeatureDetector
-
-.. _MserFeatureDetector:
-
 MserFeatureDetector
 -------------------
 .. ocv:class:: MserFeatureDetector
@@ -260,10 +228,6 @@ Wrapping class for feature detection using the
     };
 
 
-.. index:: StarFeatureDetector
-
-.. _StarFeatureDetector:
-
 StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector
@@ -282,11 +246,6 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
-
-
-.. index:: SiftFeatureDetector
-
-.. _SiftFeatureDetector:
 
 SiftFeatureDetector
 -------------------
@@ -312,11 +271,6 @@ Wrapping class for feature detection using the
         ...
     };
 
-
-.. index:: SurfFeatureDetector
-
-.. _SurfFeatureDetector:
-
 SurfFeatureDetector
 -------------------
 .. ocv:class:: SurfFeatureDetector
@@ -336,10 +290,6 @@ Wrapping class for feature detection using the
     };
 
 
-.. index:: OrbFeatureDetector
-
-.. _OrbFeatureDetector:
-
 OrbFeatureDetector
 -------------------
 .. ocv:class:: OrbFeatureDetector
@@ -356,11 +306,6 @@ Wrapping class for feature detection using the
     protected:
         ...
     };
-
-
-.. index:: SimpleBlobDetector
-
-.. _SimpleBlobDetector:
 
 SimpleBlobDetector
 -------------------
@@ -419,11 +364,6 @@ This class performs several filtrations of returned blobs. You should set ``filt
 
 Default values of parameters are tuned to extract dark circular blobs.
 
-
-.. index:: GridAdaptedFeatureDetector
-
-.. _GridAdaptedFeatureDetector:
-
 GridAdaptedFeatureDetector
 --------------------------
 .. ocv:class:: GridAdaptedFeatureDetector
@@ -449,11 +389,6 @@ Class adapting a detector to partition the source image into a grid and detect p
         ...
     };
 
-
-.. index:: PyramidAdaptedFeatureDetector
-
-.. _PyramidAdaptedFeatureDetector:
-
 PyramidAdaptedFeatureDetector
 -----------------------------
 .. ocv:class:: PyramidAdaptedFeatureDetector
@@ -472,11 +407,8 @@ Class adapting a detector to detect points over multiple levels of a Gaussian py
     };
 
 
-.. index:: DynamicAdaptedFeatureDetector
-
 DynamicAdaptedFeatureDetector
 -----------------------------
-
 .. ocv:class:: DynamicAdaptedFeatureDetector
 
 Adaptively adjusting detector that iteratively detects features until the desired number is found ::
@@ -516,10 +448,6 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
     Ptr<FeatureDetector> detector(new DynamicAdaptedFeatureDetector (100, 110, 10,
                                   new FastAdjuster(20,true)));
 
-
-
-.. index:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
-
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
 .. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
@@ -534,11 +462,8 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 
     :param max_iters: Maximum number of times to try adjusting the feature detector parameters. For :ref:`FastAdjuster` , this number can be high, but with ``Star`` or ``Surf``  many iterations can be time-comsuming.  At each iteration the detector is rerun. 
 
-.. index:: AdjusterAdapter
-
 AdjusterAdapter
 ---------------
-
 .. ocv:class:: AdjusterAdapter
 
 Class providing an interface for adjusting parameters of a feature detector. This interface is used by :ref:`DynamicAdaptedFeatureDetector` . It is a wrapper for :ref:`FeatureDetector` that enables adjusting parameters after feature detection. ::
@@ -546,10 +471,12 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
      class AdjusterAdapter: public FeatureDetector
      {
      public:
-         virtual ~AdjusterAdapter() {}
-         virtual void tooFew(int min, int n_detected) = 0;
-         virtual void tooMany(int max, int n_detected) = 0;
-         virtual bool good() const = 0;
+        virtual ~AdjusterAdapter() {}
+        virtual void tooFew(int min, int n_detected) = 0;
+        virtual void tooMany(int max, int n_detected) = 0;
+        virtual bool good() const = 0;
+        virtual Ptr<AdjusterAdapter> clone() const = 0;
+        static Ptr<AdjusterAdapter> create( const string& detectorType );
      };
 
 
@@ -557,9 +484,6 @@ See
 :ref:`FastAdjuster`,
 :ref:`StarAdjuster`,
 :ref:`SurfAdjuster` for concrete implementations.
-
-
-.. index:: AdjusterAdapter::tooFew
 
 AdjusterAdapter::tooFew
 ---------------------------
@@ -577,9 +501,6 @@ Example: ::
     {
             thresh_--;
     }
-
-
-.. index:: AdjusterAdapter::tooMany
 
 AdjusterAdapter::tooMany
 ----------------------------
@@ -599,8 +520,6 @@ Example: ::
     }
 
 
-.. index:: AdjusterAdapter::good
-
 AdjusterAdapter::good
 -------------------------
 .. ocv:function:: bool AdjusterAdapter::good() const
@@ -614,12 +533,14 @@ Example: ::
                 return (thresh_ > 1) && (thresh_ < 200);
         }
 
+AdjusterAdapter::create
+-------------------------
+.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
 
-.. index:: FastAdjuster
+    Creates adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supported ``"FAST"``, ``"STAR"`` and ``"SURF"`` only.
 
 FastAdjuster
 ------------
-
 .. ocv:class:: FastAdjuster
 
 :ref:`AdjusterAdapter` for :ref:`FastFeatureDetector`. This class decreases or increases the threshold value by 1. ::
@@ -631,11 +552,8 @@ FastAdjuster
                 ...
         };
 
-.. index:: StarAdjuster
-
 StarAdjuster
 ------------
-
 .. ocv:class:: StarAdjuster
 
 :ref:`AdjusterAdapter` for :ref:`StarFeatureDetector`. This class adjusts the ``responseThreshhold`` of ``StarFeatureDetector``.  ::
@@ -646,11 +564,8 @@ StarAdjuster
                 ...
         };
 
-.. index:: SurfAdjuster
-
 SurfAdjuster
 ------------
-
 .. ocv:class:: SurfAdjuster
 
 :ref:`AdjusterAdapter` for :ref:`SurfFeatureDetector`. This class adjusts the ``hessianThreshold`` of ``SurfFeatureDetector``. ::
@@ -660,8 +575,6 @@ SurfAdjuster
                 SurfAdjuster();
                 ...
         };
-
-.. index:: FeatureDetector
 
 FeatureDetector
 ---------------

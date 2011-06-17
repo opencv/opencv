@@ -158,9 +158,9 @@ DescriptorMatcher::train
 
 DescriptorMatcher::match
 ----------------------------
-.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                           const Mat& trainDescriptors, vector<DMatch>& matches, const Mat& mask=Mat() ) const
+.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors, const Mat& trainDescriptors, vector<DMatch>& matches, const Mat& mask=Mat() ) const
 
-.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors,                                   vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
+.. ocv:function:: void DescriptorMatcher::match( const Mat& queryDescriptors, vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
 
     Finds the best match for each descriptor from a query set.
 
