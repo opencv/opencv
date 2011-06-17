@@ -69,8 +69,6 @@ The generic function ``deallocate`` deallocates the buffer allocated with
 
 .. index:: CV_Assert
 
-.. _CV_Assert:
-
 CV_Assert
 ---------
 .. ocv:function:: CV_Assert(expr)
@@ -81,10 +79,10 @@ CV_Assert
     #define CV_DbgAssert(expr) ...
 ..
 
-    :param expr: Expression to check.
+   :param expr: Expression to check.
 
 The macros ``CV_Assert`` and ``CV_DbgAssert`` evaluate the specified expression. If it is 0, the macros raise an error (see
-:ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations, while ``CV_DbgAssert`` is only retained in the Debug configuration.
+:ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations while ``CV_DbgAssert`` is only retained in the Debug configuration.
 
 .. index:: error
 
@@ -102,7 +100,7 @@ error
 
     :param code: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   
 	
-	:param msg: Text of the error message.
+    :param msg: Text of the error message.
 
     :param args: ``printf`` -like formatted error message in parentheses.
 
@@ -117,13 +115,12 @@ The macro ``CV_Error_`` can be used to construct an error message on-fly to incl
 
 .. index:: Exception
 
-.. _Exception:
 
 Exception
 ---------
-.. c:type:: Exception
+.. ocv:class:: Exception
 
-Exception class passed to error ::
+Exception class passed to an error. ::
 
     class  Exception
     {
@@ -147,7 +144,7 @@ Exception class passed to error ::
         int line;
     };
 
-The class ``Exception`` encapsulates all or almost all the necessary information about the error happened in the program. The exception is usually constructed and thrown implicitly via ``CV_Error`` and ``CV_Error_`` macros. See
+The class ``Exception`` encapsulates all or almost all necessary information about the error happened in the program. The exception is usually constructed and thrown implicitly via ``CV_Error`` and ``CV_Error_`` macros. See
 :ocv:func:`error` .
 
 .. index:: fastMalloc
@@ -160,7 +157,7 @@ fastMalloc
 
     :param size: Allocated buffer size.
 
-The function allocates the buffer of the specified size and returns it. When the buffer size is 16 bytes or more, the returned buffer is aligned on 16 bytes.
+The function allocates the buffer of the specified size and returns it. When the buffer size is 16 bytes or more, the returned buffer is aligned to 16 bytes.
 
 .. index:: fastFree
 
@@ -199,7 +196,7 @@ getNumThreads
 
 The function returns the number of threads that is used by OpenCV.
 
-See Also:
+.. seealso::
 :ocv:func:`setNumThreads`,
 :ocv:func:`getThreadNum` 
 
@@ -213,7 +210,7 @@ getThreadNum
 
 The function returns a 0-based index of the currently executed thread. The function is only valid inside a parallel OpenMP region. When OpenCV is built without OpenMP support, the function always returns 0.
 
-See Also:
+.. seealso::
 :ocv:func:`setNumThreads`,
 :ocv:func:`getNumThreads` .
 
@@ -252,7 +249,7 @@ getCPUTickCount
 
     Returns the number of CPU ticks.
 
-The function returns the current number of CPU ticks on some architectures (such as x86, x64, PowerPC). On other platforms the function is equivalent to ``getTickCount``. It can also be used for very accurate time measurements, as well as for RNG initialization. Note that in the case of multi-CPU systems a thread, from which ``getCPUTickCount`` is called, can be suspended and resumed at another CPU with its own counter, so in theory (and practice too) the subsequent calls to the function do not necessary return the monotonously increasing values. Also, since modern CPU vary the CPU frequency depending on the load, the number of CPU clocks spent in some code can not be directly converted to time units. Therefore, ``getTickCount`` is generally a preferable solution for measuring execution time.
+The function returns the current number of CPU ticks on some architectures (such as x86, x64, PowerPC). On other platforms the function is equivalent to ``getTickCount``. It can also be used for very accurate time measurements, as well as for RNG initialization. Note that in case of multi-CPU systems a thread, from which ``getCPUTickCount`` is called, can be suspended and resumed at another CPU with its own counter. So, theoretically (and practically) the subsequent calls to the function do not necessary return the monotonously increasing values. Also, since a modern CPU varies the CPU frequency depending on the load, the number of CPU clocks spent in some code cannot be directly converted to time units. Therefore, ``getTickCount`` is generally a preferable solution for measuring execution time.
 
 .. index:: setNumThreads
 
@@ -266,7 +263,7 @@ setNumThreads
 
 The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the processing cores.
 
-See Also:
+.. seealso::
 :ocv:func:`getNumThreads`,
 :ocv:func:`getThreadNum` 
 
@@ -278,11 +275,11 @@ setUseOptimized
 
     Enables or disables the optimized code.
 
-    :param onoff: The boolean flag, specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
+    :param onoff: The boolean flag specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
 
-The function can be used to dynamically turn on and off optimized code (i.e. code that uses SSE2, AVX etc. instructions on the platforms that support it). It sets some global flag, which is further checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only safe to call the function on the very top level in your application, where you can be pretty much sure that no other OpenCV function is currently executed.
+The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX, and other instructions on the platforms that support it). It sets a global flag that is further checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only safe to call the function on the very top level in your application where you can be sure that no other OpenCV function is currently executed.
 
-By default, the optimized code is enabled (unless you disable it in CMake). The current status can be retrieved using ``useOptimized``.
+By default, the optimized code is enabled unless you disable it in CMake. The current status can be retrieved using ``useOptimized``.
 
 .. index:: useOptimized
 
@@ -290,6 +287,6 @@ useOptimized
 -----------------
 .. ocv:function:: bool useOptimized()
 
-    Returns status of the optimized code use
+    Returns the status of optimized code usage.
 
-The function returns true if the optimized code is enabled, false otherwise.
+The function returns ``true`` if the optimized code is enabled. Otherwise, it returns ``false``.
