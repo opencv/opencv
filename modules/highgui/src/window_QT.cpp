@@ -1869,18 +1869,14 @@ void CvWindow::keyPressEvent(QKeyEvent *event)
 {
 	//see http://doc.trolltech.com/4.6/qt.html#Key-enum
 	int key = event->key();
-	bool goodKey = false;
+	//bool goodKey = false;
+	bool goodKey = true;
 
-	if (key>=20 && key<=255 )
+	Qt::Key qtkey = static_cast<Qt::Key>(key);
+	char asciiCode = QTest::keyToAscii(qtkey);
+	if(asciiCode != 0)
 	{
-		key = (int)event->text().toLocal8Bit().at(0);
-		goodKey = true;
-	}
-
-	if (key == Qt::Key_Escape)
-	{
-		key = 27;
-		goodKey = true;
+		key = static_cast<int>(asciiCode);
 	}
 
 	//control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions

@@ -110,7 +110,7 @@ if (HAVE_QT)
     SET(_MOC_HEADERS src/window_QT.h )
     QT4_WRAP_CPP(_MOC_OUTFILES ${_MOC_HEADERS})
      
-    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES})
+    set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
     set(highgui_srcs ${highgui_srcs} src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES} )
 endif()
     

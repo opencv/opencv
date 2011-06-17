@@ -79,6 +79,7 @@
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QMenu>
+#include <QtTest/QTest>
 
 //start private enum
 enum {CV_MODE_NORMAL= 0, CV_MODE_OPENGL = 1};
