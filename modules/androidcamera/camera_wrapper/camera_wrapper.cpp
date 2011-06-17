@@ -6,7 +6,7 @@
 
 #include <camera/CameraHardwareInterface.h>
 #include "camera_wrapper.h"
-#include "../camera_wrapper_connector/camera_properties.h"
+#include "../include/camera_properties.h"
 #include <string>
 
 using namespace android;

@@ -16,7 +16,7 @@ SET( the_target opencv_androidcamera )
 ADD_LIBRARY( ${the_target} STATIC src/camera_activity.cpp )
 
 if (BUILD_SHARED_LIBS)
-  add_definitions(-DCVAPI_EXPORTS) 		
+  add_definitions(-DCVAPI_EXPORTS) 
 endif()
 
 TARGET_LINK_LIBRARIES( ${the_target} ${LIBRARY_DEPS} )
@@ -37,16 +37,18 @@ IF (NOT BUILD_SHARED_LIBS)
     )
 ENDIF()
 
-file(GLOB camera_wrappers "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib/libnative_camera_r*.so")
+if (NOT BUILD_ANDROID_CAMERA_WRAPPER)
+  file(GLOB camera_wrappers "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib/libnative_camera_r*.so")
 
-foreach(wrapper ${camera_wrappers})
-  ADD_CUSTOM_COMMAND(
-      TARGET ${the_target}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${LIBRARY_OUTPUT_PATH}"
-  )
-  get_filename_component(wrapper_name "${wrapper}" NAME)
-  install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
-        DESTINATION lib
-        COMPONENT main)
-endforeach()
+  foreach(wrapper ${camera_wrappers})
+    ADD_CUSTOM_COMMAND(
+        TARGET ${the_target}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${LIBRARY_OUTPUT_PATH}"
+    )
+    get_filename_component(wrapper_name "${wrapper}" NAME)
+    install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
+          DESTINATION lib
+          COMPONENT main)
+  endforeach()
+endif()

@@ -863,6 +863,21 @@ if(WIN32)
 endif()
 
 
+############## Android source tree for native camera ###############
+if(ANDROID)
+    SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH 
+"Path to Android source tree.
+Set this variable to path to your Android sources to compile
+libnative_camera_rx.x.x.so for your Android")
+    SET(BUILD_ANDROID_CAMERA_WRAPPER OFF)
+    if (ANDROID_SOURCE_TREE)
+        FILE(STRINGS "${ANDROID_SOURCE_TREE}/development/sdk/platform_source.properties" ANDROID_VERSION REGEX "Platform\\.Version=[0-9]+\\.[0-9]+\\.[0-9]+" )
+        string(REGEX REPLACE "Platform\\.Version=([0-9]+\\.[0-9]+\\.[0-9]+)" "\\1" ANDROID_VERSION "${ANDROID_VERSION}")
+        if(NOT "${ANDROID_VERSION}" STREQUAL "")
+            SET(BUILD_ANDROID_CAMERA_WRAPPER ON)
+        endif()
+    endif()
+endif()
 
 ################## Reference Manual ##################
 set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Reference Manual")
@@ -1460,7 +1475,11 @@ message(STATUS "    V4L/V4L2:                   ${HAVE_CAMV4L}/${HAVE_CAMV4L2}")
 endif()
 message(STATUS "    Xine:                       ${HAVE_XINE}")
 if(ANDROID)
-message(STATUS "    AndroidNativeCamera:        build")
+if(BUILD_ANDROID_CAMERA_WRAPPER)
+message(STATUS "    AndroidNativeCamera:        build for Android ${ANDROID_VERSION}")
+else()
+message(STATUS "    AndroidNativeCamera:        use prebuilt libraries")
+endif(BUILD_ANDROID_CAMERA_WRAPPER)
 endif()
 endif() #if(UNIX AND NOT APPLE)
 
