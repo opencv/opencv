@@ -1,7 +1,0 @@
-black_coffee_cup
-#blue_bowl
-#blue_cup
-#nvidia_cup
-#rose_cup
-#white_bowl
-
