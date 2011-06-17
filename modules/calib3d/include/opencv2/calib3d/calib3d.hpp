@@ -562,7 +562,7 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      Size imageSize,
                                      CV_IN_OUT InputOutputArray cameraMatrix,
                                      CV_IN_OUT InputOutputArray distCoeffs,
-                                     OutputArray rvecs, OutputArray tvecs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags=0 );
 
 //! computes several useful camera characteristics from the camera matrix, camera frame resolution and the physical sensor size.

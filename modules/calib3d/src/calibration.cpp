@@ -3351,7 +3351,7 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
 double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                            OutputArray _rvecs, OutputArray _tvecs, int flags )
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags )
 {
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();

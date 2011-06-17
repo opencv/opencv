@@ -51,7 +51,8 @@ if __name__ == '__main__':
     camera_matrix = np.zeros((3, 3))
     dist_coefs = np.zeros(4)
     img_n = len(img_points)
-    rvecs = [np.zeros(3) for i in xrange(img_n)]
-    tvecs = [np.zeros(3) for i in xrange(img_n)]
-    rms = cv2.calibrateCamera(obj_points, img_points, (w, h), camera_matrix, dist_coefs) #, rvecs, tvecs)
-    print rms
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), camera_matrix, dist_coefs)
+    print "RMS:", rms
+    print "camera matrix: ", camera_matrix
+    print "distortion coefficients: ", dist_coefs
+
