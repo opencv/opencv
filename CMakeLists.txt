@@ -561,6 +561,12 @@ endif()
 
 set(BUILD_NEW_PYTHON_SUPPORT ON CACHE BOOL "Build with Python support")
 
+if (WIN32)
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	    set(BUILD_NEW_PYTHON_SUPPORT OFF)
+	endif()
+endif()
+
 if(BUILD_NEW_PYTHON_SUPPORT)
     find_package(PythonInterp)
     find_package(PythonLibs)
