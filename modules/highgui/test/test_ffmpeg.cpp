@@ -53,13 +53,13 @@ class CV_FFmpegWriteBigImageTest : public cvtest::BaseTest
 		{
 			try
 			{
-				ts->printf(ts->LOG, "start  reading bit image\n");
+                ts->printf(cvtest::TS::LOG, "start  reading bit image\n");
 				Mat img = imread(string(ts->get_data_path()) + "readwrite/read.png");
-				ts->printf(ts->LOG, "finish reading bit image\n");
+                ts->printf(cvtest::TS::LOG, "finish reading bit image\n");
 				if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-				ts->printf(ts->LOG, "start  writing bit image\n");
+                ts->printf(cvtest::TS::LOG, "start  writing bit image\n");
 				imwrite(string(ts->get_data_path()) + "readwrite/write.png", img);
-				ts->printf(ts->LOG, "finish writing bit image\n");
+                ts->printf(cvtest::TS::LOG, "finish writing bit image\n");
 			}
 			catch(...)
 			{
