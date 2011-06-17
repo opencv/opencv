@@ -1965,7 +1965,7 @@ public:
     virtual bool empty() const;
 
 protected:
-	virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     RTreeClassifier classifier_;
     static const int BORDER_SIZE = 16;

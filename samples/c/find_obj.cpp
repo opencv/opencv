@@ -16,14 +16,13 @@
 using namespace std;
 void help()
 {
-	printf(
-			"This program demonstrated the use of the SURF Detector and Descriptor using\n"
-			"either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
-			"on planar objects.\n"
-			"Call:\n"
-			"./find_obj [<object_filename default box.png> <scene_filename default box_in_scene.png>]\n\n"
-			);
-
+    printf(
+        "This program demonstrated the use of the SURF Detector and Descriptor using\n"
+        "either FLANN (fast approx nearst neighbor classification) or brute force matching\n"
+        "on planar objects.\n"
+        "Usage:\n"
+        "./find_obj <object_filename> <scene_filename>, default is box.png  and box_in_scene.png\n\n");
+    return;
 }
 
 // define whether to use approximate nearest-neighbor search
@@ -214,8 +213,19 @@ int main(int argc, char** argv)
     const char* object_filename = argc == 3 ? argv[1] : "box.png";
     const char* scene_filename = argc == 3 ? argv[2] : "box_in_scene.png";
 
-    CvMemStorage* storage = cvCreateMemStorage(0);
     help();
+
+    IplImage* object = cvLoadImage( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    IplImage* image = cvLoadImage( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
+    if( !object || !image )
+    {
+        fprintf( stderr, "Can not load %s and/or %s\n",
+            object_filename, scene_filename );
+        exit(-1);
+    }
+
+    CvMemStorage* storage = cvCreateMemStorage(0);
+
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
@@ -232,30 +242,24 @@ int main(int argc, char** argv)
         {{255,255,255}}
     };
 
-    IplImage* object = cvLoadImage( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
-    IplImage* image = cvLoadImage( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
-    if( !object || !image )
-    {
-        fprintf( stderr, "Can not load %s and/or %s\n"
-            "Usage: find_obj [<object_filename> <scene_filename>]\n",
-            object_filename, scene_filename );
-        exit(-1);
-    }
     IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
     cvCvtColor( object, object_color, CV_GRAY2BGR );
-    
-    CvSeq *objectKeypoints = 0, *objectDescriptors = 0;
-    CvSeq *imageKeypoints = 0, *imageDescriptors = 0;
+
+    CvSeq* objectKeypoints = 0, *objectDescriptors = 0;
+    CvSeq* imageKeypoints = 0, *imageDescriptors = 0;
     int i;
     CvSURFParams params = cvSURFParams(500, 1);
 
     double tt = (double)cvGetTickCount();
     cvExtractSURF( object, 0, &objectKeypoints, &objectDescriptors, storage, params );
     printf("Object Descriptors: %d\n", objectDescriptors->total);
+
     cvExtractSURF( image, 0, &imageKeypoints, &imageDescriptors, storage, params );
     printf("Image Descriptors: %d\n", imageDescriptors->total);
     tt = (double)cvGetTickCount() - tt;
+
     printf( "Extraction time = %gms\n", tt/(cvGetTickFrequency()*1000.));
+
     CvPoint src_corners[4] = {{0,0}, {object->width,0}, {object->width, object->height}, {0, object->height}};
     CvPoint dst_corners[4];
     IplImage* correspond = cvCreateImage( cvSize(image->width, object->height+image->height), 8, 1 );

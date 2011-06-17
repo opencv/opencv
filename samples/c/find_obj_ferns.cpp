@@ -12,43 +12,46 @@ using namespace cv;
 void help()
 {
     printf( "This program shows the use of the \"fern\" plannar PlanarObjectDetector point\n"
-    		"descriptor classifier"
-    		"Usage:\n"
-    		"./find_obj_ferns [<object_filename default: box.png> <scene_filename default:box_in_scene.png>]\n"
-    		"\n");
+            "descriptor classifier\n"
+            "Usage:\n"
+            "./find_obj_ferns <object_filename> <scene_filename>, default: box.png and box_in_scene.png\n\n");
+    return;
 }
+
+
 int main(int argc, char** argv)
 {
+    int i;
+
     const char* object_filename = argc > 1 ? argv[1] : "box.png";
     const char* scene_filename = argc > 2 ? argv[2] : "box_in_scene.png";
-    int i;
+
     help();
-    cvNamedWindow("Object", 1);
-    cvNamedWindow("Image", 1);
-    cvNamedWindow("Object Correspondence", 1);
-    
+
     Mat object = imread( object_filename, CV_LOAD_IMAGE_GRAYSCALE );
-    Mat image;
-    
-    double imgscale = 1;
+    Mat scene = imread( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
 
-    Mat _image = imread( scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
-    resize(_image, image, Size(), 1./imgscale, 1./imgscale, INTER_CUBIC);
-
-
-    if( !object.data || !image.data )
+    if( !object.data || !scene.data )
     {
-        fprintf( stderr, "Can not load %s and/or %s\n"
-                "Usage: find_obj_ferns [<object_filename> <scene_filename>]\n",
+        fprintf( stderr, "Can not load %s and/or %s\n",
                 object_filename, scene_filename );
         exit(-1);
     }
+
+    double imgscale = 1;
+    Mat image;
+
+    resize(scene, image, Size(), 1./imgscale, 1./imgscale, INTER_CUBIC);
+
+    cvNamedWindow("Object", 1);
+    cvNamedWindow("Image", 1);
+    cvNamedWindow("Object Correspondence", 1);
 
     Size patchSize(32, 32);
     LDetector ldetector(7, 20, 2, 2000, patchSize.width, 2);
     ldetector.setVerbose(true);
     PlanarObjectDetector detector;
-    
+
     vector<Mat> objpyr, imgpyr;
     int blurKSize = 3;
     double sigma = 0;
@@ -56,10 +59,10 @@ int main(int argc, char** argv)
     GaussianBlur(image, image, Size(blurKSize, blurKSize), sigma, sigma);
     buildPyramid(object, objpyr, ldetector.nOctaves-1);
     buildPyramid(image, imgpyr, ldetector.nOctaves-1);
-    
+
     vector<KeyPoint> objKeypoints, imgKeypoints;
-	PatchGenerator gen(0,256,5,true,0.8,1.2,-CV_PI/2,CV_PI/2,-CV_PI/2,CV_PI/2);
-    
+    PatchGenerator gen(0,256,5,true,0.8,1.2,-CV_PI/2,CV_PI/2,-CV_PI/2,CV_PI/2);
+
     string model_filename = format("%s_model.xml.gz", object_filename);
     printf("Trying to load %s ...\n", model_filename.c_str());
     FileStorage fs(model_filename, FileStorage::READ);
@@ -76,7 +79,7 @@ int main(int argc, char** argv)
         ldetector.getMostStable2D(object, objKeypoints, 100, gen);
         printf("Done.\nStep 2. Training ferns-based planar object detector ...\n");
         detector.setVerbose(true);
-    
+
         detector.train(objpyr, objKeypoints, patchSize.width, 100, 11, 10000, ldetector, gen);
         printf("Done.\nStep 3. Saving the model to %s ...\n", model_filename.c_str());
         if( fs.open(model_filename, FileStorage::WRITE) )
@@ -84,7 +87,7 @@ int main(int argc, char** argv)
     }
     printf("Now find the keypoints in the image, try recognize them and compute the homography matrix\n");
     fs.release();
-        
+
     vector<Point2f> dst_corners;
     Mat correspond( object.rows + image.rows, std::max(object.cols, image.cols), CV_8UC3);
     correspond = Scalar(0.);
@@ -92,20 +95,20 @@ int main(int argc, char** argv)
     cvtColor(object, part, CV_GRAY2BGR);
     part = Mat(correspond, Rect(0, object.rows, image.cols, image.rows));
     cvtColor(image, part, CV_GRAY2BGR);
- 
+
     vector<int> pairs;
     Mat H;
-    
+
     double t = (double)getTickCount();
     objKeypoints = detector.getModelPoints();
     ldetector(imgpyr, imgKeypoints, 300);
-    
+
     std::cout << "Object keypoints: " << objKeypoints.size() << "\n";
     std::cout << "Image keypoints: " << imgKeypoints.size() << "\n";
     bool found = detector(imgpyr, imgKeypoints, H, dst_corners, &pairs);
     t = (double)getTickCount() - t;
     printf("%gms\n", t*1000/getTickFrequency());
-    
+
     if( found )
     {
         for( i = 0; i < 4; i++ )
@@ -116,14 +119,14 @@ int main(int argc, char** argv)
                  Point(r2.x, r2.y+object.rows), Scalar(0,0,255) );
         }
     }
-    
+
     for( i = 0; i < (int)pairs.size(); i += 2 )
     {
         line( correspond, objKeypoints[pairs[i]].pt,
              imgKeypoints[pairs[i+1]].pt + Point2f(0,(float)object.rows),
              Scalar(0,255,0) );
     }
-    
+
     imshow( "Object Correspondence", correspond );
     Mat objectColor;
     cvtColor(object, objectColor, CV_GRAY2BGR);
@@ -139,10 +142,12 @@ int main(int argc, char** argv)
         circle( imageColor, imgKeypoints[i].pt, 2, Scalar(0,0,255), -1 );
         circle( imageColor, imgKeypoints[i].pt, (1 << imgKeypoints[i].octave)*15, Scalar(0,255,0), 1 );
     }
+
     imwrite("correspond.png", correspond );
     imshow( "Object", objectColor );
     imshow( "Image", imageColor );
-    
+
     waitKey(0);
+
     return 0;
 }

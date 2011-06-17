@@ -376,13 +376,13 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
         channelKeypoints[ci].insert( channelKeypoints[ci].begin(), keypoints.begin(), keypoints.end() );
         // Use class_id member to get indices into initial keypoints vector
         for( size_t ki = 0; ki < channelKeypoints[ci].size(); ki++ )
-            channelKeypoints[ci][ki].class_id = ki;
+            channelKeypoints[ci][ki].class_id = (int)ki;
 
         descriptorExtractor->compute( opponentChannels[ci], channelKeypoints[ci], channelDescriptors[ci] );
         idxs[ci].resize( channelKeypoints[ci].size() );
         for( size_t ki = 0; ki < channelKeypoints[ci].size(); ki++ )
         {
-            idxs[ci][ki] = ki;
+            idxs[ci][ki] = (int)ki;
         }
         std::sort( idxs[ci].begin(), idxs[ci].end(), KP_LessThan(channelKeypoints[ci]) );
     }

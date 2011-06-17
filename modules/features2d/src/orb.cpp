@@ -127,7 +127,7 @@ HarrisResponse::HarrisResponse(const cv::Mat& image, double k) :
   dX_offsets_.resize(7 * 9);
   dY_offsets_.resize(7 * 9);
   std::vector<int>::iterator dX_offsets = dX_offsets_.begin(), dY_offsets = dY_offsets_.begin();
-  unsigned int image_step = image.step1();
+  unsigned int image_step = (unsigned int)image.step1();
   for (size_t y = 0; y <= 6 * image_step; y += image_step)
   {
     int dX_offset = y + 2, dY_offset = y + 2 * image_step;

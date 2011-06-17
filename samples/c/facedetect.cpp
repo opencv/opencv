@@ -20,7 +20,7 @@ void help()
             "see facedetect.cmd for one call:\n"
             "./facedetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --nested-cascade=\"../../data/haarcascades/haarcascade_eye.xml\" --scale=1.3 \n"
             "Hit any key to quit.\n"
-            "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+            "Using OpenCV version " << CV_VERSION << "\n" << endl;
 }
 
 void detectAndDraw( Mat& img,
@@ -49,7 +49,7 @@ int main( int argc, const char** argv )
 
     for( int i = 1; i < argc; i++ )
     {
-    	cout << "Processing " << i << " " <<  argv[i] << endl;
+        cout << "Processing " << i << " " <<  argv[i] << endl;
         if( cascadeOpt.compare( 0, cascadeOptLen, argv[i], cascadeOptLen ) == 0 )
         {
             cascadeName.assign( argv[i] + cascadeOptLen );
@@ -111,7 +111,7 @@ int main( int argc, const char** argv )
 
     if( capture )
     {
-    	cout << "In capture ..." << endl;
+        cout << "In capture ..." << endl;
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
@@ -130,12 +130,13 @@ int main( int argc, const char** argv )
         }
 
         waitKey(0);
+
 _cleanup_:
         cvReleaseCapture( &capture );
     }
     else
     {
-    	cout << "In image read" << endl;
+        cout << "In image read" << endl;
         if( !image.empty() )
         {
             detectAndDraw( image, cascade, nestedCascade, scale );
@@ -239,6 +240,6 @@ void detectAndDraw( Mat& img,
             radius = cvRound((nr->width + nr->height)*0.25*scale);
             circle( img, center, radius, color, 3, 8, 0 );
         }
-    }  
-    cv::imshow( "result", img );    
+    }
+    cv::imshow( "result", img );
 }

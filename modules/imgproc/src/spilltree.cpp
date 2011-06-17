@@ -93,7 +93,7 @@ icvFarthestNode( CvSpillTreeNode* node,
     }
   return result;
 }
-   
+
 // clone a new tree node
 static inline CvSpillTreeNode*
 icvCloneSpillTreeNode( CvSpillTreeNode* node )

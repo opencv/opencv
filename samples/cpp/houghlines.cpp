@@ -8,30 +8,31 @@ using namespace std;
 
 void help()
 {
-	cout << "\nThis program demonstrates line finding with the Hough transform.\n"
-			"Call:\n"
-			"./houghlines [image_len -- Default is pic1.png\n" << endl;
+    cout << "\nThis program demonstrates line finding with the Hough transform.\n"
+            "Usage:\n"
+            "./houghlines <image_name>, Default is pic1.png\n" << endl;
 }
 
 int main(int argc, char** argv)
 {
     const char* filename = argc >= 2 ? argv[1] : "pic1.png";
-    
+
     Mat src = imread(filename, 0);
     if(src.empty())
     {
+        help();
         cout << "can not open " << filename << endl;
-        cout << "Usage: houghlines <image_name>" << endl;
+        return -1;
     }
-    help();
+
     Mat dst, cdst;
     Canny(src, dst, 50, 200, 3);
     cvtColor(dst, cdst, CV_GRAY2BGR);
-    
+
 #if 0
     vector<Vec2f> lines;
     HoughLines(dst, lines, 1, CV_PI/180, 100, 0, 0 );
-    
+
     for( size_t i = 0; i < lines.size(); i++ )
     {
         float rho = lines[i][0], theta = lines[i][1];
@@ -57,6 +58,7 @@ int main(int argc, char** argv)
     imshow("detected lines", cdst);
 
     waitKey();
+
     return 0;
 }
 
