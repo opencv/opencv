@@ -6,13 +6,13 @@ Drawing Functions
 Drawing functions work with matrices/images of arbitrary depth.
 The boundaries of the shapes can be rendered with antialiasing (implemented only for 8-bit images for now).
 All the functions include the parameter ``color`` that uses an RGB value (that may be constructed
-with ``CV_RGB`` or the  :ref:`Scalar`  constructor
+with ``CV_RGB`` or the  :ocv:class:`Scalar`  constructor
 ) for color
 images and brightness for grayscale images. For color images, the channel ordering
 is normally *Blue, Green, Red*.
 This is what :ocv:func:`imshow`, :ocv:func:`imread`, and :ocv:func:`imwrite` expect.
 So, if you form a color using the
-:ref:`Scalar` constructor, it should look like:
+``Scalar`` constructor, it should look like:
 
 .. math::
 
@@ -24,9 +24,7 @@ If you are using your own image rendering and I/O functions, you can use any cha
 If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also, many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means that the coordinates can be passed as fixed-point numbers encoded as integers. The number of fractional bits is specified by the ``shift`` parameter and the real point coordinates are calculated as
 :math:`\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})` . This feature is especially effective when rendering antialiased shapes.
 
-**Note**:
-
-The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
+.. note:: The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
 
 .. index:: circle
 
@@ -44,11 +42,11 @@ circle
 
     :param color: Circle color.
 
-    :param thickness: Thickness of the circle outline if positive. Negative thickness means that a filled circle is to be drawn.
+    :param thickness: Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
 
-    :param lineType: Type of the circle boundary. See  :ocv:func:`line`  description.
+    :param lineType: Type of the circle boundary. See the  :ocv:func:`line`  description.
 
-    :param shift: Number of fractional bits in the center's coordinates and in the radius value.
+    :param shift: Number of fractional bits in the coordinates of the center and in the radius value.
 
 The function ``circle`` draws a simple or filled circle with a given center and radius.
 
@@ -64,14 +62,14 @@ clipLine
 
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
 	
-	:param imgSize: Image rectangle.
+    :param imgSize: Image rectangle.?? why do you list the same para twice??
 
-    :param pt1: The first line point.
+    :param pt1: First line point.
 
-    :param pt2: The second line point.
+    :param pt2: Second line point.
 
-The functions ``clipLine`` calculate a part of the line segment which is entirely within the specified rectangle.
-They return ``false`` if the line segment is completely outside the rectangle. Otherwise, it returns ``true`` .
+The functions ``clipLine`` calculate a part of the line segment that is entirely within the specified rectangle.
+They return ``false`` if the line segment is completely outside the rectangle. Otherwise, they return ``true`` .
 
 .. index:: ellipse
 
@@ -95,21 +93,21 @@ ellipse
 
     :param endAngle: Ending angle of the elliptic arc in degrees.
 
-    :param box: Alternative ellipse representation via  :ref:`RotatedRect` . This means that the function draws an ellipse inscribed in the rotated rectangle.
+    :param box: Alternative ellipse representation via  :ocv:class:`RotatedRect`. This means that the function draws an ellipse inscribed in the rotated rectangle.
 
     :param color: Ellipse color.
 
     :param thickness: Thickness of the ellipse arc outline, if positive. Otherwise, this indicates that a filled ellipse sector is to be drawn.
 
-    :param lineType: Type of the ellipse boundary. See  :ocv:func:`line`  description.
+    :param lineType: Type of the ellipse boundary. See the  :ocv:func:`line`  description.
 
-    :param shift: Number of fractional bits in the center's coordinates and axes' values.
+    :param shift: Number of fractional bits in the coordinates of the center and values of axes.
 
 The functions ``ellipse`` with less parameters draw an ellipse outline, a filled ellipse, an elliptic arc, or a filled ellipse sector.
 A piecewise-linear curve is used to approximate the elliptic arc boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
 :ocv:func:`ellipse2Poly` and then render it with
 :ocv:func:`polylines` or fill it with
-:ocv:func:`fillPoly` . If you use the first variant of the function and want to draw the whole ellipse, not an arc, pass ``startAngle=0`` and ``endAngle=360`` . The picture below explains the meaning of the parameters.
+:ocv:func:`fillPoly` . If you use the first variant of the function and want to draw the whole ellipse, not an arc, pass ``startAngle=0`` and ``endAngle=360`` . The figure below explains the meaning of the parameters.
 
 **Figure 1. Parameters of Elliptic Arc**
 
@@ -125,11 +123,11 @@ ellipse2Poly
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See  :ocv:func:`ellipse`  for details.   
+    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.   
 	
-	:param angle: Rotation angle of the ellipse in degrees. See  :ocv:func:`ellipse`  for details.   
+    :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.   
 	
-	:param startAngle: Starting angle of the elliptic arc in degrees.
+    :param startAngle: Starting angle of the elliptic arc in degrees.
 
     :param endAngle: Ending angle of the elliptic arc in degrees.
 
@@ -156,7 +154,7 @@ fillConvexPoly
 
     :param color: Polygon color.
 
-    :param lineType: Type of the polygon boundaries. See  :ocv:func:`line`  description.
+    :param lineType: Type of the polygon boundaries. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -182,7 +180,7 @@ fillPoly
 
     :param color: Polygon color.
 
-    :param lineType: Type of the polygon boundaries. See  :ocv:func:`line`  description.
+    :param lineType: Type of the polygon boundaries. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -199,13 +197,13 @@ getTextSize
 
     :param text: Input text string.
 
-    :param fontFace: Font to use. See  :ocv:func:`putText` for details.    
+    :param fontFace: Font to use. See the  :ocv:func:`putText` for details.    
 	
-	:param fontScale: Font scale. See  :ocv:func:`putText`  for details.   
+    :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.   
 	
-	:param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
+    :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
 	
-	:param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+    :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
 
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
@@ -250,9 +248,9 @@ line
 
     :param img: Image.
 
-    :param pt1: The first point of the line segment.
+    :param pt1: First point of the line segment.
 
-    :param pt2: The second point of the line segment.
+    :param pt2: Second point of the line segment.
 
     :param color: Line color.
 
@@ -260,11 +258,11 @@ line
 
     :param lineType: Type of the line:
 
-            * **8** (or omitted) 8-connected line.
+            * **8** (or omitted) - 8-connected line.
 
-            * **4** 4-connected line.
+            * **4** - 4-connected line.
 
-            * **CV_AA** antialiased line.
+            * **CV_AA** - antialiased line.
 
     :param shift: Number of fractional bits in the point coordinates.
 
@@ -279,7 +277,7 @@ LineIterator
 ------------
 .. c:type:: LineIterator
 
-Class for iterating pixels on a raster line ::
+Class for iterating pixels on a raster line. ::
 
     class LineIterator
     {
@@ -305,7 +303,7 @@ Class for iterating pixels on a raster line ::
         int minusStep, plusStep;
     };
 
-The class ``LineIterator`` is used to get each pixel of a raster line. It can be treated as versatile implementation of the Bresenham algorithm where you can stop at each pixel and do some extra processing, for example, grab pixel values along the line, or draw a line with an effect (for example, with XOR operation).
+The class ``LineIterator`` is used to get each pixel of a raster line. It can be treated as versatile implementation of the Bresenham algorithm where you can stop at each pixel and do some extra processing, for example, grab pixel values along the line or draw a line with an effect (for example, with XOR operation).
 
 The number of pixels along the line is stored in ``LineIterator::count`` . ::
 
@@ -329,17 +327,17 @@ rectangle
 
     :param img: Image.
 
-    :param pt1: One of the rectangle's vertices.
+    :param pt1: Vertex of the rectangle.
 
-    :param pt2: Opposite to  ``pt1``  rectangle vertex.
+    :param pt2: Vertex of the recangle opposite to  ``pt1`` .
     
-    :param r: Alternative specification of the drawn rectangle
+    :param r: Alternative specification of the drawn rectangle.
 
     :param color: Rectangle color or brightness (grayscale image).
 
     :param thickness: Thickness of lines that make up the rectangle. Negative values, like  ``CV_FILLED`` , mean that the function has to draw a filled rectangle.
 
-    :param lineType: Type of the line. See  :ocv:func:`line`  description.
+    :param lineType: Type of the line. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the point coordinates.
 
@@ -367,7 +365,7 @@ polylines
 
     :param thickness: Thickness of the polyline edges.
 
-    :param lineType: Type of the line segments. See  :ocv:func:`line`  description.
+    :param lineType: Type of the line segments. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
@@ -387,7 +385,7 @@ putText
 
     :param org: Bottom-left corner of the text string in the image.
 
-    :param fontFace: Font type. One of  ``FONT_HERSHEY_SIMPLEX`` ,  ``FONT_HERSHEY_PLAIN`` , ``FONT_HERSHEY_DUPLEX`` ,  ``FONT_HERSHEY_COMPLEX`` ,  ``FONT_HERSHEY_TRIPLEX`` , ``FONT_HERSHEY_COMPLEX_SMALL`` ,  ``FONT_HERSHEY_SCRIPT_SIMPLEX`` , or  ``FONT_HERSHEY_SCRIPT_COMPLEX`` ,
+    :param fontFace: Font type. One of  ``FONT_HERSHEY_SIMPLEX``,  ``FONT_HERSHEY_PLAIN``, ``FONT_HERSHEY_DUPLEX``,  ``FONT_HERSHEY_COMPLEX``,  ``FONT_HERSHEY_TRIPLEX``, ``FONT_HERSHEY_COMPLEX_SMALL``,  ``FONT_HERSHEY_SCRIPT_SIMPLEX``, or  ``FONT_HERSHEY_SCRIPT_COMPLEX``,
            where each of the font ID's can be combined with  ``FONT_HERSHEY_ITALIC``  to get the slanted letters.
 
     :param fontScale: Font scale factor that is multiplied by the font-specific base size.
@@ -396,7 +394,7 @@ putText
 
     :param thickness: Thickness of the lines used to draw a text.
 
-    :param lineType: Line type. See  ``line``  for details.
+    :param lineType: Line type. See the  ``line``  for details.
 
     :param bottomLeftOrigin: When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner.
 
