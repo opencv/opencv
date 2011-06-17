@@ -1066,9 +1066,10 @@ if(MSVC)
 endif()
 
 # Extra link libs if the user selects building static libs:
-IF(NOT BUILD_SHARED_LIBS)
+if(NOT BUILD_SHARED_LIBS)
     if(CMAKE_COMPILER_IS_GNUCXX)
         set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
+        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -fPIC")
     endif()
 endif()
 
