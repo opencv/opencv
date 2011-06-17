@@ -45,4 +45,8 @@ foreach(wrapper ${camera_wrappers})
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${LIBRARY_OUTPUT_PATH}"
   )
+  get_filename_component(wrapper_name "${wrapper}" NAME)
+  install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
+        DESTINATION lib
+        COMPONENT main)
 endforeach()

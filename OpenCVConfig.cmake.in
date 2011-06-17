@@ -91,14 +91,10 @@ endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 #  many more dependencies:
 IF (NOT @BUILD_SHARED_LIBS@)
     # Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
-    LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../3rdparty/lib)
-    if(WIN32)
+    if(WIN32 AND NOT ANDROID)
         LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
-    elseif(ANDROID)
-        LINK_DIRECTORIES(@CMAKE_BINARY_DIR@/3rdparty/lib)
-        LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/3rdparty/lib)
     else()
-        LINK_DIRECTORIES(@CMAKE_LIB_DIRS_CONFIGCMAKE@/../share/opencv/3rdparty/lib)
+        LINK_DIRECTORIES("${THIS_OPENCV_CONFIG_PATH}/3rdparty/lib")
     endif()    
 
     set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
@@ -122,16 +118,18 @@ ENDIF(NOT @BUILD_SHARED_LIBS@)
 # ======================================================
 IF (ANDROID)
   macro( COPY_NATIVE_CAMERA_LIBS target )
-    get_target_property(target_location ${target} LOCATION)
-    get_filename_component(target_location "${target_location}" PATH)
-    file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
-    foreach(wrapper ${camera_wrappers})
-        ADD_CUSTOM_COMMAND(
-          TARGET ${target}
-          POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
-          )
-    endforeach()
+    IF( ARMEABI_V7A)
+      get_target_property(target_location ${target} LOCATION)
+      get_filename_component(target_location "${target_location}" PATH)
+      file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
+      foreach(wrapper ${camera_wrappers})
+          ADD_CUSTOM_COMMAND(
+            TARGET ${target}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
+            )
+      endforeach()
+    ENDIF( ARMEABI_V7A )
   endmacro()
 ENDIF(ANDROID)
 
