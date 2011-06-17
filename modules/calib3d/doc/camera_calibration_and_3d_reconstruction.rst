@@ -101,7 +101,7 @@ The functions below use the above model to do the following:
 
  * Estimate the relative position and orientation of the stereo camera "heads" and compute the *rectification* transformation that makes the camera optical axes parallel.
 
-.. index:: calibrateCamera
+
 
 calibrateCamera
 ---------------
@@ -182,7 +182,7 @@ See Also:
 :ref:`stereoCalibrate`,
 :ref:`undistort`
 
-.. index:: calibrationMatrixValues
+
 
 calibrationMatrixValues
 -----------------------
@@ -210,7 +210,7 @@ calibrationMatrixValues
     
 The function computes various useful camera characteristics from the previously estimated camera matrix.
 
-.. index:: composeRT
+
 
 composeRT
 -------------
@@ -245,7 +245,7 @@ where :math:`\mathrm{rodrigues}` denotes a rotation vector to a rotation matrix 
 Also, the functions can compute the derivatives of the output vectors with regards to the input vectors (see :ref:`matMulDeriv` ).
 The functions are used inside :ref:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains a matrix multiplication.
 
-.. index:: computeCorrespondEpilines
+
 
 computeCorrespondEpilines
 -----------------------------
@@ -286,7 +286,7 @@ Line coefficients are defined up to a scale. They are normalized so that
 :math:`a_i^2+b_i^2=1` .
 
 
-.. index:: convertPointsToHomogeneous
+
 
 convertPointsToHomogeneous
 ------------------------
@@ -301,7 +301,7 @@ convertPointsToHomogeneous
 
 The function converts points from Euclidean to homogeneous space by appending 1's to the tuple of point coordinates. That is, each point ``(x1, x2, ..., xn)`` is converted to ``(x1, x2, ..., xn, 1)``.
 
-.. index:: convertPointsFromHomogeneous
+
 
 convertPointsFromHomogeneous
 ------------------------
@@ -316,7 +316,7 @@ convertPointsFromHomogeneous
 
 The function converts points homogeneous to Euclidean space using perspective projection. That is, each point ``(x1, x2, ... x(n-1), xn)`` is converted to ``(x1/xn, x2/xn, ..., x(n-1)/xn)``. When ``xn=0``, the output point coordinates will be ``(0,0,0,...)``.
 
-.. index:: convertPointsHomogeneous
+
 
 convertPointsHomogeneous
 ------------------------
@@ -331,7 +331,7 @@ convertPointsHomogeneous
 
 The function converts 2D or 3D points from/to homogeneous coordinates by calling either :ocv:func:`convertPointsToHomogeneous` or :ocv:func:`convertPointsFromHomogeneous`. The function is obsolete; use one of the previous two instead.
 
-.. index:: decomposeProjectionMatrix
+
 
 .. _decomposeProjectionMatrix:
 
@@ -364,7 +364,7 @@ It optionally returns three rotation matrices, one for each axis, and the three 
 The function is based on
 :ref:`RQDecomp3x3` .
 
-.. index:: drawChessboardCorners
+
 
 drawChessboardCorners
 -------------------------
@@ -382,7 +382,7 @@ drawChessboardCorners
 
 The function draws individual chessboard corners detected either as red circles if the board was not found, or as colored corners connected with lines if the board was found.
 
-.. index:: findChessboardCorners
+
 
 findChessboardCorners
 -------------------------
@@ -440,7 +440,7 @@ Sample usage of detecting and drawing chessboard corners: ::
 
 The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments. Otherwise, if there is no border and the background is dark, the outer black squares cannot be segmented properly and so the square grouping and ordering algorithm fails.
 
-.. index:: findCirclesGrid
+
 
 findCirclesGrid
 -------------------
@@ -485,7 +485,7 @@ Sample usage of detecting and drawing the centers of circles: ::
 
 The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments.
 
-.. index:: solvePnP
+
 
 solvePnP
 ------------
@@ -510,7 +510,7 @@ solvePnP
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
 :ref:`projectPoints` ) ``objectPoints`` .
 
-.. index:: solvePnPRansac
+
 
 solvePnPRansac
 ------------------
@@ -544,7 +544,7 @@ solvePnPRansac
 The function estimates an object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
 :ref:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
 
-.. index:: findFundamentalMat
+
 
 findFundamentalMat
 ----------------------
@@ -604,7 +604,7 @@ corresponding to the specified points. It can also be passed to
     Mat fundamental_matrix =
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
 
-.. index:: findHomography
+
 
 findHomography
 ------------------
@@ -683,11 +683,9 @@ See Also:
 :ref:`PerspectiveTransform`
 
 
-.. index:: estimateAffine3D
-
 estimateAffine3D
 --------------------
-.. ocv:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray outliers, double ransacThreshold = 3.0, double confidence = 0.99)
+.. ocv:function:: int estimateAffine3D(InputArray srcpt, InputArray dstpt, OutputArray out,                     OutputArray inliers, double ransacThreshold = 3.0, double confidence = 0.99)
 
     Computes an optimal affine transformation between two 3D point sets.
 
@@ -697,7 +695,7 @@ estimateAffine3D
 
     :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
 
-    :param outliers: Output vector indicating which points are outliers.
+    :param inliers: Output vector indicating which points are inliers.
 
     :param ransacThreshold: Maximum reprojection error in the RANSAC algorithm to consider a point as an inlier.
 
@@ -706,7 +704,7 @@ estimateAffine3D
 The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
 
 
-.. index:: getOptimalNewCameraMatrix
+
 
 getOptimalNewCameraMatrix
 -----------------------------
@@ -733,7 +731,7 @@ the optimal new camera matrix based on the free scaling parameter. By varying  t
 :ref:`InitUndistortRectifyMap` to produce the maps for
 :ref:`Remap` .
 
-.. index:: initCameraMatrix2D
+
 
 initCameraMatrix2D
 ----------------------
@@ -752,7 +750,7 @@ initCameraMatrix2D
 The function estimates and returns an initial camera matrix for the camera calibration process.
 Currently, the function only supports planar calibration patterns, which are patterns where each object point has z-coordinate =0.
 
-.. index:: matMulDeriv
+
 
 matMulDeriv
 ---------------
@@ -773,7 +771,7 @@ The function computes partial derivatives of the elements of the matrix product
 :math:`A*B` with regard to the elements of each of the two input matrices. The function is used to compute the Jacobian matrices in
 :ref:`stereoCalibrate`  but can also be used in any other similar optimization function.
 
-.. index:: projectPoints
+
 
 projectPoints
 -----------------
@@ -815,7 +813,7 @@ current intrinsic and extrinsic parameters.
 
 By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identity matrix, or by passing zero distortion coefficients, you can get various useful partial cases of the function. This means that you can compute the distorted coordinates for a sparse set of points or apply a perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
 
-.. index:: reprojectImageTo3D
+
 
 reprojectImageTo3D
 ----------------------
@@ -845,7 +843,7 @@ The matrix ``Q`` can be an arbitrary
 :ref:`StereoRectify`). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
 :ref:`PerspectiveTransform` .
 
-.. index:: RQDecomp3x3
+
 
 RQDecomp3x3
 ---------------
@@ -873,7 +871,7 @@ It optionally returns three rotation matrices, one for each axis, and the three 
 (as the return value)
 that could be used in OpenGL.
 
-.. index:: Rodrigues
+
 
 Rodrigues
 -------------
@@ -904,7 +902,7 @@ used in the global 3D geometry optimization procedures like
 :ref:`stereoCalibrate`, or
 :ref:`solvePnP` .
 
-.. index:: StereoBM
+
 
 StereoBM
 --------
@@ -939,7 +937,7 @@ The class is a C++ wrapper for the associated functions. In particular, ``Stereo
 :ref:`StereoBM::operator ()`. 
 
 
-.. index:: StereoBM::operator ()
+
 
 StereoBM::operator ()
 -----------------------
@@ -959,7 +957,7 @@ StereoBM::operator ()
 The method executes the BM algorithm on a rectified stereo pair. See the ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method. Note that the method is not constant, thus you should not use the same ``StereoBM`` instance from within different threads simultaneously.
 
 
-.. index:: StereoSGBM
+
 
 StereoSGBM
 ----------
@@ -1004,7 +1002,7 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
  * Some pre- and post- processing steps from K. Konolige algorithm :ref:`StereoBM::operator ()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
-.. index:: StereoSGBM::StereoSGBM
+
 
 StereoSGBM::StereoSGBM
 --------------------------
@@ -1036,7 +1034,7 @@ StereoSGBM::StereoSGBM
 
 The first constructor initializes ``StereoSGBM`` with all the default parameters. So, you only have to set ``StereoSGBM::numberOfDisparities`` at minimum. The second constructor enables you to set each parameter to a custom value.
 
-.. index:: StereoSGBM::operator ()
+
 
 StereoSGBM::operator ()
 -----------------------
@@ -1057,7 +1055,7 @@ The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_
 
 The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
 
-.. index:: stereoCalibrate
+
 
 stereoCalibrate
 -------------------
@@ -1143,7 +1141,7 @@ Besides the stereo-related information, the function can also perform a full cal
 
 Similarly to :ref:`calibrateCamera` , the function minimizes the total re-projection error for all the points in all the available views from both cameras. The function returns the final value of the re-projection error.
 
-.. index:: stereoRectify
+
 
 stereoRectify
 -----------------
@@ -1221,7 +1219,7 @@ See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizont
 
 .. image:: pics/stereo_undistort.jpg
 
-.. index:: stereoRectifyUncalibrated
+
 
 stereoRectifyUncalibrated
 -----------------------------

@@ -453,7 +453,7 @@ bool cv::Affine3DEstimator::checkSubset( const CvMat* ms1, int count )
 }
 
 int cv::estimateAffine3D(InputArray _from, InputArray _to,
-                         OutputArray _out, OutputArray _outliers,
+                         OutputArray _out, OutputArray _inliers,
                          double param1, double param2)
 {
     Mat from = _from.getMat(), to = _to.getMat();
@@ -464,16 +464,16 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     _out.create(3, 4, CV_64F);
     Mat out = _out.getMat();
     
-    _outliers.create(count, 1, CV_8U, -1, true);
-    Mat outliers = _outliers.getMat();
-    outliers = Scalar::all(1);
+    _inliers.create(count, 1, CV_8U, -1, true);
+    Mat inliers = _inliers.getMat();
+    inliers = Scalar::all(1);
 
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_64F);
     to.convertTo(dTo, CV_64F);
     
     CvMat F3x4 = out;
-    CvMat mask  = outliers;
+    CvMat mask  = inliers;
     CvMat m1 = dFrom;
     CvMat m2 = dTo;
     

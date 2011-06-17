@@ -749,7 +749,7 @@ CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       int ddepth=-1 );
     
 CV_EXPORTS_W  int estimateAffine3D(InputArray _from, InputArray _to,
-                                   OutputArray _out, OutputArray _outliers,
+                                   OutputArray _out, OutputArray _inliers,
                                    double param1=3, double param2=0.99);
     
 }
