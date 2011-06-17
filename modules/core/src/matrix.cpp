@@ -1888,41 +1888,49 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceR_<uchar,int,OpAdd<int> >;
-            if(sdepth == CV_8U && ddepth == CV_32F)
+            else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceR_<uchar,float,OpAdd<int> >;
-            if(sdepth == CV_8U && ddepth == CV_64F)
+            else if(sdepth == CV_8U && ddepth == CV_64F)
                 func = reduceR_<uchar,double,OpAdd<int> >;
-            if(sdepth == CV_16U && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_32F)
                 func = reduceR_<ushort,float,OpAdd<float> >;
-            if(sdepth == CV_16U && ddepth == CV_64F)
+            else if(sdepth == CV_16U && ddepth == CV_64F)
                 func = reduceR_<ushort,double,OpAdd<double> >;
-            if(sdepth == CV_16S && ddepth == CV_32F)
+            else if(sdepth == CV_16S && ddepth == CV_32F)
                 func = reduceR_<short,float,OpAdd<float> >;
-            if(sdepth == CV_16S && ddepth == CV_64F)
+            else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceR_<short,double,OpAdd<double> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceR_<float,float,OpAdd<float> >;
-            if(sdepth == CV_32F && ddepth == CV_64F)
+            else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceR_<float,double,OpAdd<double> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double,double,OpAdd<double> >;
         }
         else if(op == CV_REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceR_<uchar, uchar, OpMax<uchar> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_16U)
+                func = reduceR_<ushort, ushort, OpMax<ushort> >;
+            else if(sdepth == CV_16S && ddepth == CV_16S)
+                func = reduceR_<short, short, OpMax<short> >;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceR_<float, float, OpMax<float> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double, double, OpMax<double> >;
         }
         else if(op == CV_REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceR_<uchar, uchar, OpMin<uchar> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_16U)
+                func = reduceR_<ushort, ushort, OpMin<ushort> >;
+            else if(sdepth == CV_16S && ddepth == CV_16S)
+                func = reduceR_<short, short, OpMin<short> >;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceR_<float, float, OpMin<float> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceR_<double, double, OpMin<double> >;
         }
     }
@@ -1932,41 +1940,49 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceC_<uchar,int,OpAdd<int> >;
-            if(sdepth == CV_8U && ddepth == CV_32F)
+            else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceC_<uchar,float,OpAdd<int> >;
-            if(sdepth == CV_8U && ddepth == CV_64F)
+            else if(sdepth == CV_8U && ddepth == CV_64F)
                 func = reduceC_<uchar,double,OpAdd<int> >;
-            if(sdepth == CV_16U && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_32F)
                 func = reduceC_<ushort,float,OpAdd<float> >;
-            if(sdepth == CV_16U && ddepth == CV_64F)
+            else if(sdepth == CV_16U && ddepth == CV_64F)
                 func = reduceC_<ushort,double,OpAdd<double> >;
-            if(sdepth == CV_16S && ddepth == CV_32F)
+            else if(sdepth == CV_16S && ddepth == CV_32F)
                 func = reduceC_<short,float,OpAdd<float> >;
-            if(sdepth == CV_16S && ddepth == CV_64F)
+            else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceC_<short,double,OpAdd<double> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceC_<float,float,OpAdd<float> >;
-            if(sdepth == CV_32F && ddepth == CV_64F)
+            else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceC_<float,double,OpAdd<double> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceC_<double,double,OpAdd<double> >;
         }
         else if(op == CV_REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceC_<uchar, uchar, OpMax<uchar> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_16U)
+                func = reduceC_<ushort, ushort, OpMax<ushort> >;
+            else if(sdepth == CV_16S && ddepth == CV_16S)
+                func = reduceC_<short, short, OpMax<short> >;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceC_<float, float, OpMax<float> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceC_<double, double, OpMax<double> >;
         }
         else if(op == CV_REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = reduceC_<uchar, uchar, OpMin<uchar> >;
-            if(sdepth == CV_32F && ddepth == CV_32F)
+            else if(sdepth == CV_16U && ddepth == CV_16U)
+                func = reduceC_<ushort, ushort, OpMin<ushort> >;
+            else if(sdepth == CV_16S && ddepth == CV_16S)
+                func = reduceC_<short, short, OpMin<short> >;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
                 func = reduceC_<float, float, OpMin<float> >;
-            if(sdepth == CV_64F && ddepth == CV_64F)
+            else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceC_<double, double, OpMin<double> >;
         }
     }
