@@ -1743,12 +1743,13 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
 
     int mtype = depth == CV_32S || depth == CV_64F ? CV_64F : CV_32F;
     AutoBuffer<double> _mbuf;
-    double* mbuf = _mbuf;
+    double* mbuf;
 
     if( !m.isContinuous() || m.type() != mtype || m.cols != scn + 1 )
     {
         _mbuf.allocate(dcn*(scn+1));
-        Mat tmp(dcn, scn+1, mtype, (double*)_mbuf);
+        mbuf = (double*)_mbuf;
+        Mat tmp(dcn, scn+1, mtype, mbuf);
         memset(tmp.data, 0, tmp.total()*tmp.elemSize());
         if( m.cols == scn+1 )
             m.convertTo(tmp, mtype);
