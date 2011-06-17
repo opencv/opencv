@@ -371,6 +371,7 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
     vector<int> idxs[N];
 
     // Compute descriptors three times, once for each Opponent channel to concatenate into a single color descriptor
+    int maxKeypointsCount = 0;
     for( int ci = 0; ci < N; ci++ )
     {
         channelKeypoints[ci].insert( channelKeypoints[ci].begin(), keypoints.begin(), keypoints.end() );
@@ -385,13 +386,14 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
             idxs[ci][ki] = (int)ki;
         }
         std::sort( idxs[ci].begin(), idxs[ci].end(), KP_LessThan(channelKeypoints[ci]) );
+        maxKeypointsCount = std::max( maxKeypointsCount, (int)channelKeypoints[ci].size());
     }
 
     vector<KeyPoint> outKeypoints;
     outKeypoints.reserve( keypoints.size() );
 
     int descriptorSize = descriptorExtractor->descriptorSize();
-    Mat mergedDescriptors( (int)keypoints.size(), 3*descriptorSize, descriptorExtractor->descriptorType() );
+    Mat mergedDescriptors( maxKeypointsCount, 3*descriptorSize, descriptorExtractor->descriptorType() );
     int mergedCount = 0;
     // cp - current channel position
     size_t cp[] = {0, 0, 0}; 
