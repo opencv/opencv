@@ -36,7 +36,7 @@ int main( int argc, char** argv )
   cvtColor( image, gray_image, CV_RGB2GRAY );
 
   /// Save our gray image
-  imwrite( "../../images/Gray_Image.png", gray_image );
+  imwrite( "../images/Gray_Image.png", gray_image );
 
   /// Create a couple of windows and show our images
   namedWindow( imageName, CV_WINDOW_AUTOSIZE );
