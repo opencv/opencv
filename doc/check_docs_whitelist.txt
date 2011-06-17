@@ -58,6 +58,7 @@ CvSVM::CvSVM
 CvSVM::clear
 CvSVM::read
 CvSVM::write
+CvMLData::CvMLData
 CvRTrees::CvRTrees
 CvRTrees::clear
 CvRTrees::read
