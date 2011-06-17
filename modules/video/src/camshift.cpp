@@ -90,6 +90,13 @@ cvMeanShift( const void* imgProb, CvRect windowIn,
         int dx, dy, nx, ny;
         double inv_m00;
         cur_rect = cv::Rect(cur_rect) & cv::Rect(0, 0, mat->cols, mat->rows);
+        if( cv::Rect(cur_rect) == cv::Rect() )
+        {
+            cur_rect.x = mat->cols/2;
+            cur_rect.y = mat->rows/2;
+        }
+        cur_rect.width = MAX(cur_rect.width, 1);
+        cur_rect.height = MAX(cur_rect.height, 1);
         
         cvGetSubRect( mat, &cur_win, cur_rect ); 
         cvMoments( &cur_win, &moments );
