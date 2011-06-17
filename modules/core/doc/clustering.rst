@@ -22,7 +22,7 @@ kmeans
 
     :param termcrit: Flag to specify the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``termcrit.epsilon``. As soon as each of the cluster centers moves by less than ``termcrit.epsilon`` on some iteration, the algorithm stops.
 
-    :param attempts: Flag to specify how many times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
+    :param attempts: Flag to specify the number of times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 
     :param flags: Flag that can take the following values:
 
@@ -30,18 +30,18 @@ kmeans
 
             * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii.
 
-            * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers (use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method).
+            * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
 
 The function ``kmeans`` implements a k-means algorithm that finds the
 centers of ``clusterCount`` clusters and groups the input samples
-around the clusters. On output,
+around the clusters. As an output,
 :math:`\texttt{labels}_i` contains a 0-based cluster index for
 the sample stored in the
 :math:`i^{th}` row of the ``samples`` matrix.
 
-The function returns the compactness measure, which is computed as
+The function returns the compactness measure that is computed as
 
 .. math::
 
@@ -65,9 +65,9 @@ partition
 
     :param vec: Set of elements stored as a vector.
 
-    :param labels: Output vector of labels. It contains as many elements as  ``vec`` . Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
+    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
 	
-	:param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
+    :param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
 
 The generic function ``partition`` implements an
 :math:`O(N^2)` algorithm for

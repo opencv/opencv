@@ -5,13 +5,11 @@ XML/YAML Persistence
 
 .. index:: FileStorage
 
-.. _FileStorage:
-
 FileStorage
 -----------
-.. c:type:: FileStorage
+.. ocv:class:: FileStorage
 
-XML/YAML file storage class ::
+XML/YAML file storage class. ::
 
     class FileStorage
     {
@@ -53,7 +51,7 @@ XML/YAML file storage class ::
         // (see DataType) without any headers
         void writeRaw( const string& fmt, const uchar* vec, size_t len );
 
-        // writes an old-style object (CvMat, CvMatND etc.)
+        // writes an old-style object (CvMat, CvMatND, etc.)
         void writeObj( const string& name, const void* obj );
 
         // returns the default object name from the filename
@@ -68,13 +66,12 @@ XML/YAML file storage class ::
 
 .. index:: FileNode
 
-.. _FileNode:
 
 FileNode
 --------
-.. c:type:: FileNode
+.. ocv:class:: FileNode
 
-XML/YAML file node class ::
+XML/YAML file node class. ::
 
     class CV_EXPORTS FileNode
     {
@@ -118,13 +115,11 @@ XML/YAML file node class ::
 
 .. index:: FileNodeIterator
 
-.. _FileNodeIterator:
-
 FileNodeIterator
 ----------------
-.. c:type:: FileNodeIterator
+.. ocv:class:: FileNodeIterator
 
-XML/YAML file node iterator class ::
+XML/YAML file node iterator class. ::
 
     class CV_EXPORTS FileNodeIterator
     {
