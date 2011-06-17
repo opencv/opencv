@@ -107,42 +107,42 @@ if(MSVC AND NOT BUILD_SHARED_LIBS)
 endif()
   
 if(MSVC)
-	if(BUILD_WITH_STATIC_CRT)
-		foreach(flag_var
-				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-				CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-				CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-		   if(${flag_var} MATCHES "/MD")
-			  string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-		   endif(${flag_var} MATCHES "/MD")
+    if(BUILD_WITH_STATIC_CRT)
+        foreach(flag_var
+                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+           if(${flag_var} MATCHES "/MD")
+              string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+           endif(${flag_var} MATCHES "/MD")
 
-		   if(${flag_var} MATCHES "/MDd")
-			  string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
-		   endif(${flag_var} MATCHES "/MDd")		   
-		endforeach(flag_var)
-		
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
-		
-		set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
-		set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
-				
-	else(BUILD_WITH_STATIC_CRT)
-		foreach(flag_var
-				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-				CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-				CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-		   if(${flag_var} MATCHES "/MT")
-			  string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
-		   endif(${flag_var} MATCHES "/MT")
+           if(${flag_var} MATCHES "/MDd")
+              string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")
+           endif(${flag_var} MATCHES "/MDd")           
+        endforeach(flag_var)
+        
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
+        
+        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
+                
+    else(BUILD_WITH_STATIC_CRT)
+        foreach(flag_var
+                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+           if(${flag_var} MATCHES "/MT")
+              string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
+           endif(${flag_var} MATCHES "/MT")
 
-		   if(${flag_var} MATCHES "/MTd")
-			  string(REGEX REPLACE "/MTd" "/MDd" ${flag_var} "${${flag_var}}")
-		   endif(${flag_var} MATCHES "/MTd")		   
-		endforeach(flag_var)
+           if(${flag_var} MATCHES "/MTd")
+              string(REGEX REPLACE "/MTd" "/MDd" ${flag_var} "${${flag_var}}")
+           endif(${flag_var} MATCHES "/MTd")           
+        endforeach(flag_var)
 
-	endif(BUILD_WITH_STATIC_CRT)
+    endif(BUILD_WITH_STATIC_CRT)
 endif(MSVC)
 
 
@@ -194,11 +194,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
                   OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-	
+    
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
                   ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)			  
-    	
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)           
+        
     # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
     #  Look for the version number
     string(REGEX MATCH "[0-9].[0-9].[0-9]" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
@@ -809,9 +809,9 @@ if(WITH_CUDA)
         
         message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
     else()
-		unset(CUDA_ARCH_BIN CACHE)
-        unset(CUDA_ARCH_PTX CACHE)	
-	endif()	
+        unset(CUDA_ARCH_BIN CACHE)
+        unset(CUDA_ARCH_PTX CACHE)  
+    endif() 
 endif()
 
 
@@ -1317,8 +1317,8 @@ if(BUILD_PACKAGE)
         endif()
 
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY 3rdparty android modules tests DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
-        #install(DIRECTORY doc/ DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.tex")
+        install(DIRECTORY 3rdparty android modules tests doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
+        #install(DIRECTORY doc DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.rst" "*.tex")
         #install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
         #install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
 

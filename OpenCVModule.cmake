@@ -44,17 +44,17 @@ macro(define_opencv_module name)
             )
     endif()
 
-    set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )	
+    set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )    
 
     if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "modules")
-    endif()	
-		
+    endif() 
+        
     if (BUILD_SHARED_LIBS)
         if(MSVC)
             set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
         else()
-            add_definitions(-DCVAPI_EXPORTS) 		
+            add_definitions(-DCVAPI_EXPORTS)        
         endif()
     endif()
 
@@ -122,9 +122,9 @@ macro(define_opencv_module name)
 
         file(GLOB test_srcs "test/*.cpp")
         file(GLOB test_hdrs "test/*.h*")
-		
-		source_group("Src" FILES ${test_srcs})
-		source_group("Include" FILES ${test_hdrs})
+        
+        source_group("Src" FILES ${test_srcs})
+        source_group("Include" FILES ${test_hdrs})
 
         set(the_target "opencv_test_${name}")
 
@@ -147,10 +147,10 @@ macro(define_opencv_module name)
             DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
             RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
             )
-			
-		if(ENABLE_SOLUTION_FOLDERS)
-			set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-		endif()	
+            
+        if(ENABLE_SOLUTION_FOLDERS)
+            set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+        endif() 
 
         add_dependencies(${the_target} ${test_deps})
 
@@ -161,9 +161,9 @@ macro(define_opencv_module name)
         get_target_property(LOC ${the_target} LOCATION)
         add_test(${the_target} "${LOC}")
 
-        if(WIN32)
-            install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
-        endif()
+        #if(WIN32)
+        #    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+        #endif()
     endif()    
         
 endmacro()
