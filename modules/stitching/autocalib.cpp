@@ -99,19 +99,19 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
         }
     }
 
-    if (static_cast<int>(all_focals.size()) < num_images - 1)
+    if (static_cast<int>(all_focals.size()) >= num_images - 1)
     {
-        LOGLN("Can't estimate focal length, will use anaive approach");
+        nth_element(all_focals.begin(), all_focals.begin() + all_focals.size()/2, all_focals.end());
+        for (int i = 0; i < num_images; ++i)
+            focals[i] = all_focals[all_focals.size()/2];
+    }
+    else
+    {
+        LOGLN("Can't estimate focal length, will use naive approach");
         double focals_sum = 0;
         for (int i = 0; i < num_images; ++i)
             focals_sum += features[i].img_size.width + features[i].img_size.height;
         for (int i = 0; i < num_images; ++i)
             focals[i] = focals_sum / num_images;
-    }
-    else
-    {
-        nth_element(all_focals.begin(), all_focals.begin() + all_focals.size()/2, all_focals.end());
-        for (int i = 0; i < num_images; ++i)
-            focals[i] = all_focals[all_focals.size()/2];
     }
 }
