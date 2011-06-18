@@ -385,7 +385,7 @@ CV_EXPORTS_W void copyMakeBorder( InputArray src, OutputArray dst,
 //! smooths the image using median filter.
 CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
 //! smooths the image using Gaussian filter.
-CV_EXPORTS_AS(gaussianBlur) void GaussianBlur( InputArray src,
+CV_EXPORTS_W void GaussianBlur( InputArray src,
                                                OutputArray dst, Size ksize,
                                                double sigma1, double sigma2=0,
                                                int borderType=BORDER_DEFAULT );
@@ -415,25 +415,25 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                double delta=0, int borderType=BORDER_DEFAULT );
     
 //! applies generalized Sobel operator to the image
-CV_EXPORTS_AS(sobel) void Sobel( InputArray src, OutputArray dst, int ddepth,
-                                 int dx, int dy, int ksize=3,
-                                 double scale=1, double delta=0,
-                                 int borderType=BORDER_DEFAULT );
+CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
+                         int dx, int dy, int ksize=3,
+                         double scale=1, double delta=0,
+                         int borderType=BORDER_DEFAULT );
 
 //! applies the vertical or horizontal Scharr operator to the image
-CV_EXPORTS_AS(scharr) void Scharr( InputArray src, OutputArray dst, int ddepth,
-                                   int dx, int dy, double scale=1, double delta=0,
-                                   int borderType=BORDER_DEFAULT );
+CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
+                          int dx, int dy, double scale=1, double delta=0,
+                          int borderType=BORDER_DEFAULT );
 
 //! applies Laplacian operator to the image
-CV_EXPORTS_AS(laplacian) void Laplacian( InputArray src, OutputArray dst, int ddepth,
-                                         int ksize=1, double scale=1, double delta=0,
-                                         int borderType=BORDER_DEFAULT );
+CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
+                             int ksize=1, double scale=1, double delta=0,
+                             int borderType=BORDER_DEFAULT );
 
 //! applies Canny edge detector and produces the edge map.
-CV_EXPORTS_AS(canny) void Canny( InputArray image, OutputArray edges,
-                                 double threshold1, double threshold2,
-                                 int apertureSize=3, bool L2gradient=false );
+CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
+                         double threshold1, double threshold2,
+                         int apertureSize=3, bool L2gradient=false );
 
 //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
 CV_EXPORTS_W void cornerMinEigenVal( InputArray src, OutputArray dst,
@@ -466,20 +466,20 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      bool useHarrisDetector=false, double k=0.04 );
 
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
-CV_EXPORTS_AS(houghLines) void HoughLines( InputArray image, OutputArray lines,
-                                           double rho, double theta, int threshold,
-                                           double srn=0, double stn=0 );
+CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
+                              double rho, double theta, int threshold,
+                              double srn=0, double stn=0 );
 
 //! finds line segments in the black-n-white image using probabalistic Hough transform
-CV_EXPORTS_AS(houghLinesP) void HoughLinesP( InputArray image, OutputArray lines,
-                                             double rho, double theta, int threshold,
-                                             double minLineLength=0, double maxLineGap=0 );
+CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
+                               double rho, double theta, int threshold,
+                               double minLineLength=0, double maxLineGap=0 );
 
 //! finds circles in the grayscale image using 2+1 gradient Hough transform 
-CV_EXPORTS_AS(houghCircles) void HoughCircles( InputArray image, OutputArray circles,
-                                               int method, double dp, double minDist,
-                                               double param1=100, double param2=100,
-                                               int minRadius=0, int maxRadius=0 );
+CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
+                               int method, double dp, double minDist,
+                               double param1=100, double param2=100,
+                               int minRadius=0, int maxRadius=0 );
 
 //! erodes the image (applies the local minimum operator)
 CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
@@ -564,6 +564,7 @@ CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
 
 //! computes the integral image
 CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth=-1 );
+
 //! computes the integral image and integral for the squared image
 CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, int sdepth=-1 );
