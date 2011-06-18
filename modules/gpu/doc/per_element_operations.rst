@@ -1,4 +1,4 @@
-Per-element Operations.
+Per-element Operations
 =======================
 
 .. highlight:: cpp
@@ -21,7 +21,8 @@ gpu::add
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :ocv:func:`add`
+.. seealso:: 
+:ocv:func:`add`
 
 .. index:: gpu::subtract
 
@@ -39,7 +40,8 @@ gpu::subtract
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :ocv:func:`subtract`
+.. seealso:: 
+:ocv:func:`subtract`
 
 
 
@@ -59,7 +61,8 @@ gpu::multiply
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :ocv:func:`multiply`
+.. seealso:: 
+:ocv:func:`multiply`
 
 
 .. index:: gpu::divide
@@ -78,9 +81,10 @@ gpu::divide
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-	This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mode.
+This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mode.
 
-See Also: :ocv:func:`divide`
+.. seealso:: 
+:ocv:func:`divide`
 
 
 
@@ -96,7 +100,8 @@ gpu::exp
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :ocv:func:`exp`
+.. seealso:: 
+:ocv:func:`exp`
 
 
 
@@ -112,7 +117,7 @@ gpu::log
 
     :param dst: Destination matrix with the same size and type as ``src``.
 
-See Also: :ocv:func:`log`
+.. seealso:: :ocv:func:`log`
 
 
 
@@ -124,7 +129,7 @@ gpu::absdiff
 
 .. ocv:function:: void gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst)
 
-    Computes per-element absolute difference of two matrices (or of matrix and scalar).
+    Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
     :param src1: First source matrix. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1`` and ``CV_32FC1`` matrices are supported for now.
 
@@ -132,7 +137,8 @@ gpu::absdiff
 
     :param dst: Destination matrix with the same size and type as ``src1``.
 
-See Also: :ocv:func:`absdiff`
+.. seealso:: 
+:ocv:func:`absdiff`
 
 .. index:: gpu::compare
 
@@ -157,7 +163,8 @@ gpu::compare
             * **CMP_LE:** ``src1(.) <= src2(.)``
             * **CMP_NE:** ``src1(.) != src2(.)``
 
-See Also: :ocv:func:`compare`
+.. seealso:: 
+:ocv:func:`compare`
 
 
 .. index:: gpu::bitwise_not
@@ -232,7 +239,7 @@ gpu::bitwise_xor
 
 .. ocv:function:: void gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, const Stream& stream)
 
-    Performs a per-element bitwise "exclusive or" operation of two matrices.
+    Performs a per-element bitwise ``exclusive or`` operation of two matrices.
 
     :param src1: First source matrix.
 
@@ -268,7 +275,8 @@ gpu::min
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :ocv:func:`min`
+.. seealso:: 
+:ocv:func:`min`
 
 
 
@@ -294,4 +302,5 @@ gpu::max
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :ocv:func:`max`
+.. seealso:: 
+:ocv:func:`max`

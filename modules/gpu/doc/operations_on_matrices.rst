@@ -11,11 +11,11 @@ gpu::transpose
 
     Transposes a matrix.
 
-    :param src: Source matrix. 1, 4, 8 bytes element sizes are supported for now.
+    :param src: Source matrix. 1-, 4-, 8-byte element sizes are supported for now.
 
     :param dst: Destination matrix.
 
-See Also:
+.. seealso::
 :ocv:func:`transpose` 
 
 .. index:: gpu::flip
@@ -39,7 +39,7 @@ gpu::flip
             * ``<0`` Flips around both axes.
             
 
-See Also:
+.. seealso::
 :ocv:func:`flip` 
 
 .. index:: gpu::LUT
@@ -57,7 +57,8 @@ gpu::LUT
     :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src``.
             
 
-See Also: :ocv:func:`LUT` 
+.. seealso:: 
+:ocv:func:`LUT` 
 
 .. index:: gpu::merge
 
@@ -81,7 +82,8 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :ocv:func:`merge` 
+.. seealso:: 
+:ocv:func:`merge` 
 
 .. index:: gpu::split
 
@@ -99,11 +101,12 @@ gpu::split
 
     :param src: Source matrix.
 
-    :param dst: The destination array/vector of single-channel matrices.
+    :param dst: Destination array/vector of single-channel matrices.
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :ocv:func:`split`
+.. seealso:: 
+:ocv:func:`split`
 
 .. index:: gpu::magnitude
 
@@ -127,7 +130,7 @@ gpu::magnitude
 
     :param stream: Stream for the asynchronous version.
 
-See Also:
+.. seealso::
 :ocv:func:`magnitude` 
 
 .. index:: gpu::magnitudeSqr
@@ -172,7 +175,7 @@ gpu::phase
 
     :param stream: Stream for the asynchronous version.
 
-See Also:
+.. seealso::
 :ocv:func:`phase` 
 
 .. index:: gpu::cartToPolar
@@ -197,7 +200,7 @@ gpu::cartToPolar
 
     :param stream: Stream for the asynchronous version.
 
-See Also:
+.. seealso::
 :ocv:func:`cartToPolar` 
 
 .. index:: gpu::polarToCart
@@ -222,5 +225,5 @@ gpu::polarToCart
 
     :param stream: Stream for the asynchronous version.
 
-See Also:
+.. seealso::
 :ocv:func:`polarToCart` 

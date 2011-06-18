@@ -41,7 +41,7 @@ gpu::meanShiftProc
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-See Also:
+.. seealso::
 :ocv:func:`gpu::meanShiftFiltering` 
 
 .. index:: gpu::meanShiftSegmentation
@@ -80,7 +80,7 @@ gpu::integral
 
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
-See Also:
+.. seealso::
 :ocv:func:`integral` 
 
 .. index:: gpu::sqrIntegral
@@ -127,7 +127,7 @@ gpu::cornerHarris
 
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
-See Also:
+.. seealso::
 :ocv:func:`cornerHarris` 
 
 .. index:: gpu::cornerMinEigenVal
@@ -136,7 +136,7 @@ gpu::cornerMinEigenVal
 --------------------------
 .. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
 
-    Computes the minimum eigen value of 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
+    Computes the minimum eigen value of a 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
@@ -150,7 +150,7 @@ gpu::cornerMinEigenVal
 
     :param borderType: Pixel extrapolation method. Only ``BORDER_REFLECT101`` and ``BORDER_REPLICATE`` are supported for now.
 
-See also: :ocv:func:`cornerMinEigenVal`
+.. seealso:: :ocv:func:`cornerMinEigenVal`
 
 .. index:: gpu::mulSpectrums
 
@@ -172,7 +172,7 @@ gpu::mulSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-See Also:
+.. seealso::
 :ocv:func:`mulSpectrums` 
 
 .. index:: gpu::mulAndScaleSpectrums
@@ -197,7 +197,7 @@ gpu::mulAndScaleSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-See Also:
+.. seealso::
 :ocv:func:`mulSpectrums` 
 
 .. index:: gpu::dft
@@ -216,13 +216,13 @@ gpu::dft
 
     :param flags: Optional flags:
 
-            * **DFT_ROWS** Transform each individual row of the source matrix.
+            * **DFT_ROWS** transforms each individual row of the source matrix.
 
-            * **DFT_SCALE** Scale the result: divide it by the number of elements in the transform (obtained from  ``dft_size`` ).
+            * **DFT_SCALE** scales the result: divide it by the number of elements in the transform (obtained from  ``dft_size`` ).
 
-            * **DFT_INVERSE** Invert DFT. Use for complex-complex cases (real-complex and complex-real cases are always forward and inverse, respectively).
+            * **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real cases are always forward and inverse, respectively).
 
-            * **DFT_REAL_OUTPUT** Specify the output as real. The source matrix is the result of real-complex transform, so the destination matrix must be real.
+            * **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of real-complex transform, so the destination matrix must be real.
             
 
     The source matrix should be continuous, otherwise reallocation and data copying is performed. The function chooses an operation mode depending on the flags, size, and channel count of the source matrix:
@@ -231,12 +231,12 @@ gpu::dft
         If the source matrix is complex and the output is not specified as real, the destination matrix is complex and has the ``dft_size``    size and ``CV_32FC2``    type. The destination matrix contains a full result of the DFT (forward or inverse).
 
     *
-        If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see next item). The destionation matrix has the ``dft_size``    size and ``CV_32FC1``    type. It contains the result of the inverse DFT.
+        If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see the next item). The destionation matrix has the ``dft_size``    size and ``CV_32FC1``    type. It contains the result of the inverse DFT.
 
     *
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
-See Also:
+.. seealso::
 :ocv:func:`dft` 
 
 .. index:: gpu::convolve
@@ -261,14 +261,11 @@ gpu::convolve
 
 .. index:: gpu::ConvolveBuf
 
-.. _gpu::ConvolveBuf:
-
 gpu::ConvolveBuf
 ----------------
 .. ocv:class:: gpu::ConvolveBuf
 
-This class provides a memory buffer for the
-    :ocv:func:`gpu::convolve` function. 
+Class providing a memory buffer for the :ocv:func:`gpu::convolve` function. 
 ::
 
     struct CV_EXPORTS ConvolveBuf
@@ -327,7 +324,7 @@ gpu::matchTemplate
     * ``CV_TM_SQDIFF``
     * ``CV_TM_CCORR``
 
-See Also:
+.. seealso::
 :ocv:func:`matchTemplate` 
 
 .. index:: gpu::remap
@@ -346,15 +343,16 @@ gpu::remap
 
     :param ymap: Y values. Only  ``CV_32FC1`` type is supported.
 
-    The function transforms the source image using the specified map:
+The function transforms the source image using the specified map:
 
 .. math::
 
     \texttt{dst} (x,y) =  \texttt{src} (xmap(x,y), ymap(x,y))
 
-    Values of pixels with non-integer coordinates are computed using bilinear the interpolation.
+Values of pixels with non-integer coordinates are computed using the bilinear interpolation.
 
-See Also: :ocv:func:`remap` 
+.. seealso:: 
+:ocv:func:`remap` 
 
 .. index:: gpu::cvtColor
 
@@ -376,9 +374,9 @@ gpu::cvtColor
 
     :param stream: Stream for the asynchronous version.
 
-    3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
+3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
-See Also:
+.. seealso::
 :ocv:func:`cvtColor` 
 
 .. index:: gpu::threshold
@@ -403,7 +401,7 @@ gpu::threshold
 
     :param stream: Stream for the asynchronous version.
 
-See Also:
+.. seealso::
 :ocv:func:`threshold` 
 
 .. index:: gpu::resize
@@ -439,7 +437,7 @@ gpu::resize
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
 
-See Also: :ocv:func:`resize` 
+.. seealso:: :ocv:func:`resize` 
 
 .. index:: gpu::warpAffine
 
@@ -459,7 +457,7 @@ gpu::warpAffine
 
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-See Also:
+.. seealso::
 :ocv:func:`warpAffine` 
 
 .. index:: gpu::warpPerspective
@@ -470,7 +468,7 @@ gpu::warpPerspective
 
     Applies a perspective transformation to an image.
 
-    :param src: Source image. Supports  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
+    :param src: Source image. ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
     :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
 
@@ -480,7 +478,7 @@ gpu::warpPerspective
 
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-See Also:
+.. seealso::
 :ocv:func:`warpPerspective` 
 
 .. index:: gpu::rotate
@@ -505,7 +503,7 @@ gpu::rotate
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
-See Also:
+.. seealso::
 :ocv:func:`gpu::warpAffine` 
 
 .. index:: gpu::copyMakeBorder
@@ -524,7 +522,7 @@ gpu::copyMakeBorder
 
     :param value: Border value.
 
-See Also:
+.. seealso::
 :ocv:func:`copyMakeBorder`
 
 .. index:: gpu::rectStdDev
@@ -587,7 +585,7 @@ gpu::histRange
 
 .. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
 
-    Calculates a histogram with bins determined by the `levels` array.
+    Calculates a histogram with bins determined by the ``levels`` array.
 
     :param src: Source image. ``CV_8U``, ``CV_16U``, or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 

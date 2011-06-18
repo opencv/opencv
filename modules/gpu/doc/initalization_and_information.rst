@@ -27,7 +27,7 @@ gpu::getDevice
 ------------------
 .. ocv:function:: int getDevice()
 
-    Returns the current device index that was set by ``{gpu::getDevice}`` or initialized by default.
+    Returns the current device index set by ``{gpu::getDevice}`` or initialized by default.
 
 .. index:: gpu::GpuFeature
 
@@ -35,7 +35,7 @@ gpu::GpuFeature
 ---------------
 .. ocv:class:: gpu::GpuFeature
     
-This class provides GPU computing features. 
+Class providing GPU computing features. 
 ::
 
     enum GpuFeature
@@ -53,7 +53,7 @@ gpu::DeviceInfo
 ---------------
 .. ocv:class:: gpu::DeviceInfo
 
-This class provides functionality for querying the specified GPU properties. 
+Class providing functionality for querying the specified GPU properties. 
 ::
 
     class CV_EXPORTS DeviceInfo
@@ -158,13 +158,11 @@ gpu::DeviceInfo::isCompatible
 
 .. index:: gpu::TargetArchs
 
-.. _gpu::TargetArchs:
-
 gpu::TargetArchs
 ----------------
 .. ocv:class:: gpu::TargetArchs
 
-This class provides a set of static methods to check what NVIDIA* card architecture the GPU module was built for.
+Class providing a set of static methods to check what NVIDIA* card architecture the GPU module was built for.
 
 The following method checks whether the module was built with the support of the given feature:
 

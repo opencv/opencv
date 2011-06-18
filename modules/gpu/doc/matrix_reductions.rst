@@ -7,7 +7,7 @@ Matrix Reductions
 
 gpu::meanStdDev
 -------------------
-.. ocv:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. cpp:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes a mean value and a standard deviation of matrix elements.
 
@@ -17,7 +17,8 @@ gpu::meanStdDev
 
     :param stddev: Standard deviation value.
 
-See Also: :ocv:func:`meanStdDev` 
+.. seealso:: 
+:ocv:func:`meanStdDev` 
 
 .. index:: gpu::norm
 
@@ -27,17 +28,18 @@ gpu::norm
 .. ocv:function:: double gpu::norm(const GpuMat\& src1, int normType, GpuMat\& buf)
 .. ocv:function:: double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM_L2)
 
-    Returns the norm of matrix (or difference of two matrices).
+    Returns the norm of a matrix (or difference of two matrices).
 
-    :param src1: The source matrix. Any matrices except 64F are supported.
+    :param src1: Source matrix. Any matrices except 64F are supported.
 
-    :param src2: The second source matrix (if any) with the same size and type as ``src1``.
+    :param src2: Second source matrix (if any) with the same size and type as ``src1``.
 
     :param normType: Norm type.  ``NORM_L1`` ,  ``NORM_L2`` , and  ``NORM_INF``  are supported for now.
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :ocv:func:`norm`
+.. seealso:: 
+:ocv:func:`norm`
 
 .. index:: gpu::sum
 
@@ -53,7 +55,8 @@ gpu::sum
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-See Also: :ocv:func:`sum` 
+.. seealso:: 
+:ocv:func:`sum` 
 
 .. index:: gpu::absSum
 
@@ -105,7 +108,8 @@ gpu::minMax
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-See Also: :ocv:func:`minMaxLoc` 
+.. seealso:: 
+:ocv:func:`minMaxLoc` 
 
 .. index:: gpu::minMaxLoc
 
@@ -135,7 +139,8 @@ gpu::minMaxLoc
 
 	The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
-See Also: :ocv:func:`minMaxLoc` 
+.. seealso:: 
+:ocv:func:`minMaxLoc` 
 
 .. index:: gpu::countNonZero
 
@@ -151,6 +156,7 @@ gpu::countNonZero
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-	The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
+The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
 	
-	See Also: :ocv:func:`countNonZero` 
+.. seealso:: 
+:ocv:func:`countNonZero` 
