@@ -9,7 +9,7 @@ gpu::StereoBM_GPU
 -----------------
 .. ocv:class:: gpu::StereoBM_GPU
 
-This class computes stereo correspondence (disparity map) using the block matching algorithm. 
+Class computing stereo correspondence (disparity map) using the block matching algorithm. 
 ::
 
     class StereoBM_GPU
@@ -57,7 +57,7 @@ gpu::StereoBM_GPU::StereoBM_GPU
 
     Enables ``StereoBM_GPU`` constructors.
 
-    :param preset: Preset:
+    :param preset: Parameter presetting:
 
         * **BASIC_PRESET** Basic mode without pre-processing.
 
@@ -101,7 +101,7 @@ gpu::StereoBeliefPropagation
 ----------------------------
 .. ocv:class:: gpu::StereoBeliefPropagation
 
-This class computes stereo correspondence using the belief propagation algorithm. ::
+Class computing stereo correspondence using the belief propagation algorithm. ::
 
     class StereoBeliefPropagation
     {
@@ -144,23 +144,23 @@ This class computes stereo correspondence using the belief propagation algorithm
         ...
     };
 
-The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006]. It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
+The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. *Efficient belief propagation for early vision*. International Journal of Computer Vision, 70(1), October 2006]. It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
 
-**Note:**
+.. note::
 
- ``StereoBeliefPropagation`` requires a lot of memory for message storage:
+	``StereoBeliefPropagation`` requires a lot of memory for message storage:
 
-.. math::
+	.. math::
 
-    width \_ step  \cdot height  \cdot ndisp  \cdot 4  \cdot (1 + 0.25)
+		width \_ step  \cdot height  \cdot ndisp  \cdot 4  \cdot (1 + 0.25)
 
-and for data cost storage:
+	and for data cost storage:
 
-.. math::
+	.. math::
 
-    width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}})
+		width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}})
 
-``width_step`` is the number of bytes in a line including padding.
+	``width_step`` is the number of bytes in a line including padding.
 
 .. index:: gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
@@ -198,7 +198,7 @@ gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
     DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)
 
-For more details, see [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. Efficient belief propagation for early vision. International Journal of Computer Vision, 70(1), October 2006].
+For more details, see [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. *Efficient belief propagation for early vision*. International Journal of Computer Vision, 70(1), October 2006].
 
 By default, :ocv:class:`StereoBeliefPropagation` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better performance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
@@ -237,7 +237,7 @@ gpu::StereoBeliefPropagation::operator ()
 
 .. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& data, GpuMat& disparity, Stream& stream)
 
-    :param data: The user-specified data cost, a matrix of ``msg_type`` type and ``Size(<image columns>*ndisp, <image rows>)`` size.
+    :param data: User-specified data cost, a matrix of ``msg_type`` type and ``Size(<image columns>*ndisp, <image rows>)`` size.
 
     :param disparity: Output disparity map. If the matrix is empty, it is created as the ``CV_16SC1`` matrix. Otherwise, the type is retained.
 
@@ -249,7 +249,7 @@ gpu::StereoConstantSpaceBP
 --------------------------
 .. ocv:class:: gpu::StereoConstantSpaceBP
 
-This class computes stereo correspondence using the constant space belief propagation algorithm. ::
+Class computing stereo correspondence using the constant space belief propagation algorithm. ::
 
     class StereoConstantSpaceBP
     {
@@ -300,7 +300,7 @@ This class computes stereo correspondence using the constant space belief propag
     };
 
 
-The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. A constant-space belief propagation algorithm for stereo matching. In CVPR, 2010]. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false``.
+The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010]. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false``.
 
 .. index:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
@@ -310,7 +310,7 @@ gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
 .. ocv:function:: StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump, int min_disp_th = 0, int msg_type = CV_32F)
 
-    Enables the StereoConstantSpaceBP constructors.
+    Enables the ``StereoConstantSpaceBP`` constructors.
 
     :param ndisp: Number of disparities.
 
@@ -342,7 +342,7 @@ gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
     DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)
 
-For more details, see [Q. Yang, L. Wang, and N. Ahuja. A constant-space belief propagation algorithm for stereo matching. In CVPR, 2010].
+For more details, see [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010].
 
 By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better perfomance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
@@ -385,7 +385,7 @@ gpu::DisparityBilateralFilter
 -----------------------------
 .. ocv:class:: gpu::DisparityBilateralFilter
 
-This class refines a disparity map using joint bilateral filtering. ::
+Class refinining a disparity map using joint bilateral filtering. ::
 
     class CV_EXPORTS DisparityBilateralFilter
     {
@@ -410,7 +410,7 @@ This class refines a disparity map using joint bilateral filtering. ::
     };
 
 
-The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. A constant-space belief propagation algorithm for stereo matching. In CVPR, 2010].
+The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010].
 
 .. index:: gpu::DisparityBilateralFilter::DisparityBilateralFilter
 
@@ -490,7 +490,7 @@ gpu::reprojectImageTo3D
 
     :param stream: Stream for the asynchronous version.
 
-See Also: :ocv:func:`reprojectImageTo3D` .
+.. seealso:: :ocv:func:`reprojectImageTo3D` .
 
 .. index:: gpu::solvePnPRansac
 
