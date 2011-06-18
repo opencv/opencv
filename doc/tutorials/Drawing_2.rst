@@ -17,7 +17,7 @@ Code
  
 * In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops*
 
-* You will find the code in the *samples/cpp* folder of your OpenCV distribution. The file is **drawing_2.cpp**
+* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Basic/Drawing_2.cpp>`_
 
 Explanation
 ============

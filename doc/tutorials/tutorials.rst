@@ -1,7 +1,3 @@
-#################
-OpenCV Tutorials
-#################
-
 .. toctree::
 
 The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our SVN repository.
@@ -175,3 +171,20 @@ As always, we would be happy to hear your comments and receive your contribution
     
      .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.png
                       :height: 200px
+
+
+* **IMAGE PROCESSING**
+
+  * :ref:`Smoothing`
+
+     ===================== ======================================================
+      |ImageProcessing_1|  *Title:* **Smoothing Images**
+
+	                   *Compatibility:* > OpenCV 2.0
+
+                 	   Let's take a look at some basic linear filters!
+    
+     ===================== ======================================================
+    
+     .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.png
+                            :height: 200px

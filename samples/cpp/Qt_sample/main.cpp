@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <opencv/highgui.h>
-#include <gl/GL.h>
+#include <GL/gl.h>
 #include <opencv/cxcore.h>
 #include <opencv/cv.h>
 using namespace std;

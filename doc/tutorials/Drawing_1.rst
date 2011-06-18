@@ -51,7 +51,7 @@ Scalar
 
 Code
 =====
-It can be found in the samples folder in OpenCV (**Drawing_1.cpp**)
+* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Basic/Drawing_1.cpp>`_
 
 Explanation
 =============

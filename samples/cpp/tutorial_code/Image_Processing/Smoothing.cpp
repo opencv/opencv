@@ -1,5 +1,5 @@
 /**
- * file FilterDemo1.cpp
+ * file Smoothing.cpp
  * brief Sample code for simple filters
  * author OpenCV team
  */
@@ -19,7 +19,7 @@ int DELAY_BLUR = 100;
 int MAX_KERNEL_LENGTH = 31;
 
 Mat src; Mat dst;
-char window_name[] = "Filter Demo 1";
+char window_name[] = "Smoothing Demo";
 
 /// Function headers
 int display_caption( char* caption );

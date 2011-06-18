@@ -290,7 +290,11 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'circle': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-circle%s', None),
             'fill_poly': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#cv-fillpoly%s', None),
             'rng': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#rng%s', None),
-            'put_text': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#putText%s', None)
+            'put_text': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#putText%s', None),
+            'gaussian_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-gaussianblur%s', None),
+	    'blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-blur%s', None),
+            'median_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-medianblur%s', None), 
+            'bilateral_filter': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-bilateralfilter%s', None)
            }
 
 
