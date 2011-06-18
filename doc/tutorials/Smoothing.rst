@@ -100,7 +100,7 @@ Bilateral Filter
 Code
 ======
 
-This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Image_Processing/FilterDemo1.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Image_Processing/Smoothing.cpp>`_
 
 .. code-block:: cpp
 
