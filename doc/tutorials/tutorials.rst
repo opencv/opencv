@@ -188,3 +188,18 @@ As always, we would be happy to hear your comments and receive your contribution
     
      .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.png
                             :height: 200px
+
+
+  * :ref:`Morphology_1`
+
+     ===================== ======================================================
+      |ImageProcessing_2|  *Title:* **Erosion and Dilation**
+
+	                   *Compatibility:* > OpenCV 2.0
+
+                 	   Let's *change* the shape of objects!
+    
+     ===================== ======================================================
+    
+     .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.png
+                            :height: 200px

@@ -294,7 +294,10 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'gaussian_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-gaussianblur%s', None),
 	    'blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-blur%s', None),
             'median_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-medianblur%s', None), 
-            'bilateral_filter': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-bilateralfilter%s', None)
+            'bilateral_filter': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-bilateralfilter%s', None),
+	    'erode': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-erode%s', None),
+            'dilate': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-dilate%s', None),
+            'get_structuring_element': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-getstructuringelement%s', None)
            }
 
 
