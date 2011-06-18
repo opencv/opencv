@@ -919,17 +919,17 @@ public:
 	Tree_predictor() : weak(0), sum(0), k(0), sample(0), missing(0), shrinkage(1.0f) {}
 	Tree_predictor(pCvSeq* _weak, const int _k, const float _shrinkage,
 				   const CvMat* _sample, const CvMat* _missing, float* _sum ) :
-				   weak(_weak), k(_k), sample(_sample),
-                   missing(_missing), sum(_sum), shrinkage(_shrinkage)
+				   weak(_weak), sum(_sum), k(_k), sample(_sample),
+                   missing(_missing), shrinkage(_shrinkage)
 	{}
 	
     Tree_predictor( const Tree_predictor& p, cv::Split ) :
-			weak(p.weak), k(p.k), sample(p.sample),
-            missing(p.missing), sum(p.sum), shrinkage(p.shrinkage)
+			weak(p.weak), sum(p.sum), k(p.k), sample(p.sample),
+            missing(p.missing), shrinkage(p.shrinkage)
 	{}
 
 	Tree_predictor& operator=( const Tree_predictor& )
-	{}
+	{ return *this; }
 	
     virtual void operator()(const cv::BlockedRange& range) const
 	{

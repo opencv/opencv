@@ -1961,7 +1961,7 @@ CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
 CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
 //! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
 CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);  
-    
+
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
                       InputArray mask=noArray(), int dtype=-1);
@@ -2039,6 +2039,12 @@ CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts
 CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                             const int* fromTo, size_t npairs);
 
+//! extracts a single channel from src (coi is 0-based index)
+CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
+
+//! inserts a single channel to dst (coi is 0-based index)
+CV_EXPORTS_W void insertChannel(InputArray src, InputOutputArray dst, int coi);
+    
 //! reverses the order of the rows, columns or both in a matrix
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 

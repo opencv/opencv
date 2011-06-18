@@ -501,7 +501,26 @@ void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
 {
     mixChannels(!src.empty() ? &src[0] : 0, src.size(),
                 !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
-}        
+}
+
+void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
+{
+    Mat src = _src.getMat();
+    CV_Assert( 0 <= coi && coi < src.channels() );
+    _dst.create(src.dims, &src.size[0], src.depth());
+    Mat dst = _dst.getMat();
+    int ch[] = { coi, 0 };
+    mixChannels(&src, 1, &dst, 1, ch, 1);
+}
+
+void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert( src.size == dst.size && src.depth() == dst.depth() );
+    CV_Assert( 0 <= coi && coi < dst.channels() && src.channels() == 1 );
+    int ch[] = { 0, coi };
+    mixChannels(&src, 1, &dst, 1, ch, 1);
+}
 
 /****************************************************************************************\
 *                                convertScale[Abs]                                       *

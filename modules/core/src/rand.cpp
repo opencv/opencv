@@ -453,11 +453,11 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
     RandnScaleFunc scaleFunc = 0;
     
     CV_Assert(_param1.channels() == 1 && (_param1.rows == 1 || _param1.cols == 1) &&
-              (_param1.rows + _param1.cols - 1 == cn ||
+              (_param1.rows + _param1.cols - 1 == cn || _param1.rows + _param1.cols - 1 == 1 ||
                (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4)));
     CV_Assert( _param2.channels() == 1 &&
                (((_param2.rows == 1 || _param2.cols == 1) && 
-                (_param2.rows + _param2.cols - 1 == cn ||
+                (_param2.rows + _param2.cols - 1 == cn || _param2.rows + _param2.cols - 1 == 1 ||
                 (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4))) ||
                 (_param2.rows == cn && _param2.cols == cn && disttype == NORMAL)));
     
@@ -468,26 +468,34 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
     uchar* mean = 0;
     uchar* stddev = 0;
     bool stdmtx = false;
+    int n1 = (int)_param1.total();
+    int n2 = (int)_param2.total();
 
     if( disttype == UNIFORM )
     {
-        _parambuf.allocate(cn*8);
+        _parambuf.allocate(cn*8 + n1 + n2);
         double* parambuf = _parambuf;
-        const double* p1 = (const double*)_param1.data;
-        const double* p2 = (const double*)_param2.data;
+        double* p1 = (double*)_param1.data;
+        double* p2 = (double*)_param2.data;
         
-        if( !_param1.isContinuous() || _param1.type() != CV_64F )
+        if( !_param1.isContinuous() || _param1.type() != CV_64F || n1 != cn )
         {
             Mat tmp(_param1.size(), CV_64F, parambuf);
             _param1.convertTo(tmp, CV_64F);
             p1 = parambuf;
+            if( n1 < cn )
+                for( j = n1; j < cn; j++ )
+                    p1[j] = p1[j-n1];
         }
         
-        if( !_param2.isContinuous() || _param2.type() != CV_64F )
+        if( !_param2.isContinuous() || _param2.type() != CV_64F || n2 != cn )
         {
             Mat tmp(_param2.size(), CV_64F, parambuf + cn);
             _param2.convertTo(tmp, CV_64F);
             p2 = parambuf + cn;
+            if( n2 < cn )
+                for( j = n2; j < cn; j++ )
+                    p2[j] = p2[j-n2];
         }
         
         if( depth <= CV_32S )
@@ -559,10 +567,12 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
     }
     else if( disttype == CV_RAND_NORMAL )
     {
-        _parambuf.allocate(_param1.total() + _param2.total());
+        _parambuf.allocate(MAX(n1, cn) + MAX(n2, cn));
         double* parambuf = _parambuf;
         
         int ptype = depth == CV_64F ? CV_64F : CV_32F;
+        int esz = (int)CV_ELEM_SIZE(ptype);
+        
         if( _param1.isContinuous() && _param1.type() == ptype )
             mean = _param1.data;
         else
@@ -572,6 +582,10 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
             mean = (uchar*)parambuf;
         }
         
+        if( n1 < cn )
+            for( j = n1*esz; j < cn*esz; j++ )
+                mean[j] = mean[j - n1*esz];
+        
         if( _param2.isContinuous() && _param2.type() == ptype )
             stddev = _param2.data;
         else
@@ -580,6 +594,10 @@ void RNG::fill( InputOutputArray _mat, int disttype, InputArray _param1arg, Inpu
             _param2.convertTo(tmp, ptype);
             stddev = (uchar*)(parambuf + cn);
         }
+        
+        if( n1 < cn )
+            for( j = n1*esz; j < cn*esz; j++ )
+                stddev[j] = stddev[j - n1*esz];
         
         stdmtx = _param2.rows == cn && _param2.cols == cn;
         scaleFunc = randnScaleTab[depth];
