@@ -9,7 +9,7 @@ gpu::HOGDescriptor
 ------------------
 .. ocv:class:: gpu::HOGDescriptor
 
-This class provides a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. Histogram of oriented gradients for human detection. 2005.] descriptor and detector.
+Class providing a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. *Histogram of oriented gradients for human detection*. 2005.] descriptor and detector.
 ::
 
     struct CV_EXPORTS HOGDescriptor
@@ -72,27 +72,27 @@ gpu::HOGDescriptor::HOGDescriptor
    Size cell_size=Size(8, 8), int nbins=9,
    double win_sigma=DEFAULT_WIN_SIGMA,
    double threshold_L2hys=0.2, bool gamma_correction=true,
-   int nlevels=DEFAULT_NLEVELS)
+   int nlevels=DEFAULT_NLEVELS)??check the output??
 
-    Creates the ``HOG`` descriptor and detector.
+	Creates the ``HOG`` descriptor and detector.
 
-    :param win_size: Detection window size. Align to block size and block stride.
+   :param win_size: Detection window size. Align to block size and block stride.
 
-    :param block_size: Block size in pixels. Align to cell size. Only (16,16) is supported for now.
+   :param block_size: Block size in pixels. Align to cell size. Only (16,16) is supported for now.
 
-    :param block_stride: Block stride. It must be a multiple of cell size.
+   :param block_stride: Block stride. It must be a multiple of cell size.
 
-    :param cell_size: Cell size. Only (8, 8) is supported for now.
+   :param cell_size: Cell size. Only (8, 8) is supported for now.
 
-    :param nbins: Number of bins. Only 9 bins per cell are supported for now.
+   :param nbins: Number of bins. Only 9 bins per cell are supported for now.
 
-    :param win_sigma: Gaussian smoothing window parameter.
+   :param win_sigma: Gaussian smoothing window parameter.
 
-    :param threshold_L2Hys: L2-Hys normalization method shrinkage.
+   :param threshold_L2Hys: L2-Hys normalization method shrinkage.
 
-    :param gamma_correction: Flag to specify whether the gamma correction preprocessing is required or not.
+   :param gamma_correction: Flag to specify whether the gamma correction preprocessing is required or not.
 
-    :param nlevels: Maximum number of detection window increases.
+   :param nlevels: Maximum number of detection window increases.
 
 .. index:: gpu::HOGDescriptor::getDescriptorSize
 
@@ -148,19 +148,19 @@ gpu::HOGDescriptor::detect
 ------------------------------
 .. ocv:function:: void gpu::HOGDescriptor::detect(const GpuMat\& img,
    vector<Point>\& found_locations, double hit_threshold=0,
-   Size win_stride=Size(), Size padding=Size())
+   Size win_stride=Size(), Size padding=Size())??see output??
 
 	Performs object detection without a multi-scale window.
 
-	:param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
+   :param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
 
-	:param found_locations: Left-top corner points of detected objects boundaries.
+   :param found_locations: Left-top corner points of detected objects boundaries.
 
-    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
+   :param hit_threshold: Threshold for the distance between features and SVM classifying plane. Usually it is 0 and should be specfied in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
 
-	:param win_stride: Window stride. It must be a multiple of block stride.
+   :param win_stride: Window stride. It must be a multiple of block stride.
 
-	:param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
+   :param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
 
 .. index:: gpu::HOGDescriptor::detectMultiScale
 
@@ -169,23 +169,23 @@ gpu::HOGDescriptor::detectMultiScale
 .. ocv:function:: void gpu::HOGDescriptor::detectMultiScale(const GpuMat\& img,
    vector<Rect>\& found_locations, double hit_threshold=0,
    Size win_stride=Size(), Size padding=Size(),
-   double scale0=1.05, int group_threshold=2)
+   double scale0=1.05, int group_threshold=2)??the same??
 
 	Performs object detection with a multi-scale window.
 
-    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
+   :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
-    :param found_locations: Detected objects boundaries.
+   :param found_locations: Detected objects boundaries.
 
-    :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :ocv:func:`gpu::HOGDescriptor::detect`  for details.
+   :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :ocv:func:`gpu::HOGDescriptor::detect`  for details.
 
-    :param win_stride: Window stride. It must be a multiple of block stride.
+   :param win_stride: Window stride. It must be a multiple of block stride.
 
-    :param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
+   :param padding: Mock parameter to keep the CPU interface compatibility. It must be (0,0).
 
-    :param scale0: Coefficient of the detection window increase.
+   :param scale0: Coefficient of the detection window increase.
 
-    :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :ocv:func:`groupRectangles` .
+   :param group_threshold: Coefficient to regulate the similarity threshold. When detected, some objects can be covered by many rectangles. 0 means not to perform grouping. See  :ocv:func:`groupRectangles` .
 
 .. index:: gpu::HOGDescriptor::getDescriptors
 
@@ -193,21 +193,21 @@ gpu::HOGDescriptor::getDescriptors
 --------------------------------------
 .. ocv:function:: void gpu::HOGDescriptor::getDescriptors(const GpuMat\& img,
    Size win_stride, GpuMat\& descriptors,
-   int descr_format=DESCR_FORMAT_COL_BY_COL)
+   int descr_format=DESCR_FORMAT_COL_BY_COL)?? the same??
 
-    Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
+	Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
 
-    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
+   :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
-    :param win_stride: Window stride. It must be a multiple of block stride.
+   :param win_stride: Window stride. It must be a multiple of block stride.
 
-    :param descriptors: 2D array of descriptors.
+   :param descriptors: 2D array of descriptors.
 
-    :param descr_format: Descriptor storage format: 
+   :param descr_format: Descriptor storage format: 
 
-        * **DESCR_FORMAT_ROW_BY_ROW** Row-major order.
+        * **DESCR_FORMAT_ROW_BY_ROW** - Row-major order.
 
-        * **DESCR_FORMAT_COL_BY_COL** Column-major order.
+        * **DESCR_FORMAT_COL_BY_COL** - Column-major order.
             
 
 .. index:: gpu::CascadeClassifier_GPU
@@ -216,7 +216,7 @@ gpu::CascadeClassifier_GPU
 --------------------------
 .. ocv:class:: gpu::CascadeClassifier_GPU
 
-This cascade classifier class is used for object detection. 
+Cascade classifier class used for object detection. 
 ::
 
     class CV_EXPORTS CascadeClassifier_GPU
@@ -324,5 +324,5 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     imshow("Faces", image_cpu);
 
 
-See Also: :ocv:func:`CascadeClassifier::detectMultiScale` 
+.. seealso:: :ocv:func:`CascadeClassifier::detectMultiScale` 
 
