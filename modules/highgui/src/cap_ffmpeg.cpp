@@ -505,7 +505,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         // seek seems to work, so we don't need the filename,
         // but we still need to seek back to filestart
         filename=NULL;
-        av_seek_frame(ic, video_stream, 0, 0);
+        int64_t ts    = video_st->first_dts;
+        int     flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+        av_seek_frame(ic, video_stream, ts, flags);
     }
 exit_func:
 
@@ -621,7 +623,7 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     // if( !capture || !video_st || !picture->data[0] ) return 0;
     if( !video_st ) return 0;
 
-
+    double frameScale = av_q2d (video_st->time_base) * av_q2d (video_st->r_frame_rate);
     int64_t timestamp;
     timestamp = picture_pts;
 
@@ -631,24 +633,23 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         if(video_st->parser && video_st->parser->dts != AV_NOPTS_VALUE_)
             return (((double)video_st->parser->dts-1) *1000.0f) * av_q2d (video_st->time_base);
         if(video_st->cur_dts != AV_NOPTS_VALUE_)
-            return (((double)video_st->cur_dts-1) *1000.0f * av_q2d (video_st->time_base));
-        //  return (((double)video_st->cur_dts-1) *1000) / av_q2d (video_st->r_frame_rate);
+            return ((video_st->cur_dts-video_st->first_dts) * 1000.0 * av_q2d (video_st->time_base));
         break;
     case CV_CAP_PROP_POS_FRAMES:
         if(video_st->parser && video_st->parser->dts != AV_NOPTS_VALUE_)
             return (double)video_st->parser->dts-1;
         if(video_st->cur_dts != AV_NOPTS_VALUE_)
-            return (double)video_st->cur_dts-1;
+            return((video_st->cur_dts-video_st->first_dts) * frameScale);
         break;
     case CV_CAP_PROP_POS_AVI_RATIO:
         if(video_st->parser && video_st->parser->dts != AV_NOPTS_VALUE_)
             return (double)(video_st->parser->dts-1)/(double)video_st->duration;
         if(video_st->cur_dts != AV_NOPTS_VALUE_ && video_st->duration != AV_NOPTS_VALUE_)
-            return (double)(video_st->cur_dts-1)/(double)video_st->duration;
+            return(((video_st->cur_dts-video_st->first_dts)+(1.0/frameScale)) / (double)video_st->duration);
         break;
 	case CV_CAP_PROP_FRAME_COUNT:
 	    if(video_st->duration != AV_NOPTS_VALUE_)
-		    return (double)video_st->duration;
+		    return (double)video_st->duration * frameScale;
 	    break;
     case CV_CAP_PROP_FRAME_WIDTH:
         return (double)frame.width;
@@ -705,25 +706,26 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CV_CAP_PROP_POS_FRAMES:
     case CV_CAP_PROP_POS_AVI_RATIO:
         {
-            int64_t timestamp = 0;
-            AVRational time_base;
+            int64_t    timestamp  = ic->streams[video_stream]->first_dts;
+            AVRational time_base  = ic->streams[video_stream]->time_base;
+            AVRational frame_base = ic->streams[video_stream]->r_frame_rate;
+            double     timeScale  = (time_base.den / (double)time_base.num) / (frame_base.num / frame_base.den);
             switch( property_id )
             {
             case CV_CAP_PROP_POS_FRAMES:
-                timestamp=(int64_t)value;
+                timestamp += (int64_t)(value * timeScale);
                 if(ic->start_time != AV_NOPTS_VALUE_)
                     timestamp += ic->start_time;
                 break;
 
             case CV_CAP_PROP_POS_MSEC:
-                time_base=ic->streams[video_stream]->time_base;
-                timestamp=(int64_t)(value*(float(time_base.den)/float(time_base.num))/1000);
+                timestamp +=(int64_t)(value*(float(time_base.den)/float(time_base.num))/1000);
                 if(ic->start_time != AV_NOPTS_VALUE_)
                     timestamp += ic->start_time;
                 break;
 
             case CV_CAP_PROP_POS_AVI_RATIO:
-                timestamp=(int64_t)(value*ic->duration);
+                timestamp += (int64_t)(value*ic->duration);
                 if(ic->start_time != AV_NOPTS_VALUE_ && ic->duration != AV_NOPTS_VALUE_)
                     timestamp += ic->start_time;
                 break;
@@ -741,7 +743,10 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             }
             else
             {
-                int ret = av_seek_frame(ic, video_stream, timestamp, 0);
+                int flags = AVSEEK_FLAG_FRAME;
+                if (timestamp < ic->streams[video_stream]->cur_dts)
+                  flags |= AVSEEK_FLAG_BACKWARD;
+                int ret = av_seek_frame(ic, video_stream, timestamp, flags);
                 if (ret < 0)
                 {
                     fprintf(stderr, "HIGHGUI ERROR: AVI: could not seek to position %0.3f\n",
