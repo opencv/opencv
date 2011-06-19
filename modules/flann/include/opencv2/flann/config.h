@@ -1,8 +1,8 @@
 /***********************************************************************
  * Software License Agreement (BSD License)
  *
- * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
- * Copyright 2008-2009  David G. Lowe (lowe@cs.ubc.ca). All rights reserved.
+ * Copyright 2008-2011  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
+ * Copyright 2008-2011  David G. Lowe (lowe@cs.ubc.ca). All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#include "precomp.hpp"
 
+#ifndef OPENCV_FLANN_CONFIG_H_
+#define OPENCV_FLANN_CONFIG_H_
 
+#define FLANN_VERSION "1.6.10"
 
+#endif /* OPENCV_FLANN_CONFIG_H_ */

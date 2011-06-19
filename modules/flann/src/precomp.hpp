@@ -7,6 +7,7 @@
 
 #include "opencv2/flann/dist.h"
 #include "opencv2/flann/index_testing.h"
+#include "opencv2/flann/params.h"
 #include "opencv2/flann/saving.h"
 #include "opencv2/flann/general.h"
 
