@@ -5,15 +5,13 @@ Image Filtering
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images.
 
-See also: :ref:`ImageFiltering`.
-
 .. index:: gpu::BaseRowFilter_GPU
 
 gpu::BaseRowFilter_GPU
 ----------------------
 .. ocv:class:: gpu::BaseRowFilter_GPU
 
-This is a base class for linear or non-linear filters that processes rows of 2D arrays. Such filters are used for the "horizontal" filtering passes in separable filters. ::
+Base class for linear or non-linear filters that processes rows of 2D arrays. Such filters are used for the "horizontal" filtering passes in separable filters. ::
 
     class BaseRowFilter_GPU
     {
@@ -25,9 +23,7 @@ This is a base class for linear or non-linear filters that processes rows of 2D 
     };
 
 
-**Note:** 
-
-This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
+.. note:: This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::BaseColumnFilter_GPU
 
@@ -35,7 +31,7 @@ gpu::BaseColumnFilter_GPU
 -------------------------
 .. ocv:class:: gpu::BaseColumnFilter_GPU
 
-This is a base class for linear or non-linear filters that processes columns of 2D arrays. Such filters are used for the "vertical" filtering passes in separable filters. ::
+Base class for linear or non-linear filters that processes columns of 2D arrays. Such filters are used for the "vertical" filtering passes in separable filters. ::
 
     class BaseColumnFilter_GPU
     {
@@ -47,9 +43,7 @@ This is a base class for linear or non-linear filters that processes columns of 
     };
 
 
-**Note:**
-
-This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
+.. note:: This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::BaseFilter_GPU
 
@@ -57,7 +51,7 @@ gpu::BaseFilter_GPU
 -------------------
 .. ocv:class:: gpu::BaseFilter_GPU
 
-This is a base class for non-separable 2D filters. ::
+Base class for non-separable 2D filters. ::
 
     class CV_EXPORTS BaseFilter_GPU
     {
@@ -70,9 +64,7 @@ This is a base class for non-separable 2D filters. ::
     };
 
 
-**Note:**
-
-This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
+.. note:: This class does not allocate memory for a destination image. Usually this class is used inside :ocv:class:`gpu::FilterEngine_GPU`.
 
 .. index:: gpu::FilterEngine_GPU
 
@@ -80,7 +72,7 @@ gpu::FilterEngine_GPU
 ---------------------
 .. ocv:class:: gpu::FilterEngine_GPU
 
-This is a base class for Filter Engine. ::
+Base class for the Filter Engine. ::
 
     class CV_EXPORTS FilterEngine_GPU
     {
@@ -95,7 +87,7 @@ This is a base class for Filter Engine. ::
 The class can be used to apply an arbitrary filtering operation to an image. It contains all the necessary intermediate buffers. Pointers to the initialized ``FilterEngine_GPU`` instances are returned by various ``create*Filter_GPU`` functions (see below), and they are used inside high-level functions such as
 :ocv:func:`gpu::filter2D`, :ocv:func:`gpu::erode`, :ocv:func:`gpu::Sobel` , and others.
 
-By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary memory allocation for intermediate buffers and get much better performance: 
+By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary memory allocation for intermediate buffers and get better performance: 
 ::
 
     while (...)
@@ -118,13 +110,22 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
     // Release buffers only once
     filter.release();
 
- ``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)``, ``FilterEngine_GPU`` processes the inner region of an image ( ``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)`` ), because some filters do not check whether indices are outside the image for better perfomance. See below to understand which filters support processing the whole image and which do not and identify image type limitations.
+ ``FilterEngine_GPU`` can process a rectangular sub-region of an image. By default, if ``roi == Rect(0,0,-1,-1)``, ``FilterEngine_GPU`` processes the inner region of an image ( ``Rect(anchor.x, anchor.y, src_size.width - ksize.width, src_size.height - ksize.height)`` ) because some filters do not check whether indices are outside the image for better perfomance. See below to understand which filters support processing the whole image and which do not and identify image type limitations.
 
-**Note:** 
+.. note:: The GPU filters do not support the in-place mode.
 
-The GPU filters do not support the in-place mode.
-
-See also: :ocv:class:`gpu::BaseRowFilter_GPU`, :ocv:class:`gpu::BaseColumnFilter_GPU`, :ocv:class:`gpu::BaseFilter_GPU`, :ocv:func:`gpu::createFilter2D_GPU`, :ocv:func:`gpu::createSeparableFilter_GPU`, :ocv:func:`gpu::createBoxFilter_GPU`, :ocv:func:`gpu::createMorphologyFilter_GPU`, :ocv:func:`gpu::createLinearFilter_GPU`, :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`gpu::createDerivFilter_GPU`, :ocv:func:`gpu::createGaussianFilter_GPU`.
+.. seealso:: 
+:ocv:class:`gpu::BaseRowFilter_GPU`, 
+:ocv:class:`gpu::BaseColumnFilter_GPU`, 
+:ocv:class:`gpu::BaseFilter_GPU`, 
+:ocv:func:`gpu::createFilter2D_GPU`, 
+:ocv:func:`gpu::createSeparableFilter_GPU`, 
+:ocv:func:`gpu::createBoxFilter_GPU`, 
+:ocv:func:`gpu::createMorphologyFilter_GPU`, 
+:ocv:func:`gpu::createLinearFilter_GPU`, 
+:ocv:func:`gpu::createSeparableLinearFilter_GPU`, 
+:ocv:func:`gpu::createDerivFilter_GPU`, 
+:ocv:func:`gpu::createGaussianFilter_GPU`
 
 .. index:: gpu::createFilter2D_GPU
 
@@ -140,7 +141,7 @@ gpu::createFilter2D_GPU
 
     :param dstType: Output image type. It must be supported by  ``filter2D`` .
 
-	Usually this function is used inside such high-level functions as :ocv:func:`gpu::createLinearFilter_GPU`, :ocv:func:`gpu::createBoxFilter_GPU`.
+Usually this function is used inside such high-level functions as :ocv:func:`gpu::createLinearFilter_GPU`, :ocv:func:`gpu::createBoxFilter_GPU`.
 
 .. index:: gpu::createSeparableFilter_GPU
 
@@ -160,7 +161,7 @@ gpu::createSeparableFilter_GPU
 
     :param dstType: Output image type. It must be supported by  ``columnFilter``.
 
-	Usually this function is used inside such high-level functions as :ocv:func:`gpu::createSeparableLinearFilter_GPU`.
+Usually this function is used inside such high-level functions as :ocv:func:`gpu::createSeparableLinearFilter_GPU`.
 
 .. index:: gpu::getRowSumFilter_GPU
 
@@ -178,9 +179,7 @@ gpu::getRowSumFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::getColumnSumFilter_GPU
 
@@ -198,9 +197,7 @@ gpu::getColumnSumFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::createBoxFilter_GPU
 
@@ -212,19 +209,17 @@ gpu::createBoxFilter_GPU
 
 .. ocv:function:: Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType, const Size& ksize, Point anchor = Point(-1, -1))
 
-    :param srcType: Input image type. Supports ``CV_8UC1`` and ``CV_8UC4``.
+    :param srcType: Input image type supporting ``CV_8UC1`` and ``CV_8UC4``.
 
-    :param dstType: Output image type.  It supports only the same as the source type.
+    :param dstType: Output image type.  It supports only the same values as the source type.
 
     :param ksize: Kernel size.
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`boxFilter`
+.. seealso:: :ocv:func:`boxFilter`
 
 .. index:: gpu::boxFilter
 
@@ -244,11 +239,9 @@ gpu::boxFilter
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+ .. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`boxFilter`
+.. seealso:: :ocv:func:`boxFilter`
 
 .. index:: gpu::blur
 
@@ -266,11 +259,9 @@ gpu::blur
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`blur`, :ocv:func:`gpu::boxFilter`
+.. seealso:: :ocv:func:`blur`, :ocv:func:`gpu::boxFilter`
 
 .. index:: gpu::createMorphologyFilter_GPU
 
@@ -292,11 +283,9 @@ gpu::createMorphologyFilter_GPU
 
     :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`createMorphologyFilter`
+.. seealso:: :ocv:func:`createMorphologyFilter`
 
 .. index:: gpu::erode
 
@@ -316,11 +305,11 @@ gpu::erode
 
     :param iterations: Number of times erosion to be applied.
 
-	**Note:** 
+.. note:: 
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`erode`
+.. seealso:: :ocv:func:`erode`
 
 .. index:: gpu::dilate
 
@@ -340,11 +329,9 @@ gpu::dilate
 
     :param iterations: Number of times dilation to be applied.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`dilate`
+.. seealso:: :ocv:func:`dilate`
 
 .. index:: gpu::morphologyEx
 
@@ -377,11 +364,9 @@ gpu::morphologyEx
 
     :param iterations: Number of times erosion and dilation to be applied.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`morphologyEx` 
+.. seealso:: :ocv:func:`morphologyEx` 
 
 .. index:: gpu::createLinearFilter_GPU
 
@@ -403,11 +388,9 @@ gpu::createLinearFilter_GPU
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`createLinearFilter`
+.. seealso:: :ocv:func:`createLinearFilter`
 
 .. index:: gpu::filter2D
 
@@ -425,13 +408,11 @@ gpu::filter2D
 
     :param kernel: 2D array of filter coefficients. This filter works with integers kernels. If  ``kernel``  has a ``float``  or  ``double``  type, it uses fixed-point arithmetic.
 
-    :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
-
-	**Note:** 
+    :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel cente
 	
 	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`filter2D`
+.. seealso:: :ocv:func:`filter2D`
 
 .. index:: gpu::Laplacian
 
@@ -451,11 +432,9 @@ gpu::Laplacian
 
     :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :ocv:func:`getDerivKernels` ).
 
-	**Note:**
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
-See Also: :ocv:func:`Laplacian`,:ocv:func:`gpu::filter2D` .
+.. seealso:: :ocv:func:`Laplacian`,:ocv:func:`gpu::filter2D` .
 
 .. index:: gpu::getLinearRowFilter_GPU
 
@@ -503,7 +482,7 @@ gpu::getLinearColumnFilter_GPU
 	* NPP version is called when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
 	* OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``, ``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside image.
 	
-See Also: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
+.. seealso:: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
 
 .. index:: gpu::createSeparableLinearFilter_GPU
 
@@ -524,7 +503,7 @@ gpu::createSeparableLinearFilter_GPU
     :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and vertical directions For details, see  :ocv:func:`borderInterpolate`. For details on limitations, see :ocv:func:`gpu::getLinearRowFilter_GPU`, cpp:ocv:func:`gpu::getLinearColumnFilter_GPU`.
 
 
-See Also: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`gpu::getLinearColumnFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
+.. seealso:: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`gpu::getLinearColumnFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
 
 .. index:: gpu::sepFilter2D
 
@@ -546,7 +525,7 @@ gpu::sepFilter2D
 
     :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`.
 
-See Also: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`sepFilter2D`
+.. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`sepFilter2D`
 
 .. index:: gpu::createDerivFilter_GPU
 
@@ -568,7 +547,7 @@ gpu::createDerivFilter_GPU
 
     :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
 
-See Also: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createDerivFilter`
+.. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createDerivFilter`
 
 .. index:: gpu::Sobel
 
@@ -594,7 +573,7 @@ gpu::Sobel
 
     :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
 
-See Also: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Sobel`
+.. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Sobel`
 
 .. index:: gpu::Scharr
 
@@ -618,7 +597,7 @@ gpu::Scharr
 
     :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`  and :ocv:func:`Scharr` .
 
-See Also: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Scharr`
+.. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Scharr`
 
 .. index:: gpu::createGaussianFilter_GPU
 
@@ -638,7 +617,7 @@ gpu::createGaussianFilter_GPU
 
     :param rowBorderType, columnBorderType: Border type to use. See  :ocv:func:`borderInterpolate` for details.
 
-See Also: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createGaussianFilter`
+.. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createGaussianFilter`
 
 .. index:: gpu::GaussianBlur
 
@@ -658,7 +637,7 @@ gpu::GaussianBlur
 
     :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
 
-See Also: :ocv:func:`gpu::createGaussianFilter_GPU`, :ocv:func:`GaussianBlur`
+.. seealso:: :ocv:func:`gpu::createGaussianFilter_GPU`, :ocv:func:`GaussianBlur`
 
 .. index:: gpu::getMaxFilter_GPU
 
@@ -676,9 +655,7 @@ gpu::getMaxFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. index:: gpu::getMinFilter_GPU
 
@@ -696,6 +673,4 @@ gpu::getMinFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-	**Note:** 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+	.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
