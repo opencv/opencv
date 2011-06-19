@@ -892,7 +892,6 @@ template<typename _Tp> inline Mat_<_Tp>& Mat_<_Tp>::operator = (const _Tp& s)
     Mat::operator=(Scalar((const VT&)s));
     return *this;
 }
-    
 
 template<typename _Tp> inline void Mat_<_Tp>::create(int _rows, int _cols)
 {
@@ -1334,6 +1333,11 @@ inline Mat& Mat::operator = (const MatExpr& e)
     e.op->assign(e, *this);
     return *this;
 }    
+
+template<typename _Tp> inline Mat_<_Tp>::Mat_(const MatExpr& e)
+{
+    e.op->assign(e, *this, DataType<_Tp>::type);
+}
 
 template<typename _Tp> Mat_<_Tp>& Mat_<_Tp>::operator = (const MatExpr& e)
 {

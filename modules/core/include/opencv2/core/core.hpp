@@ -2535,6 +2535,8 @@ public:
     Mat_(const Mat_& m, const Rect& roi);
     //! selects a submatrix, n-dim version
     Mat_(const Mat_& m, const Range* ranges);
+    //! from a matrix expression
+    explicit Mat_(const MatExpr& e);
     //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
     explicit Mat_(const vector<_Tp>& vec, bool copyData=false);
     template<int n> explicit Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData=true);
@@ -2547,6 +2549,8 @@ public:
     Mat_& operator = (const Mat_& m);
     //! set all the elements to s.
     Mat_& operator = (const _Tp& s);
+    //! assign a matrix expression
+    Mat_& operator = (const MatExpr& e);
 
     //! iterators; they are smart enough to skip gaps in the end of rows
     iterator begin();
@@ -2562,8 +2566,6 @@ public:
     void create(int _ndims, const int* _sizes);
     //! cross-product
     Mat_ cross(const Mat_& m) const;
-    //! to support complex matrix expressions
-    Mat_& operator = (const MatExpr& expr);
     //! data type conversion
     template<typename T2> operator Mat_<T2>() const;
     //! overridden forms of Mat::row() etc.
