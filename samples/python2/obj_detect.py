@@ -1,6 +1,5 @@
 import numpy as np
 import cv2, cv
-import common
 
 def detect(img, cascade):
     rects = cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
@@ -44,7 +43,7 @@ def process_image(fn, cascade, extract_faces=True):
 
     faces = []
     if extract_faces:
-        path, name, ext = common.splitfn(fn)
+        path, name, ext = splitfn(fn)
         face_sz = 256
         for i, r in enumerate(rects):
             p1, p2, u = r.reshape(3, 2)
@@ -56,8 +55,6 @@ def process_image(fn, cascade, extract_faces=True):
             face = cv2.warpAffine(img, M, (face_sz, face_sz), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_AREA)
             faces.append(face)
 
-            cv2.imwrite('out/%s_%02d.bmp' % (name, i), face)
-        
     return small, rects, faces
     
     
@@ -66,23 +63,32 @@ if __name__ == '__main__':
     import sys
     import getopt
     from glob import glob
+    from common import splitfn, image_extensions
 
-    args, img_mask = getopt.getopt(sys.argv[1:], '', ['cascade='])
+    args, img_args = getopt.getopt(sys.argv[1:], '', ['cascade=', 'outdir='])
     args = dict(args)
-    # "../../data/haarcascades/haarcascade_frontalface_default.xml" #haarcascade_frontalface_default
     cascade_fn = args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml")
+    outdir = args.get('--outdir')
+    
+    img_list = []
+    if len(img_args) == 0:
+        img_list = ['../cpp/lena.jpg']
+    else:
+        for mask in img_args:
+            img_list.extend(glob(mask))
+    img_list = [fn for fn in img_list if splitfn(fn)[-1].lower() in image_extensions]
 
     cascade = cv2.CascadeClassifier(cascade_fn)
 
-    mask = 'D:/Dropbox/Photos/2011-06-12 aero/img_08[2-9]*.jpg'
-    for fn in glob(mask):
-        print fn
+    for i, fn in enumerate(img_list):
+        print '%d / %d   %s' % (i+1, len(img_list), fn),
         vis, rects, faces = process_image(fn, cascade)
+        if len(faces) > 0 and outdir is not None:
+            path, name, ext = splitfn(fn)
+            cv2.imwrite('%s/%s_all.bmp' % (outdir, name), vis)
+            for face_i, face in enumerate(faces):
+                cv2.imwrite('%s/%s_obj%02d.bmp' % (outdir, name, face_i), face)
+        print ' - %d object(s) found' % len(faces)
         cv2.imshow('img', vis)
-        cv2.waitKey(100)
-
-    
-    #vis, rects = process_image('test.jpg', cascade)
-    #print rects
-    #cv2.imshow('img', vis)
+        cv2.waitKey(50)
     cv2.waitKey()

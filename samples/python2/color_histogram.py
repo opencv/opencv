@@ -18,7 +18,7 @@ hist_scale = 10
 def set_scale(val):
     global hist_scale
     hist_scale = val
-cv.CreateTrackbar('scale', 'hist', hist_scale, 32, set_scale)
+cv2.createTrackbar('scale', 'hist', hist_scale, 32, set_scale)
 
 try: fn = sys.argv[1]
 except: fn = 'synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05'
