@@ -2893,7 +2893,7 @@ public:
 protected:
     void init();
 
-    int index;
+    int index, width, height;
     IplImage* frame;
     static videoInput VI;
 };
@@ -2911,6 +2911,7 @@ CvCaptureCAM_DShow::CvCaptureCAM_DShow()
 {
     index = -1;
     frame = 0;
+    width = height = -1;
 }
 
 void CvCaptureCAM_DShow::close()
@@ -2921,6 +2922,7 @@ void CvCaptureCAM_DShow::close()
         index = -1;
         cvReleaseImage(&frame);
     }
+    width = height = -1;
 }
 
 // Initialize camera input
@@ -2977,27 +2979,28 @@ double CvCaptureCAM_DShow::getProperty( int property_id )
 
 bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
 {
-    int width = 0, height = 0;
-
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         width = cvRound(value);
-        height = width*3/4;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
-        width = height*4/3;
     default:
         return false;
     }
 
-    if( width != VI.getWidth(index) || height != VI.getHeight(index) )
+    if( width > 0 && height > 0 )
     {
-        VI.stopDevice(index);
-        VI.setupDevice(index, width, height);
+        if( width != VI.getWidth(index) || height != VI.getHeight(index) )
+        {
+            VI.stopDevice(index);
+            VI.setupDevice(index, width, height);
+        }
+        width = height = -1;
+        return VI.isDeviceSetup(index);
     }
-    return VI.isDeviceSetup(index);
+    return true;
 }
 
 
