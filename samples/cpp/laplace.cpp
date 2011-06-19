@@ -2,6 +2,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 #include <ctype.h>
+#include <stdio.h>
 #include <iostream>
 
 using namespace cv;
@@ -26,8 +27,22 @@ int main( int argc, char** argv )
 
     if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
         cap.open(argc == 2 ? argv[1][0] - '0' : 0);
-    else if( argc == 2 )
+    else if( argc >= 2 )
+    {
         cap.open(argv[1]);
+        if( cap.isOpened() )
+            cout << "Video " << argv[1] <<
+                ": width=" << cap.get(CV_CAP_PROP_FRAME_WIDTH) <<
+                ", height=" << cap.get(CV_CAP_PROP_FRAME_HEIGHT) <<
+                ", nframes=" << cap.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+        if( argc > 2 && isdigit(argv[2][0]) )
+        {
+            int pos;
+            sscanf(argv[2], "%d", &pos);
+            cout << "seeking to frame #" << pos << endl;
+            cap.set(CV_CAP_PROP_POS_FRAMES, pos);
+        }
+    }
 
     if( !cap.isOpened() )
     {
