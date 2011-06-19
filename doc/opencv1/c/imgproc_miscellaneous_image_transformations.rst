@@ -1116,7 +1116,7 @@ Using these integral images, one may calculate sum, mean and standard deviation 
 
 .. math::
 
-    \sum _{x_1<=x<x_2,  \, y_1<=y<y_2} =  \texttt{sum} (x_2,y_2)- \texttt{sum} (x_1,y_2)- \texttt{sum} (x_2,y_1)+ \texttt{sum} (x_1,x_1) 
+    \sum _{x_1<=x<x_2,  \, y_1<=y<y_2} =  \texttt{sum} (x_2,y_2)- \texttt{sum} (x_1,y_2)- \texttt{sum} (x_2,y_1)+ \texttt{sum} (x_1,y_1) 
 
 
 It makes possible to do a fast blurring or fast block correlation with variable window size, for example. In the case of multi-channel images, sums for each channel are accumulated independently.
