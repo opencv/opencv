@@ -380,9 +380,8 @@ static int is_iplimage(PyObject *o)
 static void cvmat_dealloc(PyObject *self)
 {
   cvmat_t *pc = (cvmat_t*)self;
-  if (pc->data) {
-    Py_DECREF(pc->data);
-  }
+  Py_XDECREF(pc->data);
+  //cvDecRefData(pc->a);  
   cvFree(&pc->a);
   PyObject_Del(self);
 }
@@ -698,7 +697,8 @@ static int is_cvmat(PyObject *o)
 static void cvmatnd_dealloc(PyObject *self)
 {
   cvmatnd_t *pc = (cvmatnd_t*)self;
-  Py_DECREF(pc->data);
+  Py_XDECREF(pc->data);
+  cvDecRefData(pc->a);  
   cvFree(&pc->a);
   PyObject_Del(self);
 }
@@ -1648,7 +1648,11 @@ static int convert_to_CvMat(PyObject *o, CvMat **dst, const char *name)
       assert(cvGetErrStatus() == 0);
       *dst = m->a;
       return 1;
-    } else {
+    } else if (m->data && m->a->data.ptr){
+      *dst = m->a;  
+      return 1;   
+    }
+    else {
       return failmsg("CvMat argument '%s' has no data", name);
     }
   }
@@ -2241,36 +2245,6 @@ static PyObject *pythonize_CvMat(cvmat_t *m)
   return (PyObject*)m;
 }
 
-static PyObject *pythonize_foreign_CvMat(cvmat_t *m)
-{
-  // Need to make this CvMat look like any other, with a Python 
-  // buffer object as its data.
-  // Difference here is that the buffer is 'foreign' (from NumPy, for example)
-  CvMat *mat = m->a;
-  assert(mat->step != 0);
-#if 0
-  PyObject *data = PyString_FromStringAndSize((char*)(mat->data.ptr), mat->rows * mat->step);
-#else
-  memtrack_t *o = PyObject_NEW(memtrack_t, &memtrack_Type);
-  o->ptr = mat->data.ptr;
-  o->owner = __LINE__;
-  o->freeptr = false;
-  o->size = mat->rows * mat->step;
-  o->backing = NULL;
-  o->backingmat = mat;
-  PyObject *data = PyBuffer_FromReadWriteObject((PyObject*)o, (size_t)0, mat->rows * mat->step);
-  if (data == NULL)
-    return NULL;
-#endif
-  m->data = data;
-  m->offset = 0;
-  Py_DECREF(o);
-
-  // Now m has a reference to data, which has a reference to o.
-
-  return (PyObject*)m;
-}
-
 static PyObject *pythonize_IplImage(iplimage_t *cva)
 {
   // Need to make this iplimage look like any other, with a Python 
@@ -2848,7 +2822,8 @@ static PyObject *fromarray(PyObject *o, int allowND)
   PyArrayInterface *pai = (PyArrayInterface*)PyCObject_AsVoidPtr(ao);
   if (pai->two != 2) {
     PyErr_SetString(PyExc_TypeError, "object does not have array interface");
-    return NULL;
+      Py_DECREF(ao);
+      return NULL;
   }
 
   int type = -1;
@@ -2880,6 +2855,7 @@ static PyObject *fromarray(PyObject *o, int allowND)
   }
   if (type == -1) {
      PyErr_SetString(PyExc_TypeError, "the array type is not supported by OpenCV");
+     Py_DECREF(ao);
      return NULL;
   }
 
@@ -2892,27 +2868,36 @@ static PyObject *fromarray(PyObject *o, int allowND)
       ERRWRAP(m->a = cvCreateMatHeader(pai->shape[0], pai->shape[1], type));
       m->a->step = pai->strides[0];
     } else if (pai->nd == 3) {
-      if (pai->shape[2] > CV_CN_MAX)
+      if (pai->shape[2] > CV_CN_MAX) {
+        Py_DECREF(ao);  
         return (PyObject*)failmsg("cv.fromarray too many channels, see allowND argument");
+      }
       ERRWRAP(m->a = cvCreateMatHeader(pai->shape[0], pai->shape[1], type + ((pai->shape[2] - 1) << CV_CN_SHIFT)));
       m->a->step = pai->strides[0];
     } else {
+      Py_DECREF(ao);   
       return (PyObject*)failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument");
     }
     m->a->data.ptr = (uchar*)pai->data;
-    retval = pythonize_foreign_CvMat(m);
+    //retval = pythonize_foreign_CvMat(m);
+    m->data = o;  
+    m->offset = 0;  
+    retval = (PyObject*)m;  
   } else {
     int dims[CV_MAX_DIM];
     int i;
     for (i = 0; i < pai->nd; i++)
       dims[i] = pai->shape[i];
     cvmatnd_t *m = PyObject_NEW(cvmatnd_t, &cvmatnd_Type);
-    ERRWRAP(m->a = cvCreateMatND(pai->nd, dims, type));
+    ERRWRAP(m->a = cvCreateMatNDHeader(pai->nd, dims, type));
     m->a->data.ptr = (uchar*)pai->data;
-    
-    retval = pythonize_CvMatND(m, ao);
+    m->data = o;  
+    m->offset = 0;  
+    retval = (PyObject*)m;  
+    //retval = pythonize_CvMatND(m, ao);
   }
   Py_DECREF(ao);
+  Py_INCREF(o);  
   return retval;
 }
 #endif
