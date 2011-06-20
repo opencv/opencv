@@ -1,3 +1,7 @@
+#################
+OpenCV Tutorials
+#################
+
 The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our SVN repository.
 
 .. note::
