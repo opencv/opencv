@@ -58,6 +58,7 @@ enum { WINDOW_AUTOSIZE=1 };
 
 CV_EXPORTS_W void namedWindow( const string& winname, int flags=WINDOW_AUTOSIZE );
 CV_EXPORTS_W void destroyWindow( const string& winname );
+CV_EXPORTS_W void destroyAllWindows();
 CV_EXPORTS_W int startWindowThread();
 
 CV_EXPORTS_W void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV

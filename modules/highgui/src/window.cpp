@@ -136,6 +136,11 @@ void cv::destroyWindow( const string& winname )
     cvDestroyWindow( winname.c_str() );
 }
 
+void cv::destroyAllWindows()
+{
+    cvDestroyAllWindows();
+}
+
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
 	cvSetWindowProperty( winname.c_str(),prop_id,prop_value);
