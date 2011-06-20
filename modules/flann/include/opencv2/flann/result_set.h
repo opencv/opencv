@@ -28,516 +28,291 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_RESULTSET_H
-#define FLANN_RESULTSET_H
+#ifndef _OPENCV_RESULTSET_H_
+#define _OPENCV_RESULTSET_H_
+
 
 #include <algorithm>
-#include <cstring>
-#include <iostream>
 #include <limits>
-#include <set>
 #include <vector>
+#include "opencv2/flann/dist.h"
+
 
 namespace cvflann
 {
 
 /* This record represents a branch point when finding neighbors in
-    the tree.  It contains a record of the minimum distance to the query
-    point, as well as the node at which the search resumes.
- */
+	the tree.  It contains a record of the minimum distance to the query
+	point, as well as the node at which the search resumes.
+*/
 
-template <typename T, typename DistanceType>
-struct BranchStruct
-{
-    T node;           /* Tree node at which search resumes */
-    DistanceType mindist;     /* Minimum distance to query for all nodes below. */
+template <typename T>
+struct BranchStruct {
+	T node;           /* Tree node at which search resumes */
+	float mindistsq;     /* Minimum distance to query for all nodes below. */
 
-    BranchStruct() {}
-    BranchStruct(const T& aNode, DistanceType dist) : node(aNode), mindist(dist) {}
+	bool operator<(const BranchStruct<T>& rhs)
+	{
+        return mindistsq<rhs.mindistsq;
+	}
 
-    bool operator<(const BranchStruct<T, DistanceType>& rhs) const
+    static BranchStruct<T> make_branch(const T& aNode, float dist)
     {
-        return mindist<rhs.mindist;
+        BranchStruct<T> branch;
+        branch.node = aNode;
+        branch.mindistsq = dist;
+        return branch;
     }
 };
 
 
-template <typename DistanceType>
+
+
+
+template <typename ELEM_TYPE>
 class ResultSet
 {
+protected:
+
 public:
-    virtual ~ResultSet() {}
 
-    virtual bool full() const = 0;
+	virtual ~ResultSet() {};
 
-    virtual void addPoint(DistanceType dist, int index) = 0;
+	virtual void init(const ELEM_TYPE* target_, int veclen_) = 0;
 
-    virtual DistanceType worstDist() const = 0;
+	virtual int* getNeighbors() = 0;
+
+	virtual float* getDistances() = 0;
+
+	virtual size_t size() const = 0;
+
+	virtual bool full() const = 0;
+
+	virtual bool addPoint(const ELEM_TYPE* point, int index) = 0;
+
+	virtual float worstDist() const = 0;
 
 };
 
-/**
- * KNNSimpleResultSet does not ensure that the element it holds are unique.
- * Is used in those cases where the nearest neighbour algorithm used does not
- * attempt to insert the same element multiple times.
- */
-template <typename DistanceType>
-class KNNSimpleResultSet : public ResultSet<DistanceType>
+
+template <typename ELEM_TYPE>
+class KNNResultSet : public ResultSet<ELEM_TYPE>
 {
-    int* indices;
-    DistanceType* dists;
+	const ELEM_TYPE* target;
+	const ELEM_TYPE* target_end;
+    int veclen;
+
+	int* indices;
+	float* dists;
     int capacity;
-    int count;
-    DistanceType worst_distance_;
+
+	int count;
 
 public:
-    KNNSimpleResultSet(int capacity_) : capacity(capacity_), count(0)
-    {
-    }
+	KNNResultSet(int capacity_, ELEM_TYPE* target_ = NULL, int veclen_ = 0 ) :
+			target(target_), veclen(veclen_), capacity(capacity_), count(0)
+	{
+		target_end = target + veclen;
 
-    void init(int* indices_, DistanceType* dists_)
-    {
-        indices = indices_;
-        dists = dists_;
+        indices = new int[capacity_];
+        dists = new float[capacity_];
+	}
+
+	~KNNResultSet()
+	{
+		delete[] indices;
+		delete[] dists;
+	}
+
+	void init(const ELEM_TYPE* target_, int veclen_)
+	{
+        target = target_;
+        veclen = veclen_;
+        target_end = target + veclen;
         count = 0;
-        worst_distance_ = (std::numeric_limits<DistanceType>::max)();
-        dists[capacity-1] = worst_distance_;
+	}
+
+
+	int* getNeighbors()
+	{
+		return indices;
+	}
+
+    float* getDistances()
+    {
+        return dists;
     }
 
     size_t size() const
     {
-        return count;
+    	return count;
     }
 
-    bool full() const
-    {
-        return count == capacity;
-    }
+	bool full() const
+	{
+		return count == capacity;
+	}
 
 
-    void addPoint(DistanceType dist, int index)
-    {
-        if (dist >= worst_distance_) return;
-        int i;
-        for (i=count; i>0; --i) {
-#ifdef FLANN_FIRST_MATCH
-            if ( (dists[i-1]>dist) || ((dist==dists[i-1])&&(indices[i-1]>index)) )
-#else
-            if (dists[i-1]>dist)
-#endif
-            {
-                if (i<capacity) {
-                    dists[i] = dists[i-1];
-                    indices[i] = indices[i-1];
-                }
-            }
-            else break;
-        }
-        if (count < capacity) ++count;
-        dists[i] = dist;
-        indices[i] = index;
-        worst_distance_ = dists[capacity-1];
-    }
+	bool addPoint(const ELEM_TYPE* point, int index)
+	{
+		for (int i=0;i<count;++i) {
+			if (indices[i]==index) return false;
+		}
+		float dist = (float)flann_dist(target, target_end, point);
 
-    DistanceType worstDist() const
-    {
-        return worst_distance_;
-    }
-};
+		if (count<capacity) {
+			indices[count] = index;
+			dists[count] = dist;
+			++count;
+		}
+		else if (dist < dists[count-1] || (dist == dists[count-1] && index < indices[count-1])) {
+//         else if (dist < dists[count-1]) {
+			indices[count-1] = index;
+			dists[count-1] = dist;
+		}
+		else {
+			return false;
+		}
 
-/**
- * K-Nearest neighbour result set. Ensures that the elements inserted are unique
- */
-template <typename DistanceType>
-class KNNResultSet : public ResultSet<DistanceType>
-{
-    int* indices;
-    DistanceType* dists;
-    int capacity;
-    int count;
-    DistanceType worst_distance_;
+		int i = count-1;
+		// bubble up
+		while (i>=1 && (dists[i]<dists[i-1] || (dists[i]==dists[i-1] && indices[i]<indices[i-1]) ) ) {
+//         while (i>=1 && (dists[i]<dists[i-1]) ) {
+            std::swap(indices[i],indices[i-1]);
+            std::swap(dists[i],dists[i-1]);
+			i--;
+		}
 
-public:
-    KNNResultSet(int capacity_) : capacity(capacity_), count(0)
-    {
-    }
+		return true;
+	}
 
-    void init(int* indices_, DistanceType* dists_)
-    {
-        indices = indices_;
-        dists = dists_;
-        count = 0;
-        worst_distance_ = (std::numeric_limits<DistanceType>::max)();
-        dists[capacity-1] = worst_distance_;
-    }
-
-    size_t size() const
-    {
-        return count;
-    }
-
-    bool full() const
-    {
-        return count == capacity;
-    }
-
-
-    void addPoint(DistanceType dist, int index)
-    {
-        if (dist >= worst_distance_) return;
-        int i;
-        for (i = count; i > 0; --i) {
-#ifdef FLANN_FIRST_MATCH
-            if ( (dists[i-1]<=dist) && ((dist!=dists[i-1])||(indices[i-1]<=index)) )
-#else
-            if (dists[i-1]<=dist)
-#endif
-            {
-                // Check for duplicate indices
-                int j = i - 1;
-                while ((j >= 0) && (dists[j] == dist)) {
-                    if (indices[j] == index) {
-                        return;
-                    }
-                    --j;
-                }
-                break;
-            }
-        }
-
-        if (count < capacity) ++count;
-        for (int j = count-1; j > i; --j) {
-            dists[j] = dists[j-1];
-            indices[j] = indices[j-1];
-        }
-        dists[i] = dist;
-        indices[i] = index;
-        worst_distance_ = dists[capacity-1];
-    }
-
-    DistanceType worstDist() const
-    {
-        return worst_distance_;
-    }
+	float worstDist() const
+	{
+		return (count<capacity) ? (std::numeric_limits<float>::max)() : dists[count-1];
+	}
 };
 
 
 /**
  * A result-set class used when performing a radius based search.
  */
-template <typename DistanceType>
-class RadiusResultSet : public ResultSet<DistanceType>
+template <typename ELEM_TYPE>
+class RadiusResultSet : public ResultSet<ELEM_TYPE>
 {
-    DistanceType radius;
-    int* indices;
-    DistanceType* dists;
-    size_t capacity;
-    size_t count;
+	const ELEM_TYPE* target;
+	const ELEM_TYPE* target_end;
+    int veclen;
+
+	struct Item {
+		int index;
+		float dist;
+
+		bool operator<(Item rhs) {
+			return dist<rhs.dist;
+		}
+	};
+
+    std::vector<Item> items;
+	float radius;
+
+	bool sorted;
+	int* indices;
+	float* dists;
+	size_t count;
+
+private:
+	void resize_vecs()
+	{
+		if (items.size()>count) {
+			if (indices!=NULL) delete[] indices;
+			if (dists!=NULL) delete[] dists;
+			count = items.size();
+			indices = new int[count];
+			dists = new float[count];
+		}
+	}
 
 public:
-    RadiusResultSet(DistanceType radius_, int* indices_, DistanceType* dists_, int capacity_) :
-        radius(radius_), indices(indices_), dists(dists_), capacity(capacity_)
-    {
-        init();
-    }
+	RadiusResultSet(float radius_) :
+		radius(radius_), indices(NULL), dists(NULL)
+	{
+		sorted = false;
+		items.reserve(16);
+		count = 0;
+	}
 
-    ~RadiusResultSet()
-    {
-    }
+	~RadiusResultSet()
+	{
+		if (indices!=NULL) delete[] indices;
+		if (dists!=NULL) delete[] dists;
+	}
 
-    void init()
+	void init(const ELEM_TYPE* target_, int veclen_)
+	{
+        target = target_;
+        veclen = veclen_;
+        target_end = target + veclen;
+        items.clear();
+        sorted = false;
+	}
+
+	int* getNeighbors()
+	{
+		if (!sorted) {
+			sorted = true;
+			sort_heap(items.begin(), items.end());
+		}
+		resize_vecs();
+		for (size_t i=0;i<items.size();++i) {
+			indices[i] = items[i].index;
+		}
+		return indices;
+	}
+
+    float* getDistances()
     {
-        count = 0;
+		if (!sorted) {
+			sorted = true;
+			sort_heap(items.begin(), items.end());
+		}
+		resize_vecs();
+		for (size_t i=0;i<items.size();++i) {
+			dists[i] = items[i].dist;
+		}
+        return dists;
     }
 
     size_t size() const
     {
-        return count;
+    	return items.size();
     }
 
-    bool full() const
-    {
-        return true;
-    }
+	bool full() const
+	{
+		return true;
+	}
 
-    void addPoint(DistanceType dist, int index)
-    {
-        if (dist<radius) {
-            if ((capacity>0)&&(count < capacity)) {
-                dists[count] = dist;
-                indices[count] = index;
-            }
-            count++;
-        }
-    }
+	bool addPoint(const ELEM_TYPE* point, int index)
+	{
+		Item it;
+		it.index = index;
+		it.dist = (float)flann_dist(target, target_end, point);
+		if (it.dist<=radius) {
+			items.push_back(it);
+			push_heap(items.begin(), items.end());
+            return true;
+		}
+        return false;
+	}
 
-    DistanceType worstDist() const
-    {
-        return radius;
-    }
+	float worstDist() const
+	{
+		return radius;
+	}
 
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+} // namespace cvflann
 
-/** Class that holds the k NN neighbors
- * Faster than KNNResultSet as it uses a binary heap and does not maintain two arrays
- */
-template<typename DistanceType>
-class UniqueResultSet : public ResultSet<DistanceType>
-{
-public:
-    struct DistIndex
-    {
-        DistIndex(DistanceType dist, unsigned int index) :
-            dist_(dist), index_(index)
-        {
-        }
-        bool operator<(const DistIndex dist_index) const
-        {
-            return (dist_ < dist_index.dist_) || ((dist_ == dist_index.dist_) && index_ < dist_index.index_);
-        }
-        DistanceType dist_;
-        unsigned int index_;
-    };
-
-    /** Default cosntructor */
-    UniqueResultSet() :
-        worst_distance_(std::numeric_limits<DistanceType>::max())
-    {
-    }
-
-    /** Check the status of the set
-     * @return true if we have k NN
-     */
-    inline bool full() const
-    {
-        return is_full_;
-    }
-
-    /** Remove all elements in the set
-     */
-    virtual void clear() = 0;
-
-    /** Copy the set to two C arrays
-     * @param indices pointer to a C array of indices
-     * @param dist pointer to a C array of distances
-     * @param n_neighbors the number of neighbors to copy
-     */
-    virtual void copy(int* indices, DistanceType* dist, int n_neighbors = -1) const
-    {
-        if (n_neighbors < 0) {
-            for (typename std::set<DistIndex>::const_iterator dist_index = dist_indices_.begin(), dist_index_end =
-                     dist_indices_.end(); dist_index != dist_index_end; ++dist_index, ++indices, ++dist) {
-                *indices = dist_index->index_;
-                *dist = dist_index->dist_;
-            }
-        }
-        else {
-            int i = 0;
-            for (typename std::set<DistIndex>::const_iterator dist_index = dist_indices_.begin(), dist_index_end =
-                     dist_indices_.end(); (dist_index != dist_index_end) && (i < n_neighbors); ++dist_index, ++indices, ++dist, ++i) {
-                *indices = dist_index->index_;
-                *dist = dist_index->dist_;
-            }
-        }
-    }
-
-    /** Copy the set to two C arrays but sort it according to the distance first
-     * @param indices pointer to a C array of indices
-     * @param dist pointer to a C array of distances
-     * @param n_neighbors the number of neighbors to copy
-     */
-    virtual void sortAndCopy(int* indices, DistanceType* dist, int n_neighbors = -1) const
-    {
-        copy(indices, dist, n_neighbors);
-    }
-
-    /** The number of neighbors in the set
-     * @return
-     */
-    size_t size() const
-    {
-        return dist_indices_.size();
-    }
-
-    /** The distance of the furthest neighbor
-     * If we don't have enough neighbors, it returns the max possible value
-     * @return
-     */
-    inline DistanceType worstDist() const
-    {
-        return worst_distance_;
-    }
-protected:
-    /** Flag to say if the set is full */
-    bool is_full_;
-
-    /** The worst distance found so far */
-    DistanceType worst_distance_;
-
-    /** The best candidates so far */
-    std::set<DistIndex> dist_indices_;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Class that holds the k NN neighbors
- * Faster than KNNResultSet as it uses a binary heap and does not maintain two arrays
- */
-template<typename DistanceType>
-class KNNUniqueResultSet : public UniqueResultSet<DistanceType>
-{
-public:
-    /** Constructor
-     * @param capacity the number of neighbors to store at max
-     */
-    KNNUniqueResultSet(unsigned int capacity) : capacity_(capacity)
-    {
-        this->is_full_ = false;
-        this->clear();
-    }
-
-    /** Add a possible candidate to the best neighbors
-     * @param dist distance for that neighbor
-     * @param index index of that neighbor
-     */
-    inline void addPoint(DistanceType dist, int index)
-    {
-        // Don't do anything if we are worse than the worst
-        if (dist >= worst_distance_) return;
-        dist_indices_.insert(DistIndex(dist, index));
-
-        if (is_full_) {
-            if (dist_indices_.size() > capacity_) {
-                dist_indices_.erase(*dist_indices_.rbegin());
-                worst_distance_ = dist_indices_.rbegin()->dist_;
-            }
-        }
-        else if (dist_indices_.size() == capacity_) {
-            is_full_ = true;
-            worst_distance_ = dist_indices_.rbegin()->dist_;
-        }
-    }
-
-    /** Remove all elements in the set
-     */
-    void clear()
-    {
-        dist_indices_.clear();
-        worst_distance_ = std::numeric_limits<DistanceType>::max();
-        is_full_ = false;
-    }
-
-protected:
-    typedef typename UniqueResultSet<DistanceType>::DistIndex DistIndex;
-    using UniqueResultSet<DistanceType>::is_full_;
-    using UniqueResultSet<DistanceType>::worst_distance_;
-    using UniqueResultSet<DistanceType>::dist_indices_;
-
-    /** The number of neighbors to keep */
-    unsigned int capacity_;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Class that holds the radius nearest neighbors
- * It is more accurate than RadiusResult as it is not limited in the number of neighbors
- */
-template<typename DistanceType>
-class RadiusUniqueResultSet : public UniqueResultSet<DistanceType>
-{
-public:
-    /** Constructor
-     * @param capacity the number of neighbors to store at max
-     */
-    RadiusUniqueResultSet(DistanceType radius) :
-        radius_(radius)
-    {
-        is_full_ = true;
-    }
-
-    /** Add a possible candidate to the best neighbors
-     * @param dist distance for that neighbor
-     * @param index index of that neighbor
-     */
-    void addPoint(DistanceType dist, int index)
-    {
-        if (dist <= radius_) dist_indices_.insert(DistIndex(dist, index));
-    }
-
-    /** Remove all elements in the set
-     */
-    inline void clear()
-    {
-        dist_indices_.clear();
-    }
-
-
-    /** Check the status of the set
-     * @return alwys false
-     */
-    inline bool full() const
-    {
-        return true;
-    }
-
-    /** The distance of the furthest neighbor
-     * If we don't have enough neighbors, it returns the max possible value
-     * @return
-     */
-    inline DistanceType worstDist() const
-    {
-        return radius_;
-    }
-private:
-    typedef typename UniqueResultSet<DistanceType>::DistIndex DistIndex;
-    using UniqueResultSet<DistanceType>::dist_indices_;
-    using UniqueResultSet<DistanceType>::is_full_;
-
-    /** The furthest distance a neighbor can be */
-    DistanceType radius_;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Class that holds the k NN neighbors within a radius distance
- */
-template<typename DistanceType>
-class KNNRadiusUniqueResultSet : public KNNUniqueResultSet<DistanceType>
-{
-public:
-    /** Constructor
-     * @param capacity the number of neighbors to store at max
-     */
-    KNNRadiusUniqueResultSet(unsigned int capacity, DistanceType radius)
-    {
-        this->capacity_ = capacity;
-        this->radius_ = radius;
-        this->dist_indices_.reserve(capacity_);
-        this->clear();
-    }
-
-    /** Remove all elements in the set
-     */
-    void clear()
-    {
-        dist_indices_.clear();
-        worst_distance_ = radius_;
-        is_full_ = false;
-    }
-private:
-    using KNNUniqueResultSet<DistanceType>::dist_indices_;
-    using KNNUniqueResultSet<DistanceType>::is_full_;
-    using KNNUniqueResultSet<DistanceType>::worst_distance_;
-
-    /** The maximum number of neighbors to consider */
-    unsigned int capacity_;
-
-    /** The maximum distance of a neighbor */
-    DistanceType radius_;
-};
-}
-
-#endif //FLANN_RESULTSET_H
-
+#endif //_OPENCV_RESULTSET_H_

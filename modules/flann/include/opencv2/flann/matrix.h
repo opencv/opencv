@@ -28,58 +28,60 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_FLANN_DATASET_H_
-#define OPENCV_FLANN_DATASET_H_
+#ifndef _OPENCV_DATASET_H_
+#define _OPENCV_DATASET_H_
 
 #include <stdio.h>
 
-#include "general.h"
+#include "opencv2/flann/general.h"
 
-namespace cvflann
+
+namespace cvflann 
 {
 
 /**
- * Class that implements a simple rectangular matrix stored in a memory buffer and
- * provides convenient matrix-like access using the [] operators.
- */
+* Class that implements a simple rectangular matrix stored in a memory buffer and
+* provides convenient matrix-like access using the [] operators.
+*/
 template <typename T>
-class Matrix
-{
+class Matrix {
 public:
-    typedef T type;
-
     size_t rows;
     size_t cols;
-    size_t stride;
     T* data;
 
-    Matrix() : rows(0), cols(0), stride(0), data(NULL)
+    Matrix() : rows(0), cols(0), data(NULL)
     {
     }
 
-    Matrix(T* data_, size_t rows_, size_t cols_, size_t stride_ = 0) :
-        rows(rows_), cols(cols_),  stride(stride_), data(data_)
-    {
-        if (stride==0) stride = cols;
-    }
+    Matrix(T* data_, long rows_, long cols_) :
+    	 rows(rows_), cols(cols_), data(data_)
+	{
+	}
 
     /**
      * Convenience function for deallocating the storage data.
      */
-    FLANN_DEPRECATED void free()
+    void release()
     {
-        fprintf(stderr, "The cvflann::Matrix<T>::free() method is deprecated "
-                "and it does not do any memory deallocation any more.  You are"
-                "responsible for deallocating the matrix memory (by doing"
-                "'delete[] matrix.data' for example)");
+        if (data!=NULL) delete[] data;
     }
 
+	~Matrix()
+	{
+	}
+
     /**
-     * Operator that return a (pointer to a) row of the data.
-     */
+    * Operator that return a (pointer to a) row of the data.
+    */
+    T* operator[](size_t index)
+    {
+        return data+index*cols;
+    }
+
     T* operator[](size_t index) const
     {
-        return data+index*stride;
+        return data+index*cols;
     }
 };
 
@@ -93,7 +95,7 @@ public:
     flann_datatype_t type;
 
     UntypedMatrix(void* data_, long rows_, long cols_) :
-        rows(rows_), cols(cols_), data(data_)
+    	 rows(rows_), cols(cols_), data(data_)
     {
     }
 
@@ -111,6 +113,6 @@ public:
 
 
 
-}
+} // namespace cvflann
 
-#endif //OPENCV_FLANN_DATASET_H_
+#endif //_OPENCV_DATASET_H_

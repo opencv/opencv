@@ -28,41 +28,39 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_FLANN_GROUND_TRUTH_H_
-#define OPENCV_FLANN_GROUND_TRUTH_H_
+#ifndef _OPENCV_GROUND_TRUTH_H_
+#define _OPENCV_GROUND_TRUTH_H_
 
-#include "dist.h"
-#include "matrix.h"
-
+#include "opencv2/flann/dist.h"
+#include "opencv2/flann/matrix.h"
 
 namespace cvflann
 {
 
-template <typename Distance>
-void find_nearest(const Matrix<typename Distance::ElementType>& dataset, typename Distance::ElementType* query, int* matches, int nn,
-                  int skip = 0, Distance distance = Distance())
+template <typename T>
+void find_nearest(const Matrix<T>& dataset, T* query, int* matches, int nn, int skip = 0)
 {
-    typedef typename Distance::ElementType ElementType;
-    typedef typename Distance::ResultType DistanceType;
     int n = nn + skip;
 
-    int* match = new int[n];
-    DistanceType* dists = new DistanceType[n];
+    T* query_end = query + dataset.cols;
 
-    dists[0] = distance(dataset[0], query, dataset.cols);
+    long* match = new long[n];
+    T* dists = new T[n];
+
+    dists[0] = (float)flann_dist(query, query_end, dataset[0]);
     match[0] = 0;
     int dcnt = 1;
 
-    for (size_t i=1; i<dataset.rows; ++i) {
-        DistanceType tmp = distance(dataset[i], query, dataset.cols);
+    for (size_t i=1;i<dataset.rows;++i) {
+        T tmp = (T)flann_dist(query, query_end, dataset[i]);
 
         if (dcnt<n) {
-            match[dcnt] = i;
+            match[dcnt] = (long)i;
             dists[dcnt++] = tmp;
         }
         else if (tmp < dists[dcnt-1]) {
             dists[dcnt-1] = tmp;
-            match[dcnt-1] = i;
+            match[dcnt-1] = (long)i;
         }
 
         int j = dcnt-1;
@@ -74,7 +72,7 @@ void find_nearest(const Matrix<typename Distance::ElementType>& dataset, typenam
         }
     }
 
-    for (int i=0; i<nn; ++i) {
+    for (int i=0;i<nn;++i) {
         matches[i] = match[i+skip];
     }
 
@@ -83,16 +81,15 @@ void find_nearest(const Matrix<typename Distance::ElementType>& dataset, typenam
 }
 
 
-template <typename Distance>
-void compute_ground_truth(const Matrix<typename Distance::ElementType>& dataset, const Matrix<typename Distance::ElementType>& testset, Matrix<int>& matches,
-                          int skip=0, Distance d = Distance())
+template <typename T>
+void compute_ground_truth(const Matrix<T>& dataset, const Matrix<T>& testset, Matrix<int>& matches, int skip=0)
 {
-    for (size_t i=0; i<testset.rows; ++i) {
-        find_nearest<Distance>(dataset, testset[i], matches[i], (int)matches.cols, skip, d);
+    for (size_t i=0;i<testset.rows;++i) {
+        find_nearest(dataset, testset[i], matches[i], (int)matches.cols, skip);
     }
 }
 
 
-}
+} // namespace cvflann
 
-#endif //OPENCV_FLANN_GROUND_TRUTH_H_
+#endif //_OPENCV_GROUND_TRUTH_H_

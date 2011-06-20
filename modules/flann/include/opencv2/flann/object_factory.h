@@ -28,64 +28,67 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_FLANN_OBJECT_FACTORY_H_
-#define OPENCV_FLANN_OBJECT_FACTORY_H_
+#ifndef _OPENCV_OBJECT_FACTORY_H_
+#define _OPENCV_OBJECT_FACTORY_H_
 
+#include "opencv2/core/types_c.h"
 #include <map>
 
 namespace cvflann
 {
 
-class CreatorNotFound
+template<typename BaseClass, typename DerivedClass>
+BaseClass* createObject()
 {
-};
-
-template<typename BaseClass,
-         typename UniqueIdType,
-         typename ObjectCreator = BaseClass* (*)()>
-class ObjectFactory
-{
-    typedef ObjectFactory<BaseClass,UniqueIdType,ObjectCreator> ThisClass;
-    typedef std::map<UniqueIdType, ObjectCreator> ObjectRegistry;
-
-    // singleton class, private constructor
-    ObjectFactory() {}
-
-public:
-
-    bool subscribe(UniqueIdType id, ObjectCreator creator)
-    {
-        if (object_registry.find(id) != object_registry.end()) return false;
-
-        object_registry[id] = creator;
-        return true;
-    }
-
-    bool unregister(UniqueIdType id)
-    {
-        return object_registry.erase(id) == 1;
-    }
-
-    ObjectCreator create(UniqueIdType id)
-    {
-        typename ObjectRegistry::const_iterator iter = object_registry.find(id);
-
-        if (iter == object_registry.end()) {
-            throw CreatorNotFound();
-        }
-
-        return iter->second;
-    }
-
-    static ThisClass& instance()
-    {
-        static ThisClass the_factory;
-        return the_factory;
-    }
-private:
-    ObjectRegistry object_registry;
-};
-
+	return new DerivedClass();
 }
 
-#endif /* OPENCV_FLANN_OBJECT_FACTORY_H_ */
+template<typename BaseClass, typename UniqueIdType>
+class ObjectFactory
+{
+	typedef BaseClass* (*CreateObjectFunc)();
+	std::map<UniqueIdType, CreateObjectFunc> object_registry;
+
+	// singleton class, private constructor
+	//ObjectFactory() {};
+
+public:
+   typedef typename std::map<UniqueIdType, CreateObjectFunc>::iterator Iterator;
+
+
+   template<typename DerivedClass>
+   bool register_(UniqueIdType id)
+   {
+      if (object_registry.find(id) != object_registry.end())
+               return false;
+
+      object_registry[id] = &createObject<BaseClass, DerivedClass>;
+      return true;
+   }
+
+   bool unregister(UniqueIdType id)
+   {
+      return (object_registry.erase(id) == 1);
+   }
+
+   BaseClass* create(UniqueIdType id)
+   {
+      Iterator iter = object_registry.find(id);
+
+      if (iter == object_registry.end())
+         return NULL;
+
+      return ((*iter).second)();
+   }
+
+   /*static ObjectFactory<BaseClass,UniqueIdType>& instance()
+   {
+	   static ObjectFactory<BaseClass,UniqueIdType> the_factory;
+	   return the_factory;
+   }*/
+
+};
+
+} // namespace cvflann
+
+#endif /* OBJECT_FACTORY_H_ */

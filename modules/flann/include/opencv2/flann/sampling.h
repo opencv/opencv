@@ -27,11 +27,13 @@
  *************************************************************************/
 
 
-#ifndef OPENCV_FLANN_SAMPLING_H_
-#define OPENCV_FLANN_SAMPLING_H_
+#ifndef _OPENCV_SAMPLING_H_
+#define _OPENCV_SAMPLING_H_
 
-#include "matrix.h"
-#include "random.h"
+
+#include "opencv2/flann/matrix.h"
+#include "opencv2/flann/random.h"
+
 
 namespace cvflann
 {
@@ -39,43 +41,54 @@ namespace cvflann
 template<typename T>
 Matrix<T> random_sample(Matrix<T>& srcMatrix, long size, bool remove = false)
 {
-    Matrix<T> newSet(new T[size * srcMatrix.cols], size,srcMatrix.cols);
+    UniqueRandom rand((int)srcMatrix.rows);
+    Matrix<T> newSet(new T[size * srcMatrix.cols], size, (long)srcMatrix.cols);
 
-    T* src,* dest;
-    for (long i=0; i<size; ++i) {
-        long r = rand_int(srcMatrix.rows-i);
+    T *src,*dest;
+    for (long i=0;i<size;++i) {
+        long r = rand.next();
         dest = newSet[i];
         src = srcMatrix[r];
-        std::copy(src, src+srcMatrix.cols, dest);
+        for (size_t j=0;j<srcMatrix.cols;++j) {
+            dest[j] = src[j];
+        }
         if (remove) {
-            src = srcMatrix[srcMatrix.rows-i-1];
-            dest = srcMatrix[r];
-            std::copy(src, src+srcMatrix.cols, dest);
+            dest = srcMatrix[srcMatrix.rows-i-1];
+            src = srcMatrix[r];
+            for (size_t j=0;j<srcMatrix.cols;++j) {
+                std::swap(*src,*dest);
+                src++;
+                dest++;
+            }
         }
     }
+
     if (remove) {
-        srcMatrix.rows -= size;
+    	srcMatrix.rows -= size;
     }
+
     return newSet;
 }
 
 template<typename T>
 Matrix<T> random_sample(const Matrix<T>& srcMatrix, size_t size)
 {
-    UniqueRandom rand(srcMatrix.rows);
-    Matrix<T> newSet(new T[size * srcMatrix.cols], size,srcMatrix.cols);
+    UniqueRandom rand((int)srcMatrix.rows);
+    Matrix<T> newSet(new T[size * srcMatrix.cols], (long)size, (long)srcMatrix.cols);
 
-    T* src,* dest;
-    for (size_t i=0; i<size; ++i) {
+    T *src,*dest;
+    for (size_t i=0;i<size;++i) {
         long r = rand.next();
         dest = newSet[i];
         src = srcMatrix[r];
-        std::copy(src, src+srcMatrix.cols, dest);
+        for (size_t j=0;j<srcMatrix.cols;++j) {
+            dest[j] = src[j];
+        }
     }
+
     return newSet;
 }
 
-} // namespace
+} // namespace cvflann
 
-
-#endif /* OPENCV_FLANN_SAMPLING_H_ */
+#endif /* _OPENCV_SAMPLING_H_ */

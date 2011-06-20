@@ -28,20 +28,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_FLANN_SIMPLEX_DOWNHILL_H_
-#define OPENCV_FLANN_SIMPLEX_DOWNHILL_H_
+#ifndef _OPENCV_SIMPLEX_DOWNHILL_H_
+#define _OPENCV_SIMPLEX_DOWNHILL_H_
 
 namespace cvflann
 {
 
 /**
     Adds val to array vals (and point to array points) and keeping the arrays sorted by vals.
- */
+*/
 template <typename T>
 void addValue(int pos, float val, float* vals, T* point, T* points, int n)
 {
     vals[pos] = val;
-    for (int i=0; i<n; ++i) {
+    for (int i=0;i<n;++i) {
         points[pos*n+i] = point[i];
     }
 
@@ -49,7 +49,7 @@ void addValue(int pos, float val, float* vals, T* point, T* points, int n)
     int j=pos;
     while (j>0 && vals[j]<vals[j-1]) {
         swap(vals[j],vals[j-1]);
-        for (int i=0; i<n; ++i) {
+        for (int i=0;i<n;++i) {
             swap(points[j*n+i],points[(j-1)*n+i]);
         }
         --j;
@@ -64,7 +64,7 @@ void addValue(int pos, float val, float* vals, T* point, T* points, int n)
                     vals is the cost function in the n+1 simplex points, if NULL it will be computed
 
     Postcondition: returns optimum value and points[0..n] are the optimum parameters
- */
+*/
 template <typename T, typename F>
 float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
 {
@@ -84,7 +84,7 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
     if (vals == NULL) {
         ownVals = true;
         vals = new float[n+1];
-        for (int i=0; i<n+1; ++i) {
+        for (int i=0;i<n+1;++i) {
             float val = func(points+i*n);
             addValue(i, val, vals, points+i*n, points, n);
         }
@@ -96,18 +96,18 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
         if (iterations++ > MAX_ITERATIONS) break;
 
         // compute average of simplex points (except the highest point)
-        for (int j=0; j<n; ++j) {
+        for (int j=0;j<n;++j) {
             p_o[j] = 0;
-            for (int i=0; i<n; ++i) {
+            for (int i=0;i<n;++i) {
                 p_o[i] += points[j*n+i];
             }
         }
-        for (int i=0; i<n; ++i) {
+        for (int i=0;i<n;++i) {
             p_o[i] /= n;
         }
 
         bool converged = true;
-        for (int i=0; i<n; ++i) {
+        for (int i=0;i<n;++i) {
             if (p_o[i] != points[nn+i]) {
                 converged = false;
             }
@@ -115,15 +115,15 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
         if (converged) break;
 
         // trying a reflection
-        for (int i=0; i<n; ++i) {
+        for (int i=0;i<n;++i) {
             p_r[i] = p_o[i] + alpha*(p_o[i]-points[nn+i]);
         }
         float val_r = func(p_r);
 
-        if ((val_r>=vals[0])&&(val_r<vals[n])) {
+        if (val_r>=vals[0] && val_r<vals[n]) {
             // reflection between second highest and lowest
             // add it to the simplex
-            Logger::info("Choosing reflection\n");
+            logger().info("Choosing reflection\n");
             addValue(n, val_r,vals, p_r, points, n);
             continue;
         }
@@ -132,37 +132,37 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
             // value is smaller than smalest in simplex
 
             // expand some more to see if it drops further
-            for (int i=0; i<n; ++i) {
+            for (int i=0;i<n;++i) {
                 p_e[i] = 2*p_r[i]-p_o[i];
             }
             float val_e = func(p_e);
 
             if (val_e<val_r) {
-                Logger::info("Choosing reflection and expansion\n");
+                logger().info("Choosing reflection and expansion\n");
                 addValue(n, val_e,vals,p_e,points,n);
             }
             else {
-                Logger::info("Choosing reflection\n");
+                logger().info("Choosing reflection\n");
                 addValue(n, val_r,vals,p_r,points,n);
             }
             continue;
         }
         if (val_r>=vals[n]) {
-            for (int i=0; i<n; ++i) {
+            for (int i=0;i<n;++i) {
                 p_e[i] = (p_o[i]+points[nn+i])/2;
             }
             float val_e = func(p_e);
 
             if (val_e<vals[n]) {
-                Logger::info("Choosing contraction\n");
+                logger().info("Choosing contraction\n");
                 addValue(n,val_e,vals,p_e,points,n);
                 continue;
             }
         }
         {
-            Logger::info("Full contraction\n");
-            for (int j=1; j<=n; ++j) {
-                for (int i=0; i<n; ++i) {
+          logger().info("Full contraction\n");
+            for (int j=1;j<=n;++j) {
+                for (int i=0;i<n;++i) {
                     points[j*n+i] = (points[j*n+i]+points[i])/2;
                 }
                 float val = func(points+j*n);
@@ -181,6 +181,6 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
     return bestVal;
 }
 
-}
+} // namespace cvflann
 
-#endif //OPENCV_FLANN_SIMPLEX_DOWNHILL_H_
+#endif //_OPENCV_SIMPLEX_DOWNHILL_H_

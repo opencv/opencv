@@ -26,51 +26,41 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef OPENCV_FLANN_SAVING_H_
-#define OPENCV_FLANN_SAVING_H_
+#ifndef _OPENCV_SAVING_H_
+#define _OPENCV_SAVING_H_
 
+#include "opencv2/flann/general.h"
+#include "opencv2/flann/nn_index.h"
+#include <cstdio>
 #include <cstring>
-#include <vector>
-
-#include "general.h"
-#include "nn_index.h"
-
-#define FLANN_SIGNATURE "FLANN_INDEX"
 
 namespace cvflann
 {
+template <typename T> struct Datatype {};
+template<> struct Datatype<char> { static flann_datatype_t type() { return FLANN_INT8; } };
+template<> struct Datatype<short> { static flann_datatype_t type() { return FLANN_INT16; } };
+template<> struct Datatype<int> { static flann_datatype_t type() { return FLANN_INT32; } };
+template<> struct Datatype<unsigned char> { static flann_datatype_t type() { return FLANN_UINT8; } };
+template<> struct Datatype<unsigned short> { static flann_datatype_t type() { return FLANN_UINT16; } };
+template<> struct Datatype<unsigned int> { static flann_datatype_t type() { return FLANN_UINT32; } };
+template<> struct Datatype<float> { static flann_datatype_t type() { return FLANN_FLOAT32; } };
+template<> struct Datatype<double> { static flann_datatype_t type() { return FLANN_FLOAT64; } };
 
-template <typename T>
-struct Datatype {};
-template<>
-struct Datatype<char> { static flann_datatype_t type() { return FLANN_INT8; } };
-template<>
-struct Datatype<short> { static flann_datatype_t type() { return FLANN_INT16; } };
-template<>
-struct Datatype<int> { static flann_datatype_t type() { return FLANN_INT32; } };
-template<>
-struct Datatype<unsigned char> { static flann_datatype_t type() { return FLANN_UINT8; } };
-template<>
-struct Datatype<unsigned short> { static flann_datatype_t type() { return FLANN_UINT16; } };
-template<>
-struct Datatype<unsigned int> { static flann_datatype_t type() { return FLANN_UINT32; } };
-template<>
-struct Datatype<float> { static flann_datatype_t type() { return FLANN_FLOAT32; } };
-template<>
-struct Datatype<double> { static flann_datatype_t type() { return FLANN_FLOAT64; } };
 
+CV_EXPORTS const char* FLANN_SIGNATURE();
+CV_EXPORTS const char* FLANN_VERSION();
 
 /**
  * Structure representing the index header.
  */
-struct IndexHeader
+struct CV_EXPORTS IndexHeader
 {
-    char signature[16];
-    char version[16];
-    flann_datatype_t data_type;
-    flann_algorithm_t index_type;
-    size_t rows;
-    size_t cols;
+	char signature[16];
+	char version[16];
+	flann_datatype_t data_type;
+	flann_algorithm_t index_type;
+	int rows;
+	int cols;
 };
 
 /**
@@ -79,20 +69,20 @@ struct IndexHeader
  * @param stream - Stream to save to
  * @param index - The index to save
  */
-template<typename Distance>
-void save_header(FILE* stream, const NNIndex<Distance>& index)
+template<typename ELEM_TYPE>
+void save_header(FILE* stream, const NNIndex<ELEM_TYPE>& index)
 {
-    IndexHeader header;
-    memset(header.signature, 0, sizeof(header.signature));
-    strcpy(header.signature, FLANN_SIGNATURE);
-    memset(header.version, 0, sizeof(header.version));
-    strcpy(header.version, FLANN_VERSION);
-    header.data_type = Datatype<typename Distance::ElementType>::type();
-    header.index_type = index.getType();
-    header.rows = index.size();
-    header.cols = index.veclen();
+	IndexHeader header;
+	memset(header.signature, 0 , sizeof(header.signature));
+	strcpy(header.signature, FLANN_SIGNATURE());
+	memset(header.version, 0 , sizeof(header.version));
+	strcpy(header.version, FLANN_VERSION());
+	header.data_type = Datatype<ELEM_TYPE>::type();
+	header.index_type = index.getType();
+	header.rows = (int)index.size();
+	header.cols = index.veclen();
 
-    std::fwrite(&header, sizeof(header),1,stream);
+	std::fwrite(&header, sizeof(header),1,stream);
 }
 
 
@@ -101,84 +91,25 @@ void save_header(FILE* stream, const NNIndex<Distance>& index)
  * @param stream - Stream to load from
  * @return Index header
  */
-inline IndexHeader load_header(FILE* stream)
+CV_EXPORTS IndexHeader load_header(FILE* stream);
+
+
+template<typename T>
+void save_value(FILE* stream, const T& value, int count = 1)
 {
-    IndexHeader header;
-    int read_size = fread(&header,sizeof(header),1,stream);
-
-    if (read_size!=1) {
-        throw FLANNException("Invalid index file, cannot read");
-    }
-
-    if (strcmp(header.signature,FLANN_SIGNATURE)!=0) {
-        throw FLANNException("Invalid index file, wrong signature");
-    }
-
-    return header;
-
+	fwrite(&value, 1, sizeof(value)*count, stream);
 }
 
 
 template<typename T>
-void save_value(FILE* stream, const T& value, size_t count = 1)
+void load_value(FILE* stream, T& value, int count = 1)
 {
-    fwrite(&value, sizeof(value),count, stream);
+	int read_cnt = (int)fread(&value, sizeof(value),count, stream);
+	if (read_cnt!=count) {
+		throw FLANNException("Cannot read from file");
+	}
 }
 
-template<typename T>
-void save_value(FILE* stream, const cvflann::Matrix<T>& value)
-{
-    fwrite(&value, sizeof(value),1, stream);
-    fwrite(value.data, sizeof(T),value.rows*value.cols, stream);
-}
+} // namespace cvflann
 
-template<typename T>
-void save_value(FILE* stream, const std::vector<T>& value)
-{
-    size_t size = value.size();
-    fwrite(&size, sizeof(size_t), 1, stream);
-    fwrite(&value[0], sizeof(T), size, stream);
-}
-
-template<typename T>
-void load_value(FILE* stream, T& value, size_t count = 1)
-{
-    size_t read_cnt = fread(&value, sizeof(value), count, stream);
-    if (read_cnt != count) {
-        throw FLANNException("Cannot read from file");
-    }
-}
-
-template<typename T>
-void load_value(FILE* stream, cvflann::Matrix<T>& value)
-{
-    size_t read_cnt = fread(&value, sizeof(value), 1, stream);
-    if (read_cnt != 1) {
-        throw FLANNException("Cannot read from file");
-    }
-    value.data = new T[value.rows*value.cols];
-    read_cnt = fread(value.data, sizeof(T), value.rows*value.cols, stream);
-    if (read_cnt != int(value.rows*value.cols)) {
-        throw FLANNException("Cannot read from file");
-    }
-}
-
-
-template<typename T>
-void load_value(FILE* stream, std::vector<T>& value)
-{
-    size_t size;
-    size_t read_cnt = fread(&size, sizeof(size_t), 1, stream);
-    if (read_cnt!=1) {
-        throw FLANNException("Cannot read from file");
-    }
-    value.resize(size);
-    read_cnt = fread(&value[0], sizeof(T), size, stream);
-    if (read_cnt!=int(size)) {
-        throw FLANNException("Cannot read from file");
-    }
-}
-
-}
-
-#endif /* OPENCV_FLANN_SAVING_H_ */
+#endif /* _OPENCV_SAVING_H_ */

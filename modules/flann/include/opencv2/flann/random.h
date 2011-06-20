@@ -28,108 +28,106 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_RANDOM_H
-#define FLANN_RANDOM_H
+#ifndef _OPENCV_RANDOM_H_
+#define _OPENCV_RANDOM_H_
 
 #include <algorithm>
 #include <cstdlib>
-#include <vector>
+#include <cassert>
 
-#include "general.h"
 
 namespace cvflann
 {
 
 /**
  * Seeds the random number generator
- *  @param seed Random seed
  */
-inline void seed_random(unsigned int seed)
-{
-    srand(seed);
-}
+CV_EXPORTS void seed_random(unsigned int seed);
 
 /*
  * Generates a random double value.
  */
-/**
- * Generates a random double value.
- * @param high Upper limit
- * @param low Lower limit
- * @return Random double value
- */
-inline double rand_double(double high = 1.0, double low = 0)
-{
-    return low + ((high-low) * (std::rand() / (RAND_MAX + 1.0)));
-}
+CV_EXPORTS double rand_double(double high = 1.0, double low=0);
 
-/**
+/*
  * Generates a random integer value.
- * @param high Upper limit
- * @param low Lower limit
- * @return Random integer value
  */
-inline int rand_int(int high = RAND_MAX, int low = 0)
-{
-    return low + (int) ( double(high-low) * (std::rand() / (RAND_MAX + 1.0)));
-}
+CV_EXPORTS int rand_int(int high = RAND_MAX, int low = 0);
+
 
 /**
  * Random number generator that returns a distinct number from
  * the [0,n) interval each time.
+ *
+ * TODO: improve on this to use a generator function instead of an
+ * array of randomly permuted numbers
  */
-class UniqueRandom
+class CV_EXPORTS UniqueRandom
 {
-    std::vector<int> vals_;
-    int size_;
-    int counter_;
+	int* vals;
+    int size;
+	int counter;
 
 public:
-    /**
-     * Constructor.
-     * @param n Size of the interval from which to generate
-     * @return
-     */
-    UniqueRandom(int n)
-    {
-        init(n);
-    }
+	/**
+	 * Constructor.
+	 * Params:
+	 *     n = the size of the interval from which to generate
+	 *     		random numbers.
+	 */
+	UniqueRandom(int n) : vals(NULL) {
+		init(n);
+	}
 
-    /**
-     * Initializes the number generator.
-     * @param n the size of the interval from which to generate random numbers.
-     */
-    void init(int n)
-    {
-        // create and initialize an array of size n
-        vals_.resize(n);
-        size_ = n;
-        for (int i = 0; i < size_; ++i) vals_[i] = i;
+	~UniqueRandom()
+	{
+		delete[] vals;
+	}
 
-        // shuffle the elements in the array
-        std::random_shuffle(vals_.begin(), vals_.end());
+	/**
+	 * Initializes the number generator.
+	 * Params:
+	 * 		n = the size of the interval from which to generate
+	 *     		random numbers.
+	 */
+	void init(int n)
+	{
+    	// create and initialize an array of size n
+		if (vals == NULL || n!=size) {
+            delete[] vals;
+	        size = n;
+            vals = new int[size];
+    	}
+    	for(int i=0;i<size;++i) {
+			vals[i] = i;
+		}
 
-        counter_ = 0;
-    }
+		// shuffle the elements in the array
+        // Fisher-Yates shuffle
+		for (int i=size;i>0;--i) {
+// 			int rand = cast(int) (drand48() * n);
+			int rnd = rand_int(i);
+			assert(rnd >=0 && rnd < i);
+            std::swap(vals[i-1], vals[rnd]);
+		}
 
-    /**
-     * Return a distinct random integer in greater or equal to 0 and less
-     * than 'n' on each call. It should be called maximum 'n' times.
-     * Returns: a random integer
-     */
-    int next()
-    {
-        if (counter_ == size_) {
-            return -1;
-        }
-        else {
-            return vals_[counter_++];
-        }
-    }
+		counter = 0;
+	}
+
+	/**
+	 * Return a distinct random integer in greater or equal to 0 and less
+	 * than 'n' on each call. It should be called maximum 'n' times.
+	 * Returns: a random integer
+	 */
+	int next() {
+		if (counter==size) {
+			return -1;
+		} else {
+			return vals[counter++];
+		}
+	}
 };
 
-}
+} // namespace cvflann
 
-#endif //FLANN_RANDOM_H
-
-
+#endif //_OPENCV_RANDOM_H_

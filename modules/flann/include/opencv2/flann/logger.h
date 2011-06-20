@@ -28,36 +28,40 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_LOGGER_H
-#define FLANN_LOGGER_H
+#ifndef _OPENCV_LOGGER_H_
+#define _OPENCV_LOGGER_H_
 
-#include <stdio.h>
+#include <cstdio>
 #include <stdarg.h>
-
-#include "defines.h"
-
 
 namespace cvflann
 {
-
-class Logger
+    
+enum flann_log_level_t {
+    FLANN_LOG_NONE = 0,
+    FLANN_LOG_FATAL = 1,
+    FLANN_LOG_ERROR = 2,
+    FLANN_LOG_WARN = 3,
+    FLANN_LOG_INFO = 4
+};
+    
+class CV_EXPORTS Logger
 {
-    Logger() : stream(stdout), logLevel(FLANN_LOG_WARN) {}
+    FILE* stream;
+    int logLevel;
+
+public:
+
+    Logger() : stream(stdout), logLevel(FLANN_LOG_WARN) {};
 
     ~Logger()
     {
-        if ((stream!=NULL)&&(stream!=stdout)) {
+        if (stream!=NULL && stream!=stdout) {
             fclose(stream);
         }
     }
 
-    static Logger& instance()
-    {
-        static Logger logger;
-        return logger;
-    }
-
-    void _setDestination(const char* name)
+    void setDestination(const char* name)
     {
         if (name==NULL) {
             stream = stdout;
@@ -70,61 +74,23 @@ class Logger
         }
     }
 
-    int _log(int level, const char* fmt, va_list arglist)
-    {
-        if (level > logLevel ) return -1;
-        int ret = vfprintf(stream, fmt, arglist);
-        return ret;
-    }
+    void setLevel(int level) { logLevel = level; }
 
-public:
-    /**
-     * Sets the logging level. All messages with lower priority will be ignored.
-     * @param level Logging level
-     */
-    static void setLevel(int level) { instance().logLevel = level; }
+    int log(int level, const char* fmt, ...);
 
-    /**
-     * Sets the logging destination
-     * @param name Filename or NULL for console
-     */
-    static void setDestination(const char* name) { instance()._setDestination(name); }
+    int log(int level, const char* fmt, va_list arglist);
 
-    /**
-     * Print log message
-     * @param level Log level
-     * @param fmt Message format
-     * @return
-     */
-    static int log(int level, const char* fmt, ...)
-    {
-        va_list arglist;
-        va_start(arglist, fmt);
-        int ret = instance()._log(level,fmt,arglist);
-        va_end(arglist);
-        return ret;
-    }
+    int fatal(const char* fmt, ...);
 
-#define LOG_METHOD(NAME,LEVEL) \
-    static int NAME(const char* fmt, ...) \
-    { \
-        va_list ap; \
-        va_start(ap, fmt); \
-        int ret = instance()._log(LEVEL, fmt, ap); \
-        va_end(ap); \
-        return ret; \
-    }
+    int error(const char* fmt, ...);
 
-    LOG_METHOD(fatal, FLANN_LOG_FATAL)
-    LOG_METHOD(error, FLANN_LOG_ERROR)
-    LOG_METHOD(warn, FLANN_LOG_WARN)
-    LOG_METHOD(info, FLANN_LOG_INFO)
+    int warn(const char* fmt, ...);
 
-private:
-    FILE* stream;
-    int logLevel;
+    int info(const char* fmt, ...);
 };
 
-}
+CV_EXPORTS Logger& logger();
 
-#endif //FLANN_LOGGER_H
+} // namespace cvflann
+
+#endif //_OPENCV_LOGGER_H_

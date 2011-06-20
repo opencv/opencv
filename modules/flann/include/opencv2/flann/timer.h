@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_TIMER_H
-#define FLANN_TIMER_H
+#ifndef _OPENCV_TIMER_H_
+#define _OPENCV_TIMER_H_
 
 #include <time.h>
 
@@ -42,7 +42,7 @@ namespace cvflann
  *
  * Can be used to time portions of code.
  */
-class StartStopTimer
+class CV_EXPORTS StartStopTimer
 {
     clock_t startTime;
 
@@ -64,16 +64,14 @@ public:
     /**
      * Starts the timer.
      */
-    void start()
-    {
+    void start() {
         startTime = clock();
     }
 
     /**
      * Stops the timer and updates timer value.
      */
-    void stop()
-    {
+    void stop() {
         clock_t stopTime = clock();
         value += ( (double)stopTime - startTime) / CLOCKS_PER_SEC;
     }
@@ -81,13 +79,12 @@ public:
     /**
      * Resets the timer value to 0.
      */
-    void reset()
-    {
+    void reset() {
         value = 0;
     }
 
 };
 
-}
+}// namespace cvflann
 
-#endif // FLANN_TIMER_H
+#endif // _OPENCV_TIMER_H_
