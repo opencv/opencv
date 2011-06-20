@@ -104,7 +104,7 @@ The function ``namedWindow`` creates a window that can be used as a placeholder 
 
 If a window with the same name already exists, the function does nothing.
 
-You can call :cpp:func:`destroyWindow` or :cpp:func:`destroyAllWindows` to close the window and de-allocate any associated memory usage. For a simple program, you don’t really have to call these functions because all the resources and windows of the application are closed automatically by the operating system upon exit.
+You can call :cpp:func:`destroyWindow` or :cpp:func:`destroyAllWindows` to close the window and de-allocate any associated memory usage. For a simple program, you do not really have to call these functions because all the resources and windows of the application are closed automatically by the operating system upon exit.
 
 
 **[Qt Backend Only]**
@@ -150,7 +150,6 @@ The function ``destroyWindow`` destroys the window with the given name.
 
 destroyAllWindows
 -----------------
-
 .. ocv:function:: void destroyAllWindows()
 
     Destroys all of the HighGUI windows.
