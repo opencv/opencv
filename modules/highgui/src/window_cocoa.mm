@@ -183,7 +183,7 @@ CV_IMPL void cvDestroyWindow( const char* name)
 	//cout << "cvDestroyWindow" << endl; 
 	CVWindow *window = cvGetWindow(name);
 	if(window) {
-		[window performClose:nil];
+		[window close];
 		[windows removeObjectForKey:[NSString stringWithFormat:@"%s", name]];
 	}
 	[localpool drain]; 
@@ -194,10 +194,10 @@ CV_IMPL void cvDestroyAllWindows( void )
 {
 	//cout << "cvDestroyAllWindows" << endl; 
 	NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-	for(NSString *key in windows) {
-		[[windows valueForKey:key] performClose:nil];
-	}
-	[windows removeAllObjects];
+	NSDictionary* list = [NSDictionary dictionaryWithDictionary:windows];  
+ 	for(NSString *key in list) { 
+        cvDestroyWindow([key cStringUsingEncoding:NSASCIIStringEncoding]);  
+    }
 	[localpool drain]; 
 }
 
@@ -402,7 +402,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
 	if(trackbar_name == NULL || window_name == NULL)
 		CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
 	
-	if(pos <= 0)
+	if(pos < 0)
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
 	
 	if (localpool5 != nil) [localpool5 drain]; 
