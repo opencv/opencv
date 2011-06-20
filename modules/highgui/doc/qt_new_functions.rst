@@ -171,7 +171,7 @@ addText
 
     Creates the font to draw a text on an image.
 
-    :param img: Image where the text should be drawn.
+    :param img: 8-bit 3-channel image where the text should be drawn.
 
     :param text: Text to write on an image.
 
