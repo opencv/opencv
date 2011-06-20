@@ -795,6 +795,7 @@ double CvCaptureFile::getProperty(int property_id){
 	double retval; 
 	QTTime t; 
 	
+	//cerr << "get_prop"<<endl;
 	switch (property_id) {
 		case CV_CAP_PROP_POS_MSEC:
 			[[mCaptureSession attributeForKey:QTMovieCurrentTimeAttribute] getValue:&t]; 
@@ -815,6 +816,9 @@ double CvCaptureFile::getProperty(int property_id){
 		case CV_CAP_PROP_FPS:
 			retval = currentFPS;  
 			break; 
+		case CV_CAP_PROP_FRAME_COUNT:
+			retval = movieDuration*movieFPS/1000;
+			break;
 		case CV_CAP_PROP_FOURCC:
 		default:
 			retval = 0; 

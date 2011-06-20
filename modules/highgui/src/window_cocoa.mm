@@ -74,6 +74,7 @@ CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 using namespace std; 
 
 const int TOP_BORDER  = 7;
+const int MIN_SLIDER_WIDTH=200;
 
 static NSApplication *application = nil;
 static NSAutoreleasePool *pool = nil;
@@ -221,8 +222,16 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
 		[[window contentView] setImageData:(CvArr *)arr];
 		if([window autosize] || [window firstContent] || empty)
         {
+			//Set new view size considering sliders (reserve height and min width)
 			NSRect vrectNew = vrectOld;
-            vrectNew.size = [[[window contentView] image] size];
+			int slider_height = 0;
+			for(NSString *key in [window sliders]) {
+				slider_height += [[[window sliders] valueForKey:key] frame].size.height;
+			}
+            vrectNew.size.height = [[[window contentView] image] size].height + slider_height;
+            vrectNew.size.width = std::max<int>([[[window contentView] image] size].width, MIN_SLIDER_WIDTH);
+            [[window contentView]  setFrameSize:vrectNew.size]; //adjust sliders to fit new window size
+
             rect.size.width += vrectNew.size.width - vrectOld.size.width;
             rect.size.height += vrectNew.size.height - vrectOld.size.height;
 			rect.origin.y -= vrectNew.size.height - vrectOld.size.height;
@@ -645,17 +654,26 @@ CV_IMPL int cvWaitKey (int maxWait)
 	// Save slider
 	[sliders setValue:slider forKey:cvname];
 	[[self contentView] addSubview:slider];
+
 	
+	//update contentView size to contain sliders
+	NSSize viewSize=[[self contentView] frame].size,
+		   sliderSize=[slider frame].size;
+	viewSize.height += sliderSize.height;
+	viewSize.width = std::max<int>(viewSize.width, MIN_SLIDER_WIDTH);
+
 	// Update slider sizes
-	[[self contentView] setFrameSize:[[self contentView] frame].size];
+	[[self contentView] setFrameSize:viewSize];
 	[[self contentView] setNeedsDisplay:YES];
+
+	//update window size to contain sliders
+	NSRect rect = [self frame];
+	rect.size.height += [slider frame].size.height;
+	rect.size.width = std::max<int>(rect.size.width, MIN_SLIDER_WIDTH);
+	[self setFrame:rect display:YES];
+
 	
-	
-	int height = 0;
-	for(NSString *key in sliders) {
-		height += [[sliders valueForKey:key] frame].size.height;
-	}
-	[self setContentMinSize:NSMakeSize(0, height)]; 
+
 }
 
 - (CVView *)contentView {
@@ -755,6 +773,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 		NSSlider *slider = [[cvwindow sliders] valueForKey:key];
 		NSRect r = [slider frame];
 		r.origin.y = height - r.size.height;
+		r.size.width = [[cvwindow contentView] frame].size.width;
 		[slider setFrame:r];
 		height -= r.size.height;
 	}
@@ -773,7 +792,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 	}
 	
 
-	NSRect imageRect = {{0,0}, {self.frame.size.width, self.frame.size.height-height-6}};
+	NSRect imageRect = {{0,0}, {[image size].width, [image size].height}};
 	
 	if(image != nil) {
 		[image drawInRect: imageRect
@@ -803,9 +822,9 @@ CV_IMPL int cvWaitKey (int maxWait)
 	value = NULL;
 	userData = NULL;
 
-	[self setFrame:NSMakeRect(0,0,200,25)];
+	[self setFrame:NSMakeRect(0,0,200,30)];
 
-	name = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0,120, 20)];
+	name = [[NSTextField alloc] initWithFrame:NSMakeRect(10, 0,110, 25)];
 	[name setEditable:NO];
     [name setSelectable:NO];
     [name setBezeled:NO];
@@ -814,7 +833,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 	[[name cell] setLineBreakMode:NSLineBreakByTruncatingTail];
 	[self addSubview:name];
 	
-	slider = [[NSSlider alloc] initWithFrame:NSMakeRect(120, 0, 76, 20)];
+	slider = [[NSSlider alloc] initWithFrame:NSMakeRect(120, 0, 70, 25)];
 	[slider setAutoresizingMask:NSViewWidthSizable];
 	[slider setMinValue:0];
 	[slider setMaxValue:100];
@@ -825,7 +844,7 @@ CV_IMPL int cvWaitKey (int maxWait)
 	
 	[self setAutoresizingMask:NSViewWidthSizable];
 	
-	[self setFrame:NSMakeRect(12, 0, 182, 30)];
+	//[self setFrame:NSMakeRect(12, 0, 100, 30)];
 	
 	return self;
 }
