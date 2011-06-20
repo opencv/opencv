@@ -1339,7 +1339,10 @@ void CvButtonbar::addButton( QString name, CvButtonCallback call, void* userdata
 
 	if (button)
 	{
-		QObject::connect( button, SIGNAL( toggled(bool) ),button, SLOT( callCallBack(bool) ));
+		if (button_type == CV_PUSH_BUTTON)
+			QObject::connect( button, SIGNAL( clicked(bool) ),button, SLOT( callCallBack(bool) ));
+		else 
+			QObject::connect( button, SIGNAL( toggled(bool) ),button, SLOT( callCallBack(bool) ));
 		addWidget(button,Qt::AlignCenter);
 	}
 }
