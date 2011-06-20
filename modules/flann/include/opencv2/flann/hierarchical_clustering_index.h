@@ -224,7 +224,7 @@ private:
 
             // Repeat several trials
             double bestNewPot = -1;
-            int bestNewIndex;
+            int bestNewIndex = 0;
             for (int localTrial = 0; localTrial < numLocalTries; localTrial++) {
 
                 // Choose our center - have to be slightly careful to return a valid answer even accounting

@@ -138,7 +138,7 @@ public:
      */
     bool test(size_t index) const
     {
-        return (bool)(bitset_[index / cell_bit_size_] & (size_t(1) << (index % cell_bit_size_)));
+        return (bitset_[index / cell_bit_size_] & (size_t(1) << (index % cell_bit_size_))) != 0;
     }
 
 private:

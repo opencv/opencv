@@ -57,7 +57,7 @@ namespace cvflann
 
     FLANN_DEPRECATED inline void set_distance_type(flann_distance_t distance_type, int order  = 0)
     {
-        flann_distance_type_() = distance_type;
+        flann_distance_type_() = (flann_distance_t)((size_t)distance_type + order*0);
     }
 }
 

@@ -34,7 +34,12 @@
 #include <cmath>
 #include <cstdlib>
 #include <string.h>
+#ifdef _MSC_VER
+typedef unsigned uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
 #include <stdint.h>
+#endif
 
 #include "defines.h"
 
@@ -150,10 +155,10 @@ struct L2
 
         /* Process 4 items with each loop for efficiency. */
         while (a < lastgroup) {
-            diff0 = a[0] - b[0];
-            diff1 = a[1] - b[1];
-            diff2 = a[2] - b[2];
-            diff3 = a[3] - b[3];
+            diff0 = (ResultType)(a[0] - b[0]);
+            diff1 = (ResultType)(a[1] - b[1]);
+            diff2 = (ResultType)(a[2] - b[2]);
+            diff3 = (ResultType)(a[3] - b[3]);
             result += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
             a += 4;
             b += 4;
