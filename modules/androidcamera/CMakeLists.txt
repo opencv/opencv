@@ -37,7 +37,7 @@ IF (NOT BUILD_SHARED_LIBS)
     )
 ENDIF()
 
-if (NOT BUILD_ANDROID_CAMERA_WRAPPER)
+if (ARMEABI_V7A AND NOT BUILD_ANDROID_CAMERA_WRAPPER)
   file(GLOB camera_wrappers "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib/libnative_camera_r*.so")
 
   foreach(wrapper ${camera_wrappers})
