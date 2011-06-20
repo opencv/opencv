@@ -1230,6 +1230,49 @@ if(WIN32)
     install(FILES "${CMAKE_BINARY_DIR}/cvconfig.h" DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
 endif()
 
+# --------------------------------------------------------------------------------------------
+#  Installation for Android ndk-build makefile:  OpenCV.mk
+#  Part 1/2: ${BIN_DIR}/OpenCV.mk              -> For use *without* "make install"
+#  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
+# -------------------------------------------------------------------------------------------
+if(ANDROID)
+    if(BUILD_SHARED_LIBS)
+        SET(OPENCV_LIBTYPE_CONFIGMAKE "SHARED")
+    else()
+        SET(OPENCV_LIBTYPE_CONFIGMAKE "STATIC")
+    endif()
+    if(BUILD_ANDROID_CAMERA_WRAPPER)
+        set(CMAKE_CAMERA_LIBS_CONFIGCMAKE "native_camera_r${ANDROID_VERSION}")
+    else()
+        SET(CMAKE_CAMERA_LIBS_CONFIGCMAKE "")
+        file(GLOB CMAKE_CAMERA_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lib/libnative_camera_r*.so")
+        foreach(cam_lib ${CMAKE_CAMERA_LIBS})
+            get_filename_component(cam_lib "${cam_lib}" NAME)
+            string(REGEX REPLACE "lib(native_camera_r[0-9]+\\.[0-9]+\\.[0-9]+)\\.so" "\\1" cam_lib "${cam_lib}")
+            SET(CMAKE_CAMERA_LIBS_CONFIGCMAKE "${CMAKE_CAMERA_LIBS_CONFIGCMAKE} ${cam_lib}")
+        endforeach()
+    endif()
+endif(ANDROID)
+# -------------------------------------------------------------------------------------------
+#  Part 1/2: ${BIN_DIR}/OpenCV.mk              -> For use *without* "make install"
+# -------------------------------------------------------------------------------------------
+if(ANDROID)
+    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\$(RELATIVE_PREFIX)${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"\$(RELATIVE_PREFIX)${CMAKE_CURRENT_SOURCE_DIR}/include\" \"\$(RELATIVE_PREFIX)${CMAKE_CURRENT_SOURCE_DIR}/include/opencv\"")
+    set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\$(RELATIVE_PREFIX)${CMAKE_CURRENT_SOURCE_DIR}\"")
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\$(RELATIVE_PREFIX)${LIBRARY_OUTPUT_PATH}")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" IMMEDIATE @ONLY)
+endif(ANDROID)
+
+# -------------------------------------------------------------------------------------------
+#  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
+# -------------------------------------------------------------------------------------------
+if(ANDROID)
+    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../../include/opencv \$(OPENCV_THIS_DIR)/../../include")
+    set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "")
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../../lib")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION share/opencv/)
+endif(ANDROID)
 
 # --------------------------------------------------------------------------------------------
 #  Part 2/2: ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
