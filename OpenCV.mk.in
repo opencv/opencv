@@ -1,0 +1,57 @@
+RELATIVE_PREFIX:=.$(shell echo $(abspath $(LOCAL_PATH))| sed -e "s/\/[^\/]*/\/../g" )
+OPENCV_THIS_DIR:=$(RELATIVE_PREFIX)$(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+OPENCV_LIBS_DIR:=@CMAKE_LIB_DIRS_CONFIGCMAKE@
+OPENCV_BASEDIR:=@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@
+OPENCV_LOCAL_C_INCLUDES:=@CMAKE_INCLUDE_DIRS_CONFIGCMAKE@
+
+OPENCV_MODULES := contrib calib3d objdetect features2d imgproc video  highgui ml legacy flann core
+
+OPENCV_LIB_TYPE:=@OPENCV_LIBTYPE_CONFIGMAKE@
+ifeq ($(OPENCV_LIB_TYPE),SHARED)
+	OPENCV_LIB_SUFFIX:=so
+	OPENCV_EXTRA_COMPONENTS:=
+else
+	OPENCV_LIB_SUFFIX:=a
+	OPENCV_MODULES+= androidcamera
+	OPENCV_EXTRA_COMPONENTS:=@JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ zlib
+endif
+
+OPENCV_CAMERA_MODULES := @CMAKE_CAMERA_LIBS_CONFIGCMAKE@
+
+define add_opencv_module
+	include $(CLEAR_VARS)
+	LOCAL_MODULE:=opencv_$1
+	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/libopencv_$1.$(OPENCV_LIB_SUFFIX)
+	include $(PREBUILT_@OPENCV_LIBTYPE_CONFIGMAKE@_LIBRARY)
+endef
+
+define add_opencv_extra_component
+	include $(CLEAR_VARS)
+	LOCAL_MODULE:=$1
+	LOCAL_SRC_FILES:=$(OPENCV_THIS_DIR)/3rdparty/lib/lib$1.a
+	include $(PREBUILT_STATIC_LIBRARY)
+endef
+
+define add_opencv_camera_module
+	include $(CLEAR_VARS)
+	LOCAL_MODULE:=$1
+	LOCAL_SRC_FILES:=$(OPENCV_LIBS_DIR)/lib$1.so
+	include $(PREBUILT_SHARED_LIBRARY)
+endef
+
+$(foreach module,$(OPENCV_MODULES),$(eval $(call add_opencv_module,$(module))))
+$(foreach module,$(OPENCV_EXTRA_COMPONENTS),$(eval $(call add_opencv_extra_component,$(module))))
+$(foreach module,$(OPENCV_CAMERA_MODULES),$(eval $(call add_opencv_camera_module,$(module))))
+
+ifneq ($(OPENCV_BASEDIR),)
+	OPENCV_LOCAL_C_INCLUDES += $(foreach mod, $(OPENCV_MODULES), $(OPENCV_BASEDIR)/modules/$(mod)/include)
+endif
+
+OPENCV_LOCAL_LIBRARIES += $(foreach mod, $(OPENCV_MODULES), opencv_$(mod))
+OPENCV_LOCAL_LIBRARIES += $(OPENCV_EXTRA_COMPONENTS)
+OPENCV_LOCAL_CFLAGS := -fsigned-char -fPIC -DANDROID
+
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES         += $(OPENCV_LOCAL_C_INCLUDES)
+LOCAL_STATIC_LIBRARIES   += $(OPENCV_LOCAL_LIBRARIES)
+LOCAL_CFLAGS             += $(OPENCV_LOCAL_CFLAGS)

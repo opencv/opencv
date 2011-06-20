@@ -1,1 +1,0 @@
-See http://opencv.willowgarage.com/wiki/AndroidTrunk
