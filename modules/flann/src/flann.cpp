@@ -28,5 +28,4 @@
 
 #include "precomp.hpp"
 
-
-
+void cvflann::dummyfunc() {}
