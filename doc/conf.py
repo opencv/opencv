@@ -223,8 +223,10 @@ pngmath_latex_preamble = r"""
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('modules/refman', 'opencv2refman.tex', u'The OpenCV Reference Manual',
+  ('modules/refman', 'opencv2refman_cpp.tex', u'The OpenCV 2.x C++ Reference Manual',
    u'', 'manual'),
+  ('doc/opencv2/py/py_index', 'opencv2refman_py.tex', u'The OpenCV 2.x Python Reference Manual',
+   u'', 'manual'), 
   ('doc/opencv1/c/c_index', 'opencv1refman_c.tex', u'The OpenCV 1.x C Reference Manual',
    u'', 'manual'),
   ('doc/opencv1/py/py_index', 'opencv1refman_py.tex', u'The OpenCV 1.x Python Reference Manual',
