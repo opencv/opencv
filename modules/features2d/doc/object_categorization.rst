@@ -75,7 +75,7 @@ BOWKMeansTrainer
 ----------------
 .. ocv:class:: BOWKMeansTrainer
 
-:ref:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach.
+:ocv:func:`kmeans` -based class to train visual vocabulary using the *bag of visual words* approach.
 ::
 
     class BOWKMeansTrainer : public BOWTrainer
@@ -97,19 +97,19 @@ BOWKMeansTrainer::BOWKMeansTrainer
 ----------------
 .. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
 
-    To understand constructor parameters, see :ref:`kmeans` function arguments.
+    See :ocv:func:`kmeans` function parameters.
 
 BOWImgDescriptorExtractor
 -------------------------
 .. ocv:class:: BOWImgDescriptorExtractor
 
-Class to compute an image descriptor using the ''bag of visual words''. Such a computation consists of the following steps:
+Class to compute an image descriptor using the *bag of visual words*. Such a computation consists of the following steps:
 
     #. Compute descriptors for a given image and its keypoints set.
     #. Find the nearest visual words from the vocabulary for each keypoint descriptor.
     #. Compute the bag-of-words image descriptor as is a normalized histogram of vocabulary words encountered in the image. The ``i``-th bin of the histogram is a frequency of ``i``-th word of the vocabulary in the given image.
     
-Here is the class declaration ::
+The class declaration is the following: ::
 
         class BOWImgDescriptorExtractor
         {
@@ -138,7 +138,7 @@ BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 --------------------------------------------------------
 .. ocv:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
 
-    The class constructor.
+    Constructs a class.
 
     :param dextractor: Descriptor extractor that is used to compute descriptors for an input image and its keypoints.
 
@@ -152,7 +152,7 @@ BOWImgDescriptorExtractor::setVocabulary
 
     Sets a visual vocabulary.
 
-    :param vocabulary: Vocabulary (can be trained using the inheritor of  :ref:`BOWTrainer` ). Each row of the vocabulary is a visual word (cluster center).
+    :param vocabulary: Vocabulary (can be trained using the inheritor of  :ocv:class:`BOWTrainer` ). Each row of the vocabulary is a visual word (cluster center).
 
 .. index:: BOWImgDescriptorExtractor::getVocabulary
 
