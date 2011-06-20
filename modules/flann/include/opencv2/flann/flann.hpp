@@ -88,6 +88,9 @@ using ::cvflann::HierarchicalClusteringIndexParams;
 using ::cvflann::AutotunedIndexParams;
 using ::cvflann::SavedIndexParams;
 using ::cvflann::SearchParams;
+using ::cvflann::get_param;
+using ::cvflann::print_params;
+
 
 // bring the flann distances into this namespace
 using ::cvflann::L2_Simple;
@@ -102,6 +105,7 @@ using ::cvflann::HistIntersectionDistance;
 using ::cvflann::HellingerDistance;
 using ::cvflann::ChiSquareDistance;
 using ::cvflann::KL_Divergence;
+
 
 
 template <typename Distance>
