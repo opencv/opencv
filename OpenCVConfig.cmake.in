@@ -89,7 +89,9 @@ endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
 
 # For OpenCV built as static libs, we need the user to link against
 #  many more dependencies:
-IF (NOT @BUILD_SHARED_LIBS@)
+set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
+
+IF (NOT OpenCV_SHARED)
     # Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
     if(WIN32 AND NOT ANDROID)
         LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
@@ -111,7 +113,7 @@ IF (NOT @BUILD_SHARED_LIBS@)
         set(OpenCV_LIBS ${OpenCV_LIBS} ${OPENCV_EXTRA_COMPONENTS})
     endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
 
-ENDIF(NOT @BUILD_SHARED_LIBS@)
+ENDIF()
 
 # ======================================================
 #  Android camera helper macro

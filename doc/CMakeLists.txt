@@ -13,12 +13,13 @@ project(opencv_docs)
 
 file(GLOB_RECURSE OPENCV2_FILES_PICT ../modules/*.png ../modules/*.jpg)
 file(GLOB_RECURSE OPENCV2_FILES_RST ../modules/*.rst)
+file(GLOB_RECURSE OPENCV2_PY_FILES_RST opencv2/*.rst)
 file(GLOB_RECURSE OPENCV1_FILES_PICT pics/*.png pics/*.jpg)
 file(GLOB_RECURSE OPENCV1_FILES_RST opencv1/*.rst)
 file(GLOB_RECURSE OPENCV_FILES_UG user_guide/*.rst)
 file(GLOB_RECURSE OPENCV_FILES_TUT tutorials/*.rst)
 
-set(OPENCV_DOC_DEPS conf.py ${OPENCV2_FILES_RST} ${OPENCV2_FILES_PICT}
+set(OPENCV_DOC_DEPS conf.py ${OPENCV2_FILES_RST} ${OPENCV2_FILES_PICT} ${OPENCV2_PY_FILES_RST}
           ${OPENCV1_FILES_RST} ${OPENCV1_FILES_PICT}
           ${OPENCV_FILES_UG} ${OPENCV_FILES_TUT})
 
@@ -30,8 +31,10 @@ add_custom_target(docs
                     ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
                   COMMAND ${CMAKE_COMMAND} -E copy
                     ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
-                  COMMAND ${PDFLATEX_COMPILER} opencv2refman
-                  COMMAND ${PDFLATEX_COMPILER} opencv2refman
+                  COMMAND ${PDFLATEX_COMPILER} opencv2refman_cpp
+                  COMMAND ${PDFLATEX_COMPILER} opencv2refman_cpp
+                  COMMAND ${PDFLATEX_COMPILER} opencv2refman_py
+                  COMMAND ${PDFLATEX_COMPILER} opencv2refman_py
                   COMMAND ${PDFLATEX_COMPILER} opencv1refman_c
                   COMMAND ${PDFLATEX_COMPILER} opencv1refman_c
                   COMMAND ${PDFLATEX_COMPILER} opencv1refman_py

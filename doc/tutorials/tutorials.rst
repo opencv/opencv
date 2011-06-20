@@ -1,5 +1,3 @@
-.. toctree::
-
 The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our SVN repository.
 
 .. note::
@@ -203,3 +201,21 @@ As always, we would be happy to hear your comments and receive your contribution
     
      .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.png
                             :height: 200px
+
+
+.. toctree::
+   :hidden:
+
+   Linux_Installation.rst
+   Windows_Installation.rst
+   Linux_GCC_Usage.rst
+   Linux_Eclipse_Usage.rst
+   Display_Image.rst
+   Load_Save_Image.rst
+   Basic_Linear_Transform.rst
+   Adding_Images.rst
+   Adding_Trackbars.rst
+   Drawing_1.rst
+   Drawing_2.rst
+   Smoothing.rst
+   Morphology_1.rst
