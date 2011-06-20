@@ -4,7 +4,7 @@ Qt New Functions
 
 .. image:: pics/qtgui.png
 
-This figure explains new functionality implemented with Qt* GUI. The new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it.
+This figure explains new functionality implemented with Qt* GUI. The new GUI provides a statusbar, a toolbar, and a control panel. The control panel can have trackbars and buttonbars attached to it. If you can't see the control panel then press Ctrl+P or right-click on any Qt-window and select "Display properties window".
 
 *
     To attach a trackbar, the window name parameter must be NULL.
