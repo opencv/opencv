@@ -1,16 +1,29 @@
 # By including this file, all files in the CMAKE_INSTALL_DEBUG_LIBRARIES,
 # will be installed with INSTALL_PROGRAMS into /bin for WIN32 and /lib
 # for non-win32. If CMAKE_SKIP_INSTALL_RULES is set to TRUE before including
-# this file, then the INSTALL command is not called.  The use can use 
+# this file, then the INSTALL command is not called.  The user can use 
 # the variable CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS to use a custom install 
 # command and install them into any directory they want.
 # If it is the MSVC compiler, then the microsoft run
-# time libraries will be found add automatically added to the
+# time libraries will be found and automatically added to the
 # CMAKE_INSTALL_DEBUG_LIBRARIES, and installed.  
 # If CMAKE_INSTALL_DEBUG_LIBRARIES is set and it is the MSVC
 # compiler, then the debug libraries are installed when available.
 # If CMAKE_INSTALL_MFC_LIBRARIES is set then the MFC run time
 # libraries are installed as well as the CRT run time libraries.
+
+#=============================================================================
+# Copyright 2006-2009 Kitware, Inc.
+#
+# Distributed under the OSI-approved BSD License (the "License");
+# see accompanying file Copyright.txt for details.
+#
+# This software is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the License for more information.
+#=============================================================================
+# (To distribute this file outside of CMake, substitute the full
+#  License text for the above reference.)
 
 IF(MSVC)
   FILE(TO_CMAKE_PATH "$ENV{SYSTEMROOT}" SYSTEMROOT)
@@ -98,24 +111,36 @@ IF(MSVC)
         "${MSVC90_CRT_DIR}/msvcp90d.dll"
         "${MSVC90_CRT_DIR}/msvcr90d.dll"
         )
-    ENDIF(CMAKE_INSTALL_DEBUG_LIBRARIES)
-
-    IF(CMAKE_INSTALL_OPENMP_LIBRARIES)      
-      SET(MSVC90_OPENMP_DIR "${MSVC90_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC90.OPENMP")
-      SET(__install__libs ${__install__libs}
-        "${MSVC90_OPENMP_DIR}/Microsoft.VC90.OpenMP.manifest"
-        "${MSVC90_OPENMP_DIR}/vcomp90.dll"
-        )
-      IF(CMAKE_INSTALL_DEBUG_LIBRARIES)
-        SET(MSVC90_OPENMP_DIR
-          "${MSVC90_REDIST_DIR}/Debug_NonRedist/${CMAKE_MSVC_ARCH}/Microsoft.VC90.DebugOPENMP")
-        SET(__install__libs ${__install__libs}
-          "${MSVC90_OPENMP_DIR}/Microsoft.VC90.DebugOpenMP.manifest"
-          "${MSVC90_OPENMP_DIR}/vcomp90d.dll"
-          )
-      ENDIF(CMAKE_INSTALL_DEBUG_LIBRARIES)
-    ENDIF(CMAKE_INSTALL_OPENMP_LIBRARIES) 
+    ENDIF(CMAKE_INSTALL_DEBUG_LIBRARIES) 
   ENDIF(MSVC90) 
+
+  IF(MSVC10)
+    # Find the runtime library redistribution directory.
+    FIND_PATH(MSVC10_REDIST_DIR NAMES ${CMAKE_MSVC_ARCH}/Microsoft.VC100.CRT
+      PATHS
+        "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\10.0;InstallDir]/../../VC/redist"
+        "${base_dir}/VC/redist"
+      )
+    MARK_AS_ADVANCED(MSVC10_REDIST_DIR)
+    SET(MSVC10_CRT_DIR "${MSVC10_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC100.CRT")
+
+    # Install the manifest that allows DLLs to be loaded from the
+    # directory containing the executable.
+    SET(__install__libs
+      "${MSVC10_CRT_DIR}/Microsoft.VC100.CRT.manifest"
+      "${MSVC10_CRT_DIR}/msvcp100.dll"
+      "${MSVC10_CRT_DIR}/msvcr100.dll"
+      ) 
+    IF(CMAKE_INSTALL_DEBUG_LIBRARIES)
+      SET(MSVC10_CRT_DIR
+        "${MSVC10_REDIST_DIR}/Debug_NonRedist/${CMAKE_MSVC_ARCH}/Microsoft.VC90.DebugCRT")
+      SET(__install__libs ${__install__libs}
+        "${MSVC10_CRT_DIR}/Microsoft.VC100.DebugCRT.manifest"
+        "${MSVC10_CRT_DIR}/msvcp100d.dll"
+        "${MSVC10_CRT_DIR}/msvcr100d.dll"
+        )
+    ENDIF(CMAKE_INSTALL_DEBUG_LIBRARIES) 
+  ENDIF(MSVC10)
 
   IF(CMAKE_INSTALL_MFC_LIBRARIES)
     IF(MSVC70)
@@ -209,6 +234,47 @@ IF(MSVC)
         "${MSVC90_MFCLOC_DIR}/mfc90kor.dll"
         )
     ENDIF(MSVC90)
+
+    IF(MSVC10)
+      IF(CMAKE_INSTALL_DEBUG_LIBRARIES)
+        SET(MSVC10_MFC_DIR
+          "${MSVC10_REDIST_DIR}/Debug_NonRedist/${CMAKE_MSVC_ARCH}/Microsoft.VC100.DebugMFC")
+        SET(__install__libs ${__install__libs}
+          "${MSVC10_MFC_DIR}/Microsoft.VC100.DebugMFC.manifest"
+          "${MSVC10_MFC_DIR}/mfc100d.dll"
+          "${MSVC10_MFC_DIR}/mfc100ud.dll"
+          "${MSVC10_MFC_DIR}/mfcm100d.dll"
+          "${MSVC10_MFC_DIR}/mfcm100ud.dll"
+          )
+      ENDIF(CMAKE_INSTALL_DEBUG_LIBRARIES)
+        
+      SET(MSVC10_MFC_DIR "${MSVC10_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC100.MFC")
+      # Install the manifest that allows DLLs to be loaded from the
+      # directory containing the executable.
+      SET(__install__libs ${__install__libs}
+        "${MSVC10_MFC_DIR}/Microsoft.VC100.MFC.manifest"
+        "${MSVC10_MFC_DIR}/mfc100.dll"
+        "${MSVC10_MFC_DIR}/mfc100u.dll"
+        "${MSVC10_MFC_DIR}/mfcm100.dll"
+        "${MSVC10_MFC_DIR}/mfcm100u.dll"
+        )
+      # include the language dll's for vs10 as well as the actuall dll's
+      SET(MSVC10_MFCLOC_DIR "${MSVC10_REDIST_DIR}/${CMAKE_MSVC_ARCH}/Microsoft.VC100.MFCLOC")
+      # Install the manifest that allows DLLs to be loaded from the
+      # directory containing the executable.
+      SET(__install__libs ${__install__libs}
+        "${MSVC10_MFCLOC_DIR}/Microsoft.VC100.MFCLOC.manifest"
+        "${MSVC10_MFCLOC_DIR}/mfc100chs.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100cht.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100enu.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100esp.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100deu.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100fra.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100ita.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100jpn.dll"
+        "${MSVC10_MFCLOC_DIR}/mfc100kor.dll"
+        )
+    ENDIF(MSVC10)
 
   ENDIF(CMAKE_INSTALL_MFC_LIBRARIES)
 
