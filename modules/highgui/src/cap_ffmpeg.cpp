@@ -433,7 +433,9 @@ bool CvCapture_FFMPEG::reopen()
     return true;
 }
 
-
+#ifndef AVSEEK_FLAG_FRAME
+	#define AVSEEK_FLAG_FRAME 0
+#endif
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
