@@ -2108,7 +2108,7 @@ class DocumentFragmentTests(OpenCVTests):
 
     def test_precornerdetect(self):
         from precornerdetect import precornerdetect
-        im = self.get_sample("samples/c/right01.jpg", 0)
+        im = self.get_sample("samples/cpp/right01.jpg", 0)
         imf = cv.CreateMat(im.rows, im.cols, cv.CV_32FC1)
         cv.ConvertScale(im, imf)
         (r0,r1) = precornerdetect(imf)
