@@ -413,10 +413,8 @@ value if all of the corners are found and they are placed
 in a certain order (row by row, left to right in every row). Otherwise, if the function fails to find all the corners or reorder
 them, it returns 0. For example, a regular chessboard has 8 x 8
 squares and 7 x 7 internal corners, that is, points where the black
-squares touch each other. The detected coordinates are approximate,
-and to determine their position more accurately, you may use
-the function
-:ref:`cornerSubPix`.
+squares touch each other. The detected coordinates are approximate so the function calls :ref:`cornerSubPix` internally to determine their position more accurately.
+You also may use the function :ref:`cornerSubPix` with different parameters if returned coordinates are not accurate enough.
 
 Sample usage of detecting and drawing chessboard corners: ::
 
@@ -628,7 +626,7 @@ findHomography
 
         .. math::
 
-            \| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H}   \texttt{srcPoints} _i) \|  >  \texttt{ransacReprojThreshold}
+            \| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|  >  \texttt{ransacReprojThreshold}
 
         then the point  :math:`i`  is considered an outlier. If  ``srcPoints``  and  ``dstPoints``  are measured in pixels, it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 

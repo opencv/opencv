@@ -388,6 +388,14 @@ bilateralFilter
 
 The function applies bilateral filtering to the input image, as described in
 http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html
+``bilateralFilter`` can do a very good job of reducing unwanted noise while keep edges fairly sharp. However it is very slow compared to most filters.
+
+*Sigma values*: For simplicity, you can set the 2 sigma values to be the same. If they are small (< 10) then the filter will not have much effect, whereas if they are large (> 150) then they will have a very strong effect, making the image look "cartoonish".
+
+*Filter size*: Large filters (d > 5) are very slow, so it is recommended to use d=5 for real-time applications, and perhaps d=9 for offline applications that need heavy noise filtering.
+
+This filter doesn't work inplace.
+
 
 .. index:: blur
 

@@ -1781,6 +1781,8 @@ Difference norm between two projections is the maximal distance between correspo
 ``criteria.epsilon``
 serves to stop the algorithm if the difference is small.
 
+An example of using ``cvPOSIT`` and ``cvCreatePOSITObject`` is available at http://opencv.willowgarage.com/wiki/Posit
+
 
 .. index:: ProjectPoints2
 

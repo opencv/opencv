@@ -84,6 +84,7 @@ cvtColor
 
 The function converts an input image from one color
 space to another. In case of transformation to-from RGB color space, the order of the channels should be specified explicitly (RGB or BGR).
+Note that the default color format in OpenCV is often referred to as RGB but it is actually BGR (the bytes are reversed). So the first byte in a standard (24-bit) color image will be an 8-bit Blue component, the second byte will be Green and the third byte will be Red. The fourth, fifth and sixth bytes would then be the 2nd pixel (Blue then Green then Red) and so on.
 
 The conventional ranges for R, G, and B channel values are:
 
@@ -102,6 +103,8 @@ But in case of a non-linear transformation, an input RGB image should be normali
 
     img *= 1./255;
     cvtColor(img, img, CV_BGR2Luv);
+
+If you use ``cvtColor`` with 8-bit images then conversion will have lost some information. For many applications this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
 
 The function can do the following transformations:
 

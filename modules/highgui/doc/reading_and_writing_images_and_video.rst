@@ -366,5 +366,6 @@ Video writer class ::
         ...
     };
 
+For more detailed description see http://opencv.willowgarage.com/wiki/documentation/cpp/highgui/VideoWriter
 ..
 

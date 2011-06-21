@@ -46,7 +46,7 @@ Maximally stable extremal region extractor. ::
     };
 
 The class encapsulates all the parameters of the MSER extraction algorithm (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions).
+http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for usefull comments and parameters description.
 
 .. index:: StarDetector
 
