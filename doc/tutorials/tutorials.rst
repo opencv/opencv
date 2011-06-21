@@ -7,147 +7,103 @@ The following links describe a set of basic OpenCV  tutorials. All the source co
 
 As always, we would be happy to hear your comments and receive your contributions on any tutorial.
 
-* **INSTALLATION**
+* **INTRO**
 
   * :ref:`Linux_Installation`
 
-     =========== ======================================================
-     |Install_1| *Title:* **Installation steps in Linux**
+     =============== ======================================================
+     |Install_Linux| *Title:* **Installation steps in Linux**
 
-	         *Compatibility:* > OpenCV 2.0
+ 	             *Compatibility:* > OpenCV 2.0
 
-	         We will learn how to setup OpenCV in your computer!
+	             We will learn how to setup OpenCV in your computer!
     
-     =========== ======================================================
+     =============== ======================================================
     
-     .. |Install_1| image:: images/ubuntu_logo.jpeg
-                    :height: 120px
+     .. |Install_Linux| image:: Intro/Linux_Installation/images/ubuntu_logo.jpeg
+                        :height: 120px
 
   * :ref:`Windows_Installation`
   
-     =========== ======================================================
-     |Install_2| *Title:* **Installation steps in Windows**
+     ================= ======================================================
+     |Install_Windows| *Title:* **Installation steps in Windows**
 
-		 *Compatibility:* > OpenCV 2.0
+		       *Compatibility:* > OpenCV 2.0
 
-		 You will learn how to setup OpenCV in your Windows Operating System!
+		       You will learn how to setup OpenCV in your Windows Operating System!
 
-     =========== ======================================================
+     ================= ======================================================
 
-     .. |Install_2| image:: images/windows_logo.jpg
-                    :height: 120px
+     .. |Install_Windows| image:: Intro/Windows_Installation/images/windows_logo.jpg
+                          :height: 120px
 
-
-* **USAGE AND COMPILATION**
 
   * :ref:`Linux_GCC_Usage`
 
-     =========== ======================================================
-      |Usage_1|  *Title:* **Using OpenCV with gcc (and CMake)**
+     =================== ======================================================
+      |Usage_Linux_GCC|  *Title:* **Using OpenCV with gcc (and CMake)**
 
-	         *Compatibility:* > OpenCV 2.0
+	                 *Compatibility:* > OpenCV 2.0
 
-	         We will learn how to compile your first project using gcc and CMake
+	                 We will learn how to compile your first project using gcc and CMake
     
-     =========== ======================================================
+     =================== ======================================================
     
-     .. |Usage_1| image:: images/gccegg-65-2.png
-                  :height: 120px
+     .. |Usage_Linux_GCC| image:: Intro/Linux_GCC_Usage/images/gccegg-65-2.png
+                          :height: 120px
 
 
   * :ref:`Linux_Eclipse_Usage`
 
-     =========== ======================================================
-      |Usage_2|  *Title:* **Using OpenCV with Eclipse (CDT plugin)**
+     ======================= ======================================================
+      |Usage_Linux_Eclipse|  *Title:* **Using OpenCV with Eclipse (CDT plugin)**
 
-	         *Compatibility:* > OpenCV 2.0
+  	                     *Compatibility:* > OpenCV 2.0
 
-	         We will learn how to compile your first project using the Eclipse environment
+	                     We will learn how to compile your first project using the Eclipse environment
     
-     =========== ======================================================
+     ======================= ======================================================
     
-     .. |Usage_2| image:: images/eclipse_cpp_logo.jpeg
-                  :height: 120px
+     .. |Usage_Linux_Eclipse| image:: Intro/Linux_Eclipse_Usage/images/eclipse_cpp_logo.jpeg
+                              :height: 120px
 
-* **BEGINNERS SECTION**
 
   * :ref:`Display_Image`
 
-     =============== ======================================================
-      |Beginners_1|  *Title:* **Display an Image**
+     ================= ======================================================
+      |Display_Image|  *Title:* **Display an Image**
 
-	             *Compatibility:* > OpenCV 2.0
+	               *Compatibility:* > OpenCV 2.0
 
-	             We will learn how to display an image using OpenCV
+	               We will learn how to display an image using OpenCV
     
-     =============== ======================================================
+     ================= ======================================================
     
-     .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.png
-                      :height: 150px
+     .. |Display_Image| image:: Intro/Display_Image/images/Display_Image_Tutorial_Result.png
+                        :height: 120px
 
 
   * :ref:`Load_Save_Image`
 
-     =============== ======================================================
-      |Beginners_2|  *Title:* **Load and save an Image**
+     ================== ======================================================
+      |Load_Save_Image|  *Title:* **Load and save an Image**
 
-	             *Compatibility:* > OpenCV 2.0
+	                 *Compatibility:* > OpenCV 2.0
 
-	             We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
+	                 We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
     
-     =============== ======================================================
+     ================== ======================================================
     
-     .. |Beginners_2| image:: images/Load_Save_Image_Result_1.png
-                      :height: 150px
+     .. |Load_Save_Image| image:: Intro/Load_Save_Image/images/Load_Save_Image_Result_1.png
+                          :height: 150px
 
-  * :ref:`Basic_Linear_Transform`
+* **CX CORE**
 
-     =============== ======================================================
-      |Beginners_3|  *Title:* **Changing the contrast and brightness of an image**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to change our image appearance!
-    
-     =============== ======================================================
-    
-     .. |Beginners_3| image:: images/Basic_Linear_Transform_Tutorial_Result_0.png
-                      :height: 200px
-
-
-  * :ref:`Adding_Images`
-
-     =============== ======================================================
-      |Beginners_4|  *Title:* **Linear Blending**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to blend two images!
-    
-     =============== ======================================================
-    
-     .. |Beginners_4| image:: images/Adding_Images_Tutorial_Result_0.png
-                      :height: 200px
-
-
-  * :ref:`Adding_Trackbars`
-
-     =============== ======================================================
-      |Beginners_5|  *Title:* **Creating Trackbars**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to add a Trackbar to our applications
-    
-     =============== ======================================================
-    
-     .. |Beginners_5| image:: images/Adding_Trackbars_Tutorial_Cover.png
-                      :height: 200px
 
   * :ref:`Drawing_1`
 
      =============== ======================================================
-      |Beginners_6|  *Title:* **Basic Drawing**
+      |Drawing_1|    *Title:* **Basic Drawing**
 
 	             *Compatibility:* > OpenCV 2.0
 
@@ -155,13 +111,13 @@ As always, we would be happy to hear your comments and receive your contribution
     
      =============== ======================================================
     
-     .. |Beginners_6| image:: images/Drawing_1_Tutorial_Result_0.png
-                      :height: 200px
+     .. |Drawing_1| image:: CxCore/Matrix/Drawing_1/images/Drawing_1_Tutorial_Result_0.png
+                    :height: 200px
 
   * :ref:`Drawing_2`
 
      =============== ======================================================
-      |Beginners_7|  *Title:* **Cool Drawing**
+      |Drawing_2|    *Title:* **Cool Drawing**
 
 	             *Compatibility:* > OpenCV 2.0
 
@@ -169,16 +125,62 @@ As always, we would be happy to hear your comments and receive your contribution
     
      =============== ======================================================
     
-     .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.png
+     .. |Drawing_2|   image:: CxCore/Matrix/Drawing_2/images/Drawing_2_Tutorial_Result_7.png
                       :height: 200px
+
 
 
 * **IMAGE PROCESSING**
 
+  * :ref:`Basic_Linear_Transform`
+
+     ========================== =========================================================
+      |Basic_Linear_Transform|  *Title:* **Changing the contrast and brightness of an image**
+
+	                        *Compatibility:* > OpenCV 2.0
+
+	                        We will learn how to change our image appearance!
+    
+     ========================== =========================================================
+    
+     .. |Basic_Linear_Transform| image:: ImgProc/Basic_Linear_Transforms/images/Basic_Linear_Transform_Tutorial_Result_0.png
+                                 :height: 200px
+
+
+  * :ref:`Adding_Images`
+
+     ================= ======================================================
+      |Adding_Images|  *Title:* **Linear Blending**
+
+	               *Compatibility:* > OpenCV 2.0
+
+	               We will learn how to blend two images!
+    
+     ================= ======================================================
+    
+     .. |Adding_Images| image:: ImgProc/Adding_Images/images/Adding_Images_Tutorial_Result_0.png
+                        :height: 200px
+
+
+  * :ref:`Adding_Trackbars`
+
+     ==================== ======================================================
+      |Adding_Trackbars|  *Title:* **Creating Trackbars**
+
+	                  *Compatibility:* > OpenCV 2.0
+
+	                  We will learn how to add a Trackbar to our applications
+    
+     ==================== ======================================================
+    
+     .. |Adding_Trackbars| image:: HighGUI/Adding_Trackbars/images/Adding_Trackbars_Tutorial_Cover.png
+                           :height: 200px
+
+
   * :ref:`Smoothing`
 
      ===================== ======================================================
-      |ImageProcessing_1|  *Title:* **Smoothing Images**
+      |Smoothing|          *Title:* **Smoothing Images**
 
 	                   *Compatibility:* > OpenCV 2.0
 
@@ -186,14 +188,14 @@ As always, we would be happy to hear your comments and receive your contribution
     
      ===================== ======================================================
     
-     .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.png
-                            :height: 200px
+     .. |Smoothing| image:: ImgProc/Smoothing/images/Smoothing_Tutorial_Cover.png
+                    :height: 200px
 
 
   * :ref:`Morphology_1`
 
      ===================== ======================================================
-      |ImageProcessing_2|  *Title:* **Erosion and Dilation**
+      |Morphology_1|       *Title:* **Erosion and Dilation**
 
 	                   *Compatibility:* > OpenCV 2.0
 
@@ -201,5 +203,8 @@ As always, we would be happy to hear your comments and receive your contribution
     
      ===================== ======================================================
     
-     .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.png
-                            :height: 200px
+     .. |Morphology_1| image:: ImgProc/Morphology_1/images/Morphology_1_Tutorial_Cover.png
+                       :height: 200px
+
+
+
