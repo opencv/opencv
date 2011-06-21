@@ -10,7 +10,6 @@ endif()
 #if(ENABLE_OPENMP)
 #    set(CMAKE_INSTALL_OPENMP_LIBRARIES 1)
 #endif()
-#include(OpenCVInstallRequiredSystemLibraries.cmake)
 include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "OpenCV")
