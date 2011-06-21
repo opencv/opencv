@@ -299,7 +299,10 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'dilate': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-dilate%s', None),
             'get_structuring_element': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-getstructuringelement%s', None),
             'flood_fill': ( 'http://opencv.jp/opencv-2.2_org/cpp/imgproc_miscellaneous_image_transformations.html?#floodFill%s', None),
-	    'morphology_ex': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html?highlight=morphology#morphologyEx%s', None)
+	    'morphology_ex': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html?highlight=morphology#morphologyEx%s', None),
+            'pyr_down': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrdown%s', None),
+            'pyr_up': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrup%s', None),
+            'resize': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html#cv-resize%s', None)
            }
 
 

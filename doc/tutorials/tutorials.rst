@@ -204,7 +204,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ===================== ======================================================
     
      .. |Morphology_1| image:: ImgProc/Morphology_1/images/Morphology_1_Tutorial_Cover.png
-                       :height: 200px
+                       :height: 200pt
 
 
   * :ref:`Morphology_2`
@@ -219,4 +219,18 @@ As always, we would be happy to hear your comments and receive your contribution
      ===================== ======================================================
     
      .. |Morphology_2| image:: ImgProc/Morphology_2/images/Morphology_2_Tutorial_Cover.png
-                       :height: 200px
+                       :height: 200pt
+
+  * :ref:`Pyramids`
+
+     ===================== ======================================================
+      |Pyramids|           *Title:* **Image Pyramids**
+
+	                   *Compatibility:* > OpenCV 2.0
+
+                 	   What if I need a bigger/smaller image?
+    
+     ===================== ======================================================
+    
+     .. |Pyramids| image:: ImgProc/Pyramids/images/Pyramids_Tutorial_Cover.png
+                   :height: 200pt
