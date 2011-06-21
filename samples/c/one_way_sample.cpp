@@ -17,8 +17,8 @@ void help()
 {
 	printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
 			"Correspondences are drawn\n");
-    printf("Format: \n./one_way_sample [path_to_samples] [image1] [image2]\n");
-    printf("For example: ./one_way_sample ../../../opencv/samples/c scene_l.bmp scene_r.bmp\n");
+    printf("Format: \n./one_way_sample <path_to_samples> <image1> <image2>\n");
+    printf("For example: ./one_way_sample . ../c/scene_l.bmp ../c/scene_r.bmp\n");
 }
 
 using namespace cv;
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     const CvSize patch_size = cvSize(24, 24);
     const int pose_count = 50;
 
-    if (argc != 3 && argc != 4)
+    if (argc != 4)
     {
     	help();
         return 0;

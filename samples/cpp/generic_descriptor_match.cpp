@@ -9,9 +9,9 @@ using namespace cv;
 
 void help()
 {
-	printf("Use the SURF descriptor for matching keypoints between 2 images\n");
-    printf("Format: \n./generic_descriptor_match [image1] [image2] [algorithm] [XML params]\n");
-    printf("For example: ./generic_descriptor_match scene_l.bmp scene_r.bmp FERN fern_params.xml\n");
+    printf("Use the SURF descriptor for matching keypoints between 2 images\n");
+    printf("Format: \n./generic_descriptor_match <image1> <image2> <algorithm> <XML params>\n");
+    printf("For example: ./generic_descriptor_match ../c/scene_l.bmp ../c/scene_r.bmp FERN fern_params.xml\n");
 }
 
 IplImage* DrawCorrespondences(IplImage* img1, const vector<KeyPoint>& features1, IplImage* img2,
