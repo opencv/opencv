@@ -207,4 +207,16 @@ As always, we would be happy to hear your comments and receive your contribution
                        :height: 200px
 
 
+  * :ref:`Morphology_2`
 
+     ===================== ======================================================
+      |Morphology_2|       *Title:* **More advanced Morphology Transformations**
+
+	                   *Compatibility:* > OpenCV 2.0
+
+                 	   Here we investigate different morphology operators
+    
+     ===================== ======================================================
+    
+     .. |Morphology_2| image:: ImgProc/Morphology_2/images/Morphology_2_Tutorial_Cover.png
+                       :height: 200px
