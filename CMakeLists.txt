@@ -90,7 +90,7 @@ endif()
 # ----------------------------------------------------------------------------
 #  Current version number:
 # ----------------------------------------------------------------------------
-set(OPENCV_VERSION "2.2.9")
+set(OPENCV_VERSION "2.3.0")
 
 string(REGEX MATCHALL "[0-9]" OPENCV_VERSION_PARTS "${OPENCV_VERSION}")
 
@@ -577,8 +577,12 @@ if(WITH_OPENEXR)
     include(OpenCVFindOpenEXR.cmake)
 endif()
 
-# Python support
-# ===================================================
+set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Documentation")
+
+if(BUILD_DOCS)
+  include(OpenCVFindLATEX.cmake REQUIRED)
+endif()
+
 set(BUILD_NEW_PYTHON_SUPPORT ON CACHE BOOL "Build with Python support")
 
 if (WIN32)
@@ -629,7 +633,7 @@ if(PYTHON_NUMPY_PROCESS EQUAL 0)
     set(PYTHON_USE_NUMPY 1)
     add_definitions(-D PYTHON_USE_NUMPY=1)
     include_directories(AFTER ${PYTHON_NUMPY_INCLUDE_DIRS})
-    message(STATUS "    Use INCLUDE: ${PYTHON_NUMPY_INCLUDE_DIRS}")
+    message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
 else()
     set(PYTHON_USE_NUMPY 0)
 endif()
@@ -647,6 +651,7 @@ if(SPHINX_PROCESS EQUAL 0)
         message(STATUS "    Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
     endif()
 endif()
+
 
 #YV
 ############################### QT ################################
@@ -901,9 +906,6 @@ libnative_camera_rx.x.x.so for your Android")
         endif()
     endif()
 endif()
-
-################## Reference Manual ##################
-set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Reference Manual")
 
 
 ################### DOXYGEN ###############
@@ -1379,11 +1381,17 @@ if(BUILD_PACKAGE)
         endif()
 
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY 3rdparty android modules tests doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
+        install(DIRECTORY 3rdparty android modules doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
         #install(DIRECTORY doc DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.rst" "*.tex")
         #install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
         #install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
 
+        # install TBB dlls
+        if(WIN32 AND HAVE_TBB)
+            string(REGEX REPLACE "/lib" "/bin" TBB_DLL_DIR "${TBB_LIB_DIR}")
+            install(PROGRAMS "${TBB_DLL_DIR}/tbb.dll" DESTINATION bin COMPONENT main)
+            install(PROGRAMS "${TBB_DLL_DIR}/tbb_debug.dll" DESTINATION bin COMPONENT main)
+        endif()
     endif()
 endif()
 
@@ -1406,26 +1414,12 @@ endif()
 #-----------------------------------
 add_subdirectory(include)
 add_subdirectory(modules)
-
-if(BUILD_DOCS)
-  include(OpenCVFindLATEX.cmake REQUIRED)
-
-  if(PDFLATEX_COMPILER)
-    message(STATUS "PDF LaTeX found!")
-  endif()
-endif()
-
 add_subdirectory(doc)
 add_subdirectory(data)
 
 if(BUILD_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
     add_subdirectory(samples)
 endif()
-
-#if(BUILD_TESTS)
-#    enable_testing()
-#    add_subdirectory(tests)
-#endif()
 
 add_subdirectory(3rdparty)
 
