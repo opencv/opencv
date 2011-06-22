@@ -574,67 +574,71 @@ set(BUILD_NEW_PYTHON_SUPPORT ON CACHE BOOL "Build with Python support")
 
 if (WIN32)
     if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-	    set(BUILD_NEW_PYTHON_SUPPORT OFF)
-	endif()
+        set(BUILD_NEW_PYTHON_SUPPORT OFF)
+    endif()
+endif()
+if(ANDROID)
+    set(BUILD_NEW_PYTHON_SUPPORT OFF)
 endif()
 
-if(BUILD_NEW_PYTHON_SUPPORT OR BUILD_DOCS)
-    find_package(PythonInterp)
-    find_package(PythonLibs)
+# Always try to find python
+# ===================================================
+find_package(PythonInterp)
+find_package(PythonLibs)
 
-    # cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
-    if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
-        set(PYTHONLIBS_FOUND ON)
-    endif(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
+# cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
+if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
+    set(PYTHONLIBS_FOUND ON)
+endif(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
 
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
-              ERROR_VARIABLE PYTHON_VERSION_FULL
-              OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
+      ERROR_VARIABLE PYTHON_VERSION_FULL
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    string(REGEX MATCH "[0-9].[0-9]" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
-    if(UNIX)
-        set(PYTHON_PLUGIN_INSTALL_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages/opencv)
-        if(APPLE)
-          set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages CACHE PATH "Where to install the python packages.")
-        else() #debian based assumed, install to the dist-packages.
-          set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
-        endif()
+string(REGEX MATCH "[0-9].[0-9]" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
+if(UNIX)
+    set(PYTHON_PLUGIN_INSTALL_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages/opencv)
+    if(APPLE)
+        set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages CACHE PATH "Where to install the python packages.")
+    else() #debian based assumed, install to the dist-packages.
+       set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
     endif()
-    if(WIN32)
-        get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE CACHE)
-        set(PYTHON_PLUGIN_INSTALL_PATH "${PYTHON_PATH}/Lib/site-packages/opencv")
-        set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
-    endif()
+endif()
+if(WIN32)
+    get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE CACHE)
+    set(PYTHON_PLUGIN_INSTALL_PATH "${PYTHON_PATH}/Lib/site-packages/opencv")
+    set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
+endif()
 
-    # Attempt to discover the NumPy include directory.  If this succeeds, build with NumPy
+# Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
+            RESULT_VARIABLE PYTHON_NUMPY_PROCESS
+            OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
-                    RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                    OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(PYTHON_NUMPY_PROCESS EQUAL 0)
-      set(PYTHON_USE_NUMPY 1)
-      add_definitions(-D PYTHON_USE_NUMPY=1)
-      include_directories(AFTER ${PYTHON_NUMPY_INCLUDE_DIRS})
-      message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
-    else()
-      set(PYTHON_USE_NUMPY 0)
-    endif()
-    
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sphinx; print sphinx.__version__"
-                    RESULT_VARIABLE SPHINX_PROCESS
-                    OUTPUT_VARIABLE SPHINX_VERSION
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    
-    set(HAVE_SPHINX 0)
-    if(SPHINX_PROCESS EQUAL 0)
-      find_program(SPHINX_BUILD sphinx-build)
-      if(SPHINX_BUILD)
+if(PYTHON_NUMPY_PROCESS EQUAL 0)
+    set(PYTHON_USE_NUMPY 1)
+    add_definitions(-D PYTHON_USE_NUMPY=1)
+    include_directories(AFTER ${PYTHON_NUMPY_INCLUDE_DIRS})
+    message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
+else()
+    set(PYTHON_USE_NUMPY 0)
+endif()
+
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sphinx; print sphinx.__version__"
+            RESULT_VARIABLE SPHINX_PROCESS
+            OUTPUT_VARIABLE SPHINX_VERSION
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+set(HAVE_SPHINX 0)
+if(SPHINX_PROCESS EQUAL 0)
+    find_program(SPHINX_BUILD sphinx-build)
+    if(SPHINX_BUILD)
         set(HAVE_SPHINX 1)
         message(STATUS "    Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
-      endif()
     endif()
 endif()
+
 
 #YV
 ############################### QT ################################
