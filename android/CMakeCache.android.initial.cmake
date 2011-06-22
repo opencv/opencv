@@ -6,15 +6,6 @@
 #Build all examples
 set(BUILD_EXAMPLES OFF CACHE BOOL "" )
 
-#Build Reference Manual
-set(BUILD_REFMAN OFF CACHE BOOL "" )
-
-#Build LaTeX OpenCV Documentation
-#set(BUILD_LATEX_DOCS OFF CACHE BOOL "" )
-
-#Build with Python support
-set(BUILD_NEW_PYTHON_SUPPORT OFF CACHE BOOL "" )
-
 #Build a installer with the SDK
 set(BUILD_PACKAGE OFF CACHE BOOL "" )
 
@@ -24,8 +15,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
 #Build 3rd party libraries
 set(OPENCV_BUILD_3RDPARTY_LIBS ON CACHE BOOL "" )
 
-#Choose the type of build, options are: None Debug Release RelWithDebInfo
-# MinSizeRel.
+#Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel.
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" )
 
 #Include IEEE1394 support
@@ -106,5 +96,5 @@ SET( ENABLE_SSE42 OFF CACHE INTERNAL "" FORCE )
 #Enable SSSE3 instructions
 SET( ENABLE_SSSE3 OFF CACHE INTERNAL "" FORCE )
 
-#Set output folder to "libs" instead of "lib" for better compatibility with java projects
-SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/libs CACHE PATH "path for android libs" )
+#Set output folder to "libs/armeabi-v7a" instead of "lib" for compatibility with java projects
+SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" )

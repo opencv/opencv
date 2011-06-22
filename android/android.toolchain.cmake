@@ -94,6 +94,8 @@
 #     [~] default NDK path is updated for version r5c 
 #     [+] variable CMAKE_SYSTEM_PROCESSOR is set based on ARM_TARGET
 #     [~] toolchain install directory is added to linker paths
+#     [-] removed SWIG-related stuff from toolchain
+#     [+] added macro find_host_package, find_host_program to search packages/programs on host system
 # ----------------------------------------------------------------------------
 
 # this one is important
@@ -257,8 +259,8 @@ if( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS )
  if( EXISTS ${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt )
   # these paths are required for jni part of Android projects
   # but they may conflict with traditional unix makefile's folder structure
-  set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" FORCE )
   set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ARMEABI_NDK_NAME} CACHE PATH "Output directory for applications" FORCE)
+  set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" FORCE )
  endif()
  set( CMAKE_INSTALL_PREFIX ${ANDROID_NDK_TOOLCHAIN_ROOT}/user/${ARMEABI_NDK_NAME} CACHE STRING "path for installing" FORCE )
 endif()
@@ -279,10 +281,8 @@ if( BUILD_WITH_ANDROID_NDK_TOOLCHAIN )
  include_directories( ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi )
 endif()
 
-# allow programs like swig to be found -- but can be deceiving for
-# system tool dependencies.
-set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 # only search for libraries and includes in the ndk toolchain
+set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
 set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 
@@ -340,28 +340,22 @@ set( CMAKE_EXE_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" FORCE 
 set( ANDROID True )
 set( BUILD_ANDROID True )
 
-#SWIG junk...
-set( NO_SWIG OFF CACHE BOOL "Don't search for SWIG" )
-if( NOT NO_SWIG )
- #need to search in the  host for swig to be found
- set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH )
- set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH )
- find_package( SWIG QUIET )
+#macro to find package on the host OS
+macro(find_host_package)
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ find_package(${ARGN})
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
-
- if( SWIG_FOUND )
-  set( SWIG_USE_FILE ${CMAKE_ROOT}/Modules/UseSWIG.cmake CACHE PATH "Use Swig cmake module" )
-  set( SWIG_OUTPUT_ROOT ${LIBRARY_OUTPUT_PATH_ROOT}/src CACHE PATH "Where swig generated files will be placed relative to, <SWIG_OUTPUT_ROOT>/com/mylib/foo/jni ..." FORCE )
-
-  #convenience macro for swig java packages
-  macro( SET_SWIG_JAVA_PACKAGE package_name )
-   string( REGEX REPLACE "[.]" "/" package_name_output ${package_name} )
-   set( CMAKE_SWIG_OUTDIR ${SWIG_OUTPUT_ROOT}/${package_name_output} )
-   set( CMAKE_SWIG_FLAGS "-package" "\"${package_name}\"" )
-  endmacro()
- else()
-  message( STATUS "SWIG is not found" )
-  set( NO_SWIG ON CACHE BOOL "Don't search for SWIG" FORCE )
- endif()
-endif()
+endmacro()
+macro(find_host_program)
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER )
+ find_program(${ARGN})
+ set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
+ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
+endmacro()
