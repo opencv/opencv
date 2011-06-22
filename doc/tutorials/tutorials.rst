@@ -21,7 +21,7 @@ As always, we would be happy to hear your comments and receive your contribution
      =============== ======================================================
     
      .. |Install_Linux| image:: Intro/Linux_Installation/images/ubuntu_logo.jpeg
-                        :height: 120px
+                        :height: 120pt
 
   * :ref:`Windows_Installation`
   
@@ -35,7 +35,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ================= ======================================================
 
      .. |Install_Windows| image:: Intro/Windows_Installation/images/windows_logo.jpg
-                          :height: 120px
+                          :height: 120pt
 
 
   * :ref:`Linux_GCC_Usage`
@@ -50,7 +50,7 @@ As always, we would be happy to hear your comments and receive your contribution
      =================== ======================================================
     
      .. |Usage_Linux_GCC| image:: Intro/Linux_GCC_Usage/images/gccegg-65-2.png
-                          :height: 120px
+                          :height: 120pt
 
 
   * :ref:`Linux_Eclipse_Usage`
@@ -65,7 +65,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ======================= ======================================================
     
      .. |Usage_Linux_Eclipse| image:: Intro/Linux_Eclipse_Usage/images/eclipse_cpp_logo.jpeg
-                              :height: 120px
+                              :height: 120pt
 
 
   * :ref:`Display_Image`
@@ -80,7 +80,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ================= ======================================================
     
      .. |Display_Image| image:: Intro/Display_Image/images/Display_Image_Tutorial_Result.png
-                        :height: 120px
+                        :height: 120pt
 
 
   * :ref:`Load_Save_Image`
@@ -95,7 +95,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ================== ======================================================
     
      .. |Load_Save_Image| image:: Intro/Load_Save_Image/images/Load_Save_Image_Result_1.png
-                          :height: 150px
+                          :height: 150pt
 
 * **CX CORE**
 
@@ -112,7 +112,7 @@ As always, we would be happy to hear your comments and receive your contribution
      =============== ======================================================
     
      .. |Drawing_1| image:: CxCore/Matrix/Drawing_1/images/Drawing_1_Tutorial_Result_0.png
-                    :height: 200px
+                    :height: 200pt
 
   * :ref:`Drawing_2`
 
@@ -126,7 +126,7 @@ As always, we would be happy to hear your comments and receive your contribution
      =============== ======================================================
     
      .. |Drawing_2|   image:: CxCore/Matrix/Drawing_2/images/Drawing_2_Tutorial_Result_7.png
-                      :height: 200px
+                      :height: 200pt
 
 
 
@@ -144,7 +144,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ========================== =========================================================
     
      .. |Basic_Linear_Transform| image:: ImgProc/Basic_Linear_Transforms/images/Basic_Linear_Transform_Tutorial_Result_0.png
-                                 :height: 200px
+                                 :height: 200pt
 
 
   * :ref:`Adding_Images`
@@ -159,7 +159,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ================= ======================================================
     
      .. |Adding_Images| image:: ImgProc/Adding_Images/images/Adding_Images_Tutorial_Result_0.png
-                        :height: 200px
+                        :height: 200pt
 
 
   * :ref:`Adding_Trackbars`
@@ -174,7 +174,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ==================== ======================================================
     
      .. |Adding_Trackbars| image:: HighGUI/Adding_Trackbars/images/Adding_Trackbars_Tutorial_Cover.png
-                           :height: 200px
+                           :height: 200pt
 
 
   * :ref:`Smoothing`
@@ -189,7 +189,7 @@ As always, we would be happy to hear your comments and receive your contribution
      ===================== ======================================================
     
      .. |Smoothing| image:: ImgProc/Smoothing/images/Smoothing_Tutorial_Cover.png
-                    :height: 200px
+                    :height: 200pt
 
 
   * :ref:`Morphology_1`
@@ -234,3 +234,17 @@ As always, we would be happy to hear your comments and receive your contribution
     
      .. |Pyramids| image:: ImgProc/Pyramids/images/Pyramids_Tutorial_Cover.png
                    :height: 200pt
+
+  * :ref:`Basic_Threshold`
+
+     ===================== ======================================================
+      |Threshold|          *Title:* **Basic Thresholding Operations**
+
+	                   *Compatibility:* > OpenCV 2.0
+
+                 	   After so much processing, it is time to decide which pixels stay!
+    
+     ===================== ======================================================
+    
+     .. |Threshold| image:: ImgProc/Threshold/images/Threshold_Tutorial_Cover.png
+                    :height: 200pt

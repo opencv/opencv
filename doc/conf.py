@@ -302,7 +302,8 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'morphology_ex': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html?highlight=morphology#morphologyEx%s', None),
             'pyr_down': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrdown%s', None),
             'pyr_up': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrup%s', None),
-            'resize': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html#cv-resize%s', None)
+            'resize': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html#cv-resize%s', None),
+            'threshold': ('http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html#cv-threshold%s', None)
            }
 
 
