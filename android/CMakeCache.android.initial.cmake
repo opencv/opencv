@@ -96,5 +96,5 @@ SET( ENABLE_SSE42 OFF CACHE INTERNAL "" FORCE )
 #Enable SSSE3 instructions
 SET( ENABLE_SSSE3 OFF CACHE INTERNAL "" FORCE )
 
-#Set output folder to "libs/armeabi-v7a" instead of "lib" for compatibility with java projects
-SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" )
+#Set output folder to ${CMAKE_BINARY_DIR}
+set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are installed to" )
