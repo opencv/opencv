@@ -564,6 +564,12 @@ if(WITH_OPENEXR)
     include(OpenCVFindOpenEXR.cmake)
 endif()
 
+set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Documentation")
+
+if(BUILD_DOCS)
+  include(OpenCVFindLATEX.cmake REQUIRED)
+endif()
+
 set(BUILD_NEW_PYTHON_SUPPORT ON CACHE BOOL "Build with Python support")
 
 if (WIN32)
@@ -572,7 +578,7 @@ if (WIN32)
 	endif()
 endif()
 
-if(BUILD_NEW_PYTHON_SUPPORT)
+if(BUILD_NEW_PYTHON_SUPPORT OR BUILD_DOCS)
     find_package(PythonInterp)
     find_package(PythonLibs)
 
@@ -610,7 +616,7 @@ if(BUILD_NEW_PYTHON_SUPPORT)
       set(PYTHON_USE_NUMPY 1)
       add_definitions(-D PYTHON_USE_NUMPY=1)
       include_directories(AFTER ${PYTHON_NUMPY_INCLUDE_DIRS})
-      message(STATUS "    Use INCLUDE: ${PYTHON_NUMPY_INCLUDE_DIRS}")
+      message(STATUS "    Use NumPy headers from: ${PYTHON_NUMPY_INCLUDE_DIRS}")
     else()
       set(PYTHON_USE_NUMPY 0)
     endif()
@@ -883,9 +889,6 @@ libnative_camera_rx.x.x.so for your Android")
         endif()
     endif()
 endif()
-
-################## Reference Manual ##################
-set(BUILD_DOCS ON CACHE BOOL "Build OpenCV Reference Manual")
 
 
 ################### DOXYGEN ###############
@@ -1394,15 +1397,6 @@ endif()
 #-----------------------------------
 add_subdirectory(include)
 add_subdirectory(modules)
-
-if(BUILD_DOCS)
-  include(OpenCVFindLATEX.cmake REQUIRED)
-
-  if(PDFLATEX_COMPILER)
-    message(STATUS "PDF LaTeX found!")
-  endif()
-endif()
-
 add_subdirectory(doc)
 add_subdirectory(data)
 
