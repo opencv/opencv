@@ -13,7 +13,7 @@ Here you will learn the about the basic building blocks of the library. A must r
    ../basic_geometric_drawing/basic_geometric_drawing
    ../random_generator_and_text/random_generator_and_text
 
-.. |Author_AnaH| unicode:: Ana U+0020 Hu U+00E1 man
+.. |Author_AnaH| unicode:: Ana U+0020 Huam U+00E1 n
 
 * :ref:`Adding_Images`
 

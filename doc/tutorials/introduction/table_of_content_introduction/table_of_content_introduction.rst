@@ -16,7 +16,7 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../display_image/display_image
    ../load_save_image/load_save_image
 
-.. |Author_AnaH| unicode:: Ana U+0020 Hu U+00E1 man
+.. |Author_AnaH| unicode:: Ana U+0020 Huam U+00E1 n
 .. |Author_BernatG| unicode:: Bern U+00E1 t U+0020 G U+00E1 bor
    
 * **Linux**

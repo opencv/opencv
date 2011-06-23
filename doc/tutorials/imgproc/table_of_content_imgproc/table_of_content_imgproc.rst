@@ -14,7 +14,7 @@ In this section you will learn about the image processing (manipulation) functio
    ../pyramids/pyramids
    ../threshold/threshold
 
-.. |Author_AnaH| unicode:: Ana U+0020 Hu U+00E1 man
+.. |Author_AnaH| unicode:: Ana U+0020 Huam U+00E1 n
 
 * :ref:`Smoothing`
 
