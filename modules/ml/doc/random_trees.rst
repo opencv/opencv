@@ -55,30 +55,41 @@ CvRTParams
 ----------
 .. c:type:: CvRTParams
 
-Training parameters of random trees ::
+    Training parameters of random trees.
 
-    struct CvRTParams : public CvDTreeParams
-    {
-        bool calc_var_importance;
-        int nactive_vars;
-        CvTermCriteria term_crit;
-
-        CvRTParams() : CvDTreeParams( 5, 10, 0, false, 10, 0, false, false, 0 ),
-            calc_var_importance(false), nactive_vars(0)
-        {
-            term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.1 );
-        }
-
-        CvRTParams( int _max_depth, int _min_sample_count,
-                    float _regression_accuracy, bool _use_surrogates,
-                    int _max_categories, const float* _priors,
-                    bool _calc_var_importance,
-                    int _nactive_vars, int max_tree_count,
-                    float forest_accuracy, int termcrit_type );
-    };
+The set of training parameters for the forest is a superset of the training parameters for a single tree (:ref:`CvRTParams` is inherited from :ref:`CvDTreeParams`). However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
 
 
-The set of training parameters for the forest is a superset of the training parameters for a single tree. However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
+.. index:: CvRTParams
+
+.. _CvRTParams::CvRTParams:
+
+CvRTParams::CvRTParams:
+-----------------------
+.. ocv:function:: CvRTParams::CvRTParams()  
+
+.. ocv:function:: CvRTParams::CvRTParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, const float* priors, bool calc_var_importance, int nactive_vars, int max_num_of_trees_in_the_forest, float forest_accuracy, int termcrit_type )
+
+    :param calc_var_importance: If true then variable importance will be calculated and then it can be retrieved by :ocv:func:`CvRTrees::get_var_importance`.
+
+    :param nactive_vars: The size of the randomly selected subset of features to be tested at any given node. If you set it to 0 then the size will be set to the square root of the total number of features.
+
+    :param max_num_of_trees_in_the_forest: The maximum number of trees in the forest (suprise, suprise).
+
+    :param forest_accuracy: Sufficient accuracy (OOB error).
+
+    :param termcrit_type: The type of the termination criteria:
+     
+        * **CV_TERMCRIT_ITER** Terminate learning by the ``max_num_of_trees_in_the_forest``;
+        
+        * **CV_TERMCRIT_EPS** Terminate learning by the ``forest_accuracy``;
+
+        * **CV_TERMCRIT_ITER | CV_TERMCRIT_EPS** Use both termination criterias.
+
+For meaning of other parameters see :ocv:func:`CvDTreeParams::CvDTreeParams`.
+
+The default constructor sets all parameters to some default values and they are different from default values of :ref:`CvDTreeParams`.
+
 
 .. index:: CvRTrees
 
@@ -136,11 +147,13 @@ Random trees ::
 
 CvRTrees::train
 ---------------
-.. ocv:function:: bool CvRTrees::train(  const Mat& train_data,  int tflag,                      const Mat& responses,  const Mat& comp_idx=Mat(),                      const Mat& sample_idx=Mat(),  const Mat& var_type=Mat(),                      const Mat& missing_mask=Mat(),                      CvRTParams params=CvRTParams() )
+.. ocv:function:: bool CvRTrees::train( CvMLData* data, CvRTParams params=CvRTParams() )
+
+.. ocv:function:: bool CvRTrees::train( const Mat& train_data, int tflag, const Mat& responses, const Mat& comp_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvRTParams params=CvRTParams() )
 
     Trains the Random Tree model.
 
-The method ``CvRTrees::train`` is very similar to the first form of ``CvDTree::train`` () and follows the generic method ``CvStatModel::train`` conventions. All the parameters specific to the algorithm training are passed as a
+The method ``CvRTrees::train`` is very similar to the first form of :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a
 :ref:`CvRTParams` instance. The estimate of the training error ( ``oob-error`` ) is stored in the protected class member ``oob_error`` .
 
 .. index:: CvRTrees::predict
@@ -155,17 +168,33 @@ CvRTrees::predict
 
 The input parameters of the prediction method are the same as in ``CvDTree::predict``  but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
 
-.. index:: CvRTrees::get_var_importance
 
-.. _CvRTrees::get_var_importance:
+.. index:: CvRTrees::predict_prob
 
-CvRTrees::get_var_importance
+.. _CvRTrees::predict_prob:
+
+CvRTrees::predict_prob
+----------------------
+.. ocv:function:: float CvRTrees::predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const
+
+    Returns a fuzzy predicted class label.
+
+The function works for binary classification problems only. It returns the number between 0 and 1. This number represents probability or confidence of the sample belonging to the second class. It is calculated as the proportion of decision trees that classified the sample to the second class.
+
+
+.. index:: CvRTrees::getVarImportance
+
+.. _CvRTrees::getVarImportance:
+
+CvRTrees::getVarImportance
 ----------------------------
-.. ocv:function:: const Mat& CvRTrees::get_var_importance() const
+.. ocv:function:: Mat CvRTrees::getVarImportance()
 
-    Retrieves the variable importance array.
+.. ocv:function:: const CvMat* CvRTrees::get_var_importance()
 
-The method returns the variable importance vector, computed at the training stage when ``:ref:`CvRTParams`::calc_var_importance`` is set. If the training flag is not set, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
+    Returns the variable importance array.
+
+The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set. If the training flag is not set, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
 .. index:: CvRTrees::get_proximity
 
@@ -178,5 +207,68 @@ CvRTrees::get_proximity
     Retrieves the proximity measure between two training samples.
 
 The method returns proximity measure between any two samples, which is the ratio of those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees.
+
+
+.. index:: CvRTrees::calc_error
+
+.. _CvRTrees::calc_error:
+
+CvRTrees::calc_error
+--------------------
+
+.. ocv:function:: float CvRTrees::calc_error( CvMLData* data, int type, std::vector<float> *resp = 0 )
+
+    Returns error of the random forest.
+
+The method is identical to :ocv:func:`CvDTree::calc_error` but uses the random forest as predictor.
+
+
+.. index:: CvRTrees::get_train_error()
+
+.. _CvRTrees::get_train_error:
+
+CvRTrees::get_train_error
+-------------------------
+.. ocv:function:: float CvRTrees::get_train_error()
+
+    Returns the train error.
+
+The method works for classification problems only. It returns the proportion of incorrectly classified train samples.
+
+
+.. index:: CvRTrees::get_rng()
+
+.. _CvRTrees::get_rng:
+
+CvRTrees::get_rng
+-----------------
+.. ocv:function:: CvRNG* CvRTrees::get_rng()
+
+    Returns the state of the used random number generator.
+
+
+.. index:: CvRTrees::get_tree_count
+
+.. _CvRTrees::get_tree_count:
+
+CvRTrees::get_tree_count
+------------------------
+.. ocv:function:: int CvRTrees::get_tree_count() const
+
+    Returns the number of trees in the constructed random forest.
+
+
+.. index:: CvRTrees::get_tree
+
+.. _CvRTrees::get_tree:
+
+CvRTrees::get_tree
+------------------
+.. ocv:function:: CvForestTree* CvRTrees::get_tree(int i) const
+
+    Returns the specific decision tree in the random forest.
+
+    :param i: Index of the decision tree.
+
 
 For the random trees usage example, please, see letter_recog.cpp sample in OpenCV distribution.
