@@ -1608,6 +1608,11 @@ message(STATUS "    cvconfig.h is in:           ${OPENCV_CONFIG_FILE_INCLUDE_DIR
 message(STATUS "-----------------------------------------------------------------")
 message(STATUS "")
 
+# warn in the case of in-source build
+if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+    message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
+endif()
+
 #----------------------------------------------------------------------------
 #   Generate the OpenCVConfig.cmake file for unix
 #      installation in CMAKE_INSTALL_PREFIX
