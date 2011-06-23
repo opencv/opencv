@@ -5,6 +5,7 @@ if(ANDROID)
   endif()
 
   add_subdirectory(androidcamera)
+  add_subdirectory(java)
 endif()
 
 add_subdirectory(calib3d)

@@ -97,4 +97,4 @@ SET( ENABLE_SSE42 OFF CACHE INTERNAL "" FORCE )
 SET( ENABLE_SSSE3 OFF CACHE INTERNAL "" FORCE )
 
 #Set output folder to ${CMAKE_BINARY_DIR}
-set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are installed to" )
+set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
