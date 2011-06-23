@@ -124,7 +124,7 @@ Qt-specific details:
 
         ::
 
-            namedWindow( ``myWindow'', ``CV_WINDOW_NORMAL``   textbar   ``CV_GUI_NORMAL`` );
+            namedWindow( "myWindow", CV_WINDOW_NORMAL | CV_GUI_NORMAL );
 
         ..
 
@@ -194,7 +194,7 @@ waitKey
     :param delay: Delay in milliseconds. 0 is the special value that means "forever".
 
 The function ``waitKey`` waits for a key event infinitely (when
-:math:`\texttt{delay}\leq 0` ) or for ``delay`` milliseconds, when it is positive. It returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
+:math:`\texttt{delay}\leq 0` ) or for ``delay`` milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the function will not wait exactly ``delay`` ms, it will wait at least ``delay`` ms, depending on what else is running on your computer at that time. It returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
 
 **Notes:**
 

@@ -124,35 +124,48 @@ CvDTreeParams
 -------------
 .. c:type:: CvDTreeParams
 
-Decision tree training parameters ::
+    Decision tree training parameters.
 
-    struct CvDTreeParams
-    {
-        int max_categories;
-        int max_depth;
-        int min_sample_count;
-        int cv_folds;
-        bool use_surrogates;
-        bool use_1se_rule;
-        bool truncate_pruned_tree;
-        float regression_accuracy;
-        const float* priors;
+The structure contains all the decision tree training parameters. You can initialize it by default constructor and then override any parameters directly before training, or the structure may be fully initialized using the advanced variant of the constructor.
 
-        CvDTreeParams() : max_categories(10), max_depth(INT_MAX), min_sample_count(10),
-            cv_folds(10), use_surrogates(true), use_1se_rule(true),
-            truncate_pruned_tree(true), regression_accuracy(0.01f), priors(0)
-        {}
+.. index:: CvDTreeParams::CvDTreeParams
 
-        CvDTreeParams( int _max_depth, int _min_sample_count,
-                       float _regression_accuracy, bool _use_surrogates,
-                       int _max_categories, int _cv_folds,
-                       bool _use_1se_rule, bool _truncate_pruned_tree,
-                       const float* _priors );
-    };
+.. _CvDTreeParams::CvDTreeParams
 
+CvDTreeParams::CvDTreeParams
+----------------------------
+.. ocv:function:: CvDTreeParams::CvDTreeParams()  
 
-The structure contains all the decision tree training parameters. There is a default constructor that initializes all the parameters with the default values tuned for the standalone classification tree. Any parameters can be overridden then, or the structure may be fully initialized using the advanced variant of the constructor.
+.. ocv:function:: CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
 
+    :param max_depth: The maximum number of levels in a tree. The depth of a constructed tree may be smaller due to other termination criterias or pruning of the tree.
+
+    :param min_sample_count: If the number of samples in a node is less than this parameter then the node will not be splitted.
+
+    :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be splitted.
+ 
+    :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data.
+
+    :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. The clustering is applied only in n>2-class classification problems for categorical variables with ``N > max_categories`` possible values. See the Learning OpenCV book (page 489) for more detailed explanation.
+
+    :param cv_folds: If ``cv_folds > 1`` then prune a tree with ``K``-fold cross-validation where ``K`` is equal to ``cv_folds``.
+
+    :param use_1se_rule: If true then a pruning will be harsher. This will make a tree more compact but a bit less accurate.
+
+    :param truncate_pruned_tree: If true then pruned branches are removed completely from the tree. Otherwise they are retained and it is possible to get the unpruned tree or prune the tree differently by changing ``CvDTree::pruned_tree_idx`` parameter.
+
+    :param priors: Weights of prediction categories which determine relative weights that you give to misclassification. That is, if the weight of the first category is 1 and the weight of the second category is 10, then each mistake in predicting the second category is equivalent to making 10 mistakes in predicting the first category.
+
+The default constructor initializes all the parameters with the default values tuned for the standalone classification tree:
+
+::
+
+    CvDTreeParams() : max_categories(10), max_depth(INT_MAX), min_sample_count(10),
+        cv_folds(10), use_surrogates(true), use_1se_rule(true),
+        truncate_pruned_tree(true), regression_accuracy(0.01f), priors(0)
+    {}
+
+ 
 .. index:: CvDTreeTrainData
 
 .. _CvDTreeTrainData:

@@ -6,8 +6,8 @@ Common Interfaces of Descriptor Matchers
 Matchers of keypoint descriptors in OpenCV have wrappers with a common interface that enables you to easily switch
 between different algorithms solving the same problem. This section is devoted to matching descriptors
 that are represented as vectors in a multidimensional space. All objects that implement ``vector``
-descriptor matchers inherit
-:ref:`DescriptorMatcher` interface.
+descriptor matchers inherit the
+:ocv:class:`DescriptorMatcher` interface.
 
 .. index:: DMatch
 
@@ -18,7 +18,7 @@ DMatch
 .. ocv:class:: DMatch
 
 Class for matching keypoint descriptors: query descriptor index,
-train descriptor index, train image index, and distance between descriptors ::
+train descriptor index, train image index, and distance between descriptors. ::
 
     struct DMatch
     {
@@ -48,7 +48,7 @@ train descriptor index, train image index, and distance between descriptors ::
 
 DescriptorMatcher
 -----------------
-.. c:type:: DescriptorMatcher
+.. ocv:class:: DescriptorMatcher
 
 Abstract base class for matching keypoint descriptors. It has two groups
 of match methods: for matching descriptors of an image with another image or
@@ -198,7 +198,7 @@ DescriptorMatcher::knnMatch
 
     :param k: Count of best matches found per each query descriptor or less if a query descriptor has less than k possible matches in total.
 
-    :param compactResult: Parameter that is used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
+    :param compactResult: Parameter used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
 These extended variants of :ocv:func:`DescriptorMatcher::match` methods find several best matches for each query descriptor. The matches are returned in the distance increasing order. See :ocv:func:`DescriptorMatcher::match` for the details about query and train descriptors. 
 
@@ -220,9 +220,9 @@ DescriptorMatcher::radiusMatch
 
     :param masks: Set of masks. Each  ``masks[i]``  specifies permissible matches between the input query descriptors and stored train descriptors from the i-th image ``trainDescCollection[i]``.
 
-    :param matches: The found matches.
+    :param matches: Found matches.
 
-    :param compactResult: Parameter that is used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
+    :param compactResult: Parameter used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
     :param maxDistance: Threshold for the distance between matched descriptors.
     
@@ -265,7 +265,7 @@ DescriptorMatcher::create
 
 BruteForceMatcher
 -----------------
-.. c:type:: BruteForceMatcher
+.. ocv:class:: BruteForceMatcher
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches of descriptor sets. ::
 
@@ -351,9 +351,9 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
 
 FlannBasedMatcher
 -----------------
-.. c:type:: FlannBasedMatcher
+.. ocv:class:: FlannBasedMatcher
 
-Flann-based descriptor matcher. This matcher trains :ref:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because :ocv:func:`flann::Index` does not support this. ::
+Flann-based descriptor matcher. This matcher trains :ocv:func:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because ``flann::Index`` does not support this. ::
 
     class FlannBasedMatcher : public DescriptorMatcher
     {

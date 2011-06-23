@@ -5,9 +5,9 @@ Common Interfaces of Descriptor Extractors
 
 Extractors of keypoint descriptors in OpenCV have wrappers with a common interface that enables you to easily switch
 between different algorithms solving the same problem. This section is devoted to computing descriptors
-that are represented as vectors in a multidimensional space. All objects that implement the ``vector``
+represented as vectors in a multidimensional space. All objects that implement the ``vector``
 descriptor extractors inherit the
-:ref:`DescriptorExtractor` interface.
+:ocv:class:`DescriptorExtractor` interface.
 
 .. index:: DescriptorExtractor
 
@@ -15,7 +15,7 @@ DescriptorExtractor
 -------------------
 .. ocv:class:: DescriptorExtractor
 
-Abstract base class for computing descriptors for image keypoints ::
+Abstract base class for computing descriptors for image keypoints. ::
 
     class CV_EXPORTS DescriptorExtractor
     {
@@ -45,7 +45,7 @@ dense, fixed-dimension vector of a basic type. Most descriptors
 follow this pattern as it simplifies computing
 distances between descriptors. Therefore, a collection of
 descriptors is represented as
-:ref:`Mat` , where each row is a keypoint descriptor.
+:ocv:class:`Mat` , where each row is a keypoint descriptor.
 
 .. index:: DescriptorExtractor::compute
 
@@ -57,9 +57,9 @@ DescriptorExtractor::compute
 
     :param image: Image.
 
-    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed. Somtimes new keypoints can be added, eg SIFT duplicates keypoint with several dominant orientations (for each orientation).
+    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates keypoint with several dominant orientations (for each orientation).
 
-    :param descriptors: Descriptors. Row i is the descriptor for keypoint i.
+    :param descriptors: Descriptors. Row ``i`` is the descriptor for keypoint ``i``.
 
 .. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
 
@@ -103,13 +103,13 @@ DescriptorExtractor::create
 
 The current implementation supports the following types of a descriptor extractor:
 
- * ``"SIFT"`` -- :ref:`SiftDescriptorExtractor`
- * ``"SURF"`` -- :ref:`SurfDescriptorExtractor`
- * ``"ORB"`` -- :ref:`OrbDescriptorExtractor`
- * ``"BRIEF"`` -- :ref:`BriefDescriptorExtractor`
+ * ``"SIFT"`` -- :ocv:class:`SiftDescriptorExtractor`
+ * ``"SURF"`` -- :ocv:class:`SurfDescriptorExtractor`
+ * ``"ORB"`` -- :ocv:class:`OrbDescriptorExtractor`
+ * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
-:ref:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
+:ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
 for example: ``"OpponentSIFT"`` .
 
 .. index:: SiftDescriptorExtractor
@@ -121,7 +121,7 @@ SiftDescriptorExtractor
 .. ocv:class:: SiftDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
-:ref:`SIFT` class ::
+:ocv:class::`SIFT` class. ::
 
     class SiftDescriptorExtractor : public DescriptorExtractor
     {
@@ -153,7 +153,7 @@ SurfDescriptorExtractor
 .. ocv:class:: SurfDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
-:ref:`SURF` class ::
+:ocv:class:`SURF` class. ::
 
     class SurfDescriptorExtractor : public DescriptorExtractor
     {
@@ -179,7 +179,7 @@ OrbDescriptorExtractor
 .. ocv:class:: OrbDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
-:ref:`ORB` class ::
+:ocv:class:`ORB` class. ::
 
     template<typename T>
     class ORbDescriptorExtractor : public DescriptorExtractor
@@ -203,7 +203,7 @@ CalonderDescriptorExtractor
 .. ocv:class:: CalonderDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
-:ref:`RTreeClassifier` class ::
+:ocv:class:`RTreeClassifier` class. ::
 
     template<typename T>
     class CalonderDescriptorExtractor : public DescriptorExtractor
@@ -258,7 +258,7 @@ BriefDescriptorExtractor
 
 Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
 Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
-11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010 ::
+11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
 
     class BriefDescriptorExtractor : public DescriptorExtractor
     {

@@ -9,7 +9,7 @@ FAST
 --------
 .. ocv:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
 
-    Detects corners using the FAST algorithm by E. Rosten (*Machine learning for high-speed corner detection*, 2006).
+    Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
 
     :param image: Image where keypoints (corners) are detected.
 
@@ -27,7 +27,7 @@ MSER
 ----
 .. ocv:class:: MSER
 
-Maximally stable extremal region extractor ::
+Maximally stable extremal region extractor. ::
 
     class MSER : public CvMSERParams
     {
@@ -46,7 +46,7 @@ Maximally stable extremal region extractor ::
     };
 
 The class encapsulates all the parameters of the MSER extraction algorithm (see
-http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions).
+http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for usefull comments and parameters description.
 
 .. index:: StarDetector
 
@@ -56,7 +56,7 @@ StarDetector
 ------------
 .. ocv:class:: StarDetector
 
-Class implementing the Star keypoint detector ::
+Class implementing the ``Star`` keypoint detector. ::
 
     class StarDetector : CvStarDetectorParams
     {
@@ -89,13 +89,11 @@ The class implements a modified version of the ``CenSurE`` keypoint detector des
 
 .. index:: SIFT
 
-.. _SIFT:
-
 SIFT
 ----
 .. ocv:class:: SIFT
 
-Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform (SIFT) approach ::
+Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform (SIFT) approach. ::
 
     class CV_EXPORTS SIFT
     {
@@ -179,13 +177,11 @@ Class for extracting keypoints and computing descriptors using the Scale Invaria
 
 .. index:: SURF
 
-.. _SURF:
-
 SURF
 ----
 .. ocv:class:: SURF
 
-Class for extracting Speeded Up Robust Features from an image ::
+Class for extracting Speeded Up Robust Features from an image. ::
 
     class SURF : public CvSURFParams
     {
@@ -214,18 +210,16 @@ The class implements the Speeded Up Robust Features descriptor
 [Bay06].
 There is a fast multi-scale Hessian keypoint detector that can be used to find keypoints
 (default option). But the descriptors can be also computed for the user-specified keypoints.
-The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in OpenCV samples directory.
+The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in the OpenCV samples directory.
 
 
 .. index:: ORB
-
-.. _ORB:
 
 ORB
 ----
 .. ocv:class:: ORB
 
-Class for extracting ORB features and descriptors from an image ::
+Class for extracting ORB features and descriptors from an image. ::
 
     class ORB
     {
@@ -272,18 +266,17 @@ Class for extracting ORB features and descriptors from an image ::
                         bool useProvidedKeypoints=false) const;
     };
 
-The class implements ORB
+The class implements ORB.
 
 
 .. index:: RandomizedTree
 
-.. _RandomizedTree:
 
 RandomizedTree
 --------------
 .. ocv:class:: RandomizedTree
 
-Class containing a base structure for ``RTreeClassifier`` ::
+Class containing a base structure for ``RTreeClassifier``. ::
 
     class CV_EXPORTS RandomizedTree
     {
@@ -423,7 +416,7 @@ RTreeNode
 ---------
 .. ocv:class:: RTreeNode
 
-Class containing a base structure for ``RandomizedTree`` ::
+Class containing a base structure for ``RandomizedTree``. ::
 
     struct RTreeNode
     {
@@ -451,7 +444,7 @@ RTreeClassifier
 ---------------
 .. ocv:class:: RTreeClassifier
 
-Class containing ``RTreeClassifier``. It represents the Calonder descriptor that was originally introduced by Michael Calonder. ::
+Class containing ``RTreeClassifier``. It represents the Calonder descriptor originally introduced by Michael Calonder. ::
 
     class CV_EXPORTS RTreeClassifier
     {
@@ -569,7 +562,7 @@ RTreeClassifier::getSparseSignature
     
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
     
-    :param thresh: Threshold that is used for compressing the signature.
+    :param thresh: Threshold used for compressing the signature.
 
 .. index:: RTreeClassifier::countNonZeroElements
 

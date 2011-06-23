@@ -336,7 +336,8 @@ HoughLines
     :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta`` .
     
 The function implements the standard or standard multi-scale Hough transform algorithm for line detection. See
-:ocv:func:`HoughLinesP` for the code example.
+:ocv:func:`HoughLinesP` for the code example. Also see http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
+
 
 .. index:: HoughLinesP
 

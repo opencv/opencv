@@ -87,6 +87,8 @@ Thanks to:
 */
 /////////////////////////////////////////////////////////
 
+#include "precomp.hpp"
+
 #if _MSC_VER >= 1400
 #pragma warning(disable: 4995)
 #endif
@@ -100,7 +102,6 @@ Thanks to:
 
 #include <vector>
 
-
 //Include Directshow stuff here so we don't worry about needing all the h files.
 #ifdef _MSC_VER
 #include "DShow.h"
@@ -111,7 +112,7 @@ Thanks to:
 #else
 #include "dshow/dshow.h"
 #include "dshow/dvdmedia.h"
-#include "bdatypes.h"
+#include "dshow/bdatypes.h"
 
 interface IEnumPIDMap : public IUnknown
 {
@@ -154,8 +155,6 @@ interface IMPEG2PIDMap : public IUnknown
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x400
 #endif
-
-#include <windows.h>
 
 
 /*
