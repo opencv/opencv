@@ -65,7 +65,7 @@ release = '2.3'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['doc/tutorials/definitions']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -294,18 +294,19 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'rng': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#rng%s', None),
             'put_text': ('http://opencv.willowgarage.com/documentation/cpp/core_drawing_functions.html?#putText%s', None),
             'gaussian_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-gaussianblur%s', None),
-	    'blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-blur%s', None),
+            'blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-blur%s', None),
             'median_blur': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-medianblur%s', None), 
             'bilateral_filter': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-bilateralfilter%s', None),
-	    'erode': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-erode%s', None),
+            'erode': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-erode%s', None),
             'dilate': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-dilate%s', None),
             'get_structuring_element': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html#cv-getstructuringelement%s', None),
             'flood_fill': ( 'http://opencv.jp/opencv-2.2_org/cpp/imgproc_miscellaneous_image_transformations.html?#floodFill%s', None),
-	    'morphology_ex': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html?highlight=morphology#morphologyEx%s', None),
+            'morphology_ex': ('http://opencv.jp/opencv-2.2_org/cpp/imgproc_image_filtering.html?highlight=morphology#morphologyEx%s', None),
             'pyr_down': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrdown%s', None),
             'pyr_up': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrup%s', None),
             'resize': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html#cv-resize%s', None),
-            'threshold': ('http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html#cv-threshold%s', None)
+            'threshold': ('http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html#cv-threshold%s', None),
+            'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None)
            }
 
 
