@@ -624,7 +624,7 @@ if(WIN32)
 endif()
 
 # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
             RESULT_VARIABLE PYTHON_NUMPY_PROCESS
             OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
             OUTPUT_STRIP_TRAILING_WHITESPACE)
