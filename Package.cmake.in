@@ -10,7 +10,6 @@ endif()
 #if(ENABLE_OPENMP)
 #    set(CMAKE_INSTALL_OPENMP_LIBRARIES 1)
 #endif()
-#include(OpenCVInstallRequiredSystemLibraries.cmake)
 include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "OpenCV")
@@ -77,7 +76,7 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME
 if(WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_SOURCE_GENERATOR "ZIP")
-    set(CPACK_NSIS_PACKAGE_NAME "OpenCV ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+    set(CPACK_NSIS_PACKAGE_NAME "OpenCV ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}rc")
     set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\doc\\\\opencv.ico")
     #set(CPACK_PACKAGE_ICON "utils/opencv.ico") 
@@ -90,7 +89,9 @@ if(WIN32)
 
     set(CPACK_NSIS_MENU_LINKS
         "http://opencv.willowgarage.com" "Start Page"
-        "doc\\\\opencv.pdf" "The Reference Manual"
+        "doc\\\\opencv2refman_cpp.pdf" "The OpenCV C++ Reference Manual"
+        "doc\\\\opencv2refman_py.pdf" "The OpenCV Python Reference Manual"
+        "doc\\\\opencv_tutorials.pdf" "The OpenCV Tutorials for Beginners"
         "CMakeLists.txt" "The Build Script (open with CMake)"
         "samples\\\\c" "C Samples"
         "samples\\\\cpp" "C++ Samples"

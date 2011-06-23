@@ -7234,7 +7234,7 @@ mSet
 
 .. cfunction:: void cvmSet(CvMat* mat, int row, int col, double value)
 
-    Returns a specific element of a single-channel floating-point matrix.
+    Sets a specific element of a single-channel floating-point matrix.
 
 
 

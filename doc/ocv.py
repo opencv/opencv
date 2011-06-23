@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-    ocv domain, a modified copy of sphinx.domains.cpp. The original copyright is below
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ocv domain, a modified copy of sphinx.domains.cpp + shpinx.domains.python.
+                            The original copyright is below
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    The C++ language domain.
+    The OpenCV C/C++/Python/Java/... language domain.
 
     :copyright: Copyright 2007-2011 by the Sphinx team, see AUTHORS.
     :license: BSD, see LICENSE for details.
@@ -13,6 +14,7 @@ import re
 from copy import deepcopy
 
 from docutils import nodes
+from docutils.parsers.rst import directives
 
 from sphinx import addnodes
 from sphinx.roles import XRefRole
@@ -21,7 +23,271 @@ from sphinx.domains import Domain, ObjType
 from sphinx.directives import ObjectDescription
 from sphinx.util.nodes import make_refnode
 from sphinx.util.compat import Directive
-from sphinx.util.docfields import Field, TypedField
+from sphinx.util.docfields import Field, GroupedField, TypedField
+
+########################### Python Part ########################### 
+
+# REs for Python signatures
+py_sig_re = re.compile(
+    r'''^ ([\w.]*\.)?            # class name(s)
+          (\w+)  \s*             # thing name
+          (?: \((.*)\)           # optional: arguments
+           (?:\s* -> \s* (.*))?  #           return annotation
+          )? $                   # and nothing more
+          ''', re.VERBOSE)
+
+
+def _pseudo_parse_arglist(signode, arglist):
+    """"Parse" a list of arguments separated by commas.
+
+    Arguments can have "optional" annotations given by enclosing them in
+    brackets.  Currently, this will split at any comma, even if it's inside a
+    string literal (e.g. default argument value).
+    """
+    paramlist = addnodes.desc_parameterlist()
+    stack = [paramlist]
+    try:
+        for argument in arglist.split(','):
+            argument = argument.strip()
+            ends_open = ends_close = 0
+            while argument.startswith('['):
+                stack.append(addnodes.desc_optional())
+                stack[-2] += stack[-1]
+                argument = argument[1:].strip()
+            while argument.startswith(']'):
+                stack.pop()
+                argument = argument[1:].strip()
+            while argument.endswith(']'):
+                ends_close += 1
+                argument = argument[:-1].strip()
+            while argument.endswith('['):
+                ends_open += 1
+                argument = argument[:-1].strip()
+            if argument:
+                stack[-1] += addnodes.desc_parameter(argument, argument, noemph=True)
+            while ends_open:
+                stack.append(addnodes.desc_optional())
+                stack[-2] += stack[-1]
+                ends_open -= 1
+            while ends_close:
+                stack.pop()
+                ends_close -= 1
+        if len(stack) != 1:
+            raise IndexError
+    except IndexError:
+        # if there are too few or too many elements on the stack, just give up
+        # and treat the whole argument list as one argument, discarding the
+        # already partially populated paramlist node
+        signode += addnodes.desc_parameterlist()
+        signode[-1] += addnodes.desc_parameter(arglist, arglist)
+    else:
+        signode += paramlist
+
+
+class OCVPyObject(ObjectDescription):
+    """
+    Description of a general Python object.
+    """
+    option_spec = {
+        'noindex': directives.flag,
+        'module': directives.unchanged,
+    }
+
+    doc_field_types = [
+        TypedField('parameter', label=l_('Parameters'),
+                   names=('param', 'parameter', 'arg', 'argument',
+                          'keyword', 'kwarg', 'kwparam'),
+                   typerolename='obj', typenames=('paramtype', 'type'),
+                   can_collapse=True),
+        TypedField('variable', label=l_('Variables'), rolename='obj',
+                   names=('var', 'ivar', 'cvar'),
+                   typerolename='obj', typenames=('vartype',),
+                   can_collapse=True),
+        GroupedField('exceptions', label=l_('Raises'), rolename='exc',
+                     names=('raises', 'raise', 'exception', 'except'),
+                     can_collapse=True),
+        Field('returnvalue', label=l_('Returns'), has_arg=False,
+              names=('returns', 'return')),
+        Field('returntype', label=l_('Return type'), has_arg=False,
+              names=('rtype',)),
+    ]
+
+    def get_signature_prefix(self, sig):
+        """
+        May return a prefix to put before the object name in the signature.
+        """
+        return ''
+
+    def needs_arglist(self):
+        """
+        May return true if an empty argument list is to be generated even if
+        the document contains none.
+        """
+        return False
+
+    def handle_signature(self, sig, signode):
+        """
+        Transform a Python signature into RST nodes.
+        Returns (fully qualified name of the thing, classname if any).
+
+        If inside a class, the current class name is handled intelligently:
+        * it is stripped from the displayed name if present
+        * it is added to the full name (return value) if not present
+        """
+        signode += nodes.strong("Python:", "Python:")
+        signode += addnodes.desc_name(" ", " ")
+        m = py_sig_re.match(sig)
+        if m is None:
+            raise ValueError
+        name_prefix, name, arglist, retann = m.groups()
+
+        # determine module and class name (if applicable), as well as full name
+        modname = self.options.get(
+            'module', self.env.temp_data.get('py:module'))
+        classname = self.env.temp_data.get('py:class')
+        if classname:
+            add_module = False
+            if name_prefix and name_prefix.startswith(classname):
+                fullname = name_prefix + name
+                # class name is given again in the signature
+                name_prefix = name_prefix[len(classname):].lstrip('.')
+            elif name_prefix:
+                # class name is given in the signature, but different
+                # (shouldn't happen)
+                fullname = classname + '.' + name_prefix + name
+            else:
+                # class name is not given in the signature
+                fullname = classname + '.' + name
+        else:
+            add_module = True
+            if name_prefix:
+                classname = name_prefix.rstrip('.')
+                fullname = name_prefix + name
+            else:
+                classname = ''
+                fullname = name
+
+        signode['module'] = modname
+        signode['class'] = classname
+        signode['fullname'] = fullname
+
+        sig_prefix = self.get_signature_prefix(sig)
+        if sig_prefix:
+            signode += addnodes.desc_annotation(sig_prefix, sig_prefix)
+
+        if name_prefix:
+            signode += addnodes.desc_addname(name_prefix, name_prefix)
+        # exceptions are a special case, since they are documented in the
+        # 'exceptions' module.
+        elif add_module and self.env.config.add_module_names:
+            modname = self.options.get(
+                'module', self.env.temp_data.get('py:module'))
+            if modname and modname != 'exceptions':
+                nodetext = modname + '.'
+                signode += addnodes.desc_addname(nodetext, nodetext)
+
+        signode += addnodes.desc_name(name, name)
+        if not arglist:
+            if self.needs_arglist():
+                # for callables, add an empty parameter list
+                signode += addnodes.desc_parameterlist()
+            if retann:
+                signode += addnodes.desc_returns(retann, retann)
+            return fullname, name_prefix
+        _pseudo_parse_arglist(signode, arglist)
+        if retann:
+            signode += addnodes.desc_returns(retann, retann)
+        return fullname, name_prefix
+
+    def get_index_text(self, modname, name):
+        """
+        Return the text for the index entry of the object.
+        """
+        raise NotImplementedError('must be implemented in subclasses')
+
+    def add_target_and_index(self, name_cls, sig, signode):
+        modname = self.options.get(
+            'module', self.env.temp_data.get('py:module'))
+        fullname = (modname and modname + '.' or '') + name_cls[0]
+        # note target
+        if fullname not in self.state.document.ids:
+            signode['names'].append(fullname)
+            signode['ids'].append(fullname)
+            signode['first'] = (not self.names)
+            self.state.document.note_explicit_target(signode)
+            objects = self.env.domaindata['py']['objects']
+            if fullname in objects:
+                self.env.warn(
+                    self.env.docname,
+                    'duplicate object description of %s, ' % fullname +
+                    'other instance in ' +
+                    self.env.doc2path(objects[fullname][0]) +
+                    ', use :noindex: for one of them',
+                    self.lineno)
+            objects[fullname] = (self.env.docname, self.objtype)
+
+        indextext = self.get_index_text(modname, name_cls)
+        if indextext:
+            self.indexnode['entries'].append(('single', indextext,
+                                              fullname, fullname))
+
+    def before_content(self):
+        # needed for automatic qualification of members (reset in subclasses)
+        self.clsname_set = False
+
+    def after_content(self):
+        if self.clsname_set:
+            self.env.temp_data['py:class'] = None
+
+class OCVPyModulelevel(OCVPyObject):
+    """
+    Description of an object on module level (functions, data).
+    """
+
+    def needs_arglist(self):
+        return self.objtype == 'pyfunction'
+
+    def get_index_text(self, modname, name_cls):
+        if self.objtype == 'pyfunction':
+            if not modname:
+                fname = name_cls[0]
+                if not fname.startswith("cv") and not fname.startswith("cv2"):
+                    return _('%s() (Python function)') % fname
+                pos = fname.find(".")
+                modname = fname[:pos]
+                fname = fname[pos+1:]
+                return _('%s() (Python function in %s)') % (fname, modname)
+            return _('%s() (Python function in %s)') % (name_cls[0], modname)
+        elif self.objtype == 'pydata':
+            if not modname:
+                return _('%s (Python variable)') % name_cls[0]
+            return _('%s (in module %s)') % (name_cls[0], modname)
+        else:
+            return ''
+
+class OCVPyXRefRole(XRefRole):
+    def process_link(self, env, refnode, has_explicit_title, title, target):
+        refnode['ocv:module'] = env.temp_data.get('ocv:module')
+        refnode['ocv:class'] = env.temp_data.get('ocv:class')
+        if not has_explicit_title:
+            title = title.lstrip('.')   # only has a meaning for the target
+            target = target.lstrip('~') # only has a meaning for the title
+            # if the first character is a tilde, don't display the module/class
+            # parts of the contents
+            if title[0:1] == '~':
+                title = title[1:]
+                dot = title.rfind('.')
+                if dot != -1:
+                    title = title[dot+1:]
+        # if the first character is a dot, search more specific namespaces first
+        # else search builtins first
+        if target[0:1] == '.':
+            target = target[1:]
+            refnode['refspecific'] = True
+        return title, target
+
+
+########################### C/C++/Java Part ########################### 
 
 _identifier_re = re.compile(r'(~?\b[a-zA-Z_][a-zA-Z0-9_]*)\b')
 _whitespace_re = re.compile(r'\s+(?u)')
@@ -838,6 +1104,8 @@ class OCVObject(ObjectDescription):
         node += pnode
 
     def attach_modifiers(self, node, obj):
+        node += nodes.strong("C++:", "C++:")
+        node += addnodes.desc_name(" ", " ")
         if obj.visibility != 'public':
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
@@ -976,10 +1244,12 @@ class OCVFunctionObject(OCVObject):
             if arg.type is not None:
                 self.attach_type(param, arg.type)
                 param += nodes.Text(u' ')
-            param += nodes.emphasis(unicode(arg.name), unicode(arg.name))
+            #param += nodes.emphasis(unicode(arg.name), unicode(arg.name))
+            param += nodes.strong(unicode(arg.name), unicode(arg.name))
             if arg.default is not None:
                 def_ = u'=' + unicode(arg.default)
-                param += nodes.emphasis(def_, def_)
+                #param += nodes.emphasis(def_, def_)
+                param += nodes.Text(def_)
             paramlist += param
 
         node += paramlist
@@ -1059,6 +1329,7 @@ class OCVDomain(Domain):
     object_types = {
         'class':    ObjType(l_('class'),    'class'),
         'function': ObjType(l_('function'), 'func', 'funcx'),
+        'pyfunction': ObjType(l_('pyfunction'), 'pyfunc'),
         'member':   ObjType(l_('member'),   'member'),
         'type':     ObjType(l_('type'),     'type')
     }
@@ -1066,6 +1337,7 @@ class OCVDomain(Domain):
     directives = {
         'class':        OCVClassObject,
         'function':     OCVFunctionObject,
+        'pyfunction':   OCVPyModulelevel,
         'member':       OCVMemberObject,
         'type':         OCVTypeObject,
         'namespace':    OCVCurrentNamespace
@@ -1074,6 +1346,7 @@ class OCVDomain(Domain):
         'class':  OCVXRefRole(),
         'func' :  OCVXRefRole(fix_parens=True),
         'funcx' :  OCVXRefRole(),
+        'pyfunc' :  OCVPyXRefRole(),
         'member': OCVXRefRole(),
         'type':   OCVXRefRole()
     }

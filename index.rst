@@ -10,6 +10,7 @@ Welcome to opencv documentation!
    :maxdepth: 2
 
    modules/refman.rst
+   doc/opencv2/py/py_index.rst
    doc/opencv1/c/c_index.rst
    doc/opencv1/py/py_index.rst
    doc/user_guide/user_guide.rst

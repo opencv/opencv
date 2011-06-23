@@ -663,14 +663,7 @@ The function can do the following transformations:
     ``CV_BayerBG2BGR, CV_BayerGB2BGR, CV_BayerRG2BGR, CV_BayerGR2BGR, CV_BayerBG2RGB, CV_BayerGB2RGB, CV_BayerRG2RGB, CV_BayerGR2RGB``
     ) The Bayer pattern is widely used in CCD and CMOS cameras. It allows one to get color pictures from a single plane where R,G and B pixels (sensors of a particular component) are interleaved like this:
     
-    
-    
-    
-    
-    .. math::
-    
-        \newcommand{\Rcell}{\color{red}R} \newcommand{\Gcell}{\color{green}G} \newcommand{\Bcell}{\color{blue}B} \definecolor{BackGray}{rgb}{0.8,0.8,0.8} \begin{array}{ c c c c c } \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \\ \Gcell & \colorbox{BackGray}{\Bcell} & \colorbox{BackGray}{\Gcell} & \Bcell & \Gcell \\ \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \\ \Gcell & \Bcell & \Gcell & \Bcell & \Gcell \\ \Rcell & \Gcell & \Rcell & \Gcell & \Rcell \end{array} 
-    
+    .. image:: ../pics/bayer.png
     
     The output RGB components of a pixel are interpolated from 1, 2 or
     4 neighbors of the pixel having the same color. There are several
