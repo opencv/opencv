@@ -223,7 +223,7 @@ CvRTrees::calc_error
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the random forest as predictor.
 
 
-.. index:: CvRTrees::get_train_error()
+.. index:: CvRTrees::get_train_error
 
 .. _CvRTrees::get_train_error:
 
@@ -236,7 +236,7 @@ CvRTrees::get_train_error
 The method works for classification problems only. It returns the proportion of incorrectly classified train samples.
 
 
-.. index:: CvRTrees::get_rng()
+.. index:: CvRTrees::get_rng
 
 .. _CvRTrees::get_rng:
 

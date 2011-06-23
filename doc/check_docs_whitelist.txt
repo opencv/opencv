@@ -43,7 +43,8 @@ Mat cv::findFundamentalMat( InputArray points1, InputArray points2, OutputArray 
 Mat findHomography( InputArray srcPoints, InputArray dstPoints, OutputArray mask, int method=0, double ransacReprojThreshold=3);
 
 ########################################## ml ######################################
-
+cvParamLattice
+cvDefaultParamLattice
 CvBoostTree
 CvForestTree
 CvSVMKernel

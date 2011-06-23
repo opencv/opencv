@@ -142,7 +142,7 @@ The method ``write`` stores the complete model state in the file storage with th
 
 CvStatModel::read
 -----------------
-.. ocv:function:: void CvStatMode::read( CvFileStorage* storage, CvFileNode* node )
+.. ocv:function:: void CvStatModel::read( CvFileStorage* storage, CvFileNode* node )
 
     Reads the model from the file storage.
 
@@ -157,7 +157,7 @@ The previous model state is cleared by ``clear()`` .
 
 CvStatModel::train
 ------------------
-.. ocv:function:: bool CvStatMode::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
+.. ocv:function:: bool CvStatModel::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
 
     Trains the model.
 
