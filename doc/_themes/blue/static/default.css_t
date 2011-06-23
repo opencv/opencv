@@ -274,17 +274,30 @@ tt.descname {
     font-size: 1.6em;
 }
 
-dl.cfunction {
-    padding-bottom: 9px;
-}
-
-dl.cfunction > dt:first-child {
-    margin-bottom: 7px;
-    border-bottom: 1px dotted black;
-}
-
 div.math p {
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
+dl.function > dt:first-child {
+    margin-bottom: 7px;
+    background-color: #ecf0f3;
+}
+
+dl.cfunction > dt:first-child {
+    margin-bottom: 7px;
+    background-color: #ecf0f3;
+}
+
+dl.pyfunction > dt:first-child {
+    margin-bottom: 7px;
+    background-color: #ecf0f3;
+}
+
+table.field-list {
+    margin-top: 20px;
+}
+
+ul.simple {
+    list-style: none;
+}

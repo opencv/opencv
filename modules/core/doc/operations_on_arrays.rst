@@ -3,15 +3,6 @@ Operations on Arrays
 
 .. highlight:: cpp
 
-.. list-table:: **Arithmetical Operations**
-
-   * -
-     -
-   * - :ocv:func:`abs` (src)
-     - Computes an absolute value of each matrix element.
-   * - :ocv:func:`absdiff` (src1, src2, dst)
-     - Computes the per-element absolute difference between 2 arrays or between an array and a scalar.
-
 abs
 ---
 .. ocv:function:: MatExpr abs(const Mat& src)
@@ -77,9 +68,11 @@ The function ``absdiff`` computes:
 
 add
 -------
-.. ocv:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 
-    Computes the per-element sum of two arrays or an array and a scalar.
+Computes the per-element sum of two arrays or an array and a scalar.
+
+.. ocv:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
+.. ocv:pyfunction:: cv2.add(src1, src2 [, dst=None [, mask=None [, dtype=-1]]]) -> dst
 
     :param src1: First source array or a scalar.
 
