@@ -106,7 +106,7 @@ The functions below use the above model to do the following:
 calibrateCamera
 ---------------
 
-.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArray rvecs, OutputArray tvecs, int flags=0 )
+.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags=0 )
 
     Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
@@ -120,9 +120,9 @@ calibrateCamera
 
     :param distCoeffs: Output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements.
 
-    :param rvecs: Output  vector  of rotation vectors (see  :ref:`Rodrigues` ) estimated for each pattern view. That is, each k-th rotation vector together with the corresponding k-th translation vector (see the next output parameter description) brings the calibration pattern from the model coordinate space (in which object points are specified) to the world coordinate space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
+    :param rvecs: Output  vector of rotation vectors (see  :ref:`Rodrigues` ) estimated for each pattern view. That is, each k-th rotation vector together with the corresponding k-th translation vector (see the next output parameter description) brings the calibration pattern from the model coordinate space (in which object points are specified) to the world coordinate space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 
-    :param tvecs: Output  vector  of translation vectors estimated for each pattern view.
+    :param tvecs: Output vector of translation vectors estimated for each pattern view.
 
     :param flags: Different flags that may be zero or a combination of the following values:
 

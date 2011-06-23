@@ -130,7 +130,7 @@ where
 
     dst(i)=(x'_i,y'_i),
     src(i)=(x_i, y_i),
-    i=0,1,2
+    i=0,1,2,3
 
 See Also:
 :ocv:func:`findHomography`,
