@@ -91,43 +91,58 @@ CvEMParams
 ----------
 .. c:type:: CvEMParams
 
-Parameters of the EM algorithm ::
+    Parameters of the EM algorithm.
 
-    struct CvEMParams
+All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
+
+
+.. index:: CvEMParams::CvEMParams
+
+.. _CvEMParams::CvEMParams:
+
+CvEMParams::CvEMParams
+----------------------
+.. ocv:function:: CvEMParams()
+
+.. ocv:function:: CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/, int start_step=0/*CvEM::START_AUTO_STEP*/, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
+
+    :param nclusters: The number of mixtures in the gaussian mixture model.
+
+    :param cov_mat_type: Constraint on covariance matrices which defines type of matrices. Possible values are:
+
+        * **CvEM::COV_MAT_SPHERICAL** A scaled identity matrix :math:`\mu_k * I`.
+        * **CvEM::COV_MAT_DIAGONAL** A diagonal matrix with positive diagonal elements.
+        * **CvEM::COV_MAT_GENERIC** A symmetric positively defined matrix.
+
+    :param start_step: The start step of the EM algorithm: 
+
+        * **CvEM::START_E_STEP** Start with Expectation step. You need to provide means :math:`a_k` of mixtures to use this option. Optionally you can pass weights :math:`\pi_k` and covariance matrices :math:`S_k` of mixtures.
+        * **CvEM::START_M_STEP** Start with Maximization step. You need to provide initial probabilites :math:`p_{i,k}` to use this option.
+        * **CvEM::START_AUTO_STEP** Start with Expectation step. You need not provide any parameters because they will be estimated by the k-means algorithm.
+
+    :param term_crit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``term_crit.max_iter`` (number of M-steps) or when relative change of likelihood logarithm is less than ``term_crit.epsilon``.
+
+    :param probs: Initial probabilities :math:`p_{i,k}` of sample :math:`i` to belong to mixture :math:`k`. It is a floating-point matrix of :math:`nsamples \times nclusters` size.
+
+    :param weights: Initial weights of mixtures :math:`\pi_k`. It is a floating-point vector with :math:`nclusters` elements.
+
+    :param means: Initial means of mixtures :math:`a_k`. It is a floating-point matrix of :math:`nclusters \times dims` size.
+
+    :param covs: Initial covariance matrices of mixtures :math:`S_k`. Each of covariance matrices is a valid square floating-point matrix of :math:`dims \times dims` size.
+
+The default constructor represents a rough rule-of-the-thumb:
+
+::
+
+    CvEMParams() : nclusters(10), cov_mat_type(1/*CvEM::COV_MAT_DIAGONAL*/),
+        start_step(0/*CvEM::START_AUTO_STEP*/), probs(0), weights(0), means(0), covs(0)
     {
-        CvEMParams() : nclusters(10), cov_mat_type(CvEM::COV_MAT_DIAGONAL),
-            start_step(CvEM::START_AUTO_STEP), probs(0), weights(0), means(0),
-                                                         covs(0)
-        {
-            term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,
-                                                    100, FLT_EPSILON );
-        }
-
-        CvEMParams( int _nclusters, int _cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/,
-                    int _start_step=0/*CvEM::START_AUTO_STEP*/,
-                    CvTermCriteria _term_crit=cvTermCriteria(
-                                            CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,
-                                            100, FLT_EPSILON),
-                    const CvMat* _probs=0, const CvMat* _weights=0,
-                    const CvMat* _means=0, const CvMat** _covs=0 ) :
-                    nclusters(_nclusters), cov_mat_type(_cov_mat_type),
-                    start_step(_start_step),
-                    probs(_probs), weights(_weights), means(_means), covs(_covs),
-                    term_crit(_term_crit)
-        {}
-
-        int nclusters;
-        int cov_mat_type;
-        int start_step;
-        const CvMat* probs;
-        const CvMat* weights;
-        const CvMat* means;
-        const CvMat** covs;
-        CvTermCriteria term_crit;
-    };
+        term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON );
+    }
 
 
-The structure has two constructors. The default one represents a rough rule-of-the-thumb. With another one it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
+With another contstructor it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
+
 
 .. index:: CvEM
 
@@ -137,56 +152,9 @@ CvEM
 ----
 .. c:type:: CvEM
 
-EM model ::
+    The EM model.
 
-    class CV_EXPORTS CvEM : public CvStatModel
-    {
-    public:
-        // Type of covariance matrices
-        enum { COV_MAT_SPHERICAL=0, COV_MAT_DIAGONAL=1, COV_MAT_GENERIC=2 };
-
-        // Initial step
-        enum { START_E_STEP=1, START_M_STEP=2, START_AUTO_STEP=0 };
-
-        CvEM();
-        CvEM( const Mat& samples, const Mat& sample_idx=Mat(),
-              CvEMParams params=CvEMParams(), Mat* labels=0 );
-        virtual ~CvEM();
-
-        virtual bool train( const Mat& samples, const Mat& sample_idx=Mat(),
-                            CvEMParams params=CvEMParams(), Mat* labels=0 );
-
-        virtual float predict( const Mat& sample, Mat& probs ) const;
-        virtual void clear();
-
-        int get_nclusters() const { return params.nclusters; }
-        const Mat& get_means() const { return means; }
-        const Mat&* get_covs() const { return covs; }
-        const Mat& get_weights() const { return weights; }
-        const Mat& get_probs() const { return probs; }
-
-    protected:
-
-        virtual void set_params( const CvEMParams& params,
-                                 const CvVectors& train_data );
-        virtual void init_em( const CvVectors& train_data );
-        virtual double run_em( const CvVectors& train_data );
-        virtual void init_auto( const CvVectors& samples );
-        virtual void kmeans( const CvVectors& train_data, int nclusters,
-                             Mat& labels, CvTermCriteria criteria,
-                             const Mat& means );
-        CvEMParams params;
-        double log_likelihood;
-
-        Mat& means;
-        Mat&* covs;
-        Mat& weights;
-        Mat& probs;
-
-        Mat& log_weight_div_det;
-        Mat& inv_eigen_values;
-        Mat&* cov_rotate_mats;
-    };
+The class implements the EM algorithm as described in the beginning of this section.
 
 
 .. index:: CvEM::train
@@ -195,20 +163,168 @@ EM model ::
 
 CvEM::train
 -----------
-.. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
+.. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(), CvEMParams params=CvEMParams(), Mat* labels=0 )
+
+.. ocv:function:: bool CvEM::train( const CvMat* samples, const CvMat* sampleIdx=0, CvEMParams params=CvEMParams(), CvMat* labels=0 )
 
     Estimates the Gaussian mixture parameters from a sample set.
+
+    :param samples: Samples from which the Gaussian mixture model will be estimated.
+
+    :param sample_idx: Mask of samples to use. All samples are used by default.
+
+    :param params: Parameters of the EM algorithm.
+
+    :param labels: The optional output "class label" for each sample: :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
 Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or function values) as input. Instead, it computes the
 *Maximum Likelihood Estimate* of the Gaussian mixture parameters from an input sample set, stores all the parameters inside the structure:
 :math:`p_{i,k}` in ``probs``,
 :math:`a_k` in ``means`` ,
 :math:`S_k` in ``covs[k]``,
-:math:`\pi_k` in ``weights`` , and optionally computes the output "class label" for each sample:
-:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture for each sample).
+:math:`\pi_k` in ``weights`` ,
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
 :ref:`Bayes classifier`.
+
+
+.. index:: CvEM::predict
+
+.. _CvEM::predict:
+
+CvEM::predict
+-------------
+.. ocv:function:: float CvEM::predict( const Mat& sample, Mat* probs=0 ) const
+
+.. ocv:function:: float CvEM::predict( const CvMat* sample, CvMat* probs ) const
+
+    Returns a mixture component index of a sample.
+
+    :param sample: A sample for classification.
+
+    :param probs: If it is not null then the method will write posterior probabilities of each component given the sample data to this parameter.
+
+
+.. index:: CvEM::getNClusters
+
+.. _CvEM::getNClusters:
+
+CvEM::getNClusters
+------------------
+.. ocv:function:: int CvEM::getNClusters() const
+
+.. ocv:function:: int CvEM::get_nclusters() const
+
+    Returns the number of mixture components :math:`M` in the gaussian mixture model.
+
+
+.. index:: CvEM::getMeans
+
+.. _CvEM::getMeans:
+
+CvEM::getNClusters
+------------------
+.. ocv:function:: Mat CvEM::getMeans() const
+
+.. ocv:function:: const CvMat* CvEM::get_means() const
+
+    Returns mixture means :math:`a_k`.
+
+
+.. index:: CvEM::getCovs
+
+.. _CvEM::getCovs:
+
+CvEM::getCovs
+-------------
+.. ocv:function:: void CvEM::getCovs(std::vector<cv::Mat>& covs) const
+
+.. ocv:function:: const CvMat** CvEM::get_covs() const
+
+    Returns mixture covariance matrices :math:`S_k`.
+
+
+.. index:: CvEM::getWeights
+
+.. _CvEM::getWeights:
+
+CvEM::getWeights
+----------------
+.. ocv:function:: Mat CvEM::getWeights() const
+
+.. ocv:function:: const CvMat* CvEM::get_weights() const
+
+    Returns mixture weights :math:`\pi_k`.
+
+
+.. index:: CvEM::getProbs
+
+.. _CvEM::getProbs:
+
+CvEM::getProbs
+--------------
+.. ocv:function:: Mat CvEM::getProbs() const
+
+.. ocv:function:: const CvMat* CvEM::get_probs() const
+
+    Returns probabilites :math:`p_{i,k}` of sample :math:`i` to belong to a mixture component :math:`k`.
+
+
+.. index:: CvEM::getLikelihood
+
+.. _CvEM::getLikelihood:
+
+CvEM::getLikelihood
+-------------------
+.. ocv:function:: double CvEM::getLikelihood() const
+
+.. ocv:function:: double CvEM::get_log_likelihood() const
+
+    Returns logarithm of likelihood.
+
+
+.. index:: CvEM::getLikelihoodDelta
+
+.. _CvEM::getLikelihoodDelta:
+
+CvEM::getLikelihoodDelta
+------------------------
+.. ocv:function:: double CvEM::getLikelihoodDelta() const
+
+.. ocv:function:: double CvEM::get_log_likelihood_delta() const 
+
+    Returns difference between logarithm of likelihood on the last iteration and logarithm of likelihood on the previous iteration.
+
+
+.. index:: CvEM::write_params
+
+.. _CvEM::write_params:
+
+CvEM::write_params
+------------------
+.. ocv:function:: void CvEM::write_params( CvFileStorage* fs ) const
+
+    Writes used parameters of the EM algorithm to a file storage.
+
+    :param fs: A file storage where parameters will be written.
+
+
+.. index:: CvEM::read_params
+
+.. _CvEM::read_params:
+
+CvEM::read_params
+-----------------
+.. ocv:function:: void CvEM::read_params( CvFileStorage* fs, CvFileNode* node )
+
+    Reads parameters of the EM algorithm.
+
+    :param fs: A file storage with parameters of the EM algorithm.
+
+    :param node: The parent map. If it is NULL, the function searches a node with parameters in all the top-level nodes (streams), starting with the first one.
+
+Read parameters will be used for the EM algorithm in this ``CvEM`` object.
+
 
 For example of clustering random samples of multi-Gaussian distribution using EM see em.cpp sample in OpenCV distribution.
 
