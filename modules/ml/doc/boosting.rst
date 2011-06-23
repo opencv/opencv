@@ -92,23 +92,44 @@ CvBoostParams
 -------------
 .. c:type:: CvBoostParams
 
-Boosting training parameters ::
+    Boosting training parameters.
 
-    struct CvBoostParams : public CvDTreeParams
-    {
-        int boost_type;
-        int weak_count;
-        int split_criteria;
-        double weight_trim_rate;
+The structure is derived from :ref:`CvDTreeParams` but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
 
-        CvBoostParams();
-        CvBoostParams( int boost_type, int weak_count, double weight_trim_rate,
-                       int max_depth, bool use_surrogates, const float* priors );
-    };
+All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
 
+.. index:: CvBoostParams::CvBoostParams
 
-The structure is derived from
-:ref:`CvDTreeParams`  but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
+.. _CvBoostParams::CvBoostParams:
+
+CvBoostParams::CvBoostParams
+----------------------------
+.. ocv:function:: CvBoostParams::CvBoostParams()
+
+.. ocv:function:: CvBoostParams::CvBoostParams( int boost_type, int weak_count, double weight_trim_rate, int max_depth, bool use_surrogates, const float* priors )
+
+    :param boost_type: Type of the boosting algorithm. Possible values are:
+        
+        * **CvBoost::DISCRETE** Discrete AbaBoost.
+        * **CvBoost::REAL** Real AdaBoost. It is a technique that utilizes confidence-rated predictions and works well with categorical data.
+        * **CvBoost::LOGIT** LogitBoost. It can produce good regression fits.
+        * **CvBoost::GENTLE** Gentle AdaBoost. It puts less weight on outlier data points and for that reason is often good with regression data. 
+
+        Often the "real" and "gentle" forms of AdaBoost work best.
+
+    :param weak_count: The number of weak classifiers.
+
+    :param weight_trim_rate: A threshold between 0 and 1 used to save computational time. Samples with summary weight :math:`\leq 1 - weight\_trim\_rate` do not participate in the *next* iteration of training. Set this parameter to 0 to turn off this functionality.
+
+See :ref:`CvDTreeParams::CvDTreeParams` for description of other parameters.
+
+Also there is one parameter that you can set directly.
+    :param split_criteria: Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
+
+        * **CvBoost::DEFAULT** Use the default for the particular boosting method.
+        * **CvBoost::GINI** Default option for real AdaBoost.
+        * **CvBoost::MISCLASS** Default option for discrete AdaBoost.
+        * **CvBoost::SQERR** Least-square error; only option available for LogitBoost and gentle AdaBoost.
 
 .. index:: CvBoostTree
 
@@ -203,6 +224,24 @@ Do not confuse this method with the pruning of individual decision trees, which 
 
 .. _CvBoost::get_weak_predictors:
 
+
+.. index:: CvBoost::calc_error
+
+.. _CvBoost::calc_error:
+
+CvBoost::calc_error
+-------------------
+.. ocv:function:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
+
+    Returns error of the boosted tree classifier.
+
+The method is identical to :ocv:func:`CvDTree::calc_error` but uses the boosted tree classifier as predictor.
+
+
+.. index:: CvBoost::get_weak_predictors
+
+.. _CvBoost::get_weak_predictors:
+
 CvBoost::get_weak_predictors
 ----------------------------
 .. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
@@ -210,4 +249,27 @@ CvBoost::get_weak_predictors
     Returns the sequence of weak tree classifiers.
 
 The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or, probably, to some of its derivatives.
+
+
+.. index:: CvBoost::get_params
+
+.. _CvBoost::get_params:
+
+CvBoost::get_params
+-------------------
+.. ocv:function:: const CvBoostParams& CvBoost::get_params() const
+
+    Returns current parameters of the boosted tree classifier.
+
+
+.. index:: CvBoost::get_data
+
+.. _CvBoost::get_data:
+
+CvBoost::get_data
+-----------------
+.. ocv:function:: const CvDTreeTrainData* CvBoost::get_data() const
+
+    Returns used train data of the boosted tree classifier.
+
 
