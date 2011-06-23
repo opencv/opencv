@@ -130,7 +130,7 @@ The structure contains all the decision tree training parameters. You can initia
 
 .. index:: CvDTreeParams::CvDTreeParams
 
-.. _CvDTreeParams::CvDTreeParams
+.. _CvDTreeParams::CvDTreeParams:
 
 CvDTreeParams::CvDTreeParams
 ----------------------------
@@ -388,6 +388,7 @@ CvDTree::train
 
 .. ocv:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const Mat& _subsample_idx )
 
+
     Trains a decision tree.
 
 There are two ``train`` methods in ``CvDTree`` :
@@ -420,6 +421,65 @@ the discrete input variables have been already normalized to
 :math:`num\_of\_categories_i-1` ranges since the decision tree uses such
 normalized representation internally. It is useful for faster prediction
 with tree ensembles. For ordered input variables, the flag is not used.
+
+
+.. index:: CvDTree::calc_error
+
+.. _CvDTree::calc_error:
+
+CvDTree::calc_error
+-------------------
+.. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
+
+    Returns error of the decision tree.
+
+    :param data: Data for the decision tree.
+
+    :param type: Type of error. Possible values are:
+
+        * **CV_TRAIN_ERROR** Error on train samples.
+
+        * **CV_TEST_ERROR** Erron on test samples.
+
+    :param resp: If it is not null then size of this vector will be set to the number of samples and each element will be set to result of prediction on the corresponding sample.
+
+The method calculates error of the decision tree. In case of classification it is the percentage of incorrectly classified samples and in case of regression it is the mean of squared errors on samples.
+
+
+.. index:: CvDTree::getVarImportance
+
+.. _CvDTree::getVarImportance:
+
+CvDTree::getVarImportance
+-------------------------
+.. ocv:function:: Mat CvDTree::getVarImportance()
+
+.. ocv:function:: const CvMat* CvDTree::get_var_importance()
+
+    Returns the variable importance array.
+
+
+.. index:: CvDTree::get_root
+
+.. _CvDTree::get_root:
+
+CvDTree::get_root
+-----------------
+.. ocv:function:: const CvDTreeNode* CvDTree::get_root() const
+
+    Returns the root of the decision tree.
+
+
+.. index:: CvDTree::get_data
+
+.. _CvDTree::get_data:
+
+CvDTree::get_data
+-----------------
+.. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
+
+    Returns used train data of the decision tree.
+
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.
