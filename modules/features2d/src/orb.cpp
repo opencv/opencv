@@ -381,24 +381,6 @@ public:
     }
   }
 
-  /** Compare the currently used normalized step of the integral image to a new one
-   * @param integral_image the integral we want to use the pattern on
-   * @return true if the two steps are equal
-   */
-  bool compareNormalizedStep(const cv::Mat & integral_image) const
-  {
-    return (normalized_step_ == integral_image.step1());
-  }
-
-  /** Compare the currently used normalized step of the integral image to a new one
-   * @param step_size the normalized step size to compare to
-   * @return true if the two steps are equal
-   */
-  bool compareNormalizedStep(unsigned int normalized_step_size) const
-  {
-    return (normalized_step_ == normalized_step_size);
-  }
-
 private:
   static inline int angle2Wedge(float angle)
   {
@@ -777,11 +759,11 @@ void ORB::computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Ma
   integral(image, integral_image, CV_32S);
   integral_image_steps_.resize(params_.n_levels_, 0);
 
-  if (integral_image_steps_[level] == integral_image.step1())
+  unsigned int integral_image_step = integral_image.step1();
+  if (integral_image_steps_[level] == integral_image_step)
     return;
 
   // If the integral image dimensions have changed, recompute everything
-  int integral_image_step = integral_image.step1();
 
   // Cache the step sizes
   integral_image_steps_[level] = integral_image_step;
@@ -815,13 +797,10 @@ void ORB::computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Ma
 
   // Remove the previous version if dimensions are different
   patterns_.resize(params_.n_levels_, 0);
-  if ((patterns_[level]) && (patterns_[level]->compareNormalizedStep(integral_image)))
-  {
+  if (patterns_[level])
     delete patterns_[level];
-    patterns_[level] = 0;
-  }
-  if (!patterns_[level])
-    patterns_[level] = new OrbPatterns(params_.patch_size_, integral_image.step1());
+
+  patterns_[level] = new OrbPatterns(params_.patch_size_, integral_image_step);
 }
 
 /** Compute the ORB decriptors
