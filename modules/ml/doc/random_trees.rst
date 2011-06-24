@@ -53,11 +53,11 @@ In random trees there is no need for any accuracy estimation procedures, such as
 
 CvRTParams
 ----------
-.. c:type:: CvRTParams
+.. ocv:class:: struct CvRTParams : public CvDTreeParams
 
     Training parameters of random trees.
 
-The set of training parameters for the forest is a superset of the training parameters for a single tree (:ref:`CvRTParams` is inherited from :ref:`CvDTreeParams`). However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
+The set of training parameters for the forest is a superset of the training parameters for a single tree. However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
 
 
 .. index:: CvRTParams
@@ -97,48 +97,11 @@ The default constructor sets all parameters to some default values and they are 
 
 CvRTrees
 --------
-.. c:type:: CvRTrees
+.. ocv:class:: class CvRTrees : public CvStatModel
 
-Random trees ::
+    Random trees.
 
-    class CvRTrees : public CvStatModel
-    {
-    public:
-        CvRTrees();
-        virtual ~CvRTrees();
-        virtual bool train( const Mat& _train_data, int _tflag,
-                            const Mat& _responses, const Mat& _var_idx=Mat(),
-                            const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
-                            const Mat& _missing_mask=Mat(),
-                            CvRTParams params=CvRTParams() );
-        virtual float predict( const Mat& sample, const Mat& missing = 0 )
-                                                                    const;
-        virtual void clear();
-
-        virtual const Mat& get_var_importance();
-        virtual float get_proximity( const Mat& sample_1, const Mat& sample_2 )
-                                                                            const;
-
-        virtual void read( CvFileStorage* fs, CvFileNode* node );
-        virtual void write( CvFileStorage* fs, const char* name );
-
-        Mat& get_active_var_mask();
-        CvRNG* get_rng();
-
-        int get_tree_count() const;
-        CvForestTree* get_tree(int i) const;
-
-    protected:
-
-        bool grow_forest( const CvTermCriteria term_crit );
-
-        // array of the trees of the forest
-        CvForestTree** trees;
-        CvDTreeTrainData* data;
-        int ntrees;
-        int nclasses;
-        ...
-    };
+The class implements the random forest predictor as described in the beginning of this section.
 
 
 .. index:: CvRTrees::train
@@ -149,12 +112,13 @@ CvRTrees::train
 ---------------
 .. ocv:function:: bool CvRTrees::train( CvMLData* data, CvRTParams params=CvRTParams() )
 
-.. ocv:function:: bool CvRTrees::train( const Mat& train_data, int tflag, const Mat& responses, const Mat& comp_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvRTParams params=CvRTParams() )
+.. ocv:function:: bool CvRTrees::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvRTParams params=CvRTParams() )
+
+.. ocv:function:: bool CvRTress::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvRTParams params=CvRTParams() )
 
     Trains the Random Tree model.
 
-The method ``CvRTrees::train`` is very similar to the first form of :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a
-:ref:`CvRTParams` instance. The estimate of the training error ( ``oob-error`` ) is stored in the protected class member ``oob_error`` .
+The method :ocv:func:`CvRTrees::train` is very similar to the method :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a :ocv:class:`CvRTParams` instance. The estimate of the training error (``oob-error``) is stored in the protected class member ``oob_error``.
 
 .. index:: CvRTrees::predict
 
@@ -164,9 +128,15 @@ CvRTrees::predict
 -----------------
 .. ocv:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
 
+.. ocv:function:: float CvRTrees::predict( const CvMat* sample, const CvMat* missing = 0 ) const
+
     Predicts the output for an input sample.
 
-The input parameters of the prediction method are the same as in ``CvDTree::predict``  but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
+    :param sample: Sample for classification.
+
+    :param missing: Optional missing measurement mask of the sample.
+
+The input parameters of the prediction method are the same as in :ocv:func:`CvDTree::predict`  but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
 
 
 .. index:: CvRTrees::predict_prob
@@ -177,7 +147,13 @@ CvRTrees::predict_prob
 ----------------------
 .. ocv:function:: float CvRTrees::predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const
 
+.. ocv:function:: float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing = 0 ) const
+
     Returns a fuzzy predicted class label.
+
+    :param sample: Sample for classification.
+
+    :param missing: Optional missing measurement mask of the sample.
 
 The function works for binary classification problems only. It returns the number between 0 and 1. This number represents probability or confidence of the sample belonging to the second class. It is calculated as the proportion of decision trees that classified the sample to the second class.
 
@@ -194,7 +170,7 @@ CvRTrees::getVarImportance
 
     Returns the variable importance array.
 
-The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set. If the training flag is not set, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
+The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set to true. If this flag was set to false, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
 .. index:: CvRTrees::get_proximity
 
@@ -202,9 +178,17 @@ The method returns the variable importance vector, computed at the training stag
 
 CvRTrees::get_proximity
 -----------------------
-.. ocv:function:: float CvRTrees::get_proximity(  const Mat& sample_1,  const Mat& sample_2 ) const
+.. ocv:function:: float CvRTrees::get_proximity( const CvMat* sample1, const CvMat* sample2, const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const
 
     Retrieves the proximity measure between two training samples.
+
+    :param sample_1: The first sample.
+
+    :param sample_2: The second sample.
+
+    :param missing1: Optional missing measurement mask of the first sample.
+
+    :param missing2:  Optional missing measurement mask of the second sample.
 
 The method returns proximity measure between any two samples, which is the ratio of those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees.
 
@@ -266,7 +250,7 @@ CvRTrees::get_tree
 ------------------
 .. ocv:function:: CvForestTree* CvRTrees::get_tree(int i) const
 
-    Returns the specific decision tree in the random forest.
+    Returns the specific decision tree in the constructed random forest.
 
     :param i: Index of the decision tree.
 
