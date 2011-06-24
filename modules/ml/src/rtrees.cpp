@@ -190,6 +190,26 @@ void CvForestTree::read( CvFileStorage* _fs, CvFileNode* _node,
 //////////////////////////////////////////////////////////////////////////////////////////
 //                                  Random trees                                        //
 //////////////////////////////////////////////////////////////////////////////////////////
+CvRTParams::CvRTParams() : CvDTreeParams( 5, 10, 0, false, 10, 0, false, false, 0 ),
+    calc_var_importance(false), nactive_vars(0)
+{
+    term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.1 );
+}
+
+CvRTParams::CvRTParams( int _max_depth, int _min_sample_count,
+                        float _regression_accuracy, bool _use_surrogates,
+                        int _max_categories, const float* _priors, bool _calc_var_importance,
+                        int _nactive_vars, int max_num_of_trees_in_the_forest,
+                        float forest_accuracy, int termcrit_type ) :
+    CvDTreeParams( _max_depth, _min_sample_count, _regression_accuracy,
+                   _use_surrogates, _max_categories, 0,
+                   false, false, _priors ),
+    calc_var_importance(_calc_var_importance),
+    nactive_vars(_nactive_vars)
+{
+    term_crit = cvTermCriteria(termcrit_type,
+        max_num_of_trees_in_the_forest, forest_accuracy);
+}
 
 CvRTrees::CvRTrees()
 {

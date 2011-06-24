@@ -744,23 +744,12 @@ struct CV_EXPORTS_W_MAP CvDTreeParams
     CV_PROP_RW float regression_accuracy;
     const float* priors;
 
-    CvDTreeParams() : max_categories(10), max_depth(INT_MAX), min_sample_count(10),
-        cv_folds(10), use_surrogates(true), use_1se_rule(true),
-        truncate_pruned_tree(true), regression_accuracy(0.01f), priors(0)
-    {}
-
-    CvDTreeParams( int _max_depth, int _min_sample_count,
-                   float _regression_accuracy, bool _use_surrogates,
-                   int _max_categories, int _cv_folds,
-                   bool _use_1se_rule, bool _truncate_pruned_tree,
-                   const float* _priors ) :
-        max_categories(_max_categories), max_depth(_max_depth),
-        min_sample_count(_min_sample_count), cv_folds (_cv_folds),
-        use_surrogates(_use_surrogates), use_1se_rule(_use_1se_rule),
-        truncate_pruned_tree(_truncate_pruned_tree),
-        regression_accuracy(_regression_accuracy),
-        priors(_priors)
-    {}
+    CvDTreeParams();
+    CvDTreeParams( int max_depth, int min_sample_count,
+                   float regression_accuracy, bool use_surrogates,
+                   int max_categories, int cv_folds,
+                   bool use_1se_rule, bool truncate_pruned_tree,
+                   const float* priors );
 };
 
 
@@ -1016,26 +1005,12 @@ struct CV_EXPORTS_W_MAP CvRTParams : public CvDTreeParams
     CV_PROP_RW int nactive_vars;
     CV_PROP_RW CvTermCriteria term_crit;
 
-    CvRTParams() : CvDTreeParams( 5, 10, 0, false, 10, 0, false, false, 0 ),
-        calc_var_importance(false), nactive_vars(0)
-    {
-        term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.1 );
-    }
-
-    CvRTParams( int _max_depth, int _min_sample_count,
-                float _regression_accuracy, bool _use_surrogates,
-                int _max_categories, const float* _priors, bool _calc_var_importance,
-                int _nactive_vars, int max_num_of_trees_in_the_forest,
-                float forest_accuracy, int termcrit_type ) :
-        CvDTreeParams( _max_depth, _min_sample_count, _regression_accuracy,
-                       _use_surrogates, _max_categories, 0,
-                       false, false, _priors ),
-        calc_var_importance(_calc_var_importance),
-        nactive_vars(_nactive_vars)
-    {
-        term_crit = cvTermCriteria(termcrit_type,
-            max_num_of_trees_in_the_forest, forest_accuracy);
-    }
+    CvRTParams();
+    CvRTParams( int max_depth, int min_sample_count,
+                float regression_accuracy, bool use_surrogates,
+                int max_categories, const float* priors, bool calc_var_importance,
+                int nactive_vars, int max_num_of_trees_in_the_forest,
+                float forest_accuracy, int termcrit_type );
 };
 
 
