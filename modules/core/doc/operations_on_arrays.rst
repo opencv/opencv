@@ -31,6 +31,16 @@ Computes the per-element absolute difference between two arrays or between an ar
 
 .. ocv:function:: void absdiff(InputArray src1, InputArray src2, OutputArray dst)
 
+.. ocv:pyfunction:: cv2.absdiff(src1, src2, [dst=None]) -> dst
+
+.. ocv:pyoldfunction:: cv.AbsDiff(src1, src2, dst) -> None
+
+.. ocv:pyoldfunction:: cv.AbsDiffS(src1, src2, dst) -> None
+
+.. ocv:cfunction:: void cvAbsDiff(const CvArr* src1, const CvArr* src2, CvArr* dst)
+
+.. ocv:cfunction:: void cvAbsDiffS(const CvArr* src1, CvScalar src2, CvArr* dst)
+
     :param src1: First input array or a scalar.
     
     :param src2: Second input array or a scalar.

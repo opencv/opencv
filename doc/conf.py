@@ -170,7 +170,7 @@ htmlhelp_basename = 'opencv'
 
 # OpenCV docs use some custom LaTeX macros in the formulae. Make sure we include the definitions
 pngmath_latex_preamble = r"""
-\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
+\usepackage{euler}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
 \newcommand{\matTT}[9]{
 \[
 \left|\begin{array}{ccc}
@@ -237,7 +237,13 @@ latex_documents = [
    u'', 'manual'), 
 ]
 
-latex_elements = {'preamble': '\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}'}
+preamble ="""
+\usepackage{euler}
+\usepackage[scaled=0.85]{beramono}
+\usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}
+"""
+
+latex_elements = {'preamble': preamble}
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.

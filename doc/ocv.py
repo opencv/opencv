@@ -243,12 +243,13 @@ class OCVPyModulelevel(OCVPyObject):
     """
     Description of an object on module level (functions, data).
     """
+    directive_prefix = 'py'
 
     def needs_arglist(self):
-        return self.objtype == 'pyfunction'
+        return self.objtype == self.__class__.directive_prefix + 'function'
 
     def get_index_text(self, modname, name_cls):
-        if self.objtype == 'pyfunction':
+        if self.objtype == self.__class__.directive_prefix + 'function':
             if not modname:
                 fname = name_cls[0]
                 if not fname.startswith("cv") and not fname.startswith("cv2"):
@@ -264,6 +265,10 @@ class OCVPyModulelevel(OCVPyObject):
             return _('%s (in module %s)') % (name_cls[0], modname)
         else:
             return ''
+
+class OCVPyOldModulelevel(OCVPyModulelevel):
+    directive_prefix = 'pyold'
+    pass
 
 class OCVPyXRefRole(XRefRole):
     def process_link(self, env, refnode, has_explicit_title, title, target):
@@ -1075,6 +1080,8 @@ class DefinitionParser(object):
 class OCVObject(ObjectDescription):
     """Description of a C++ language object."""
 
+    langname = "C++"
+
     doc_field_types = [
         TypedField('parameter', label=l_('Parameters'),
                    names=('param', 'parameter', 'arg', 'argument'),
@@ -1104,7 +1111,8 @@ class OCVObject(ObjectDescription):
         node += pnode
 
     def attach_modifiers(self, node, obj):
-        node += nodes.strong("C++:", "C++:")
+        lname = self.__class__.langname
+        node += nodes.strong(lname + ":", lname + ":")
         node += addnodes.desc_name(" ", " ")
         if obj.visibility != 'public':
             node += addnodes.desc_annotation(obj.visibility,
@@ -1259,7 +1267,8 @@ class OCVFunctionObject(OCVObject):
             node += addnodes.desc_addname(' = 0', ' = 0')
 
     def get_index_text(self, name):
-        return _('%s (C++ function)') % name
+        lname = self.__class__.langname
+        return _('%s (%s function)') % (name, lname)
 
     def parse_definition(self, parser):
         return parser.parse_function()
@@ -1322,6 +1331,13 @@ class OCVXRefRole(XRefRole):
         return title, target
 
 
+class OCVCFunctionObject(OCVFunctionObject):
+    langname = "C"
+    
+class OCVJavaFunctionObject(OCVFunctionObject):
+    langname = "Java"
+
+
 class OCVDomain(Domain):
     """OpenCV C++ language domain."""
     name = 'ocv'
@@ -1329,7 +1345,10 @@ class OCVDomain(Domain):
     object_types = {
         'class':    ObjType(l_('class'),    'class'),
         'function': ObjType(l_('function'), 'func', 'funcx'),
+        'cfunction': ObjType(l_('cfunction'), 'cfunc', 'cfuncx'),
+        'jfunction': ObjType(l_('jfunction'), 'jfunc', 'jfuncx'),
         'pyfunction': ObjType(l_('pyfunction'), 'pyfunc'),
+        'pyoldfunction': ObjType(l_('pyoldfunction'), 'pyoldfunc'),
         'member':   ObjType(l_('member'),   'member'),
         'type':     ObjType(l_('type'),     'type')
     }
@@ -1337,7 +1356,10 @@ class OCVDomain(Domain):
     directives = {
         'class':        OCVClassObject,
         'function':     OCVFunctionObject,
+        'cfunction':    OCVCFunctionObject,
+        'jfunction':    OCVJavaFunctionObject,
         'pyfunction':   OCVPyModulelevel,
+        'pyoldfunction':   OCVPyOldModulelevel,
         'member':       OCVMemberObject,
         'type':         OCVTypeObject,
         'namespace':    OCVCurrentNamespace
@@ -1346,7 +1368,12 @@ class OCVDomain(Domain):
         'class':  OCVXRefRole(),
         'func' :  OCVXRefRole(fix_parens=True),
         'funcx' :  OCVXRefRole(),
+        'cfunc' :  OCVXRefRole(fix_parens=True),
+        'cfunc' :  OCVXRefRole(),
+        'jfunc' :  OCVXRefRole(fix_parens=True),
+        'jfunc' :  OCVXRefRole(),
         'pyfunc' :  OCVPyXRefRole(),
+        'pyoldfunc' :  OCVPyXRefRole(),
         'member': OCVXRefRole(),
         'type':   OCVXRefRole()
     }

@@ -52,7 +52,7 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
     3.3. Set :math:`w_i \Leftarrow w_i exp[c_m 1_{(y_i \neq f_m(x_i))}], i = 1,2,...,N,` and renormalize so that :math:`\Sigma i w_i = 1`         .
 
 
-#. Classify new samples *x* using the formula: :math:`\sign (\Sigma m = 1M c_m f_m(x))`         .
+#. Classify new samples *x* using the formula: :math:`\textrm{sign} (\Sigma m = 1M c_m f_m(x))`         .
 
 
 .. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M
