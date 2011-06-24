@@ -5,7 +5,6 @@ if(ANDROID)
   endif()
 
   add_subdirectory(androidcamera)
-  add_subdirectory(java)
 endif()
 
 add_subdirectory(calib3d)
@@ -29,6 +28,10 @@ add_subdirectory(objdetect)
 
 if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT)
   add_subdirectory(python)
+endif()
+
+if(BUILD_JAVA_SUPPORT)
+  add_subdirectory(java)
 endif()
 
 add_subdirectory(video)

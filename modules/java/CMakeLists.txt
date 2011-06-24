@@ -24,12 +24,12 @@ foreach(module ${OPENCV_JAVA_MODULES})
     list(SORT module_cppheaders)
 
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${module}.java
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp
-        COMMAND ${PYTHON_EXECUTABLE} -B "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.java"
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
+        COMMAND "${PYTHON_EXECUTABLE}" -B "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${GEN_JAVA}
-        DEPENDS ${HDR_PARSER}
+        DEPENDS "${GEN_JAVA}"
+        DEPENDS "${HDR_PARSER}"
         DEPENDS ${module_headers}
         )
 endforeach()
@@ -37,7 +37,7 @@ endforeach()
 set(target "opencv_java")
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/srccpp/*.cpp")
+FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
 
 SET (generated_cpp_sources "")
 SET (generated_java_sources "")
@@ -75,25 +75,42 @@ set_target_properties(${target} PROPERTIES
     INSTALL_NAME_DIR lib
     )
 
-add_custom_target(opecv_java_api ALL DEPENDS ${target})
+set(api_target opencv_java_api)
+add_custom_target(${api_target} ALL DEPENDS ${target})
 
 IF(ANDROID)
     # create Android library project in build folder
-    add_custom_command(TARGET opecv_java_api COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res")
+    add_custom_command(
+        TARGET ${api_target}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res"
+        COMMENT "Creating res directory"
+        )
 
     FILE(GLOB android_lib_project_files "${CMAKE_CURRENT_SOURCE_DIR}/android/*")
     foreach(lib_file ${android_lib_project_files})
         if(NOT IS_DIRECTORY ${lib_file})
-            add_custom_command(TARGET opecv_java_api COMMAND ${CMAKE_COMMAND} -E copy "${lib_file}" "${CMAKE_BINARY_DIR}" DEPENDS "${lib_file}")
+            get_filename_component(lib_file_name "${lib_file}" NAME)
+            add_custom_command(
+                TARGET ${api_target}
+                COMMAND ${CMAKE_COMMAND} -E copy "${lib_file}" "${CMAKE_BINARY_DIR}"
+                DEPENDS "${lib_file}"
+                COMMENT "Generating ${lib_file_name}"
+                )
         endif()
     endforeach()
 ENDIF()
 
-FILE(GLOB java_project_files "${CMAKE_CURRENT_SOURCE_DIR}/srcjava/*.java")
+FILE(GLOB java_project_files "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
 SET(JAVA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/src/org/opencv")
-add_custom_command(TARGET opecv_java_api COMMAND ${CMAKE_COMMAND} -E make_directory "${JAVA_OUTPUT_DIR}")
 
 foreach(java_file ${java_project_files} ${generated_java_sources})
-    add_custom_command(TARGET opecv_java_api COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}" DEPENDS "${java_file}" DEPENDS "${JAVA_OUTPUT_DIR}")
+    get_filename_component(java_file_name "${java_file}" NAME)
+    add_custom_command(
+        TARGET ${api_target}
+        COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}/${java_file_name}"
+        DEPENDS "${java_file}"
+        DEPENDS "${JAVA_OUTPUT_DIR}"
+        COMMENT "Generating src/org/opencv/${java_file_name}"
+        )
 endforeach()
 

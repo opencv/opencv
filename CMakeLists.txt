@@ -652,6 +652,13 @@ if(SPHINX_PROCESS EQUAL 0)
     endif()
 endif()
 
+# Java support
+# ===================================================
+if (PYTHON_EXECUTABLE AND ANDROID)
+    SET(BUILD_JAVA_SUPPORT ON CACHE BOOL "Build with Java support")
+else()
+    SET(BUILD_JAVA_SUPPORT OFF CACHE BOOL "Build with Java support" FORCE)
+endif()
 
 #YV
 ############################### QT ################################
@@ -1566,6 +1573,7 @@ message(STATUS "    Python numpy:               YES")
 else()
 message(STATUS "    Python numpy:               NO (Python interface will not cover OpenCV 2.x API)")
 endif()
+message(STATUS "    Java:                       ${BUILD_JAVA_SUPPORT}")
 
 if(WITH_IPP AND IPP_FOUND)
 message(STATUS "    Use IPP:                    ${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
