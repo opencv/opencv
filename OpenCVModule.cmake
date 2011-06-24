@@ -97,8 +97,8 @@ macro(define_opencv_module name)
 
     install(TARGETS ${the_target}
         RUNTIME DESTINATION bin COMPONENT main
-        LIBRARY DESTINATION lib COMPONENT main
-        ARCHIVE DESTINATION lib COMPONENT main)
+        LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+        ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
     install(FILES ${lib_hdrs}
         DESTINATION include/opencv2/${name}

@@ -38,8 +38,6 @@
 #
 #    NO_UNDEFINED=true - set true to show all undefined symbols will as linker errors even if they are not used.
 #
-#    NO_SWIG=false - set true to disable SWIG package
-#
 #
 #  Toolcahin will search for NDK/toolchain in following order:
 #    ANDROID_NDK - cmake parameter
@@ -96,6 +94,7 @@
 #     [~] toolchain install directory is added to linker paths
 #     [-] removed SWIG-related stuff from toolchain
 #     [+] added macro find_host_package, find_host_program to search packages/programs on host system
+#     [~] fixed path to STL library
 # ----------------------------------------------------------------------------
 
 # this one is important
@@ -261,7 +260,7 @@ if( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS )
   set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin CACHE PATH "Output directory for applications" FORCE)
  endif()
  set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs" FORCE )
- set( CMAKE_INSTALL_PREFIX ${ANDROID_NDK_TOOLCHAIN_ROOT}/user/${ARMEABI_NDK_NAME} CACHE STRING "path for installing" FORCE )
+ set( CMAKE_INSTALL_PREFIX ${ANDROID_NDK_TOOLCHAIN_ROOT}/user CACHE STRING "path for installing" FORCE )
 endif()
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS ON CACHE INTERNAL "" FORCE)
 
@@ -271,11 +270,20 @@ set( CMAKE_FIND_ROOT_PATH ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin ${ANDROID_NDK_TOOLCH
 if( BUILD_WITH_ANDROID_NDK )
  set( STL_PATH "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++" )
  set( STL_LIBRARIES_PATH "${STL_PATH}/libs/${ARMEABI_NDK_NAME}" )
- include_directories( ${STL_PATH}/include ${STL_LIBRARIES_PATH}/include )
+ include_directories( "${STL_PATH}/include" "${STL_LIBRARIES_PATH}/include" )
+ if ( NOT ARMEABI AND NOT FORCE_ARM )
+  set( STL_LIBRARIES_PATH "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb" )
+ endif()
 endif()
 
 if( BUILD_WITH_ANDROID_NDK_TOOLCHAIN )
- set( STL_LIBRARIES_PATH "${CMAKE_INSTALL_PREFIX}/lib" )
+ set( STL_LIBRARIES_PATH "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/lib" )
+ if( NOT ARMEABI )
+  set( STL_LIBRARIES_PATH "${STL_LIBRARIES_PATH}/${CMAKE_SYSTEM_PROCESSOR}" )
+ endif()
+ if( NOT FORCE_ARM )
+  set( STL_LIBRARIES_PATH "${STL_LIBRARIES_PATH}/thumb" )
+ endif()
  #for some reason this is needed? TODO figure out why...
  include_directories( ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi )
 endif()
@@ -324,7 +332,7 @@ set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "c flags" )
 #-L${LIBCPP_LINK_DIR} -lstdc++ -lsupc++
 #Also, this is *required* to use the following linker flags that routes around
 #a CPU bug in some Cortex-A8 implementations:
-set( LINKER_FLAGS "-Wl,--fix-cortex-a8 -L${STL_LIBRARIES_PATH} -L${CMAKE_INSTALL_PREFIX}/lib -lstdc++ -lsupc++ " )
+set( LINKER_FLAGS "-Wl,--fix-cortex-a8 -L${STL_LIBRARIES_PATH} -L${CMAKE_INSTALL_PREFIX}/libs/${ARMEABI_NDK_NAME} -lstdc++ -lsupc++ " )
 
 set( NO_UNDEFINED ON CACHE BOOL "Don't all undefined symbols" )
 if( NO_UNDEFINED )
@@ -339,7 +347,7 @@ set( CMAKE_EXE_LINKER_FLAGS "${LINKER_FLAGS}" CACHE STRING "linker flags" FORCE 
 set( ANDROID True )
 set( BUILD_ANDROID True )
 
-#macro to find package on the host OS
+#macro to find packages on the host OS
 macro(find_host_package)
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )
@@ -349,6 +357,7 @@ macro(find_host_package)
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
+#macro to find programs on the host OS
 macro(find_host_program)
  set( CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER )
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER )

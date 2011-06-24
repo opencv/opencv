@@ -1180,10 +1180,18 @@ endif("${CMAKE_CONFIGURE_LDFLAGS}")
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
-if(WIN32)
+if(ANDROID)
+set(OPENCV_DOC_INSTALL_PATH doc)
+elseif(WIN32)
 set(OPENCV_DOC_INSTALL_PATH doc)
 else()
 set(OPENCV_DOC_INSTALL_PATH share/opencv/doc)
+endif()
+
+if(ANDROID)
+set(OPENCV_LIB_INSTALL_PATH libs/${ARMEABI_NDK_NAME})
+else()
+set(OPENCV_LIB_INSTALL_PATH lib)
 endif()
 
 
@@ -1318,10 +1326,13 @@ set(VERSION             ${OPENCV_VERSION})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/opencv.pc" @ONLY IMMEDIATE)
 
-if(UNIX)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/opencv.pc DESTINATION lib/pkgconfig)
+if(UNIX AND NOT ANDROID)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/opencv.pc DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
 endif()
 
+if(ANDROID)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION share/opencv)
+endif()
 
 # ----------------------------------------------------------------------------
 #   Uninstall target, for "make uninstall"

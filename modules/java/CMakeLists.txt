@@ -38,10 +38,8 @@ foreach(module ${OPENCV_JAVA_MODULES})
         )
 endforeach()
 
-set(target "opencv_java")
+set(target opencv_java)
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
-
-FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
 
 SET (generated_cpp_sources "")
 SET (generated_java_sources "")
@@ -60,10 +58,9 @@ foreach(module ${OPENCV_EXTRA_JAVA_MODULES})
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
 
-#SET (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -L/home/andreyk/OpenCV2/trunk/opencv/android/build/libs/armeabi-v7a")
+FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
 
 add_library(${target} SHARED ${handwrittren_cpp_sources} ${generated_cpp_sources})
-
 target_link_libraries(${target} ${dependent_libs} ${dependent_extra_libs} ${OPENCV_LINKER_LIBS})
 if(ANDROID)
     target_link_libraries(${target} jnigraphics)
@@ -78,6 +75,8 @@ set_target_properties(${target} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR lib
     )
+
+install(TARGETS ${target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 set(api_target opencv_java_api)
 add_custom_target(${api_target} ALL DEPENDS ${target})
@@ -100,6 +99,7 @@ IF(ANDROID)
                 DEPENDS "${lib_file}"
                 COMMENT "Generating ${lib_file_name}"
                 )
+            install(FILES "${CMAKE_BINARY_DIR}/${lib_file_name}" DESTINATION . COMPONENT main)
         endif()
     endforeach()
 ENDIF()
@@ -116,5 +116,8 @@ foreach(java_file ${java_project_files} ${generated_java_sources})
         DEPENDS "${JAVA_OUTPUT_DIR}"
         COMMENT "Generating src/org/opencv/${java_file_name}"
         )
+    if(ANDROID)
+        install(FILES "${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION src/org/opencv COMPONENT main)
+    endif()
 endforeach()
 
