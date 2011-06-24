@@ -63,27 +63,18 @@ Importance of each variable is computed over all the splits on this variable in 
 
 CvDTreeSplit
 ------------
-.. c:type:: CvDTreeSplit
+.. c:type:: struct CvDTreeSplit
 
-Decision tree node split ::
+    Decision tree node split.
 
-    struct CvDTreeSplit
-    {
-        int var_idx;
-        int inversed;
-        float quality;
-        CvDTreeSplit* next;
-        union
-        {
-            int subset[2];
-            struct
-            {
-                float c;
-                int split_point;
-            }
-            ord;
-        };
-    };
+The structure represents a possible decision tree node split. It has public members:
+
+    * ``int var_idx`` Index of variable on which the split is created.
+    * ``int inversed`` If it is not null then inverse split rule is used that is a left branch and a right branch are switched.
+    * ``float quality`` Quality of the split.
+    * ``CvDTreeSplit* next`` Pointer to the next split in the node list of splits.
+    * ``int subset[2]`` Parameters of the split on a categorical variable.
+    * ``struct {float c; int split_point;} ord`` Parameters of the split on ordered variable.
 
 
 .. index:: CvDTreeNode
@@ -92,29 +83,23 @@ Decision tree node split ::
 
 CvDTreeNode
 -----------
-.. c:type:: CvDTreeNode
+.. c:type:: struct CvDTreeNode
 
-Decision tree node ::
+    Decision tree node.
 
-    struct CvDTreeNode
-    {
-        int class_idx;
-        int Tn;
-        double value;
-
-        CvDTreeNode* parent;
-        CvDTreeNode* left;
-        CvDTreeNode* right;
-
-        CvDTreeSplit* split;
-
-        int sample_count;
-        int depth;
-        ...
-    };
-
+The structure represents a node in a decision tree. It has public members:    
+ 
+    * ``int Tn`` Tree index in a sequence of pruned trees. Nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (they are pruned).
+    * ``double value`` Value at the node: a class label in case of classification or estimated function value in case of regression.
+    * ``CvDTreeNode* parent`` Pointer to the parent node.   
+    * ``CvDTreeNode* left`` Pointer to the left child node.
+    * ``CvDTreeNode* right`` Pointer to the right child node.
+    * ``CvDTreeSplit* split`` Pointer to the first (primary) split in the node list of splits.
+    * ``int sample_count`` Number of samples in the node.
+    * ``int depth`` Depth of the node.
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
+
 
 .. index:: CvDTreeParams
 
@@ -122,7 +107,7 @@ Other numerous fields of ``CvDTreeNode`` are used internally at the training sta
 
 CvDTreeParams
 -------------
-.. c:type:: CvDTreeParams
+.. c:type:: struct CvDTreeParams
 
     Decision tree training parameters.
 
@@ -136,7 +121,7 @@ CvDTreeParams::CvDTreeParams
 ----------------------------
 .. ocv:function:: CvDTreeParams::CvDTreeParams()  
 
-.. ocv:function:: CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
+.. ocv:function:: CvDTreeParams::CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
 
     :param max_depth: The maximum number of levels in a tree. The depth of a constructed tree may be smaller due to other termination criterias or pruning of the tree.
 
@@ -144,7 +129,7 @@ CvDTreeParams::CvDTreeParams
 
     :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be splitted.
  
-    :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data.
+    :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data and compute variable importance correctly.
 
     :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. The clustering is applied only in n>2-class classification problems for categorical variables with ``N > max_categories`` possible values. See the Learning OpenCV book (page 489) for more detailed explanation.
 
@@ -172,105 +157,11 @@ The default constructor initializes all the parameters with the default values t
 
 CvDTreeTrainData
 ----------------
-.. c:type:: CvDTreeTrainData
+.. c:type:: struct CvDTreeTrainData
 
-Decision tree training data and shared data for tree ensembles ::
+    Decision tree training data and shared data for tree ensembles.
 
-    struct CvDTreeTrainData
-    {
-        CvDTreeTrainData();
-        CvDTreeTrainData( const Mat& _train_data, int _tflag,
-                          const Mat& _responses, const Mat& _var_idx=Mat(),
-                          const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
-                          const Mat& _missing_mask=Mat(),
-                          const CvDTreeParams& _params=CvDTreeParams(),
-                          bool _shared=false, bool _add_labels=false );
-        virtual ~CvDTreeTrainData();
-
-        virtual void set_data( const Mat& _train_data, int _tflag,
-                              const Mat& _responses, const Mat& _var_idx=Mat(),
-                              const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
-                              const Mat& _missing_mask=Mat(),
-                              const CvDTreeParams& _params=CvDTreeParams(),
-                              bool _shared=false, bool _add_labels=false,
-                              bool _update_data=false );
-
-        virtual void get_vectors( const Mat& _subsample_idx,
-             float* values, uchar* missing, float* responses,
-             bool get_class_idx=false );
-
-        virtual CvDTreeNode* subsample_data( const Mat& _subsample_idx );
-
-        virtual void write_params( CvFileStorage* fs );
-        virtual void read_params( CvFileStorage* fs, CvFileNode* node );
-
-        // release all the data
-        virtual void clear();
-
-        int get_num_classes() const;
-        int get_var_type(int vi) const;
-        int get_work_var_count() const;
-
-        virtual int* get_class_labels( CvDTreeNode* n );
-        virtual float* get_ord_responses( CvDTreeNode* n );
-        virtual int* get_labels( CvDTreeNode* n );
-        virtual int* get_cat_var_data( CvDTreeNode* n, int vi );
-        virtual CvPair32s32f* get_ord_var_data( CvDTreeNode* n, int vi );
-        virtual int get_child_buf_idx( CvDTreeNode* n );
-
-        ////////////////////////////////////
-
-        virtual bool set_params( const CvDTreeParams& params );
-        virtual CvDTreeNode* new_node( CvDTreeNode* parent, int count,
-                                       int storage_idx, int offset );
-
-        virtual CvDTreeSplit* new_split_ord( int vi, float cmp_val,
-                    int split_point, int inversed, float quality );
-        virtual CvDTreeSplit* new_split_cat( int vi, float quality );
-        virtual void free_node_data( CvDTreeNode* node );
-        virtual void free_train_data();
-        virtual void free_node( CvDTreeNode* node );
-
-        int sample_count, var_all, var_count, max_c_count;
-        int ord_var_count, cat_var_count;
-        bool have_labels, have_priors;
-        bool is_classifier;
-
-        int buf_count, buf_size;
-        bool shared;
-
-        Mat& cat_count;
-        Mat& cat_ofs;
-        Mat& cat_map;
-
-        Mat& counts;
-        Mat& buf;
-        Mat& direction;
-        Mat& split_buf;
-
-        Mat& var_idx;
-        Mat& var_type; // i-th element =
-                         //   k<0  - ordered
-                         //   k>=0 - categorical, see k-th element of cat_* arrays
-        Mat& priors;
-
-        CvDTreeParams params;
-
-        CvMemStorage* tree_storage;
-        CvMemStorage* temp_storage;
-
-        CvDTreeNode* data_root;
-
-        CvSet* node_heap;
-        CvSet* split_heap;
-        CvSet* cv_heap;
-        CvSet* nv_heap;
-
-        CvRNG rng;
-    };
-
-
-This structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
+The structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
 
 #. Training parameters, an instance of :ref:`CvDTreeParams`.
 
@@ -283,10 +174,10 @@ There are two ways of using this structure. In simple cases (for example, a stan
 :ref:`Boosting` ), there is no need to care or even to know about the structure. You just construct the needed statistical model, train it, and use it. The ``CvDTreeTrainData`` structure is constructed and used internally. However, for custom tree algorithms or another sophisticated cases, the structure may be constructed and used explicitly. The scheme is the following:
 
 #.
-    The structure is initialized using the default constructor, followed by ``set_data`` , or it is built using the full form of constructor. The parameter ``_shared``  must be set to ``true`` .
+    The structure is initialized using the default constructor, followed by ``set_data``, or it is built using the full form of constructor. The parameter ``_shared`` must be set to ``true``.
 
 #.
-    One or more trees are trained using this data (see the special form of the method ``CvDTree::train``  ).
+    One or more trees are trained using this data (see the special form of the method :ocv:func:`CvDTree::train`).
 
 #.
     The structure is released as soon as all the trees using it are released.
@@ -297,85 +188,11 @@ There are two ways of using this structure. In simple cases (for example, a stan
 
 CvDTree
 -------
-.. c:type:: CvDTree
+.. ocv:class:: class CvDTree : public CvStatModel
 
-Decision tree ::
+    Decision tree.
 
-    class CvDTree : public CvStatModel
-    {
-    public:
-        CvDTree();
-        virtual ~CvDTree();
-
-        virtual bool train( const Mat& _train_data, int _tflag,
-                            const Mat& _responses, const Mat& _var_idx=Mat(),
-                            const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(),
-                            const Mat& _missing_mask=Mat(),
-                            CvDTreeParams params=CvDTreeParams() );
-
-        virtual bool train( CvDTreeTrainData* _train_data,
-                            const Mat& _subsample_idx );
-
-        virtual CvDTreeNode* predict( const Mat& _sample,
-                                      const Mat& _missing_data_mask=Mat(),
-                                      bool raw_mode=false ) const;
-        virtual const Mat& get_var_importance();
-        virtual void clear();
-
-        virtual void read( CvFileStorage* fs, CvFileNode* node );
-        virtual void write( CvFileStorage* fs, const char* name );
-
-        // special read & write methods for trees in the tree ensembles
-        virtual void read( CvFileStorage* fs, CvFileNode* node,
-                           CvDTreeTrainData* data );
-        virtual void write( CvFileStorage* fs );
-
-        const CvDTreeNode* get_root() const;
-        int get_pruned_tree_idx() const;
-        CvDTreeTrainData* get_data();
-
-    protected:
-
-        virtual bool do_train( const Mat& _subsample_idx );
-
-        virtual void try_split_node( CvDTreeNode* n );
-        virtual void split_node_data( CvDTreeNode* n );
-        virtual CvDTreeSplit* find_best_split( CvDTreeNode* n );
-        virtual CvDTreeSplit* find_split_ord_class( CvDTreeNode* n, int vi );
-        virtual CvDTreeSplit* find_split_cat_class( CvDTreeNode* n, int vi );
-        virtual CvDTreeSplit* find_split_ord_reg( CvDTreeNode* n, int vi );
-        virtual CvDTreeSplit* find_split_cat_reg( CvDTreeNode* n, int vi );
-        virtual CvDTreeSplit* find_surrogate_split_ord( CvDTreeNode* n, int vi );
-        virtual CvDTreeSplit* find_surrogate_split_cat( CvDTreeNode* n, int vi );
-        virtual double calc_node_dir( CvDTreeNode* node );
-        virtual void complete_node_dir( CvDTreeNode* node );
-        virtual void cluster_categories( const int* vectors, int vector_count,
-            int var_count, int* sums, int k, int* cluster_labels );
-
-        virtual void calc_node_value( CvDTreeNode* node );
-
-        virtual void prune_cv();
-        virtual double update_tree_rnc( int T, int fold );
-        virtual int cut_tree( int T, int fold, double min_alpha );
-        virtual void free_prune_data(bool cut_tree);
-        virtual void free_tree();
-
-        virtual void write_node( CvFileStorage* fs, CvDTreeNode* node );
-        virtual void write_split( CvFileStorage* fs, CvDTreeSplit* split );
-        virtual CvDTreeNode* read_node( CvFileStorage* fs,
-                                        CvFileNode* node,
-                                        CvDTreeNode* parent );
-        virtual CvDTreeSplit* read_split( CvFileStorage* fs, CvFileNode* node );
-        virtual void write_tree_nodes( CvFileStorage* fs );
-        virtual void read_tree_nodes( CvFileStorage* fs, CvFileNode* node );
-
-        CvDTreeNode* root;
-
-        int pruned_tree_idx;
-        Mat& var_importance;
-
-        CvDTreeTrainData* data;
-    };
+The class implements a decision tree predictor as described in the beginning of this section.
 
 
 .. index:: CvDTree::train
@@ -384,20 +201,24 @@ Decision tree ::
 
 CvDTree::train
 --------------
-.. ocv:function:: bool CvDTree::train(  const Mat& _train_data,  int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(),  const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
+.. ocv:function:: bool CvDTree::train( const Mat& train_data,  int tflag, const Mat& responses,  const Mat& var_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:function:: bool CvDTree::train( CvDTreeTrainData* _train_data, const Mat& _subsample_idx )
+.. ocv:function:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
 
+.. ocv:function:: bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
+
+.. ocv:function:: bool CvDTree::train( CvDTreeTrainData* train_data, const Mat& subsample_idx )
 
     Trains a decision tree.
 
-There are two ``train`` methods in ``CvDTree`` :
+There are four ``train`` methods in :ocv:class:`CvDTree`:
 
-* The first method follows the generic ``CvStatModel::train`` conventions. It is the most complete form. Both data layouts ( ``_tflag=CV_ROW_SAMPLE`` and ``_tflag=CV_COL_SAMPLE`` ) are supported, as well as sample and variable subsets, missing measurements, arbitrary combinations of input and output variable types, and so on. The last parameter contains all of the necessary training parameters (see the
-:ref:`CvDTreeParams` description).
+* The **first two** methods follow the generic ``CvStatModel::train`` conventions. It is the most complete form. Both data layouts (``tflag=CV_ROW_SAMPLE`` and ``tflag=CV_COL_SAMPLE``) are supported, as well as sample and variable subsets, missing measurements, arbitrary combinations of input and output variable types, and so on. The last parameter contains all of the necessary training parameters (see the :ref:`CvDTreeParams` description).
 
-* The second method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed
-:ref:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``_subsample_idx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``_subsample_idx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
+* The **third** method uses :ocv:class:`CvMLData` to pass training data to a decision tree.
+
+* The **last** method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed :ref:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``subsample_idx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``subsample_idx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
+
 
 .. index:: CvDTree::predict
 
@@ -405,22 +226,19 @@ There are two ``train`` methods in ``CvDTree`` :
 
 CvDTree::predict
 ----------------
-.. ocv:function:: CvDTreeNode* CvDTree::predict(  const Mat& _sample,  const Mat& _missing_data_mask=Mat(),                                 bool raw_mode=false ) const
+.. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missing_data_mask=Mat(), bool raw_mode=false ) const
+
+.. ocv:function:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
 
     Returns the leaf node of a decision tree corresponding to the input vector.
 
-The method takes the feature vector and an optional missing measurement mask as input, traverses the decision tree, and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the
-:ref:`CvDTreeNode` structure, for example: dtree-
-:math:`>` predict(sample,mask)-
-:math:`>` value.
+    :param sample: Sample for prediction.
 
-The last parameter is normally set to ``false`` , implying a regular
-input. If it is ``true`` , the method assumes that all the values of
-the discrete input variables have been already normalized to
-:math:`0` to
-:math:`num\_of\_categories_i-1` ranges since the decision tree uses such
-normalized representation internally. It is useful for faster prediction
-with tree ensembles. For ordered input variables, the flag is not used.
+    :param missing_data: Optional input missing measurement mask.
+
+    :param preprocessedInput: This parameter is normally set to ``false``, implying a regular input. If it is ``true``, the method assumes that all the values of the discrete input variables have been already normalized to :math:`0` to :math:`num\_of\_categories_i-1` ranges since the decision tree uses such normalized representation internally. It is useful for faster prediction with tree ensembles. For ordered input variables, the flag is not used.
+       
+The method traverses the decision tree and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the :ref:`CvDTreeNode` structure, for example: ``dtree->predict(sample,mask)->value``.
 
 
 .. index:: CvDTree::calc_error
@@ -469,6 +287,18 @@ CvDTree::get_root
 
     Returns the root of the decision tree.
 
+
+.. index:: CvDTree::get_pruned_tree_idx
+
+.. _CvDTree::get_pruned_tree_idx:
+
+CvDTree::get_pruned_tree_idx
+----------------------------
+.. ocv:function:: int CvDTree::get_pruned_tree_idx() const
+
+    Returns the ``CvDTree::pruned_tree_idx`` parameter.
+
+This parameter is used to prunde a decision tree. See the ``CvDTreeNode::Tn`` parameter.
 
 .. index:: CvDTree::get_data
 
