@@ -97,7 +97,7 @@ CvStatModel::clear
 
     Deallocates memory and resets the model state.
 
-The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the ``train`` methods of the derived classes, from the methods ``load()``,``read()`` , or even explicitly by the user.
+The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the ``train`` methods of the derived classes, from the methods ``load()``, ``read()``, or even explicitly by the user.
 
 .. index:: CvStatModel::save
 
@@ -189,7 +189,7 @@ Usually, the previous model state is cleared by ``clear()`` before running the t
 
 CvStatModel::predict
 --------------------
-.. ocv:function:: float CvStatMode::predict( const Mat& sample[, <prediction_params>] ) const
+.. ocv:function:: float CvStatModel::predict( const Mat& sample[, <prediction_params>] ) const
 
     Predicts the response for a sample.
 

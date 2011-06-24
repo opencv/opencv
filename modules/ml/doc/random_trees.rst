@@ -53,7 +53,7 @@ In random trees there is no need for any accuracy estimation procedures, such as
 
 CvRTParams
 ----------
-.. ocv:class:: struct CvRTParams : public CvDTreeParams
+.. ocv:class:: CvRTParams
 
     Training parameters of random trees.
 
@@ -97,7 +97,7 @@ The default constructor sets all parameters to some default values and they are 
 
 CvRTrees
 --------
-.. ocv:class:: class CvRTrees : public CvStatModel
+.. ocv:class:: CvRTrees
 
     Random trees.
 

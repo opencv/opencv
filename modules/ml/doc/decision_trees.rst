@@ -63,18 +63,35 @@ Importance of each variable is computed over all the splits on this variable in 
 
 CvDTreeSplit
 ------------
-.. c:type:: struct CvDTreeSplit
+.. c:type:: CvDTreeSplit
 
     Decision tree node split.
 
 The structure represents a possible decision tree node split. It has public members:
 
-    * ``int var_idx`` Index of variable on which the split is created.
-    * ``int inversed`` If it is not null then inverse split rule is used that is a left branch and a right branch are switched.
-    * ``float quality`` Quality of the split.
-    * ``CvDTreeSplit* next`` Pointer to the next split in the node list of splits.
-    * ``int subset[2]`` Parameters of the split on a categorical variable.
-    * ``struct {float c; int split_point;} ord`` Parameters of the split on ordered variable.
+.. ocv:member:: int var_idx
+
+    Index of variable on which the split is created.
+
+.. ocv:member:: int inversed
+
+    If it is not null then inverse split rule is used that is a left branch and a right branch are switched.
+
+.. ocv:member:: float quality
+
+    Quality of the split.
+
+.. ocv:member:: CvDTreeSplit* next
+
+    Pointer to the next split in the node list of splits.
+
+.. ocv:member:: int subset[2]
+
+    Parameters of the split on a categorical variable.
+
+.. ocv:member:: struct {float c; int split_point;} ord
+
+    Parameters of the split on ordered variable.
 
 
 .. index:: CvDTreeNode
@@ -83,20 +100,43 @@ The structure represents a possible decision tree node split. It has public memb
 
 CvDTreeNode
 -----------
-.. c:type:: struct CvDTreeNode
+.. c:type:: CvDTreeNode
 
     Decision tree node.
 
 The structure represents a node in a decision tree. It has public members:    
  
-    * ``int Tn`` Tree index in a sequence of pruned trees. Nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (they are pruned).
-    * ``double value`` Value at the node: a class label in case of classification or estimated function value in case of regression.
-    * ``CvDTreeNode* parent`` Pointer to the parent node.   
-    * ``CvDTreeNode* left`` Pointer to the left child node.
-    * ``CvDTreeNode* right`` Pointer to the right child node.
-    * ``CvDTreeSplit* split`` Pointer to the first (primary) split in the node list of splits.
-    * ``int sample_count`` Number of samples in the node.
-    * ``int depth`` Depth of the node.
+.. ocv:member:: int Tn
+
+    Tree index in a sequence of pruned trees. Nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (they are pruned).
+
+.. ocv:member:: double value
+
+    Value at the node: a class label in case of classification or estimated function value in case of regression.
+
+.. ocv:member:: CvDTreeNode* parent
+
+    Pointer to the parent node.
+
+.. ocv:mebmer:: CvDTreeNode* left
+
+    Pointer to the left child node.
+
+.. ocv:member:: CvDTreeNode* right
+
+    Pointer to the right child node.
+
+.. ocv:member:: CvDTreeSplit* split
+
+    Pointer to the first (primary) split in the node list of splits.
+
+.. ocv:mebmer:: int sample_count
+
+    Number of samples in the node.
+
+.. ocv:member:: int depth
+
+    Depth of the node.
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
 
@@ -107,7 +147,7 @@ Other numerous fields of ``CvDTreeNode`` are used internally at the training sta
 
 CvDTreeParams
 -------------
-.. c:type:: struct CvDTreeParams
+.. c:type:: CvDTreeParams
 
     Decision tree training parameters.
 
@@ -157,7 +197,7 @@ The default constructor initializes all the parameters with the default values t
 
 CvDTreeTrainData
 ----------------
-.. c:type:: struct CvDTreeTrainData
+.. c:type:: CvDTreeTrainData
 
     Decision tree training data and shared data for tree ensembles.
 
@@ -188,7 +228,7 @@ There are two ways of using this structure. In simple cases (for example, a stan
 
 CvDTree
 -------
-.. ocv:class:: class CvDTree : public CvStatModel
+.. ocv:class:: CvDTree 
 
     Decision tree.
 
