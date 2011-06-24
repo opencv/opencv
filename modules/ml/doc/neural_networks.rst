@@ -1,7 +1,9 @@
 Neural Networks
 ===============
 
-ML implements feed-forward artificial neural networks, more particularly, multi-layer perceptrons (MLP), the most commonly used type of neural networks. MLP consists of the input layer, output layer, and one or more hidden layers. Each layer of MLP includes one or more neurons that are directionally linked with the neurons from the previous and the next layer. The example below represents a 3-layer perceptron with three inputs, two outputs, and the hidden layer including five neurons:
+.. highlight:: cpp
+
+ML implements feed-forward artificial neural networks or, more particularly, multi-layer perceptrons (MLP), the most commonly used type of neural networks. MLP consists of the input layer, output layer, and one or more hidden layers. Each layer of MLP includes one or more neurons directionally linked with the neurons from the previous and the next layer. The example below represents a 3-layer perceptron with three inputs, two outputs, and the hidden layer including five neurons:
 
 .. image:: pics/mlp.png
 
@@ -45,10 +47,13 @@ In ML, all the neurons have the same activation functions, with the same free pa
 
 So, the whole trained network works as follows: 
 
-#. It takes the feature vector as input. The vector size is equal to the size of the input layer.
-#. Values are passed as input to the first hidden layer.
-#. Outputs of the hidden layer are computed using the weights and the activation functions.
-#. Outputs are passed further downstream until you compute the output layer.
+#. Take the feature vector as input. The vector size is equal to the size of the input layer.
+
+#. Pass values as input to the first hidden layer.
+
+#. Compute outputs of the hidden layer using the weights and the activation functions.
+
+#. Pass outputs further downstream until you compute the output layer.
 
 So, to compute the network, you need to know all the
 weights
@@ -66,10 +71,10 @@ so the error on the test set usually starts increasing after the network
 size reaches a limit. Besides, the larger networks are trained much
 longer than the smaller ones, so it is reasonable to pre-process the data,
 using
-:ref:`PCA::operator ()` or similar technique, and train a smaller network
+:ocv:func:`PCA::operator ()` or similar technique, and train a smaller network
 on only essential features.
 
-Another feature of MLP's is their inability to handle categorical
+Another MPL feature is an inability to handle categorical
 data as is. However, there is a workaround. If a certain feature in the
 input or output (in case of ``n`` -class classifier for
 :math:`n>2` ) layer is categorical and can take
@@ -101,9 +106,9 @@ References:
 
 CvANN_MLP_TrainParams
 ---------------------
-.. c:type:: CvANN_MLP_TrainParams
+.. ocv:class:: CvANN_MLP_TrainParams
 
-Parameters of the MLP training algorithm ::
+Parameters of the MLP training algorithm. ::
 
     struct CvANN_MLP_TrainParams
     {
@@ -134,9 +139,9 @@ The structure has a default constructor that initializes parameters for the ``RP
 
 CvANN_MLP
 ---------
-.. c:type:: CvANN_MLP
+.. ocv:class:: CvANN_MLP
 
-MLP model ::
+MLP model. ::
 
     class CvANN_MLP : public CvStatModel
     {
@@ -259,9 +264,9 @@ CvANN_MLP::train
 
     :param _flags: Various parameters to control the training algorithm. A combination of the following parameters is possible:
 
-            * **UPDATE_WEIGHTS = 1** Algorithm updates the network weights, rather than computes them from scratch (in the latter case the weights are initialized using the  Nguyen-Widrow  algorithm).
+            * **UPDATE_WEIGHTS = 1** Algorithm updates the network weights, rather than computes them from scratch. In the latter case the weights are initialized using the  Nguyen-Widrow  algorithm.
 
-            * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation =1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
+            * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation equal to 1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
 
             * **NO_OUTPUT_SCALE** Algorithm does not normalize the output vectors. If the flag is not set, the training algorithm normalizes each output feature independently, by transforming it to the certain range depending on the used activation function.
 

@@ -3,7 +3,9 @@
 Normal Bayes Classifier
 =======================
 
-This is a simple classification model assuming that feature vectors from each class are normally distributed (though, not necessarily independently distributed). So, the whole data distribution function is assumed to be a Gaussian mixture, one component per  class. Using the training data the algorithm estimates mean vectors and covariance matrices for every class, and then it uses them for prediction.
+.. highlight:: cpp
+
+This simple classification model assumes that feature vectors from each class are normally distributed (though, not necessarily independently distributed). So, the whole data distribution function is assumed to be a Gaussian mixture, one component per  class. Using the training data the algorithm estimates mean vectors and covariance matrices for every class, and then it uses them for prediction.
 
 [Fukunaga90] K. Fukunaga. *Introduction to Statistical Pattern Recognition*. second ed., New York: Academic Press, 1990.
 
@@ -11,9 +13,9 @@ This is a simple classification model assuming that feature vectors from each cl
 
 CvNormalBayesClassifier
 -----------------------
-.. c:type:: CvNormalBayesClassifier
+.. ocv:class:: CvNormalBayesClassifier
 
-Bayes classifier for normally distributed data ::
+Bayes classifier for normally distributed data. ::
 
     class CvNormalBayesClassifier : public CvStatModel
     {
@@ -50,7 +52,7 @@ CvNormalBayesClassifier::train
 
     Trains the model.
 
-The method trains the Normal Bayes classifier. It follows the conventions of the generic ``train`` "method" with the following limitations: 
+The method trains the Normal Bayes classifier. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.

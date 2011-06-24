@@ -1,9 +1,11 @@
-K Nearest Neighbors
+K-Nearest Neighbors
 ===================
+
+.. highlight:: cpp
 
 The algorithm caches all training samples and predicts the response for a new sample by analyzing a certain number (
 **K**
-) of the nearest neighbors of the sample (using voting, calculating weighted sum, and so on). The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
+) of the nearest neighbors of the sample using voting, calculating weighted sum, and so on. The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
 
 .. index:: CvKNearest
 
@@ -11,9 +13,9 @@ The algorithm caches all training samples and predicts the response for a new sa
 
 CvKNearest
 ----------
-.. c:type:: CvKNearest
+.. ocv:class:: CvKNearest
 
-K-Nearest Neighbors model ::
+K-Nearest Neighbors model. ::
 
     class CvKNearest : public CvStatModel
     {
@@ -53,7 +55,8 @@ CvKNearest::train
 
     Trains the model.
 
-The method trains the K-Nearest model. It follows the conventions of the generic ``train`` "method" with the following limitations: 
+The method trains the K-Nearest model. It follows the conventions of the generic ``train`` approach with the following limitations: 
+
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.
 * Output variables can be either categorical ( ``is_regression=false`` ) or ordered ( ``is_regression=true`` ).
@@ -87,7 +90,7 @@ For each input vector, the neighbors are sorted by their distances to the vector
 
 If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method.
 
-The sample below (currently using the obsolete ``CvMat`` structures) demonstrates the use of the k-nearest classifier for 2D point classification ::
+The sample below (currently using the obsolete ``CvMat`` structures) demonstrates the use of the k-nearest classifier for 2D point classification: ::
 
     #include "ml.h"
     #include "highgui.h"

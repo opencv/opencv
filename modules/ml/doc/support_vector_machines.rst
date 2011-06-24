@@ -3,9 +3,9 @@ Support Vector Machines
 
 .. highlight:: cpp
 
-Originally, support vector machines (SVM) was a technique for building an optimal binary (2-class) classifier. Later the technique has been extended to regression and clustering problems. SVM is a partial case of kernel-based methods. It maps feature vectors into a higher-dimensional space using a kernel function and builds an optimal linear discriminating function in this space or an optimal hyper-plane that fits into the training data. In case of SVM, the kernel is not defined explicitly. Instead, a distance between any 2 points in the hyper-space needs to be defined.
+Originally, support vector machines (SVM) was a technique for building an optimal binary (2-class) classifier. Later the technique was extended to regression and clustering problems. SVM is a partial case of kernel-based methods. It maps feature vectors into a higher-dimensional space using a kernel function and builds an optimal linear discriminating function in this space or an optimal hyper-plane that fits into the training data. In case of SVM, the kernel is not defined explicitly. Instead, a distance between any 2 points in the hyper-space needs to be defined.
 
-The solution is optimal, which means that the margin between the separating hyper-plane and the nearest feature vectors from both classes (in case of 2-class classifier) is maximal. The feature vectors that are the closest to the hyper-plane are called "support vectors", which means that the position of other vectors does not affect the hyper-plane (the decision function).
+The solution is optimal, which means that the margin between the separating hyper-plane and the nearest feature vectors from both classes (in case of 2-class classifier) is maximal. The feature vectors that are the closest to the hyper-plane are called *support vectors*, which means that the position of other vectors does not affect the hyper-plane (the decision function).
 
 There are a lot of good references on SVM. You may consider starting with the following:
 
@@ -27,9 +27,9 @@ There are a lot of good references on SVM. You may consider starting with the fo
 
 CvSVM
 -----
-.. c:type:: CvSVM
+.. ocv:class:: CvSVM
 
-Support Vector Machines ::
+Support Vector Machines. ::
 
     class CvSVM : public CvStatModel
     {
@@ -90,9 +90,9 @@ Support Vector Machines ::
 
 CvSVMParams
 -----------
-.. c:type:: CvSVMParams
+.. ocv:class:: CvSVMParams
 
-SVM training parameters ::
+SVM training parameters. ::
 
     struct CvSVMParams
     {
@@ -117,7 +117,7 @@ SVM training parameters ::
 
 
 The structure must be initialized and passed to the training method of
-:ref:`CvSVM` .
+:ocv:class:`CvSVM` .
 
 .. index:: CvSVM::train
 
@@ -127,17 +127,20 @@ CvSVM::train
 ------------
 .. ocv:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
 
-    Trains SVM.
+    Trains an SVM.
 
-The method trains the SVM model. It follows the conventions of the generic ``train`` "method" with the following limitations: 
+The method trains the SVM model. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
 * Only the ``CV_ROW_SAMPLE`` data layout is supported.
+
 * Input variables are all ordered.
+
 * Output variables can be either categorical ( ``_params.svm_type=CvSVM::C_SVC`` or ``_params.svm_type=CvSVM::NU_SVC`` ), or ordered ( ``_params.svm_type=CvSVM::EPS_SVR`` or ``_params.svm_type=CvSVM::NU_SVR`` ), or not required at all ( ``_params.svm_type=CvSVM::ONE_CLASS`` ).
+
 * Missing measurements are not supported.
 
 All the other parameters are gathered in the
-:ref:`CvSVMParams` structure.
+:ocv:class:`CvSVMParams` structure.
 
 .. index:: CvSVM::train_auto
 
@@ -147,16 +150,16 @@ CvSVM::train_auto
 -----------------
 .. ocv:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
 
-    Trains SVM with optimal parameters.
+    Trains an SVM with optimal parameters.
 
     :param k_fold: Cross-validation parameter. The training set is divided into  ``k_fold``  subsets. One subset is used to train the model, the others form the test set. So, the SVM algorithm is executed  ``k_fold``  times.
 
 The method trains the SVM model automatically by choosing the optimal
 parameters ``C`` , ``gamma`` , ``p`` , ``nu`` , ``coef0`` , ``degree`` from
-:ref:`CvSVMParams`. Parameters are considered optimal
+:ocv:class:`CvSVMParams`. Parameters are considered optimal
 when the cross-validation estimate of the test set error
 is minimal. The parameters are iterated by a logarithmic grid, for
-example, the parameter ``gamma`` takes the values in the set
+example, the parameter ``gamma`` takes values in the set
 (
 :math:`min`,
 :math:`min*step`,
@@ -165,7 +168,7 @@ example, the parameter ``gamma`` takes the values in the set
 where
 :math:`min` is ``gamma_grid.min_val`` ,
 :math:`step` is ``gamma_grid.step`` , and
-:math:`n` is the maximal index such that
+:math:`n` is the maximal index where
 
 .. math::
 
@@ -173,12 +176,12 @@ where
 
 So ``step`` must always be greater than 1.
 
-If there is no need to optimize a parameter, the corresponding grid step should be set to any value less or equal to 1. For example, to avoid optimization in ``gamma`` , set ``gamma_grid.step = 0`` , ``gamma_grid.min_val`` , ``gamma_grid.max_val`` as arbitrary numbers. In this case, the value ``params.gamma`` is taken for ``gamma`` .
+If there is no need to optimize a parameter, the corresponding grid step should be set to any value less than or equal to 1. For example, to avoid optimization in ``gamma`` , set ``gamma_grid.step = 0`` , ``gamma_grid.min_val`` , ``gamma_grid.max_val`` as arbitrary numbers. In this case, the value ``params.gamma`` is taken for ``gamma`` .
 
 And, finally, if the optimization in a parameter is required but
 the corresponding grid is unknown, you may call the function ``CvSVM::get_default_grid`` . To generate a grid, for example, for ``gamma`` , call ``CvSVM::get_default_grid(CvSVM::GAMMA)`` .
 
-This function works for the case of classification
+This function works for the classification
 ( ``params.svm_type=CvSVM::C_SVC`` or ``params.svm_type=CvSVM::NU_SVC`` )
 as well as for the regression
 ( ``params.svm_type=CvSVM::EPS_SVR`` or ``params.svm_type=CvSVM::NU_SVR`` ). If ``params.svm_type=CvSVM::ONE_CLASS`` , no optimization is made and the usual SVM with parameters specified in ``params``  is executed.
@@ -207,7 +210,7 @@ CvSVM::get_default_grid
 
             * **CvSVM::DEGREE**
 
-        The grid will be generated for the parameter with this ID.
+        The grid is generated for the parameter with this ID.
 
 The function generates a grid for the specified parameter of the SVM algorithm. The grid may be passed to the function ``CvSVM::train_auto`` .
 
