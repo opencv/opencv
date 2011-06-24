@@ -238,9 +238,9 @@ GBT model. ::
 
 CvGBTrees::train
 ----------------
-.. ocv:function:: bool train(const Mat & trainData, int tflag, const Mat & responses, const Mat & varIdx=Mat(), const Mat & sampleIdx=Mat(), const Mat & varType=Mat(), const Mat & missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
+.. ocv:function:: bool CvGBTrees::train(const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
 
-.. ocv:function:: bool train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
+.. ocv:function:: bool CvGBTrees::train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
     
 	Trains a Gradient boosted tree model.
 	
@@ -265,7 +265,7 @@ as a :ocv:class:`CvGBTreesParams` structure.
 
 CvGBTrees::predict
 ------------------
-.. ocv:function:: float predict(const Mat & sample, const Mat & missing=Mat(), const Range & slice = Range::all(), int k=-1) const
+.. ocv:function:: float CvGBTrees::predict(const Mat& sample, const Mat& missing=Mat(), const Range& slice = Range::all(), int k=-1) const
 
     Predicts a response for an input sample.
  
@@ -308,7 +308,7 @@ of single trees are computed in a parallel fashion.
 
 CvGBTrees::clear
 ----------------
-.. ocv:function:: void clear()
+.. ocv:function:: void CvGBTrees::clear()
 
     Clears the model.
     
@@ -323,7 +323,7 @@ destructor.
 
 CvGBTrees::calc_error
 ---------------------
-.. ocv:function:: float calc_error( CvMLData* _data, int type, std::vector<float> *resp = 0 )
+.. ocv:function:: float CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp = 0 )
 
     Calculates a training or testing error.
     

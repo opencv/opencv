@@ -102,9 +102,9 @@ All parameters are public. You can initialize them by a constructor and then ove
 
 CvEMParams::CvEMParams
 ----------------------
-.. ocv:function:: CvEMParams()
+.. ocv:function:: CvEMParams::CvEMParams()
 
-.. ocv:function:: CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/, int start_step=0/*CvEM::START_AUTO_STEP*/, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
+.. ocv:function:: CvEMParams::CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/, int start_step=0/*CvEM::START_AUTO_STEP*/, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
 
     :param nclusters: The number of mixtures in the gaussian mixture model.
 
