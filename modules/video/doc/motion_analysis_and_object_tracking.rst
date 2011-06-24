@@ -11,9 +11,9 @@ calcOpticalFlowPyrLK
 
     Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with pyramids.
 
-    :param prevImg: The first 8-bit single-channel or 3-channel input image.
+    :param prevImg: First 8-bit single-channel or 3-channel input image.
 
-    :param nextImg: The second input image of the same size and the same type as  ``prevImg`` .
+    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
 
     :param prevPts: Vector of points for which the flow needs to be found.
 
@@ -47,9 +47,9 @@ calcOpticalFlowFarneback
 
     Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
-    :param prevImg: The first 8-bit single-channel input image.
+    :param prevImg: First 8-bit single-channel input image.
 
-    :param nextImg: The second input image of the same size and the same type as  ``prevImg`` .
+    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
 
     :param flow: Computed flow image that has the same size as  ``prevImg``  and type  ``CV_32FC2`` .
 
@@ -69,7 +69,7 @@ calcOpticalFlowFarneback
 
             * **OPTFLOW_USE_INITIAL_FLOW** Use the input  ``flow``  as an initial flow approximation.
 
-            * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
+            * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
 The function finds an optical flow for each ``prevImg`` pixel using the alorithm so that
 
@@ -86,20 +86,20 @@ estimateRigidTransform
 
     Computes an optimal affine transformation between two 2D point sets.
 
-    :param src: The first input 2D point set, stored in ``std::vector`` or ``Mat``, or an image, stored in ``Mat``
+    :param src: First input 2D point set stored in ``std::vector`` or ``Mat``, or an image stored in ``Mat``.
 
-    :param dst: The second input 2D point set of the same size and the same type as ``A``, or another image.
+    :param dst: Second input 2D point set of the same size and the same type as ``A``, or another image.
 
     :param fullAffine: If true, the function finds an optimal affine transformation with no additional resrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is limited to combinations of translation, rotation, and uniform scaling (5 degrees of freedom).
 
 The function finds an optimal affine transform *[A|b]* (a ``2 x 3`` floating-point matrix) that approximates best the affine transformation between:
 
-  #.
-      two point sets
-  #.
-      or between 2 raster images. In this case, the function first finds some features in the ``src`` image and finds the corresponding features in ``dst`` image, after which the problem is reduced to the first case.
+  *
+      Two point sets
+  *
+      Two raster images. In this case, the function first finds some features in the ``src`` image and finds the corresponding features in ``dst`` image. After that, the problem is reduced to the first case.
       
-In the case of point sets, the problem is formulated in the following way. We need to find such 2x2 matrix *A* and 2x1 vector *b*, such that:
+In case of point sets, the problem is formulated as follows: you need to find a 2x2 matrix *A* and 2x1 vector *b* so that:
 
     .. math::
 
@@ -107,7 +107,7 @@ In the case of point sets, the problem is formulated in the following way. We ne
 
     where ``src[i]`` and ``dst[i]`` are the i-th points in ``src`` and ``dst``, respectively
     
-    :math:`[A|b]` can be either arbitrary (when ``fullAffine=true`` ) or have form
+    :math:`[A|b]` can be either arbitrary (when ``fullAffine=true`` ) or have a form of
 
     .. math::
 
@@ -115,10 +115,10 @@ In the case of point sets, the problem is formulated in the following way. We ne
 
     when ``fullAffine=false`` .
 
-    See Also:
-    :ocv:func:`getAffineTransform`,
-    :ocv:func:`getPerspectiveTransform`,
-    :ocv:func:`findHomography`
+.. seealso::
+:ocv:func:`getAffineTransform`,
+:ocv:func:`getPerspectiveTransform`,
+:ocv:func:`findHomography`
 
 
 .. index:: updateMotionHistory
@@ -219,17 +219,17 @@ segmentMotion
 
 .. ocv:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
 
-    Splits a motion history image into a few parts corresponding to separate independent motions (e.g. left hand, right hand).
+    Splits a motion history image into a few parts corresponding to separate independent motions (for example, left hand, right hand).
 
     :param mhi: Motion history image.
 
-    :param segmask: Image where the mask found should be stored, single-channel, 32-bit floating-point.
+    :param segmask: Image where the found mask should be stored, single-channel, 32-bit floating-point.
 
-    :param boundingRects: Vector that will contain ROIs of motion connected components.
+    :param boundingRects: Vector containing ROIs of motion connected components.
 
     :param timestamp: Current time in milliseconds or other units.
 
-    :param segThresh: Segmentation threshold; recommended to be equal to the interval between motion history "steps" or greater.
+    :param segThresh: Segmentation threshold that is recommended to be equal to the interval between motion history "steps" or greater.
  
 
 The function finds all of the motion segments and marks them in ``segmask`` with individual values (1,2,...). It also computes a vector with ROIs of motion connected components. After that the motion direction for every component can be calculated with :ocv:func:`calcGlobalOrientation` using the extracted mask of the particular component.
@@ -274,10 +274,10 @@ meanShift
 The function implements the iterative object search algorithm. It takes the input back projection of an object and the initial position. The mass center in ``window`` of the back projection image is computed and the search window center shifts to the mass center. The procedure is repeated until the specified number of iterations ``criteria.maxCount`` is done or until the window center shifts by less than ``criteria.epsilon`` . The algorithm is used inside
 :ocv:func:`CamShift` and, unlike
 :ocv:func:`CamShift` , the search window size or orientation do not change during the search. You can simply pass the output of
-:ocv:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise (for example, by retrieving connected components with
+:ocv:func:`calcBackProject` to this function. But better results can be obtained if you pre-filter the back projection and remove the noise. For example, you can do this by retrieving connected components with
 :ocv:func:`findContours` , throwing away contours with small area (
 :ocv:func:`contourArea` ), and rendering the  remaining contours with
-:ocv:func:`drawContours` ).
+:ocv:func:`drawContours` .
 
 .. index:: KalmanFilter
 
@@ -307,13 +307,13 @@ KalmanFilter::KalmanFilter
 
     The full constructor.
     
-    :param dynamParams: The dimensionality of the state.
+    :param dynamParams: Dimensionality of the state.
     
-    :param measureParams: The dimensionality of the measurement.
+    :param measureParams: Dimensionality of the measurement.
     
-    :param controlParams: The dimensionality of the control vector.
+    :param controlParams: Dimensionality of the control vector.
 
-    :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
+    :param type: Type of the created matrices that should be ``CV_32F`` or ``CV_64F``.
  
 
 .. index:: KalmanFilter::init
@@ -325,13 +325,13 @@ KalmanFilter::init
 
     Re-initializes Kalman filter. The previous content is destroyed.
 
-    :param dynamParams: The dimensionality of the state.
+    :param dynamParams: Dimensionality of the state.
     
-    :param measureParams: The dimensionality of the measurement.
+    :param measureParams: Dimensionality of the measurement.
     
-    :param controlParams: The dimensionality of the control vector.
+    :param controlParams: Dimensionality of the control vector.
 
-    :param type: Type of the created matrices. Should be ``CV_32F`` or ``CV_64F``.
+    :param type: Type of the created matrices that should be ``CV_32F`` or ``CV_64F``.
 
 
 .. index:: KalmanFilter::predict
@@ -341,7 +341,7 @@ KalmanFilter::predict
 
 .. ocv:function:: const Mat& KalmanFilter::predict(const Mat& control=Mat())
 
-    Computes predicted state
+    Computes a predicted state.
 
 
 .. index:: KalmanFilter::correct
@@ -351,7 +351,7 @@ KalmanFilter::correct
 
 .. ocv:function:: const Mat& KalmanFilter::correct(const Mat& measurement)
 
-    Updates the predicted state from the measurement
+    Updates the predicted state from the measurement.
 
 
 .. index:: BackgroundSubtractor
@@ -361,7 +361,7 @@ BackgroundSubtractor
 
 .. ocv:class: BackgroundSubtractor
 
-The base class for background/foreground segmentation. ::
+Base class for background/foreground segmentation. ::
 
     class BackgroundSubtractor
     {
@@ -382,11 +382,11 @@ BackgroundSubtractor::operator()
 
 .. ocv:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
-    Computes foreground mask.
+    Computes a foreground mask.
 
-    :param image: The next video frame.
+    :param image: Next video frame.
 
-    :param fgmask: The foreground mask as 8-bit binary image.
+    :param fgmask: Foreground mask as an 8-bit binary image.
 
 
 .. index:: BackgroundSubtractor::getBackgroundImage
@@ -396,7 +396,7 @@ BackgroundSubtractor::getBackgroundImage
 
 .. ocv:function:: virtual void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
 
-This method computes a background image.
+	Computes a background image.
 
 
 .. index:: BackgroundSubtractorMOG
@@ -406,9 +406,9 @@ BackgroundSubtractorMOG
 
 .. ocv:class: BackgroundSubtractorMOG : public BackgroundSubtractor
 
-    Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
-The class implements the following algorithm: P. KadewTraKuPong and R. Bowden, An improved adaptive background mixture model for real-time tracking with shadow detection, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
 
 
 .. index:: BackgroundSubtractorMOG::BackgroundSubtractorMOG
@@ -420,15 +420,17 @@ BackgroundSubtractorMOG::BackgroundSubtractorMOG
 
 .. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
 
-    :param history: The length of the history.
+	Description??
 
-    :param nmixtures: The number of gaussian mixtures.
+    :param history: Length of the history.
+
+    :param nmixtures: Number of Gaussian mixtures.
 
     :param backgroundRatio: Background ratio.
 
-    :param noiseSigma: The noise strength.
+    :param noiseSigma: Noise strength.
 
-Default constructor sets all parameters to some default values.
+Default constructor sets all parameters to default values.
 
 
 .. index:: BackgroundSubtractorMOG::operator()
@@ -438,7 +440,7 @@ BackgroundSubtractorMOG::operator()
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
-    The update operator.
+    Updates an operator.??
 
 
 .. index:: BackgroundSubtractorMOG::initialize
@@ -448,7 +450,7 @@ BackgroundSubtractorMOG::initialize
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG::initialize(Size frameSize, int frameType) 
 
-    Re-initiaization method.
+    Re-initiaizes the data.??
 
 
 .. index:: BackgroundSubtractorMOG2
@@ -458,13 +460,13 @@ BackgroundSubtractorMOG2
 
 .. ocv:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
-    Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
-The class implements the Gaussian mixture model background subtraction from: 
+The class implements the Gaussian mixture model background subtraction described in: 
 
-  * Z.Zivkovic, Improved adaptive Gausian mixture model for background subtraction, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
+  * Z.Zivkovic, *Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
 
-  * Z.Zivkovic, F. van der Heijden, Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction, Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006. The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on: Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004.
+  * Z.Zivkovic, F. van der Heijden, *Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction*, Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006. The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on: Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004.
 
 
 .. index:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
@@ -476,34 +478,36 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
 
 .. ocv:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int history, float varThreshold, bool bShadowDetection=1)
 
-    :param history: The length of the history.
+	Description??
 
-    :param varThreshold: Threshold on the squared Mahalanobis distance to decide if it is well described by the background model or not. Related to Cthr from the paper. This does not influence the update of the background. A typical value could be 4 sigma and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
+    :param history: Length of the history.
 
-    :param bShadowDetection: Do shadow detection (true) or not (false).
+    :param varThreshold: Threshold on the squared Mahalanobis distance to decide whether it is well described by the background model (see Cthr??). This parameter does not affect the background update. A typical value could be 4 sigma, that is, ``varThreshold=4*4=16;`` (see Tb??).
+
+    :param bShadowDetection: Parameter defining whether shadow detection should be enabled (``true`` or ``false``).
 
 
-The class has an important public parameter:
+The class??why class?? has an important public parameter:
 
-    :param nmixtures: The maximum allowed number of mixture comonents. Actual number is determined dynamically per pixel.
+    :param nmixtures: Maximum allowed number of mixture comonents. Actual number is determined dynamically per pixel.
 
-Also the class has several less important parameters - things you might change but be carefull:
+There are other less important parameters of the class that you may cautiously change:??check the param desc below. I rephrased many of them??
 
-    :param backgroundRatio: Corresponds to fTB=1-cf from the paper. TB - threshold when the component becomes significant enough to be included into the background model. It is the TB=1-cf from the paper. Default is cf=0.1 => TB=0.9. For alpha=0.001 it means that the mode should exist for approximately 105 frames before it is considered foreground.
+    :param backgroundRatio: Threshold defining whether the component is significant enough to be included into the background model ( corresponds to ``TB=1-cf`` from the paper??which paper??). ``cf=0.1 => TB=0.9`` is default. For ``alpha=0.001``, it means that the mode should exist for approximately 105 frames before it is considered foreground.
 
-    :param varThresholdGen: Correspondts to Tg - threshold on the squared Mahalanobis distance to decide when a sample is close to the existing components. If it is not close to any a new component will be generated. Default is 3 sigma => Tg=3*3=9. Smaller Tg leads to more generated components and higher Tg might make lead to small number of components but they can grow too large.
+    :param varThresholdGen: Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg``). If it is not close to any component, a new component is generated. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
 
-    :param fVarInit: Initial variance for the newly generated components. It will will influence the speed of adaptation. A good guess should be made. A simple way is to estimate the typical standard deviation from the images. OpenCV uses here 15 as a reasonable value.
+    :param fVarInit: Initial variance for the newly generated components. It affects the speed of adaptation. The parameter value is based on your estimate of the typical standard deviation from the images. OpenCV uses 15 as a reasonable value.
 
-    :param fVarMin: Used to further control the variance.
+    :param fVarMin: Parameter used to further control the variance.
 
-    :param fVarMax: Used to further control the variance.
+    :param fVarMax: Parameter used to further control the variance.
 
-    :param fCT: Complexity reduction prior. This is related to the number of samples needed to accept that a component actually exists. Default is CT=0.05 of all the samples. By setting CT=0 you get the standard Stauffer&Grimson algorithm (maybe not exact but very similar).
+    :param fCT: Complexity reduction prior??. This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
 
-    :param nShadowDetection: This value is inserted as the shadow detection result. Default value is 127.
+    :param nShadowDetection: Shadow detection result. Default value is 127.
 
-    :param fTau: Shadow threshold. The shadow is detected if the pixel is darker version of the background. Tau is a threshold on how much darker the shadow can be. Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow. See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+    :param fTau: Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati,Mikic,Trivedi,Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
                  
 
 .. index:: BackgroundSubtractorMOG2::operator()
@@ -513,7 +517,7 @@ BackgroundSubtractorMOG2::operator()
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
 
-    The update operator.
+    Updates an operator.??
 
 
 .. index:: BackgroundSubtractorMOG2::initialize
@@ -523,7 +527,7 @@ BackgroundSubtractorMOG2::initialize
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG2::initialize(Size frameSize, int frameType)
 
-    Re-initiaization method.
+    Re-initializes the data.??
 
 
 .. index:: BackgroundSubtractorMOG2::getBackgroundImage
@@ -533,6 +537,6 @@ BackgroundSubtractorMOG2::getBackgroundImage
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
 
-    Computes a background image which are the mean of all background gaussians.
+    Computes a background image, which is the mean of all background Gaussians.
 
 

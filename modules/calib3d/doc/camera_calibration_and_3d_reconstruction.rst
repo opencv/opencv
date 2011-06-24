@@ -1,6 +1,8 @@
 Camera Calibration and 3D Reconstruction
 ========================================
 
+.. highlight:: cpp
+
 The functions in this section use a so-called pinhole camera model. In this model, a scene view is formed by projecting 3D points into the image plane
 using a perspective transformation.
 
@@ -158,29 +160,28 @@ The algorithm performs the following steps:
 
 #.
     Estimate the initial camera pose as if the intrinsic parameters have been already known. This is done using
-    :ref:`solvePnP` .
+    :ocv:func:`solvePnP` .
 #.
     Run the global Levenberg-Marquardt optimization algorithm to minimize the reprojection error, that is, the total sum of squared distances between the observed feature points ``imagePoints``     and the projected (using the current estimates for camera parameters and the poses) object points ``objectPoints``. See :ref:`projectPoints` for details.
 
 The function returns the final re-projection error.
 
-**Note:**
+.. note::
 
-If you use a non-square (=non-NxN) grid and
-:ref:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns
-bad values (zero distortion coefficients, an image center very far from
-:math:`(w/2-0.5,h/2-0.5)` , and/or large differences between
-:math:`f_x` and
-:math:`f_y` (ratios of
-10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in
-:ref:`FindChessboardCorners` .
+	If you use a non-square (=non-NxN) grid and	:ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns
+	bad values (zero distortion coefficients, an image center very far from
+	:math:`(w/2-0.5,h/2-0.5)` , and/or large differences between
+	:math:`f_x` and
+	:math:`f_y` (ratios of
+	10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in
+	:ocv:func:`FindChessboardCorners` .
 
-See Also:
-:ref:`FindChessboardCorners`,
-:ref:`solvePnP`,
-:ref:`initCameraMatrix2D`, 
-:ref:`stereoCalibrate`,
-:ref:`undistort`
+.. seealso::
+:ocv:func:`FindChessboardCorners`,
+:ocv:func:`solvePnP`,
+:ocv:func:`initCameraMatrix2D`, 
+:ocv:func:`stereoCalibrate`,
+:ocv:func:`undistort`
 
 
 
@@ -219,13 +220,13 @@ composeRT
 
     Combines two rotation-and-shift transformations.
 
-    :param rvec1: The first rotation vector.
+    :param rvec1: First rotation vector.
 
-    :param tvec1: The first translation vector.
+    :param tvec1: First translation vector.
 
-    :param rvec2: The second rotation vector.
+    :param rvec2: Second rotation vector.
 
-    :param tvec2: The second translation vector.
+    :param tvec2: Second translation vector.
 
     :param rvec3: Output rotation vector of the superposition.
 
@@ -242,8 +243,8 @@ The functions compute:
 where :math:`\mathrm{rodrigues}` denotes a rotation vector to a rotation matrix transformation, and
 :math:`\mathrm{rodrigues}^{-1}` denotes the inverse transformation. See :ref:`Rodrigues` for details.
 
-Also, the functions can compute the derivatives of the output vectors with regards to the input vectors (see :ref:`matMulDeriv` ).
-The functions are used inside :ref:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains a matrix multiplication.
+Also, the functions can compute the derivatives of the output vectors with regards to the input vectors (see :ocv:func:`matMulDeriv` ).
+The functions are used inside :ocv:func:`stereoCalibrate` but can also be used in your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a function that contains a matrix multiplication.
 
 
 
@@ -257,7 +258,7 @@ computeCorrespondEpilines
     
     :param whichImage: Index of the image (1 or 2) that contains the  ``points`` .
     
-    :param F: Fundamental matrix that can be estimated using  :ref:`findFundamentalMat`         or  :ref:`StereoRectify` .
+    :param F: Fundamental matrix that can be estimated using  :ocv:func:`findFundamentalMat`         or  :ocv:func:`StereoRectify` .
 
     :param lines: Output vector of the epipolar lines corresponding to the points in the other image. Each line :math:`ax + by + c=0`  is encoded by 3 numbers  :math:`(a, b, c)` .
     
@@ -265,7 +266,7 @@ For every point in one of the two images of a stereo pair, the function finds th
 corresponding epipolar line in the other image.
 
 From the fundamental matrix definition (see
-:ref:`findFundamentalMat` ),
+:ocv:func:`findFundamentalMat` ),
 line
 :math:`l^{(2)}_i` in the second image for the point
 :math:`p^{(1)}_i` in the first image (when ``whichImage=1`` ) is computed as:
@@ -327,9 +328,11 @@ convertPointsHomogeneous
 
     :param src: Input array or vector of 2D, 3D, or 4D points.
 
-    :param dst: Output vector of 2D, 3D or 4D points.
+    :param dst: Output vector of 2D, 3D, or 4D points.
 
-The function converts 2D or 3D points from/to homogeneous coordinates by calling either :ocv:func:`convertPointsToHomogeneous` or :ocv:func:`convertPointsFromHomogeneous`. The function is obsolete; use one of the previous two instead.
+The function converts 2D or 3D points from/to homogeneous coordinates by calling either :ocv:func:`convertPointsToHomogeneous` or :ocv:func:`convertPointsFromHomogeneous`. 
+
+.. note:: The function is obsolete. Use one of the previous two functions instead.
 
 
 
@@ -343,7 +346,7 @@ decomposeProjectionMatrix
 
     :param projMatrix: 3x4 input projection matrix P.
 
-    :param cameraMatrix: The output 3x3 camera matrix K
+    :param cameraMatrix: Output 3x3 camera matrix K.
 
     :param rotMatrix: Output 3x3 external rotation matrix R.
 
@@ -355,14 +358,14 @@ decomposeProjectionMatrix
 
     :param rotMatrZ: Optional 3x3 rotation matrix around z-axis.
 
-    :param eulerAngles: Optional 3-element vector containing the three Euler angles of rotation.
+    :param eulerAngles: Optional three-element vector containing three Euler angles of rotation.
 
 The function computes a decomposition of a projection matrix into a calibration and a rotation matrix and the position of a camera.
 
-It optionally returns three rotation matrices, one for each axis, and the three Euler angles that could be used in OpenGL.
+It optionally returns three rotation matrices, one for each axis, and three Euler angles that could be used in OpenGL.
 
 The function is based on
-:ref:`RQDecomp3x3` .
+:ocv:func:`RQDecomp3x3` .
 
 
 
@@ -374,7 +377,7 @@ drawChessboardCorners
 
     :param image: Destination image. It must be an 8-bit color image.
 
-    :param patternSize: Number of inner corners per a chessboard row and column ``(patternSize = cv::Size(points_per_row,points_per_column))``
+    :param patternSize: Number of inner corners per a chessboard row and column ``(patternSize = cv::Size(points_per_row,points_per_column))``.
 
     :param corners: Array of detected corners, the output of ``findChessboardCorners``.
 
@@ -392,7 +395,7 @@ findChessboardCorners
 
     :param image: Source chessboard view. It must be an 8-bit grayscale or color image.
 
-    :param patternSize: Number of inner corners per a chessboard row and column. ``( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) )``
+    :param patternSize: Number of inner corners per a chessboard row and column ``( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) )``.
 
     :param corners: Output array of detected corners. 
 
@@ -400,9 +403,9 @@ findChessboardCorners
 
             * **CV_CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black and white, rather than a fixed threshold level (computed from the average image brightness).
 
-            * **CV_CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with  :ref:`EqualizeHist`  before applying fixed or adaptive thresholding.
+            * **CV_CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with  :ocv:func:`EqualizeHist`  before applying fixed or adaptive thresholding.
 
-            * **CV_CALIB_CB_FILTER_QUADS** Use additional criteria (like contour area, perimeter, square-like shape) to filter out false quads that are extracted at the contour retrieval stage.
+            * **CV_CALIB_CB_FILTER_QUADS** Use additional criteria (like contour area, perimeter, square-like shape) to filter out false quads extracted at the contour retrieval stage.
 
             * **CALIB_CB_FAST_CHECK** Run a fast check on the image that looks for chessboard corners, and shortcut the call if none is found. This can drastically speed up the call in the degenerate condition when no chessboard is observed.
 
@@ -412,8 +415,8 @@ locate the internal chessboard corners. The function returns a non-zero
 value if all of the corners are found and they are placed
 in a certain order (row by row, left to right in every row). Otherwise, if the function fails to find all the corners or reorder
 them, it returns 0. For example, a regular chessboard has 8 x 8
-squares and 7 x 7 internal corners, that is, points where the black
-squares touch each other. The detected coordinates are approximate so the function calls :ref:`cornerSubPix` internally to determine their position more accurately.
+squares and 7 x 7 internal corners, that is, points where the black squares touch each other.
+The detected coordinates are approximate, and to determine their positions more accurately, the function calls :ocv:func:`cornerSubPix`.
 You also may use the function :ref:`cornerSubPix` with different parameters if returned coordinates are not accurate enough.
 
 Sample usage of detecting and drawing chessboard corners: ::
@@ -434,9 +437,7 @@ Sample usage of detecting and drawing chessboard corners: ::
 
     drawChessboardCorners(img, patternsize, Mat(corners), patternfound);
 
-**Note:**
-
-The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments. Otherwise, if there is no border and the background is dark, the outer black squares cannot be segmented properly and so the square grouping and ordering algorithm fails.
+.. note:: The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments. Otherwise, if there is no border and the background is dark, the outer black squares cannot be segmented properly and so the square grouping and ordering algorithm fails.
 
 
 
@@ -479,9 +480,7 @@ Sample usage of detecting and drawing the centers of circles: ::
 
     drawChessboardCorners(img, patternsize, Mat(centers), patternfound);
 
-**Note:**
-
-The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments.
+.. note:: The function requires white space (like a square-thick border, the wider the better) around the board to make the detection more robust in various environments.
 
 
 
@@ -506,7 +505,7 @@ solvePnP
     :param useExtrinsicGuess: If true (1), the function uses the provided  ``rvec``  and  ``tvec``  values as initial approximations of the rotation and translation vectors, respectively, and further optimizes them.
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
-:ref:`projectPoints` ) ``objectPoints`` .
+:ocv:func:`projectPoints` ) ``objectPoints`` .
 
 
 
@@ -533,14 +532,14 @@ solvePnPRansac
 
     :param iterationsCount: Number of iterations. 
     
-    :param reprojectionError: The inlier threshold value used by the RANSAC procedure. That is, the parameter value is the maximum allowed distance between the observed and computed point projections to consider it an inlier.
+    :param reprojectionError: Inlier threshold value used by the RANSAC procedure. The parameter value is the maximum allowed distance between the observed and computed point projections to consider it an inlier.
    
-    :param minInliersCount: If the algorithm at some stage finds more inliers than ``minInliersCount`` , it finishs.
+    :param minInliersCount: Number of inliers. If the algorithm at some stage finds more inliers than ``minInliersCount`` , it finishes.
     
     :param inliers: Output vector that contains indices of inliers in ``objectPoints`` and ``imagePoints`` .
 
 The function estimates an object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients. This function finds such a pose that minimizes reprojection error, that is, the sum of squared distances between the observed projections ``imagePoints`` and the projected (using
-:ref:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
+:ocv:func:`projectPoints` ) ``objectPoints``. The use of RANSAC makes the function resistant to outliers.
 
 
 
@@ -583,9 +582,9 @@ the found fundamental matrix. Normally just one matrix is found. But in case of 
 :math:`9 \times 3` matrix that stores all 3 matrices sequentially).
 
 The calculated fundamental matrix may be passed further to
-:ref:`ComputeCorrespondEpilines` that finds the epipolar lines
+:ocv:func:`ComputeCorrespondEpilines` that finds the epipolar lines
 corresponding to the specified points. It can also be passed to
-:ref:`StereoRectifyUncalibrated` to compute the rectification transformation. ::
+:ocv:func:`StereoRectifyUncalibrated` to compute the rectification transformation. ::
 
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;
@@ -673,12 +672,12 @@ The function is used to find initial intrinsic and extrinsic matrices.
 Homography matrix is determined up to a scale. Thus, it is normalized so that
 :math:`h_{33}=1` .
 
-See Also:
-:ref:`GetAffineTransform`,
-:ref:`GetPerspectiveTransform`,
-:ref:`EstimateRigidMotion`,
-:ref:`WarpPerspective`,
-:ref:`PerspectiveTransform`
+.. seealso::
+:ocv:func:`GetAffineTransform`,
+:ocv:func:`GetPerspectiveTransform`,
+:ocv:func:`EstimateRigidMotion`,
+:ocv:func:`WarpPerspective`,
+:ocv:func:`PerspectiveTransform`
 
 
 estimateAffine3D
@@ -687,9 +686,9 @@ estimateAffine3D
 
     Computes an optimal affine transformation between two 3D point sets.
 
-    :param srcpt: The first input 3D point set.
+    :param srcpt: First input 3D point set.
 
-    :param dstpt: The second input 3D point set.
+    :param dstpt: Second input 3D point set.
 
     :param out: Output 3D affine transformation matrix  :math:`3 \times 4` .
 
@@ -697,7 +696,7 @@ estimateAffine3D
 
     :param ransacThreshold: Maximum reprojection error in the RANSAC algorithm to consider a point as an inlier.
 
-    :param confidence: The confidence level, between 0 and 1, that the estimated transformation will have. Anything between 0.95 and 0.99 is usually good enough. Too close to 1 values can slow down the estimation too much, lower than 0.8-0.9 confidence values can result in an incorrectly estimated transformation.
+    :param confidence: Confidence level, between 0 and 1, for the estimated transformation. Anything between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
 
 The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
 
@@ -722,12 +721,12 @@ getOptimalNewCameraMatrix
 
     :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
 
-    :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ref:`StereoRectify` .
+    :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`StereoRectify` .
     
 The function computes and returns
 the optimal new camera matrix based on the free scaling parameter. By varying  this parameter, you may retrieve only sensible pixels ``alpha=0`` , keep all the original image pixels if there is valuable information in the corners ``alpha=1`` , or get something in between. When ``alpha>0`` , the undistortion result is likely to have some black pixels corresponding to "virtual" pixels outside of the captured distorted image. The original camera matrix, distortion coefficients, the computed new camera matrix, and ``newImageSize`` should be passed to
-:ref:`InitUndistortRectifyMap` to produce the maps for
-:ref:`Remap` .
+:ocv:func:`InitUndistortRectifyMap` to produce the maps for
+:ocv:func:`Remap` .
 
 
 
@@ -737,9 +736,9 @@ initCameraMatrix2D
 
     Finds an initial camera matrix from 3D-2D point correspondences.
 
-    :param objectPoints: Vector of vectors of the calibration pattern points in the calibration pattern coordinate space. See  :ref:`calibrateCamera` for details.
+    :param objectPoints: Vector belonging vectors of the calibration pattern points in the calibration pattern coordinate space. See  :ocv:func:`calibrateCamera` for details.
     
-    :param imagePoints: Vector of vectors of the projections of the calibration pattern points.
+    :param imagePoints: Vector belonging to vectors of the projections of the calibration pattern points.
     
     :param imageSize: Image size in pixels used to initialize the principal point.
 
@@ -757,17 +756,17 @@ matMulDeriv
 
     Computes partial derivatives of the matrix product for each multiplied matrix.
 
-    :param A: The first multiplied matrix.
+    :param A: First multiplied matrix.
 
-    :param B: The second multiplied matrix.
+    :param B: Second multiplied matrix.
 
-    :param dABdA: The first output derivative matrix  ``d(A*B)/dA``  of size  :math:`\texttt{A.rows*B.cols} \times {A.rows*A.cols}` .
+    :param dABdA: First output derivative matrix  ``d(A*B)/dA``  of size  :math:`\texttt{A.rows*B.cols} \times {A.rows*A.cols}` .
     
-    :param dABdA: The second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
+    :param dABdA: Second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
 
 The function computes partial derivatives of the elements of the matrix product
 :math:`A*B` with regard to the elements of each of the two input matrices. The function is used to compute the Jacobian matrices in
-:ref:`stereoCalibrate`  but can also be used in any other similar optimization function.
+:ocv:func:`stereoCalibrate`  but can also be used in any other similar optimization function.
 
 
 
@@ -780,7 +779,7 @@ projectPoints
 
     :param objectPoints: Array of object points, 3xN/Nx3 1-channel or 1xN/Nx1 3-channel  (or  ``vector<Point3f>`` ), where N is the number of points in the view.
 
-    :param rvec: Rotation vector. See  :ref:`Rodrigues` for details.
+    :param rvec: Rotation vector. See  :ocv:func:`Rodrigues` for details.
     
     :param tvec: Translation vector.
 
@@ -801,15 +800,13 @@ of partial derivatives of image points coordinates (as functions of all the
 input parameters) with respect to the particular parameters, intrinsic and/or
 extrinsic. The Jacobians are used during the global optimization
 in
-:ref:`calibrateCamera`, 
-:ref:`solvePnP`, and 
-:ref:`stereoCalibrate` . The
+:ocv:func:`calibrateCamera`, 
+:ocv:func:`solvePnP`, and 
+:ocv:func:`stereoCalibrate` . The
 function itself can also be used to compute a re-projection error given the
 current intrinsic and extrinsic parameters.
 
-**Note:**
-
-By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identity matrix, or by passing zero distortion coefficients, you can get various useful partial cases of the function. This means that you can compute the distorted coordinates for a sparse set of points or apply a perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
+.. note:: By setting ``rvec=tvec=(0,0,0)``  or by setting ``cameraMatrix`` to a 3x3 identity matrix, or by passing zero distortion coefficients, you can get various useful partial cases of the function. This means that you can compute the distorted coordinates for a sparse set of points or apply a perspective transformation (and also compute the derivatives) in the ideal zero-distortion setup.
 
 
 
@@ -824,9 +821,9 @@ reprojectImageTo3D
 
     :param _3dImage: Output 3-channel floating-point image of the same size as  ``disparity`` . Each element of  ``_3dImage(x,y)``  contains 3D coordinates of the point  ``(x,y)``  computed from the disparity map.
 
-    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ref:`StereoRectify` .
+    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`StereoRectify` .
     
-    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ref:`StereoBM::operator ()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:func:`StereoBM::operator ()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
     :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
     
@@ -838,8 +835,8 @@ The function transforms a single-channel disparity map to a 3-channel image repr
 
 The matrix ``Q`` can be an arbitrary
 :math:`4 \times 4` matrix (for example, the one computed by
-:ref:`StereoRectify`). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
-:ref:`PerspectiveTransform` .
+:ocv:func:`StereoRectify`). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
+:ocv:func:`PerspectiveTransform` .
 
 
 
@@ -863,7 +860,7 @@ RQDecomp3x3
     :param Qz: Optional output 3x3 rotation matrix around z-axis.
 
 The function computes a RQ decomposition using the given rotations. This function is used in
-:ref:`DecomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
+:ocv:func:`DecomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles
 (as the return value)
@@ -896,17 +893,17 @@ Inverse transformation can be also done easily, since
 A rotation vector is a convenient and most compact representation of a rotation matrix
 (since any rotation matrix has just 3 degrees of freedom). The representation is
 used in the global 3D geometry optimization procedures like
-:ref:`calibrateCamera`,
-:ref:`stereoCalibrate`, or
-:ref:`solvePnP` .
+:ocv:func:`calibrateCamera`,
+:ocv:func:`stereoCalibrate`, or
+:ocv:func:`solvePnP` .
 
 
 
 StereoBM
 --------
-.. c:type:: StereoBM
+.. ocv:class:: StereoBM
 
-Class for computing stereo correspondence using the block matching algorithm ::
+Class for computing stereo correspondence using the block matching algorithm. ::
 
     // Block matching stereo correspondence algorithm class StereoBM
     {
@@ -932,7 +929,7 @@ Class for computing stereo correspondence using the block matching algorithm ::
     };
 
 The class is a C++ wrapper for the associated functions. In particular, ``StereoBM::operator ()`` is the wrapper for
-:ref:`StereoBM::operator ()`. 
+:ocv:func:`StereoBM::operator ()`. 
 
 
 
@@ -962,7 +959,7 @@ StereoSGBM
 
 .. c:type:: StereoSGBM
 
-Class for computing stereo correspondence using the semi-global block matching algorithm ::
+Class for computing stereo correspondence using the semi-global block matching algorithm. ::
 
     class StereoSGBM
     {
@@ -998,7 +995,7 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
  * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from BT96 is used. Though, the color images are supported as well.
 
- * Some pre- and post- processing steps from K. Konolige algorithm :ref:`StereoBM::operator ()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
+ * Some pre- and post- processing steps from K. Konolige algorithm :ocv:func:`StereoBM::operator ()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
 
 
@@ -1008,7 +1005,7 @@ StereoSGBM::StereoSGBM
 
 .. ocv:function:: StereoSGBM::StereoSGBM( int minDisparity, int numDisparities, int SADWindowSize, int P1=0, int P2=0, int disp12MaxDiff=0, int preFilterCap=0, int uniquenessRatio=0, int speckleWindowSize=0, int speckleRange=0, bool fullDP=false)
 
-    The constructor.
+    Initializes ``StereoSGBM`` and sets parameters to custom values.??
 
     :param minDisparity: Minimum possible disparity value. Normally, it is zero but sometimes rectification algorithms can shift images, so this parameter needs to be adjusted accordingly.
 
@@ -1049,9 +1046,7 @@ StereoSGBM::operator ()
 
 The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_match.cpp`` OpenCV sample on how to prepare images and call the method. 
 
-**Note**:
-
-The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
+.. note:: The method is not constant, so you should not use the same ``StereoSGBM`` instance from different threads simultaneously.
 
 
 
@@ -1061,11 +1056,11 @@ stereoCalibrate
 
     Calibrates the stereo camera.
 
-    :param objectPoints: Vector of vectors of the calibration pattern points.
+    :param objectPoints: Vector belonging to vectors of the calibration pattern points.
 
-    :param imagePoints1: Vector of vectors of the projections of the calibration pattern points, observed by the first camera.
+    :param imagePoints1: Vector belonging to vectors of the projections of the calibration pattern points, observed by the first camera.
 
-    :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
+    :param imagePoints2: Vector belonging to vectors of the projections of the calibration pattern points, observed by the second camera.
 
     :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , 
 	:math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
@@ -1135,9 +1130,9 @@ where
     F = cameraMatrix2^{-T} E cameraMatrix1^{-1}
 
 Besides the stereo-related information, the function can also perform a full calibration of each of two cameras. However, due to the high dimensionality of the parameter space and noise in the input data, the function can diverge from the correct solution. If the intrinsic parameters can be estimated with high accuracy for each of the cameras individually (for example, using
-:ref:`calibrateCamera` ), you are recommended to do so and then pass ``CV_CALIB_FIX_INTRINSIC`` flag to the function along with the computed intrinsic parameters. Otherwise, if all the parameters are estimated at once, it makes sense to restrict some parameters, for example, pass ``CV_CALIB_SAME_FOCAL_LENGTH`` and ``CV_CALIB_ZERO_TANGENT_DIST`` flags, which is usually a reasonable assumption.
+:ocv:func:`calibrateCamera` ), you are recommended to do so and then pass ``CV_CALIB_FIX_INTRINSIC`` flag to the function along with the computed intrinsic parameters. Otherwise, if all the parameters are estimated at once, it makes sense to restrict some parameters, for example, pass ``CV_CALIB_SAME_FOCAL_LENGTH`` and ``CV_CALIB_ZERO_TANGENT_DIST`` flags, which is usually a reasonable assumption.
 
-Similarly to :ref:`calibrateCamera` , the function minimizes the total re-projection error for all the points in all the available views from both cameras. The function returns the final value of the re-projection error.
+Similarly to :ocv:func:`calibrateCamera` , the function minimizes the total re-projection error for all the points in all the available views from both cameras. The function returns the final value of the re-projection error.
 
 
 
@@ -1148,13 +1143,13 @@ stereoRectify
 
     Computes rectification transforms for each head of a calibrated stereo camera.
 
-    :param cameraMatrix1: The first camera matrix.
+    :param cameraMatrix1: First camera matrix.
     
-    :param cameraMatrix2: The second camera matrix.
+    :param cameraMatrix2: Second camera matrix.
 
-    :param distCoeffs1: The first camera distortion parameters.
+    :param distCoeffs1: First camera distortion parameters.
     
-    :param distCoeffs2: The second camera distortion parameters.
+    :param distCoeffs2: Second camera distortion parameters.
 
     :param imageSize: Size of the image used for stereo calibration.
 
@@ -1177,7 +1172,7 @@ stereoRectify
     :param roi1, roi2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
 The function computes the rotation matrices for each camera that (virtually) make both camera image planes the same plane. Consequently, this makes all the epipolar lines parallel and thus simplifies the dense stereo correspondence problem. The function takes the matrices computed by
-:ref:`stereoCalibrate` as input. As output, it provides two rotation matrices and also two projection matrices in the new coordinates. The function distinguishes the following two cases:
+:ocv:func:`stereoCalibrate` as input. As output, it provides two rotation matrices and also two projection matrices in the new coordinates. The function distinguishes the following two cases:
 
 #.
     **Horizontal stereo**: the first and the second camera views are shifted relative to each other mainly along the x axis (with possible small vertical shift). In the rectified images, the corresponding epipolar lines in the left and right cameras are horizontal and have the same y-coordinate. P1 and P2 look like:
@@ -1211,7 +1206,7 @@ The function computes the rotation matrices for each camera that (virtually) mak
 
 As you can see, the first three columns of ``P1`` and ``P2`` will effectively be the new "rectified" camera matrices.
 The matrices, together with ``R1`` and ``R2`` , can then be passed to
-:ref:`InitUndistortRectifyMap` to initialize the rectification map for each camera.
+:ocv:func:`InitUndistortRectifyMap` to initialize the rectification map for each camera.
 
 See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizontal lines pass through the corresponding image regions. This means that the images are well rectified, which is what most stereo correspondence algorithms rely on. The green rectangles are ``roi1`` and ``roi2`` . You see that their interiors are all valid pixels.
 
@@ -1236,13 +1231,13 @@ stereoRectifyUncalibrated
     :param threshold: Optional threshold used to filter out the outliers. If the parameter is greater than zero, all the point pairs that do not comply with the epipolar geometry (that is, the points for which  :math:`|\texttt{points2[i]}^T*\texttt{F}*\texttt{points1[i]}|>\texttt{threshold}` ) are rejected prior to computing the homographies. Otherwise,all the points are considered inliers.
 
 The function computes the rectification transformations without knowing intrinsic parameters of the cameras and their relative position in the space, which explains the suffix "uncalibrated". Another related difference from
-:ref:`StereoRectify` is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations encoded by the homography matrices ``H1`` and ``H2`` . The function implements the algorithm
+:ocv:func:`StereoRectify` is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations encoded by the homography matrices ``H1`` and ``H2`` . The function implements the algorithm
 Hartley99
 .
 
-**Note**:
+.. note::
 
-While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion, it would be better to correct it before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using
-:ref:`calibrateCamera` . Then, the images can be corrected using
-:ref:`undistort` , or just the point coordinates can be corrected with
-:ref:`undistortPoints` .
+	While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion, it would be better to correct it before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using
+	:ocv:func:`calibrateCamera` . Then, the images can be corrected using
+	:ocv:func:`undistort` , or just the point coordinates can be corrected with
+	:ocv:func:`undistortPoints` .

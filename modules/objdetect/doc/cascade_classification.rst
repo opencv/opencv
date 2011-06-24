@@ -7,9 +7,9 @@ Cascade Classification
 
 FeatureEvaluator
 ----------------
-.. c:type:: FeatureEvaluator
+.. ocv:class:: FeatureEvaluator
 
-Base class for computing feature values in cascade classifiers ::
+Base class for computing feature values in cascade classifiers. ::
 
     class CV_EXPORTS FeatureEvaluator
     {
@@ -102,7 +102,7 @@ FeatureEvaluator::calcCat
 
     :param featureIdx: Index of the feature whose value is computed.
 
-The function returns the computed label of a categorical feature, that is, the value from [0,... (number of categories - 1)].
+The function returns the computed label of a categorical feature, which is the value from [0,... (number of categories - 1)].
 
 .. index:: FeatureEvaluator::create
 
@@ -116,13 +116,11 @@ FeatureEvaluator::create
 
 .. index:: CascadeClassifier
 
-.. _CascadeClassifier:
-
 CascadeClassifier
 -----------------
-.. c:type:: CascadeClassifier
+.. ocv:class:: CascadeClassifier
 
-The cascade classifier class for object detection ::
+Cascade classifier class for object detection. ::
 
     class CascadeClassifier
     {
@@ -207,7 +205,7 @@ CascadeClassifier::empty
 ----------------------------
 .. ocv:function:: bool CascadeClassifier::empty() const
 
-    Checks if the classifier has been loaded or not.
+    Checks whether the classifier has been loaded.
 
 .. index:: CascadeClassifier::load
 
@@ -217,7 +215,7 @@ CascadeClassifier::load
 
     Loads a classifier from a file. The previous content is destroyed.
 
-    :param filename: Name of the file from which the classifier is loaded. The file may contain an old HAAR classifier (trained by the haartraining application) or new cascade classifier trained traincascade application.
+    :param filename: Name of the file from which the classifier is loaded. The file may contain an old HAAR classifier trained by the haartraining application or a new cascade classifier trained by the traincascade application.
 
 .. index:: CascadeClassifier::read
 
@@ -253,9 +251,9 @@ CascadeClassifier::setImage
 -------------------------------
 .. ocv:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
 
-    Sets an image for detection, which is called by ``detectMultiScale`` at each image level.
+    Sets an image for detection that is called by ``detectMultiScale`` at each image level.
 
-    :param feval: Pointer to the feature evaluator that is used for computing features.
+    :param feval: Pointer to the feature evaluator used for computing features.
 
     :param image: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
 
@@ -265,9 +263,9 @@ CascadeClassifier::runAt
 ----------------------------
 .. ocv:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt )
 
-    Runs the detector at the specified point. Use ``setImage`` to set the image that the detector is working with.
+    Runs the detector at the specified point. Use ``setImage`` to set the image for the detector to work with.
 
-    :param feval: Feature evaluator that is used for computing features.
+    :param feval: Feature evaluator used for computing features.
 
     :param pt: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
 
@@ -282,12 +280,12 @@ groupRectangles
 
     Groups the object candidate rectangles.
 
-    :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles.??
+    :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles.
 
-    :param groupThreshold: Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.??
+    :param groupThreshold: Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.
 
     :param eps: Relative difference between sides of the rectangles to merge them into a group.
 
 The function is a wrapper for the generic function
-:ref:`partition` . It clusters all the input rectangles using the rectangle equivalence criteria that combines rectangles with similar sizes and similar locations (the similarity is defined by ``eps`` ). When ``eps=0`` , no clustering is done at all. If
+:ocv:func:`partition` . It clusters all the input rectangles using the rectangle equivalence criteria that combines rectangles with similar sizes and similar locations. The similarity is defined by ``eps``. When ``eps=0`` , no clustering is done at all. If
 :math:`\texttt{eps}\rightarrow +\inf` , all the rectangles are put in one cluster. Then, the small clusters containing less than or equal to ``groupThreshold`` rectangles are rejected. In each other cluster, the average rectangle is computed and put into the output rectangle list.
