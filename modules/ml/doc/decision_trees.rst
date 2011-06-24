@@ -5,11 +5,11 @@ The ML classes discussed in this section implement Classification and Regression
 .
 
 The class
-:ref:`CvDTree` represents a single decision tree that may be used alone, or as a base class in tree ensembles (see
+:ocv:class:`CvDTree` represents a single decision tree that may be used alone or as a base class in tree ensembles (see
 :ref:`Boosting` and
 :ref:`Random Trees` ).
 
-A decision tree is a binary tree (tree where each non-leaf node has exactly two child nodes). It can be used either for classification or for regression. For classification, each tree leaf is marked with a class label; multiple leafs may have the same label. For regression, a constant is also assigned to each tree leaf, so the approximation function is piecewise constant.
+A decision tree is a binary tree (tree where each non-leaf node has two child nodes). It can be used either for classification or for regression. For classification, each tree leaf is marked with a class label; multiple leaves may have the same label. For regression, a constant is also assigned to each tree leaf, so the approximation function is piecewise constant.
 
 Predicting with Decision Trees
 ------------------------------
@@ -22,7 +22,7 @@ value of a certain variable whose index is stored in the observed
 node. The following variables are possible:
 
 * 
-  **Ordered variables.** The variable value is compared with a threshold that is also stored in the node). If the value is less than the threshold, the procedure goes to the left. Otherwise, it goes to the right. For example, if the weight is less than 1 kilogram, the procedure goes to the left, else to the right.
+  **Ordered variables.** The variable value is compared with a threshold that is also stored in the node. If the value is less than the threshold, the procedure goes to the left. Otherwise, it goes to the right. For example, if the weight is less than 1 kilogram, the procedure goes to the left, else to the right.
 * 
   **Categorical variables.**  A discrete variable value is tested to see whether it belongs to a certain subset of values (also stored in the node) from a limited set of values the variable could take. If it does, the procedure goes to the left. Otherwise, it goes to the right. For example, if the color is green or red, go to the left, else to the right.
 
@@ -36,7 +36,7 @@ Sometimes, certain features of the input vector are missed (for example, in the 
 Training Decision Trees
 -----------------------
 
-The tree is built recursively, starting from the root node. All training data (feature vectors and responses) is used to split the root node. In each node the optimum decision rule (the best "primary" split) is found based on some criteria. In ML, ``gini`` "purity" criteria are used for classification, and sum of squared errors is used for regression. Then, if necessary, the surrogate splits are found. They resemble the results of the primary split on the training data. All the data is divided using the primary and the surrogate splits (like it is done in the prediction procedure) between the left and the right child node. Then, the procedure recursively splits both left and right nodes. At each node the recursive procedure may stop (that is, stop splitting the node further) in one of the following cases:
+The tree is built recursively, starting from the root node. All training data (feature vectors and responses) is used to split the root node. In each node the optimum decision rule (the best "primary" split) is found based on some criteria. In machine learning, ``gini`` "purity" criteria are used for classification, and sum of squared errors is used for regression. Then, if necessary, the surrogate splits are found. They resemble the results of the primary split on the training data. All the data is divided using the primary and the surrogate splits (like it is done in the prediction procedure) between the left and the right child node. Then, the procedure recursively splits both left and right nodes. At each node the recursive procedure may stop (that is, stop splitting the node further) in one of the following cases:
 
 * Depth of the constructed tree branch has reached the specified maximum value.
 
@@ -46,7 +46,7 @@ The tree is built recursively, starting from the root node. All training data (f
 
 * The best found split does not give any noticeable improvement compared to a random choice.
 
-When the tree is built, it may be pruned using a cross-validation procedure, if necessary. That is, some branches of the tree that may lead to the model overfitting are cut off. Normally, this procedure is only applied to standalone decision trees. Tree ensembles usually build trees that are small enough and use their own protection schemes against overfitting.
+When the tree is built, it may be pruned using a cross-validation procedure, if necessary. That is, some branches of the tree that may lead to the model overfitting are cut off. Normally, this procedure is only applied to standalone decision trees. Usually tree ensembles build trees that are small enough and use their own protection schemes against overfitting.
 
 Variable Importance
 -------------------
@@ -57,15 +57,10 @@ Importance of each variable is computed over all the splits on this variable in 
 
 [Breiman84] Breiman, L., Friedman, J. Olshen, R. and Stone, C. (1984), *Classification and Regression Trees*, Wadsworth.
 
-.. index:: CvDTreeSplit
-
-.. _CvDTreeSplit:
-
 CvDTreeSplit
 ------------
-.. c:type:: CvDTreeSplit
+.. ocv:class:: CvDTreeSplit
 
-    Decision tree node split.
 
 The structure represents a possible decision tree node split. It has public members:
 
@@ -94,15 +89,10 @@ The structure represents a possible decision tree node split. It has public memb
     Parameters of the split on ordered variable.
 
 
-.. index:: CvDTreeNode
-
-.. _CvDTreeNode:
-
 CvDTreeNode
 -----------
-.. c:type:: CvDTreeNode
+.. ocv:class:: CvDTreeNode
 
-    Decision tree node.
 
 The structure represents a node in a decision tree. It has public members:    
  
@@ -140,10 +130,11 @@ The structure represents a node in a decision tree. It has public members:
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
 
+CvDTreeTrainData
+----------------
+.. ocv:class:: CvDTreeTrainData
 
-.. index:: CvDTreeParams
-
-.. _CvDTreeParams:
+Decision tree training data and shared data for tree ensembles. ::
 
 CvDTreeParams
 -------------
@@ -152,10 +143,6 @@ CvDTreeParams
     Decision tree training parameters.
 
 The structure contains all the decision tree training parameters. You can initialize it by default constructor and then override any parameters directly before training, or the structure may be fully initialized using the advanced variant of the constructor.
-
-.. index:: CvDTreeParams::CvDTreeParams
-
-.. _CvDTreeParams::CvDTreeParams:
 
 CvDTreeParams::CvDTreeParams
 ----------------------------
@@ -191,25 +178,21 @@ The default constructor initializes all the parameters with the default values t
     {}
 
  
-.. index:: CvDTreeTrainData
-
-.. _CvDTreeTrainData:
-
 CvDTreeTrainData
 ----------------
-.. c:type:: CvDTreeTrainData
+.. ocv:class:: CvDTreeTrainData
 
     Decision tree training data and shared data for tree ensembles.
 
 The structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
 
-#. Training parameters, an instance of :ref:`CvDTreeParams`.
+#. Training parameters, an instance of :ocv:class:`CvDTreeParams`.
 
-#. Training data, preprocessed to find the best splits more efficiently. For tree ensembles, this preprocessed data is reused by all trees. Additionally, the training data characteristics shared by all trees in the ensemble are stored here: variable types, the number of classes, class label compression map, and so on.
+#. Training data preprocessed to find the best splits more efficiently. For tree ensembles, this preprocessed data is reused by all trees. Additionally, the training data characteristics shared by all trees in the ensemble are stored here: variable types, the number of classes, a class label compression map, and so on.
 
 #. Buffers, memory storages for tree nodes, splits, and other elements of the constructed trees.
 
-There are two ways of using this structure. In simple cases (for example, a standalone tree or the ready-to-use "black box" tree ensemble from ML, like
+There are two ways of using this structure. In simple cases (for example, a standalone tree or the ready-to-use "black box" tree ensemble from machine learning, like
 :ref:`Random Trees` or
 :ref:`Boosting` ), there is no need to care or even to know about the structure. You just construct the needed statistical model, train it, and use it. The ``CvDTreeTrainData`` structure is constructed and used internally. However, for custom tree algorithms or another sophisticated cases, the structure may be constructed and used explicitly. The scheme is the following:
 
@@ -222,22 +205,14 @@ There are two ways of using this structure. In simple cases (for example, a stan
 #.
     The structure is released as soon as all the trees using it are released.
 
-.. index:: CvDTree
-
-.. _CvDTree:
-
 CvDTree
 -------
-.. ocv:class:: CvDTree 
+.. ocv:class:: CvDTree
 
     Decision tree.
 
 The class implements a decision tree predictor as described in the beginning of this section.
 
-
-.. index:: CvDTree::train
-
-.. _CvDTree::train:
 
 CvDTree::train
 --------------
@@ -260,9 +235,6 @@ There are four ``train`` methods in :ocv:class:`CvDTree`:
 * The **last** method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed :ref:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``subsampleIdx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``subsampleIdx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
 
 
-.. index:: CvDTree::predict
-
-.. _CvDTree::predict:
 
 CvDTree::predict
 ----------------
@@ -281,9 +253,6 @@ CvDTree::predict
 The method traverses the decision tree and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the :ref:`CvDTreeNode` structure, for example: ``dtree->predict(sample,mask)->value``.
 
 
-.. index:: CvDTree::calc_error
-
-.. _CvDTree::calc_error:
 
 CvDTree::calc_error
 -------------------
@@ -292,7 +261,7 @@ CvDTree::calc_error
     Returns error of the decision tree.
 
     :param data: Data for the decision tree.
-
+    
     :param type: Type of error. Possible values are:
 
         * **CV_TRAIN_ERROR** Error on train samples.
@@ -304,10 +273,6 @@ CvDTree::calc_error
 The method calculates error of the decision tree. In case of classification it is the percentage of incorrectly classified samples and in case of regression it is the mean of squared errors on samples.
 
 
-.. index:: CvDTree::getVarImportance
-
-.. _CvDTree::getVarImportance:
-
 CvDTree::getVarImportance
 -------------------------
 .. ocv:function:: Mat CvDTree::getVarImportance()
@@ -317,10 +282,6 @@ CvDTree::getVarImportance
     Returns the variable importance array.
 
 
-.. index:: CvDTree::get_root
-
-.. _CvDTree::get_root:
-
 CvDTree::get_root
 -----------------
 .. ocv:function:: const CvDTreeNode* CvDTree::get_root() const
@@ -328,28 +289,19 @@ CvDTree::get_root
     Returns the root of the decision tree.
 
 
-.. index:: CvDTree::get_pruned_tree_idx
-
-.. _CvDTree::get_pruned_tree_idx:
-
 CvDTree::get_pruned_tree_idx
 ----------------------------
 .. ocv:function:: int CvDTree::get_pruned_tree_idx() const
 
     Returns the ``CvDTree::pruned_tree_idx`` parameter.
 
-This parameter is used to prunde a decision tree. See the ``CvDTreeNode::Tn`` parameter.
-
-.. index:: CvDTree::get_data
-
-.. _CvDTree::get_data:
+The parameter ``DTree::pruned_tree_idx`` is used to prune a decision tree. See the ``CvDTreeNode::Tn`` parameter.
 
 CvDTree::get_data
 -----------------
 .. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
 
     Returns used train data of the decision tree.
-
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.

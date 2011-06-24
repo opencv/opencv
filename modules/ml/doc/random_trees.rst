@@ -3,13 +3,15 @@
 Random Trees
 ============
 
+.. highlight:: cpp
+
 Random trees have been introduced by Leo Breiman and Adele Cutler:
 http://www.stat.berkeley.edu/users/breiman/RandomForests/
 . The algorithm can deal with both classification and regression problems. Random trees is a collection (ensemble) of tree predictors that is called
 *forest*
-further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that recieved the majority of "votes". In case of regression, the classifier response is the average of the responses over all the trees in the forest.
+further in this section (the term has been also introduced by L. Breiman). The classification works as follows: the random trees classifier takes the input feature vector, classifies it with every tree in the forest, and outputs the class label that recieved the majority of "votes". In case of a regression, the classifier response is the average of the responses over all the trees in the forest.
 
-All the trees are trained with the same parameters but on different training sets that are generated from the original training set using the bootstrap procedure: for each training set, you randomly select the same number of vectors as in the original set ( ``=N`` ). The vectors are chosen with replacement. That is, some vectors will occur more than once and some will be absent. At each node of each trained tree,  not all the variables are used to find the best split, rather than a random subset of them. With each node a new subset is generated. However, its size is fixed for all the nodes and all the trees. It is a training parameter set to
+All the trees are trained with the same parameters but on different training sets. These sets are generated from the original training set using the bootstrap procedure: for each training set, you randomly select the same number of vectors as in the original set ( ``=N`` ). The vectors are chosen with replacement. That is, some vectors will occur more than once and some will be absent. At each node of each trained tree,  not all the variables are used to find the best split, but a random subset of them. With each node a new subset is generated. However, its size is fixed for all the nodes and all the trees. It is a training parameter set to
 :math:`\sqrt{number\_of\_variables}` by default. None of the built trees are pruned.
 
 In random trees there is no need for any accuracy estimation procedures, such as cross-validation or bootstrap, or a separate test set to get an estimate of the training error. The error is estimated internally during the training. When the training set for the current tree is drawn by sampling with replacement, some vectors are left out (so-called
@@ -20,25 +22,28 @@ In random trees there is no need for any accuracy estimation procedures, such as
     Get a prediction for each vector, which is oob relative to the i-th tree, using the very i-th tree.
 
 #.
-    After all the trees have been trained, for each vector that has ever been oob, find the class-"winner" for it (the class that has got the majority of votes in the trees where the vector was oob) and compare it to the ground-truth response.
+    After all the trees have been trained, for each vector that has ever been oob, find the class-*winner* for it (the class that has got the majority of votes in the trees where the vector was oob) and compare it to the ground-truth response.
 
 #.
-    Compute the classification error estimate as ratio of the number of misclassified oob vectors to all the vectors in the original data. In case of regression, the oob-error is computed as the squared error for oob vectors difference divided by the total number of vectors.
+    Compute the classification error estimate as a ratio of the number of misclassified oob vectors to all the vectors in the original data. In case of regression, the oob-error is computed as the squared error for oob vectors difference divided by the total number of vectors.
+
+
+For the random trees usage example, please, see letter_recog.cpp sample in OpenCV distribution.
 
 **References:**
 
 *
-    Machine Learning, Wald I, July 2002.
+    *Machine Learning*, Wald I, July 2002.
 
     http://stat-www.berkeley.edu/users/breiman/wald2002-1.pdf
 
 *
-    Looking Inside the Black Box, Wald II, July 2002.
+    *Looking Inside the Black Box*, Wald II, July 2002.
 
     http://stat-www.berkeley.edu/users/breiman/wald2002-2.pdf
 
 *
-    Software for the Masses, Wald III, July 2002.
+    *Software for the Masses*, Wald III, July 2002.
 
     http://stat-www.berkeley.edu/users/breiman/wald2002-3.pdf
 
@@ -46,10 +51,6 @@ In random trees there is no need for any accuracy estimation procedures, such as
     And other articles from the web site
     http://www.stat.berkeley.edu/users/breiman/RandomForests/cc_home.htm
     .
-
-.. index:: CvRTParams
-
-.. _CvRTParams:
 
 CvRTParams
 ----------
@@ -59,10 +60,6 @@ CvRTParams
 
 The set of training parameters for the forest is a superset of the training parameters for a single tree. However, random trees do not need all the functionality/features of decision trees. Most noticeably, the trees are not pruned, so the cross-validation parameters are not used.
 
-
-.. index:: CvRTParams
-
-.. _CvRTParams::CvRTParams:
 
 CvRTParams::CvRTParams:
 -----------------------
@@ -90,23 +87,11 @@ For meaning of other parameters see :ocv:func:`CvDTreeParams::CvDTreeParams`.
 
 The default constructor sets all parameters to some default values and they are different from default values of :ref:`CvDTreeParams`.
 
-
-.. index:: CvRTrees
-
-.. _CvRTrees:
-
 CvRTrees
 --------
 .. ocv:class:: CvRTrees
 
-    Random trees.
-
-The class implements the random forest predictor as described in the beginning of this section.
-
-
-.. index:: CvRTrees::train
-
-.. _CvRTrees::train:
+    The class implements the random forest predictor as described in the beginning of this section.
 
 CvRTrees::train
 ---------------
@@ -119,10 +104,6 @@ CvRTrees::train
     Trains the Random Tree model.
 
 The method :ocv:func:`CvRTrees::train` is very similar to the method :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a :ocv:class:`CvRTParams` instance. The estimate of the training error (``oob-error``) is stored in the protected class member ``oob_error``.
-
-.. index:: CvRTrees::predict
-
-.. _CvRTrees::predict:
 
 CvRTrees::predict
 -----------------
@@ -139,10 +120,6 @@ CvRTrees::predict
 The input parameters of the prediction method are the same as in :ocv:func:`CvDTree::predict`  but the return value type is different. This method returns the cumulative result from all the trees in the forest (the class that receives the majority of voices, or the mean of the regression function estimates).
 
 
-.. index:: CvRTrees::predict_prob
-
-.. _CvRTrees::predict_prob:
-
 CvRTrees::predict_prob
 ----------------------
 .. ocv:function:: float CvRTrees::predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const
@@ -158,10 +135,6 @@ CvRTrees::predict_prob
 The function works for binary classification problems only. It returns the number between 0 and 1. This number represents probability or confidence of the sample belonging to the second class. It is calculated as the proportion of decision trees that classified the sample to the second class.
 
 
-.. index:: CvRTrees::getVarImportance
-
-.. _CvRTrees::getVarImportance:
-
 CvRTrees::getVarImportance
 ----------------------------
 .. ocv:function:: Mat CvRTrees::getVarImportance()
@@ -172,9 +145,6 @@ CvRTrees::getVarImportance
 
 The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set to true. If this flag was set to false, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
-.. index:: CvRTrees::get_proximity
-
-.. _CvRTrees::get_proximity:
 
 CvRTrees::get_proximity
 -----------------------
@@ -190,12 +160,7 @@ CvRTrees::get_proximity
 
     :param missing2:  Optional missing measurement mask of the second sample.
 
-The method returns proximity measure between any two samples, which is the ratio of those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees.
-
-
-.. index:: CvRTrees::calc_error
-
-.. _CvRTrees::calc_error:
+The method returns proximity measure between any two samples. This is a ratio of those trees in the ensemble, in which the samples fall into the same leaf node, to the total number of the trees.
 
 CvRTrees::calc_error
 --------------------
@@ -207,10 +172,6 @@ CvRTrees::calc_error
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the random forest as predictor.
 
 
-.. index:: CvRTrees::get_train_error
-
-.. _CvRTrees::get_train_error:
-
 CvRTrees::get_train_error
 -------------------------
 .. ocv:function:: float CvRTrees::get_train_error()
@@ -220,20 +181,12 @@ CvRTrees::get_train_error
 The method works for classification problems only. It returns the proportion of incorrectly classified train samples.
 
 
-.. index:: CvRTrees::get_rng
-
-.. _CvRTrees::get_rng:
-
 CvRTrees::get_rng
 -----------------
 .. ocv:function:: CvRNG* CvRTrees::get_rng()
 
     Returns the state of the used random number generator.
 
-
-.. index:: CvRTrees::get_tree_count
-
-.. _CvRTrees::get_tree_count:
 
 CvRTrees::get_tree_count
 ------------------------
@@ -242,10 +195,6 @@ CvRTrees::get_tree_count
     Returns the number of trees in the constructed random forest.
 
 
-.. index:: CvRTrees::get_tree
-
-.. _CvRTrees::get_tree:
-
 CvRTrees::get_tree
 ------------------
 .. ocv:function:: CvForestTree* CvRTrees::get_tree(int i) const
@@ -253,6 +202,3 @@ CvRTrees::get_tree
     Returns the specific decision tree in the constructed random forest.
 
     :param i: Index of the decision tree.
-
-
-For the random trees usage example, please, see letter_recog.cpp sample in OpenCV distribution.
