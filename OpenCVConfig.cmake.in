@@ -32,7 +32,7 @@ SET(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC@)
 #  This variable may or may not be used below, depending on the parsing of OpenCVConfig.cmake
 get_filename_component(THIS_OPENCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
 #Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
-get_filename_component(OPENCV_INSTALL_PATH "${CMAKE_CURRENT_LIST_FILE}/../.." REALPATH)
+get_filename_component(OPENCV_INSTALL_PATH "${THIS_OPENCV_CONFIG_PATH}/../.." REALPATH)
 
 # ======================================================
 # Include directories to add to the user project:
