@@ -1,7 +1,9 @@
 Expectation Maximization
 ========================
 
-The EM (Expectation Maximization) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
+.. highlight:: cpp
+
+The Expectation Maximization(EM) algorithm estimates the parameters of the multivariate probability density function in the form of a Gaussian mixture distribution with a specified number of mixtures.
 
 Consider the set of the N feature vectors
 { :math:`x_1, x_2,...,x_{N}` } from a d-dimensional Euclidean space drawn from a Gaussian mixture:
@@ -59,7 +61,7 @@ At the second step (Maximization step or M-step), the mixture parameter estimate
 Alternatively, the algorithm may start with the M-step when the initial values for
 :math:`p_{i,k}` can be provided. Another alternative when
 :math:`p_{i,k}` are unknown is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
-:math:`p_{i,k}` . Often (including ML) the
+:math:`p_{i,k}` . Often (including macnine learning) the
 :ref:`kmeans` algorithm is used for that purpose.
 
 One of the main problems of the EM algorithm is a large number
@@ -83,22 +85,16 @@ already a good enough approximation).
 *
     Bilmes98 J. A. Bilmes. *A Gentle Tutorial of the EM Algorithm and its Application to Parameter Estimation for Gaussian Mixture and Hidden Markov Models*. Technical Report TR-97-021, International Computer Science Institute and Computer Science Division, University of California at Berkeley, April 1998.
 
-.. index:: CvEMParams
-
-.. _CvEMParams:
 
 CvEMParams
 ----------
-.. c:type:: CvEMParams
+.. ocv:class:: CvEMParams
 
-    Parameters of the EM algorithm.
+   Parameters of the EM algorithm.
 
 All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
 
 
-.. index:: CvEMParams::CvEMParams
-
-.. _CvEMParams::CvEMParams:
 
 CvEMParams::CvEMParams
 ----------------------
@@ -144,26 +140,16 @@ The default constructor represents a rough rule-of-the-thumb:
 With another contstructor it is possible to override a variety of parameters from a single number of mixtures (the only essential problem-dependent parameter) to initial values for the mixture parameters.
 
 
-.. index:: CvEM
-
-.. _CvEM:
-
 CvEM
 ----
-.. c:type:: CvEM
+.. ocv:class:: CvEM
 
-    The EM model.
+    The class implements the EM algorithm as described in the beginning of this section.
 
-The class implements the EM algorithm as described in the beginning of this section.
-
-
-.. index:: CvEM::train
-
-.. _CvEM::train:
 
 CvEM::train
 -----------
-.. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(), CvEMParams params=CvEMParams(), Mat* labels=0 )
+.. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
 
 .. ocv:function:: bool CvEM::train( const CvMat* samples, const CvMat* sampleIdx=0, CvEMParams params=CvEMParams(), CvMat* labels=0 )
 
@@ -177,20 +163,21 @@ CvEM::train
 
     :param labels: The optional output "class label" for each sample: :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
+    Estimates the Gaussian mixture parameters from a sample set.
+
 Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or function values) as input. Instead, it computes the
 *Maximum Likelihood Estimate* of the Gaussian mixture parameters from an input sample set, stores all the parameters inside the structure:
 :math:`p_{i,k}` in ``probs``,
 :math:`a_k` in ``means`` ,
 :math:`S_k` in ``covs[k]``,
-:math:`\pi_k` in ``weights`` ,
+:math:`\pi_k` in ``weights`` , and optionally computes the output "class label" for each sample:
+:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
 :ref:`Bayes classifier`.
 
+For an example of clustering random samples of the multi-Gaussian distribution using EM, see ``em.cpp`` sample in the OpenCV distribution.
 
-.. index:: CvEM::predict
-
-.. _CvEM::predict:
 
 CvEM::predict
 -------------
@@ -205,10 +192,6 @@ CvEM::predict
     :param probs: If it is not null then the method will write posterior probabilities of each component given the sample data to this parameter.
 
 
-.. index:: CvEM::getNClusters
-
-.. _CvEM::getNClusters:
-
 CvEM::getNClusters
 ------------------
 .. ocv:function:: int CvEM::getNClusters() const
@@ -217,10 +200,6 @@ CvEM::getNClusters
 
     Returns the number of mixture components :math:`M` in the gaussian mixture model.
 
-
-.. index:: CvEM::getMeans
-
-.. _CvEM::getMeans:
 
 CvEM::getNClusters
 ------------------
@@ -231,10 +210,6 @@ CvEM::getNClusters
     Returns mixture means :math:`a_k`.
 
 
-.. index:: CvEM::getCovs
-
-.. _CvEM::getCovs:
-
 CvEM::getCovs
 -------------
 .. ocv:function:: void CvEM::getCovs(std::vector<cv::Mat>& covs) const
@@ -243,10 +218,6 @@ CvEM::getCovs
 
     Returns mixture covariance matrices :math:`S_k`.
 
-
-.. index:: CvEM::getWeights
-
-.. _CvEM::getWeights:
 
 CvEM::getWeights
 ----------------
@@ -257,10 +228,6 @@ CvEM::getWeights
     Returns mixture weights :math:`\pi_k`.
 
 
-.. index:: CvEM::getProbs
-
-.. _CvEM::getProbs:
-
 CvEM::getProbs
 --------------
 .. ocv:function:: Mat CvEM::getProbs() const
@@ -269,10 +236,6 @@ CvEM::getProbs
 
     Returns probabilites :math:`p_{i,k}` of sample :math:`i` to belong to a mixture component :math:`k`.
 
-
-.. index:: CvEM::getLikelihood
-
-.. _CvEM::getLikelihood:
 
 CvEM::getLikelihood
 -------------------
@@ -283,10 +246,6 @@ CvEM::getLikelihood
     Returns logarithm of likelihood.
 
 
-.. index:: CvEM::getLikelihoodDelta
-
-.. _CvEM::getLikelihoodDelta:
-
 CvEM::getLikelihoodDelta
 ------------------------
 .. ocv:function:: double CvEM::getLikelihoodDelta() const
@@ -296,10 +255,6 @@ CvEM::getLikelihoodDelta
     Returns difference between logarithm of likelihood on the last iteration and logarithm of likelihood on the previous iteration.
 
 
-.. index:: CvEM::write_params
-
-.. _CvEM::write_params:
-
 CvEM::write_params
 ------------------
 .. ocv:function:: void CvEM::write_params( CvFileStorage* fs ) const
@@ -308,10 +263,6 @@ CvEM::write_params
 
     :param fs: A file storage where parameters will be written.
 
-
-.. index:: CvEM::read_params
-
-.. _CvEM::read_params:
 
 CvEM::read_params
 -----------------
@@ -327,6 +278,5 @@ Read parameters will be used for the EM algorithm in this ``CvEM`` object.
 
 
 For example of clustering random samples of multi-Gaussian distribution using EM see em.cpp sample in OpenCV distribution.
-
 
 

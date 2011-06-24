@@ -3,13 +3,15 @@
 Boosting
 ========
 
+.. highlight:: cpp
+
 A common machine learning task is supervised learning. In supervised learning, the goal is to learn the functional relationship
 :math:`F: y = F(x)` between the input
 :math:`x` and the output
-:math:`y` . Predicting the qualitative output is called classification, while predicting the quantitative output is called regression.
+:math:`y` . Predicting the qualitative output is called *classification*, while predicting the quantitative output is called *regression*.
 
-Boosting is a powerful learning concept that provides a solution to the supervised classification learning task. It combines the performance of many "weak" classifiers to produce a powerful 'committee'
-:ref:`[HTF01] <HTF01>` . A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. However, many of them smartly combine results to a strong classifier that often outperforms most "monolithic" strong classifiers such as SVMs and Neural Networks.??
+Boosting is a powerful learning concept that provides a solution to the supervised classification learning task. It combines the performance of many "weak" classifiers to produce a powerful committee
+:ref:`[HTF01] <HTF01>` . A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. However, many of them smartly combine results to a strong classifier that often outperforms most "monolithic" strong classifiers such as SVMs and Neural Networks.
 
 Decision trees are the most popular weak classifiers used in boosting schemes. Often the simplest decision trees with only a single split node per tree (called ``stumps`` ) are sufficient.
 
@@ -19,10 +21,10 @@ The boosted model is based on
 :math:`x_i \in{R^K}` and
 :math:`y_i \in{-1, +1}` .
 :math:`x_i` is a
-:math:`K` -component vector. Each component encodes a feature relevant for the learning task at hand. The desired two-class output is encoded as -1 and +1.
+:math:`K` -component vector. Each component encodes a feature relevant to the learning task at hand. The desired two-class output is encoded as -1 and +1.
 
 Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle AdaBoost
-:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm as shown in the box below??. Each sample is initially assigned the same weight (step 2). Then, a weak classifier
+:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm as shown in the box below??. Initially the same weight is assigned to each sample (step 2). Then, a weak classifier
 :math:`f_{m(x)}` is trained on the weighted training data (step 3a). Its weighted training error and scaling factor
 :math:`c_m` is computed (step 3b). The weights are increased for training samples that have been misclassified (step 3c). All weights are then normalized, and the process of finding the next weak classifier continues for another
 :math:`M` -1 times. The final classifier
@@ -63,44 +65,31 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
 
 Two-class Discrete AdaBoost Algorithm: Training (steps 1 to 3) and Evaluation (step 4)??you need to revise this section. what is this? a title for the image that is missing?
 
-**NOTE:**
+.. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M
+:math:`>` two classes, there is the **AdaBoost.MH** algorithm (described in :ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
 
-Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M
-:math:`>` two classes, there is the
-**AdaBoost.MH**
-algorithm (described in
-:ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
-
-To reduce computation time for boosted models without substantially losing accuracy, the influence trimming technique may be employed. As the training algorithm proceeds and the number of trees in the ensemble is increased, a larger number of the training samples are classified correctly and with increasing confidence, thereby those samples receive smaller weights on the subsequent iterations. Examples with a very low relative weight have a small impact on the weak classifier training. Thus, such examples may be excluded during the weak classifier training without having much effect on the induced classifier. This process is controlled with the ``weight_trim_rate`` parameter. Only examples with the summary fraction ``weight_trim_rate`` of the total weight mass are used in the weak classifier training. Note that the weights for
+To reduce computation time for boosted models without substantially losing accuracy, the influence trimming technique can be employed. As the training algorithm proceeds and the number of trees in the ensemble is increased, a larger number of the training samples are classified correctly and with increasing confidence, thereby those samples receive smaller weights on the subsequent iterations. Examples with a very low relative weight have a small impact on the weak classifier training. Thus, such examples may be excluded during the weak classifier training without having much effect on the induced classifier. This process is controlled with the ``weight_trim_rate`` parameter. Only examples with the summary fraction ``weight_trim_rate`` of the total weight mass are used in the weak classifier training. Note that the weights for
 **all**
 training examples are recomputed at each training iteration. Examples deleted at a particular iteration may be used again for learning some of the weak classifiers further
 :ref:`[FHT98] <FHT98>` .
 
-.. _HTF01:??what is this meant to be? it doesn't work
+.. _HTF01:
 
-[HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Springer Series in Statistics*. 2001.
+[HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction*. Springer Series in Statistics. 2001.
 
-.. _FHT98:??the same comment
+.. _FHT98:
 
-[FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. Additive Logistic Regression: a Statistical View of Boosting. Technical Report, Dept. of Statistics*, Stanford University, 1998.
-
-.. index:: CvBoostParams
-
-.. _CvBoostParams:
+[FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. *Additive Logistic Regression: a Statistical View of Boosting*. Technical Report, Dept. of Statistics, Stanford University, 1998.
 
 CvBoostParams
 -------------
-.. c:type:: CvBoostParams
+.. ocv:class:: CvBoostParams
 
     Boosting training parameters.
 
 The structure is derived from :ref:`CvDTreeParams` but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
 
 All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
-
-.. index:: CvBoostParams::CvBoostParams
-
-.. _CvBoostParams::CvBoostParams:
 
 CvBoostParams::CvBoostParams
 ----------------------------
@@ -137,9 +126,9 @@ Also there is one parameter that you can set directly.
 
 CvBoostTree
 -----------
-.. c:type:: CvBoostTree
+.. ocv:class:: CvBoostTree
 
-Weak tree classifier ::
+Weak tree classifier. ::
 
     class CvBoostTree: public CvDTree
     {
@@ -161,28 +150,21 @@ Weak tree classifier ::
 
 
 The weak classifier, a component of the boosted tree classifier
-:ref:`CvBoost` , is a derivative of
-:ref:`CvDTree` . Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence ``CvBoost::weak`` , retrieved by ``CvBoost::get_weak_predictors`` .
+:ocv:class:`CvBoost` , is a derivative of
+:ocv:class:`CvDTree` . Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence ``CvBoost::weak`` , retrieved by ``CvBoost::get_weak_predictors`` .
 
-**Note:**
-
+.. note::
 In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression tree, rather than a classification tree. Even in case of Discrete AdaBoost and Real AdaBoost, the ``CvBoostTree::predict`` return value ( ``CvDTreeNode::value`` ) is not an output class label. A negative value "votes" for class
 #
-0, a positive - for class
+0, a positive value - for class
 #
 1. The votes are weighted. The weight of each individual tree may be increased or decreased using the method ``CvBoostTree::scale`` .
-
-.. index:: CvBoost
 
 CvBoost
 -------
 .. ocv:class:: CvBoost
 
-Boosted tree classifier, derived from :ocv:class:`CvStatModel`
-
-.. index:: CvBoost::train
-
-.. _CvBoost::train:
+Boosted tree classifier derived from :ocv:class:`CvStatModel`.
 
 CvBoost::train
 --------------
@@ -192,10 +174,6 @@ CvBoost::train
 
 The train method follows the common template. The last parameter ``update`` specifies whether the classifier needs to be updated (the new weak tree classifiers added to the existing ensemble) or the classifier needs to be rebuilt from scratch. The responses must be categorical, which means that boosted trees cannot be built for regression, and there should be two classes.
 
-.. index:: CvBoost::predict
-
-.. _CvBoost::predict:
-
 CvBoost::predict
 ----------------
 .. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
@@ -203,10 +181,6 @@ CvBoost::predict
     Predicts a response for an input sample.
 
 The method ``CvBoost::predict`` runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
-
-.. index:: CvBoost::prune
-
-.. _CvBoost::prune:
 
 CvBoost::prune
 --------------
@@ -216,18 +190,8 @@ CvBoost::prune
 
 The method removes the specified weak classifiers from the sequence. 
 
-**Note:**
+.. note:: Do not confuse this method with the pruning of individual decision trees, which is currently not supported.
 
-Do not confuse this method with the pruning of individual decision trees, which is currently not supported.
-
-.. index:: CvBoost::get_weak_predictors
-
-.. _CvBoost::get_weak_predictors:
-
-
-.. index:: CvBoost::calc_error
-
-.. _CvBoost::calc_error:
 
 CvBoost::calc_error
 -------------------
@@ -238,22 +202,13 @@ CvBoost::calc_error
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the boosted tree classifier as predictor.
 
 
-.. index:: CvBoost::get_weak_predictors
-
-.. _CvBoost::get_weak_predictors:
-
 CvBoost::get_weak_predictors
 ----------------------------
 .. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
 
     Returns the sequence of weak tree classifiers.
 
-The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or, probably, to some of its derivatives.
-
-
-.. index:: CvBoost::get_params
-
-.. _CvBoost::get_params:
+The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or to some of its derivatives.
 
 CvBoost::get_params
 -------------------
@@ -262,14 +217,8 @@ CvBoost::get_params
     Returns current parameters of the boosted tree classifier.
 
 
-.. index:: CvBoost::get_data
-
-.. _CvBoost::get_data:
-
 CvBoost::get_data
 -----------------
 .. ocv:function:: const CvDTreeTrainData* CvBoost::get_data() const
 
     Returns used train data of the boosted tree classifier.
-
-
