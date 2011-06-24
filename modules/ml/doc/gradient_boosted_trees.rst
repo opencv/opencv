@@ -14,8 +14,6 @@ Decision trees (:ocv:class:`CvDTree`) usage as base learners allows to process o
 and categorical variables.
 
 
-.. _Training the GBT model:
-
 Training the GBT model
 ----------------------
 
@@ -91,8 +89,6 @@ is a regularization parameter from the interval :math:`(0,1]`, futher called
 *shrinkage*.
 
 
-.. _Predicting with GBT model:
-
 Predicting with the GBT Model
 -------------------------
 
@@ -103,9 +99,6 @@ For classification problems, the result is :math:`\arg\max_{i=1..K}(f_i(x))`.
 
 .. highlight:: cpp
 
-
-.. index:: CvGBTreesParams
-.. _CvGBTreesParams:
 
 CvGBTreesParams
 ---------------
@@ -157,11 +150,6 @@ By default the following constructor is used:
 
     CvGBTreesParams(CvGBTrees::SQUARED_LOSS, 200, 0.8f, 0.01f, 3, false)
         : CvDTreeParams( 3, 10, 0, false, 10, 0, false, false, 0 )
-
-
-
-.. index:: CvGBTrees
-.. _CvGBTrees:
 
 CvGBTrees
 ---------
@@ -231,19 +219,18 @@ GBT model. ::
 	};
 
 
-	
-.. index:: CvGBTrees::train
-
-.. _CvGBTrees::train:
-
 CvGBTrees::train
 ----------------
+<<<<<<< .mine
+Trains a Gradient boosted tree model.
+
+.. ocv:function:: bool train(const Mat & trainData, int tflag, const Mat & responses, const Mat & varIdx=Mat(), const Mat & sampleIdx=Mat(), const Mat & varType=Mat(), const Mat & missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
+=======
 .. ocv:function:: bool CvGBTrees::train(const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
+>>>>>>> .r5669
 
 .. ocv:function:: bool CvGBTrees::train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
     
-	Trains a Gradient boosted tree model.
-	
 The first train method follows the common template (see :ocv:func:`CvStatModel::train`).
 Both ``tflag`` values (``CV_ROW_SAMPLE``, ``CV_COL_SAMPLE``) are supported.
 ``trainData`` must be of the ``CV_32F`` type. ``responses`` must be a matrix of type
@@ -259,15 +246,15 @@ All parameters specific to the GBT model are passed into the training function
 as a :ocv:class:`CvGBTreesParams` structure.
 
 
-.. index:: CvGBTrees::predict
-
-.. _CvGBTrees::predict:
-
 CvGBTrees::predict
 ------------------
+<<<<<<< .mine
+Predicts a response for an input sample.
+=======
 .. ocv:function:: float CvGBTrees::predict(const Mat& sample, const Mat& missing=Mat(), const Range& slice = Range::all(), int k=-1) const
+>>>>>>> .r5669
 
-    Predicts a response for an input sample.
+.. ocv:function:: float predict(const Mat & sample, const Mat & missing=Mat(), const Range & slice = Range::all(), int k=-1) const
  
    :param sample: Input feature vector that has the same format as every training set
     element. If not all the variables were actualy used during training,
@@ -302,30 +289,22 @@ prediction if the OpenCV is built with the TBB library. In this case, prediction
 of single trees are computed in a parallel fashion. 
 
     
-.. index:: CvGBTrees::clear
-
-.. _CvGBTrees::clear:
-
 CvGBTrees::clear
 ----------------
-.. ocv:function:: void CvGBTrees::clear()
+Clears the model.
 
-    Clears the model.
+.. ocv:function:: void CvGBTrees::clear()
     
-The finction deletes the data set information and all the weak models and sets all internal
+The function deletes the data set information and all the weak models and sets all internal
 variables to the initial state. The function is called in :ocv:func:`CvGBTrees::train` and in the
 destructor.
 
 
-.. index:: CvGBTrees::calc_error
-
-.. _CvGBTrees::calc_error:
-
 CvGBTrees::calc_error
 ---------------------
-.. ocv:function:: float CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp = 0 )
+Calculates a training or testing error.
 
-    Calculates a training or testing error.
+.. ocv:function:: float CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp = 0 )
     
    :param _data: Data set.
     

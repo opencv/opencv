@@ -3,15 +3,11 @@ User Interface
 
 .. highlight:: cpp
 
-.. index:: createTrackbar
-
-.. _createTrackbar:
-
 createTrackbar
 ------------------
-.. ocv:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
+Creates a trackbar and attaches it to the specified window.
 
-    Creates a trackbar and attaches it to the specified window.
+.. ocv:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
     :param trackbarname: Name of the created trackbar.
 
@@ -41,13 +37,11 @@ is NULL.
 
 Clicking the label of each trackbar enables editing the trackbar values manually for a more accurate control of it.
 
-.. index:: getTrackbarPos
-
 getTrackbarPos
 ------------------
-.. ocv:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
+Returns the trackbar position.
 
-    Returns the trackbar position.
+.. ocv:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
 
     :param trackbarname: Name of the trackbar.
 
@@ -61,15 +55,11 @@ Qt-specific details:
 
     * **winname** Name of the window that is the parent of the trackbar. It can be NULL if the trackbar is attached to the control panel.
 
-.. index:: imshow
-
-.. _imshow:
-
 imshow
 ----------
-.. ocv:function:: void imshow( const string& winname, InputArray image )
+Displays an image in the specified window.
 
-    Displays an image in the specified window.
+.. ocv:function:: void imshow( const string& winname, InputArray image )
 
     :param winname: Name of the window.
 
@@ -86,15 +76,12 @@ The function ``imshow`` displays an image in the specified window. If the window
 *
     If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
-.. index:: namedWindow
-
-.. _namedWindow:
 
 namedWindow
 ---------------
-.. ocv:function:: void namedWindow( const string& winname, int flags )
+Creates a window.
 
-    Creates a window.
+.. ocv:function:: void namedWindow( const string& winname, int flags )
 
     :param name: Name of the window in the window caption that may be used as a window identifier.
 
@@ -129,43 +116,31 @@ Qt-specific details:
         ..
 
 
-.. index:: destroyWindow
-
-.. _destroyWindow:
-
 destroyWindow
 -------------
-.. ocv:function:: void destroyWindow( const string &winname )
+Destroys a window.
 
-    Destroys a window.
+.. ocv:function:: void destroyWindow( const string &winname )
             
     :param winname: Name of the window to be destroyed. 
                                            
 The function ``destroyWindow`` destroys the window with the given name.
 
 
-.. index:: destroyAllWindows
-
-.. _destroyAllWindows:
-
 destroyAllWindows
 -----------------
-.. ocv:function:: void destroyAllWindows()
+Destroys all of the HighGUI windows.
 
-    Destroys all of the HighGUI windows.
+.. ocv:function:: void destroyAllWindows()
 
 The function ``destroyAllWindows`` destroys all of the opened HighGUI windows.
 
 
-.. index:: setTrackbarPos
-
-.. _setTrackbarPos:
-
 setTrackbarPos
 ------------------
-.. ocv:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
+Sets the trackbar position.
 
-    Sets the trackbar position.
+.. ocv:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
 
     :param trackbarname: Name of the trackbar.
 
@@ -181,15 +156,11 @@ Qt-specific details:
 
     * **winname** Name of the window that is the parent of the trackbar. It can be NULL if the trackbar is attached to the control panel.
 
-.. index:: waitKey
-
-.. _waitKey:
-
 waitKey
 -----------
-.. ocv:function:: int waitKey(int delay=0)
+Waits for a pressed key.
 
-    Waits for a pressed key.
+.. ocv:function:: int waitKey(int delay=0)
 
     :param delay: Delay in milliseconds. 0 is the special value that means "forever".
 

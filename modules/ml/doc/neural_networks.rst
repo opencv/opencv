@@ -100,9 +100,6 @@ References:
 *
     M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
 
-.. index:: CvANN_MLP_TrainParams
-
-.. _CvANN_MLP_TrainParams:
 
 CvANN_MLP_TrainParams
 ---------------------
@@ -132,10 +129,6 @@ Parameters of the MLP training algorithm. ::
 
 
 The structure has a default constructor that initializes parameters for the ``RPROP`` algorithm. There is also a more advanced constructor to customize the parameters and/or choose the back-propagation algorithm. Finally, the individual parameters can be adjusted after the structure is created.
-
-.. index:: CvANN_MLP
-
-.. _CvANN_MLP:
 
 CvANN_MLP
 ---------
@@ -224,15 +217,11 @@ MLP model. ::
 
 Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method ``create`` . All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
 
-.. index:: CvANN_MLP::create
-
-.. _CvANN_MLP::create:
-
 CvANN_MLP::create
 -----------------
-.. ocv:function:: void CvANN_MLP::create(  const Mat& _layer_sizes,                          int _activ_func=SIGMOID_SYM,                          double _f_param1=0,  double _f_param2=0 )
+Constructs MLP with the specified topology.
 
-    Constructs MLP with the specified topology.
+.. ocv:function:: void CvANN_MLP::create(  const Mat& _layer_sizes, int _activ_func=SIGMOID_SYM,                          double _f_param1=0, double _f_param2=0 )
 
     :param _layer_sizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
 
@@ -242,15 +231,11 @@ CvANN_MLP::create
 
 The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
 
-.. index:: CvANN_MLP::train
-
-.. _CvANN_MLP::train:
-
 CvANN_MLP::train
 ----------------
-.. ocv:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(),                        CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),                        int flags=0 )
+Trains/updates MLP.
 
-    Trains/updates MLP.
+.. ocv:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(), CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(), int flags=0 )
 
     :param _inputs: Floating-point matrix of input vectors, one vector per row.
 

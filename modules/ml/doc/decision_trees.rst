@@ -138,14 +138,14 @@ Decision tree training data and shared data for tree ensembles. ::
 
 CvDTreeParams
 -------------
-.. c:type:: CvDTreeParams
-
-    Decision tree training parameters.
+.. ocv:class:: CvDTreeParams
 
 The structure contains all the decision tree training parameters. You can initialize it by default constructor and then override any parameters directly before training, or the structure may be fully initialized using the advanced variant of the constructor.
 
 CvDTreeParams::CvDTreeParams
 ----------------------------
+The constructors.
+
 .. ocv:function:: CvDTreeParams::CvDTreeParams()  
 
 .. ocv:function:: CvDTreeParams::CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
@@ -182,9 +182,7 @@ CvDTreeTrainData
 ----------------
 .. ocv:class:: CvDTreeTrainData
 
-    Decision tree training data and shared data for tree ensembles.
-
-The structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
+Decision tree training data and shared data for tree ensembles. The structure is mostly used internally for storing both standalone trees and tree ensembles efficiently. Basically, it contains the following types of information:
 
 #. Training parameters, an instance of :ocv:class:`CvDTreeParams`.
 
@@ -209,13 +207,13 @@ CvDTree
 -------
 .. ocv:class:: CvDTree
 
-    Decision tree.
-
-The class implements a decision tree predictor as described in the beginning of this section.
+The class implements a decision tree as described in the beginning of this section.
 
 
 CvDTree::train
 --------------
+Trains a decision tree.
+
 .. ocv:function:: bool CvDTree::train( const Mat& train_data,  int tflag, const Mat& responses,  const Mat& var_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
 .. ocv:function:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
@@ -223,8 +221,6 @@ CvDTree::train
 .. ocv:function:: bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
 
 .. ocv:function:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
-
-    Trains a decision tree.
 
 There are four ``train`` methods in :ocv:class:`CvDTree`:
 
@@ -238,11 +234,11 @@ There are four ``train`` methods in :ocv:class:`CvDTree`:
 
 CvDTree::predict
 ----------------
+Returns the leaf node of a decision tree corresponding to the input vector.
+
 .. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missing_data_mask=Mat(), bool raw_mode=false ) const
 
 .. ocv:function:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
-
-    Returns the leaf node of a decision tree corresponding to the input vector.
 
     :param sample: Sample for prediction.
 
@@ -256,9 +252,9 @@ The method traverses the decision tree and returns the reached leaf node as outp
 
 CvDTree::calc_error
 -------------------
-.. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
+Returns error of the decision tree.
 
-    Returns error of the decision tree.
+.. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
 
     :param data: Data for the decision tree.
     
@@ -275,33 +271,33 @@ The method calculates error of the decision tree. In case of classification it i
 
 CvDTree::getVarImportance
 -------------------------
+Returns the variable importance array.
+
 .. ocv:function:: Mat CvDTree::getVarImportance()
 
 .. ocv:function:: const CvMat* CvDTree::get_var_importance()
 
-    Returns the variable importance array.
-
 
 CvDTree::get_root
 -----------------
-.. ocv:function:: const CvDTreeNode* CvDTree::get_root() const
+Returns the root of the decision tree.
 
-    Returns the root of the decision tree.
+.. ocv:function:: const CvDTreeNode* CvDTree::get_root() const
 
 
 CvDTree::get_pruned_tree_idx
 ----------------------------
-.. ocv:function:: int CvDTree::get_pruned_tree_idx() const
+Returns the ``CvDTree::pruned_tree_idx`` parameter.
 
-    Returns the ``CvDTree::pruned_tree_idx`` parameter.
+.. ocv:function:: int CvDTree::get_pruned_tree_idx() const
 
 The parameter ``DTree::pruned_tree_idx`` is used to prune a decision tree. See the ``CvDTreeNode::Tn`` parameter.
 
 CvDTree::get_data
 -----------------
-.. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
+Returns used train data of the decision tree.
 
-    Returns used train data of the decision tree.
+.. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.

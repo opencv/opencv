@@ -3,13 +3,13 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
-.. index:: FAST
+
 
 FAST
 --------
-.. ocv:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
+Detects corners using the FAST algorithm
 
-    Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
+.. ocv:function:: void FAST( const Mat& image, vector<KeyPoint>& keypoints,            int threshold, bool nonmaxSupression=true )
 
     :param image: Image where keypoints (corners) are detected.
 
@@ -19,9 +19,8 @@ FAST
 
     :param nonmaxSupression: If it is true, non-maximum supression is applied to detected corners (keypoints).
 
-.. index:: MSER
+Detects corners using the FAST algorithm by E. Rosten (*Machine Learning for High-speed Corner Detection*, 2006).
 
-.. _MSER:
 
 MSER
 ----
@@ -48,9 +47,6 @@ Maximally stable extremal region extractor. ::
 The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://opencv.willowgarage.com/wiki/documentation/cpp/features2d/MSER for usefull comments and parameters description.
 
-.. index:: StarDetector
-
-.. _StarDetector:
 
 StarDetector
 ------------
@@ -87,7 +83,7 @@ Class implementing the ``Star`` keypoint detector. ::
 The class implements a modified version of the ``CenSurE`` keypoint detector described in
 [Agrawal08].
 
-.. index:: SIFT
+
 
 SIFT
 ----
@@ -175,7 +171,7 @@ Class for extracting keypoints and computing descriptors using the Scale Invaria
     };
 
 
-.. index:: SURF
+
 
 SURF
 ----
@@ -213,7 +209,7 @@ There is a fast multi-scale Hessian keypoint detector that can be used to find k
 The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in the OpenCV samples directory.
 
 
-.. index:: ORB
+
 
 ORB
 ----
@@ -269,7 +265,7 @@ Class for extracting ORB features and descriptors from an image. ::
 The class implements ORB.
 
 
-.. index:: RandomizedTree
+
 
 
 RandomizedTree
@@ -344,13 +340,13 @@ Class containing a base structure for ``RTreeClassifier``. ::
             void estimateQuantPercForPosteriors(float perc[2]);
     };
 
-.. index:: RandomizedTree::train
+
 
 RandomizedTree::train
 -------------------------
-.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
+Trains a randomized tree using an input set of keypoints.
 
-    Trains a randomized tree using an input set of keypoints.
+.. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
 .. ocv:function:: void train(std::vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int depth, int views, size_t reduced_num_dim, int num_quant_bits)
 
@@ -368,15 +364,15 @@ RandomizedTree::train
     
     :param num_quant_bits: Number of bits used for quantization.
 
-.. index:: RandomizedTree::read
+
 
 RandomizedTree::read
 ------------------------
+Reads a pre-saved randomized tree from a file or stream.
+
 .. ocv:function:: read(const char* file_name, int num_quant_bits)
 
 .. ocv:function:: read(std::istream &is, int num_quant_bits)
-
-    Reads a pre-saved randomized tree from a file or stream.
 
     :param file_name: Name of the file that contains randomized tree data.
 
@@ -384,21 +380,21 @@ RandomizedTree::read
 
     :param num_quant_bits: Number of bits used for quantization.
 
-.. index:: RandomizedTree::write
+
 
 RandomizedTree::write
 -------------------------
+Writes the current randomized tree to a file or stream.
+
 .. ocv:function:: void write(const char* file_name) const
 
-    Writes the current randomized tree to a file or stream.
-
-.. ocv:function:: void write(std::ostream \&os) const
+.. ocv:function:: void write(std::ostream &os) const
 
     :param file_name: Name of the file where randomized tree data is stored.
 
     :param is: Output stream associated with the file where randomized tree data is stored.
 
-.. index:: RandomizedTree::applyQuantization
+
 
 RandomizedTree::applyQuantization
 -------------------------------------
@@ -408,9 +404,6 @@ RandomizedTree::applyQuantization
 
     :param num_quant_bits: Number of bits used for quantization.
 
-.. index:: RTreeNode
-
-.. _RTreeNode:
 
 RTreeNode
 ---------
@@ -436,9 +429,7 @@ Class containing a base structure for ``RandomizedTree``. ::
             }
     };
 
-.. index:: RTreeClassifier
 
-.. _RTreeClassifier:
 
 RTreeClassifier
 ---------------
@@ -508,13 +499,13 @@ Class containing ``RTreeClassifier``. It represents the Calonder descriptor orig
             bool keep_floats_;
     };
 
-.. index:: RTreeClassifier::train
+
 
 RTreeClassifier::train
 --------------------------
-.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
+Trains a randomized tree classifier using an input set of keypoints.
 
-    Trains a randomized tree classifier using an input set of keypoints.
+.. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, int num_trees = RTreeClassifier::DEFAULT_TREES,                         int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM, int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
 .. ocv:function:: void train(vector<BaseKeypoint> const& base_set, RNG& rng, PatchGenerator& make_patch, int num_trees = RTreeClassifier::DEFAULT_TREES, int depth = DEFAULT_DEPTH, int views = DEFAULT_VIEWS, size_t reduced_num_dim = DEFAULT_REDUCED_NUM_DIM,                         int num_quant_bits = DEFAULT_NUM_QUANT_BITS, bool print_status = true)
 
@@ -536,27 +527,26 @@ RTreeClassifier::train
     
     :param print_status: Current status of training printed on the console.
 
-.. index:: RTreeClassifier::getSignature
+
 
 RTreeClassifier::getSignature
 ---------------------------------
-.. ocv:function:: void getSignature(IplImage *patch, uchar *sig)
+Returns a signature for an image patch.
 
-    Returns a signature for an image patch.
+.. ocv:function:: void getSignature(IplImage *patch, uchar *sig)
 
 .. ocv:function:: void getSignature(IplImage *patch, float *sig)
 
     :param patch: Image patch to calculate the signature for.
     :param sig: Output signature (array dimension is ``reduced_num_dim)`` .
 
-.. index:: RTreeClassifier::getSparseSignature
+
 
 RTreeClassifier::getSparseSignature
 --------------------------------------- 
+Returns a sparse signature for an image patch
 
 .. ocv:function:: void getSparseSignature(IplImage *patch, float *sig, float thresh)
-
-    Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
 
     :param patch: Image patch to calculate the signature for.
     
@@ -564,13 +554,14 @@ RTreeClassifier::getSparseSignature
     
     :param thresh: Threshold used for compressing the signature.
 
-.. index:: RTreeClassifier::countNonZeroElements
+    Returns a signature for an image patch similarly to ``getSignature``  but uses a threshold for removing all signature elements below the threshold so that the signature is compressed.
+
 
 RTreeClassifier::countNonZeroElements
 -----------------------------------------
-.. ocv:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
+Returns the number of non-zero elements in an input array.
 
-    Returns the number of non-zero elements in an input array.
+.. ocv:function:: static int countNonZeroElements(float *vec, int n, double tol=1e-10)
 
     :param vec: Input vector containing float elements.
 
@@ -578,13 +569,13 @@ RTreeClassifier::countNonZeroElements
 
     :param tol: Threshold used for counting elements. All elements less than ``tol``  are considered as zero elements.
 
-.. index:: RTreeClassifier::read
+
 
 RTreeClassifier::read
 -------------------------
-.. ocv:function:: read(const char* file_name)
+Reads a pre-saved ``RTreeClassifier`` from a file or stream.
 
-    Reads a pre-saved ``RTreeClassifier`` from a file or stream.
+.. ocv:function:: read(const char* file_name)
 
 .. ocv:function:: read(std::istream& is)
 
@@ -592,13 +583,13 @@ RTreeClassifier::read
 
     :param is: Input stream associated with the file that contains randomized tree data.
 
-.. index:: RTreeClassifier::write
+
 
 RTreeClassifier::write
 --------------------------
-.. ocv:function:: void write(const char* file_name) const
+Writes the current ``RTreeClassifier`` to a file or stream.
 
-    Writes the current ``RTreeClassifier`` to a file or stream.
+.. ocv:function:: void write(const char* file_name) const
 
 .. ocv:function:: void write(std::ostream &os) const
 
@@ -606,13 +597,13 @@ RTreeClassifier::write
 
     :param os: Output stream associated with the file where randomized tree data is stored.
 
-.. index:: RTreeClassifier::setQuantization
+
 
 RTreeClassifier::setQuantization
 ------------------------------------
-.. ocv:function:: void setQuantization(int num_quant_bits)
+Applies quantization to the current randomized tree.
 
-    Applies quantization to the current randomized tree.
+.. ocv:function:: void setQuantization(int num_quant_bits)
 
     :param num_quant_bits: Number of bits used for quantization.
 

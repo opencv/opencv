@@ -9,8 +9,6 @@ This simple classification model assumes that feature vectors from each class ar
 
 [Fukunaga90] K. Fukunaga. *Introduction to Statistical Pattern Recognition*. second ed., New York: Academic Press, 1990.
 
-.. index:: CvNormalBayesClassifier
-
 CvNormalBayesClassifier
 -----------------------
 .. ocv:class:: CvNormalBayesClassifier
@@ -42,15 +40,11 @@ Bayes classifier for normally distributed data. ::
     };
 
 
-.. index:: CvNormalBayesClassifier::train
-
-.. _CvNormalBayesClassifier::train:
-
 CvNormalBayesClassifier::train
 ------------------------------
-.. ocv:function:: bool CvNormalBayesClassifier::train(  const Mat& _train_data,  const Mat& _responses,                 const Mat& _var_idx =Mat(),  const Mat& _sample_idx=Mat(),  bool update=false )
+Trains the model.
 
-    Trains the model.
+.. ocv:function:: bool CvNormalBayesClassifier::train(  const Mat& _train_data,  const Mat& _responses,                 const Mat& _var_idx =Mat(),  const Mat& _sample_idx=Mat(),  bool update=false )
 
 The method trains the Normal Bayes classifier. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
@@ -61,15 +55,11 @@ The method trains the Normal Bayes classifier. It follows the conventions of the
 
 In addition, there is an ``update`` flag that identifies whether the model should be trained from scratch ( ``update=false`` ) or should be updated using the new training data ( ``update=true`` ).
 
-.. index:: CvNormalBayesClassifier::predict
-
-.. _CvNormalBayesClassifier::predict:
-
 CvNormalBayesClassifier::predict
 --------------------------------
-.. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
+Predicts the response for sample(s).
 
-    Predicts the response for sample(s).
+.. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
 The method ``predict`` estimates the most probable classes for input vectors. Input vectors (one or more) are stored as rows of the matrix ``samples`` . In case of multiple input vectors, there should be one output vector ``results`` . The predicted class for a single input vector is returned by the method.
 

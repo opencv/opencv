@@ -42,25 +42,25 @@ In this declaration, some methods are commented off. These are methods for which
 
 CvStatModel::CvStatModel
 ------------------------
-.. ocv:function:: CvStatModel::CvStatModel()
+The default constuctor.
 
-    Serves as a default constructor.
+.. ocv:function:: CvStatModel::CvStatModel()
 
 Each statistical model class in ML has a default constructor without parameters. This constructor is useful for a two-stage model construction, when the default constructor is followed by ``train()`` or ``load()`` .
 
 CvStatModel::CvStatModel(...)
 -----------------------------
-.. ocv:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
+The training constructor.
 
-    Serves as a training constructor.
+.. ocv:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
 
 Most ML classes provide a single-step constructor and train constructors. This constructor is equivalent to the default constructor, followed by the ``train()`` method with the parameters that are passed to the constructor.
 
 CvStatModel::~CvStatModel
 -------------------------
-.. ocv:function:: CvStatModel::~CvStatModel()
+The virtual destructor.
 
-    Serves as a virtual destructor.
+.. ocv:function:: CvStatModel::~CvStatModel()
 
 The destructor of the base class is declared as virtual. So, it is safe to write the following code: ::
 
@@ -77,43 +77,43 @@ Normally, the destructor of each derived class does nothing. But in this instanc
 
 CvStatModel::clear
 ------------------
-.. ocv:function:: void CvStatModel::clear()
+Deallocates memory and resets the model state.
 
-    Deallocates memory and resets the model state.
+.. ocv:function:: void CvStatModel::clear()
 
 The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the ``train`` methods of the derived classes, from the methods ``load()``, ``read()``, or even explicitly by the user.
 
 CvStatModel::save
 -----------------
-.. ocv:function:: void CvStatModel::save( const char* filename, const char* name=0 )
+Saves the model to a file.
 
-    Saves the model to a file.
+.. ocv:function:: void CvStatModel::save( const char* filename, const char* name=0 )
 
 The method ``save`` saves the complete model state to the specified XML or YAML file with the specified name or default name (which depends on a particular class). *Data persistence* functionality from ``CxCore`` is used.
 
 CvStatModel::load
 -----------------
-.. ocv:function:: void CvStatModel::load( const char* filename, const char* name=0 )
+Loads the model from a file.
 
-    Loads the model from a file.
+.. ocv:function:: void CvStatModel::load( const char* filename, const char* name=0 )
 
 The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by ``clear()`` .
 
 
 CvStatModel::write
 ------------------
-.. ocv:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
+Writes the model to the file storage.
 
-    Writes the model to the file storage.
+.. ocv:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
 
 The method ``write`` stores the complete model state in the file storage with the specified name or default name (which depends on the particular class). The method is called by ``save()`` .
 
 
 CvStatModel::read
 -----------------
-.. ocv:function:: void CvStatModel::read( CvFileStorage* storage, CvFileNode* node )
+Reads the model from the file storage.
 
-    Reads the model from the file storage.
+.. ocv:function:: void CvStatModel::read( CvFileStorage* storage, CvFileNode* node )
 
 The method ``read`` restores the complete model state from the specified node of the file storage. Use the function
 :ocv:func:`GetFileNodeByName` to locate the node.
@@ -122,9 +122,9 @@ The previous model state is cleared by ``clear()`` .
 
 CvStatModel::train
 ------------------
-.. ocv:function:: bool CvStatModel::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
+Trains the model.
 
-    Trains the model.
+.. ocv:function:: bool CvStatModel::train( const Mat& train_data, [int tflag,] ..., const Mat& responses, ...,     [const Mat& var_idx,] ..., [const Mat& sample_idx,] ...     [const Mat& var_type,] ..., [const Mat& missing_mask,] <misc_training_alg_params> ... )
 
 The method trains the statistical model using a set of input feature vectors and the corresponding output values (responses). Both input and output vectors/values are passed as matrices. By default, the input feature vectors are stored as ``train_data`` rows, that is, all the components (features) of a training vector are stored continuously. However, some algorithms can handle the transposed representation when all values of each particular feature (component/input variable) over the whole input set are stored continuously. If both layouts are supported, the method includes the ``tflag`` parameter that specifies the orientation as follows:
 
@@ -150,9 +150,9 @@ Usually, the previous model state is cleared by ``clear()`` before running the t
 
 CvStatModel::predict
 --------------------
-.. ocv:function:: float CvStatModel::predict( const Mat& sample[, <prediction_params>] ) const
+Predicts the response for a sample.
 
-    Predicts the response for a sample.
+.. ocv:function:: float CvStatModel::predict( const Mat& sample[, <prediction_params>] ) const
 
 The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train`` , it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict`` .
 

@@ -3,13 +3,13 @@ Feature Detection
 
 .. highlight:: cpp
 
-.. index:: Canny
+
 
 Canny
 ---------
-.. ocv:function:: void Canny( InputArray image, OutputArray edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
+Finds edges in an image using the Canny algorithm.
 
-    Finds edges in an image using the Canny algorithm.
+.. ocv:function:: void Canny( InputArray image, OutputArray edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
 
     :param image: Single-channel 8-bit input image.
 
@@ -26,14 +26,13 @@ Canny
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
-.. index:: cornerEigenValsAndVecs
+
 
 cornerEigenValsAndVecs
 ----------------------
+Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
 .. ocv:function:: void cornerEigenValsAndVecs( InputArray src, OutputArray dst, int blockSize, int apertureSize, int borderType=BORDER_DEFAULT )
-
-    Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -73,14 +72,13 @@ See Also:
 :ocv:func:`cornerHarris`,
 :ocv:func:`preCornerDetect`
 
-.. index:: cornerHarris
+
 
 cornerHarris
 ------------
+Harris edge detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int apertureSize, double k, int borderType=BORDER_DEFAULT )
-
-    Harris edge detector.
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -108,14 +106,13 @@ The function runs the Harris edge detector on the image. Similarly to
 
 Corners in the image can be found as the local maxima of this response map.
 
-.. index:: cornerMinEigenVal
+
 
 cornerMinEigenVal
 -----------------
+Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 .. ocv:function:: void cornerMinEigenVal( InputArray src, OutputArray dst, int blockSize, int apertureSize=3, int borderType=BORDER_DEFAULT )
-
-    Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -132,13 +129,13 @@ The function is similar to
 :math:`\min(\lambda_1, \lambda_2)` in terms of the formulae in the
 :ocv:func:`cornerEigenValsAndVecs` description.
 
-.. index:: cornerSubPix
+
 
 cornerSubPix
 ----------------
-.. ocv:function:: void cornerSubPix( InputArray image, InputOutputArray corners, Size winSize, Size zeroZone, TermCriteria criteria )
+Refines the corner locations.
 
-    Refines the corner locations.
+.. ocv:function:: void cornerSubPix( InputArray image, InputOutputArray corners, Size winSize, Size zeroZone, TermCriteria criteria )
 
     :param image: Input image.
 
@@ -188,14 +185,13 @@ where the gradients are summed within a neighborhood ("search window") of
 The algorithm sets the center of the neighborhood window at this new center
 :math:`q` and then iterates until the center stays within a set threshold.
 
-.. index:: goodFeaturesToTrack
+
 
 goodFeaturesToTrack
 -------------------
+Determines strong corners on an image.
 
 .. ocv:function:: void goodFeaturesToTrack( InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=noArray(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
-
-    Determines strong corners on an image.
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -246,14 +242,13 @@ See Also: :ocv:func:`cornerMinEigenVal`,
 :ocv:func:`PlanarObjectDetector`, 
 :ocv:func:`OneWayDescriptor`
 
-.. index:: HoughCircles
+
 
 HoughCircles
 ------------
+Finds circles in a grayscale image using the Hough transform.
 
 .. ocv:function:: void HoughCircles( InputArray image, OutputArray circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
-
-    Finds circles in a grayscale image using the Hough transform.
 
     :param image: 8-bit, single-channel, grayscale input image.
 
@@ -312,14 +307,13 @@ See Also:
 :ocv:func:`fitEllipse`,
 :ocv:func:`minEnclosingCircle`
 
-.. index:: HoughLines
+
 
 HoughLines
 ----------
+Finds lines in a binary image using the standard Hough transform.
 
 .. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
-
-    Finds lines in a binary image using the standard Hough transform.
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -339,14 +333,13 @@ The function implements the standard or standard multi-scale Hough transform alg
 :ocv:func:`HoughLinesP` for the code example. Also see http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
 
 
-.. index:: HoughLinesP
+
 
 HoughLinesP
 -----------
+Finds line segments in a binary image using the probabilistic Hough transform.
 
 .. ocv:function:: void HoughLinesP( InputArray image, OutputArray lines, double rho, double theta, int threshold, double minLineLength=0, double maxLineGap=0 )
-
-    Finds line segments in a binary image using the probabilistic Hough transform.
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -427,14 +420,13 @@ And this is the output of the above program in case of the probabilistic Hough t
 
 .. image:: pics/houghp.png
 
-.. index:: preCornerDetect
+
 
 preCornerDetect
 ---------------
+Calculates a feature map for corner detection.
 
 .. ocv:function:: void preCornerDetect( InputArray src, OutputArray dst, int apertureSize, int borderType=BORDER_DEFAULT )
-
-    Calculates a feature map for corner detection.
 
     :param src: Source single-channel 8-bit of floating-point image.
 

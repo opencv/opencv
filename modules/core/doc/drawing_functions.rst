@@ -26,13 +26,11 @@ If a drawn figure is partially or completely outside the image, the drawing func
 
 .. note:: The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
 
-.. index:: circle
-
 circle
 ----------
-.. ocv:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
+Draws a circle.
 
-    Draws a circle.
+.. ocv:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
 
     :param img: Image where the circle is drawn.
 
@@ -50,18 +48,16 @@ circle
 
 The function ``circle`` draws a simple or filled circle with a given center and radius.
 
-.. index:: clipLine
-
 clipLine
 ------------
+Clips the line against the image rectangle.
+
 .. ocv:function:: bool clipLine(Size imgSize, Point& pt1, Point& pt2)
 
 .. ocv:function:: bool clipLine(Rect imgRect, Point& pt1, Point& pt2)
 
-    Clips the line against the image rectangle.
-
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
-	
+
     :param imgSize: Image rectangle.?? why do you list the same para twice??
 
     :param pt1: First line point.
@@ -71,15 +67,13 @@ clipLine
 The functions ``clipLine`` calculate a part of the line segment that is entirely within the specified rectangle.
 They return ``false`` if the line segment is completely outside the rectangle. Otherwise, they return ``true`` .
 
-.. index:: ellipse
-
 ellipse
 -----------
+Draws a simple or thick elliptic arc or fills an ellipse sector.
+
 .. ocv:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
 
 .. ocv:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
-
-    Draws a simple or thick elliptic arc or fills an ellipse sector.
 
     :param img: Image.
 
@@ -113,13 +107,11 @@ A piecewise-linear curve is used to approximate the elliptic arc boundary. If yo
 
 .. image:: pics/ellipse.png
 
-.. index:: ellipse2Poly
-
 ellipse2Poly
 ----------------
-.. ocv:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
+Approximates an elliptic arc with a polyline.
 
-    Approximates an elliptic arc with a polyline.
+.. ocv:function:: void ellipse2Poly( Point center, Size axes, int angle,                   int startAngle, int endAngle, int delta,                   vector<Point>& pts )
 
     :param center: Center of the arc.
 
@@ -138,13 +130,13 @@ ellipse2Poly
 The function ``ellipse2Poly`` computes the vertices of a polyline that approximates the specified elliptic arc. It is used by
 :ocv:func:`ellipse` .
 
-.. index:: fillConvexPoly
+
 
 fillConvexPoly
 ------------------
-.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
+Fills a convex polygon.
 
-    Fills a convex polygon.
+.. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
 
     :param img: Image.
 
@@ -162,13 +154,13 @@ The function ``fillConvexPoly`` draws a filled convex polygon.
 This function is much faster than the function ``fillPoly`` . It can fill not only convex polygons but any monotonic polygon without self-intersections,
 that is, a polygon whose contour intersects every horizontal line (scan line) twice at the most (though, its top-most and/or the bottom edge could be horizontal).
 
-.. index:: fillPoly
+
 
 fillPoly
 ------------
-.. ocv:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
+Fills the area bounded by one or more polygons.
 
-    Fills the area bounded by one or more polygons.
+.. ocv:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
 
     :param img: Image.
 
@@ -187,22 +179,22 @@ fillPoly
 The function ``fillPoly`` fills an area bounded by several polygonal contours. The function can fill complex areas, for example,
 areas with holes, contours with self-intersections (some of thier parts), and so forth.
 
-.. index:: getTextSize
+
 
 getTextSize
 ---------------
-.. ocv:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
+Calculates the width and height of a text string.
 
-    Calculates the width and height of a text string.
+.. ocv:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
 
     :param text: Input text string.
 
     :param fontFace: Font to use. See the  :ocv:func:`putText` for details.    
-	
+
     :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.   
-	
+
     :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.   
-	
+
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
 
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
@@ -238,13 +230,13 @@ That is, the following code renders some text, the tight box surrounding it, and
     putText(img, text, textOrg, fontFace, fontScale,
             Scalar::all(255), thickness, 8);
 
-.. index:: line
+
 
 line
 --------
-.. ocv:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
+Draws a line segment connecting two points.
 
-    Draws a line segment connecting two points.
+.. ocv:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
 
     :param img: Image.
 
@@ -269,13 +261,10 @@ line
 The function ``line`` draws the line segment between ``pt1`` and ``pt2`` points in the image. The line is clipped by the image boundaries. For non-antialiased lines with integer coordinates, the 8-connected or 4-connected Bresenham algorithm is used. Thick lines are drawn with rounding endings.
 Antialiased lines are drawn using Gaussian filtering. To specify the line color, you may use the macro ``CV_RGB(r, g, b)`` .
 
-.. index:: LineIterator
-
-.. _LineIterator:
 
 LineIterator
 ------------
-.. c:type:: LineIterator
+.. ocv:class:: LineIterator
 
 Class for iterating pixels on a raster line. ::
 
@@ -315,15 +304,15 @@ The number of pixels along the line is stored in ``LineIterator::count`` . ::
     for(int i = 0; i < it.count; i++, ++it)
         buf[i] = *(const Vec3b)*it;
 
-.. index:: rectangle
+
 
 rectangle
 -------------
+Draws a simple, thick, or filled up-right rectangle.
+
 .. ocv:function:: void rectangle(Mat& img, Point pt1, Point pt2, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
 
 .. ocv:function:: void rectangle(Mat& img, Rect r, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
-
-    Draws a simple, thick, or filled up-right rectangle.
 
     :param img: Image.
 
@@ -343,13 +332,13 @@ rectangle
 
 The function ``rectangle`` draws a rectangle outline or a filled rectangle whose two opposite corners are ``pt1`` and ``pt2``, or ``r.tl()`` and ``r.br()-Point(1,1)``.
 
-.. index:: polylines
+
 
 polylines
 -------------
-.. ocv:function:: void polylines(Mat& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar& color,               int thickness=1, int lineType=8, int shift=0 )
+Draws several polygonal curves.
 
-    Draws several polygonal curves.
+.. ocv:function:: void polylines(Mat& img, const Point** pts, const int* npts,               int ncontours, bool isClosed, const Scalar& color,               int thickness=1, int lineType=8, int shift=0 )
 
     :param img: Image.
 
@@ -371,13 +360,13 @@ polylines
 
 The function ``polylines`` draws one or more polygonal curves.
 
-.. index:: putText
+
 
 putText
 -----------
-.. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+Draws a text string.
 
-    Draws a text string.
+.. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
 
     :param img: Image.
 

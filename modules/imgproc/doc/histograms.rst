@@ -3,15 +3,15 @@ Histograms
 
 .. highlight:: cpp
 
-.. index:: calcHist
+
 
 calcHist
 ------------
+Calculates a histogram of a set of arrays.
+
 .. ocv:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform=true,               bool accumulate=false )
 
 .. ocv:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               SparseMat& hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
-
-    Calculates a histogram of a set of arrays.
 
     :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -95,15 +95,15 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
     }
 
 
-.. index:: calcBackProject
+
 
 calcBackProject
 -------------------
+Calculates the back projection of a histogram.
+
 .. ocv:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, InputArray hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
 .. ocv:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, const SparseMat& hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
-
-    Calculates the back projection of a histogram.
 
     :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -138,16 +138,15 @@ This is an approximate algorithm of the
 See Also:
 :ocv:func:`calcHist`
 
-.. index:: compareHist
+
 
 compareHist
 -----------
+Compares two histograms.
 
 .. ocv:function:: double compareHist( InputArray H1, InputArray H2, int method )
 
 .. ocv:function:: double compareHist( const SparseMat& H1,  const SparseMat& H2, int method )
-
-    Compares two histograms.
 
     :param H1: The first compared histogram.
 
@@ -204,14 +203,13 @@ While the function works well with 1-, 2-, 3-dimensional dense histograms, it ma
 :ocv:func:`EMD` function.
 
 
-.. index:: EMD
+
 
 EMD
 ------
+Computes the "minimal work" distance between two weighted point configurations.
+
 .. ocv:function:: float EMD( InputArray signature1, InputArray signature2, int distType, InputArray cost=noArray(), float* lowerBound=0, OutputArray flow=noArray() )
-
-    Computes the "minimal work" distance between two weighted point configurations.
-
 
     :param signature1: The first signature, a  :math:`\texttt{size1}\times \texttt{dims}+1`  floating-point matrix. Each row stores the point weight followed by the point coordinates. The matrix is allowed to have a single column (weights only) if the user-defined cost matrix is used.
 
@@ -228,13 +226,13 @@ EMD
 The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in :ref:`RubnerSept98` is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
 
 
-.. index:: equalizeHist
+
 
 equalizeHist
 ----------------
-.. ocv:function:: void equalizeHist( InputArray src, OutputArray dst )
+Equalizes the histogram of a grayscale image.
 
-    Equalizes the histogram of a grayscale image.
+.. ocv:function:: void equalizeHist( InputArray src, OutputArray dst )
 
     :param src: Source 8-bit single channel image.
 

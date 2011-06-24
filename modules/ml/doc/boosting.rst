@@ -24,11 +24,13 @@ The boosted model is based on
 :math:`K` -component vector. Each component encodes a feature relevant to the learning task at hand. The desired two-class output is encoded as -1 and +1.
 
 Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle AdaBoost
-:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm as shown in the box below??. Initially the same weight is assigned to each sample (step 2). Then, a weak classifier
+:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm, outlined below. Initially the same weight is assigned to each sample (step 2). Then, a weak classifier
 :math:`f_{m(x)}` is trained on the weighted training data (step 3a). Its weighted training error and scaling factor
 :math:`c_m` is computed (step 3b). The weights are increased for training samples that have been misclassified (step 3c). All weights are then normalized, and the process of finding the next weak classifier continues for another
 :math:`M` -1 times. The final classifier
 :math:`F(x)` is the sign of the weighted sum over the individual weak classifiers (step 4).
+
+**Two-class Discrete AdaBoost Algorithm**
 
 #.
     Set
@@ -41,29 +43,17 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
     :math:`w_i = 1/N, i = 1,...,N`     .
 
 #.
-    Repeat for
-    :math:`m`     =
-    :math:`1,2,...,M`     :
+    Repeat for :math:`m = 1,2,...,M` :
 
-    #.
-        Fit the classifier
-        :math:`f_m(x) \in{-1,1}`         , using weights
-        :math:`w_i`         on the training data.
+    3.1. Fit the classifier :math:`f_m(x) \in{-1,1}`, using weights :math:`w_i` on the training data.
 
-    #.
-        Compute
-        :math:`err_m = E_w [1_{(y =\neq f_m(x))}], c_m = log((1 - err_m)/err_m)`         .
+    3.2. Compute :math:`err_m = E_w [1_{(y \neq f_m(x))}], c_m = log((1 - err_m)/err_m)`         .
 
-    #.
-        Set
-        :math:`w_i \Leftarrow w_i exp[c_m 1_{(y_i \neq f_m(x_i))}], i = 1,2,...,N,`         and renormalize so that
-        :math:`\Sigma i w_i = 1`         .
+    3.3. Set :math:`w_i \Leftarrow w_i exp[c_m 1_{(y_i \neq f_m(x_i))}], i = 1,2,...,N,` and renormalize so that :math:`\Sigma i w_i = 1`         .
 
-    #.
-        Output the classifier sign
-        :math:`[\Sigma m = 1M c_m f_m(x)]`         .
 
-Two-class Discrete AdaBoost Algorithm: Training (steps 1 to 3) and Evaluation (step 4)??you need to revise this section. what is this? a title for the image that is missing?
+#. Classify new samples *x* using the formula: :math:`\sign (\Sigma m = 1M c_m f_m(x))`         .
+
 
 .. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M
 :math:`>` two classes, there is the **AdaBoost.MH** algorithm (described in :ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
@@ -93,6 +83,8 @@ All parameters are public. You can initialize them by a constructor and then ove
 
 CvBoostParams::CvBoostParams
 ----------------------------
+The constructors.
+
 .. ocv:function:: CvBoostParams::CvBoostParams()
 
 .. ocv:function:: CvBoostParams::CvBoostParams( int boost_type, int weak_count, double weight_trim_rate, int max_depth, bool use_surrogates, const float* priors )
@@ -119,10 +111,6 @@ Also there is one parameter that you can set directly.
         * **CvBoost::GINI** Default option for real AdaBoost.
         * **CvBoost::MISCLASS** Default option for discrete AdaBoost.
         * **CvBoost::SQERR** Least-square error; only option available for LogitBoost and gentle AdaBoost.
-
-.. index:: CvBoostTree
-
-.. _CvBoostTree:
 
 CvBoostTree
 -----------
@@ -168,25 +156,25 @@ Boosted tree classifier derived from :ocv:class:`CvStatModel`.
 
 CvBoost::train
 --------------
-.. ocv:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
+Trains a boosted tree classifier.
 
-    Trains a boosted tree classifier.
+.. ocv:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
 The train method follows the common template. The last parameter ``update`` specifies whether the classifier needs to be updated (the new weak tree classifiers added to the existing ensemble) or the classifier needs to be rebuilt from scratch. The responses must be categorical, which means that boosted trees cannot be built for regression, and there should be two classes.
 
 CvBoost::predict
 ----------------
-.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
+Predicts a response for an input sample.
 
-    Predicts a response for an input sample.
+.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
 The method ``CvBoost::predict`` runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
 
 CvBoost::prune
 --------------
-.. ocv:function:: void CvBoost::prune( CvSlice slice )
+Removes the specified weak classifiers.
 
-    Removes the specified weak classifiers.
+.. ocv:function:: void CvBoost::prune( CvSlice slice )
 
 The method removes the specified weak classifiers from the sequence. 
 
@@ -195,30 +183,32 @@ The method removes the specified weak classifiers from the sequence.
 
 CvBoost::calc_error
 -------------------
-.. ocv:function:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
+Returns error of the boosted tree classifier.
 
-    Returns error of the boosted tree classifier.
+.. ocv:function:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
 
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the boosted tree classifier as predictor.
 
 
 CvBoost::get_weak_predictors
 ----------------------------
+Returns the sequence of weak tree classifiers.
+
 .. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
 
-    Returns the sequence of weak tree classifiers.
 
 The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or to some of its derivatives.
 
 CvBoost::get_params
 -------------------
-.. ocv:function:: const CvBoostParams& CvBoost::get_params() const
+Returns current parameters of the boosted tree classifier.
 
-    Returns current parameters of the boosted tree classifier.
+.. ocv:function:: const CvBoostParams& CvBoost::get_params() const
 
 
 CvBoost::get_data
 -----------------
+Returns used train data of the boosted tree classifier.
+
 .. ocv:function:: const CvDTreeTrainData* CvBoost::get_data() const
 
-    Returns used train data of the boosted tree classifier.

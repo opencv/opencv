@@ -93,9 +93,9 @@ Abstract base class for 2D image feature detectors. ::
 
 FeatureDetector::detect
 ---------------------------
-.. ocv:function:: void FeatureDetector::detect( const Mat& image,                                vector<KeyPoint>& keypoints,                                 const Mat& mask=Mat() ) const
+Detects keypoints in an image (first variant) or image set (second variant).
 
-    Detects keypoints in an image (first variant) or image set (second variant).
+.. ocv:function:: void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
 
     :param image: Image.
 
@@ -113,25 +113,25 @@ FeatureDetector::detect
 
 FeatureDetector::read
 -------------------------
-.. ocv:function:: void FeatureDetector::read( const FileNode& fn )
+Reads a feature detector object from a file node.
 
-    Reads a feature detector object from a file node.
+.. ocv:function:: void FeatureDetector::read( const FileNode& fn )
 
     :param fn: File node from which the detector is read.
 
 FeatureDetector::write
 --------------------------
-.. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
+Writes a feature detector object to a file storage.
 
-    Writes a feature detector object to a file storage.
+.. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
 
     :param fs: File storage where the detector is written.
 
 FeatureDetector::create
 ---------------------------
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+Creates a feature detector by its name.
 
-    Creates a feature detector by its name.
+.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 
     :param detectorType: Feature detector type.
 
@@ -457,12 +457,11 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
                                   new FastAdjuster(20,true)));
 
 
-								  
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
-.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
+The constructor
 
-    Constructs the class.
+.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
 
     :param adjuster:  :ocv:class:`AdjusterAdapter`  that detects features and adjusts parameters.
 
@@ -497,9 +496,9 @@ See
 
 AdjusterAdapter::tooFew
 ---------------------------
-.. ocv:function:: void AdjusterAdapter::tooFew(int min, int n_detected)
+Adjusts the detector parameters to detect more features.
 
-    Adjusts the detector parameters to detect more features.
+.. ocv:function:: void AdjusterAdapter::tooFew(int min, int n_detected)
 
     :param min: Minimum desired number of features.
 
@@ -514,9 +513,9 @@ Example: ::
 
 AdjusterAdapter::tooMany
 ----------------------------
-.. ocv:function:: void AdjusterAdapter::tooMany(int max, int n_detected)
+Adjusts the detector parameters to detect less features.
 
-    Adjusts the detector parameters to detect less features.
+.. ocv:function:: void AdjusterAdapter::tooMany(int max, int n_detected)
 
     :param max: Maximum desired number of features.
 
@@ -532,9 +531,9 @@ Example: ::
 
 AdjusterAdapter::good
 -------------------------
-.. ocv:function:: bool AdjusterAdapter::good() const
+Returns false if the detector parameters cannot be adjusted any more. 
 
-    Returns false if the detector parameters cannot be adjusted any more. 
+.. ocv:function:: bool AdjusterAdapter::good() const
 
 Example: ::
 
@@ -545,6 +544,8 @@ Example: ::
 
 AdjusterAdapter::create
 -------------------------
+Creates an adjuster adapter by name
+
 .. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
 
     Creates an adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supports ``"FAST"``, ``"STAR"``, and ``"SURF"`` only.

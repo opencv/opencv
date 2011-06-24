@@ -1,6 +1,7 @@
 Geometric Image Transformations
 ===============================
 .. highlight:: cpp
+
 The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
 :math:`(x, y)` of the destination image, the functions compute coordinates of the corresponding "donor" pixel in the source image and copy the pixel value:
 
@@ -32,16 +33,11 @@ The actual implementations of the geometrical transformations, from the most gen
     :math:`(f_x(x,y), f_y(x,y))`     is taken as the interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
     :ref:`Resize`   for details.
 
-.. index:: convertMaps
-
-.. _convertMaps:
-
 convertMaps
 -----------
+Converts image transformation maps from one representation to another.
 
 .. ocv:function:: void convertMaps( InputArray map1, InputArray map2, OutputArray dstmap1, OutputArray dstmap2, int dstmap1type, bool nninterpolation=false )
-
-    Converts image transformation maps from one representation to another.
 
     :param map1: The first input map of type  ``CV_16SC2``  ,  ``CV_32FC1`` , or  ``CV_32FC2`` .
     
@@ -73,13 +69,13 @@ See Also:
 :ocv:func:`undisort`,
 :ocv:func:`initUndistortRectifyMap`
 
-.. index:: getAffineTransform
+
 
 getAffineTransform
 ----------------------
-.. ocv:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+Calculates an affine transform from three pairs of the corresponding points.
 
-    Calculates an affine transform from three pairs of the corresponding points.
+.. ocv:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
     :param src: Coordinates of triangle vertices in the source image.
 
@@ -104,15 +100,12 @@ See Also:
 :ocv:func:`transform`
 
 
-.. index:: getPerspectiveTransform
-
-.. _getPerspectiveTransform:
 
 getPerspectiveTransform
 ---------------------------
-.. ocv:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+Calculates a perspective transform from four pairs of the corresponding points.
 
-    Calculates a perspective transform from four pairs of the corresponding points.
+.. ocv:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
     :param src: Coordinates of quadrangle vertices in the source image.
 
@@ -130,22 +123,19 @@ where
 
     dst(i)=(x'_i,y'_i),
     src(i)=(x_i, y_i),
-    i=0,1,2
+    i=0,1,2,3
 
 See Also:
 :ocv:func:`findHomography`,
 :ocv:func:`warpPerspective`,
 :ocv:func:`perspectiveTransform`
 
-.. index:: getRectSubPix
-
-.. getRectSubPix:
 
 getRectSubPix
 -----------------
-.. ocv:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
+Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
-    Retrieves a pixel rectangle from an image with sub-pixel accuracy.
+.. ocv:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
 
     :param src: Source image.
 
@@ -175,15 +165,12 @@ See Also:
 :ocv:func:`warpAffine`,
 :ocv:func:`warpPerspective`
 
-.. index:: getRotationMatrix2D
-
-.. _getRotationMatrix2D:
 
 getRotationMatrix2D
 -----------------------
-.. ocv:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
+Calculates an affine matrix of 2D rotation.
 
-    Calculates an affine matrix of 2D rotation.
+.. ocv:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
 
     :param center: Center of the rotation in the source image.
 
@@ -210,15 +197,15 @@ See Also:
 :ocv:func:`warpAffine`,
 :ocv:func:`transform`
 
-.. index:: invertAffineTransform
 
-.. _invertAffineTransform:
+
+
 
 invertAffineTransform
 -------------------------
-.. ocv:function:: void invertAffineTransform(InputArray M, OutputArray iM)
+Inverts an affine transformation.
 
-    Inverts an affine transformation.
+.. ocv:function:: void invertAffineTransform(InputArray M, OutputArray iM)
 
     :param M: Original affine transformation.
 
@@ -234,16 +221,15 @@ The function computes an inverse affine transformation represented by
 The result is also a
 :math:`2 \times 3` matrix of the same type as ``M`` .
 
-.. index:: remap
 
-.. _remap:
+
+
 
 remap
 -----
+Applies a generic geometrical transformation to an image.
 
 .. ocv:function:: void remap( InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
-
-    Applies a generic geometrical transformation to an image.
 
     :param src: Source image.
 
@@ -279,16 +265,13 @@ representations of a map is that they can yield much faster (~2x) remapping oper
 
 This function cannot operate in-place.
 
-.. index:: resize
 
-.. _resize:
 
 resize
 ----------
+Resizes an image.
 
 .. ocv:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
-
-    Resizes an image.
 
     :param src: Source image.
 
@@ -346,15 +329,14 @@ See Also:
 :ocv:func:`warpPerspective`,
 :ocv:func:`remap` 
 
-.. index:: warpAffine
 
-.. _warpAffine:
+
 
 warpAffine
 --------------
-.. ocv:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+Applies an affine transformation to an image.
 
-    Applies an affine transformation to an image.
+.. ocv:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     :param src: Source image.
 
@@ -387,13 +369,13 @@ See Also:
 :ocv:func:`getRectSubPix`,
 :ocv:func:`transform`
 
-.. index:: warpPerspective
+
 
 warpPerspective
 -------------------
-.. ocv:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
+Applies a perspective transformation to an image.
 
-    Applies a perspective transformation to an image.
+.. ocv:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
     :param src: Source image.
 
@@ -428,14 +410,13 @@ See Also:
 :ocv:func:`perspectiveTransform`
 
 
-.. index:: initUndistortRectifyMap
+
 
 initUndistortRectifyMap
 ---------------------------
+Computes the undistortion and rectification transformation map.
 
 .. ocv:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )
-
-    Computes the undistortion and rectification transformation map.
 
     :param cameraMatrix: Input camera matrix  :math:`A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
     
@@ -483,13 +464,13 @@ In case of a stereo camera, this function is called twice: once for each camera 
 where ``cameraMatrix`` can be chosen arbitrarily.
 
 
-.. index:: getDefaultNewCameraMatrix
+
 
 getDefaultNewCameraMatrix
 -----------------------------
-.. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
+Returns the default new camera matrix.
 
-    Returns the default new camera matrix.
+.. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
 
     :param cameraMatrix: Input camera matrix.
 
@@ -516,13 +497,13 @@ By default, the undistortion functions in OpenCV (see
 :ref:`undistort`) do not move the principal point. However, when you work with stereo, it is important to move the principal points in both views to the same y-coordinate (which is required by most of stereo correspondence algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for each view where the principal points are located at the center.
 
 
-.. index:: undistort
+
 
 undistort
 -------------
-.. ocv:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
+Transforms an image to compensate for lens distortion.
 
-    Transforms an image to compensate for lens distortion.
+.. ocv:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
 
     :param src: Input (distorted) image.
 
@@ -551,13 +532,13 @@ The camera matrix and the distortion parameters can be determined using
 :math:`c_y` need to be scaled accordingly, while the distortion coefficients remain the same.
 
 
-.. index:: undistortPoints
+
 
 undistortPoints
 -------------------
-.. ocv:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
+Computes the ideal point coordinates from the observed point coordinates.
 
-    Computes the ideal point coordinates from the observed point coordinates.
+.. ocv:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
 
     :param src: Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
 

@@ -56,15 +56,12 @@ The following code is an example used to generate the figure. ::
         return 0;
     }
 
-.. index:: setWindowProperty
-
-.. _setWindowProperty:
 
 setWindowProperty
 ---------------------
-.. ocv:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
+Changes parameters of a window dynamically.
 
-    Changes parameters of a window dynamically.
+.. ocv:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
     :param name: Name of the window.
 
@@ -92,13 +89,11 @@ setWindowProperty
 
 The function ``setWindowProperty``  enables changing properties of a window.
 
-.. index:: getWindowProperty
-
 getWindowProperty
 ---------------------
-.. ocv:function:: void  getWindowProperty(const string& name, int prop_id)
+Provides parameters of a window.
 
-    Provides parameters of a window.
+.. ocv:function:: void  getWindowProperty(const string& name, int prop_id)
 
     :param name: Name of the window.
 
@@ -116,15 +111,11 @@ See
 
 The function ``getWindowProperty``  returns properties of a window.
 
-.. index:: fontQt
-
-.. _fontQt:
-
 fontQt
 ----------
-.. ocv:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+Creates the font to draw a text on an image.
 
-    Creates the font to draw a text on an image.
+.. ocv:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
 
     :param nameFont: Name of the font. The name should match the name of a system font (such as *Times*). If the font is not found, a default one is used.
 
@@ -163,13 +154,12 @@ A basic usage of this function is the following: ::
     CvFont font = fontQt(''Times'');
     addText( img1, ``Hello World !'', Point(50,50), font);
 
-.. index:: addText
 
 addText
 -----------
-.. ocv:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
+Creates the font to draw a text on an image.
 
-    Creates the font to draw a text on an image.
+.. ocv:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
 
     :param img: 8-bit 3-channel image where the text should be drawn.
 
@@ -204,13 +194,12 @@ displayOverlay
 
 The function ``displayOverlay`` displays useful information/tips on top of the window for a certain amount of time *delay*. The function does not modify the image, displayed in the window, that is, after the specified delay the original content of the window is restored.
 
-.. index:: displayStatusBar
 
 displayStatusBar
 --------------------
-.. ocv:function:: void displayStatusBar(const string& name, const string& text, int delay)
+Displays a text on the window statusbar during the specified period of time.
 
-    Displays a text on the window statusbar during the specified period of time.
+.. ocv:function:: void displayStatusBar(const string& name, const string& text, int delay)
 
     :param name: Name of the window.
 
@@ -222,14 +211,11 @@ The function ``displayOverlay`` displays useful information/tips on top of the w
 *delay*
 . This information is displayed on the window statubar (the window must be created with the ``CV_GUI_EXPANDED`` flags).
 
-.. index:: createOpenGLCallback
-
 createOpenGLCallback
 ------------------------
+Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
 .. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
-
-    Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
     :param window_name: Name of the window.
 
@@ -274,42 +260,34 @@ The function ``createOpenGLCallback`` can be used to draw 3D data on the window.
         }
     }
 
-.. index:: saveWindowParameters
 
 saveWindowParameters
 ------------------------
+Saves parameters of the specified window.
 
 .. ocv:function:: void saveWindowParameters(const string& name)
-
-    Saves parameters of the window ``windowname`` .
 
     :param name: Name of the window.
 
 The function ``saveWindowParameters`` saves size, location, flags,  trackbars value, zoom and panning location of the window
 ``window_name`` .
 
-.. index:: loadWindowParameters
-
 loadWindowParameters
 ------------------------
+Loads parameters of the specified window.
 
 .. ocv:function:: void loadWindowParameters(const string& name)
-
-    Loads parameters of the window ``windowname`` .
 
     :param name: Name of the window.
 
 The function ``loadWindowParameters`` loads size, location, flags, trackbars value, zoom and panning location of the window
 ``window_name`` .
 
-.. index:: createButton
-
 createButton
 ----------------
+Attaches a button to the control panel.
 
 .. ocv:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
-
-    Attaches a button to the control panel.
 
     :param  button_name: Name of the button.
 

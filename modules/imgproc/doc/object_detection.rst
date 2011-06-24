@@ -3,13 +3,11 @@ Object Detection
 
 .. highlight:: cpp
 
-.. index:: matchTemplate
-
 matchTemplate
 -----------------
-.. ocv:function:: void matchTemplate( InputArray image, InputArray temp, OutputArray result, int method )
+Compares a template against overlapped image regions.
 
-    Compares a template against overlapped image regions.
+.. ocv:function:: void matchTemplate( InputArray image, InputArray temp, OutputArray result, int method )
 
     :param image: Image where the search is running. It must be 8-bit or 32-bit floating-point.
 

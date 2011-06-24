@@ -90,17 +90,17 @@ CvEMParams
 ----------
 .. ocv:class:: CvEMParams
 
-   Parameters of the EM algorithm.
-
-All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
+Parameters of the EM algorithm. All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
 
 
 
 CvEMParams::CvEMParams
 ----------------------
+The constructors
+
 .. ocv:function:: CvEMParams::CvEMParams()
 
-.. ocv:function:: CvEMParams::CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/, int start_step=0/*CvEM::START_AUTO_STEP*/, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
+.. ocv:function:: CvEMParams::CvEMParams( int nclusters, int cov_mat_type=CvEM::COV_MAT_DIAGONAL, int start_step=CvEM::START_AUTO_STEP, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
 
     :param nclusters: The number of mixtures in the gaussian mixture model.
 
@@ -149,11 +149,11 @@ CvEM
 
 CvEM::train
 -----------
+Estimates the Gaussian mixture parameters from a sample set.
+
 .. ocv:function:: void CvEM::train(  const Mat& samples,  const Mat&  sample_idx=Mat(),                    CvEMParams params=CvEMParams(),  Mat* labels=0 )
 
 .. ocv:function:: bool CvEM::train( const CvMat* samples, const CvMat* sampleIdx=0, CvEMParams params=CvEMParams(), CvMat* labels=0 )
-
-    Estimates the Gaussian mixture parameters from a sample set.
 
     :param samples: Samples from which the Gaussian mixture model will be estimated.
 
@@ -181,11 +181,11 @@ For an example of clustering random samples of the multi-Gaussian distribution u
 
 CvEM::predict
 -------------
+Returns a mixture component index of a sample.
+
 .. ocv:function:: float CvEM::predict( const Mat& sample, Mat* probs=0 ) const
 
 .. ocv:function:: float CvEM::predict( const CvMat* sample, CvMat* probs ) const
-
-    Returns a mixture component index of a sample.
 
     :param sample: A sample for classification.
 
@@ -194,89 +194,88 @@ CvEM::predict
 
 CvEM::getNClusters
 ------------------
+Returns the number of mixture components :math:`M` in the gaussian mixture model.
+
 .. ocv:function:: int CvEM::getNClusters() const
 
 .. ocv:function:: int CvEM::get_nclusters() const
 
-    Returns the number of mixture components :math:`M` in the gaussian mixture model.
-
 
 CvEM::getNClusters
 ------------------
+Returns mixture means :math:`a_k`.
+
 .. ocv:function:: Mat CvEM::getMeans() const
 
 .. ocv:function:: const CvMat* CvEM::get_means() const
 
-    Returns mixture means :math:`a_k`.
-
 
 CvEM::getCovs
 -------------
+Returns mixture covariance matrices :math:`S_k`.
+
 .. ocv:function:: void CvEM::getCovs(std::vector<cv::Mat>& covs) const
 
 .. ocv:function:: const CvMat** CvEM::get_covs() const
 
-    Returns mixture covariance matrices :math:`S_k`.
-
 
 CvEM::getWeights
 ----------------
+Returns mixture weights :math:`\pi_k`.
+
 .. ocv:function:: Mat CvEM::getWeights() const
 
 .. ocv:function:: const CvMat* CvEM::get_weights() const
 
-    Returns mixture weights :math:`\pi_k`.
-
 
 CvEM::getProbs
 --------------
+Returns vectors of probabilities for each training sample.
+
 .. ocv:function:: Mat CvEM::getProbs() const
 
 .. ocv:function:: const CvMat* CvEM::get_probs() const
 
-    Returns probabilites :math:`p_{i,k}` of sample :math:`i` to belong to a mixture component :math:`k`.
+Returns probabilites :math:`p_{i,k}` of sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) to belong to a mixture component :math:`k`.
 
 
 CvEM::getLikelihood
 -------------------
+Returns logarithm of likelihood.
+
 .. ocv:function:: double CvEM::getLikelihood() const
 
 .. ocv:function:: double CvEM::get_log_likelihood() const
 
-    Returns logarithm of likelihood.
-
 
 CvEM::getLikelihoodDelta
 ------------------------
+Returns difference between logarithm of likelihood on the last iteration and logarithm of likelihood on the previous iteration.
+
 .. ocv:function:: double CvEM::getLikelihoodDelta() const
 
 .. ocv:function:: double CvEM::get_log_likelihood_delta() const 
 
-    Returns difference between logarithm of likelihood on the last iteration and logarithm of likelihood on the previous iteration.
-
 
 CvEM::write_params
 ------------------
-.. ocv:function:: void CvEM::write_params( CvFileStorage* fs ) const
+Writes used parameters of the EM algorithm to a file storage.
 
-    Writes used parameters of the EM algorithm to a file storage.
+.. ocv:function:: void CvEM::write_params( CvFileStorage* fs ) const
 
     :param fs: A file storage where parameters will be written.
 
 
 CvEM::read_params
 -----------------
-.. ocv:function:: void CvEM::read_params( CvFileStorage* fs, CvFileNode* node )
+Reads parameters of the EM algorithm.
 
-    Reads parameters of the EM algorithm.
+.. ocv:function:: void CvEM::read_params( CvFileStorage* fs, CvFileNode* node )
 
     :param fs: A file storage with parameters of the EM algorithm.
 
     :param node: The parent map. If it is NULL, the function searches a node with parameters in all the top-level nodes (streams), starting with the first one.
 
-Read parameters will be used for the EM algorithm in this ``CvEM`` object.
-
-
-For example of clustering random samples of multi-Gaussian distribution using EM see em.cpp sample in OpenCV distribution.
+The function reads EM parameters from the specified file storage node. For example of clustering random samples of multi-Gaussian distribution using EM see em.cpp sample in OpenCV distribution.
 
 

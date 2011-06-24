@@ -3,15 +3,12 @@ Miscellaneous Image Transformations
 
 .. highlight:: cpp
 
-.. index:: adaptiveThreshold
-
-.. _adaptiveThreshold:
 
 adaptiveThreshold
 ---------------------
-.. ocv:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
+Applies an adaptive threshold to an array.
 
-    Applies an adaptive threshold to an array.
+.. ocv:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
 
     :param src: Source 8-bit single-channel image.
 
@@ -64,15 +61,12 @@ See Also:
 :ocv:func:`GaussianBlur`
 
 
-.. index:: cvtColor
-
-.. _cvtColor:
 
 cvtColor
 ------------
-.. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
+Converts an image from one color space to another.
 
-    Converts an image from one color space to another.
+.. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
 
     :param src: Source image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
@@ -399,17 +393,14 @@ The function can do the following transformations:
     columns, respectively. For example, the above pattern has a very
     popular "BG" type.
 
-.. index:: distanceTransform
-
-.. _distanceTransform:
 
 distanceTransform
 ---------------------
+Calculates the distance to the closest zero pixel for each pixel of the source image.
+
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize )
-
-    Calculates the distance to the closest zero pixel for each pixel of the source image.
 
     :param src: 8-bit, single-channel (binary) source image.
 
@@ -467,17 +458,17 @@ In this mode, the complexity is still linear.
 That is, the function provides a very fast way to compute the Voronoi diagram for a binary image.
 Currently, the second variant can use only the approximate distance transform algorithm.
 
-.. index:: floodFill
 
-.. _floodFill:
+
+
 
 floodFill
 -------------
+Fills a connected component with the given color.
+
 .. ocv:function:: int floodFill( InputOutputArray image, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),               int flags=4 )
 
 .. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
-
-    Fills a connected component with the given color.
 
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
@@ -569,15 +560,15 @@ Use these functions to either mark a connected component with the specified colo
 See Also:
 :ocv:func:`findContours`
 
-.. index:: inpaint
 
-.. _inpaint:
+
+
 
 inpaint
 -----------
-.. ocv:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
+Restores the selected region in an image using the region neighborhood.
 
-    Restores the selected region in an image using the region neighborhood.
+.. ocv:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
 
     :param src: Input 8-bit 1-channel or 3-channel image.
 
@@ -597,17 +588,17 @@ The function reconstructs the selected image area from the pixel near the area b
 http://en.wikipedia.org/wiki/Inpainting
 for more details.
 
-.. index:: integral
+
 
 integral
 ------------
+Calculates the integral of an image.
+
 .. ocv:function:: void integral( InputArray image, OutputArray sum, int sdepth=-1 )
 
 .. ocv:function:: void integral( InputArray image, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
 
 .. ocv:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
-
-    Calculates the integral of an image.
 
     :param image: Source image as :math:`W \times H` , 8-bit or floating-point (32f or 64f).
 
@@ -645,15 +636,15 @@ As a practical example, the next figure shows the calculation of the integral of
 
 .. image:: pics/integral.png
 
-.. index:: threshold
 
-.. _threshold:
+
+
 
 threshold
 -------------
-.. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
+Applies a fixed-level threshold to each array element.
 
-    Applies a fixed-level threshold to each array element.
+.. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
 
     :param src: Source array (single-channel, 8-bit of 32-bit floating point)
 
@@ -718,13 +709,13 @@ See Also:
 :ocv:func:`min`,
 :ocv:func:`max`
 
-.. index:: watershed
+
 
 watershed
 -------------
-.. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
+Performs a marker-based image segmentation using the watershed algrorithm.
 
-    Performs a marker-based image segmentation using the watershed algrorithm.
+.. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 
     :param image: Input 8-bit 3-channel image.
 
@@ -756,14 +747,13 @@ can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
 See Also:
 :ocv:func:`findContours`
 
-.. index:: grabCut
+
 
 grabCut
 -------
+Runs the GrabCut algorithm.
 
 .. ocv:function:: void grabCut(InputArray image, InputOutputArray mask, Rect rect, InputOutputArray bgdModel, InputOutputArray fgdModel, int iterCount, int mode )
-
-    Runs the GrabCut algorithm.
 
     :param image: Input 8-bit 3-channel image.
 

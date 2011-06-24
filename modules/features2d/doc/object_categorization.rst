@@ -34,42 +34,41 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
 BOWTrainer::add
 -------------------
-.. ocv:function:: void BOWTrainer::add( const Mat& descriptors )
+Adds descriptors to a training set. 
 
-    Adds descriptors to a training set. The training set is clustered using ``clustermethod`` to construct the vocabulary.
+.. ocv:function:: void BOWTrainer::add( const Mat& descriptors )
 
     :param descriptors: Descriptors to add to a training set. Each row of  the ``descriptors``  matrix is a descriptor.
 
+The training set is clustered using ``clustermethod`` to construct the vocabulary.
 
 BOWTrainer::getDescriptors
 ------------------------------
+Returns a training set of descriptors.
+
 .. ocv:function:: const vector<Mat>& BOWTrainer::getDescriptors() const
 
-    Returns a training set of descriptors.
 
-.. index:: BOWTrainer::descripotorsCount
 
 BOWTrainer::descripotorsCount
 ---------------------------------
+Returns the count of all descriptors stored in the training set.
+
 .. ocv:function:: const vector<Mat>& BOWTrainer::descripotorsCount() const
 
-    Returns the count of all descriptors stored in the training set.
 
-.. index:: BOWTrainer::cluster
 
 BOWTrainer::cluster
 -----------------------
-.. ocv:function:: Mat BOWTrainer::cluster() const
+Clusters train descriptors. 
 
-    Clusters train descriptors. The vocabulary consists of cluster centers. So, this method returns the vocabulary. In the first variant of the method, train descriptors stored in the object are clustered. In the second variant, input descriptors are clustered.
+.. ocv:function:: Mat BOWTrainer::cluster() const
 
 .. ocv:function:: Mat BOWTrainer::cluster( const Mat& descriptors ) const
 
     :param descriptors: Descriptors to cluster. Each row of  the ``descriptors``  matrix is a descriptor. Descriptors are not added to the inner train descriptor set.
 
-.. index:: BOWKMeansTrainer
-
-.. _BOWKMeansTrainer:
+The vocabulary consists of cluster centers. So, this method returns the vocabulary. In the first variant of the method, train descriptors stored in the object are clustered. In the second variant, input descriptors are clustered.
 
 BOWKMeansTrainer
 ----------------
@@ -94,7 +93,9 @@ BOWKMeansTrainer
     };
 
 BOWKMeansTrainer::BOWKMeansTrainer
-----------------
+----------------------------------
+The constructor.
+
 .. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
 
     See :ocv:func:`kmeans` function parameters.
@@ -132,43 +133,43 @@ The class declaration is the following: ::
         };
 
 
-.. index:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
+
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor
 --------------------------------------------------------
-.. ocv:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
+The constructor.
 
-    Constructs a class.
+.. ocv:function:: BOWImgDescriptorExtractor::BOWImgDescriptorExtractor(           const Ptr<DescriptorExtractor>& dextractor,          const Ptr<DescriptorMatcher>& dmatcher )
 
     :param dextractor: Descriptor extractor that is used to compute descriptors for an input image and its keypoints.
 
     :param dmatcher: Descriptor matcher that is used to find the nearest word of the trained vocabulary for each keypoint descriptor of the image.
 
-.. index:: BOWImgDescriptorExtractor::setVocabulary
+
 
 BOWImgDescriptorExtractor::setVocabulary
 --------------------------------------------
-.. ocv:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
+Sets a visual vocabulary.
 
-    Sets a visual vocabulary.
+.. ocv:function:: void BOWImgDescriptorExtractor::setVocabulary( const Mat& vocabulary )
 
     :param vocabulary: Vocabulary (can be trained using the inheritor of  :ocv:class:`BOWTrainer` ). Each row of the vocabulary is a visual word (cluster center).
 
-.. index:: BOWImgDescriptorExtractor::getVocabulary
+
 
 BOWImgDescriptorExtractor::getVocabulary
 --------------------------------------------
+Returns the set vocabulary.
+
 .. ocv:function:: const Mat& BOWImgDescriptorExtractor::getVocabulary() const
 
-    Returns the set vocabulary.
 
-.. index:: BOWImgDescriptorExtractor::compute
 
 BOWImgDescriptorExtractor::compute
 --------------------------------------
-.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& image,           vector<KeyPoint>& keypoints, Mat& imgDescriptor,           vector<vector<int> >* pointIdxsOfClusters=0,           Mat* descriptors=0 )
+Computes an image descriptor using the set visual vocabulary.
 
-    Computes an image descriptor using the set visual vocabulary.
+.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor, vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 )
 
     :param image: Image, for which the descriptor is computed.
 
@@ -180,19 +181,19 @@ BOWImgDescriptorExtractor::compute
 
     :param descriptors: Descriptors of the image keypoints  that are returned if they are non-zero.
 
-.. index:: BOWImgDescriptorExtractor::descriptorSize
+
 
 BOWImgDescriptorExtractor::descriptorSize
 ---------------------------------------------
+Returns an image discriptor size if the vocabulary is set. Otherwise, it returns 0.
+
 .. ocv:function:: int BOWImgDescriptorExtractor::descriptorSize() const
 
-    Returns an image discriptor size if the vocabulary is set. Otherwise, it returns 0.
 
-.. index:: BOWImgDescriptorExtractor::descriptorType
 
 BOWImgDescriptorExtractor::descriptorType
 ---------------------------------------------
-.. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const
+Returns an image descriptor type.
 
-    Returns an image descriptor type.
+.. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const
 

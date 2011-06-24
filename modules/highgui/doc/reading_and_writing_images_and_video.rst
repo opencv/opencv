@@ -3,15 +3,11 @@ Reading and Writing Images and Video
 
 .. highlight:: cpp
 
-.. index:: imdecode
-
-.. _imdecode:
-
 imdecode
 ------------
-.. ocv:function:: Mat imdecode( InputArray buf,  int flags )
+Reads an image from a buffer in memory.
 
-    Reads an image from a buffer in memory.
+.. ocv:function:: Mat imdecode( InputArray buf,  int flags )
 
     :param buf: Input array of vector of bytes.
 
@@ -23,15 +19,11 @@ If the buffer is too short or contains invalid data, the empty matrix is returne
 See
 :ref:`imread` for the list of supported formats and flags description.
 
-.. index:: imencode
-
-.. _imencode:
-
 imencode
 ------------
-.. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+Encode an image into a memory buffer.
 
-    Encode an image into a memory buffer.
+.. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
 
     :param ext: File extension that defines the output format.
 
@@ -45,15 +37,11 @@ The function compresses the image and stores it in the memory buffer that is res
 See
 :ref:`imwrite` for the list of supported formats and flags description.
 
-.. index:: imread
-
-.. _imread:
-
 imread
 ----------
-.. ocv:function:: Mat imread( const string& filename, int flags=1 )
+Loads an image from a file.
 
-    Loads an image from a file.
+.. ocv:function:: Mat imread( const string& filename, int flags=1 )
 
     :param filename: Name of file to be loaded.
 
@@ -89,15 +77,11 @@ The function ``imread`` loads an image from the specified file and returns it. I
 
 * On Linux*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for codecs supplied with an OS image. Install the relevant packages (do not forget the development files, for example, "libjpeg-dev", in Debian* and Ubuntu*) to get the codec support or turn on the ``OPENCV_BUILD_3RDPARTY_LIBS`` flag in CMake.
 
-.. index:: imwrite
-
-.. _imwrite:
-
 imwrite
 -----------
-.. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
+Saves an image to a specified file.
 
-    Saves an image to a specified file.
+.. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
 
     :param filename: Name of the file.
 
@@ -116,13 +100,9 @@ The function ``imwrite`` saves the image to the specified file. The image format
 :ref:`Mat::convertTo` , and
 :ref:`cvtColor` to convert it before saving. Or, use the universal XML I/O functions to save the image to XML or YAML format.
 
-.. index:: VideoCapture
-
-.. _VideoCapture:
-
 VideoCapture
 ------------
-.. c:type:: VideoCapture
+.. ocv:class:: VideoCapture
 
 Class for video capturing from video files or cameras ::
 
@@ -202,30 +182,25 @@ The class provides C++ video capturing API. Here is how the class can be used: :
     }
 
 
-.. index:: VideoCapture::VideoCapture
-
-.. _VideoCapture::VideoCapture:
-
 VideoCapture::VideoCapture
 ------------------------------
+VideoCapture constructors.
+
 .. ocv:function:: VideoCapture::VideoCapture()
 
 .. ocv:function:: VideoCapture::VideoCapture(const string& filename)
 
 .. ocv:function:: VideoCapture::VideoCapture(int device)
 
-VideoCapture constructors.
-
     :param filename: name of the opened video file
 
     :param device: id of the opened video capturing device (i.e. a camera index).
 
-.. index:: VideoCapture::get
-
-.. _VideoCapture::get:
 
 VideoCapture::get
 ---------------------
+Returns the specified ``VideoCapture`` property 
+
 .. ocv:function:: double VideoCapture::get(int property_id)
 
     :param property_id: Property identifier. It can be one of the following:
@@ -271,15 +246,11 @@ VideoCapture::get
 
 **Note**: When querying a property that is not supported by the backend used by the ``VideoCapture`` class, value 0 is returned.
 
-.. index:: VideoCapture::set
-
-.. _VideoCapture::set:
-
 VideoCapture::set
 ---------------------
-.. ocv:function:: bool VideoCapture::set(int property_id, double value)
+Sets a property in the ``VideoCapture``.
 
-    Sets a property in the VideoCapture backend.
+.. ocv:function:: bool VideoCapture::set(int property_id, double value)
 
     :param property_id: Property identifier. It can be one of the following:
 
@@ -323,15 +294,9 @@ VideoCapture::set
 
     :param value: Value of the property.
 
-
-
-.. index:: VideoWriter
-
-.. _VideoWriter:
-
 VideoWriter
 -----------
-.. c:type:: VideoWriter
+.. ocv:class:: VideoWriter
 
 Video writer class ::
 

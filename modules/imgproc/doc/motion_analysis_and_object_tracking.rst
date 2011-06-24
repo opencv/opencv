@@ -3,13 +3,11 @@ Motion Analysis and Object Tracking
 
 .. highlight:: cpp
 
-.. index:: accumulate
-
 accumulate
 --------------
-.. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
+Adds an image to the accumulator.
 
-    Adds an image to the accumulator.
+.. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -32,13 +30,13 @@ See Also:
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateSquare
+
 
 accumulateSquare
 --------------------
-.. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
+Adds the square of a source image to the accumulator.
 
-    Adds the square of a source image to the accumulator.
+.. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -59,13 +57,13 @@ See Also:
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateProduct
+
 
 accumulateProduct
 ---------------------
-.. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
+Adds the per-element product of two input images to the accumulator.
 
-    Adds the per-element product of two input images to the accumulator.
+.. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
     :param src1: The first input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -88,13 +86,13 @@ See Also:
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateWeighted
+
 
 accumulateWeighted
 ----------------------
-.. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
+Updates a running average.
 
-    Updates a running average.
+.. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 

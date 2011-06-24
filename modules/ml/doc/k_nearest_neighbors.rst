@@ -7,10 +7,6 @@ The algorithm caches all training samples and predicts the response for a new sa
 **K**
 ) of the nearest neighbors of the sample using voting, calculating weighted sum, and so on. The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
 
-.. index:: CvKNearest
-
-.. _CvKNearest:
-
 CvKNearest
 ----------
 .. ocv:class:: CvKNearest
@@ -45,15 +41,11 @@ K-Nearest Neighbors model. ::
     };
 
 
-.. index:: CvKNearest::train
-
-.. _CvKNearest::train:
-
 CvKNearest::train
 -----------------
-.. ocv:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
+Trains the model.
 
-    Trains the model.
+.. ocv:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
 
 The method trains the K-Nearest model. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
@@ -67,15 +59,11 @@ The parameter ``_max_k`` specifies the number of maximum neighbors that may be p
 The parameter ``_update_base`` specifies whether the model is trained from scratch
 ( ``_update_base=false`` ), or it is updated using the new training data ( ``_update_base=true`` ). In the latter case, the parameter ``_max_k`` must not be larger than the original value.
 
-.. index:: CvKNearest::find_nearest
-
-.. _CvKNearest::find_nearest:
-
 CvKNearest::find_nearest
 ------------------------
-.. ocv:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
+Finds the neighbors for input vectors.
 
-    Finds the neighbors for input vectors.
+.. ocv:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
 
 For each input vector (a row of the matrix ``_samples`` ), the method finds the
 :math:`\texttt{k} \le

@@ -21,10 +21,6 @@ There are a lot of good references on SVM. You may consider starting with the fo
     http://www.csie.ntu.edu.tw/~cjlin/libsvm/
     )
 
-.. index:: CvSVM
-
-.. _CvSVM:
-
 CvSVM
 -----
 .. ocv:class:: CvSVM
@@ -84,10 +80,6 @@ Support Vector Machines. ::
     };
 
 
-.. index:: CvSVMParams
-
-.. _CvSVMParams:
-
 CvSVMParams
 -----------
 .. ocv:class:: CvSVMParams
@@ -119,15 +111,11 @@ SVM training parameters. ::
 The structure must be initialized and passed to the training method of
 :ocv:class:`CvSVM` .
 
-.. index:: CvSVM::train
-
-.. _CvSVM::train:
-
 CvSVM::train
 ------------
-.. ocv:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
+Trains an SVM.
 
-    Trains an SVM.
+.. ocv:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
 
 The method trains the SVM model. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
@@ -142,15 +130,12 @@ The method trains the SVM model. It follows the conventions of the generic ``tra
 All the other parameters are gathered in the
 :ocv:class:`CvSVMParams` structure.
 
-.. index:: CvSVM::train_auto
-
-.. _CvSVM::train_auto:
 
 CvSVM::train_auto
 -----------------
-.. ocv:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
+Trains an SVM with optimal parameters.
 
-    Trains an SVM with optimal parameters.
+.. ocv:function:: train_auto(  const Mat& _train_data,  const Mat& _responses,          const Mat& _var_idx,  const Mat& _sample_idx,          CvSVMParams params,  int k_fold = 10,          CvParamGrid C_grid      = get_default_grid(CvSVM::C),          CvParamGrid gamma_grid  = get_default_grid(CvSVM::GAMMA),          CvParamGrid p_grid      = get_default_grid(CvSVM::P),          CvParamGrid nu_grid     = get_default_grid(CvSVM::NU),          CvParamGrid coef_grid   = get_default_grid(CvSVM::COEF),          CvParamGrid degree_grid = get_default_grid(CvSVM::DEGREE) )
 
     :param k_fold: Cross-validation parameter. The training set is divided into  ``k_fold``  subsets. One subset is used to train the model, the others form the test set. So, the SVM algorithm is executed  ``k_fold``  times.
 
@@ -186,15 +171,11 @@ This function works for the classification
 as well as for the regression
 ( ``params.svm_type=CvSVM::EPS_SVR`` or ``params.svm_type=CvSVM::NU_SVR`` ). If ``params.svm_type=CvSVM::ONE_CLASS`` , no optimization is made and the usual SVM with parameters specified in ``params``  is executed.
 
-.. index:: CvSVM::get_default_grid
-
-.. _CvSVM::get_default_grid:
-
 CvSVM::get_default_grid
 -----------------------
-.. ocv:function:: CvParamGrid CvSVM::get_default_grid( int param_id )
+Generates a grid for SVM parameters.
 
-    Generates a grid for SVM parameters.
+.. ocv:function:: CvParamGrid CvSVM::get_default_grid( int param_id )
 
     :param param_id: SVN parameters IDs that must be one of the following:
 
@@ -214,29 +195,21 @@ CvSVM::get_default_grid
 
 The function generates a grid for the specified parameter of the SVM algorithm. The grid may be passed to the function ``CvSVM::train_auto`` .
 
-.. index:: CvSVM::get_params
-
-.. _CvSVM::get_params:
-
 CvSVM::get_params
 -----------------
-.. ocv:function:: CvSVMParams CvSVM::get_params() const
+Returns the current SVM parameters.
 
-    Returns the current SVM parameters.
+.. ocv:function:: CvSVMParams CvSVM::get_params() const
 
 This function may be used to get the optimal parameters obtained while automatically training ``CvSVM::train_auto`` .
 
-.. index:: CvSVM::get_support_vector*
-
-.. _CvSVM::get_support_vector*:
-
-CvSVM::get_support_vector*
+CvSVM::get_support_vector
 --------------------------
+Retrieves a number of support vectors and the particular vector.
+
 .. ocv:function:: int CvSVM::get_support_vector_count() const
 
 .. ocv:function:: const float* CvSVM::get_support_vector(int i) const
-
-    Retrieves a number of support vectors and the particular vector.
 
 The methods can be used to retrieve a set of support vectors.
 

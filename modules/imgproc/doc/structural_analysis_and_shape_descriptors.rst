@@ -3,13 +3,18 @@ Structural Analysis and Shape Descriptors
 
 .. highlight:: cpp
 
-.. index:: moments
-
 moments
 -----------
+Calculates all of the moments up to the third order of a polygon or rasterized shape
+
 .. ocv:function:: Moments moments( InputArray array, bool binaryImage=false )
 
-    Calculates all of the moments up to the third order of a polygon or rasterized shape where the class ``Moments`` is defined as: ::
+    :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
+
+    :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
+
+
+The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The results are returned in a structure ``Moments``, defined as: ::
 
     class Moments
     {
@@ -28,13 +33,8 @@ moments
         double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
     };
 
-    :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
 
-    :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
-
-The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape.
-In case of a raster image, the spatial moments
-:math:`\texttt{Moments::m}_{ji}` are computed as:
+In case of a raster image, the spatial moments :math:`\texttt{Moments::m}_{ji}` are computed as:
 
 .. math::
 
@@ -75,13 +75,13 @@ See Also:
 :ocv:func:`contourArea`,
 :ocv:func:`arcLength`
 
-.. index:: HuMoments
+
 
 HuMoments
 -------------
-.. ocv:function:: void HuMoments( const Moments& moments, double h[7] )
+Calculates the seven Hu invariants.
 
-    Calculates the seven Hu invariants.
+.. ocv:function:: void HuMoments( const Moments& moments, double h[7] )
 
     :param moments: Input moments computed with  :ocv:func:`moments` .
     :param h: Output Hu invariants.
@@ -103,15 +103,14 @@ These values are proved to be invariants to the image scale, rotation, and refle
 See Also:
 :ocv:func:`matchShapes`
 
-.. index:: findContours
 
 findContours
 ----------------
+Finds contours in a binary image.
+
 .. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours,                   OutputArray hierarchy, int mode, int method, Point offset=Point())
 
 .. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
-
-    Finds contours in a binary image.
 
     :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
 
@@ -146,13 +145,13 @@ Suzuki85
 **Note**:
 Source ``image`` is modified by this function.
 
-.. index:: drawContours
+
 
 drawContours
 ----------------
-.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+Draws contours outlines or filled contours.
 
-    Draws contours outlines or filled contours.
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
 
     :param image: Destination image.
 
@@ -217,13 +216,13 @@ The function draws contour outlines in the image if
         waitKey(0);
     }
 
-.. index:: approxPolyDP
+
 
 approxPolyDP
 ----------------
-.. ocv:function:: void approxPolyDP( InputArray curve, OutputArray approxCurve, double epsilon, bool closed )
+Approximates a polygonal curve(s) with the specified precision.
 
-    Approximates a polygonal curve(s) with the specified precision.
+.. ocv:function:: void approxPolyDP( InputArray curve, OutputArray approxCurve, double epsilon, bool closed )
 
     :param curve: Input vector of 2d point, stored in ``std::vector`` or ``Mat``.
 
@@ -238,13 +237,13 @@ http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
 See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp on how to use the function.
 
-.. index:: arcLength
+
 
 arcLength
 -------------
-.. ocv:function:: double arcLength( InputArray curve, bool closed )
+Calculates a contour perimeter or a curve length.
 
-    Calculates a contour perimeter or a curve length.
+.. ocv:function:: double arcLength( InputArray curve, bool closed )
 
     :param curve: Input vector of 2D points, stored in ``std::vector`` or ``Mat``.
 
@@ -252,26 +251,26 @@ arcLength
 
 The function computes a curve length or a closed contour perimeter.
 
-.. index:: boundingRect
+
 
 boundingRect
 ----------------
-.. ocv:function:: Rect boundingRect( InputArray points )
+Calculates the up-right bounding rectangle of a point set.
 
-    Calculates the up-right bounding rectangle of a point set.
+.. ocv:function:: Rect boundingRect( InputArray points )
 
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
 
 
-.. index:: contourArea
+
 
 contourArea
 ---------------
-.. ocv:function:: double contourArea( InputArray contour, bool oriented=false )
+Calculates a contour area.
 
-    Calculates a contour area.
+.. ocv:function:: double contourArea( InputArray contour, bool oriented=false )
 
     :param contour: Input vector of 2d points (contour vertices), stored in ``std::vector`` or ``Mat``.
     :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking sign of the area. By default the parameter is ``false``, which means that the absolute value is returned.
@@ -297,13 +296,13 @@ Here is a short example: ::
             "area1 =" << area1 << endl <<
             "approx poly vertices" << approx.size() << endl;
 
-.. index:: convexHull
+
 
 convexHull
 --------------
-.. ocv:function:: void convexHull( InputArray points, OutputArray hull, bool clockwise=false, bool returnPoints=true )
+Finds the convex hull of a point set.
 
-    Finds the convex hull of a point set.
+.. ocv:function:: void convexHull( InputArray points, OutputArray hull, bool clockwise=false, bool returnPoints=true )
 
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
@@ -318,25 +317,25 @@ Sklansky82
 that has
 *O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
 
-.. index:: fitEllipse
+
 
 fitEllipse
 --------------
-.. ocv:function:: RotatedRect fitEllipse( InputArray points )
+Fits an ellipse around a set of 2D points.
 
-    Fits an ellipse around a set of 2D points.
+.. ocv:function:: RotatedRect fitEllipse( InputArray points )
 
     :param points: Input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed.
 
-.. index:: fitLine
+
 
 fitLine
 -----------
-.. ocv:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
+Fits a line to a 2D or 3D point set.
 
-    Fits a line to a 2D or 3D point set.
+.. ocv:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
 
     :param points: Input vector of 2D or 3D points, stored in ``std::vector<>`` or ``Mat``.
 
@@ -396,37 +395,37 @@ http://en.wikipedia.org/wiki/M-estimator
 :math:`w_i` are adjusted to be inversely proportional to
 :math:`\rho(r_i)` .
 
-.. index:: isContourConvex
+
 
 isContourConvex
 -------------------
-.. ocv:function:: bool isContourConvex( InputArray contour )
+Tests a contour convexity.
 
-    Tests a contour convexity.
+.. ocv:function:: bool isContourConvex( InputArray contour )
 
     :param contour: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function tests whether the input contour is convex or not. The contour must be simple, that is, without self-intersections. Otherwise, the function output is undefined.
 
-.. index:: minAreaRect
+
 
 minAreaRect
 ---------------
-.. ocv:function:: RotatedRect minAreaRect( InputArray points )
+Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
-    Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
+.. ocv:function:: RotatedRect minAreaRect( InputArray points )
 
     :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
 
-.. index:: minEnclosingCircle
+
 
 minEnclosingCircle
 ----------------------
-.. ocv:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
+Finds a circle of the minimum area enclosing a 2D point set.
 
-    Finds a circle of the minimum area enclosing a 2D point set.
+.. ocv:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
 
     :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
@@ -436,13 +435,13 @@ minEnclosingCircle
 
 The function finds the minimal enclosing circle of a 2D point set using an iterative algorithm. See the OpenCV sample ``minarea.cpp`` .
 
-.. index:: matchShapes
+
 
 matchShapes
 ---------------
-.. ocv:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
+Compares two shapes.
 
-    Compares two shapes.
+.. ocv:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
 
     :param object1: The first contour or grayscale image.
 
@@ -486,13 +485,13 @@ and
 :math:`A` and
 :math:`B` , respectively.
 
-.. index:: pointPolygonTest
+
 
 pointPolygonTest
 --------------------
-.. ocv:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
+Performs a point-in-contour test.
 
-    Performs a point-in-contour test.
+.. ocv:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
 
     :param contour: Input contour.
 

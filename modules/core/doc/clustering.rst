@@ -3,16 +3,11 @@ Clustering
 
 .. highlight:: cpp
 
-.. index:: kmeans
-
-.. _kmeans:
-
 kmeans
 ------
+Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=noArray() )
-
-    Finds centers of clusters and groups input samples around the clusters.
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
@@ -53,15 +48,13 @@ Basically, you can use only the core of the function, set the number of
 attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( ``flags`` = ``KMEANS_USE_INITIAL_LABELS`` ) flag, and then choose the best (most-compact) clustering.
 
-.. index:: partition
-
 partition
 -------------
+Splits an element set into equivalency classes.
+
 .. ocv:function:: template<typename _Tp, class _EqPredicate> int
 
-.. ocv:function:: partition( const vector<_Tp>& vec, vector<int>& labels,               _EqPredicate predicate=_EqPredicate())
-
-    Splits an element set into equivalency classes.
+.. ocv:function:: partition( const vector<_Tp>& vec, vector<int>& labels, _EqPredicate predicate=_EqPredicate())
 
     :param vec: Set of elements stored as a vector.
 
