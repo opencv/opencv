@@ -13,15 +13,19 @@ SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 
 foreach(module ${OPENCV_JAVA_MODULES})
-    IF(${module} STREQUAL core)
-        SET (module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/${module}.hpp")
+    IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist")
+        FILE(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist" headers_to_parse)
         SET (module_cheaders "")
+        SET (module_cppheaders "")
+        foreach(header ${headers_to_parse})
+            list(APPEND module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/${header}")
+        endforeach()
     ELSE()
         FILE(GLOB module_cheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.h")
         FILE(GLOB module_cppheaders "${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include/opencv2/${module}/*.hpp")
+        list(SORT module_cheaders)
+        list(SORT module_cppheaders)
     ENDIF()
-    list(SORT module_cheaders)
-    list(SORT module_cppheaders)
 
     add_custom_command(
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.java"
