@@ -39,7 +39,6 @@ get_filename_component(OPENCV_INSTALL_PATH "${CMAKE_CURRENT_LIST_FILE}/../.." RE
 # ======================================================
 # Provide the include directories to the caller
 SET(OpenCV_INCLUDE_DIRS "${OPENCV_INSTALL_PATH}/include/opencv;${OPENCV_INSTALL_PATH}/include")
-message(STATUS "OpenCV Includes : ${OpenCV_INCLUDE_DIRS}")
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
