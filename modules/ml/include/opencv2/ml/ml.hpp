@@ -552,19 +552,11 @@ protected:
 
 struct CV_EXPORTS_W_MAP CvEMParams
 {
-    CvEMParams() : nclusters(10), cov_mat_type(1/*CvEM::COV_MAT_DIAGONAL*/),
-        start_step(0/*CvEM::START_AUTO_STEP*/), probs(0), weights(0), means(0), covs(0)
-    {
-        term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON );
-    }
-
-    CvEMParams( int _nclusters, int _cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/,
-                int _start_step=0/*CvEM::START_AUTO_STEP*/,
-                CvTermCriteria _term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON),
-                const CvMat* _probs=0, const CvMat* _weights=0, const CvMat* _means=0, const CvMat** _covs=0 ) :
-                nclusters(_nclusters), cov_mat_type(_cov_mat_type), start_step(_start_step),
-                probs(_probs), weights(_weights), means(_means), covs(_covs), term_crit(_term_crit)
-    {}
+    CvEMParams();
+    CvEMParams( int nclusters, int cov_mat_type=1/*CvEM::COV_MAT_DIAGONAL*/,
+                int start_step=0/*CvEM::START_AUTO_STEP*/,
+                CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON),
+                const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 );
 
     CV_PROP_RW int nclusters;
     CV_PROP_RW int cov_mat_type;
