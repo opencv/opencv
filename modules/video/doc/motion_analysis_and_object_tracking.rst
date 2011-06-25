@@ -15,9 +15,9 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
 
-    :param prevPts: Vector of points for which the flow needs to be found.
+    :param prevPts: Vector of 2D points for which the flow needs to be found. The point coordinates must be single-precision floating-point numbers.
 
-    :param nextPts: Output vector of points containing the calculated new positions of input features in the second image.
+    :param nextPts: Output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image. When ``OPTFLOW_USE_INITIAL_FLOW`` flag is passed, the vector must have the same size as in the input.
 
     :param status: Output status vector. Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
 
