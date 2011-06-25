@@ -1232,8 +1232,8 @@ exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/unix-install/\"" OUTPUT_VARIAB
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
 if(UNIX)
-    # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/FOO/FOOConfig.cmake, so:
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/opencv/)
+    # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/cmake/FOO/FOOConfig.cmake, so:
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/cmake/OpenCV/)
 endif()
 
 # --------------------------------------------------------------------------------------------
