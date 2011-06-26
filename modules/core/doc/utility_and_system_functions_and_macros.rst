@@ -82,6 +82,8 @@ Signals an error and raises an exception.
 
 .. ocv:function:: void error( const Exception& exc )
 
+.. ocv:cfunction:: int cvError( int status, const char* funcName, const char* errMsg, const char* filename, int line )
+
     :param exc: Exception to throw.
 
     :param code: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   

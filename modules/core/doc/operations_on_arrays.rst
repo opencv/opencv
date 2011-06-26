@@ -30,16 +30,16 @@ absdiff
 Computes the per-element absolute difference between two arrays or between an array and a scalar.
 
 .. ocv:function:: void absdiff(InputArray src1, InputArray src2, OutputArray dst)
-
 .. ocv:pyfunction:: cv2.absdiff(src1, src2, [dst=None]) -> dst
-
 .. ocv:pyoldfunction:: cv.AbsDiff(src1, src2, dst) -> None
-
 .. ocv:pyoldfunction:: cv.AbsDiffS(src1, src2, dst) -> None
+.. ocv:cfunction:: void cvAbsDiff(const CvArr* src1, const CvArr* src2, CvArr* dst)
+.. ocv:cfunction:: void cvAbsDiffS(const CvArr* src1, CvScalar src2, CvArr* dst)
 
 .. ocv:cfunction:: void cvAbsDiff(const CvArr* src1, const CvArr* src2, CvArr* dst)
-
-.. ocv:cfunction:: void cvAbsDiffS(const CvArr* src1, CvScalar src2, CvArr* dst)
+.. ocv:cfunction:: void cvAbsDiffS(const CvArr* src, CvArr* dst, CvScalar value)
+.. ocv:pyoldfunction:: AbsDiff(src1, src2, dst)-> None
+.. ocv:pyoldfunction:: AbsDiffS(src, dst, value)-> None
 
     :param src1: First input array or a scalar.
     
@@ -83,6 +83,11 @@ Computes the per-element sum of two arrays or an array and a scalar.
 
 .. ocv:function:: void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1)
 .. ocv:pyfunction:: cv2.add(src1, src2 [, dst=None [, mask=None [, dtype=-1]]]) -> dst
+
+.. ocv:cfunction:: void cvAdd(const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:cfunction:: void cvAddS(const CvArr* src, CvScalar value, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: Add(src1, src2, dst, mask=None)-> None
+.. ocv:pyoldfunction:: AddS(src, value, dst, mask=None)-> None
 
     :param src1: First source array or a scalar.
 
@@ -142,6 +147,9 @@ Computes the weighted sum of two arrays.
 
 .. ocv:function:: void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst, int dtype=-1)
 
+.. ocv:cfunction:: void cvAddWeighted(const CvArr* src1, double alpha, const CvArr* src2, double beta, double gamma, CvArr* dst)
+.. ocv:pyoldfunction:: AddWeighted(src1, alpha, src2, beta, gamma, dst)-> None
+
     :param src1: First source array.
 
     :param alpha: Weight for the first array elements.
@@ -185,6 +193,11 @@ Calculates the per-element bit-wise conjunction of two arrays or an array and a 
 
 .. ocv:function:: void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
 
+.. ocv:cfunction:: void cvAnd(const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:cfunction:: void cvAndS(const CvArr* src, CvScalar value, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: And(src1, src2, dst, mask=None)-> None
+.. ocv:pyoldfunction:: AndS(src, value, dst, mask=None)-> None
+
     :param src1: First source array or a scalar.
 
     :param src2: Second source array or a scalar.
@@ -227,6 +240,9 @@ Inverts every bit of an array.
 
 .. ocv:function:: void bitwise_not(InputArray src, OutputArray dst, InputArray mask=noArray())
 
+.. ocv:cfunction:: void cvNot(const CvArr* src, CvArr* dst)
+.. ocv:pyoldfunction:: Not(src, dst)-> None
+
     :param src: Source array.
 
     :param dst: Destination array that has the same size and type as the input array.
@@ -248,6 +264,11 @@ bitwise_or
 Calculates the per-element bit-wise disjunction of two arrays or an array and a scalar.
 
 .. ocv:function:: void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
+
+.. ocv:cfunction:: void cvOr(const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:cfunction:: void cvOrS(const CvArr* src, CvScalar value, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: Or(src1, src2, dst, mask=None)-> None
+.. ocv:pyoldfunction:: OrS(src, value, dst, mask=None)-> None
 
     :param src1: First source array or a scalar.
 
@@ -289,6 +310,11 @@ bitwise_xor
 Calculates the per-element bit-wise "exclusive or" operation on two arrays or an array and a scalar.
 
 .. ocv:function:: void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask=noArray())
+
+.. ocv:cfunction:: void cvXor(const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:cfunction:: void cvXorS(const CvArr* src, CvScalar value, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: Xor(src1, src2, dst, mask=None)-> None
+.. ocv:pyoldfunction:: XorS(src, value, dst, mask=None)-> None
 
     :param src1: First source array or a scalar.
 
@@ -332,6 +358,9 @@ Calculates the covariance matrix of a set of vectors.
 .. ocv:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
 
 .. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
+
+.. ocv:cfunction:: void cvCalcCovarMatrix( const CvArr** vects, int count, CvArr* covMat, CvArr* avg, int flags)
+.. ocv:pyoldfunction:: CalcCovarMatrix(vects, covMat, avg, flags)-> None
 
     :param samples: Samples stored either as separate matrices or as rows/columns of a single matrix.
 
@@ -382,6 +411,9 @@ cartToPolar
 Calculates the magnitude and angle of 2D vectors.
 
 .. ocv:function:: void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees=false)
+
+.. ocv:cfunction:: void cvCartToPolar( const CvArr* x, const CvArr* y, CvArr* magnitude, CvArr* angle=NULL, int angleInDegrees=0)
+.. ocv:pyoldfunction:: CartToPolar(x, y, magnitude, angle=None, angleInDegrees=0)-> None
 
     :param x: Array of x-coordinates. This must be a single-precision or double-precision floating-point array.
 
@@ -523,6 +555,9 @@ Scales, computes absolute values, and converts the result to 8-bit.
 
 .. ocv:function:: void convertScaleAbs(InputArray src, OutputArray dst, double alpha=1, double beta=0)
 
+.. ocv:cfunction:: void cvConvertScaleAbs(const CvArr* src, CvArr* dst, double scale=1, double shift=0)
+.. ocv:pyoldfunction:: ConvertScaleAbs(src, dst, scale=1.0, shift=0.0)-> None
+
     :param src: Source array.
 
     :param dst: Destination array.
@@ -560,6 +595,9 @@ countNonZero
 Counts non-zero array elements.
 
 .. ocv:function:: int countNonZero( InputArray mtx )
+
+.. ocv:cfunction:: int cvCountNonZero(const CvArr* arr)
+.. ocv:pyoldfunction:: CountNonZero(arr)-> int
 
     :param mtx: Single-channel array.
 
@@ -661,6 +699,9 @@ Performs a forward or inverse discrete Cosine transform of 1D or 2D array.
 
 .. ocv:function:: void dct(InputArray src, OutputArray dst, int flags=0)
 
+.. ocv:cfunction:: void cvDCT(const CvArr* src, CvArr* dst, int flags)
+.. ocv:pyoldfunction:: DCT(src, dst, flags)-> None
+
     :param src: Source floating-point array.
 
     :param dst: Destination array of the same size and type as  ``src`` .
@@ -749,6 +790,9 @@ dft
 Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
 
 .. ocv:function:: void dft(InputArray src, OutputArray dst, int flags=0, int nonzeroRows=0)
+
+.. ocv:cfunction:: void cvDFT(const CvArr* src, CvArr* dst, int flags, int nonzeroRows=0)
+.. ocv:pyoldfunction:: DFT(src, dst, flags, nonzeroRows=0)-> None
 
     :param src: Source array that could be real or complex.
 
@@ -989,6 +1033,9 @@ Calculates the exponent of every array element.
 
 .. ocv:function:: void exp(InputArray src, OutputArray dst)
 
+.. ocv:cfunction:: void cvExp(const CvArr* src, CvArr* dst)
+.. ocv:pyoldfunction:: Exp(src, dst)-> None
+
     :param src: Source array.
 
     :param dst: Destination array of the same size and type as ``src``.
@@ -1047,6 +1094,9 @@ Flips a 2D array around vertical, horizontal, or both axes.
 
 .. ocv:function:: void flip(InputArray src, OutputArray dst, int flipCode)
 
+.. ocv:cfunction:: void cvFlip(const CvArr* src, CvArr* dst=NULL, int flipMode=0)
+.. ocv:pyoldfunction:: Flip(src, dst=None, flipMode=0)-> None
+
     :param src: Source array.
 
     :param dst: Destination array of the same size and type as  ``src`` .
@@ -1084,6 +1134,9 @@ gemm
 Performs generalized matrix multiplication.
 
 .. ocv:function:: void gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags=0)
+
+.. ocv:cfunction:: void cvGEMM( const CvArr* src1, const CvArr* src2, double alpha, const CvArr* src3, double beta, CvArr* dst, int tABC=0)
+.. ocv:pyoldfunction:: GEMM(src1, src2, alphs, src3, beta, dst, tABC=0)-> None
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -1157,6 +1210,9 @@ getOptimalDFTSize
 Returns the optimal DFT size for a given vector size.
 
 .. ocv:function:: int getOptimalDFTSize(int vecsize)
+
+.. ocv:cfunction:: int cvGetOptimalDFTSize(int size0)
+.. ocv:pyoldfunction:: GetOptimalDFTSize(size0)-> int
 
     :param vecsize: Vector size.
 
@@ -1232,6 +1288,11 @@ Checks if array elements lie between the elements of two other arrays.
 
 .. ocv:function:: void inRange(InputArray src, InputArray lowerb, InputArray upperb, OutputArray dst)
 
+.. ocv:cfunction:: void cvInRange(const CvArr* src, const CvArr* lower, const CvArr* upper, CvArr* dst)
+.. ocv:cfunction:: void cvInRangeS(const CvArr* src, CvScalar lower, CvScalar upper, CvArr* dst)
+.. ocv:pyoldfunction:: InRange(src, lower, upper, dst)-> None
+.. ocv:pyoldfunction:: InRangeS(src, lower, upper, dst)-> None
+
     :param src: First source array.
 
     :param lowerb: Inclusive lower boundary array or a scalar.
@@ -1268,6 +1329,9 @@ Finds the inverse or pseudo-inverse of a matrix.
 
 .. ocv:function:: double invert(InputArray src, OutputArray dst, int method=DECOMP_LU)
 
+.. ocv:cfunction:: double cvInvert(const CvArr* src, CvArr* dst, int method=CV_LU)
+.. ocv:pyoldfunction:: Invert(src, dst, method=CV_LU)-> double
+
     :param src: Source floating-point  ``M x N``  matrix.
 
     :param dst: Destination matrix of  ``N x M``  size and the same type as  ``src`` .
@@ -1302,6 +1366,9 @@ Calculates the natural logarithm of every array element.
 
 .. ocv:function:: void log(InputArray src, OutputArray dst)
 
+.. ocv:cfunction:: void cvLog(const CvArr* src, CvArr* dst)
+.. ocv:pyoldfunction:: Log(src, dst)-> None
+
     :param src: Source array.
 
     :param dst: Destination array of the same size and type as  ``src`` .
@@ -1332,6 +1399,9 @@ LUT
 Performs a look-up table transform of an array.
 
 .. ocv:function:: void LUT(InputArray src, InputArray lut, OutputArray dst)
+
+.. ocv:cfunction:: void cvLUT(const CvArr* src, CvArr* dst, const CvArr* lut)
+.. ocv:pyoldfunction:: LUT(src, dst, lut)-> None
 
     :param src: Source array of 8-bit elements.
 
@@ -1391,6 +1461,8 @@ Calculates the Mahalanobis distance between two vectors.
 
 .. ocv:function:: double Mahalanobis(InputArray vec1, InputArray vec2, InputArray icovar)
 
+.. ocv:cfunction:: double cvMahalanobis( const CvArr* vec1, const CvArr* vec2, CvArr* mat)
+
     :param vec1: First 1D source vector.
 
     :param vec2: Second 1D source vector.
@@ -1424,6 +1496,11 @@ Calculates per-element maximum of two arrays or an array and a scalar.
 .. ocv:function:: void max(const Mat& src1, const Mat& src2, Mat& dst)
 
 .. ocv:function:: void max(const Mat& src1, double value, Mat& dst)
+
+.. ocv:cfunction:: void cvMax(const CvArr* src1, const CvArr* src2, CvArr* dst)
+.. ocv:cfunction:: void cvMaxS(const CvArr* src, double value, CvArr* dst)
+.. ocv:pyoldfunction:: Max(src1, src2, dst)-> None
+.. ocv:pyoldfunction:: MaxS(src, value, dst)-> None
 
     :param src1: First source array.
 
@@ -1528,6 +1605,9 @@ Composes a multi-channel array from several single-channel arrays.
 
 .. ocv:function:: void merge(const vector<Mat>& mv, OutputArray dst)
 
+.. ocv:cfunction:: void cvMerge(const CvArr* src0, const CvArr* src1, const CvArr* src2, const CvArr* src3, CvArr* dst)
+.. ocv:pyoldfunction:: Merge(src0, src1, src2, src3, dst)-> None
+
     :param mv: Source array or vector of matrices to be merged. All the matrices in ``mv``  must have the same size and the same depth.
 
     :param count: Number of source matrices when  ``mv``  is a plain C array. It must be greater than zero.
@@ -1563,6 +1643,11 @@ Calculates per-element minimum of two arrays or array and a scalar.
 .. ocv:function:: void min(const Mat& src1, const Mat& src2, Mat& dst)
 
 .. ocv:function:: void min(const Mat& src1, double value, Mat& dst)
+
+.. ocv:cfunction:: void cvMin(const CvArr* src1, const CvArr* src2, CvArr* dst)
+.. ocv:cfunction:: void cvMinS(const CvArr* src, double value, CvArr* dst)
+.. ocv:pyoldfunction:: Min(src1, src2, dst)-> None
+.. ocv:pyoldfunction:: MinS(src, value, dst)-> None
 
     :param src1: First source array.
 
@@ -1606,6 +1691,9 @@ Finds the global minimum and maximum in a whole array or sub-array.
 .. ocv:function:: void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 
 .. ocv:function:: void minMaxLoc(const SparseMat& src, double* minVal, double* maxVal, int* minIdx=0, int* maxIdx=0)
+
+.. ocv:cfunction:: void cvMinMaxLoc(const CvArr* arr, double* minVal, double* maxVal, CvPoint* minLoc=NULL, CvPoint* maxLoc=NULL, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: MinMaxLoc(arr, mask=None)-> (minVal, maxVal, minLoc, maxLoc)
 
     :param src: Source single-channel array.
 
@@ -1655,6 +1743,9 @@ Copies specified channels from input arrays to the specified channels of output 
 
 .. ocv:function:: void mixChannels(const vector<Mat>& srcv, vector<Mat>& dstv, const int* fromTo, int npairs)
 
+.. ocv:cfunction:: void cvMixChannels(const CvArr** src, int srcCount, CvArr** dst, int dstCount, const int* fromTo, int pairCount)
+.. ocv:pyoldfunction:: MixChannels(src, dst, fromTo) -> None
+
     :param srcv: Input array or vector of matrices. All the matrices must have the same size and the same depth.
 
     :param nsrc: Number of elements in  ``srcv`` .
@@ -1701,6 +1792,9 @@ mulSpectrums
 Performs the per-element multiplication of two Fourier spectrums.
 
 .. ocv:function:: void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conj=false)
+
+.. ocv:cfunction:: void cvMulSpectrums( const CvArr* src1, const CvArr* src2, CvArr* dst, int flags)
+.. ocv:pyoldfunction:: MulSpectrums(src1, src2, dst, flags)-> None
 
     :param src1: First source array.
 
@@ -1769,6 +1863,9 @@ Calculates the product of a matrix and its transposition.
 
 .. ocv:function:: void mulTransposed(InputArray src, OutputArray dst, bool aTa, InputArray delta=noArray(), double scale=1, int rtype=-1)
 
+.. ocv:cfunction:: void cvMulTransposed(const CvArr* src, CvArr* dst, int order, const CvArr* delta=NULL, double scale=1.0)
+.. ocv:pyoldfunction:: MulTransposed(src, dst, order, delta=None, scale)-> None
+
     :param src: Source single-channel matrix. Note that unlike :ocv:func:`gemm`, the function can multiply not only floating-point matrices.
 
     :param dst: Destination square matrix.
@@ -1813,6 +1910,9 @@ Calculates an absolute array norm, an absolute difference norm, or a relative di
 .. ocv:function:: double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray())
 
 .. ocv:function:: double norm( const SparseMat& src, int normType )
+
+.. ocv:cfunction:: double cvNorm(const CvArr* arr1, const CvArr* arr2=NULL, int normType=CV_L2, const CvArr* mask=NULL)
+.. ocv:pyoldfunction:: Norm(arr1, arr2, normType=CV_L2, mask=None)-> double
 
     :param src1: First source array.
 
@@ -2048,6 +2148,9 @@ Performs the perspective matrix transformation of vectors.
 
 .. ocv:function:: void perspectiveTransform(InputArray src, OutputArray dst, InputArray mtx)
 
+.. ocv:cfunction:: void cvPerspectiveTransform(const CvArr* src, CvArr* dst, const CvMat* mat)
+.. ocv:pyoldfunction:: PerspectiveTransform(src, dst, mat)-> None
+
     :param src: Source two-channel or three-channel floating-point array. Each element is a 2D/3D vector to be transformed.
 
     :param dst: Destination array of the same size and type as  ``src`` .
@@ -2114,6 +2217,9 @@ Computes x and y coordinates of 2D vectors from their magnitude and angle.
 
 .. ocv:function:: void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees=false)
 
+.. ocv:cfunction:: void cvPolarToCart( const CvArr* magnitude, const CvArr* angle, CvArr* x, CvArr* y, int angleInDegrees=0)
+.. ocv:pyoldfunction:: PolarToCart(magnitude, angle, x, y, angleInDegrees=0)-> None
+
     :param magnitude: Source floating-point array of magnitudes of 2D vectors. It can be an empty matrix ( ``=Mat()`` ). In this case, the function assumes that all the magnitudes are =1. If it is not empty, it must have the same size and type as  ``angle`` .
     
     :param angle: Source floating-point array of angles of 2D vectors.
@@ -2149,6 +2255,9 @@ pow
 Raises every array element to a power.
 
 .. ocv:function:: void pow(InputArray src, double p, OutputArray dst)
+
+.. ocv:cfunction:: void cvPow( const CvArr* src, CvArr* dst, double power)
+.. ocv:pyoldfunction:: Pow(src, dst, power)-> None
 
     :param src: Source array.
 
@@ -2403,6 +2512,9 @@ Reduces a matrix to a vector.
 
 .. ocv:function:: void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype=-1)
 
+.. ocv:cfunction:: void cvReduce(const CvArr* src, CvArr* dst, int dim=-1, int op=CV_REDUCE_SUM)
+.. ocv:pyoldfunction:: Reduce(src, dst, dim=-1, op=CV_REDUCE_SUM)-> None
+
     :param mtx: Source 2D matrix.
 
     :param vec: Destination vector. Its size and type is defined by  ``dim``  and  ``dtype``  parameters.
@@ -2434,6 +2546,9 @@ Fills the destination array with repeated copies of the source array.
 .. ocv:function:: void repeat(InputArray src, int ny, int nx, OutputArray dst)
 
 .. ocv:function:: Mat repeat(InputArray src, int ny, int nx)
+
+.. ocv:cfunction:: void cvRepeat(const CvArr* src, CvArr* dst)
+.. ocv:pyoldfunction:: Repeat(src, dst)-> None
 
     :param src: Source array to replicate.
 
@@ -2495,6 +2610,9 @@ Calculates the sum of a scaled array and another array.
 
 .. ocv:function:: void scaleAdd(InputArray src1, double scale, InputArray src2, OutputArray dst)
 
+.. ocv:cfunction:: void cvScaleAdd(const CvArr* src1, CvScalar scale, const CvArr* src2, CvArr* dst)
+.. ocv:pyoldfunction:: ScaleAdd(src1, scale, src2, dst)-> None
+
     :param src1: First source array.
 
     :param scale: Scale factor for the first array.
@@ -2533,6 +2651,9 @@ Initializes a scaled identity matrix.
 
 .. ocv:function:: void setIdentity(InputOutputArray dst, const Scalar& value=Scalar(1))
 
+.. ocv:cfunction:: void cvSetIdentity(CvArr* mat, CvScalar value=cvRealScalar(1))
+.. ocv:pyoldfunction:: SetIdentity(mat, value=1)-> None
+
     :param dst: Matrix to initialize (not necessarily square).
 
     :param value: Value to assign to diagonal elements.
@@ -2565,6 +2686,9 @@ solve
 Solves one or more linear systems or least-squares problems.
 
 .. ocv:function:: bool solve(InputArray src1, InputArray src2, OutputArray dst, int flags=DECOMP_LU)
+
+.. ocv:cfunction:: int cvSolve(const CvArr* src1, const CvArr* src2, CvArr* dst, int method=CV_LU)
+.. ocv:pyoldfunction:: Solve(A, B, X, method=CV_LU)-> None
 
     :param src1: Input matrix on the left-hand side of the system.
 
@@ -2610,6 +2734,9 @@ solveCubic
 Finds the real roots of a cubic equation.
 
 .. ocv:function:: void solveCubic(InputArray coeffs, OutputArray roots)
+
+.. ocv:cfunction:: void cvSolveCubic(const CvArr* coeffs, CvArr* roots)
+.. ocv:pyoldfunction:: SolveCubic(coeffs, roots)-> None
 
     :param coeffs: Equation coefficients, an array of 3 or 4 elements.
 
@@ -2726,6 +2853,9 @@ Divides a multi-channel array into several single-channel arrays.
 
 .. ocv:function:: void split(const Mat& mtx, vector<Mat>& mv)
 
+.. ocv:cfunction:: void cvSplit(const CvArr* src, CvArr* dst0, CvArr* dst1, CvArr* dst2, CvArr* dst3)
+.. ocv:pyoldfunction:: Split(src, dst0, dst1, dst2, dst3)-> None
+
     :param mtx: Source multi-channel array.
 
     :param mv: Destination array or vector of arrays. In the first variant of the function the number of arrays must match  ``mtx.channels()`` . The arrays themselves are reallocated, if needed.
@@ -2752,6 +2882,9 @@ sqrt
 Calculates a quare root of array elements.
 
 .. ocv:function:: void sqrt(InputArray src, OutputArray dst)
+
+.. ocv:cfunction:: float cvSqrt(float value)
+.. ocv:pyoldfunction:: Sqrt(value)-> float
 
     :param src: Source floating-point array.
 
@@ -2932,6 +3065,9 @@ Calculates the sum of array elements.
 
 .. ocv:function:: Scalar sum(InputArray mtx)
 
+.. ocv:cfunction:: CvScalar cvSum(const CvArr* arr)
+.. ocv:pyoldfunction:: Sum(arr)-> CvScalar
+
     :param mtx: Source array that must have from 1 to 4 channels.
 
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
@@ -2971,6 +3107,9 @@ Returns the trace of a matrix.
 
 .. ocv:function:: Scalar trace(InputArray mtx)
 
+.. ocv:cfunction:: CvScalar cvTrace(const CvArr* mat)
+.. ocv:pyoldfunction:: Trace(mat)-> CvScalar
+
     :param mtx: Source matrix.
 
 The function ``trace`` returns the sum of the diagonal elements of the matrix ``mtx`` .
@@ -2986,6 +3125,9 @@ transform
 Performs the matrix transformation of every array element.
 
 .. ocv:function:: void transform(InputArray src, OutputArray dst, InputArray mtx )
+
+.. ocv:cfunction:: void cvTransform(const CvArr* src, CvArr* dst, const CvMat* transmat, const CvMat* shiftvec=NULL)
+.. ocv:pyoldfunction:: Transform(src, dst, transmat, shiftvec=None)-> None
 
     :param src: Source array that must have as many channels (1 to 4) as  ``mtx.cols``  or  ``mtx.cols-1``.
     
@@ -3030,6 +3172,9 @@ transpose
 Transposes a matrix.
 
 .. ocv:function:: void transpose(InputArray src, OutputArray dst)
+
+.. ocv:cfunction:: void cvTranspose(const CvArr* src, CvArr* dst)
+.. ocv:pyoldfunction:: Transpose(src, dst)-> None
 
     :param src: Source array.
 

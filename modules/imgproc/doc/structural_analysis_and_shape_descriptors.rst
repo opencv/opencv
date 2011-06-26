@@ -9,6 +9,9 @@ Calculates all of the moments up to the third order of a polygon or rasterized s
 
 .. ocv:function:: Moments moments( InputArray array, bool binaryImage=false )
 
+.. ocv:cfunction:: void cvMoments( const CvArr* arr, CvMoments* moments, int binary=0 )
+.. ocv:pyoldfunction:: Moments(arr, binary=0) -> moments
+
     :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
 
     :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
@@ -112,6 +115,9 @@ Finds contours in a binary image.
 
 .. ocv:function:: void findContours( InputOutputArray image, OutputArrayOfArrays contours, int mode, int method, Point offset=Point())
 
+.. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** firstContour, int headerSize=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0, 0) )
+.. ocv:pyoldfunction:: FindContours(image, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE, offset=(0, 0)) -> cvseq
+
     :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
@@ -152,6 +158,9 @@ drawContours
 Draws contours outlines or filled contours.
 
 .. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours,                   int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+
+.. ocv:cfunction:: void cvDrawContours( CvArr *img, CvSeq* contour, CvScalar externalColor, CvScalar holeColor, int maxLevel, int thickness=1, int lineType=8 )
+.. ocv:pyoldfunction:: DrawContours(img, contour, externalColor, holeColor, maxLevel, thickness=1, lineType=8, offset=(0, 0))-> None
 
     :param image: Destination image.
 
@@ -245,6 +254,9 @@ Calculates a contour perimeter or a curve length.
 
 .. ocv:function:: double arcLength( InputArray curve, bool closed )
 
+.. ocv:cfunction:: double cvArcLength( const void* curve, CvSlice slice=CV_WHOLE_SEQ, int isClosed=-1 )
+.. ocv:pyoldfunction:: ArcLength(curve, slice=CV_WHOLE_SEQ, isClosed=-1)-> double
+
     :param curve: Input vector of 2D points, stored in ``std::vector`` or ``Mat``.
 
     :param closed: Flag indicating whether the curve is closed or not.
@@ -259,6 +271,9 @@ Calculates the up-right bounding rectangle of a point set.
 
 .. ocv:function:: Rect boundingRect( InputArray points )
 
+.. ocv:cfunction:: CvRect cvBoundingRect( CvArr* points, int update=0 )
+.. ocv:pyoldfunction:: BoundingRect(points, update=0)-> CvRect
+
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
@@ -271,6 +286,9 @@ contourArea
 Calculates a contour area.
 
 .. ocv:function:: double contourArea( InputArray contour, bool oriented=false )
+
+.. ocv:cfunction:: double cvContourArea( const CvArr* contour, CvSlice slice=CV_WHOLE_SEQ )
+.. ocv:pyoldfunction:: ContourArea(contour, slice=CV_WHOLE_SEQ)-> double
 
     :param contour: Input vector of 2d points (contour vertices), stored in ``std::vector`` or ``Mat``.
     :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking sign of the area. By default the parameter is ``false``, which means that the absolute value is returned.
@@ -336,6 +354,9 @@ fitLine
 Fits a line to a 2D or 3D point set.
 
 .. ocv:function:: void fitLine( InputArray points, OutputArray line, int distType, double param, double reps, double aeps )
+
+.. ocv:cfunction:: void cvFitLine( const CvArr* points, int distType, double param, double reps, double aeps, float* line )
+.. ocv:pyoldfunction:: FitLine(points, distType, param, reps, aeps) -> line
 
     :param points: Input vector of 2D or 3D points, stored in ``std::vector<>`` or ``Mat``.
 
@@ -427,6 +448,9 @@ Finds a circle of the minimum area enclosing a 2D point set.
 
 .. ocv:function:: void minEnclosingCircle( InputArray points, Point2f& center, float& radius )
 
+.. ocv:cfunction:: int cvMinEnclosingCircle( const CvArr* points, CvPoint2D32f* center, float* radius )
+.. ocv:pyoldfunction:: MinEnclosingCircle(points)-> (int, center, radius)
+
     :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
 
     :param center: Output center of the circle.
@@ -442,6 +466,9 @@ matchShapes
 Compares two shapes.
 
 .. ocv:function:: double matchShapes( InputArray object1, InputArray object2, int method, double parameter=0 )
+
+.. ocv:cfunction:: double cvMatchShapes( const void* object1, const void* object2, int method, double parameter=0 )
+.. ocv:pyoldfunction:: MatchShapes(object1, object2, method, parameter=0)-> None
 
     :param object1: The first contour or grayscale image.
 
@@ -492,6 +519,9 @@ pointPolygonTest
 Performs a point-in-contour test.
 
 .. ocv:function:: double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist )
+
+.. ocv:cfunction:: double cvPointPolygonTest( const CvArr* contour, CvPoint2D32f pt, int measureDist )
+.. ocv:pyoldfunction:: PointPolygonTest(contour, pt, measureDist)-> double
 
     :param contour: Input contour.
 

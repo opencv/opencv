@@ -524,6 +524,9 @@ Forms a border around an image.
 
 .. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
 
+.. ocv:cfunction:: void cvCopyMakeBorder( const CvArr* src, CvArr* dst, CvPoint offset, int bordertype, CvScalar value=cvScalarAll(0) )
+.. ocv:pyoldfunction:: CopyMakeBorder(src, dst, offset, bordertype, value=(0, 0, 0, 0))-> None
+
     :param src: Source image.
 
     :param dst: Destination image of the same type as  ``src``  and the size  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
@@ -787,6 +790,9 @@ Dilates an image by using a specific structuring element.
 
 .. ocv:function:: void dilate( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
+.. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
+.. ocv:pyoldfunction:: Dilate(src, dst, element=None, iterations=1)-> None
+
     :param src: Source image.
 
     :param dst: Destination image of the same size and type as  ``src`` .
@@ -820,6 +826,9 @@ erode
 Erodes an image by using a specific structuring element.
 
 .. ocv:function:: void erode( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
+
+.. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
+.. ocv:pyoldfunction:: Erode(src, dst, element=None, iterations=1)-> None
 
     :param src: Source image.
 
@@ -855,6 +864,9 @@ filter2D
 Convolves an image with the kernel.
 
 .. ocv:function:: void filter2D( InputArray src, OutputArray dst, int ddepth, InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
+
+.. ocv:cfunction:: void cvFilter2D( const CvArr* src, CvArr* dst, const CvMat* kernel, CvPoint anchor=cvPoint(-1, -1))
+.. ocv:pyoldfunction:: Filter2D(src, dst, kernel, anchor=(-1, -1))-> None
 
     :param src: Source image.
 
@@ -1070,6 +1082,9 @@ Performs advanced morphological transformations.
 
 .. ocv:function:: void morphologyEx( InputArray src, OutputArray dst, int op, InputArray element,                   Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
+.. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
+.. ocv:pyoldfunction:: MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
+
     :param src: Source image.
 
     :param dst: Destination image of the same size and type as  ``src`` .
@@ -1180,6 +1195,9 @@ Smoothes an image and downsamples it.
 
 .. ocv:function:: void pyrDown( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
+.. ocv:cfunction:: void cvPyrDown( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
+.. ocv:pyoldfunction:: PyrDown(src, dst, filter=CV_GAUSSIAN_5X5)-> None
+
     :param src: Source image.
 
     :param dst: Destination image. It has the specified size and the same type as  ``src`` .
@@ -1262,6 +1280,9 @@ Sobel
 Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 .. ocv:function:: void Sobel( InputArray src, OutputArray dst, int ddepth, int xorder, int yorder, int ksize=3, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
+
+.. ocv:cfunction:: void cvSobel( const CvArr* src, CvArr* dst, int xorder, int yorder, int apertureSize=3 )
+.. ocv:pyoldfunction:: Sobel(src, dst, xorder, yorder, apertureSize=3)-> None
 
     :param src: Source image.
 

@@ -32,6 +32,9 @@ Draws a circle.
 
 .. ocv:function:: void circle(Mat& img, Point center, int radius,            const Scalar& color, int thickness=1,            int lineType=8, int shift=0)
 
+.. ocv:cfunction:: void cvCircle( CvArr* img, CvPoint center, int radius, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: Circle(img, center, radius, color, thickness=1, lineType=8, shift=0)-> None
+
     :param img: Image where the circle is drawn.
 
     :param center: Center of the circle.
@@ -56,6 +59,9 @@ Clips the line against the image rectangle.
 
 .. ocv:function:: bool clipLine(Rect imgRect, Point& pt1, Point& pt2)
 
+.. ocv:cfunction:: int cvClipLine( CvSize imgSize, CvPoint* pt1, CvPoint* pt2 )
+.. ocv:pyoldfunction:: ClipLine(imgSize, pt1, pt2) -> (clippedPt1, clippedPt2)
+
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
 
     :param imgSize: Image rectangle.?? why do you list the same para twice??
@@ -74,6 +80,9 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 .. ocv:function:: void ellipse(Mat& img, Point center, Size axes,             double angle, double startAngle, double endAngle,             const Scalar& color, int thickness=1,             int lineType=8, int shift=0)
 
 .. ocv:function:: void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,             int thickness=1, int lineType=8)
+
+.. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double startAngle, double endAngle, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: Ellipse(img, center, axes, angle, startAngle, endAngle, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -138,6 +147,9 @@ Fills a convex polygon.
 
 .. ocv:function:: void fillConvexPoly(Mat& img, const Point* pts, int npts,                    const Scalar& color, int lineType=8,                    int shift=0)
 
+.. ocv:cfunction:: void cvFillConvexPoly( CvArr* img, CvPoint* pts, int npts, CvScalar color, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: FillConvexPoly(img, pn, color, lineType=8, shift=0)-> None
+
     :param img: Image.
 
     :param pts: Polygon vertices.
@@ -161,6 +173,9 @@ fillPoly
 Fills the area bounded by one or more polygons.
 
 .. ocv:function:: void fillPoly(Mat& img, const Point** pts,               const int* npts, int ncontours,              const Scalar& color, int lineType=8,              int shift=0, Point offset=Point() )
+
+.. ocv:cfunction:: void cvFillPoly( CvArr* img, CvPoint** pts, int* npts, int contours, CvScalar color, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: FillPoly(img, polys, color, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -186,6 +201,9 @@ getTextSize
 Calculates the width and height of a text string.
 
 .. ocv:function:: Size getTextSize(const string& text, int fontFace,                 double fontScale, int thickness,                 int* baseLine)
+
+.. ocv:cfunction:: void cvGetTextSize( const char* textString, const CvFont* font, CvSize* textSize, int* baseline )
+.. ocv:pyoldfunction:: GetTextSize(textString, font)-> (textSize, baseline)
 
     :param text: Input text string.
 
@@ -237,6 +255,9 @@ line
 Draws a line segment connecting two points.
 
 .. ocv:function:: void line(Mat& img, Point pt1, Point pt2, const Scalar& color,          int thickness=1, int lineType=8, int shift=0)
+
+.. ocv:cfunction:: void cvLine( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
 
     :param img: Image.
 
@@ -314,6 +335,9 @@ Draws a simple, thick, or filled up-right rectangle.
 
 .. ocv:function:: void rectangle(Mat& img, Rect r, const Scalar& color, int thickness=1,               int lineType=8, int shift=0)
 
+.. ocv:cfunction:: void cvRectangle( CvArr* img, CvPoint pt1, CvPoint pt2, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: Rectangle(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)-> None
+
     :param img: Image.
 
     :param pt1: Vertex of the rectangle.
@@ -367,6 +391,9 @@ putText
 Draws a text string.
 
 .. ocv:function:: void putText( Mat& img, const string& text, Point org,              int fontFace, double fontScale, Scalar color,              int thickness=1, int lineType=8,              bool bottomLeftOrigin=false )
+
+.. ocv:cfunction:: void cvPutText( CvArr* img, const char* text, CvPoint org, const CvFont* font, CvScalar color )
+.. ocv:pyoldfunction:: PutText(img, text, org, font, color)-> None
 
     :param img: Image.
 

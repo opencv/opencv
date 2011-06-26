@@ -10,6 +10,9 @@ Applies an adaptive threshold to an array.
 
 .. ocv:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
 
+.. ocv:cfunction:: void cvAdaptiveThreshold( const CvArr* src, CvArr* dst, double maxValue, int adaptiveMethod=CV_ADAPTIVE_THRESH_MEAN_C, int thresholdType=CV_THRESH_BINARY, int blockSize=3, double param1=5 )
+.. ocv:pyoldfunction:: AdaptiveThreshold(src, dst, maxValue, adaptiveMethod=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY, blockSize=3, param1=5)-> None
+
     :param src: Source 8-bit single-channel image.
 
     :param dst: Destination image of the same size and the same type as  ``src`` .
@@ -67,6 +70,9 @@ cvtColor
 Converts an image from one color space to another.
 
 .. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
+
+.. ocv:cfunction:: void cvCvtColor( const CvArr* src, CvArr* dst, int code )
+.. ocv:pyoldfunction:: CvtColor(src, dst, code)-> None
 
     :param src: Source image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
@@ -470,6 +476,9 @@ Fills a connected component with the given color.
 
 .. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
 
+.. ocv:cfunction:: void cvFloodFill( CvArr* image, CvPoint seedPoint, CvScalar newVal, CvScalar loDiff=cvScalarAll(0), CvScalar upDiff=cvScalarAll(0), CvConnectedComp* comp=NULL, int flags=4, CvArr* mask=NULL )
+.. ocv:pyoldfunction:: FloodFill(image, seedPoint, newVal, loDiff=(0, 0, 0, 0), upDiff=(0, 0, 0, 0), flags=4, mask=None)-> comp
+
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
     :param mask: (For the second function only) Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller. The function uses and updates the mask, so you take responsibility of initializing the  ``mask``  content. Flood-filling cannot go across non-zero pixels in the mask. For example, an edge detector output can be used as a mask to stop filling at edges. It is possible to use the same mask in multiple calls to the function to make sure the filled area does not overlap.  
@@ -570,6 +579,9 @@ Restores the selected region in an image using the region neighborhood.
 
 .. ocv:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
 
+.. ocv:cfunction:: void cvInpaint( const CvArr* src, const CvArr* mask, CvArr* dst, double inpaintRadius, int flags)
+.. ocv:pyoldfunction:: Inpaint(src, mask, dst, inpaintRadius, flags) -> None
+
     :param src: Input 8-bit 1-channel or 3-channel image.
 
     :param inpaintMask: Inpainting mask, 8-bit 1-channel image. Non-zero pixels indicate the area that needs to be inpainted.
@@ -599,6 +611,9 @@ Calculates the integral of an image.
 .. ocv:function:: void integral( InputArray image, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
 
 .. ocv:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
+
+.. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tiltedSum=NULL )
+.. ocv:pyoldfunction:: Integral(image, sum, sqsum=None, tiltedSum=None)-> None
 
     :param image: Source image as :math:`W \times H` , 8-bit or floating-point (32f or 64f).
 
@@ -645,6 +660,9 @@ threshold
 Applies a fixed-level threshold to each array element.
 
 .. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
+
+.. ocv:cfunction:: double cvThreshold( const CvArr* src, CvArr* dst, double threshold, double maxValue, int thresholdType )
+.. ocv:pyoldfunction:: Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
     :param src: Source array (single-channel, 8-bit of 32-bit floating point)
 

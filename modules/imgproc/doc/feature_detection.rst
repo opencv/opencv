@@ -11,6 +11,9 @@ Finds edges in an image using the Canny algorithm.
 
 .. ocv:function:: void Canny( InputArray image, OutputArray edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
 
+.. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int apertureSize=3 )
+.. ocv:pyoldfunction:: Canny(image, edges, threshold1, threshold2, apertureSize=3)-> None
+
     :param image: Single-channel 8-bit input image.
 
     :param edges: Output edge map. It has the same size and type as  ``image`` .
@@ -33,6 +36,9 @@ cornerEigenValsAndVecs
 Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
 .. ocv:function:: void cornerEigenValsAndVecs( InputArray src, OutputArray dst, int blockSize, int apertureSize, int borderType=BORDER_DEFAULT )
+
+.. ocv:cfunction:: void cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv, int blockSize, int apertureSize=3 )
+.. ocv:pyoldfunction:: CornerEigenValsAndVecs(image, eigenvv, blockSize, apertureSize=3)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -80,6 +86,9 @@ Harris edge detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int apertureSize, double k, int borderType=BORDER_DEFAULT )
 
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harrisDst, int blockSize, int apertureSize=3, double k=0.04 )
+.. ocv:pyoldfunction:: CornerHarris(image, harrisDst, blockSize, apertureSize=3, k=0.04)-> None
+
     :param src: Input single-channel 8-bit or floating-point image.
 
     :param dst: Image to store the Harris detector responses. It has the type  ``CV_32FC1``  and the same size as  ``src`` .
@@ -113,6 +122,9 @@ cornerMinEigenVal
 Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 .. ocv:function:: void cornerMinEigenVal( InputArray src, OutputArray dst, int blockSize, int apertureSize=3, int borderType=BORDER_DEFAULT )
+
+.. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int blockSize, int apertureSize=3 )
+.. ocv:pyoldfunction:: CornerMinEigenVal(image, eigenval, blockSize, apertureSize=3)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -192,6 +204,9 @@ goodFeaturesToTrack
 Determines strong corners on an image.
 
 .. ocv:function:: void goodFeaturesToTrack( InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=noArray(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
+
+.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners int* cornerCount double qualityLevel double minDistance const CvArr* mask=NULL int blockSize=3 int useHarris=0 double k=0.04 )
+.. ocv:pyoldfunction:: GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -427,6 +442,9 @@ preCornerDetect
 Calculates a feature map for corner detection.
 
 .. ocv:function:: void preCornerDetect( InputArray src, OutputArray dst, int apertureSize, int borderType=BORDER_DEFAULT )
+
+.. ocv:cfunction:: void cvPreCornerDetect( const CvArr* image, CvArr* corners, int apertureSize=3 )
+.. ocv:pyoldfunction:: PreCornerDetect(image, corners, apertureSize=3)-> None
 
     :param src: Source single-channel 8-bit of floating-point image.
 

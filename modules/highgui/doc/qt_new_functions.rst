@@ -63,6 +63,8 @@ Changes parameters of a window dynamically.
 
 .. ocv:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
+.. ocv:cfunction:: void cvSetWindowProperty(const char* name, int propId, double propValue)
+
     :param name: Name of the window.
 
     :param prop_id: Window property to edit. The following operation flags are available:
@@ -95,6 +97,8 @@ Provides parameters of a window.
 
 .. ocv:function:: void  getWindowProperty(const string& name, int prop_id)
 
+.. ocv:cfunction:: void cvGetWindowProperty(const char* name, int propId)
+
     :param name: Name of the window.
 
     :param prop_id: Window property to retrive. The following operation flags are available:
@@ -116,6 +120,8 @@ fontQt
 Creates the font to draw a text on an image.
 
 .. ocv:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+
+.. ocv:cfunction:: CvFont cvFontQt(const char* nameFont, int pointSize=-1, CvScalar color=cvScalarAll(0), int weight=CV_FONT_NORMAL, int style=CV_STYLE_NORMAL, int spacing=0)
 
     :param nameFont: Name of the font. The name should match the name of a system font (such as *Times*). If the font is not found, a default one is used.
 
@@ -161,6 +167,8 @@ Creates the font to draw a text on an image.
 
 .. ocv:function:: void addText(const Mat& img, const string& text, Point location, CvFont *font)
 
+.. ocv:cfunction:: void cvAddText(const CvArr* img, const char* text, CvPoint location, CvFont *font)
+
     :param img: 8-bit 3-channel image where the text should be drawn.
 
     :param text: Text to write on an image.
@@ -186,6 +194,8 @@ displayOverlay
 
     Displays a  text on a window image as an overlay for a specified duration.  
 
+.. ocv:cfunction:: void cvDisplayOverlay(const char* name, const char* text, int delay)
+
     :param name: Name of the window.
 
     :param text: Overlay text to write on a window image.
@@ -200,6 +210,8 @@ displayStatusBar
 Displays a text on the window statusbar during the specified period of time.
 
 .. ocv:function:: void displayStatusBar(const string& name, const string& text, int delay)
+
+.. ocv:cfunction:: void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 
     :param name: Name of the window.
 
@@ -216,6 +228,8 @@ createOpenGLCallback
 Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
 .. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
+
+.. ocv:cfunction:: void cvCreateOpenGLCallback( const char* windowName, CvOpenGLCallback callbackOpenGL, void* userdata=NULL, double angle=-1, double zmin=-1, double zmax=-1
 
     :param window_name: Name of the window.
 
@@ -267,6 +281,8 @@ Saves parameters of the specified window.
 
 .. ocv:function:: void saveWindowParameters(const string& name)
 
+.. ocv:cfunction:: void cvSaveWindowParameters(const char* name)
+
     :param name: Name of the window.
 
 The function ``saveWindowParameters`` saves size, location, flags,  trackbars value, zoom and panning location of the window
@@ -278,6 +294,8 @@ Loads parameters of the specified window.
 
 .. ocv:function:: void loadWindowParameters(const string& name)
 
+.. ocv:cfunction:: void cvLoadWindowParameters(const char* name)
+
     :param name: Name of the window.
 
 The function ``loadWindowParameters`` loads size, location, flags, trackbars value, zoom and panning location of the window
@@ -288,6 +306,8 @@ createButton
 Attaches a button to the control panel.
 
 .. ocv:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
+
+.. ocv:cfunction:: cvCreateButton( const char* buttonName=NULL, CvButtonCallback onChange=NULL, void* userdata=NULL, int buttonType=CV_PUSH_BUTTON, int initialButtonState=0
 
     :param  button_name: Name of the button.
 

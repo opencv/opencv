@@ -9,6 +9,9 @@ Creates a trackbar and attaches it to the specified window.
 
 .. ocv:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
+.. ocv:cfunction:: int cvCreateTrackbar( const char* trackbarName, const char* windowName, int* value, int count, CvTrackbarCallback onChange )
+.. ocv:pyoldfunction:: CreateTrackbar(trackbarName, windowName, value, count, onChange) -> None
+
     :param trackbarname: Name of the created trackbar.
 
     :param winname: Name of the window that will be used as a parent of the created trackbar.
@@ -42,6 +45,9 @@ getTrackbarPos
 Returns the trackbar position.
 
 .. ocv:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
+
+.. ocv:cfunction:: int cvGetTrackbarPos( const char* trackbarName, const char* windowName )
+.. ocv:pyoldfunction:: GetTrackbarPos(trackbarName, windowName)-> None
 
     :param trackbarname: Name of the trackbar.
 
@@ -83,6 +89,9 @@ Creates a window.
 
 .. ocv:function:: void namedWindow( const string& winname, int flags )
 
+.. ocv:cfunction:: int cvNamedWindow( const char* name, int flags )
+.. ocv:pyoldfunction:: NamedWindow(name, flags=CV_WINDOW_AUTOSIZE)-> None
+
     :param name: Name of the window in the window caption that may be used as a window identifier.
 
     :param flags: Flags of the window. Currently the only supported flag is  ``CV_WINDOW_AUTOSIZE`` . If this is set, the window size is automatically adjusted to fit the displayed image (see  :ref:`imshow` ), and you cannot change the window size manually.
@@ -122,6 +131,9 @@ Destroys a window.
 
 .. ocv:function:: void destroyWindow( const string &winname )
             
+.. ocv:cfunction:: void cvDestroyWindow( const char* name )
+.. ocv:pyoldfunction:: DestroyWindow(name)-> None
+
     :param winname: Name of the window to be destroyed. 
                                            
 The function ``destroyWindow`` destroys the window with the given name.
@@ -142,6 +154,9 @@ Sets the trackbar position.
 
 .. ocv:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
 
+.. ocv:cfunction:: void cvSetTrackbarPos( const char* trackbarName, const char* windowName, int pos )
+.. ocv:pyoldfunction:: SetTrackbarPos(trackbarName, windowName, pos)-> None
+
     :param trackbarname: Name of the trackbar.
 
     :param winname: Name of the window that is the parent of trackbar.
@@ -161,6 +176,9 @@ waitKey
 Waits for a pressed key.
 
 .. ocv:function:: int waitKey(int delay=0)
+
+.. ocv:cfunction:: int cvWaitKey( int delay=0 )
+.. ocv:pyoldfunction:: WaitKey(delay=0)-> int
 
     :param delay: Delay in milliseconds. 0 is the special value that means "forever".
 
