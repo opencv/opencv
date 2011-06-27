@@ -3,27 +3,35 @@ Reading and Writing Images and Video
 
 .. highlight:: cpp
 
+.. index:: imdecode
+
+.. _imdecode:
+
 imdecode
 ------------
-Reads an image from a buffer in memory.
-
 .. ocv:function:: Mat imdecode( InputArray buf,  int flags )
 
-    :param buf: Input array of vector of bytes.
+    Reads an image from a buffer in the memory.
 
-    :param flags: The same flags as in  :ref:`imread` .
+    :param buf: Input array of a vector of bytes.
+
+    :param flags: The same flags as in  :ocv:func:`imread` .
     
-The function reads an image from the specified buffer in memory.
+The function reads an image from the specified buffer in the memory.
 If the buffer is too short or contains invalid data, the empty matrix is returned.
 
 See
-:ref:`imread` for the list of supported formats and flags description.
+:ocv:func:`imread` for the list of supported formats and flags description.
+
+.. index:: imencode
+
+.. _imencode:
 
 imencode
 ------------
-Encode an image into a memory buffer.
-
 .. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+
+    Encodes an image into a memory buffer.
 
     :param ext: File extension that defines the output format.
 
@@ -31,57 +39,65 @@ Encode an image into a memory buffer.
 
     :param buf: Output buffer resized to fit the compressed image.
 
-    :param params: Format-specific parameters. See  :ref:`imwrite` .
+    :param params: Format-specific parameters. See  :ocv:func:`imwrite` .
 
 The function compresses the image and stores it in the memory buffer that is resized to fit the result.
 See
-:ref:`imwrite` for the list of supported formats and flags description.
+:ocv:func:`imwrite` for the list of supported formats and flags description.
+
+.. index:: imread
+
+.. _imread:
 
 imread
 ----------
-Loads an image from a file.
-
 .. ocv:function:: Mat imread( const string& filename, int flags=1 )
 
-    :param filename: Name of file to be loaded.
+    Loads an image from a file.
+
+    :param filename: Name of a file to be loaded.
 
     :param flags: Flags specifying the color type of a loaded image:
 
-        * **>0**  a 3-channel color image
+        * **>0**  Load a 3-channel color image.
 
-        * **=0** a grayscale image
+        * **=0** Load a grayscale image.
 
-        * **<0** The image is loaded as is. Note that in the current implementation the alpha channel, if any, is stripped from the output image. For example, a 4-channel RGBA image is loaded as RGB if  :math:`flags\ge0` .
+        * **<0** Load the image as is. Note that in the current implementation the alpha channel, if any, is stripped from the output image. For example, a 4-channel RGBA image is loaded as RGB if  :math:`flags\ge0` .
 
-The function ``imread`` loads an image from the specified file and returns it. If the image cannot be read (because of missing file, improper permissions, unsupported or invalid format), the function returns an empty matrix ( ``Mat::data==NULL`` ). Currently, the following file formats are supported:
+The function ``imread`` loads an image from the specified file and returns it. If the image cannot be read (because of a missing file, improper permissions, unsupported or invalid format), the function returns an empty matrix ( ``Mat::data==NULL`` ). Currently, the following file formats are supported:
 
  * Windows bitmaps - ``*.bmp, *.dib`` (always supported)
 
- * JPEG files - ``*.jpeg, *.jpg, *.jpe`` (see the *Notes* section)
+ * JPEG files - ``*.jpeg, *.jpg, *.jpe`` (see the *Notes* below)
 
- * JPEG 2000 files - ``*.jp2`` (see the *Notes* section)
+ * JPEG 2000 files - ``*.jp2`` (see the *Notes* below)
 
- * Portable Network Graphics - ``*.png`` (see the *Notes* section)
+ * Portable Network Graphics - ``*.png`` (see the *Notes* below)
 
  * Portable image format - ``*.pbm, *.pgm, *.ppm``     (always supported)
 
  * Sun rasters - ``*.sr, *.ras``     (always supported)
 
- * TIFF files - ``*.tiff, *.tif`` (see the *Notes* section)
+ * TIFF files - ``*.tiff, *.tif`` (see the *Notes* below)
 
-**Notes**:
+.. note::
 
-* The function determines the type of an image by the content, not by the file extension.
+	* The function determines the type of an image by the content, not by the file extension.
 
-* On Microsoft Windows* OS and MacOSX*, the codecs shipped with an OpenCV image (libjpeg, libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs, and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware that currently these native image loaders give images with different pixel values because of the color management embedded into MacOSX.
+	* On Microsoft Windows* OS and MacOSX*, the codecs shipped with an OpenCV image ( ``libjpeg``, ``libpng``, ``libtiff``, and ``libjasper``) are used by default. So, OpenCV can always read JPEGs, PNGs, and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware that currently these native image loaders give images with different pixel values because of the color management embedded into MacOSX.
 
-* On Linux*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for codecs supplied with an OS image. Install the relevant packages (do not forget the development files, for example, "libjpeg-dev", in Debian* and Ubuntu*) to get the codec support or turn on the ``OPENCV_BUILD_3RDPARTY_LIBS`` flag in CMake.
+	* On Linux*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for codecs supplied with an OS image. Install the relevant packages (do not forget the development files, for example, ``libjpeg-dev``, in Debian* and Ubuntu*) to get the codec support or turn on the ``OPENCV_BUILD_3RDPARTY_LIBS`` flag in CMake.
+
+.. index:: imwrite
+
+.. _imwrite:
 
 imwrite
 -----------
-Saves an image to a specified file.
-
 .. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
+
+    Saves an image to a specified file.
 
     :param filename: Name of the file.
 
@@ -96,15 +112,19 @@ Saves an image to a specified file.
         *  For PPM, PGM, or PBM, it can be a binary format flag ( ``CV_IMWRITE_PXM_BINARY`` ), 0 or 1. Default value is 1.
 
 The function ``imwrite`` saves the image to the specified file. The image format is chosen based on the ``filename`` extension (see
-:ref:`imread` for the list of extensions). Only 8-bit (or 16-bit in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images can be saved using this function. If the format, depth or channel order is different, use
-:ref:`Mat::convertTo` , and
-:ref:`cvtColor` to convert it before saving. Or, use the universal XML I/O functions to save the image to XML or YAML format.
+:ocv:func:`imread` for the list of extensions). Only 8-bit (or 16-bit in case of PNG, JPEG 2000, and TIFF) single-channel or 3-channel (with 'BGR' channel order) images can be saved using this function. If the format, depth or channel order is different, use
+:ocv:func:`Mat::convertTo` , and
+:ocv:func:`cvtColor` to convert it before saving. Or, use the universal XML I/O functions to save the image to XML or YAML format.
+
+.. index:: VideoCapture
+
+.. _VideoCapture:
 
 VideoCapture
 ------------
 .. ocv:class:: VideoCapture
 
-Class for video capturing from video files or cameras ::
+Class for video capturing from video files or cameras. ::
 
     class VideoCapture
     {
@@ -152,7 +172,7 @@ Class for video capturing from video files or cameras ::
     };
 
 
-The class provides C++ video capturing API. Here is how the class can be used: ::
+The class provides C++ video capturing API. Use the class as follows: ::
 
     #include "cv.h"
     #include "highgui.h"
@@ -182,30 +202,35 @@ The class provides C++ video capturing API. Here is how the class can be used: :
     }
 
 
+.. index:: VideoCapture::VideoCapture
+
+.. _VideoCapture::VideoCapture:
+
 VideoCapture::VideoCapture
 ------------------------------
-VideoCapture constructors.
-
 .. ocv:function:: VideoCapture::VideoCapture()
 
 .. ocv:function:: VideoCapture::VideoCapture(const string& filename)
 
 .. ocv:function:: VideoCapture::VideoCapture(int device)
 
-    :param filename: name of the opened video file
+	Provides VideoCapture constructors.
 
-    :param device: id of the opened video capturing device (i.e. a camera index).
+    :param filename: Name of an opened video file.
 
+    :param device: ID of an opened video capturing device (a camera index).
+
+.. index:: VideoCapture::get
+
+.. _VideoCapture::get:
 
 VideoCapture::get
 ---------------------
-Returns the specified ``VideoCapture`` property 
-
 .. ocv:function:: double VideoCapture::get(int property_id)
 
     :param property_id: Property identifier. It can be one of the following:
 
-        * **CV_CAP_PROP_POS_MSEC** Film current position in milliseconds or video capture timestamp.
+        * **CV_CAP_PROP_POS_MSEC** Current position of the film in milliseconds or video capture timestamp.
 
         * **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
 
@@ -239,22 +264,26 @@ Returns the specified ``VideoCapture`` property
 
         * **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted to RGB.
 
-        * **CV_CAP_PROP_WHITE_BALANCE** Currently unsupported
+        * **CV_CAP_PROP_WHITE_BALANCE** Currently not supported.
 
-        * **CV_CAP_PROP_RECTIFICATION** TOWRITE (note: only supported by DC1394 v 2.x backend currently)
+        * **CV_CAP_PROP_RECTIFICATION** TOWRITE (Note: only supported by DC1394 v 2.x backend currently)
 
 
-**Note**: When querying a property that is not supported by the backend used by the ``VideoCapture`` class, value 0 is returned.
+.. note:: When querying a property that is not supported by the backend used by the ``VideoCapture`` class, value 0 is returned.
+
+.. index:: VideoCapture::set
+
+.. _VideoCapture::set:
 
 VideoCapture::set
 ---------------------
-Sets a property in the ``VideoCapture``.
-
 .. ocv:function:: bool VideoCapture::set(int property_id, double value)
+
+    Sets a property in the VideoCapture backend.
 
     :param property_id: Property identifier. It can be one of the following:
 
-        * **CV_CAP_PROP_POS_MSEC** Film current position in milliseconds or video capture timestamp.
+        * **CV_CAP_PROP_POS_MSEC** Current position of the film in milliseconds or video capture timestamp.
 
         * **CV_CAP_PROP_POS_FRAMES** 0-based index of the frame to be decoded/captured next.
 
@@ -288,17 +317,23 @@ Sets a property in the ``VideoCapture``.
 
         * **CV_CAP_PROP_CONVERT_RGB** Boolean flags indicating whether images should be converted to RGB.
 
-        * **CV_CAP_PROP_WHITE_BALANCE** Currently unsupported
+        * **CV_CAP_PROP_WHITE_BALANCE** Currently not supported
 
-        * **CV_CAP_PROP_RECTIFICATION** TOWRITE (note: only supported by DC1394 v 2.x backend currently)
+        * **CV_CAP_PROP_RECTIFICATION** TOWRITE (Note: only supported by DC1394 v 2.x backend currently)
 
     :param value: Value of the property.
+
+
+
+.. index:: VideoWriter
+
+.. _VideoWriter:
 
 VideoWriter
 -----------
 .. ocv:class:: VideoWriter
 
-Video writer class ::
+Video writer class. ::
 
     class VideoWriter
     {
@@ -331,6 +366,5 @@ Video writer class ::
         ...
     };
 
-For more detailed description see http://opencv.willowgarage.com/wiki/documentation/cpp/highgui/VideoWriter
 ..
 
