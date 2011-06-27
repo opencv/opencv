@@ -571,6 +571,10 @@ if(WITH_JASPER AND NOT JASPER_FOUND)
     set(JASPER_LIBRARIES libjasper)
 endif()
 
+if(NOT ZLIB_FOUND)
+    set(ZLIB_LIBRARY zlib)
+endif()
+
 #message(STATUS "Graphic libraries: ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${TIFF_LIBRARIES} ${JASPER_LIBRARIES}")
 
 if(WITH_OPENEXR)
@@ -1120,19 +1124,19 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
     if(CMAKE_COMPILER_IS_GNUCXX)
         set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} stdc++)
-        set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} -fPIC")
+        set(OPENCV_EXTRA_C_FLAGS "-fPIC ${OPENCV_EXTRA_C_FLAGS}")
     endif()
 endif()
 
 
 # Add user supplied extra options (optimization, etc...)
 # ==========================================================
-set(OPENCV_EXTRA_C_FLAGS "" CACHE STRING "Extra compiler options")
-set(OPENCV_EXTRA_C_FLAGS_RELEASE "" CACHE STRING "Extra compiler options for Release build")
-set(OPENCV_EXTRA_C_FLAGS_DEBUG "" CACHE STRING "Extra compiler options for Debug build")
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS "" CACHE STRING "Extra linker flags" FORCE)
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "" CACHE STRING "Extra linker flags for Release build" FORCE)
-set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "" CACHE STRING "Extra linker flags for Debug build" FORCE)
+set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS}" CACHE STRING "Extra compiler options")
+set(OPENCV_EXTRA_C_FLAGS_RELEASE "${OPENCV_EXTRA_C_FLAGS_RELEASE}" CACHE STRING "Extra compiler options for Release build")
+set(OPENCV_EXTRA_C_FLAGS_DEBUG "${OPENCV_EXTRA_C_FLAGS_DEBUG}" CACHE STRING "Extra compiler options for Debug build")
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS}" CACHE STRING "Extra linker flags" FORCE)
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}" CACHE STRING "Extra linker flags for Release build" FORCE)
+set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}" CACHE STRING "Extra linker flags for Debug build" FORCE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_C_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_C_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
@@ -1189,7 +1193,7 @@ set(OPENCV_DOC_INSTALL_PATH doc)
 elseif(WIN32)
 set(OPENCV_DOC_INSTALL_PATH doc)
 else()
-set(OPENCV_DOC_INSTALL_PATH share/opencv/doc)
+set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
 if(ANDROID)
@@ -1209,64 +1213,48 @@ endif()
 # -------------------------------------------------------------------------------------------
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------
-
-# Name of libraries is: libcv.so.1.1.0, etc...
-#  OPENCV_DLLVERSION must be set to "110", etc..
-# Already done above.
-
-# Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${CMAKE_CURRENT_SOURCE_DIR}/include\" \"${CMAKE_CURRENT_SOURCE_DIR}/include/opencv\"")
-set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"${CMAKE_CURRENT_SOURCE_DIR}\"")
-
+set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
+set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
-# Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
-
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/../../include/opencv" "\${THIS_OPENCV_CONFIG_PATH}/../../include\"")
-set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\"")
-
-set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/../../lib\"")
+set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/include/opencv" "\${OpenCV_INSTALL_PATH}/include\"")
+set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
+if(ANDROID)
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/libs/\${ARMEABI_NDK_NAME}\"")
+    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/libs/\${ARMEABI_NDK_NAME}\"")
+else()
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
+    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+endif()
 
 exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/unix-install/\"" OUTPUT_VARIABLE RET_VAL)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 
 if(UNIX)
-    # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/cmake/FOO/FOOConfig.cmake, so:
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/cmake/OpenCV/)
+    # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/FOO/FOOConfig.cmake, so:
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/OpenCV/)
 endif()
 
 # --------------------------------------------------------------------------------------------
 #  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
 # -------------------------------------------------------------------------------------------
 if(WIN32)
-    # Set CMAKE_INCLUDE_DIRS_CONFIGCMAKE to the list of include directories:
-    # support for 3rdparty libraries.
-    # This will expand to, for example, <program files>/OpenCV 1.1.0/include
-    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/include\" 
-                                        \"\${THIS_OPENCV_CONFIG_PATH}/include/opencv\" 
-                                        \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/include\"")
+    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\" \"\${OpenCV_CONFIG_PATH}/3rdparty/include\"")
+    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "\${THIS_OPENCV_CONFIG_PATH}")
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/${OPENCV_LIB_INSTALL_PATH}\" \"\${OpenCV_CONFIG_PATH}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 
-    set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}\"")
-
-    # This will expand to, for example, <program files>/OpenCV 1.1.0/lib
-    # support for 3rdparty libraries.
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${THIS_OPENCV_CONFIG_PATH}/lib\" 
-                                    \"\${THIS_OPENCV_CONFIG_PATH}/3rdparty/lib\"")
-
-    #exec_program(${CMAKE_COMMAND} ARGS "-E make_directory \"${CMAKE_BINARY_DIR}/win-install/\"")
     exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
+
     # Install the OpenCVConfig.cmake file which has the right paths pointing to the install directory 
     install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/") 
-
-    # Add the OpenCV configuration header to the install path
-    # Useful for instance if a client application checks against the features OpenCV has been compiled with
-    install(FILES "${CMAKE_BINARY_DIR}/cvconfig.h" DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
 endif()
 
 # --------------------------------------------------------------------------------------------
@@ -1312,7 +1300,7 @@ if(ANDROID)
     set(CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE "")
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../../lib")
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION share/opencv/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION share/OpenCV/)
 endif(ANDROID)
 
 # --------------------------------------------------------------------------------------------
@@ -1335,7 +1323,7 @@ if(UNIX AND NOT ANDROID)
 endif()
 
 if(ANDROID)
-    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION share/opencv)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION share/OpenCV)
 endif()
 
 # ----------------------------------------------------------------------------

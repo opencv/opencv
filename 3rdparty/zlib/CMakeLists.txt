@@ -38,5 +38,5 @@ endif()
 	
 if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${the_target}
-	    ARCHIVE DESTINATION share/opencv/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+	    ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

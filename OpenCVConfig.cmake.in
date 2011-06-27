@@ -15,10 +15,17 @@
 #                                      with this path is NOT needed.
 #      - OpenCV_INCLUDE_DIRS         : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES : The version of compute capability
-#      - OpenCV_VERSION              : The version of this OpenCV build. Example: "1.2.0"
-#      - OpenCV_VERSION_MAJOR        : Major version part of OpenCV_VERSION. Example: "1"
-#      - OpenCV_VERSION_MINOR        : Minor version part of OpenCV_VERSION. Example: "2"
+#      - OpenCV_VERSION              : The version of this OpenCV build. Example: "2.3.0"
+#      - OpenCV_VERSION_MAJOR        : Major version part of OpenCV_VERSION. Example: "2"
+#      - OpenCV_VERSION_MINOR        : Minor version part of OpenCV_VERSION. Example: "3"
 #      - OpenCV_VERSION_PATCH        : Patch version part of OpenCV_VERSION. Example: "0"
+#
+#    Advanced variables:
+#      - OpenCV_SHARED
+#      - OpenCV_CONFIG_PATH
+#      - OpenCV_INSTALL_PATH
+#      - OpenCV_LIB_COMPONENTS
+#      - OpenCV_EXTRA_COMPONENTS
 #
 # =================================================================================================
 
@@ -28,90 +35,86 @@
 # ======================================================
 SET(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC@)
 
+# Some additional settings are required if OpenCV is built as static libs
+set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
+
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
-#  This variable may or may not be used below, depending on the parsing of OpenCVConfig.cmake
-get_filename_component(THIS_OPENCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
 #Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
-get_filename_component(OPENCV_INSTALL_PATH "${THIS_OPENCV_CONFIG_PATH}/../.." REALPATH)
+get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." REALPATH)
 
 # ======================================================
 # Include directories to add to the user project:
 # ======================================================
+
 # Provide the include directories to the caller
-SET(OpenCV_INCLUDE_DIRS "${OPENCV_INSTALL_PATH}/include/opencv;${OPENCV_INSTALL_PATH}/include")
+SET(OpenCV_INCLUDE_DIRS @CMAKE_INCLUDE_DIRS_CONFIGCMAKE@)
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
 # Link directories to add to the user project:
 # ======================================================
-# Provide the libs directory anyway, it may be needed in some cases.
-SET(OpenCV_LIB_DIR "${OPENCV_INSTALL_PATH}/lib")
 
+# Provide the libs directory anyway, it may be needed in some cases.
+SET(OpenCV_LIB_DIR @CMAKE_LIB_DIRS_CONFIGCMAKE@)
 LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 
 # ====================================================================
 # Link libraries: e.g.   opencv_core220.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
+#libraries order is very important because linker from Android NDK is one-pass linker
+SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core )
+
 if(NOT ANDROID)
-    set(OPENCV_LIB_COMPONENTS opencv_core opencv_imgproc opencv_features2d opencv_gpu opencv_calib3d opencv_objdetect opencv_video opencv_highgui opencv_ml opencv_legacy opencv_contrib opencv_flann)
-else()
-    #libraries order is very important because linker from Android NDK is one-pass linker
-    set(OPENCV_LIB_COMPONENTS opencv_contrib opencv_calib3d opencv_objdetect opencv_features2d opencv_imgproc opencv_video  opencv_highgui opencv_ml opencv_legacy  opencv_flann opencv_core )
-    IF (NOT @BUILD_SHARED_LIBS@)
-        set(OPENCV_LIB_COMPONENTS ${OPENCV_LIB_COMPONENTS} opencv_androidcamera)
-    ENDIF()
+    LIST(INSERT OpenCV_LIB_COMPONENTS 0 opencv_gpu)
+ELSEIF(NOT OpenCV_SHARED)
+    LIST(APPEND OpenCV_LIB_COMPONENTS opencv_androidcamera)
 endif()
 
 SET(OpenCV_LIBS "")
-foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
+foreach(__CVLIB ${OpenCV_LIB_COMPONENTS})
     # CMake>=2.6 supports the notation "debug XXd optimized XX"
-    if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+    if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 2.4)
         # Modern CMake:
         SET(OpenCV_LIBS ${OpenCV_LIBS} debug ${__CVLIB}@OPENCV_DLLVERSION@@OPENCV_DEBUG_POSTFIX@ optimized ${__CVLIB}@OPENCV_DLLVERSION@)
-    else(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
+    else()
         # Old CMake:
         SET(OpenCV_LIBS ${OpenCV_LIBS} ${__CVLIB}@OPENCV_DLLVERSION@)
-    endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-endforeach(__CVLIB)
+    endif()
+endforeach()
 
 # ==============================================================
 #  Extra include directories, needed by OpenCV 2 new structure
 # ==============================================================
-if(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
-    SET(BASEDIR @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@)
-    foreach(__CVLIB ${OPENCV_LIB_COMPONENTS})
+if(NOT "@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@" STREQUAL  "")
+    foreach(__CVLIB ${OpenCV_LIB_COMPONENTS})
         # We only need the "core",... part here: "opencv_core" -> "core"
-        STRING(REGEX REPLACE "opencv_(.*)" "\\1" MODNAME ${__CVLIB})
-        INCLUDE_DIRECTORIES("${BASEDIR}/modules/${MODNAME}/include")
-    endforeach(__CVLIB)
-endif(NOT @CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@ STREQUAL  "")
+        STRING(REGEX REPLACE "opencv_(.*)" "\\1" __MODNAME ${__CVLIB})
+        INCLUDE_DIRECTORIES("@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@/modules/${__MODNAME}/include")
+    endforeach()
+endif()
 
 # For OpenCV built as static libs, we need the user to link against
 #  many more dependencies:
-set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
-
 IF (NOT OpenCV_SHARED)
     # Under static libs, the user of OpenCV needs access to the 3rdparty libs as well:
-    if(WIN32 AND NOT ANDROID)
-        LINK_DIRECTORIES(@CMAKE_BASE_INCLUDE_DIRS_CONFIGCMAKE@/3rdparty/lib)
-    else()
-        LINK_DIRECTORIES("${THIS_OPENCV_CONFIG_PATH}/3rdparty/lib")
-    endif()    
+    LINK_DIRECTORIES(@CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE@)
 
     set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
+    set(OpenCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ @ZLIB_LIBRARY@)
 
-    set(OPENCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ zlib)
-
-    if (CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-        foreach(__EXTRA_LIB ${OPENCV_EXTRA_COMPONENTS})
+    if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 2.4)
+        # Modern CMake:
+        foreach(__EXTRA_LIB ${OpenCV_EXTRA_COMPONENTS})
             set(OpenCV_LIBS ${OpenCV_LIBS}
                 debug ${__EXTRA_LIB}@OPENCV_DEBUG_POSTFIX@
                 optimized ${__EXTRA_LIB})
-        endforeach(__EXTRA_LIB)
-    else(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-        set(OpenCV_LIBS ${OpenCV_LIBS} ${OPENCV_EXTRA_COMPONENTS})
-    endif(CMAKE_MAJOR_VERSION GREATER 2  OR  CMAKE_MINOR_VERSION GREATER 4)
-
+        endforeach()
+    else()
+        # Old CMake:
+        set(OpenCV_LIBS ${OpenCV_LIBS} ${OpenCV_EXTRA_COMPONENTS})
+    endif()
 ENDIF()
 
 # ======================================================
