@@ -30,7 +30,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
     add_custom_command(
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.java"
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-        COMMAND "${PYTHON_EXECUTABLE}" -B "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
+        COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS "${GEN_JAVA}"
         DEPENDS "${HDR_PARSER}"
@@ -101,6 +101,16 @@ IF(ANDROID)
                 )
             install(FILES "${CMAKE_BINARY_DIR}/${lib_file_name}" DESTINATION . COMPONENT main)
         endif()
+    endforeach()
+
+    foreach(jni_file ${handwrittren_cpp_sources} ${generated_cpp_sources})
+        get_filename_component(jni_file_name "${jni_file}" NAME)
+        add_custom_command(
+            TARGET ${api_target}
+            COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
+            DEPENDS "${jni_file}"
+            COMMENT "Generating jni/${jni_file_name}"
+            )
     endforeach()
 ENDIF()
 

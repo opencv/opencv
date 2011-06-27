@@ -623,6 +623,10 @@ if(WIN32)
     set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
 endif()
 
+IF (${PYTHON_VERSION_MAJOR_MINOR} VERSION_GREATER 2.5)
+    SET(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} -B)
+ENDIF()
+
 # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
             RESULT_VARIABLE PYTHON_NUMPY_PROCESS

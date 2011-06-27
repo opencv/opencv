@@ -53,7 +53,7 @@ target_link_libraries(${cv_target} ${PYTHON_LIBRARIES} opencv_core opencv_imgpro
 set_target_properties(${cv_target} PROPERTIES PREFIX "")
 set_target_properties(${cv_target} PROPERTIES OUTPUT_NAME "cv")
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print distutils.sysconfig.get_config_var('SO')"
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import distutils.sysconfig; print distutils.sysconfig.get_config_var('SO')"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
                 OUTPUT_VARIABLE CVPY_SUFFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
