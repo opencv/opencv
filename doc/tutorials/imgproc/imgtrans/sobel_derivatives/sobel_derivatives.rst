@@ -29,7 +29,25 @@ Theory
            :height: 200pt
            :align: center
  
-   You can easily notice that in an *edge*, the pixel intensity *changes* in a notorious way. A good way to express *changes* is by using *derivatives*. A high change in gradient indicates a major change in the image.
+   You can easily notice that in an *edge*, the pixel intensity *changes* in a notorious way. A good way to express *changes* is by using *derivatives*. A high change in gradient indicates a major change in the image. 
+
+#. To be more graphical, let's assume we have a 1D-image. An edge is shown by the "jump" in intensity in the plot below:
+
+   .. image:: images/Sobel_Derivatives_Tutorial_Theory_Intensity_Function.jpg
+           :alt:  Intensity Plot for an edge
+           :height: 200pt
+           :align: center
+
+#. The edge "jump" can be seen more easily if we take the first derivative (actually, here appears as a maximum)
+
+   .. image:: images/Sobel_Derivatives_Tutorial_Theory_dIntensity_Function.jpg
+           :alt:  First derivative of Intensity - Plot for an edge
+           :height: 200pt
+           :align: center
+
+#. So, from the explanation above, we can deduce that a method to detect edges in an image can be performed by locating pixel locations where the gradient is higher than its neighbors (or to generalize, higher than a threshold).
+
+#. More detailed explanation, please refer to **Learning OpenCV** by Bradski and Kaehler
 
 Sobel Operator
 ---------------
@@ -44,7 +62,7 @@ Assuming that the image to  be operated is :math:`I`:
 
 #. We calculate two derivatives:
 
-   a. **Horizontal changes**: This is computed by convolving :math:`I` with a kernel :math:`G_{x}` such as:
+   a. **Horizontal changes**: This is computed by convolving :math:`I` with a kernel :math:`G_{x}` with odd size. For example for a kernel size of 3, :math:`G_{x}` would be computed as:
 
       .. math::
    
@@ -54,7 +72,7 @@ Assuming that the image to  be operated is :math:`I`:
          -1 & 0 & +1 
          \end{bmatrix} * I
 
-   b. **Vertical changes**: This is computed by convolving :math:`I` with a kernel :math:`G_{y}` such as:
+   b. **Vertical changes**: This is computed by convolving :math:`I` with a kernel :math:`G_{y}` with odd size. For example for a kernel size of 3, :math:`G_{y}` would be computed as:
 
       .. math::
    
@@ -76,6 +94,26 @@ Assuming that the image to  be operated is :math:`I`:
       
       G = |G_{x}| + |G_{y}|
 
+
+.. note::
+
+   When the size of the kernel is :math:`3`, the Sobel kernel shown above may produce noticeable inaccuracies (after all, Sobel is only an approximation of the derivative). OpenCV addresses this inaccuracy for kernels of size 3 by using the :scharr:`Scharr <>` function. This is as fast but more accurate than the standar Sobel function. It implements the following kernels:
+
+      .. math::
+
+         G_{x} = \begin{bmatrix}
+         -3 & 0 & +3  \\
+         -10 & 0 & +10  \\
+         -3 & 0 & +3 
+         \end{bmatrix} 
+   
+         G_{y} = \begin{bmatrix}
+         -3 & -10 & -3  \\
+         0 & 0 & 0  \\
+         +3 & +10 & +3 
+         \end{bmatrix} 
+
+  You can check out more information of this function in the OpenCV reference (:scharr:`Scharr <>`). Also, in the sample code below, you will notice that above the code for :sobel:`Sobel <>` function there is also code for the :scharr:`Scharr <>` function commented. Uncommenting it (and obviously commenting the Sobel stuff) should give you an idea of how this function works.
 
 Code
 =====

@@ -30,10 +30,10 @@ char* window_name = "Edge Map";
 void CannyThreshold(int, void*)
 {
     /// Reduce noise with a kernel 3x3
-    blur( src_gray, dst, Size(3,3) );
+    blur( src_gray, detected_edges, Size(3,3) );
 
     /// Canny detector
-    Canny( src_gray, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
+    Canny( detected_edges, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
 
     /// Using Canny's output as a mask, we display our result
     dst = Scalar::all(0);
@@ -53,6 +53,9 @@ int main( int argc, char** argv )
 
   if( !src.data )
     { return -1; }
+
+  /// Create a matrix of the same type and size as src (for dst)
+  dst.create( src.size(), src.type() );
 
   /// Convert the image to grayscale
   cvtColor( src, src_gray, CV_BGR2GRAY );

@@ -312,6 +312,7 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
  	    'scharr': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-scharr%s', None),
             'laplacian': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-laplacian%s', None),
 	    'canny': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#Canny%s', None),
+	    'copy_to': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?#Mat::copyTo%s', None), 	
             'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None)
            }
 

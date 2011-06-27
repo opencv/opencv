@@ -135,22 +135,20 @@ Code
 Explanation
 =============
 
-#. We begin with the usual steps:
+#. Load an image
 
-   * Load an image
+   .. code-block:: cpp
 
-     .. code-block:: cpp
+      src = imread( argv[1] );
 
-     	src = imread( argv[1] );
+      if( !src.data )
+        { return -1; }
 
-     	if( !src.data )
-     	  { return -1; }
+#. Create a window to display the result
 
-   * Create a window to display the result
+   .. code-block:: cpp
 
-     .. code-block:: cpp
-
-     	namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
 #. Initialize the arguments for the linear filter
 
