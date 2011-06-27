@@ -1245,10 +1245,10 @@ endif()
 #  Part 3/3: ${BIN_DIR}/win-install/OpenCVConfig.cmake  -> For use within binary installers/packages
 # -------------------------------------------------------------------------------------------
 if(WIN32)
-    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\" \"\${OpenCV_CONFIG_PATH}/3rdparty/include\"")
-    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "\${THIS_OPENCV_CONFIG_PATH}")
-    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/${OPENCV_LIB_INSTALL_PATH}\" \"\${OpenCV_CONFIG_PATH}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
-    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+    set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/include\" \"\${OpenCV_CONFIG_PATH}/include/opencv\"")
+    set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
+    set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
+    set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_CONFIG_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 
     exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/win-install/\"" OUTPUT_VARIABLE RET_VAL)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
