@@ -7,9 +7,13 @@ kmeans
 ------
 Finds centers of clusters and groups input samples around the clusters.
 
-.. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=noArray() )
+.. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
 
 .. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
+
+.. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
+
+.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, criteria)-> None
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
@@ -17,7 +21,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
-    :param termcrit: Flag to specify the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``termcrit.epsilon``. As soon as each of the cluster centers moves by less than ``termcrit.epsilon`` on some iteration, the algorithm stops.
+    :param criteria: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``criteria.epsilon``. As soon as each of the cluster centers moves by less than ``criteria.epsilon`` on some iteration, the algorithm stops.
 
     :param attempts: Flag to specify the number of times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 

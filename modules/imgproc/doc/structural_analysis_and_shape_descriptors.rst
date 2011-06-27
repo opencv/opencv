@@ -11,13 +11,14 @@ Calculates all of the moments up to the third order of a polygon or rasterized s
 
 .. ocv:pyfunction:: cv2.moments(array[, binaryImage]) -> retval
 
-.. ocv:cfunction:: void cvMoments( const CvArr* arr, CvMoments* moments, int binary=0 )
-.. ocv:pyoldfunction:: cv.Moments(arr, binary=0) -> moments
+.. ocv:cfunction:: void cvMoments( const CvArr* array, CvMoments* moments, int binary=0 )
+.. ocv:pyoldfunction:: cv.Moments(array, binary=0) -> moments
 
     :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
 
     :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
-
+    
+    :param moments: The output moments
 
 The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The results are returned in a structure ``Moments``, defined as: ::
 
@@ -89,6 +90,10 @@ Calculates the seven Hu invariants.
 .. ocv:function:: void HuMoments( const Moments& moments, double h[7] )
 
 .. ocv:pyfunction:: cv2.HuMoments(m) -> hu
+
+.. ocv:cfunction:: void cvGetHuMoments( const CvMoments* moments, CvHuMoments* hu )
+
+.. ocv:pyoldfunction:: cv.GetHuMoments(moments) -> hu
 
     :param moments: Input moments computed with  :ocv:func:`moments` .
     :param h: Output Hu invariants.
@@ -241,19 +246,57 @@ Approximates a polygonal curve(s) with the specified precision.
 
 .. ocv:pyfunction:: cv2.approxPolyDP(curve, epsilon, closed[, approxCurve]) -> approxCurve
 
-    :param curve: Input vector of 2d point, stored in ``std::vector`` or ``Mat``.
+.. ocv:cfunction:: CvSeq* cvApproxPoly( const void* curve, int headerSize, CvMemStorage* storage, int method, double epsilon, int recursive=0 )
 
-    :param approxCurve: Result of the approximation. The type should match the type of the input curve.
+    :param curve: Input vector of 2d point, stored in:
+        
+        * ``std::vector`` or ``Mat`` (C++ interface)
+        
+        * ``Nx2`` numpy array (Python interface).
+        
+        * ``CvSeq`` or `` ``CvMat`` (C interface) 
+
+    :param approxCurve: Result of the approximation. The type should match the type of the input curve. In the case of C interface the approximated curve is stored in the memory storage and pointer to it is returned.
 
     :param epsilon: Parameter specifying the approximation accuracy. This is the maximum distance between the original curve and its approximation.
 
     :param closed: If true, the approximated curve is closed (its first and last vertices are connected). Otherwise, it is not closed.
+    
+    :param headerSize: Header size of the approximated curve. Normally, ``sizeof(CvContour)`` is used.
+    
+    :param storage: Memory storage where the approximated curve will be stored.
+    
+    :param method: The contour approximation algorithm. Only ``CV_POLY_APPROX_DP`` is supported.
+    
+    :param recursive: The recursion flag. If it is non-zero and ``curve`` is ``CvSeq*``, the function ``cvApproxPoly`` will approximate all the contours accessible from ``curve`` by ``h_next`` and ``v_next`` links.
 
 The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices, so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
 See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp on how to use the function.
 
+
+ApproxChains
+-------------
+Approximates Freeman chain(s) with a polygonal curve.
+
+.. ocv:cfunction:: CvSeq* cvApproxChains( CvSeq* chain, CvMemStorage* storage, int method=CV_CHAIN_APPROX_SIMPLE, double parameter=0, int minimalPerimeter=0, int recursive=0 )
+
+.. ocv:pyoldfunction:: cv.ApproxChains(chain, storage, method=CV_CHAIN_APPROX_SIMPLE, parameter=0, minimalPerimeter=0, recursive=0)-> contours
+    
+    :param chain: Pointer to the approximated Freeman chain that can refer to other chains     
+    
+    :param storage: Storage location for the resulting polylines 
+    
+    :param method: Approximation method (see the description of the function  :ref:`FindContours` ) 
+    
+    :param parameter: Method parameter (not used now) 
+    
+    :param minimalPerimeter: Approximates only those contours whose perimeters are not less than  ``minimal_perimeter`` . Other chains are removed from the resulting structure   
+    
+    :param recursive: Recursion flag. If it is non-zero, the function approximates all chains that can be obtained to from  ``chain``  by using the  ``h_next``  or  ``v_next`` links. Otherwise, the single input chain is approximated.
+    
+This is a stand-alone contour approximation routine, not represented in the new interface. When :ocv:cfunc:`FindContours` retrieves contours as Freeman chains, it calls to the function to get approximated contours, represented as polygons.
 
 
 arcLength
@@ -460,7 +503,17 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 .. ocv:pyfunction:: cv2.minAreaRect(points) -> retval
 
-    :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
+.. ocv:cfunction:: CvBox2D cvMinAreaRect2( const CvArr* points, CvMemStorage* storage=NULL )
+
+.. ocv:pyoldfunction:: cv.MinAreaRect2(points, storage=None)-> CvBox2D
+
+    :param points: The input vector of 2D points, stored in:
+    
+        * ``std::vector<>`` or ``Mat`` (C++ interface).
+        
+        * ``CvSeq*`` or ``CvMat*`` (C interface)
+        
+        * Nx2 numpy array (Python interface)
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
 
@@ -475,9 +528,16 @@ Finds a circle of the minimum area enclosing a 2D point set.
 .. ocv:pyfunction:: cv2.minEnclosingCircle(points, center, radius) -> None
 
 .. ocv:cfunction:: int cvMinEnclosingCircle( const CvArr* points, CvPoint2D32f* center, float* radius )
+
 .. ocv:pyoldfunction:: cv.MinEnclosingCircle(points)-> (int, center, radius)
 
-    :param points: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
+    :param points: The input vector of 2D points, stored in:
+    
+        * ``std::vector<>`` or ``Mat`` (C++ interface).
+        
+        * ``CvSeq*`` or ``CvMat*`` (C interface)
+        
+        * Nx2 numpy array (Python interface)
 
     :param center: Output center of the circle.
 

@@ -226,17 +226,29 @@ Computes the "minimal work" distance between two weighted point configurations.
 
 .. ocv:function:: float EMD( InputArray signature1, InputArray signature2, int distType, InputArray cost=noArray(), float* lowerBound=0, OutputArray flow=noArray() )
 
+.. ocv:cfunction:: float cvCalcEMD2( const CvArr* signature1, const CvArr* signature2, int distType, CvDistanceFunction distFunc=NULL, const CvArr* cost=NULL, CvArr* flow=NULL, float* lowerBound=NULL, void* userdata=NULL )
+.. ocv:pyoldfunction:: cv.CalcEMD2(signature1, signature2, distType, distFunc=None, cost=None, flow=None, lowerBound=None, userdata=None) -> float
+
     :param signature1: The first signature, a  :math:`\texttt{size1}\times \texttt{dims}+1`  floating-point matrix. Each row stores the point weight followed by the point coordinates. The matrix is allowed to have a single column (weights only) if the user-defined cost matrix is used.
 
     :param signature2: The second signature of the same format as  ``signature1`` , though the number of rows may be different. The total weights may be different, in this case an extra "dummy" point is added to either  ``signature1``  or  ``signature2`` .
 
     :param distType: Used metric.  ``CV_DIST_L1, CV_DIST_L2`` , and  ``CV_DIST_C``  stand for one of the standard metrics;  ``CV_DIST_USER``  means that a pre-calculated cost matrix ``cost``  is used.
 
+    :param distFunc: custom distance function, supported by the old interface. ``CvDistanceFunction`` is defined as: ::
+        
+            typedef float (CV_CDECL * CvDistanceFunction)( const float* a,
+                                const float* b, void* userdata );
+        
+        where ``a`` and ``b`` are point coordinates and ``userdata`` is the same as the last parameter.
+        
     :param cost: The user-defined  :math:`\texttt{size1}\times \texttt{size2}`  cost matrix. Also, if a cost matrix is used, lower boundary  ``lowerBound``  can not be calculated, because it needs a metric function.
 
     :param lowerBound: Optional input/output parameter: lower boundary of distance between the two signatures that is a distance between mass centers. The lower boundary may not be calculated if the user-defined cost matrix is used, the total weights of point configurations are not equal, or if the signatures consist of weights only (i.e. the signature matrices have a single column). The user  **must**  initialize  ``*lowerBound`` . If the calculated distance between mass centers is greater or equal to  ``*lowerBound``  (it means that the signatures are far enough) the function does not calculate EMD. In any case  ``*lowerBound``  is set to the calculated distance between mass centers on return. Thus, if user wants to calculate both distance between mass centers and EMD,  ``*lowerBound``  should be set to 0.
 
     :param flow: The resultant  :math:`\texttt{size1} \times \texttt{size2}`  flow matrix:  :math:`\texttt{flow}_{i,j}`  is a flow from  :math:`i`  th point of  ``signature1``  to  :math:`j`  th point of  ``signature2``  .
+    
+    :param userdata: Optional pointer directly passed to the custom distance function.
 
 The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in :ref:`RubnerSept98` is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
 

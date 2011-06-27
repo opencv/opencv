@@ -49,6 +49,14 @@ Loads an image from a file.
 
 .. ocv:pyfunction:: cv2.imread(filename[, flags]) -> retval
 
+.. ocv:cfunction:: IplImage* cvLoadImage( const char* filename, int flags=CV_LOAD_IMAGE_COLOR )
+
+.. ocv:cfunction:: CvMat* cvLoadImageM( const char* filename, int flags=CV_LOAD_IMAGE_COLOR )
+
+.. ocv:pyoldfunction:: cv.LoadImage(filename, flags=CV_LOAD_IMAGE_COLOR)->None
+
+.. ocv:pyoldfunction:: cv.LoadImageM(filename, flags=CV_LOAD_IMAGE_COLOR)->None
+
     :param filename: Name of file to be loaded.
 
     :param flags: Flags specifying the color type of a loaded image:
@@ -87,13 +95,17 @@ imwrite
 -----------
 Saves an image to a specified file.
 
-.. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
+.. ocv:function:: bool imwrite( const string& filename, InputArray image, const vector<int>& params=vector<int>())
 
-.. ocv:pyfunction:: cv2.imwrite(filename, img[, params]) -> retval
+.. ocv:pyfunction:: cv2.imwrite(filename, image[, params]) -> retval
+
+.. ocv:cfunction:: int cvSaveImage( const char* filename, const CvArr* image )
+
+.. ocv:pyoldfunction:: cv.SaveImage(filename, image)-> None
 
     :param filename: Name of the file.
 
-    :param img: Image to be saved.
+    :param image: Image to be saved.
 
     :param params: Format-specific save parameters encoded as pairs  ``paramId_1, paramValue_1, paramId_2, paramValue_2, ...`` . The following parameters are currently supported:
 

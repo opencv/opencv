@@ -159,6 +159,10 @@ Refines the corner locations.
 
 .. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> None
 
+.. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize winSize, CvSize zeroZone, CvTermCriteria criteria )
+
+.. ocv:pyoldfunction:: cv.FindCornerSubPix(image, corners, winSize, zeroZone, criteria)-> corners
+
     :param image: Input image.
 
     :param corners: Initial coordinates of the input corners and refined coordinates provided for output.
@@ -346,6 +350,10 @@ Finds lines in a binary image using the standard Hough transform.
 
 .. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
 
+.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
+
+.. ocv:pyoldfunction:: cv.HoughLines2(image, storage, method, rho, theta, threshold, param1=0, param2=0)-> lines
+
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
     :param lines: Output vector of lines. Each line is represented by a two-element vector  :math:`(\rho, \theta)` .  :math:`\rho`  is the distance from the coordinate origin  :math:`(0,0)`  (top-left corner of the image).  :math:`\theta`  is the line rotation angle in radians ( :math:`0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}` ).
@@ -358,13 +366,36 @@ Finds lines in a binary image using the standard Hough transform.
 
     :param srn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution is  ``rho``  and the accurate accumulator resolution is  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0`` , the classical Hough transform is used. Otherwise, both these parameters should be positive.
 
-    :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta`` .
+    :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
     
-The function implements the standard or standard multi-scale Hough transform algorithm for line detection. See
-:ocv:func:`HoughLinesP` for the code example. Also see http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
+    :param method: The Hough transform variant, one of the following: 
+         
+            * **CV_HOUGH_STANDARD** classical or standard Hough transform. Every line is represented by two floating-point numbers  :math:`(\rho, \theta)` , where  :math:`\rho`  is a distance between (0,0) point and the line, and  :math:`\theta`  is the angle between x-axis and the normal to the line. Thus, the matrix must be (the created sequence will be) of  ``CV_32FC2``  type 
+            
+               
+            * **CV_HOUGH_PROBABILISTIC** probabilistic Hough transform (more efficient in case if picture contains a few long linear segments). It returns line segments rather than the whole line. Each segment is represented by starting and ending points, and the matrix must be (the created sequence will be) of  ``CV_32SC4``  type 
+             
+            * **CV_HOUGH_MULTI_SCALE** multi-scale variant of the classical Hough transform. The lines are encoded the same way as  ``CV_HOUGH_STANDARD``
+    
 
+    :param param1: The first method-dependent parameter:
+    
+        *  For the classical Hough transform it is not used (0).
+    
+        *  For the probabilistic Hough transform it is the minimum line length.
+    
+        *  For the multi-scale Hough transform it is ``srn``. 
 
+    :param param2: The second method-dependent parameter: 
+    
+        *  For the classical Hough transform it is not used (0).
+    
+        *  For the probabilistic Hough transform it is the maximum gap between line segments lying on the same line to treat them as a single line segment (that is, to join them).
+    
+        *  For the multi-scale Hough transform it is ``stn``.
 
+The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
+See also the example in :ocv:func:`HoughLinesP` description.
 
 HoughLinesP
 -----------

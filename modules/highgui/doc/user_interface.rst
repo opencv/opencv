@@ -59,7 +59,10 @@ Displays an image in the specified window.
 
 .. ocv:function:: void imshow( const string& winname, InputArray image )
 
-.. ocv:pyfunction:: cv2.imshow(winname, mat) -> None
+.. ocv:pyfunction:: cv2.imshow(winname, image) -> None
+
+.. ocv:cfunction:: void cvShowImage( const char* winname, const CvArr* image )
+.. ocv:pyoldfunction:: cv.ShowImage(winname, image)-> None
 
     :param winname: Name of the window.
 

@@ -414,6 +414,10 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
 .. ocv:pyfunction:: cv2.distanceTransform(src, distanceType, maskSize[, dst[, labels]]) -> dst, labels
 
+.. ocv:cfunction:: void cvDistTransform( const CvArr* src, CvArr* dst, int distanceType=CV_DIST_L2, int maskSize=3, const float* mask=NULL, CvArr* labels=NULL )
+
+.. ocv:pyoldfunction:: cv.DistTransform(src, dst, distanceType=CV_DIST_L2, maskSize=3, mask=None, labels=None)-> None
+
     :param src: 8-bit, single-channel (binary) source image.
 
     :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
@@ -623,6 +627,10 @@ Calculates the integral of an image.
 .. ocv:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
 
 .. ocv:pyfunction:: cv2.integral(src[, sum[, sdepth]]) -> sum
+
+.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth]]]) -> sum, sqsum
+
+.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth]]]]) -> sum, sqsum, tilted
 
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tiltedSum=NULL )
 .. ocv:pyoldfunction:: cv.Integral(image, sum, sqsum=None, tiltedSum=None)-> None

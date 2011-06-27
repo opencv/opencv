@@ -274,6 +274,8 @@ Enables or disables the optimized code.
 
 .. ocv:pyfunction:: cv2.setUseOptimized(onoff) -> None
 
+.. ocv:cfunction:: int cvUseOptimized( int onoff )
+
     :param onoff: The boolean flag specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
 
 The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX, and other instructions on the platforms that support it). It sets a global flag that is further checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only safe to call the function on the very top level in your application where you can be sure that no other OpenCV function is currently executed.

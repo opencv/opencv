@@ -1185,6 +1185,10 @@ Calculates the Laplacian of an image.
 
 .. ocv:pyfunction:: cv2.Laplacian(src, ddepth[, dst[, ksize[, scale[, delta[, borderType]]]]]) -> dst
 
+.. ocv:cfunction:: void cvLaplace( const CvArr* src, CvArr* dst, int ksize=3)
+
+.. ocv:pyoldfunction:: cv.Laplace(src, dst, ksize=3)-> None
+
     :param src: Source image.
 
     :param dst: Destination image of the same size and the same number of channels as  ``src`` .

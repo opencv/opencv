@@ -557,6 +557,10 @@ Transforms an image to compensate for lens distortion.
 
 .. ocv:pyfunction:: cv2.undistort(src, cameraMatrix, distCoeffs[, dst[, newCameraMatrix]]) -> dst
 
+.. ocv:cfunction:: void cvUndistort2( const CvArr* src, CvArr* dst, const CvMat* cameraMatrix, const CvMat* distCoeffs, const CvMat* newCameraMatrix=NULL )
+
+.. ocv:pyoldfunction:: cv.Undistort2(src, dst, cameraMatrix, distCoeffs)-> None
+
     :param src: Input (distorted) image.
 
     :param dst: Output (corrected) image that has the same size and type as  ``src`` .

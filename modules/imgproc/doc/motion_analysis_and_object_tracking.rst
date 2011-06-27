@@ -11,6 +11,9 @@ Adds an image to the accumulator.
 
 .. ocv:pyfunction:: cv2.accumulate(src, dst[, mask]) -> dst
 
+.. ocv:cfunction:: void cvAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.Acc(src, dst, mask=None)-> None
+
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
     :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
@@ -42,6 +45,9 @@ Adds the square of a source image to the accumulator.
 
 .. ocv:pyfunction:: cv2.accumulateSquare(src, dst[, mask]) -> dst
 
+.. ocv:cfunction:: void cvSquareAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.SquareAcc(src, dst, mask=None)-> None
+
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
     :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
@@ -70,6 +76,9 @@ Adds the per-element product of two input images to the accumulator.
 .. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
 .. ocv:pyfunction:: cv2.accumulateProduct(src1, src2, dst[, mask]) -> dst
+
+.. ocv:cfunction:: void cvMultiplyAcc( const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.MultiplyAcc(src1, src2, dst, mask=None)-> None
 
     :param src1: First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -101,6 +110,9 @@ Updates a running average.
 .. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
 .. ocv:pyfunction:: cv2.accumulateWeighted(src, dst, alpha[, mask]) -> dst
+
+.. ocv:cfunction:: void cvRunningAvg( const CvArr* src, CvArr* dst, double alpha, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.RunningAvg(src, dst, alpha, mask=None)-> None
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
