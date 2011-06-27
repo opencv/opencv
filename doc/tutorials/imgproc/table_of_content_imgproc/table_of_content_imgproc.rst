@@ -103,3 +103,26 @@ In this section you will learn about the image processing (manipulation) functio
   .. |Threshold| image:: images/Threshold_Tutorial_Cover.png
                       :height: 100pt
                       :width:  100pt
+
+.. ************************
+.. ImgTrans
+.. ************************
+
+* :ref:`filter_2d`
+
+  ===================== ==============================================
+   |Filter_2D|          *Title:* **Making your own linear filters**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn to design our own filters by using OpenCV functions
+
+  ===================== ==============================================
+  
+  .. |Filter_2D| image:: images/imgtrans/Filter_2D_Tutorial_Cover.jpg
+                      :height: 100pt
+                      :width:  100pt
+
+
