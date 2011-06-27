@@ -348,7 +348,7 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::diag(const Matx<_Tp,MIN(m,n),1>& d)
 {
     Matx<_Tp,m,n> M;
     for(int i = 0; i < MIN(m,n); i++)
-        M(i,i) = d[i];
+        M(i,i) = d(i, 0);
     return M;
 }
 
