@@ -17,7 +17,7 @@ Default and training constructors.
 
 .. ocv:function:: CvKNearest::CvKNearest()
 
-.. ocv:function:: CvKNearest::CvKNearest( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& sampleIdx=cv::Mat(), bool isRegression=false, int max_k=32 )
+.. ocv:function:: CvKNearest::CvKNearest( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int max_k=32 )
 
 .. ocv:cfunction:: CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
 
@@ -27,7 +27,7 @@ CvKNearest::train
 -----------------
 Trains the model.
 
-.. ocv:function:: bool CvKNearest::train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& sampleIdx=cv::Mat(), bool isRegression=false, int maxK=32, bool updateBase=false )
+.. ocv:function:: bool CvKNearest::train( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int maxK=32, bool updateBase=false )
 
 .. ocv:cfunction:: bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
 
@@ -48,9 +48,9 @@ CvKNearest::find_nearest
 ------------------------
 Finds the neighbors and predicts responses for input vectors.
 
-.. ocv:function:: float CvKNearest::find_nearest( const cv::Mat& samples, int k, cv::Mat* results=0, const float** neighbors=0, cv::Mat* neighborResponses=0, cv::Mat* dist=0 ) const
+.. ocv:function:: float CvKNearest::find_nearest( const Mat& samples, int k, Mat* results=0, const float** neighbors=0, Mat* neighborResponses=0, Mat* dist=0 ) const
 
-.. ocv:function:: float CvKNearest::find_nearest( const cv::Mat& samples, int k, cv::Mat& results, cv::Mat& neighborResponses, cv::Mat& dists) const
+.. ocv:function:: float CvKNearest::find_nearest( const Mat& samples, int k, Mat& results, Mat& neighborResponses, Mat& dists) const
 
 .. ocv:cfunction:: float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
 
