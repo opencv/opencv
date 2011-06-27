@@ -25,7 +25,7 @@ The function supports multi-channel images. Each channel is processed independen
 
 The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
@@ -44,15 +44,15 @@ Adds the square of a source image to the accumulator.
 
     :param mask: Optional operation mask.
 
-The function adds the input image ``src`` or its selected region, raised to power 2, to the accumulator ``dst`` :
+The function adds the input image ``src`` or its selected region, raised to a power of 2, to the accumulator ``dst`` :
 
 .. math::
 
     \texttt{dst} (x,y)  \leftarrow \texttt{dst} (x,y) +  \texttt{src} (x,y)^2  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-The function supports multi-channel images Each channel is processed independently.
+The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
@@ -65,15 +65,15 @@ Adds the per-element product of two input images to the accumulator.
 
 .. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
-    :param src1: The first input image, 1- or 3-channel, 8-bit or 32-bit floating point.
+    :param src1: First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
-    :param src2: The second input image of the same type and the same size as  ``src1`` .
+    :param src2: Second input image of the same type and the same size as  ``src1`` .
 	
     :param dst: Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point.
 
     :param mask: Optional operation mask.
 
-The function adds the product of 2 images or their selected regions to the accumulator ``dst`` :
+The function adds the product of two images or their selected regions to the accumulator ``dst`` :
 
 .. math::
 
@@ -81,7 +81,7 @@ The function adds the product of 2 images or their selected regions to the accum
 
 The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulate`,
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateWeighted`
@@ -111,7 +111,7 @@ The function calculates the weighted sum of the input image ``src`` and the accu
 That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets" about earlier images).
 The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulate`,
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct` 
