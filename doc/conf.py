@@ -306,6 +306,12 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'pyr_up': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html#cv-pyrup%s', None),
             'resize': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html#cv-resize%s', None),
             'threshold': ('http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html#cv-threshold%s', None),
+            'filter2d': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-filter2d%s', None),
+            'copy_make_border': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html?#copyMakeBorder%s', None),
+	    'sobel': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-sobel%s', None),
+ 	    'scharr': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-scharr%s', None),
+            'laplacian': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-laplacian%s', None),
+	    'canny': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#Canny%s', None),
             'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None)
            }
 
