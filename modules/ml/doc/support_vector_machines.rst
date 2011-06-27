@@ -21,6 +21,78 @@ There are a lot of good references on SVM. You may consider starting with the fo
     http://www.csie.ntu.edu.tw/~cjlin/libsvm/
     )
 
+For details of implementation and various SVM formulations see:
+
+.. _LIBSVM:
+
+*
+    [LibSVM] C.-C. Chang and C.-J. Lin. *LIBSVM: a library for support vector machines*, ACM Transactions on Intelligent Systems and Technology, 2:27:1--27:27, 2011. 
+    (
+    http://www.csie.ntu.edu.tw/~cjlin/papers/libsvm.pdf
+    )
+
+CvSVMParams
+-----------
+.. ocv:class:: CvSVMParams
+
+SVM training parameters.
+
+The structure must be initialized and passed to the training method of :ocv:class:`CvSVM`.
+
+CvSVMParams::CvSVMParams
+------------------------
+The constructors.
+
+.. ocv:function:: CvSVMParams::CvSVMParams()
+
+.. ocv:function:: CvSVMParams::CvSVMParams( int svm_type, int kernel_type, double degree, double gamma, double coef0, double Cvalue, double nu, double p, CvMat* class_weights, CvTermCriteria term_crit );
+
+    :param svm_type: Type of a SVM formulation. Possible values are:
+
+        * **CvSVM::C_SVC** C-Support Vector Classification.
+        * **CvSVM::NU_SVC** :math:`\nu`-Support Vector Classification.
+        * **CvSVM::ONE_CLASS** Distribution Estimation (One-class SVM)
+        * **CvSVM::EPS_SVR** :math:`\epsilon`-Support Vector Regression
+        * **CvSVM::NU_SVR** :math:`\nu`-Support Vector Regression
+
+        See :ref:`[LibSVM] <LibSVM>` for details.
+
+    :param kernel_type: Type of a SVM kernel. Possible values are:
+
+        * **CvSVM::LINEAR** Linear kernel: :math:`K(x_i, x_j) = x_i^T x_j`.
+        * **CvSVM::POLY** Polynomial kernel: :math:`K(x_i, x_j) = (\gamma x_i^T x_j + coef0)^{degree}, \gamma > 0`.
+        * **CvSVM::RBF** Radial basis function (RBF): :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
+        * **CvSVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
+ 
+    :param degree: Parameter ``degree`` of a kernel function (POLY).
+
+    :param gamma: Parameter :math:`\gamma` of a kernel function (POLY / RBF / SIGMOID).
+
+    :param coef0: Parameter ``coef0`` of a kernel function (POLY / SIGMOID).
+
+    :param Cvalue: Parameter ``C`` of a SVM formulation (C_SVC / EPS_SVR / NU_SVR).
+
+    :param nu: Parameter :math:`\nu` of a SVM formulation (NU_SVC / ONE_CLASS / NU_SVR).
+
+    :param p: Parameter :math:`\epsilon` of a SVM formulation (EPS_SVR)
+
+    :param class_weights: Sets the parameter ``C`` of class ``#i`` to :math:`class\_weights_i * C` (C_SVC).
+
+    :param term_crit: Termination criteria of SVM training optimization loop: you can specify tolerance and/or the maximum number of iterations.
+
+The default constructor initialize the structure with following values:
+
+::
+
+    CvSVMParams::CvSVMParams() :
+        svm_type(CvSVM::C_SVC), kernel_type(CvSVM::RBF), degree(0),
+        gamma(1), coef0(0), C(1), nu(0), p(0), class_weights(0)
+    {
+        term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 1000, FLT_EPSILON );
+    }
+
+
+
 CvSVM
 -----
 .. ocv:class:: CvSVM
@@ -79,37 +151,6 @@ Support Vector Machines. ::
         ...
     };
 
-
-CvSVMParams
------------
-.. ocv:class:: CvSVMParams
-
-SVM training parameters. ::
-
-    struct CvSVMParams
-    {
-        CvSVMParams();
-        CvSVMParams( int _svm_type, int _kernel_type,
-                     double _degree, double _gamma, double _coef0,
-                     double _C, double _nu, double _p,
-                     const CvMat* _class_weights, CvTermCriteria _term_crit );
-
-        int         svm_type;
-        int         kernel_type;
-        double      degree; // for poly
-        double      gamma;  // for poly/rbf/sigmoid
-        double      coef0;  // for poly/sigmoid
-
-        double      C;  // for CV_SVM_C_SVC, CV_SVM_EPS_SVR and CV_SVM_NU_SVR
-        double      nu; // for CV_SVM_NU_SVC, CV_SVM_ONE_CLASS, and CV_SVM_NU_SVR
-        double      p; // for CV_SVM_EPS_SVR
-        CvMat*      class_weights; // for CV_SVM_C_SVC
-        CvTermCriteria term_crit; // termination criteria
-    };
-
-
-The structure must be initialized and passed to the training method of
-:ocv:class:`CvSVM` .
 
 CvSVM::train
 ------------
