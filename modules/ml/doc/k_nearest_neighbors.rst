@@ -3,80 +3,102 @@ K-Nearest Neighbors
 
 .. highlight:: cpp
 
-The algorithm caches all training samples and predicts the response for a new sample by analyzing a certain number (
-**K**
-) of the nearest neighbors of the sample using voting, calculating weighted sum, and so on. The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
+The algorithm caches all training samples and predicts the response for a new sample by analyzing a certain number (**K**) of the nearest neighbors of the sample using voting, calculating weighted sum, and so on. The method is sometimes referred to as "learning by example" because for prediction it looks for the feature vector with a known response that is closest to the given vector.
 
 CvKNearest
 ----------
 .. ocv:class:: CvKNearest
 
-K-Nearest Neighbors model. ::
+The class implements K-Nearest Neighbors model as described in the beginning of this section. 
 
-    class CvKNearest : public CvStatModel
-    {
-    public:
+CvKNearest::CvKNearest
+----------------------
+Default and training constructors.
 
-        CvKNearest();
-        virtual ~CvKNearest();
+.. ocv:function:: CvKNearest::CvKNearest()
 
-        CvKNearest( const Mat& _train_data, const Mat& _responses,
-                    const Mat& _sample_idx=Mat(), bool _is_regression=false, int max_k=32 );
+.. ocv:function:: CvKNearest::CvKNearest( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& sampleIdx=cv::Mat(), bool isRegression=false, int max_k=32 )
 
-        virtual bool train( const Mat& _train_data, const Mat& _responses,
-                            const Mat& _sample_idx=Mat(), bool is_regression=false,
-                            int _max_k=32, bool _update_base=false );
+.. ocv:cfunction:: CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
 
-        virtual float find_nearest( const Mat& _samples, int k, Mat* results=0,
-            const float** neighbors=0, Mat* neighbor_responses=0, Mat* dist=0 ) const;
-
-        virtual void clear();
-        int get_max_k() const;
-        int get_var_count() const;
-        int get_sample_count() const;
-        bool is_regression() const;
-
-    protected:
-        ...
-    };
-
+See :ocv:func:`CvKNearest::train` for parameters descriptions.
 
 CvKNearest::train
 -----------------
 Trains the model.
 
-.. ocv:function:: bool CvKNearest::train(  const Mat& _train_data,  const Mat& _responses,                          const Mat& _sample_idx=Mat(),  bool is_regression=false, int _max_k=32,  bool _update_base=false )
+.. ocv:function:: bool CvKNearest::train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& sampleIdx=cv::Mat(), bool isRegression=false, int maxK=32, bool updateBase=false )
 
-The method trains the K-Nearest model. It follows the conventions of the generic ``train`` approach with the following limitations: 
+.. ocv:cfunction:: bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
+
+    :param isRegression: Type of the problem: ``true`` for regression and ``false`` for classification.
+
+    :param maxK: Number of maximum neighbors that may be passed to the method :ocv:func:`CvKNearest::find_nearest`.
+
+    :param updateBase: Specifies whether the model is trained from scratch (``update_base=false``), or it is updated using the new training data (``update_base=true``). In the latter case, the parameter ``maxK`` must not be larger than the original value.
+
+The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStataModel::train` approach with the following limitations: 
 
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.
 * Output variables can be either categorical ( ``is_regression=false`` ) or ordered ( ``is_regression=true`` ).
-* Variable subsets ( ``var_idx`` ) and missing measurements are not supported.
-
-The parameter ``_max_k`` specifies the number of maximum neighbors that may be passed to the method ``find_nearest`` .
-
-The parameter ``_update_base`` specifies whether the model is trained from scratch
-( ``_update_base=false`` ), or it is updated using the new training data ( ``_update_base=true`` ). In the latter case, the parameter ``_max_k`` must not be larger than the original value.
+* Variable subsets (``var_idx``) and missing measurements are not supported.
 
 CvKNearest::find_nearest
 ------------------------
-Finds the neighbors for input vectors.
+Finds the neighbors and predicts responses for input vectors.
 
-.. ocv:function:: float CvKNearest::find_nearest(  const Mat& _samples,  int k, Mat* results=0,          const float** neighbors=0,  Mat* neighbor_responses=0,  Mat* dist=0 ) const
+.. ocv:function:: float CvKNearest::find_nearest( const cv::Mat& samples, int k, cv::Mat* results=0, const float** neighbors=0, cv::Mat* neighborResponses=0, cv::Mat* dist=0 ) const
 
-For each input vector (a row of the matrix ``_samples`` ), the method finds the
-:math:`\texttt{k} \le
-\texttt{get\_max\_k()}` nearest neighbor.  In case of regression,
-the predicted result is a mean value of the particular vector's
-neighbor responses. In case of classification, the class is determined
-by voting.
+.. ocv:function:: float CvKNearest::find_nearest( const cv::Mat& samples, int k, cv::Mat& results, cv::Mat& neighborResponses, cv::Mat& dists) const
 
-For a custom classification/regression prediction, the method can optionally return pointers to the neighbor vectors themselves ( ``neighbors`` , an array of ``k*_samples->rows`` pointers), their corresponding output values ( ``neighbor_responses`` , a vector of ``k*_samples->rows`` elements), and the distances from the input vectors to the neighbors ( ``dist`` , also a vector of ``k*_samples->rows`` elements).
+.. ocv:cfunction:: float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
+
+    :param samples: Input samples stored by rows. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times number\_of\_features` size.
+
+    :param k: Number of used nearest neighbors. It must satisfy constraint: :math:`k \le` :ocv:func:`CvKNearest::get_max_k`.
+
+    :param results: Vector with results of prediction (regression or classification) for each input sample. It is a single-precision floating-point vector with ``number_of_samples`` elements.
+
+    :param neighbors: Optional output pointers to the neighbor vectors themselves. It is an array of ``k*samples->rows`` pointers.
+
+    :param neighborResponses: Optional output values for corresponding ``neighbors``. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times k` size.
+
+    :param dist: Optional output distances from the input vectors to the corresponding ``neighbors``. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times k` size.
+
+For each input vector (a row of the matrix ``samples``), the method finds the ``k`` nearest neighbors.  In case of regression, the predicted result is a mean value of the particular vector's neighbor responses. In case of classification, the class is determined by voting.
 
 For each input vector, the neighbors are sorted by their distances to the vector.
 
+In case of C++ interface you can use output pointers to empty matrices and the function will allocate memory itself.
+
 If only a single input vector is passed, all output matrices are optional and the predicted value is returned by the method.
+
+CvKNearest::get_max_k
+---------------------
+Returns the number of maximum neighbors that may be passed to the method :ocv:func:`CvKNearest::find_nearest`.
+
+.. ocv:function:: int CvKNearest::get_max_k() const
+
+CvKNearest::get_var_count
+-------------------------
+Returns the number of used features (variables count).
+
+.. ocv:function:: int CvKNearest::get_var_count() const
+
+CvKNearest::get_sample_count
+----------------------------
+Returns the total number of train samples.
+
+.. ocv:function:: int CvKNearest::get_sample_count() const
+
+CvKNearest::is_regression
+-------------------------
+Returns type of the problem: ``true`` for regression and ``false`` for classification.
+
+.. ocv:function:: bool CvKNearest::is_regression() const
+
+
 
 The sample below (currently using the obsolete ``CvMat`` structures) demonstrates the use of the k-nearest classifier for 2D point classification: ::
 
