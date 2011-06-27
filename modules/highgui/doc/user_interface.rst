@@ -3,15 +3,14 @@ User Interface
 
 .. highlight:: cpp
 
-.. index:: createTrackbar
-
-.. _createTrackbar:
-
 createTrackbar
 ------------------
+Creates a trackbar and attaches it to the specified window.
+
 .. ocv:function:: int createTrackbar( const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
-    Creates a trackbar and attaches it to the specified window.
+.. ocv:cfunction:: int cvCreateTrackbar( const char* trackbarName, const char* windowName, int* value, int count, CvTrackbarCallback onChange )
+.. ocv:pyoldfunction:: CreateTrackbar(trackbarName, windowName, value, count, onChange) -> None
 
     :param trackbarname: Name of the created trackbar.
 
@@ -25,29 +24,22 @@ createTrackbar
 
     :param userdata: User data that is passed as is to the callback. It can be used to handle trackbar events without using global variables.
 
-The function ``createTrackbar`` creates a trackbar (a slider or range control) with the specified name and range, assigns a variable ``value`` to be a position syncronized with the trackbar and specifies the callback function ``onChange`` to be called on the trackbar position change. The created trackbar is displayed on top of the given window.
+The function ``createTrackbar`` creates a trackbar (a slider or range control) with the specified name and range, assigns a variable ``value`` to be a position syncronized with the trackbar and specifies the callback function ``onChange`` to be called on the trackbar position change. The created trackbar is displayed in the specified window ``winname``.
 
+.. note::
+    
+    **[Qt Backend Only]** ``winname`` can be empty (or NULL) if the trackbar should be attached to the control panel.
 
-**[Qt Backend Only]**
-Qt-specific details:
-
-    * **winname** Name of the window that will be used as a parent for created trackbar. It can be NULL if the trackbar should be attached to the control panel.
-
-The created trackbar is displayed at the bottom of the given window if
-*winname*
-is correctly provided, or displayed on the control panel if
-*winname*
-is NULL.
-
-Clicking the label of each trackbar enables editing the trackbar values manually for a more accurate control of it.
-
-.. index:: getTrackbarPos
+Clicking the label of each trackbar enables editing the trackbar values manually.
 
 getTrackbarPos
 ------------------
+Returns the trackbar position.
+
 .. ocv:function:: int getTrackbarPos( const string& trackbarname, const string& winname )
 
-    Returns the trackbar position.
+.. ocv:cfunction:: int cvGetTrackbarPos( const char* trackbarName, const char* windowName )
+.. ocv:pyoldfunction:: GetTrackbarPos(trackbarName, windowName)-> None
 
     :param trackbarname: Name of the trackbar.
 
@@ -55,21 +47,15 @@ getTrackbarPos
 
 The function returns the current position of the specified trackbar.
 
+.. note::
 
-**[Qt Backend Only]**
-Qt-specific details:
-
-    * **winname** Name of the window that is the parent of the trackbar. It can be NULL if the trackbar is attached to the control panel.
-
-.. index:: imshow
-
-.. _imshow:
+    **[Qt Backend Only]** ``winname`` can be empty (or NULL) if the trackbar is attached to the control panel.
 
 imshow
 ----------
-.. ocv:function:: void imshow( const string& winname, InputArray image )
+Displays an image in the specified window.
 
-    Displays an image in the specified window.
+.. ocv:function:: void imshow( const string& winname, InputArray image )
 
     :param winname: Name of the window.
 
@@ -77,28 +63,25 @@ imshow
 
 The function ``imshow`` displays an image in the specified window. If the window was created with the ``CV_WINDOW_AUTOSIZE`` flag, the image is shown with its original size. Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
-*
-    If the image is 8-bit unsigned, it is displayed as is.
+    * If the image is 8-bit unsigned, it is displayed as is.
 
-*
-    If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
+    * If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the value range [0,255*256] is mapped to [0,255].
 
-*
-    If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
+    * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
-.. index:: namedWindow
-
-.. _namedWindow:
 
 namedWindow
 ---------------
+Creates a window.
+
 .. ocv:function:: void namedWindow( const string& winname, int flags )
 
-    Creates a window.
+.. ocv:cfunction:: int cvNamedWindow( const char* name, int flags )
+.. ocv:pyoldfunction:: NamedWindow(name, flags=CV_WINDOW_AUTOSIZE)-> None
 
     :param name: Name of the window in the window caption that may be used as a window identifier.
 
-    :param flags: Flags of the window. Currently the only supported flag is  ``CV_WINDOW_AUTOSIZE`` . If it is set, the window size is automatically adjusted to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
+    :param flags: Flags of the window. Currently the only supported flag is  ``CV_WINDOW_AUTOSIZE`` . If this is set, the window size is automatically adjusted to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
 
 The function ``namedWindow`` creates a window that can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
 
@@ -106,99 +89,80 @@ If a window with the same name already exists, the function does nothing.
 
 You can call :ocv:func:`destroyWindow` or :ocv:func:`destroyAllWindows` to close the window and de-allocate any associated memory usage. For a simple program, you do not really have to call these functions because all the resources and windows of the application are closed automatically by the operating system upon exit.
 
+.. note::
 
-**[Qt Backend Only]**
-Qt-specific details:
+    Qt backend supports additional flags:
 
-    * **flags** Flags of the window. Currently the supported flags are:
+        * **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:**   ``CV_WINDOW_NORMAL``  enables you to resize the window, whereas   ``CV_WINDOW_AUTOSIZE``  adjusts automatically the window size to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
 
-            * **CV_WINDOW_NORMAL or CV_WINDOW_AUTOSIZE:**   ``CV_WINDOW_NORMAL``  enables you to resize the window, whereas   ``CV_WINDOW_AUTOSIZE``  adjusts automatically the window size to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
+        * **CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO:** ``CV_WINDOW_FREERATIO``  adjusts the image with no respect to its ratio, whereas  ``CV_WINDOW_KEEPRATIO``  keeps the image ratio.
 
-            * **CV_WINDOW_FREERATIO or CV_WINDOW_KEEPRATIO:** ``CV_WINDOW_FREERATIO``  adjusts the image with no respect to its ratio, whereas  ``CV_WINDOW_KEEPRATIO``  keeps the image ratio.
+        * **CV_GUI_NORMAL or CV_GUI_EXPANDED:**   ``CV_GUI_NORMAL``  is the old way to draw the window without statusbar and toolbar, whereas  ``CV_GUI_EXPANDED``  is a new enhanced GUI.
 
-            * **CV_GUI_NORMAL or CV_GUI_EXPANDED:**   ``CV_GUI_NORMAL``  is the old way to draw the window without statusbar and toolbar, whereas  ``CV_GUI_EXPANDED``  is a new enhanced GUI.
-
-        This parameter is optional. The default flags set for a new window are  ``CV_WINDOW_AUTOSIZE`` , ``CV_WINDOW_KEEPRATIO`` , and  ``CV_GUI_EXPANDED`` .
-
-        However, if you want to modify the flags, you can combine them using the OR operator, that is:
-
-        ::
-
-            namedWindow( ``myWindow'', ``CV_WINDOW_NORMAL``   textbar   ``CV_GUI_NORMAL`` );
-
-        ..
-
-
-.. index:: destroyWindow
-
-.. _destroyWindow:
+    By default, ``flags == CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_EXPANDED``
 
 destroyWindow
 -------------
-.. ocv:function:: void destroyWindow( const string &winname )
+Destroys a window.
 
-    Destroys a window.
+.. ocv:function:: void destroyWindow( const string &winname )
             
+.. ocv:cfunction:: void cvDestroyWindow( const char* name )
+.. ocv:pyoldfunction:: DestroyWindow(name)-> None
+
     :param winname: Name of the window to be destroyed. 
                                            
 The function ``destroyWindow`` destroys the window with the given name.
 
 
-.. index:: destroyAllWindows
-
-.. _destroyAllWindows:
-
 destroyAllWindows
 -----------------
-.. ocv:function:: void destroyAllWindows()
+Destroys all of the HighGUI windows.
 
-    Destroys all of the HighGUI windows.
+.. ocv:function:: void destroyAllWindows()
 
 The function ``destroyAllWindows`` destroys all of the opened HighGUI windows.
 
 
-.. index:: setTrackbarPos
-
-.. _setTrackbarPos:
-
 setTrackbarPos
 ------------------
+Sets the trackbar position.
+
 .. ocv:function:: void setTrackbarPos( const string& trackbarname, const string& winname, int pos )
 
-    Sets the trackbar position.
+.. ocv:cfunction:: void cvSetTrackbarPos( const char* trackbarName, const char* windowName, int pos )
+.. ocv:pyoldfunction:: SetTrackbarPos(trackbarName, windowName, pos)-> None
 
     :param trackbarname: Name of the trackbar.
 
-    :param winname: Name of the window that is the parent of the trackbar.
+    :param winname: Name of the window that is the parent of trackbar.
 
     :param pos: New position.
 
 The function sets the position of the specified trackbar in the specified window.
 
-
-**[Qt Backend Only]**
-Qt-specific details:
-
-    * **winname** Name of the window that is the parent of the trackbar. It can be NULL if the trackbar is attached to the control panel.
-
-.. index:: waitKey
-
-.. _waitKey:
+.. note::
+    
+    **[Qt Backend Only]** ``winname`` can be empty (or NULL) if the trackbar is attached to the control panel.
 
 waitKey
 -----------
+Waits for a pressed key.
+
 .. ocv:function:: int waitKey(int delay=0)
 
-    Waits for a pressed key.
+.. ocv:cfunction:: int cvWaitKey( int delay=0 )
+.. ocv:pyoldfunction:: WaitKey(delay=0)-> int
 
     :param delay: Delay in milliseconds. 0 is the special value that means "forever".
 
 The function ``waitKey`` waits for a key event infinitely (when
-:math:`\texttt{delay}\leq 0` ) or for ``delay`` milliseconds, when it is positive. It returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
+:math:`\texttt{delay}\leq 0` ) or for ``delay`` milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the function will not wait exactly ``delay`` ms, it will wait at least ``delay`` ms, depending on what else is running on your computer at that time. It returns the code of the pressed key or -1 if no key was pressed before the specified time had elapsed.
 
 .. note::
 
-* This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing unless HighGUI is used within an environment that takes care of event processing.
+    This function is the only method in HighGUI that can fetch and handle events, so it needs to be called periodically for normal event processing unless HighGUI is used within an environment that takes care of event processing.
 
-* The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
-
+.. note::
+    
+    The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
