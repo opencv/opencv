@@ -146,6 +146,8 @@ Trains a boosted tree classifier.
 
 .. ocv:function:: bool CvBoost::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
+.. ocv:pyfunction:: cv2.CvBoost.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
+
 .. ocv:cfunction:: bool CvBoost::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams(), bool update=false )
 
 .. ocv:cfunction:: bool CvBoost::train( CvMLData* data, CvBoostParams params=CvBoostParams(), bool update=false )
@@ -160,6 +162,8 @@ Predicts a response for an input sample.
 
 .. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
+.. ocv:pyfunction:: cv2.CvBoost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
+
 The method runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
 
 CvBoost::prune
@@ -167,6 +171,8 @@ CvBoost::prune
 Removes the specified weak classifiers.
 
 .. ocv:function:: void CvBoost::prune( CvSlice slice )
+
+.. ocv:pyfunction:: cv2.CvBoost.prune(slice) -> None
 
 The method removes the specified weak classifiers from the sequence. 
 

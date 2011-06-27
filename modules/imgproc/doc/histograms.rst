@@ -13,8 +13,10 @@ Calculates a histogram of a set of arrays.
 
 .. ocv:function:: void calcHist( const Mat* arrays, int narrays, const int* channels, InputArray mask,               SparseMat& hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
 
+.. ocv:pyfunction:: cv2.calcHist(images, channels, mask, histSize, ranges[, hist[, accumulate]]) -> hist
+
 .. ocv:cfunction:: void cvCalcHist( IplImage** image, CvHistogram* hist, int accumulate=0, const CvArr* mask=NULL )
-.. ocv:pyoldfunction:: CalcHist(image, hist, accumulate=0, mask=None)-> None
+.. ocv:pyoldfunction:: cv.CalcHist(image, hist, accumulate=0, mask=None)-> None
 
     :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -108,8 +110,10 @@ Calculates the back projection of a histogram.
 
 .. ocv:function:: void calcBackProject( const Mat* arrays, int narrays, const int* channels, const SparseMat& hist, OutputArray backProject, const float** ranges, double scale=1, bool uniform=true )
 
+.. ocv:pyfunction:: cv2.calcBackProject(images, channels, hist, ranges[, dst[, scale]]) -> dst
+
 .. ocv:cfunction:: void cvCalcBackProject( IplImage** image, CvArr* backProject, const CvHistogram* hist )
-.. ocv:pyoldfunction:: CalcBackProject(image, backProject, hist)-> None
+.. ocv:pyoldfunction:: cv.CalcBackProject(image, backProject, hist)-> None
 
     :param arrays: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -154,8 +158,10 @@ Compares two histograms.
 
 .. ocv:function:: double compareHist( const SparseMat& H1,  const SparseMat& H2, int method )
 
+.. ocv:pyfunction:: cv2.compareHist(H1, H2, method) -> retval
+
 .. ocv:cfunction:: double cvCompareHist( const CvHistogram* hist1, const CvHistogram* hist2, int method )
-.. ocv:pyoldfunction:: CompareHist(hist1, hist2, method)->float
+.. ocv:pyoldfunction:: cv.CompareHist(hist1, hist2, method)->float
 
     :param H1: The first compared histogram.
 
@@ -242,6 +248,8 @@ equalizeHist
 Equalizes the histogram of a grayscale image.
 
 .. ocv:function:: void equalizeHist( InputArray src, OutputArray dst )
+
+.. ocv:pyfunction:: cv2.equalizeHist(src[, dst]) -> dst
 
     :param src: Source 8-bit single channel image.
 

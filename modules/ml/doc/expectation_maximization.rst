@@ -155,6 +155,8 @@ Estimates the Gaussian mixture parameters from a sample set.
 
 .. ocv:function:: bool CvEM::train( const CvMat* samples, const CvMat* sampleIdx=0, CvEMParams params=CvEMParams(), CvMat* labels=0 )
 
+.. ocv:pyfunction:: cv2.CvEM.train(samples[, sampleIdx[, params]]) -> retval, labels
+
     :param samples: Samples from which the Gaussian mixture model will be estimated.
 
     :param sample_idx: Mask of samples to use. All samples are used by default.
@@ -186,6 +188,8 @@ Returns a mixture component index of a sample.
 .. ocv:function:: float CvEM::predict( const Mat& sample, Mat* probs=0 ) const
 
 .. ocv:function:: float CvEM::predict( const CvMat* sample, CvMat* probs ) const
+
+.. ocv:pyfunction:: cv2.CvEM.predict(sample) -> retval, probs
 
     :param sample: A sample for classification.
 

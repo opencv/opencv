@@ -105,6 +105,8 @@ Trains the Random Trees model.
 
 .. ocv:function:: bool CvRTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvRTParams params=CvRTParams() )
 
+.. ocv:pyfunction:: cv2.CvRTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
+
 The method :ocv:func:`CvRTrees::train` is very similar to the method :ocv:func:`CvDTree::train` and follows the generic method :ocv:func:`CvStatModel::train` conventions. All the parameters specific to the algorithm training are passed as a :ocv:class:`CvRTParams` instance. The estimate of the training error (``oob-error``) is stored in the protected class member ``oob_error``.
 
 CvRTrees::predict
@@ -114,6 +116,8 @@ Predicts the output for an input sample.
 .. ocv:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
 
 .. ocv:function:: float CvRTrees::predict( const CvMat* sample, const CvMat* missing = 0 ) const
+
+.. ocv:pyfunction:: cv2.CvRTrees.predict(sample[, missing]) -> retval
 
     :param sample: Sample for classification.
 
@@ -129,6 +133,8 @@ Returns a fuzzy-predicted class label.
 .. ocv:function:: float CvRTrees::predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const
 
 .. ocv:function:: float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing = 0 ) const
+
+.. ocv:pyfunction:: cv2.CvRTrees.predict_prob(sample[, missing]) -> retval
 
     :param sample: Sample for classification.
 

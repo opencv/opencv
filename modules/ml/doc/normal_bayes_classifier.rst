@@ -33,6 +33,8 @@ Trains the model.
 
 .. ocv:function:: bool CvNormalBayesClassifier::train( const Mat& trainData, const Mat& responses, const Mat& varIdx = Mat(), const Mat& sampleIdx=Mat(), bool update=false )
 
+.. ocv:pyfunction:: cv2.CvNormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
+
 .. ocv:cfunction:: bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
 
     :param update: Identifies whether the model should be trained from scratch (``update=false``) or should be updated using the new training data (``update=true``).
@@ -49,6 +51,8 @@ CvNormalBayesClassifier::predict
 Predicts the response for sample(s).
 
 .. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
+
+.. ocv:pyfunction:: cv2.CvNormalBayesClassifier.predict(samples) -> retval, results
 
 .. ocv:cfunction:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
 

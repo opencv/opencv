@@ -199,11 +199,15 @@ Checks whether the classifier has been loaded.
 .. ocv:function:: bool CascadeClassifier::empty() const
 
 
+.. ocv:pyfunction:: cv2.CascadeClassifier.empty() -> retval
+
 CascadeClassifier::load
 ---------------------------
 Loads a classifier from a file.
 
 .. ocv:function:: bool CascadeClassifier::load(const string& filename)
+
+.. ocv:pyfunction:: cv2.CascadeClassifier.load(filename) -> retval
 
     :param filename: Name of the file from which the classifier is loaded. The file may contain an old HAAR classifier trained by the haartraining application or a new cascade classifier trained by the traincascade application.
 
@@ -223,6 +227,9 @@ CascadeClassifier::detectMultiScale
 Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
 .. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image,                            vector<Rect>& objects,                            double scaleFactor=1.1,                            int minNeighbors=3, int flags=0,                            Size minSize=Size())
+
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image, rejectLevels, levelWeights[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects
 
     :param image: Matrix of the type   ``CV_8U``  containing an image where objects are detected.
 
@@ -270,6 +277,10 @@ groupRectangles
 Groups the object candidate rectangles.
 
 .. ocv:function:: void groupRectangles(vector<Rect>& rectList,                     int groupThreshold, double eps=0.2)
+
+.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> None
+.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> weights
+.. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold, eps, weights, levelWeights) -> None
 
     :param rectList: Input/output vector of rectangles. Output vector includes retained and grouped rectangles.
 

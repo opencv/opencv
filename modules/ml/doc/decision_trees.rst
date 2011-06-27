@@ -222,6 +222,8 @@ Trains a decision tree.
 
 .. ocv:function:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
 
+.. ocv:pyfunction:: cv2.CvDTree.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
+
 There are four ``train`` methods in :ocv:class:`CvDTree`:
 
 * The **first two** methods follow the generic ``CvStatModel::train`` conventions. It is the most complete form. Both data layouts (``tflag=CV_ROW_SAMPLE`` and ``tflag=CV_COL_SAMPLE``) are supported, as well as sample and variable subsets, missing measurements, arbitrary combinations of input and output variable types, and so on. The last parameter contains all of the necessary training parameters (see the :ref:`CvDTreeParams` description).
@@ -239,6 +241,8 @@ Returns the leaf node of a decision tree corresponding to the input vector.
 .. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missing_data_mask=Mat(), bool raw_mode=false ) const
 
 .. ocv:function:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
+
+.. ocv:pyfunction:: cv2.CvDTree.predict(sample[, missingDataMask[, preprocessedInput]]) -> retval
 
     :param sample: Sample for prediction.
 

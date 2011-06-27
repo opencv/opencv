@@ -39,6 +39,8 @@ Converts image transformation maps from one representation to another.
 
 .. ocv:function:: void convertMaps( InputArray map1, InputArray map2, OutputArray dstmap1, OutputArray dstmap2, int dstmap1type, bool nninterpolation=false )
 
+.. ocv:pyfunction:: cv2.convertMaps(map1, map2, dstmap1type[, dstmap1[, dstmap2[, nninterpolation]]]) -> dstmap1, dstmap2
+
     :param map1: The first input map of type  ``CV_16SC2``  ,  ``CV_32FC1`` , or  ``CV_32FC2`` .
     
     :param map2: The second input map of type  ``CV_16UC1``  , ``CV_32FC1``  , or none (empty matrix), respectively.
@@ -77,8 +79,10 @@ Calculates an affine transform from three pairs of the corresponding points.
 
 .. ocv:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
 
+.. ocv:pyfunction:: cv2.getAffineTransform(src, dst) -> retval
+
 .. ocv:cfunction:: CvMat* cvGetAffineTransform( const CvPoint2D32f* src, const CvPoint2D32f* dst, CvMat* mapMatrix )
-.. ocv:pyoldfunction:: GetAffineTransform(src, dst, mapMatrix)-> None
+.. ocv:pyoldfunction:: cv.GetAffineTransform(src, dst, mapMatrix)-> None
 
     :param src: Coordinates of triangle vertices in the source image.
 
@@ -110,8 +114,10 @@ Calculates a perspective transform from four pairs of the corresponding points.
 
 .. ocv:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
 
+.. ocv:pyfunction:: cv2.getPerspectiveTransform(src, dst) -> retval
+
 .. ocv:cfunction:: CvMat* cvGetPerspectiveTransform( const CvPoint2D32f* src, const CvPoint2D32f* dst, CvMat* mapMatrix )
-.. ocv:pyoldfunction:: GetPerspectiveTransform(src, dst, mapMatrix)-> None
+.. ocv:pyoldfunction:: cv.GetPerspectiveTransform(src, dst, mapMatrix)-> None
 
     :param src: Coordinates of quadrangle vertices in the source image.
 
@@ -143,8 +149,10 @@ Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
 .. ocv:function:: void getRectSubPix( InputArray image, Size patchSize, Point2f center, OutputArray dst, int patchType=-1 )
 
+.. ocv:pyfunction:: cv2.getRectSubPix(image, patchSize, center[, patch[, patchType]]) -> patch
+
 .. ocv:cfunction:: void cvGetRectSubPix( const CvArr* src, CvArr* dst, CvPoint2D32f center )
-.. ocv:pyoldfunction:: GetRectSubPix(src, dst, center)-> None
+.. ocv:pyoldfunction:: cv.GetRectSubPix(src, dst, center)-> None
 
     :param src: Source image.
 
@@ -181,7 +189,9 @@ Calculates an affine matrix of 2D rotation.
 
 .. ocv:function:: Mat getRotationMatrix2D( Point2f center, double angle, double scale )
 
-.. ocv:pyoldfunction:: GetRotationMatrix2D(center, angle, scale, mapMatrix)-> None
+.. ocv:pyfunction:: cv2.getRotationMatrix2D(center, angle, scale) -> retval
+
+.. ocv:pyoldfunction:: cv.GetRotationMatrix2D(center, angle, scale, mapMatrix)-> None
 
     :param center: Center of the rotation in the source image.
 
@@ -218,6 +228,8 @@ Inverts an affine transformation.
 
 .. ocv:function:: void invertAffineTransform(InputArray M, OutputArray iM)
 
+.. ocv:pyfunction:: cv2.invertAffineTransform(M[, iM]) -> iM
+
     :param M: Original affine transformation.
 
     :param iM: Output reverse affine transformation.
@@ -242,8 +254,10 @@ Applies a generic geometrical transformation to an image.
 
 .. ocv:function:: void remap( InputArray src, OutputArray dst, InputArray map1, InputArray map2, int interpolation, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
+.. ocv:pyfunction:: cv2.remap(src, map1, map2, interpolation[, dst[, borderMode[, borderValue]]]) -> dst
+
 .. ocv:cfunction:: void cvRemap( const CvArr* src, CvArr* dst, const CvArr* mapx, const CvArr* mapy, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CvScalar fillval=cvScalarAll(0) )
-.. ocv:pyoldfunction:: Remap(src, dst, mapx, mapy, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
+.. ocv:pyoldfunction:: cv.Remap(src, dst, mapx, mapy, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
     :param src: Source image.
 
@@ -287,8 +301,10 @@ Resizes an image.
 
 .. ocv:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
 
+.. ocv:pyfunction:: cv2.resize(src, dsize[, dst[, fx[, fy[, interpolation]]]]) -> dst
+
 .. ocv:cfunction:: void cvResize( const CvArr* src, CvArr* dst, int interpolation=CV_INTER_LINEAR )
-.. ocv:pyoldfunction:: Resize(src, dst, interpolation=CV_INTER_LINEAR)-> None
+.. ocv:pyoldfunction:: cv.Resize(src, dst, interpolation=CV_INTER_LINEAR)-> None
 
     :param src: Source image.
 
@@ -355,8 +371,10 @@ Applies an affine transformation to an image.
 
 .. ocv:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
+.. ocv:pyfunction:: cv2.warpAffine(src, M, dsize[, dst[, flags[, borderMode[, borderValue]]]]) -> dst
+
 .. ocv:cfunction:: void cvWarpAffine( const CvArr* src, CvArr* dst, const CvMat* mapMatrix, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CvScalar fillval=cvScalarAll(0) )
-.. ocv:pyoldfunction:: WarpAffine(src, dst, mapMatrix, flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
+.. ocv:pyoldfunction:: cv.WarpAffine(src, dst, mapMatrix, flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
     :param src: Source image.
 
@@ -397,8 +415,10 @@ Applies a perspective transformation to an image.
 
 .. ocv:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
 
+.. ocv:pyfunction:: cv2.warpPerspective(src, M, dsize[, dst[, flags[, borderMode[, borderValue]]]]) -> dst
+
 .. ocv:cfunction:: void cvWarpPerspective( const CvArr* src, CvArr* dst, const CvMat* mapMatrix, int flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CvScalar fillval=cvScalarAll(0) )
-.. ocv:pyoldfunction:: WarpPerspective(src, dst, mapMatrix, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
+.. ocv:pyoldfunction:: cv.WarpPerspective(src, dst, mapMatrix, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
     :param src: Source image.
 
@@ -441,8 +461,10 @@ Computes the undistortion and rectification transformation map.
 
 .. ocv:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )
 
+.. ocv:pyfunction:: cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, m1type[, map1[, map2]]) -> map1, map2
+
 .. ocv:cfunction:: void cvInitUndistortRectifyMap( const CvMat* cameraMatrix, const CvMat* distCoeffs, const CvMat* R, const CvMat* newCameraMatrix, CvArr* map1, CvArr* map2 )
-.. ocv:pyoldfunction:: InitUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, map1, map2)-> None
+.. ocv:pyoldfunction:: cv.InitUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, map1, map2)-> None
 
     :param cameraMatrix: Input camera matrix  :math:`A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}` .
     
@@ -498,6 +520,8 @@ Returns the default new camera matrix.
 
 .. ocv:function:: Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgSize=Size(), bool centerPrincipalPoint=false )
 
+.. ocv:pyfunction:: cv2.getDefaultNewCameraMatrix(cameraMatrix[, imgsize[, centerPrincipalPoint]]) -> retval
+
     :param cameraMatrix: Input camera matrix.
 
     :param imageSize: Camera view image size in pixels.
@@ -530,6 +554,8 @@ undistort
 Transforms an image to compensate for lens distortion.
 
 .. ocv:function:: void undistort( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray newCameraMatrix=noArray() )
+
+.. ocv:pyfunction:: cv2.undistort(src, cameraMatrix, distCoeffs[, dst[, newCameraMatrix]]) -> dst
 
     :param src: Input (distorted) image.
 
@@ -567,7 +593,7 @@ Computes the ideal point coordinates from the observed point coordinates.
 .. ocv:function:: void undistortPoints( InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, InputArray R=noArray(), InputArray P=noArray())
 
 .. ocv:cfunction:: void cvUndistortPoints( const CvMat* src, CvMat* dst, const CvMat* cameraMatrix, const CvMat* distCoeffs, const CvMat* R=NULL, const CvMat* P=NULL)
-.. ocv:pyoldfunction:: UndistortPoints(src, dst, cameraMatrix, distCoeffs, R=None, P=None)-> None
+.. ocv:pyoldfunction:: cv.UndistortPoints(src, dst, cameraMatrix, distCoeffs, R=None, P=None)-> None
 
     :param src: Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
 

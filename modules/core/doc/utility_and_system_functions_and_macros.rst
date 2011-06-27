@@ -213,6 +213,8 @@ Returns the number of ticks.
 
 .. ocv:function:: int64 getTickCount()
 
+.. ocv:pyfunction:: cv2.getTickCount() -> retval
+
 The function returns the number of ticks after the certain event (for example, when the machine was turned on).
 It can be used to initialize
 :ocv:func:`RNG` or to measure a function execution time by reading the tick count before and after the function call. See also the tick frequency.
@@ -224,6 +226,8 @@ getTickFrequency
 Returns the number of ticks per second.
 
 .. ocv:function:: double getTickFrequency()
+
+.. ocv:pyfunction:: cv2.getTickFrequency() -> retval
 
 The function returns the number of ticks per second.
 That is, the following code computes the execution time in seconds: ::
@@ -239,6 +243,8 @@ getCPUTickCount
 Returns the number of CPU ticks.
 
 .. ocv:function:: int64 getCPUTickCount()
+
+.. ocv:pyfunction:: cv2.getCPUTickCount() -> retval
 
 The function returns the current number of CPU ticks on some architectures (such as x86, x64, PowerPC). On other platforms the function is equivalent to ``getTickCount``. It can also be used for very accurate time measurements, as well as for RNG initialization. Note that in case of multi-CPU systems a thread, from which ``getCPUTickCount`` is called, can be suspended and resumed at another CPU with its own counter. So, theoretically (and practically) the subsequent calls to the function do not necessary return the monotonously increasing values. Also, since a modern CPU varies the CPU frequency depending on the load, the number of CPU clocks spent in some code cannot be directly converted to time units. Therefore, ``getTickCount`` is generally a preferable solution for measuring execution time.
 
@@ -266,6 +272,8 @@ Enables or disables the optimized code.
 
 .. ocv:function:: void setUseOptimized(bool onoff)
 
+.. ocv:pyfunction:: cv2.setUseOptimized(onoff) -> None
+
     :param onoff: The boolean flag specifying whether the optimized code should be used (``onoff=true``) or not (``onoff=false``).
 
 The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX, and other instructions on the platforms that support it). It sets a global flag that is further checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only safe to call the function on the very top level in your application where you can be sure that no other OpenCV function is currently executed.
@@ -277,5 +285,7 @@ useOptimized
 Returns the status of optimized code usage.
 
 .. ocv:function:: bool useOptimized()
+
+.. ocv:pyfunction:: cv2.useOptimized() -> retval
 
 The function returns ``true`` if the optimized code is enabled. Otherwise, it returns ``false``.

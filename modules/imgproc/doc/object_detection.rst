@@ -9,8 +9,10 @@ Compares a template against overlapped image regions.
 
 .. ocv:function:: void matchTemplate( InputArray image, InputArray temp, OutputArray result, int method )
 
+.. ocv:pyfunction:: cv2.matchTemplate(image, templ, method[, result]) -> result
+
 .. ocv:cfunction:: void cvMatchTemplate( const CvArr* image, const CvArr* templ, CvArr* result, int method )
-.. ocv:pyoldfunction:: MatchTemplate(image, templ, result, method)-> None
+.. ocv:pyoldfunction:: cv.MatchTemplate(image, templ, result, method)-> None
 
     :param image: Image where the search is running. It must be 8-bit or 32-bit floating-point.
 

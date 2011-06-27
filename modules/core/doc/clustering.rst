@@ -9,6 +9,8 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=noArray() )
 
+.. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
+
     :param samples: Floating-point matrix of input samples, one row per sample.
 
     :param clusterCount: Number of clusters to split the set by.

@@ -9,6 +9,8 @@ Reads an image from a buffer in memory.
 
 .. ocv:function:: Mat imdecode( InputArray buf,  int flags )
 
+.. ocv:pyfunction:: cv2.imdecode(buf, flags) -> retval
+
     :param buf: Input array of vector of bytes.
 
     :param flags: The same flags as in  :ocv:func:`imread` .
@@ -24,6 +26,8 @@ imencode
 Encodes an image into a memory buffer.
 
 .. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+
+.. ocv:pyfunction:: cv2.imencode(ext, img, buf[, params]) -> retval
 
     :param ext: File extension that defines the output format.
 
@@ -42,6 +46,8 @@ imread
 Loads an image from a file.
 
 .. ocv:function:: Mat imread( const string& filename, int flags=1 )
+
+.. ocv:pyfunction:: cv2.imread(filename[, flags]) -> retval
 
     :param filename: Name of file to be loaded.
 
@@ -82,6 +88,8 @@ imwrite
 Saves an image to a specified file.
 
 .. ocv:function:: bool imwrite( const string& filename, InputArray img, const vector<int>& params=vector<int>())
+
+.. ocv:pyfunction:: cv2.imwrite(filename, img[, params]) -> retval
 
     :param filename: Name of the file.
 
@@ -203,6 +211,8 @@ Returns the specified ``VideoCapture`` property
 
 .. ocv:function:: double VideoCapture::get(int property_id)
 
+.. ocv:pyfunction:: cv2.VideoCapture.get(propId) -> retval
+
     :param property_id: Property identifier. It can be one of the following:
 
         * **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds or video capture timestamp.
@@ -251,6 +261,8 @@ VideoCapture::set
 Sets a property in the ``VideoCapture``.
 
 .. ocv:function:: bool VideoCapture::set(int property_id, double value)
+
+.. ocv:pyfunction:: cv2.VideoCapture.set(propId, value) -> retval
 
     :param property_id: Property identifier. It can be one of the following:
 

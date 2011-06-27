@@ -117,6 +117,8 @@ Trains an SVM.
 
 .. ocv:function:: bool CvSVM::train(  const Mat& _train_data,  const Mat& _responses,                     const Mat& _var_idx=Mat(),  const Mat& _sample_idx=Mat(),                     CvSVMParams _params=CvSVMParams() )
 
+.. ocv:pyfunction:: cv2.CvSVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
+
 The method trains the SVM model. It follows the conventions of the generic ``train`` approach with the following limitations: 
 
 * Only the ``CV_ROW_SAMPLE`` data layout is supported.

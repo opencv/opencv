@@ -10,8 +10,10 @@ Applies an adaptive threshold to an array.
 
 .. ocv:function:: void adaptiveThreshold( InputArray src, OutputArray dst, double maxValue,                        int adaptiveMethod, int thresholdType,                        int blockSize, double C )
 
+.. ocv:pyfunction:: cv2.adaptiveThreshold(src, maxValue, adaptiveMethod, thresholdType, blockSize, C[, dst]) -> dst
+
 .. ocv:cfunction:: void cvAdaptiveThreshold( const CvArr* src, CvArr* dst, double maxValue, int adaptiveMethod=CV_ADAPTIVE_THRESH_MEAN_C, int thresholdType=CV_THRESH_BINARY, int blockSize=3, double param1=5 )
-.. ocv:pyoldfunction:: AdaptiveThreshold(src, dst, maxValue, adaptiveMethod=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY, blockSize=3, param1=5)-> None
+.. ocv:pyoldfunction:: cv.AdaptiveThreshold(src, dst, maxValue, adaptiveMethod=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY, blockSize=3, param1=5)-> None
 
     :param src: Source 8-bit single-channel image.
 
@@ -71,8 +73,10 @@ Converts an image from one color space to another.
 
 .. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
 
+.. ocv:pyfunction:: cv2.cvtColor(src, code[, dst[, dstCn]]) -> dst
+
 .. ocv:cfunction:: void cvCvtColor( const CvArr* src, CvArr* dst, int code )
-.. ocv:pyoldfunction:: CvtColor(src, dst, code)-> None
+.. ocv:pyoldfunction:: cv.CvtColor(src, dst, code)-> None
 
     :param src: Source image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
@@ -408,6 +412,8 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, OutputArray labels, int distanceType, int maskSize )
 
+.. ocv:pyfunction:: cv2.distanceTransform(src, distanceType, maskSize[, dst[, labels]]) -> dst, labels
+
     :param src: 8-bit, single-channel (binary) source image.
 
     :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
@@ -476,8 +482,10 @@ Fills a connected component with the given color.
 
 .. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seed, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
 
+.. ocv:pyfunction:: cv2.floodFill(image, mask, seedPoint, newVal[, loDiff[, upDiff[, flags]]]) -> retval, rect
+
 .. ocv:cfunction:: void cvFloodFill( CvArr* image, CvPoint seedPoint, CvScalar newVal, CvScalar loDiff=cvScalarAll(0), CvScalar upDiff=cvScalarAll(0), CvConnectedComp* comp=NULL, int flags=4, CvArr* mask=NULL )
-.. ocv:pyoldfunction:: FloodFill(image, seedPoint, newVal, loDiff=(0, 0, 0, 0), upDiff=(0, 0, 0, 0), flags=4, mask=None)-> comp
+.. ocv:pyoldfunction:: cv.FloodFill(image, seedPoint, newVal, loDiff=(0, 0, 0, 0), upDiff=(0, 0, 0, 0), flags=4, mask=None)-> comp
 
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
@@ -579,8 +587,10 @@ Restores the selected region in an image using the region neighborhood.
 
 .. ocv:function:: void inpaint( InputArray src, InputArray inpaintMask, OutputArray dst, double inpaintRadius, int flags )
 
+.. ocv:pyfunction:: cv2.inpaint(src, inpaintMask, inpaintRange, flags[, dst]) -> dst
+
 .. ocv:cfunction:: void cvInpaint( const CvArr* src, const CvArr* mask, CvArr* dst, double inpaintRadius, int flags)
-.. ocv:pyoldfunction:: Inpaint(src, mask, dst, inpaintRadius, flags) -> None
+.. ocv:pyoldfunction:: cv.Inpaint(src, mask, dst, inpaintRadius, flags) -> None
 
     :param src: Input 8-bit 1-channel or 3-channel image.
 
@@ -612,8 +622,10 @@ Calculates the integral of an image.
 
 .. ocv:function:: void integral( InputArray image, OutputArray sum,  OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
 
+.. ocv:pyfunction:: cv2.integral(src[, sum[, sdepth]]) -> sum
+
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tiltedSum=NULL )
-.. ocv:pyoldfunction:: Integral(image, sum, sqsum=None, tiltedSum=None)-> None
+.. ocv:pyoldfunction:: cv.Integral(image, sum, sqsum=None, tiltedSum=None)-> None
 
     :param image: Source image as :math:`W \times H` , 8-bit or floating-point (32f or 64f).
 
@@ -661,8 +673,10 @@ Applies a fixed-level threshold to each array element.
 
 .. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxVal, int thresholdType )
 
+.. ocv:pyfunction:: cv2.threshold(src, thresh, maxval, type[, dst]) -> retval, dst
+
 .. ocv:cfunction:: double cvThreshold( const CvArr* src, CvArr* dst, double threshold, double maxValue, int thresholdType )
-.. ocv:pyoldfunction:: Threshold(src, dst, threshold, maxValue, thresholdType)-> None
+.. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
     :param src: Source array (single-channel, 8-bit of 32-bit floating point)
 
@@ -735,6 +749,8 @@ Performs a marker-based image segmentation using the watershed algrorithm.
 
 .. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 
+.. ocv:pyfunction:: cv2.watershed(image, markers) -> None
+
     :param image: Input 8-bit 3-channel image.
 
     :param markers: Input/output 32-bit single-channel image (map) of markers. It should have the same size as  ``image`` .
@@ -772,6 +788,8 @@ grabCut
 Runs the GrabCut algorithm.
 
 .. ocv:function:: void grabCut(InputArray image, InputOutputArray mask, Rect rect, InputOutputArray bgdModel, InputOutputArray fgdModel, int iterCount, int mode )
+
+.. ocv:pyfunction:: cv2.grabCut(img, mask, rect, bgdModel, fgdModel, iterCount[, mode]) -> None
 
     :param image: Input 8-bit 3-channel image.
 

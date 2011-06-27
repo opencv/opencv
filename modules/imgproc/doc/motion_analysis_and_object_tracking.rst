@@ -9,6 +9,8 @@ Adds an image to the accumulator.
 
 .. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
+.. ocv:pyfunction:: cv2.accumulate(src, dst[, mask]) -> dst
+
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
     :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
@@ -38,6 +40,8 @@ Adds the square of a source image to the accumulator.
 
 .. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
+.. ocv:pyfunction:: cv2.accumulateSquare(src, dst[, mask]) -> dst
+
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
     :param dst: Accumulator image with the same number of channels as input image, 32-bit or 64-bit floating-point.
@@ -64,6 +68,8 @@ accumulateProduct
 Adds the per-element product of two input images to the accumulator.
 
 .. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
+
+.. ocv:pyfunction:: cv2.accumulateProduct(src1, src2, dst[, mask]) -> dst
 
     :param src1: First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -93,6 +99,8 @@ accumulateWeighted
 Updates a running average.
 
 .. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
+
+.. ocv:pyfunction:: cv2.accumulateWeighted(src, dst, alpha[, mask]) -> dst
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 

@@ -63,6 +63,8 @@ Changes parameters of a window dynamically.
 
 .. ocv:function:: void setWindowProperty(const string& name, int prop_id, double prop_value)
 
+.. ocv:pyfunction:: cv2.setWindowProperty(winname, prop_id, prop_value) -> None
+
 .. ocv:cfunction:: void cvSetWindowProperty(const char* name, int propId, double propValue)
 
     :param name: Name of the window.
@@ -96,6 +98,8 @@ getWindowProperty
 Provides parameters of a window.
 
 .. ocv:function:: void  getWindowProperty(const string& name, int prop_id)
+
+.. ocv:pyfunction:: cv2.getWindowProperty(winname, prop_id) -> retval
 
 .. ocv:cfunction:: void cvGetWindowProperty(const char* name, int propId)
 
