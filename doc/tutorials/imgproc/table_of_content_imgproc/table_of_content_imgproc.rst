@@ -126,3 +126,73 @@ In this section you will learn about the image processing (manipulation) functio
                       :width:  100pt
 
 
+* :ref:`copyMakeBorder`
+
+  ===================== ==============================================
+   |CopyMakeBorder|     *Title:* **Adding borders to your images**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to pad our images!
+
+  ===================== ==============================================
+  
+  .. |CopyMakeBorder| image:: images/imgtrans/CopyMakeBorder_Tutorial_Cover.jpg
+                           :height: 100pt
+                           :width:  100pt
+
+
+* :ref:`sobel_derivatives`
+
+  ===================== ==============================================
+   |SobelDerivatives|   *Title:* **Sobel Derivatives**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to calculate gradients and use them to detect edges!
+
+  ===================== ==============================================
+  
+  .. |SobelDerivatives| image:: images/imgtrans/Sobel_Derivatives_Tutorial_Cover.jpg
+                             :height: 100pt
+                             :width:  100pt
+
+* :ref:`laplace_operator`
+
+  ===================== ==============================================
+   |LaplaceOperator|    *Title:* **Laplace Operator**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn about the *Laplace* operator and how to detect edges with it.
+
+  ===================== ==============================================
+  
+  .. |LaplaceOperator| image:: images/imgtrans/Laplace_Operator_Tutorial_Cover.jpg
+                             :height: 100pt
+                             :width:  100pt
+
+
+* :ref:`canny_detector`
+
+  ===================== ==============================================
+   |CannyDetector|      *Title:* **Canny Edge Detector**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn a sophisticated alternative to detect edges.
+
+  ===================== ==============================================
+  
+  .. |CannyDetector| image:: images/imgtrans/Canny_Detector_Tutorial_Cover.jpg
+                           :height: 100pt
+                           :width:  100pt
+
