@@ -55,8 +55,7 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
 #. Classify new samples *x* using the formula: :math:`\textrm{sign} (\Sigma m = 1M c_m f_m(x))`         .
 
 
-.. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M
-:math:`>` two classes, there is the **AdaBoost.MH** algorithm (described in :ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
+.. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M :math:`>` two classes, there is the **AdaBoost.MH** algorithm (described in :ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
 
 To reduce computation time for boosted models without substantially losing accuracy, the influence trimming technique can be employed. As the training algorithm proceeds and the number of trees in the ensemble is increased, a larger number of the training samples are classified correctly and with increasing confidence, thereby those samples receive smaller weights on the subsequent iterations. Examples with a very low relative weight have a small impact on the weak classifier training. Thus, such examples may be excluded during the weak classifier training without having much effect on the induced classifier. This process is controlled with the ``weight_trim_rate`` parameter. Only examples with the summary fraction ``weight_trim_rate`` of the total weight mass are used in the weak classifier training. Note that the weights for
 **all**
@@ -102,10 +101,13 @@ The constructors.
 
     :param weight_trim_rate: A threshold between 0 and 1 used to save computational time. Samples with summary weight :math:`\leq 1 - weight\_trim\_rate` do not participate in the *next* iteration of training. Set this parameter to 0 to turn off this functionality.
 
-See :ref:`CvDTreeParams::CvDTreeParams` for description of other parameters.
+See :ocv:func:`CvDTreeParams::CvDTreeParams` for description of other parameters.
 
-Also there is one parameter that you can set directly.
-    :param split_criteria: Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
+Also there is one structure member that you can set directly:
+
+.. ocv:member:: int split_criteria
+
+    Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
 
         * **CvBoost::DEFAULT** Use the default for the particular boosting method.
         * **CvBoost::GINI** Default option for real AdaBoost.
@@ -116,37 +118,9 @@ CvBoostTree
 -----------
 .. ocv:class:: CvBoostTree
 
-Weak tree classifier. ::
+The weak tree classifier, a component of the boosted tree classifier :ocv:class:`CvBoost`, is a derivative of :ocv:class:`CvDTree`. Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence :ocv:member:`CvBoost::weak`, retrieved by :ocv:func:`CvBoost::get_weak_predictors`.
 
-    class CvBoostTree: public CvDTree
-    {
-    public:
-        CvBoostTree();
-        virtual ~CvBoostTree();
-
-        virtual bool train( CvDTreeTrainData* _train_data,
-                            const Mat& subsample_idx, CvBoost* ensemble );
-        virtual void scale( double s );
-        virtual void read( CvFileStorage* fs, CvFileNode* node,
-                           CvBoost* ensemble, CvDTreeTrainData* _data );
-        virtual void clear();
-
-    protected:
-        ...
-        CvBoost* ensemble;
-    };
-
-
-The weak classifier, a component of the boosted tree classifier
-:ocv:class:`CvBoost` , is a derivative of
-:ocv:class:`CvDTree` . Normally, there is no need to use the weak classifiers directly. However, they can be accessed as elements of the sequence ``CvBoost::weak`` , retrieved by ``CvBoost::get_weak_predictors`` .
-
-.. note::
-In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression tree, rather than a classification tree. Even in case of Discrete AdaBoost and Real AdaBoost, the ``CvBoostTree::predict`` return value ( ``CvDTreeNode::value`` ) is not an output class label. A negative value "votes" for class
-#
-0, a positive value - for class
-#
-1. The votes are weighted. The weight of each individual tree may be increased or decreased using the method ``CvBoostTree::scale`` .
+.. note:: In case of LogitBoost and Gentle AdaBoost, each weak predictor is a regression tree, rather than a classification tree. Even in case of Discrete AdaBoost and Real AdaBoost, the ``CvBoostTree::predict`` return value (:ocv:member:`CvDTreeNode::value`) is not an output class label. A negative value "votes" for class #0, a positive value - for class #1. The votes are weighted. The weight of each individual tree may be increased or decreased using the method ``CvBoostTree::scale``.
 
 CvBoost
 -------
@@ -154,21 +128,39 @@ CvBoost
 
 Boosted tree classifier derived from :ocv:class:`CvStatModel`.
 
+CvBoost::CvBoost
+----------------
+Default and training constructors.
+
+.. ocv:function:: CvBoost::CvBoost()
+
+.. ocv:function:: CvBoost::CvBoost( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams() )
+
+.. ocv:cfunction:: CvBoost::CvBoost( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams() )
+
+The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
+
 CvBoost::train
 --------------
 Trains a boosted tree classifier.
 
-.. ocv:function:: bool CvBoost::train(  const Mat& _train_data, int _tflag, const Mat& _responses,  const Mat& _var_idx=Mat(), const Mat& _sample_idx=Mat(), const Mat& _var_type=Mat(), const Mat& _missing_mask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
+.. ocv:function:: bool CvBoost::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
-The train method follows the common template. The last parameter ``update`` specifies whether the classifier needs to be updated (the new weak tree classifiers added to the existing ensemble) or the classifier needs to be rebuilt from scratch. The responses must be categorical, which means that boosted trees cannot be built for regression, and there should be two classes.
+.. ocv:cfunction:: bool CvBoost::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams(), bool update=false )
+
+.. ocv:cfunction:: bool CvBoost::train( CvMLData* data, CvBoostParams params=CvBoostParams(), bool update=false )
+
+    :param update: Specifies whether the classifier needs to be updated (``true``, the new weak tree classifiers added to the existing ensemble) or the classifier needs to be rebuilt from scratch (``false``).
+
+The train method follows the common template of :ocv:func:`CvStatModel::train`. The responses must be categorical, which means that boosted trees cannot be built for regression, and there should be two classes.
 
 CvBoost::predict
 ----------------
 Predicts a response for an input sample.
 
-.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(),                          const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
+.. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
-The method ``CvBoost::predict`` runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
+The method runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
 
 CvBoost::prune
 --------------
@@ -195,7 +187,6 @@ CvBoost::get_weak_predictors
 Returns the sequence of weak tree classifiers.
 
 .. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
-
 
 The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or to some of its derivatives.
 
