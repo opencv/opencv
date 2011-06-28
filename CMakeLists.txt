@@ -8,9 +8,11 @@
 #   - OCT-2008: Initial version <joseluisblancoc@gmail.com>
 #
 # ----------------------------------------------------------------------------
+cmake_minimum_required(VERSION 2.4)
+project(OpenCV)
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
-
+set(OPENCV_INCLUDE_PREFIX include)
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
 if(UNIX)
@@ -48,10 +50,6 @@ endif()
 if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)" AND NOT ANDROID)
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
 endif()
-
-
-project(OpenCV)
-cmake_minimum_required(VERSION 2.4)
 
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
@@ -104,7 +102,7 @@ endif()
 # ----------------------------------------------------------------------------
 #  Current version number:
 # ----------------------------------------------------------------------------
-set(OPENCV_VERSION "2.3.0")
+set(OPENCV_VERSION "2.3.1")
 
 string(REGEX MATCHALL "[0-9]+" OPENCV_VERSION_PARTS "${OPENCV_VERSION}")
 
@@ -123,6 +121,14 @@ else()
     #set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
     set(OPENCV_DLLVERSION "")
     set(OPENCV_DEBUG_POSTFIX)
+endif()
+
+#name mangling
+if(UNIX)
+    option(OPENCV_MANGLED_INSTALL_PATHS "Enables mangled install paths, that help with side by side installs" False)
+    if(OPENCV_MANGLED_INSTALL_PATHS)
+      set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
+    endif()
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1151,7 +1157,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINA
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
-set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/include/opencv" "\${OpenCV_INSTALL_PATH}/include\"")
+set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}\"")
+
+
 set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
 if(ANDROID)
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/libs/\${ARMEABI_NDK_NAME}\"")
@@ -1161,12 +1169,24 @@ else()
     set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 endif()
 
-exec_program(mkdir ARGS "-p \"${CMAKE_BINARY_DIR}/unix-install/\"" OUTPUT_VARIABLE RET_VAL)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
 
 if(UNIX)
-    # For a command "FIND_PACKAGE(FOO)", CMake will look at the directory /usr/share|lib/FOO/FOOConfig.cmake, so:
+  #http://www.vtk.org/Wiki/CMake/Tutorials/Packaging reference
+  # For a command "find_package(<name> [major[.minor]] [EXACT] [REQUIRED|QUIET])"
+  # cmake will look in the following dir on unix:
+  #                <prefix>/(share|lib)/cmake/<name>*/                     (U)
+  #                <prefix>/(share|lib)/<name>*/                           (U)
+  #                <prefix>/(share|lib)/<name>*/(cmake|CMake)/             (U)
+  if(OPENCV_MANGLED_INSTALL_PATHS)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION share/OpenCV-${OPENCV_VERSION}/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV-${OPENCV_VERSION}/)
+  else()
     install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION share/OpenCV/)
+  endif()
+
+
 endif()
 
 if(ANDROID)
@@ -1246,8 +1266,8 @@ endif(ANDROID)
 set(prefix      ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "\${prefix}")
 set(libdir      "\${exec_prefix}/lib")
-set(includedir  "\${prefix}/include")
-set(VERSION     ${OPENCV_VERSION})
+set(includedir      "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
+set(VERSION             ${OPENCV_VERSION})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/opencv.pc" @ONLY IMMEDIATE)
 

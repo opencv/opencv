@@ -366,7 +366,7 @@ install(TARGETS ${the_target}
     ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 install(FILES ${highgui_ext_hdrs}
-        DESTINATION include/opencv2/highgui
+        DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/highgui
         COMPONENT main)
 
 

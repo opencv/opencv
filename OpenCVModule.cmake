@@ -101,7 +101,7 @@ macro(define_opencv_module name)
         ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
     install(FILES ${lib_hdrs}
-        DESTINATION include/opencv2/${name}
+        DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
         COMPONENT main)
         
     if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
