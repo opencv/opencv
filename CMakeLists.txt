@@ -128,6 +128,7 @@ if(UNIX)
     option(OPENCV_MANGLED_INSTALL_PATHS "Enables mangled install paths, that help with side by side installs" False)
     if(OPENCV_MANGLED_INSTALL_PATHS)
       set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
+      set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
     endif()
 endif()
 
@@ -1153,7 +1154,8 @@ set(CMAKE_LIB_DIRS_CONFIGCMAKE "${LIBRARY_OUTPUT_PATH}")
 set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
-
+#support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
@@ -1167,6 +1169,9 @@ if(ANDROID)
 else()
     set(CMAKE_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_LIB_INSTALL_PATH}\"")
     set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+    if(OPENCV_MANGLED_INSTALL_PATHS)
+      set(CMAKE_3RDPARTY_LIB_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/share/OpenCV-${OPENCV_VERSION}/3rdparty/${OPENCV_LIB_INSTALL_PATH}\"")
+    endif()
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
@@ -1184,8 +1189,8 @@ if(UNIX)
     install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV-${OPENCV_VERSION}/)
   else()
     install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION share/OpenCV/)
+    install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV/)
   endif()
-
 
 endif()
 
@@ -1257,6 +1262,12 @@ if(ANDROID)
 endif(ANDROID)
 
 # --------------------------------------------------------------------------------------------
+#according to man pkg-config
+#  The package name specified on the pkg-config command line is defined to
+#      be the name of the metadata file, minus the .pc extension. If a library
+#      can install multiple versions simultaneously, it must give each version
+#     its own name (for example, GTK 1.2 might have the package  name  "gtk+"
+#      while GTK 2.0 has "gtk+-2.0").
 #  Part 2/2: ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
 # prefix=/usr
 # exec_prefix=${prefix}
@@ -1269,10 +1280,16 @@ set(libdir      "\${exec_prefix}/lib")
 set(includedir      "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
 set(VERSION             ${OPENCV_VERSION})
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/opencv.pc" @ONLY IMMEDIATE)
+set(OPENCV_PC_FILE_NAME "opencv.pc")
+#need to be explicit with naming the pc file and version number for side by side installs to work.
+if(OPENCV_MANGLED_INSTALL_PATHS)
+  set(OPENCV_PC_FILE_NAME "opencv-${OPENCV_VERSION}.pc")
+endif()
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
 
 if(UNIX AND NOT ANDROID)
-    install(FILES ${CMAKE_BINARY_DIR}/unix-install/opencv.pc DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
 endif()
 
 # ----------------------------------------------------------------------------
