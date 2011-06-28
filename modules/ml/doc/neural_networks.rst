@@ -97,137 +97,116 @@ References:
 *
     Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, *Efficient backprop*, in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
 
+.. _RPROP93:
+
 *
-    M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
+    [RPROP93] M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
 
 
 CvANN_MLP_TrainParams
 ---------------------
 .. ocv:class:: CvANN_MLP_TrainParams
 
-Parameters of the MLP training algorithm. ::
+Parameters of the MLP training algorithm. You can initialize the structure by a constructor or the individual parameters can be adjusted after the structure is created.
 
-    struct CvANN_MLP_TrainParams
+The back-propagation algorithm parameters:
+
+.. ocv:member:: double bp_dw_scale
+
+    Strength of the weight gradient term.
+
+.. ocv:member:: double bp_moment_scale
+
+    Strength of the momentum term.
+
+The RPROP algorithm parameters (see :ref:`[RPROP93] <RPROP93>` for details):
+
+.. ocv:member:: double rp_dw0
+
+    Initial value :math:`\Delta_0` of update-values :math:`\Delta_{ij}`.
+
+.. ocv:member:: double rp_dw_plus
+
+    Increase factor :math:`\eta^+`.
+
+.. ocv:member:: double rp_dw_minus
+
+    Decrease factor :math:`\eta^-`.
+
+.. ocv:member:: double rp_dw_min
+
+    Update-values lower limit :math:`\Delta_{min}`.
+
+.. ocv:member:: double rp_dw_max
+
+    Update-values upper limit :math:`\Delta_{max}`.
+
+
+CvANN_MLP_TrainParams::CvANN_MLP_TrainParams
+--------------------------------------------
+The constructors.
+
+.. ocv:function:: CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
+
+.. ocv:function:: CvANN_MLP_TrainParams::CvANN_MLP_TrainParams( CvTermCriteria term_crit, int train_method, double param1, double param2=0 )
+
+    :param term_crit: Termination criteria of the training algorithm. You can specify the maximum number of iterations (``max_iter``) and/or tolerance on the error change (``epsilon``).
+
+    :param train_method: Training method of the MLP. Possible values are:
+
+        * **CvANN_MLP_TrainParams::BACKPROP** The back-propagation algorithm.
+
+        * **CvANN_MLP_TrainParams::RPROP** The RPROP algorithm.
+
+    :param param1: Parameter of the training method. It is ``rp_dw0`` for ``RPROP`` and ``bp_dw_scale`` for ``BACKPROP``.
+
+    :param param2: Parameter of the training method. It is ``rp_dw_min`` for ``RPROP`` and ``bp_moment_scale`` for ``BACKPROP``.
+
+By default the RPROP algorithm is used:
+
+::
+
+    CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
     {
-        CvANN_MLP_TrainParams();
-        CvANN_MLP_TrainParams( CvTermCriteria term_crit, int train_method,
-                               double param1, double param2=0 );
-        ~CvANN_MLP_TrainParams();
-
-        enum { BACKPROP=0, RPROP=1 };
-
-        CvTermCriteria term_crit;
-        int train_method;
-
-        // back-propagation parameters
-        double bp_dw_scale, bp_moment_scale;
-
-        // rprop parameters
-        double rp_dw0, rp_dw_plus, rp_dw_minus, rp_dw_min, rp_dw_max;
-    };
-
-
-
-The structure has a default constructor that initializes parameters for the ``RPROP`` algorithm. There is also a more advanced constructor to customize the parameters and/or choose the back-propagation algorithm. Finally, the individual parameters can be adjusted after the structure is created.
+        term_crit = cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 1000, 0.01 );
+        train_method = RPROP;
+        bp_dw_scale = bp_moment_scale = 0.1;
+        rp_dw0 = 0.1; rp_dw_plus = 1.2; rp_dw_minus = 0.5;
+        rp_dw_min = FLT_EPSILON; rp_dw_max = 50.;
+    }
 
 CvANN_MLP
 ---------
 .. ocv:class:: CvANN_MLP
 
-MLP model. ::
+MLP model.   
 
-    class CvANN_MLP : public CvStatModel
-    {
-    public:
-        CvANN_MLP();
-        CvANN_MLP( const Mat& _layer_sizes,
-                   int _activ_func=SIGMOID_SYM,
-                   double _f_param1=0, double _f_param2=0 );
-
-        virtual ~CvANN_MLP();
-
-        virtual void create( const Mat& _layer_sizes,
-                             int _activ_func=SIGMOID_SYM,
-                             double _f_param1=0, double _f_param2=0 );
-
-        virtual int train( const Mat& _inputs, const Mat& _outputs,
-                           const Mat& _sample_weights,
-                           const Mat& _sample_idx=Mat(),
-                           CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(),
-                           int flags=0 );
-        virtual float predict( const Mat& _inputs,
-                               Mat& _outputs ) const;
-
-        virtual void clear();
-
-        // possible activation functions
-        enum { IDENTITY = 0, SIGMOID_SYM = 1, GAUSSIAN = 2 };
-
-        // available training flags
-        enum { UPDATE_WEIGHTS = 1, NO_INPUT_SCALE = 2, NO_OUTPUT_SCALE = 4 };
-
-        virtual void read( CvFileStorage* fs, CvFileNode* node );
-        virtual void write( CvFileStorage* storage, const char* name );
-
-        int get_layer_count() { return layer_sizes ? layer_sizes->cols : 0; }
-        const Mat& get_layer_sizes() { return layer_sizes; }
-
-    protected:
-
-        virtual bool prepare_to_train( const Mat& _inputs, const Mat& _outputs,
-                const Mat& _sample_weights, const Mat& _sample_idx,
-                CvANN_MLP_TrainParams _params,
-                CvVectors* _ivecs, CvVectors* _ovecs, double** _sw, int _flags );
-
-        // sequential random backpropagation
-        virtual int train_backprop( CvVectors _ivecs, CvVectors _ovecs,
-                                                    const double* _sw );
-
-        // RPROP algorithm
-        virtual int train_rprop( CvVectors _ivecs, CvVectors _ovecs,
-                                                 const double* _sw );
-
-        virtual void calc_activ_func( Mat& xf, const double* bias ) const;
-        virtual void calc_activ_func_deriv( Mat& xf, Mat& deriv,
-                                                 const double* bias ) const;
-        virtual void set_activ_func( int _activ_func=SIGMOID_SYM,
-                                     double _f_param1=0, double _f_param2=0 );
-        virtual void init_weights();
-        virtual void scale_input( const Mat& _src, Mat& _dst ) const;
-        virtual void scale_output( const Mat& _src, Mat& _dst ) const;
-        virtual void calc_input_scale( const CvVectors* vecs, int flags );
-        virtual void calc_output_scale( const CvVectors* vecs, int flags );
-
-        virtual void write_params( CvFileStorage* fs );
-        virtual void read_params( CvFileStorage* fs, CvFileNode* node );
-
-        Mat& layer_sizes;
-        Mat& wbuf;
-        Mat& sample_weights;
-        double** weights;
-        double f_param1, f_param2;
-        double min_val, max_val, min_val1, max_val1;
-        int activ_func;
-        int max_count, max_buf_sz;
-        CvANN_MLP_TrainParams params;
-        CvRNG rng;
-    };
-    
+Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method :ocv:func:`CvANN_MLP::create`. All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
 
 
-Unlike many other models in ML that are constructed and trained at once, in the MLP model these steps are separated. First, a network with the specified topology is created using the non-default constructor or the method ``create`` . All the weights are set to zeros. Then, the network is trained using a set of input and output vectors. The training procedure can be repeated more than once, that is, the weights can be adjusted based on the new training data.
+CvANN_MLP::CvANN_MLP
+--------------------
+The constructors.
+
+.. ocv:function:: CvANN_MLP::CvANN_MLP()
+
+.. ocv:cfunction:: CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+
+The advanced constructor allows to create MLP with the specified topology. See :ocv:func:`CvANN_MLP::create` for details.
 
 CvANN_MLP::create
 -----------------
 Constructs MLP with the specified topology.
 
-.. ocv:function:: void CvANN_MLP::create(  const Mat& _layer_sizes, int _activ_func=SIGMOID_SYM,                          double _f_param1=0, double _f_param2=0 )
+.. ocv:function:: void CvANN_MLP::create( const Mat& layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
-    :param _layer_sizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
+.. ocv:cfunction:: void CvANN_MLP::create( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
-    :param _activ_func: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY`` ,  ``CvANN_MLP::SIGMOID_SYM`` , and  ``CvANN_MLP::GAUSSIAN`` .
+    :param layerSizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
 
-    :param _f_param1,_f_param2: Free parameters of the activation function,  :math:`\alpha`  and  :math:`\beta` , respectively. See the formulas in the introduction section.
+    :param activateFunc: Parameter specifying the activation function for each neuron: one of  ``CvANN_MLP::IDENTITY``, ``CvANN_MLP::SIGMOID_SYM``, and ``CvANN_MLP::GAUSSIAN``.
+
+    :param fparam1/fparam2: Free parameters of the activation function, :math:`\alpha` and :math:`\beta`, respectively. See the formulas in the introduction section.
 
 The method creates an MLP network with the specified topology and assigns the same activation function to all the neurons.
 
@@ -235,21 +214,23 @@ CvANN_MLP::train
 ----------------
 Trains/updates MLP.
 
-.. ocv:function:: int CvANN_MLP::train(  const Mat& _inputs,  const Mat& _outputs,                        const Mat& _sample_weights,  const Mat& _sample_idx=Mat(), CvANN_MLP_TrainParams _params = CvANN_MLP_TrainParams(), int flags=0 )
+.. ocv:function:: int CvANN_MLP::train( const Mat& inputs, const Mat& outputs, const Mat& sampleWeights, const Mat& sampleIdx=Mat(), CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
-    :param _inputs: Floating-point matrix of input vectors, one vector per row.
+.. ocv:cfunction:: int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
-    :param _outputs: Floating-point matrix of the corresponding output vectors, one vector per row.
+    :param inputs: Floating-point matrix of input vectors, one vector per row.
 
-    :param _sample_weights: (RPROP only) Optional floating-point vector of weights for each sample. Some samples may be more important than others for training. You may want to raise the weight of certain classes to find the right balance between hit-rate and false-alarm rate, and so on.
+    :param outputs: Floating-point matrix of the corresponding output vectors, one vector per row.
 
-    :param _sample_idx: Optional integer vector indicating the samples (rows of  ``_inputs``  and  ``_outputs`` ) that are taken into account.
+    :param sampleWeights: (RPROP only) Optional floating-point vector of weights for each sample. Some samples may be more important than others for training. You may want to raise the weight of certain classes to find the right balance between hit-rate and false-alarm rate, and so on.
 
-    :param _params: Training parameters. See the ``CvANN_MLP_TrainParams``  description.
+    :param sampleIdx: Optional integer vector indicating the samples (rows of ``inputs`` and ``outputs``) that are taken into account.
 
-    :param _flags: Various parameters to control the training algorithm. A combination of the following parameters is possible:
+    :param params: Training parameters. See the :ocv:class:`CvANN_MLP_TrainParams` description.
 
-            * **UPDATE_WEIGHTS = 1** Algorithm updates the network weights, rather than computes them from scratch. In the latter case the weights are initialized using the  Nguyen-Widrow  algorithm.
+    :param flags: Various parameters to control the training algorithm. A combination of the following parameters is possible:
+
+            * **UPDATE_WEIGHTS** Algorithm updates the network weights, rather than computes them from scratch. In the latter case the weights are initialized using the Nguyen-Widrow algorithm.
 
             * **NO_INPUT_SCALE** Algorithm does not normalize the input vectors. If this flag is not set, the training algorithm normalizes each input feature independently, shifting its mean value to 0 and making the standard deviation equal to 1. If the network is assumed to be updated frequently, the new training data could be much different from original one. In this case, you should take care of proper normalization.
 
@@ -257,3 +238,38 @@ Trains/updates MLP.
 
 This method applies the specified training algorithm to computing/adjusting the network weights. It returns the number of done iterations.
 
+CvANN_MLP::predict
+------------------
+Predicts responses for input samples.
+
+.. ocv:function:: float CvANN_MLP::predict( const Mat& inputs, Mat& outputs ) const
+
+.. ocv:cfunction:: float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
+
+    :param inputs: Input samples.
+
+    :param outputs: Predicted responses for corresponding samples.
+
+The method returns a dummy value which should be ignored.
+
+CvANN_MLP::get_layer_count
+--------------------------
+Returns the number of layers in the MLP.
+
+.. ocv:function:: int CvANN_MLP::get_layer_count()
+
+CvANN_MLP::get_layer_sizes
+--------------------------
+Returns numbers of neurons in each layer of the MLP.
+
+.. ocv:cfunction:: const CvMat* CvANN_MLP::get_layer_sizes()
+
+The method returns the integer vector specifying the number of neurons in each layer including the input and output layers of the MLP.
+
+CvANN_MLP::get_weights
+----------------------
+Returns neurons weights of the particular layer.
+
+.. ocv:function:: double* CvANN_MLP::get_weights(int layer)
+
+    :param layer: Index of the particular layer.
