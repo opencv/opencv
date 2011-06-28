@@ -1,5 +1,8 @@
+# In order to compile your application under cygwin
+# you need to define NDK_USE_CYGPATH=1 before calling ndk-build
+
 USER_LOCAL_PATH:=$(LOCAL_PATH)
-LOCAL_PATH:=$(subst ?,,$(firstword ?$(subst \\, ,$(subst /, ,$(call my-dir)))))
+LOCAL_PATH:=$(subst ?,,$(firstword ?$(subst \, ,$(subst /, ,$(call my-dir)))))
 
 OPENCV_THIS_DIR:=$(patsubst $(LOCAL_PATH)\\%,%,$(patsubst $(LOCAL_PATH)/%,%,$(call my-dir)))
 OPENCV_LIBS_DIR:=@CMAKE_LIBS_DIR_CONFIGCMAKE@
