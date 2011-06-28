@@ -46,7 +46,7 @@ The default constuctor.
 
 .. ocv:function:: CvStatModel::CvStatModel()
 
-Each statistical model class in ML has a default constructor without parameters. This constructor is useful for a two-stage model construction, when the default constructor is followed by ``train()`` or ``load()`` .
+Each statistical model class in ML has a default constructor without parameters. This constructor is useful for a two-stage model construction, when the default constructor is followed by :ocv:func:`CvStatModel::train` or :ocv:func:`CvStatModel::load`.
 
 CvStatModel::CvStatModel(...)
 -----------------------------
@@ -54,7 +54,7 @@ The training constructor.
 
 .. ocv:function:: CvStatModel::CvStatModel( const Mat& train_data ... )
 
-Most ML classes provide a single-step constructor and train constructors. This constructor is equivalent to the default constructor, followed by the ``train()`` method with the parameters that are passed to the constructor.
+Most ML classes provide a single-step constructor and train constructors. This constructor is equivalent to the default constructor, followed by the :ocv:func:`CvStatModel::train` method with the parameters that are passed to the constructor.
 
 CvStatModel::~CvStatModel
 -------------------------
@@ -73,7 +73,7 @@ The destructor of the base class is declared as virtual. So, it is safe to write
     delete model;
 
 
-Normally, the destructor of each derived class does nothing. But in this instance, it calls the overridden method ``clear()`` that deallocates all the memory.
+Normally, the destructor of each derived class does nothing. But in this instance, it calls the overridden method :ocv:func:`CvStatModel::clear` that deallocates all the memory.
 
 CvStatModel::clear
 ------------------
@@ -81,7 +81,7 @@ Deallocates memory and resets the model state.
 
 .. ocv:function:: void CvStatModel::clear()
 
-The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the ``train`` methods of the derived classes, from the methods ``load()``, ``read()``, or even explicitly by the user.
+The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the :ocv:func:`CvStatModel::train` methods of the derived classes, from the methods :ocv:func:`CvStatModel::load`, :ocv:func:`CvStatModel::read()``, or even explicitly by the user.
 
 CvStatModel::save
 -----------------
@@ -101,7 +101,7 @@ Loads the model from a file.
 
 .. ocv:pyfunction:: cv2.CvStatModel.load(filename[, name]) -> None
 
-The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by ``clear()`` .
+The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
 
 
 CvStatModel::write
@@ -110,7 +110,7 @@ Writes the model to the file storage.
 
 .. ocv:function:: void CvStatModel::write( CvFileStorage* storage, const char* name )
 
-The method ``write`` stores the complete model state in the file storage with the specified name or default name (which depends on the particular class). The method is called by ``save()`` .
+The method ``write`` stores the complete model state in the file storage with the specified name or default name (which depends on the particular class). The method is called by :ocv:func:`CvStatModel::save`.
 
 
 CvStatModel::read
@@ -122,7 +122,7 @@ Reads the model from the file storage.
 The method ``read`` restores the complete model state from the specified node of the file storage. Use the function
 :ocv:func:`GetFileNodeByName` to locate the node.
 
-The previous model state is cleared by ``clear()`` .
+The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
 
 CvStatModel::train
 ------------------
@@ -144,13 +144,13 @@ For classification problems, the responses are discrete class labels. For regres
 
 * ``CV_VAR_ORDERED(=CV_VAR_NUMERICAL)``     The output values are ordered. This means that two different values can be compared as numbers, and this is a regression problem.
 
-Types of input variables can be also specified using ``var_type`` . Most algorithms can handle only ordered input variables.
+Types of input variables can be also specified using ``var_type``. Most algorithms can handle only ordered input variables.
 
-Many ML models may be trained on a selected feature subset, and/or on a selected sample subset of the training set. To make it easier for you, the method ``train`` usually includes the ``var_idx`` and ``sample_idx`` parameters. The former parameter identifies variables (features) of interest, and the latter one identifies samples of interest. Both vectors are either integer ( ``CV_32SC1`` ) vectors (lists of 0-based indices) or 8-bit ( ``CV_8UC1`` ) masks of active variables/samples. You may pass ``NULL`` pointers instead of either of the arguments, meaning that all of the variables/samples are used for training.
+Many ML models may be trained on a selected feature subset, and/or on a selected sample subset of the training set. To make it easier for you, the method ``train`` usually includes the ``var_idx`` and ``sample_idx`` parameters. The former parameter identifies variables (features) of interest, and the latter one identifies samples of interest. Both vectors are either integer (``CV_32SC1``) vectors (lists of 0-based indices) or 8-bit (``CV_8UC1``) masks of active variables/samples. You may pass ``NULL`` pointers instead of either of the arguments, meaning that all of the variables/samples are used for training.
 
-Additionally, some algorithms can handle missing measurements, that is, when certain features of certain training samples have unknown values (for example, they forgot to measure a temperature of patient A on Monday). The parameter ``missing_mask`` , an 8-bit matrix of the same size as ``train_data`` , is used to mark the missed values (non-zero elements of the mask).
+Additionally, some algorithms can handle missing measurements, that is, when certain features of certain training samples have unknown values (for example, they forgot to measure a temperature of patient A on Monday). The parameter ``missing_mask``, an 8-bit matrix of the same size as ``train_data``, is used to mark the missed values (non-zero elements of the mask).
 
-Usually, the previous model state is cleared by ``clear()`` before running the training procedure. However, some algorithms may optionally update the model state with the new training data, instead of resetting it.
+Usually, the previous model state is cleared by :ocv:func:`CvStatModel::clear` before running the training procedure. However, some algorithms may optionally update the model state with the new training data, instead of resetting it.
 
 CvStatModel::predict
 --------------------
@@ -158,7 +158,7 @@ Predicts the response for a sample.
 
 .. ocv:function:: float CvStatModel::predict( const Mat& sample[, <prediction_params>] ) const
 
-The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train`` , it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict`` .
+The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train``, it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict``.
 
 The suffix ``const`` means that prediction does not affect the internal model state, so the method can be safely called from within different threads.
 

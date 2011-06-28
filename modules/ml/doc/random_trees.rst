@@ -71,7 +71,7 @@ The constructors.
 
     :param calc_var_importance: If true then variable importance will be calculated and then it can be retrieved by :ocv:func:`CvRTrees::get_var_importance`.
 
-    :param nactive_vars: The size of the randomly selected subset of features to be tested at any given node. If you set it to 0 then the size will be set to the square root of the total number of features.
+    :param nactive_vars: The size of the randomly selected subset of features at each tree node and that are used to find the best split(s). If you set it to 0 then the size will be set to the square root of the total number of features.
 
     :param max_num_of_trees_in_the_forest: The maximum number of trees in the forest (suprise, suprise).
 

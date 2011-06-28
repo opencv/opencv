@@ -70,11 +70,11 @@ The structure represents a possible decision tree node split. It has public memb
 
 .. ocv:member:: int inversed
 
-    If it is not null then inverse split rule is used that is a left branch and a right branch are switched.
+    If it is not null then inverse split rule is used that is left and right branches are exchanged in the rule expressions below. 
 
 .. ocv:member:: float quality
 
-    Quality of the split.
+    The split quality, a positive number. It is used to choose the best primary split, then to choose and sort the surrogate splits. After the tree is constructed, it is also used to compute variable importance. 
 
 .. ocv:member:: CvDTreeSplit* next
 
@@ -82,12 +82,27 @@ The structure represents a possible decision tree node split. It has public memb
 
 .. ocv:member:: int subset[2]
 
-    Parameters of the split on a categorical variable.
+    Bit array indicating the value subset in case of split on a categorical variable. The rule is:
 
-.. ocv:member:: struct {float c; int split_point;} ord
+::
 
-    Parameters of the split on ordered variable.
+    if var_value in subset 
+      then next_node <- left 
+      else next_node <- right
 
+.. ocv:member:: float ord.c 
+
+    The threshold value in case of split on an ordered variable. The rule is: 
+
+::
+
+    if var_value < c 
+      then next_node<-left 
+      else next_node<-right
+
+.. ocv:member:: int ord.split_point
+
+    Used internally by the training algorithm.
 
 CvDTreeNode
 -----------
@@ -95,10 +110,14 @@ CvDTreeNode
 
 
 The structure represents a node in a decision tree. It has public members:    
- 
+
+.. ocv:member:: int class_idx 
+
+    Class index normalized to 0..class_count-1 range and assigned to the node. It is used internally in classification trees and tree ensembles.
+
 .. ocv:member:: int Tn
 
-    Tree index in a sequence of pruned trees. Nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (they are pruned).
+    Tree index in a ordered sequence of pruned trees. The indices are used during and after the pruning procedure. The root node has the maximum value ``Tn`` of the whole tree, child nodes have ``Tn`` less than or equal to the parent's ``Tn``, and nodes with :math:`Tn \leq CvDTree::pruned\_tree\_idx` are not used at prediction stage (the corresponding branches are considered as cut-off), even if they have not been physically deleted from the tree at the pruning stage.
 
 .. ocv:member:: double value
 
@@ -122,19 +141,13 @@ The structure represents a node in a decision tree. It has public members:
 
 .. ocv:mebmer:: int sample_count
 
-    Number of samples in the node.
+    The number of samples that fall into the node at the training stage. It is used to resolve the difficult cases - when the variable for the primary split is missing and all the variables for other surrogate splits are missing too. In this case the sample is directed to the left if ``left->sample_count > right->sample_count`` and to the right otherwise. 
 
 .. ocv:member:: int depth
 
-    Depth of the node.
+    Depth of the node. The root node depth is 0, the child nodes depth is the parent's depth + 1. 
 
 Other numerous fields of ``CvDTreeNode`` are used internally at the training stage.
-
-CvDTreeTrainData
-----------------
-.. ocv:class:: CvDTreeTrainData
-
-Decision tree training data and shared data for tree ensembles. ::
 
 CvDTreeParams
 -------------
@@ -150,23 +163,23 @@ The constructors.
 
 .. ocv:function:: CvDTreeParams::CvDTreeParams( int max_depth, int min_sample_count, float regression_accuracy, bool use_surrogates, int max_categories, int cv_folds, bool use_1se_rule, bool truncate_pruned_tree, const float* priors )
 
-    :param max_depth: The maximum number of levels in a tree. The depth of a constructed tree may be smaller due to other termination criterias or pruning of the tree.
-
+    :param max_depth: The maximum possible depth of the tree. That is the training algorithms attempts to split a node while its depth is less than ``max_depth``. The actual depth may be smaller if the other termination criteria are met (see the outline of the training procedure in the beginning of the section), and/or if the tree is pruned. 
+    
     :param min_sample_count: If the number of samples in a node is less than this parameter then the node will not be splitted.
 
     :param regression_accuracy: Termination criteria for regression trees. If all absolute differences between an estimated value in a node and values of train samples in this node are less than this parameter then the node will not be splitted.
  
     :param use_surrogates: If true then surrogate splits will be built. These splits allow to work with missing data and compute variable importance correctly.
 
-    :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. The clustering is applied only in n>2-class classification problems for categorical variables with ``N > max_categories`` possible values. See the Learning OpenCV book (page 489) for more detailed explanation.
+    :param max_categories: Cluster possible values of a categorical variable into ``K`` :math:`\leq` ``max_categories`` clusters to find a suboptimal split. If a discrete variable, on which the training procedure tries to make a split, takes more than ``max_categories`` values, the precise best subset estimation may take a very long time because the algorithm is exponential. Instead, many decision trees engines (including ML) try to find sub-optimal split in this case by clustering all the samples into ``max_categories`` clusters that is some categories are merged together. The clustering is applied only in ``n``>2-class classification problems for categorical variables with ``N > max_categories`` possible values. In case of regression and 2-class classification the optimal split can be found efficiently without employing clustering, thus the parameter is not used in these cases. 
 
     :param cv_folds: If ``cv_folds > 1`` then prune a tree with ``K``-fold cross-validation where ``K`` is equal to ``cv_folds``.
 
-    :param use_1se_rule: If true then a pruning will be harsher. This will make a tree more compact but a bit less accurate.
+    :param use_1se_rule: If true then a pruning will be harsher. This will make a tree more compact and more resistant to the training data noise but a bit less accurate.
 
-    :param truncate_pruned_tree: If true then pruned branches are removed completely from the tree. Otherwise they are retained and it is possible to get the unpruned tree or prune the tree differently by changing ``CvDTree::pruned_tree_idx`` parameter.
+    :param truncate_pruned_tree: If true then pruned branches are physically removed from the tree. Otherwise they are retained and it is possible to get results from the original unpruned (or pruned less aggressively) tree by decreasing ``CvDTree::pruned_tree_idx`` parameter.
 
-    :param priors: Weights of prediction categories which determine relative weights that you give to misclassification. That is, if the weight of the first category is 1 and the weight of the second category is 10, then each mistake in predicting the second category is equivalent to making 10 mistakes in predicting the first category.
+    :param priors: The array of a priori class probabilities, sorted by the class label value. The parameter can be used to tune the decision tree preferences toward a certain class. For example, if users want to detect some rare anomaly occurrence, the training base will likely contain much more normal cases than anomalies, so a very good classification performance will be achieved just by considering every case as normal. To avoid this, the priors can be specified, where the anomaly probability is artificially increased (up to 0.5 or even greater), so the weight of the misclassified anomalies becomes much bigger, and the tree is adjusted properly. You can also think about this parameter as weights of prediction categories which determine relative weights that you give to misclassification. That is, if the weight of the first category is 1 and the weight of the second category is 10, then each mistake in predicting the second category is equivalent to making 10 mistakes in predicting the first category.
 
 The default constructor initializes all the parameters with the default values tuned for the standalone classification tree:
 

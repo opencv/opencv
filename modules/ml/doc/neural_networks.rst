@@ -113,11 +113,11 @@ The back-propagation algorithm parameters:
 
 .. ocv:member:: double bp_dw_scale
 
-    Strength of the weight gradient term.
+    Strength of the weight gradient term. The recommended value is about 0.1.
 
 .. ocv:member:: double bp_moment_scale
 
-    Strength of the momentum term.
+    Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
 
 The RPROP algorithm parameters (see :ref:`[RPROP93] <RPROP93>` for details):
 
@@ -127,19 +127,19 @@ The RPROP algorithm parameters (see :ref:`[RPROP93] <RPROP93>` for details):
 
 .. ocv:member:: double rp_dw_plus
 
-    Increase factor :math:`\eta^+`.
+    Increase factor :math:`\eta^+`. It must be >1.
 
 .. ocv:member:: double rp_dw_minus
 
-    Decrease factor :math:`\eta^-`.
+    Decrease factor :math:`\eta^-`. It must be <1.
 
 .. ocv:member:: double rp_dw_min
 
-    Update-values lower limit :math:`\Delta_{min}`.
+    Update-values lower limit :math:`\Delta_{min}`. It must be positive.
 
 .. ocv:member:: double rp_dw_max
 
-    Update-values upper limit :math:`\Delta_{max}`.
+    Update-values upper limit :math:`\Delta_{max}`. It must be >1.
 
 
 CvANN_MLP_TrainParams::CvANN_MLP_TrainParams
@@ -150,7 +150,7 @@ The constructors.
 
 .. ocv:function:: CvANN_MLP_TrainParams::CvANN_MLP_TrainParams( CvTermCriteria term_crit, int train_method, double param1, double param2=0 )
 
-    :param term_crit: Termination criteria of the training algorithm. You can specify the maximum number of iterations (``max_iter``) and/or tolerance on the error change (``epsilon``).
+    :param term_crit: Termination criteria of the training algorithm. You can specify the maximum number of iterations (``max_iter``) and/or how much the error could change between the iterations to make the algorithm continue (``epsilon``).
 
     :param train_method: Training method of the MLP. Possible values are:
 

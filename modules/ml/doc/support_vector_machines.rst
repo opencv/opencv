@@ -111,19 +111,26 @@ The constructors.
 
     :param svm_type: Type of a SVM formulation. Possible values are:
 
-        * **CvSVM::C_SVC** C-Support Vector Classification.
-        * **CvSVM::NU_SVC** :math:`\nu`-Support Vector Classification.
-        * **CvSVM::ONE_CLASS** Distribution Estimation (One-class SVM)
-        * **CvSVM::EPS_SVR** :math:`\epsilon`-Support Vector Regression
-        * **CvSVM::NU_SVR** :math:`\nu`-Support Vector Regression
+        * **CvSVM::C_SVC** C-Support Vector Classification. ``n``-class classification (``n`` :math:`\geq` 2), allows imperfect separation of classes with penalty multiplier ``C`` for outliers.
+
+        * **CvSVM::NU_SVC** :math:`\nu`-Support Vector Classification. ``n``-class classification with possible imperfect separation. Parameter :math:`\nu`  (in the range 0..1, the larger the value, the smoother the decision boundary) is used instead of ``C``.
+
+        * **CvSVM::ONE_CLASS** Distribution Estimation (One-class SVM). All the training data are from the same class, SVM builds a boundary that separates the class from the rest of the feature space.
+
+        * **CvSVM::EPS_SVR** :math:`\epsilon`-Support Vector Regression. The distance between feature vectors from the training set and the fitting hyper-plane must be less than ``p``. For outliers the penalty multiplier ``C`` is used.
+
+        * **CvSVM::NU_SVR** :math:`\nu`-Support Vector Regression. :math:`\nu` is used instead of ``p``.
 
         See :ref:`[LibSVM] <LibSVM>` for details.
 
     :param kernel_type: Type of a SVM kernel. Possible values are:
 
-        * **CvSVM::LINEAR** Linear kernel: :math:`K(x_i, x_j) = x_i^T x_j`.
+        * **CvSVM::LINEAR** Linear kernel. No mapping is done, linear discrimination (or regression) is done in the original feature space. It is the fastest option. :math:`K(x_i, x_j) = x_i^T x_j`.
+
         * **CvSVM::POLY** Polynomial kernel: :math:`K(x_i, x_j) = (\gamma x_i^T x_j + coef0)^{degree}, \gamma > 0`.
-        * **CvSVM::RBF** Radial basis function (RBF): :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
+
+        * **CvSVM::RBF** Radial basis function (RBF), a good choice in most cases. :math:`K(x_i, x_j) = e^{-\gamma ||x_i - x_j||^2}, \gamma > 0`.
+
         * **CvSVM::SIGMOID** Sigmoid kernel: :math:`K(x_i, x_j) = \tanh(\gamma x_i^T x_j + coef0)`.
  
     :param degree: Parameter ``degree`` of a kernel function (POLY).
@@ -132,15 +139,15 @@ The constructors.
 
     :param coef0: Parameter ``coef0`` of a kernel function (POLY / SIGMOID).
 
-    :param Cvalue: Parameter ``C`` of a SVM formulation (C_SVC / EPS_SVR / NU_SVR).
+    :param Cvalue: Parameter ``C`` of a SVM optimiazation problem (C_SVC / EPS_SVR / NU_SVR).
 
-    :param nu: Parameter :math:`\nu` of a SVM formulation (NU_SVC / ONE_CLASS / NU_SVR).
+    :param nu: Parameter :math:`\nu` of a SVM optimization problem (NU_SVC / ONE_CLASS / NU_SVR).
 
-    :param p: Parameter :math:`\epsilon` of a SVM formulation (EPS_SVR)
+    :param p: Parameter :math:`\epsilon` of a SVM optimization problem (EPS_SVR).
 
-    :param class_weights: Sets the parameter ``C`` of class ``#i`` to :math:`class\_weights_i * C` (C_SVC).
+    :param class_weights: Optional weights in the C_SVC problem , assigned to particular classes. They are multiplied by ``C`` so the parameter ``C`` of class ``#i`` becomes :math:`class\_weights_i * C`. Thus these weights affect the misclassification penalty for different classes. The larger weight, the larger penalty on misclassification of data from the corresponding class.
 
-    :param term_crit: Termination criteria of SVM training optimization loop: you can specify tolerance and/or the maximum number of iterations.
+    :param term_crit: Termination criteria of the iterative SVM training procedure which solves a partial case of constrained quadratic optimization problem. You can specify tolerance and/or the maximum number of iterations.
 
 The default constructor initialize the structure with following values:
 

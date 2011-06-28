@@ -21,7 +21,7 @@ Default and training constructors.
 
 .. ocv:cfunction:: CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
 
-See :ocv:func:`CvKNearest::train` for parameters descriptions.
+See :ocv:func:`CvKNearest::train` for additional parameters descriptions.
 
 CvKNearest::train
 -----------------

@@ -95,7 +95,7 @@ The constructors.
         * **CvBoost::LOGIT** LogitBoost. It can produce good regression fits.
         * **CvBoost::GENTLE** Gentle AdaBoost. It puts less weight on outlier data points and for that reason is often good with regression data. 
 
-        Often the "real" and "gentle" forms of AdaBoost work best.
+        Gentle AdaBoost and Real AdaBoost are often the preferable choices. 
 
     :param weak_count: The number of weak classifiers.
 
@@ -109,10 +109,23 @@ Also there is one structure member that you can set directly:
 
     Splitting criteria used to choose optimal splits during a weak tree construction. Possible values are:
 
-        * **CvBoost::DEFAULT** Use the default for the particular boosting method.
-        * **CvBoost::GINI** Default option for real AdaBoost.
-        * **CvBoost::MISCLASS** Default option for discrete AdaBoost.
-        * **CvBoost::SQERR** Least-square error; only option available for LogitBoost and gentle AdaBoost.
+        * **CvBoost::DEFAULT** Use the default for the particular boosting method, see below.
+        * **CvBoost::GINI** Use Gini index. This is default option for Real AdaBoost; may be also used for Discrete AdaBoost.
+        * **CvBoost::MISCLASS** Use misclassification rate. This is default option for Discrete AdaBoost; may be also used for Real AdaBoost.
+        * **CvBoost::SQERR** Use least squares criteria. This is default and the only option for LogitBoost and Gentle AdaBoost.
+
+Default parameters are:
+
+::
+
+    CvBoostParams::CvBoostParams()
+    {
+        boost_type = CvBoost::REAL;
+        weak_count = 100;
+        weight_trim_rate = 0.95;
+        cv_folds = 0;
+        max_depth = 1;
+    }
 
 CvBoostTree
 -----------

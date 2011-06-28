@@ -102,13 +102,15 @@ The constructors
 
 .. ocv:function:: CvEMParams::CvEMParams( int nclusters, int cov_mat_type=CvEM::COV_MAT_DIAGONAL, int start_step=CvEM::START_AUTO_STEP, CvTermCriteria term_crit=cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON), const CvMat* probs=0, const CvMat* weights=0, const CvMat* means=0, const CvMat** covs=0 ) 
 
-    :param nclusters: The number of mixtures in the gaussian mixture model.
-
+    :param nclusters: The number of mixture components in the gaussian mixture model. Some of EM implementation could determine the optimal number of mixtures within a specified value range, but that is not the case in ML yet.
+    
     :param cov_mat_type: Constraint on covariance matrices which defines type of matrices. Possible values are:
 
-        * **CvEM::COV_MAT_SPHERICAL** A scaled identity matrix :math:`\mu_k * I`.
-        * **CvEM::COV_MAT_DIAGONAL** A diagonal matrix with positive diagonal elements.
-        * **CvEM::COV_MAT_GENERIC** A symmetric positively defined matrix.
+        * **CvEM::COV_MAT_SPHERICAL** A scaled identity matrix :math:`\mu_k * I`. There is the only parameter :math:`\mu_k` to be estimated for earch matrix. The option may be used in special cases, when the constraint is relevant, or as a first step in the optimization (for example in case when the data is preprocessed with PCA). The results of such preliminary estimation may be passed again to the optimization procedure, this time with ``cov_mat_type=CvEM::COV_MAT_DIAGONAL``.
+
+        * **CvEM::COV_MAT_DIAGONAL** A diagonal matrix with positive diagonal elements. The number of free parameters is ``d`` for each matrix. This is most commonly used option yielding good estimation results.
+
+        * **CvEM::COV_MAT_GENERIC** A symmetric positively defined matrix. The number of free parameters in each matrix is about :math:`d^2/2`. It is not recommended to use this option, unless there is pretty accurate initial estimation of the parameters and/or a huge number of training samples.
 
     :param start_step: The start step of the EM algorithm: 
 
@@ -118,13 +120,13 @@ The constructors
 
     :param term_crit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``term_crit.max_iter`` (number of M-steps) or when relative change of likelihood logarithm is less than ``term_crit.epsilon``.
 
-    :param probs: Initial probabilities :math:`p_{i,k}` of sample :math:`i` to belong to mixture :math:`k`. It is a floating-point matrix of :math:`nsamples \times nclusters` size.
+    :param probs: Initial probabilities :math:`p_{i,k}` of sample :math:`i` to belong to mixture :math:`k`. It is a floating-point matrix of :math:`nsamples \times nclusters` size. It is used and must be not NULL only when ``start_step=CvEM::START_M_STEP``.
 
-    :param weights: Initial weights of mixtures :math:`\pi_k`. It is a floating-point vector with :math:`nclusters` elements.
+    :param weights: Initial weights of mixtures :math:`\pi_k`. It is a floating-point vector with :math:`nclusters` elements. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``. 
 
-    :param means: Initial means of mixtures :math:`a_k`. It is a floating-point matrix of :math:`nclusters \times dims` size.
+    :param means: Initial means of mixtures :math:`a_k`. It is a floating-point matrix of :math:`nclusters \times dims` size. It is used used and must be not NULL only when ``start_step=CvEM::START_E_STEP``.
 
-    :param covs: Initial covariance matrices of mixtures :math:`S_k`. Each of covariance matrices is a valid square floating-point matrix of :math:`dims \times dims` size.
+    :param covs: Initial covariance matrices of mixtures :math:`S_k`. Each of covariance matrices is a valid square floating-point matrix of :math:`dims \times dims` size. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``.
 
 The default constructor represents a rough rule-of-the-thumb:
 
