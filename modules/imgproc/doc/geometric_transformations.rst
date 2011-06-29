@@ -368,7 +368,7 @@ Resizes an image.
             \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}
 
         
-    Either  ``dsize``  or both  ``fx``  and  ``fy``  must be non-zero.
+        Either  ``dsize``  or both  ``fx``  and  ``fy``  must be non-zero.
 
     :param fx: Scale factor along the horizontal axis. When it is 0, it is computed as
 
