@@ -640,6 +640,10 @@ inline void cull(std::vector<cv::KeyPoint>& keypoints, size_t n_points)
   //this is only necessary if the keypoints size is greater than the number of desired points.
   if (keypoints.size() > n_points)
   {
+    if (n_points==0) {
+      keypoints.clear();
+      return;
+    }
     //first use nth element to partition the keypoints into the best and worst.
     std::nth_element(keypoints.begin(), keypoints.begin() + n_points, keypoints.end(), keypointResponseGreater);
     //this is the boundary response, and in the case of FAST may be ambigous
