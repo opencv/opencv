@@ -2075,6 +2075,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
+        CV_Assert(src1.channels() == 1);
         _dst.create(src1.size(), CV_8UC1);
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
