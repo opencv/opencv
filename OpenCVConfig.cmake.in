@@ -31,21 +31,22 @@ SET(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC@)
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 #  This variable may or may not be used below, depending on the parsing of OpenCVConfig.cmake
 get_filename_component(THIS_OPENCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
-#Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
-get_filename_component(OPENCV_INSTALL_PATH "${THIS_OPENCV_CONFIG_PATH}/../.." REALPATH)
 
 # ======================================================
 # Include directories to add to the user project:
 # ======================================================
+
 # Provide the include directories to the caller
-SET(OpenCV_INCLUDE_DIRS "${OPENCV_INSTALL_PATH}/include/opencv;${OPENCV_INSTALL_PATH}/include")
+SET(OpenCV_INCLUDE_DIRS @CMAKE_INCLUDE_DIRS_CONFIGCMAKE@)
+
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
 # Link directories to add to the user project:
 # ======================================================
+
 # Provide the libs directory anyway, it may be needed in some cases.
-SET(OpenCV_LIB_DIR "${OPENCV_INSTALL_PATH}/lib")
+SET(OpenCV_LIB_DIR @CMAKE_LIB_DIRS_CONFIGCMAKE@)
 
 LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 
