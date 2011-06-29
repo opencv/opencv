@@ -421,9 +421,9 @@ TEST_P(CopyTo, Masked)
 
     cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-    cv::Mat mask = cvtest::randomMat(rng, src.size(), CV_8UC1, 0.0, 1.5, false);
+    cv::Mat mask = cvtest::randomMat(rng, src.size(), CV_8UC1, 0.0, 2.0, false);
 
-    cv::Mat dst_gold;
+    cv::Mat dst_gold(src.size(), src.type(), cv::Scalar::all(0));
     src.copyTo(dst_gold, mask);
 
     cv::Mat dst;
@@ -431,7 +431,7 @@ TEST_P(CopyTo, Masked)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_src(src);
 
-        cv::gpu::GpuMat dev_dst;
+        cv::gpu::GpuMat dev_dst(src.size(), src.type(), cv::Scalar::all(0));
 
         dev_src.copyTo(dev_dst, cv::gpu::GpuMat(mask));
 

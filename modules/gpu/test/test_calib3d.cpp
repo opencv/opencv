@@ -88,17 +88,21 @@ TEST_P(StereoBlockMatching, Regression)
     ASSERT_TRUE(!img_l.empty() && !img_r.empty() && !img_template.empty());
 
     PRINT_PARAM(devInfo);
+    
+    cv::Mat disp;
 
-    cv::gpu::GpuMat disp;
-    cv::gpu::StereoBM_GPU bm(0, 128, 19);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_disp;
+        cv::gpu::StereoBM_GPU bm(0, 128, 19);
 
-    bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+        bm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+        
+        dev_disp.download(disp);
+    );
 
     disp.convertTo(disp, img_template.type());
-
-    ASSERT_EQ(img_template.size(), disp.size());
-    double norm = cv::norm(img_template, (cv::Mat)disp, cv::NORM_INF);
-    ASSERT_EQ(0.0, norm);
+    
+    EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3D, StereoBlockMatching, testing::ValuesIn(devices()));
@@ -122,16 +126,20 @@ TEST_P(StereoBeliefPropagation, Regression)
 
     PRINT_PARAM(devInfo);
 
-    cv::gpu::GpuMat disp;
-    cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    cv::Mat disp;
 
-    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_disp;
+        cv::gpu::StereoBeliefPropagation bpm(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+
+        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+        
+        dev_disp.download(disp);
+    );
 
     disp.convertTo(disp, img_template.type());
-
-    ASSERT_EQ(img_template.size(), disp.size());
-    double norm = cv::norm(img_template, (cv::Mat)disp, cv::NORM_INF);
-    ASSERT_EQ(0.0, norm);
+    
+    EXPECT_MAT_NEAR(img_template, disp, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3D, StereoBeliefPropagation, testing::ValuesIn(devices()));
@@ -164,16 +172,20 @@ TEST_P(StereoConstantSpaceBP, Regression)
 
     PRINT_PARAM(devInfo);
 
-    cv::gpu::GpuMat disp;
-    cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
+    cv::Mat disp;
 
-    bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), disp);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_disp;
+        cv::gpu::StereoConstantSpaceBP bpm(128, 16, 4, 4);
+
+        bpm(cv::gpu::GpuMat(img_l), cv::gpu::GpuMat(img_r), dev_disp);
+        
+        dev_disp.download(disp);
+    );
 
     disp.convertTo(disp, img_template.type());
-
-    ASSERT_EQ(img_template.size(), disp.size());
-    double norm = cv::norm(img_template, (cv::Mat)disp, cv::NORM_INF);
-    ASSERT_EQ(0.0, norm);
+    
+    EXPECT_MAT_NEAR(img_template, disp, 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3D, StereoConstantSpaceBP, testing::ValuesIn(devices()));

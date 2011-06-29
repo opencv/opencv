@@ -1629,7 +1629,7 @@ TEST_P(MeanShiftSegmentation, Regression)
     cv::Mat dst_rgb;
     cv::cvtColor(dst, dst_rgb, CV_BGRA2BGR);
 
-    EXPECT_MAT_SIMILAR(dst_gold, dst_rgb, 1e-5);
+    EXPECT_MAT_SIMILAR(dst_gold, dst_rgb, 1e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, testing::Combine(
