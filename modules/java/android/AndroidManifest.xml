@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="org.opencv.JavaAPI"
+      package="org.opencv"
       android:versionCode="1"
       android:versionName="1.0">
-    <application android:label="OpenCVJavaAPI">
-        <activity android:name="OpenCVJavaAPI"
-                  android:label="OpenCVJavaAPI">
+    <application android:label="OpenCV">
+        <activity android:name="OpenCV"
+                  android:label="OpenCV">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
