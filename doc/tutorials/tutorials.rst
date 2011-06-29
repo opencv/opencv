@@ -4,222 +4,152 @@ OpenCV Tutorials
 
 The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our SVN repository.
 
-.. note::
-   YouTube videos yet to come...we have to think about them!
-
 As always, we would be happy to hear your comments and receive your contributions on any tutorial.
 
-* **INSTALLATION**
-
-  * :ref:`Linux_Installation`
-
-     =========== ======================================================
-     |Install_1| *Title:* **Installation steps in Linux**
-
-	         *Compatibility:* > OpenCV 2.0
-
-	         We will learn how to setup OpenCV in your computer!
-    
-     =========== ======================================================
-    
-     .. |Install_1| image:: images/ubuntu_logo.jpeg
-                    :height: 120px
-
-  * :ref:`Windows_Installation`
-  
-     =========== ======================================================
-     |Install_2| *Title:* **Installation steps in Windows**
-
-		 *Compatibility:* > OpenCV 2.0
-
-		 You will learn how to setup OpenCV in your Windows Operating System!
-
-     =========== ======================================================
-
-     .. |Install_2| image:: images/windows_logo.jpg
-                    :height: 120px
-
-
-* **USAGE AND COMPILATION**
-
-  * :ref:`Linux_GCC_Usage`
-
-     =========== ======================================================
-      |Usage_1|  *Title:* **Using OpenCV with gcc (and CMake)**
-
-	         *Compatibility:* > OpenCV 2.0
-
-	         We will learn how to compile your first project using gcc and CMake
-    
-     =========== ======================================================
-    
-     .. |Usage_1| image:: images/gccegg-65-2.png
-                  :height: 120px
-
-
-  * :ref:`Linux_Eclipse_Usage`
-
-     =========== ======================================================
-      |Usage_2|  *Title:* **Using OpenCV with Eclipse (CDT plugin)**
-
-	         *Compatibility:* > OpenCV 2.0
-
-	         We will learn how to compile your first project using the Eclipse environment
-    
-     =========== ======================================================
-    
-     .. |Usage_2| image:: images/eclipse_cpp_logo.jpeg
-                  :height: 120px
-
-* **BEGINNERS SECTION**
-
-  * :ref:`Display_Image`
-
-     =============== ======================================================
-      |Beginners_1|  *Title:* **Display an Image**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to display an image using OpenCV
-    
-     =============== ======================================================
-    
-     .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.png
-                      :height: 150px
-
-
-  * :ref:`Load_Save_Image`
-
-     =============== ======================================================
-      |Beginners_2|  *Title:* **Load and save an Image**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
-    
-     =============== ======================================================
-    
-     .. |Beginners_2| image:: images/Load_Save_Image_Result_1.png
-                      :height: 150px
-
-  * :ref:`Basic_Linear_Transform`
-
-     =============== ======================================================
-      |Beginners_3|  *Title:* **Changing the contrast and brightness of an image**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to change our image appearance!
-    
-     =============== ======================================================
-    
-     .. |Beginners_3| image:: images/Basic_Linear_Transform_Tutorial_Result_0.png
-                      :height: 200px
-
-
-  * :ref:`Adding_Images`
-
-     =============== ======================================================
-      |Beginners_4|  *Title:* **Linear Blending**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to blend two images!
-    
-     =============== ======================================================
-    
-     .. |Beginners_4| image:: images/Adding_Images_Tutorial_Result_0.png
-                      :height: 200px
-
-
-  * :ref:`Adding_Trackbars`
-
-     =============== ======================================================
-      |Beginners_5|  *Title:* **Creating Trackbars**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to add a Trackbar to our applications
-    
-     =============== ======================================================
-    
-     .. |Beginners_5| image:: images/Adding_Trackbars_Tutorial_Cover.png
-                      :height: 200px
-
-  * :ref:`Drawing_1`
-
-     =============== ======================================================
-      |Beginners_6|  *Title:* **Basic Drawing**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will learn how to draw simple geometry with OpenCV!
-    
-     =============== ======================================================
-    
-     .. |Beginners_6| image:: images/Drawing_1_Tutorial_Result_0.png
-                      :height: 200px
-
-  * :ref:`Drawing_2`
-
-     =============== ======================================================
-      |Beginners_7|  *Title:* **Cool Drawing**
-
-	             *Compatibility:* > OpenCV 2.0
-
-	             We will draw some *fancy-looking* stuff using OpenCV!
-    
-     =============== ======================================================
-    
-     .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.png
-                      :height: 200px
-
-
-* **IMAGE PROCESSING**
-
-  * :ref:`Smoothing`
-
-     ===================== ======================================================
-      |ImageProcessing_1|  *Title:* **Smoothing Images**
-
-	                   *Compatibility:* > OpenCV 2.0
-
-                 	   Let's take a look at some basic linear filters!
-    
-     ===================== ======================================================
-    
-     .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.png
-                            :height: 200px
-
-
-  * :ref:`Morphology_1`
-
-     ===================== ======================================================
-      |ImageProcessing_2|  *Title:* **Erosion and Dilation**
-
-	                   *Compatibility:* > OpenCV 2.0
-
-                 	   Let's *change* the shape of objects!
-    
-     ===================== ======================================================
-    
-     .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.png
-                            :height: 200px
-
-
 .. toctree::
+   :maxdepth: 2
    :hidden:
+   
+   introduction/table_of_content_introduction/table_of_content_introduction
+   core/table_of_content_core/table_of_content_core
+   imgproc/table_of_content_imgproc/table_of_content_imgproc
+   highgui/table_of_content_highgui/table_of_content_highgui
+   calib3d/table_of_content_calib3d/table_of_content_calib3d
+   features2d/table_of_content_features2d/table_of_content_features2d
+   video/table_of_content_video/table_of_content_video
+   objdetect/table_of_content_objdetect/table_of_content_objdetect
+   ml/table_of_content_ml/table_of_content_ml
+   gpu/table_of_content_gpu/table_of_content_gpu
+   general/table_of_content_general/table_of_content_general
+   
+*  :ref:`Table-Of-Content-Introduction`
 
-   Linux_Installation.rst
-   Windows_Installation.rst
-   Linux_GCC_Usage.rst
-   Linux_Eclipse_Usage.rst
-   Display_Image.rst
-   Load_Save_Image.rst
-   Basic_Linear_Transform.rst
-   Adding_Images.rst
-   Adding_Trackbars.rst
-   Drawing_1.rst
-   Drawing_2.rst
-   Smoothing.rst
-   Morphology_1.rst
+   =========== =======================================================
+   |Introduct| You will learn how to setup OpenCV on your computer!
+  
+   =========== =======================================================
+  
+   .. |Introduct| image:: images/introduction.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: Introduction Icon
+
+*  :ref:`Table-Of-Content-Core`
+
+   =========== =======================================================
+   |Core|      Here you will learn the about the basic building blocks of the library. A must read and know for     understanding how to manipulate the images on a pixel level.
+  
+   =========== =======================================================
+  
+   .. |Core| image:: images/core.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: core Icon
+
+*  :ref:`Table-Of-Content-ImgProc`
+
+   =========== =======================================================
+   |ImgProc|   In this section you will learn about the image processing (manipulation) functions inside OpenCV.
+  
+   =========== =======================================================
+  
+   .. |ImgProc| image:: images/imgproc.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: imgproc Icon
+
+*  :ref:`Table-Of-Content-HighGui`
+
+   =========== =======================================================
+   |HighGui|   This section contains valuable tutorials about how to read/save your image/video files and how to use the built-in graphical user interface of the library. 
+  
+   =========== =======================================================
+  
+   .. |HighGui| image:: images/highgui.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: highgui Icon
+
+*  :ref:`Table-Of-Content-Calib3D`
+
+   =========== =======================================================
+   |Calib3D|   Although we got most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out from the 2D images information about the 3D world. 
+  
+   =========== =======================================================
+  
+   .. |Calib3D| image:: images/calib3d.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: calib3d Icon
+
+*  :ref:`Table-Of-Content-Feature2D`
+
+   =========== =======================================================
+   |Featur2D|  Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.
+  
+   =========== =======================================================
+  
+   .. |Featur2D| image:: images/feature2D.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: feature2D Icon
+
+*  :ref:`Table-Of-Content-Video`
+
+   =========== =======================================================
+   |Video|     Look here in order to find use on your video stream algoritms like: motion extraction, feature tracking and foreground extractions. 
+  
+   =========== =======================================================
+  
+   .. |Video| image:: images/video.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: video Icon
+
+*  :ref:`Table-Of-Content-ObjDetect`
+
+   =========== =======================================================
+   |ObjDetect| Ever wondered how your digital camera detects peoples and faces? Look here to find out!
+  
+   =========== =======================================================
+  
+   .. |ObjDetect| image:: images/objdetect.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: objdetect Icon
+
+*  :ref:`Table-Of-Content-Ml`
+
+   =========== =======================================================
+   |ml|        Use the powerfull machine learning classes for statistical classification, regression and clustering of data.
+  
+   =========== =======================================================
+  
+   .. |ml| image:: images/ml.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: ml Icon
+
+*  :ref:`Table-Of-Content-GPU`
+
+   =========== =======================================================
+   |GPU|       Squeeze out every little computation power from your system by using the power of your video card to run the OpenCV algorithms. 
+  
+   =========== =======================================================
+  
+   .. |GPU| image:: images/gpu.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: gpu icon
+
+*  :ref:`Table-Of-Content-General`
+
+   =========== =======================================================
+   |General|   These tutorials are the bottom of the iceberg as they link together multiple of the modules presented above in order to solve complex problems.
+  
+   =========== =======================================================
+  
+   .. |General| image:: images/general.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: General Icon
