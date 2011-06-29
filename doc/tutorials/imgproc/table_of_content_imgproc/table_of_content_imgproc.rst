@@ -196,3 +196,39 @@ In this section you will learn about the image processing (manipulation) functio
                            :height: 100pt
                            :width:  100pt
 
+
+* :ref:`hough_lines`
+
+  ===================== ==============================================
+   |HoughLines|         *Title:* **Hough Line Transform**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to detect lines
+
+  ===================== ==============================================
+  
+  .. |HoughLines| image:: images/imgtrans/Hough_Lines_Tutorial_Cover.jpg
+                        :height: 100pt
+                        :width:  100pt
+
+
+* :ref:`hough_circle`
+
+  ===================== ==============================================
+   |HoughCircle|        *Title:* **Hough Circle Transform**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to detect circles
+
+  ===================== ==============================================
+  
+  .. |HoughCircle| image:: images/imgtrans/Hough_Circle_Tutorial_Cover.jpg
+                         :height: 100pt
+                         :width:  100pt
+

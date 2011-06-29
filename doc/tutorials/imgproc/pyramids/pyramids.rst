@@ -10,8 +10,8 @@ In this tutorial you will learn how to:
 
 * Use the OpenCV functions :pyr_up:`pyrUp <>` and :pyr_down:`pyrDown <>` to downsample  or upsample a given image.
   
-Cool Theory
-============
+Theory
+=======
 
 .. note::
    The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
