@@ -528,7 +528,7 @@ That's all there is to it!
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 
-#if !defined(_MT) || defined(_DLL) 
+#if !defined(_MT) || defined(_DLL) || defined(_MSC_VER)
 extern "C" { __declspec(dllexport) unsigned int __lc_codepage = 0; }
 #endif
 #ifdef _M_X64
