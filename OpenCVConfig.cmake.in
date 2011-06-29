@@ -15,10 +15,10 @@
 #                                      with this path is NOT needed.
 #      - OpenCV_INCLUDE_DIRS         : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES : The version of compute capability
-#      - OpenCV_VERSION              : The version of this OpenCV build. Example: "2.3.0"
-#      - OpenCV_VERSION_MAJOR        : Major version part of OpenCV_VERSION. Example: "2"
-#      - OpenCV_VERSION_MINOR        : Minor version part of OpenCV_VERSION. Example: "3"
-#      - OpenCV_VERSION_PATCH        : Patch version part of OpenCV_VERSION. Example: "0"
+#      - OpenCV_VERSION              : The version of this OpenCV build. Example: "@OPENCV_VERSION@"
+#      - OpenCV_VERSION_MAJOR        : Major version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_MAJOR@"
+#      - OpenCV_VERSION_MINOR        : Minor version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_MINOR@"
+#      - OpenCV_VERSION_PATCH        : Patch version part of OpenCV_VERSION. Example: "@OPENCV_VERSION_PATCH@"
 #
 #    Advanced variables:
 #      - OpenCV_SHARED
@@ -26,6 +26,7 @@
 #      - OpenCV_INSTALL_PATH
 #      - OpenCV_LIB_COMPONENTS
 #      - OpenCV_EXTRA_COMPONENTS
+#      - OpenCV_USE_MANGLED_PATHS
 #
 # =================================================================================================
 
@@ -37,6 +38,9 @@ SET(OpenCV_COMPUTE_CAPABILITIES @OpenCV_CUDA_CC@)
 
 # Some additional settings are required if OpenCV is built as static libs
 set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
+
+# Enables mangled install paths, that help with side by side installs
+set(OpenCV_USE_MANGLED_PATHS @OPENCV_MANGLED_INSTALL_PATHS@)
 
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
@@ -71,7 +75,7 @@ ELSEIF(NOT OpenCV_SHARED)
     LIST(APPEND OpenCV_LIB_COMPONENTS opencv_androidcamera)
 endif()
 
-if(@OPENCV_MANGLED_INSTALL_PATHS@)
+if(OpenCV_USE_MANGLED_PATHS)
       #be explicit about the library names.
       set(OpenCV_LIB_COMPONENTS_ )
       foreach( CVLib ${OpenCV_LIB_COMPONENTS})
@@ -118,7 +122,7 @@ IF (NOT OpenCV_SHARED)
     set(OpenCV_LIBS @OPENCV_LINKER_LIBS@ @IPP_LIBS@ @HIGHGUI_LIBRARIES@ ${OpenCV_LIBS})
     set(OpenCV_EXTRA_COMPONENTS @JPEG_LIBRARIES@ @PNG_LIBRARIES@ @TIFF_LIBRARIES@ @JASPER_LIBRARIES@ @ZLIB_LIBRARY@)
 
-    if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 2.4)
+    if (WIN32 AND ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 2.4)
         # Modern CMake:
         foreach(__EXTRA_LIB ${OpenCV_EXTRA_COMPONENTS})
             set(OpenCV_LIBS ${OpenCV_LIBS}

@@ -8,11 +8,9 @@
 #   - OCT-2008: Initial version <joseluisblancoc@gmail.com>
 #
 # ----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 2.4)
-project(OpenCV)
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
-set(OPENCV_INCLUDE_PREFIX include)
+
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
 if(UNIX)
@@ -55,40 +53,8 @@ if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
 
-# SUBDIRECTORIES:
-# Save libs and executables in the same place
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
-
-if(ANDROID)
-    set(OPENCV_DOC_INSTALL_PATH doc)
-elseif(WIN32)
-    set(OPENCV_DOC_INSTALL_PATH doc)
-else()
-    set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
-endif()
-
-if(ANDROID)
-    set(OPENCV_LIB_INSTALL_PATH libs/${ARMEABI_NDK_NAME})
-else()
-    set(OPENCV_LIB_INSTALL_PATH lib)
-endif()
-
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# in case of cross compilation this macro will search packages
-# for host system instead of packages for target system
-if(NOT COMMAND find_host_package)
-    macro(find_host_package)
-        find_package(${ARGN})
-    endmacro()
-endif()
-if(NOT COMMAND find_host_program)
-    macro(find_host_program)
-        find_program(${ARGN})
-    endmacro()
-endif()
+cmake_minimum_required(VERSION 2.4)
+project(OpenCV)
 
 # --------------------------------------------------------------
 # Indicate CMake 2.7 and above that we don't want to mix relative
@@ -98,6 +64,12 @@ endif()
 if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif()
+
+# ----------------------------------------------------------------------------
+# Build static or dynamic libs?
+# Default: dynamic libraries
+# ----------------------------------------------------------------------------
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
 # ----------------------------------------------------------------------------
 #  Current version number:
@@ -124,19 +96,52 @@ else()
 endif()
 
 #name mangling
-if(UNIX)
+set(OPENCV_INCLUDE_PREFIX include)
+if(UNIX AND NOT ANDROID AND BUILD_SHARED_LIBS)
     option(OPENCV_MANGLED_INSTALL_PATHS "Enables mangled install paths, that help with side by side installs" False)
     if(OPENCV_MANGLED_INSTALL_PATHS)
       set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
-      set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
     endif()
 endif()
 
-# ----------------------------------------------------------------------------
-# Build static or dynamic libs?
-# Default: dynamic libraries
-# ----------------------------------------------------------------------------
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+# SUBDIRECTORIES:
+# Save libs and executables in the same place
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
+
+if(ANDROID)
+    set(OPENCV_DOC_INSTALL_PATH doc)
+elseif(WIN32)
+    set(OPENCV_DOC_INSTALL_PATH doc)
+else()
+    if(OPENCV_MANGLED_INSTALL_PATHS)
+        set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
+    else()
+        set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
+    endif()
+endif()
+
+if(ANDROID)
+    set(OPENCV_LIB_INSTALL_PATH libs/${ARMEABI_NDK_NAME})
+else()
+    set(OPENCV_LIB_INSTALL_PATH lib)
+endif()
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# in case of cross compilation this macro will search packages
+# for host system instead of packages for target system
+if(NOT COMMAND find_host_package)
+    macro(find_host_package)
+        find_package(${ARGN})
+    endmacro()
+endif()
+if(NOT COMMAND find_host_program)
+    macro(find_host_program)
+        find_program(${ARGN})
+    endmacro()
+endif()
 
 # ----------------------------------------------------------------------------
 # Use statically or dynamically linked CRT?
@@ -1191,7 +1196,6 @@ if(UNIX)
     install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION share/OpenCV/)
     install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION share/OpenCV/)
   endif()
-
 endif()
 
 if(ANDROID)
@@ -1266,7 +1270,7 @@ endif(ANDROID)
 #  The package name specified on the pkg-config command line is defined to
 #      be the name of the metadata file, minus the .pc extension. If a library
 #      can install multiple versions simultaneously, it must give each version
-#     its own name (for example, GTK 1.2 might have the package  name  "gtk+"
+#      its own name (for example, GTK 1.2 might have the package  name  "gtk+"
 #      while GTK 2.0 has "gtk+-2.0").
 #  Part 2/2: ${BIN_DIR}/unix-install/opencv.pc -> For use *with* "make install"
 # prefix=/usr
@@ -1277,8 +1281,8 @@ endif(ANDROID)
 set(prefix      ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "\${prefix}")
 set(libdir      "\${exec_prefix}/lib")
-set(includedir      "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
-set(VERSION             ${OPENCV_VERSION})
+set(includedir  "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
+set(VERSION     ${OPENCV_VERSION})
 
 set(OPENCV_PC_FILE_NAME "opencv.pc")
 #need to be explicit with naming the pc file and version number for side by side installs to work.
