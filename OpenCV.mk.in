@@ -14,7 +14,11 @@ OPENCV_MODULES := contrib calib3d objdetect features2d imgproc video  highgui ml
 ifeq ($(TARGET_ARCH_ABI),armeabi)
 OPENCV_CAMERA_MODULES:=
 else
+ifeq (${OPENCV_CAMERA_MODULES},off)
+OPENCV_CAMERA_MODULES:=
+else
 OPENCV_CAMERA_MODULES:=@CMAKE_CAMERA_LIBS_CONFIGCMAKE@
+endif
 endif
 
 OPENCV_LIB_TYPE:=@OPENCV_LIBTYPE_CONFIGMAKE@
