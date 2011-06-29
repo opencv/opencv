@@ -478,7 +478,7 @@ TEST_P(Compare, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Compare, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)));
+                        testing::Values((int)cv::CMP_EQ, (int)cv::CMP_GT, (int)cv::CMP_GE, (int)cv::CMP_LT, (int)cv::CMP_LE, (int)cv::CMP_NE)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanStdDev
