@@ -9,36 +9,36 @@ import android.view.Window;
 
 public class Sample0Base extends Activity {
     private static final String TAG = "Sample0Base::Activity";
-    
-	public static final int view_mode_rgba = 0;
-	public static final int view_mode_gray = 1;
-	
-	private MenuItem item_preview_rgba;
-	private MenuItem item_preview_gray;
-	
-	public int view_mode;
-	
+
+    public static final int VIEW_MODE_RGBA = 0;
+    public static final int VIEW_MODE_GRAY = 1;
+
+    private MenuItem mItemPreviewRGBA;
+    private MenuItem mItemPreviewGray;
+
+    public int viewMode;
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView( new Sample0View(this) );
-        view_mode = view_mode_rgba;
+        setContentView(new Sample0View(this));
+        viewMode = VIEW_MODE_RGBA;
     }
-    
+
     public boolean onCreateOptionsMenu(Menu menu) {
-    	item_preview_rgba = menu.add("Preview RGBA");
-    	item_preview_gray = menu.add("Preview GRAY");
-		return true;
+        mItemPreviewRGBA = menu.add("Preview RGBA");
+        mItemPreviewGray = menu.add("Preview GRAY");
+        return true;
     }
-    
-    public boolean onOptionsItemSelected (MenuItem item) {
-    	Log.i(TAG, "Menu Item selected " + item);
-    	if (item == item_preview_rgba)
-    		view_mode = view_mode_rgba;
-    	else if (item == item_preview_gray)
-    		view_mode = view_mode_gray;
-		return true;
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.i(TAG, "Menu Item selected " + item);
+        if (item == mItemPreviewRGBA)
+            viewMode = VIEW_MODE_RGBA;
+        else if (item == mItemPreviewGray)
+            viewMode = VIEW_MODE_GRAY;
+        return true;
     }
 }
