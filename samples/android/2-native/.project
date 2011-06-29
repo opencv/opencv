@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Sample 1 Java API</name>
+	<name>Sample 2 Native API</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -30,11 +30,4 @@
 		<nature>com.android.ide.eclipse.adt.AndroidNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>OpenCVJavaAPI_src</name>
-			<type>2</type>
-			<locationURI>_android_OpenCVJavaAPI_583dbd7b/src</locationURI>
-		</link>
-	</linkedResources>
 </projectDescription>
