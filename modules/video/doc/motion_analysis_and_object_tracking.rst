@@ -81,7 +81,7 @@ The function finds an optical flow for each ``prevImg`` pixel using the [Farneba
 
 .. math::
 
-    \texttt{prevImg} (x,y)  \sim \texttt{nextImg} ( \texttt{flow} (x,y)[0],  \texttt{flow} (x,y)[1])
+    \texttt{prevImg} (y,x)  \sim \texttt{nextImg} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])
 
 
 
@@ -441,7 +441,7 @@ Re-initializes Kalman filter. The previous content is destroyed.
 
 .. ocv:function:: void KalmanFilter::init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
 
-    :param dynamParams: Dimensionality of the state.
+    :param dynamParams: Dimensionalityensionality of the state.
     
     :param measureParams: Dimensionality of the measurement.
     

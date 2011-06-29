@@ -19,7 +19,7 @@ Default and training constructors.
 
 .. ocv:function:: CvKNearest::CvKNearest( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int max_k=32 )
 
-.. ocv:cfunction:: CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
+.. ocv:function::CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
 
 See :ocv:func:`CvKNearest::train` for additional parameters descriptions.
 
@@ -29,9 +29,9 @@ Trains the model.
 
 .. ocv:function:: bool CvKNearest::train( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int maxK=32, bool updateBase=false )
 
-.. ocv:pyfunction:: cv2.KNearest.train(trainData, responses[, sampleIdx[, isRegression[, maxK[, updateBase]]]]) -> retval
+.. ocv:function::bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
 
-.. ocv:cfunction:: bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
+.. ocv:pyfunction:: cv2.KNearest.train(trainData, responses[, sampleIdx[, isRegression[, maxK[, updateBase]]]]) -> retval
 
     :param isRegression: Type of the problem: ``true`` for regression and ``false`` for classification.
 
@@ -54,9 +54,10 @@ Finds the neighbors and predicts responses for input vectors.
 
 .. ocv:function:: float CvKNearest::find_nearest( const Mat& samples, int k, Mat& results, Mat& neighborResponses, Mat& dists) const
 
+.. ocv:function::float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
+
 .. ocv:pyfunction:: cv2.KNearest.find_nearest(samples, k[, results[, neighborResponses[, dists]]]) -> retval, results, neighborResponses, dists
 
-.. ocv:cfunction:: float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
 
     :param samples: Input samples stored by rows. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times number\_of\_features` size.
 

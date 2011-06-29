@@ -224,7 +224,7 @@ Returns one of the edges related to the given edge.
 
         * **CV_PREV_AROUND_RIGHT** previous around the right facet (reversed  ``eDnext`` )
 
-.. image:: ../pics/quadedge.png
+.. image:: pics/quadedge.png
 
 The function returns one of the edges related to the input edge.
 
@@ -236,8 +236,6 @@ Returns next edge around the edge origin
 .. ocv:pyoldfunction:: cv.Subdiv2DNextEdge(edge)-> CvSubdiv2DEdge
 
     :param edge: Subdivision edge (not a quad-edge)
-
-.. image:: ../pics/quadedge.png
 
 The function returns the next edge around the edge origin: 
 ``eOnext``
@@ -311,8 +309,6 @@ Returns another edge of the same quad-edge.
             * **2** the reversed edge (reversed  ``e``  (in green))
 
             * **3** the reversed rotated edge (reversed  ``eRot``  (in green))
-
-.. image:: ../pics/quadedge.png
 
 The function returns one of the edges of the same quad-edge as the input edge.
 

@@ -23,7 +23,7 @@ Default and training constructors.
 
 .. ocv:function:: CvNormalBayesClassifier::CvNormalBayesClassifier( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat() )
 
-.. ocv:cfunction:: CvNormalBayesClassifier::CvNormalBayesClassifier( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0 )
+.. ocv:function::CvNormalBayesClassifier::CvNormalBayesClassifier( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0 )
 
 .. ocv:pyfunction:: cv2.NormalBayesClassifier(trainData, responses[, varIdx[, sampleIdx]]) -> <NormalBayesClassifier object>
 
@@ -35,9 +35,9 @@ Trains the model.
 
 .. ocv:function:: bool CvNormalBayesClassifier::train( const Mat& trainData, const Mat& responses, const Mat& varIdx = Mat(), const Mat& sampleIdx=Mat(), bool update=false )
 
-.. ocv:pyfunction:: cv2.NormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
+.. ocv:function::bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
 
-.. ocv:cfunction:: bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
+.. ocv:pyfunction:: cv2.NormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
 
     :param update: Identifies whether the model should be trained from scratch (``update=false``) or should be updated using the new training data (``update=true``).
 
@@ -54,9 +54,9 @@ Predicts the response for sample(s).
 
 .. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
-.. ocv:pyfunction:: cv2.NormalBayesClassifier.predict(samples) -> retval, results
+.. ocv:function::float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
 
-.. ocv:cfunction:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
+.. ocv:pyfunction:: cv2.NormalBayesClassifier.predict(samples) -> retval, results
 
 The method estimates the most probable classes for input vectors. Input vectors (one or more) are stored as rows of the matrix ``samples``. In case of multiple input vectors, there should be one output vector ``results``. The predicted class for a single input vector is returned by the method.
 

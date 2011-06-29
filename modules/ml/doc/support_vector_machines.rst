@@ -158,7 +158,7 @@ Default and training constructors.
 
 .. ocv:function:: CvSVM::CvSVM( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), CvSVMParams params=CvSVMParams() )
 
-.. ocv:cfunction:: CvSVM::CvSVM( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
+.. ocv:function::CvSVM::CvSVM( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
 
 .. ocv:pyfunction:: cv2.SVM(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> <SVM object>
 
@@ -170,7 +170,7 @@ Trains an SVM.
 
 .. ocv:function:: bool CvSVM::train( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), CvSVMParams params=CvSVMParams() )
 
-.. ocv:cfunction:: bool CvSVM::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
+.. ocv:function::bool CvSVM::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
 
 .. ocv:pyfunction:: cv2.SVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
 
@@ -194,7 +194,7 @@ Trains an SVM with optimal parameters.
 
 .. ocv:function:: bool CvSVM::train_auto( const Mat& trainData, const Mat& responses, const Mat& varIdx, const Mat& sampleIdx, CvSVMParams params, int k_fold = 10, CvParamGrid Cgrid = CvSVM::get_default_grid(CvSVM::C), CvParamGrid gammaGrid = CvSVM::get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = CvSVM::get_default_grid(CvSVM::P), CvParamGrid nuGrid  = CvSVM::get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = CvSVM::get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE), bool balanced=false)
 
-.. ocv:cfunction:: bool CvSVM::train_auto( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx, const CvMat* sampleIdx, CvSVMParams params, int kfold = 10, CvParamGrid Cgrid = get_default_grid(CvSVM::C), CvParamGrid gammaGrid = get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = get_default_grid(CvSVM::P), CvParamGrid nuGrid = get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE), bool balanced=false )
+.. ocv:function::bool CvSVM::train_auto( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx, const CvMat* sampleIdx, CvSVMParams params, int kfold = 10, CvParamGrid Cgrid = get_default_grid(CvSVM::C), CvParamGrid gammaGrid = get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = get_default_grid(CvSVM::P), CvParamGrid nuGrid = get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE), bool balanced=false )
 
 .. ocv:pyfunction:: cv2.SVM.train_auto(trainData, responses, varIdx, sampleIdx, params[, k_fold[, Cgrid[, gammaGrid[, pGrid[, nuGrid[, coeffGrid[, degreeGrid[, balanced]]]]]]]]) -> retval
 
@@ -226,9 +226,9 @@ Predicts the response for input sample(s).
 
 .. ocv:function:: float CvSVM::predict( const Mat& sample, bool returnDFVal=false ) const
 
-.. ocv:cfunction:: float CvSVM::predict( const CvMat* sample, bool returnDFVal=false ) const
+.. ocv:function::float CvSVM::predict( const CvMat* sample, bool returnDFVal=false ) const
 
-.. ocv:cfunction:: float CvSVM::predict( const CvMat* samples, CvMat* results ) const
+.. ocv:function::float CvSVM::predict( const CvMat* samples, CvMat* results ) const
 
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 

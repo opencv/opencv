@@ -227,11 +227,11 @@ Trains a decision tree.
 
 .. ocv:function:: bool CvDTree::train( const Mat& train_data,  int tflag, const Mat& responses,  const Mat& var_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:cfunction:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
+.. ocv:function::bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:cfunction:: bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
+.. ocv:function::bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:cfunction:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
+.. ocv:function::bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
 
 .. ocv:pyfunction:: cv2.DTree.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
 
@@ -251,7 +251,7 @@ Returns the leaf node of a decision tree corresponding to the input vector.
 
 .. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missingDataMask=Mat(), bool preprocessedInput=false ) const
 
-.. ocv:cfunction:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
+.. ocv:function::CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
 
 .. ocv:pyfunction:: cv2.DTree.predict(sample[, missingDataMask[, preprocessedInput]]) -> retval
 
@@ -269,7 +269,7 @@ CvDTree::calc_error
 -------------------
 Returns error of the decision tree.
 
-.. ocv:cfunction:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
+.. ocv:function::float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
 
     :param data: Data for the decision tree.
     
@@ -290,7 +290,7 @@ Returns the variable importance array.
 
 .. ocv:function:: Mat CvDTree::getVarImportance()
 
-.. ocv:cfunction:: const CvMat* CvDTree::get_var_importance()
+.. ocv:function::const CvMat* CvDTree::get_var_importance()
 
 .. ocv:pyfunction:: cv2.DTree.getVarImportance() -> importanceVector
 
@@ -313,7 +313,7 @@ CvDTree::get_data
 -----------------
 Returns used train data of the decision tree.
 
-.. ocv:cfunction:: const CvDTreeTrainData* CvDTree::get_data() const
+.. ocv:function::const CvDTreeTrainData* CvDTree::get_data() const
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.

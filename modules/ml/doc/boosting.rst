@@ -142,7 +142,7 @@ Default and training constructors.
 
 .. ocv:function:: CvBoost::CvBoost( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams() )
 
-.. ocv:cfunction:: CvBoost::CvBoost( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams() )
+.. ocv:function::CvBoost::CvBoost( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams() )
 
 .. ocv:pyfunction:: cv2.Boost(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> <Boost object>
 
@@ -155,11 +155,11 @@ Trains a boosted tree classifier.
 
 .. ocv:function:: bool CvBoost::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
+.. ocv:function::bool CvBoost::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams(), bool update=false )
+
+.. ocv:function::bool CvBoost::train( CvMLData* data, CvBoostParams params=CvBoostParams(), bool update=false )
+
 .. ocv:pyfunction:: cv2.Boost.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
-
-.. ocv:cfunction:: bool CvBoost::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams(), bool update=false )
-
-.. ocv:cfunction:: bool CvBoost::train( CvMLData* data, CvBoostParams params=CvBoostParams(), bool update=false )
 
     :param update: Specifies whether the classifier needs to be updated (``true``, the new weak tree classifiers added to the existing ensemble) or the classifier needs to be rebuilt from scratch (``false``).
 
@@ -171,7 +171,7 @@ Predicts a response for an input sample.
 
 .. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
-.. ocv:cfunction:: float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
+.. ocv:function::float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
 
 .. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
 
@@ -193,7 +193,7 @@ CvBoost::prune
 --------------
 Removes the specified weak classifiers.
 
-.. ocv:cfunction:: void CvBoost::prune( CvSlice slice )
+.. ocv:function::void CvBoost::prune( CvSlice slice )
 
 .. ocv:pyfunction:: cv2.Boost.prune(slice) -> None
 
@@ -208,7 +208,7 @@ CvBoost::calc_error
 -------------------
 Returns error of the boosted tree classifier.
 
-.. ocv:cfunction:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
+.. ocv:function::float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
 
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the boosted tree classifier as predictor.
 
@@ -217,7 +217,7 @@ CvBoost::get_weak_predictors
 ----------------------------
 Returns the sequence of weak tree classifiers.
 
-.. ocv:cfunction:: CvSeq* CvBoost::get_weak_predictors()
+.. ocv:function::CvSeq* CvBoost::get_weak_predictors()
 
 The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the :ocv:class:`CvBoostTree` class or to some of its derivatives.
 
@@ -232,5 +232,5 @@ CvBoost::get_data
 -----------------
 Returns used train data of the boosted tree classifier.
 
-.. ocv:cfunction:: const CvDTreeTrainData* CvBoost::get_data() const
+.. ocv:function::const CvDTreeTrainData* CvBoost::get_data() const
 
