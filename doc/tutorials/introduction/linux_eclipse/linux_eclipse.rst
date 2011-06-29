@@ -111,19 +111,19 @@ Making a project
 
 #. We are only missing one final step: To tell OpenCV where the OpenCV headers and libraries are. For this, do the following:
 
-   * Go to  **Project-->Properties**
+    *
+      Go to  **Project-->Properties**
 
-     .. image:: images/Eclipse_Tutorial_Screenshot-8.png
-        :height: 400px 
-        :alt: Eclipse Tutorial Screenshot 8
-        :align: center
+      .. image:: images/Eclipse_Tutorial_Screenshot-8.png
+         :height: 400px 
+         :alt: Eclipse Tutorial Screenshot 8
+         :align: center
 
-    * In **C/C++ Build**, click on **Settings**. At the right, choose the **Tool Settings** Tab. Here we will enter the headers and libraries info:
+    *
+      In **C/C++ Build**, click on **Settings**. At the right, choose the **Tool Settings** Tab. Here we will enter the headers and libraries info:
 
-      a. In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should include the path of the folder where opencv was installed. In our example, this is: 
-         ::
-
-         /usr/local/include/opencv
+      a.
+        In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should include the path of the folder where opencv was installed. In our example, this is ``/usr/local/include/opencv``.
 
          .. image:: images/Eclipse_Tutorial_Screenshot-9.png
             :height: 400px 
@@ -144,48 +144,52 @@ Making a project
                -I/usr/local/include/opencv -I/usr/local/include 
 
         
-      b. Now go to **GCC C++ Linker**,there you have to fill two spaces:
+      b.
+        Now go to **GCC C++ Linker**,there you have to fill two spaces:
 
           * In **Library search path (-L)** you have to write the path to where the opencv libraries reside, in my case the path is:
             ::
           
-            /usr/local/lib
+                /usr/local/lib
+                
+            ..
 
-          * In **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first on the list below are enough (for simple applications) . In my case, I am putting all of them since I plan to use the whole bunch:
+          *
+            In **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first on the list below are enough (for simple applications) . In my case, I am putting all of them since I plan to use the whole bunch:
 
 
-            * opencv_core      
-            * opencv_imgproc     
-            * opencv_highgui
-            * opencv_ml       
-            * opencv_video      
-            * opencv_features2d
-            * opencv_calib3d   
-            * opencv_objdetect   
-            * opencv_contrib
-            * opencv_legacy    
-            * opencv_flann
+              * opencv_core      
+              * opencv_imgproc     
+              * opencv_highgui
+              * opencv_ml       
+              * opencv_video      
+              * opencv_features2d
+              * opencv_calib3d   
+              * opencv_objdetect   
+              * opencv_contrib
+              * opencv_legacy    
+              * opencv_flann
           
-          .. image:: images/Eclipse_Tutorial_Screenshot-10.png
-             :height: 400px 
-             :alt: Eclipse Tutorial Screenshot 10
-             :align: center 
+            .. image:: images/Eclipse_Tutorial_Screenshot-10.png
+               :height: 400px 
+               :alt: Eclipse Tutorial Screenshot 10
+               :align: center 
 
-          .. note::
+            .. note::
 
-             If you don't know where your libraries are (or you are just psychotic and want to make sure the path is fine), type in **Terminal**:
+               If you don't know where your libraries are (or you are just psychotic and want to make sure the path is fine), type in **Terminal**:
 
-             .. code-block:: bash
+               .. code-block:: bash
             
-                pkg-config --libs opencv
+                  pkg-config --libs opencv
 
-             My output (in case you want to check) was:
+               My output (in case you want to check) was:
 
-             .. code-block:: bash
+               .. code-block:: bash
 
-                -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann  
+                  -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann  
 
-          Now you are done. Click **OK**
+            Now you are done. Click **OK**
 
     * Your project should be ready to be built. For this, go to **Project->Build all**   
  
