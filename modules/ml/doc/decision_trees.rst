@@ -179,7 +179,7 @@ The constructors.
 
     :param truncate_pruned_tree: If true then pruned branches are physically removed from the tree. Otherwise they are retained and it is possible to get results from the original unpruned (or pruned less aggressively) tree by decreasing ``CvDTree::pruned_tree_idx`` parameter.
 
-    :param priors: The array of a priori class probabilities, sorted by the class label value. The parameter can be used to tune the decision tree preferences toward a certain class. For example, if users want to detect some rare anomaly occurrence, the training base will likely contain much more normal cases than anomalies, so a very good classification performance will be achieved just by considering every case as normal. To avoid this, the priors can be specified, where the anomaly probability is artificially increased (up to 0.5 or even greater), so the weight of the misclassified anomalies becomes much bigger, and the tree is adjusted properly. You can also think about this parameter as weights of prediction categories which determine relative weights that you give to misclassification. That is, if the weight of the first category is 1 and the weight of the second category is 10, then each mistake in predicting the second category is equivalent to making 10 mistakes in predicting the first category.
+    :param priors: The array of a priori class probabilities, sorted by the class label value. The parameter can be used to tune the decision tree preferences toward a certain class. For example, if you want to detect some rare anomaly occurrence, the training base will likely contain much more normal cases than anomalies, so a very good classification performance will be achieved just by considering every case as normal. To avoid this, the priors can be specified, where the anomaly probability is artificially increased (up to 0.5 or even greater), so the weight of the misclassified anomalies becomes much bigger, and the tree is adjusted properly. You can also think about this parameter as weights of prediction categories which determine relative weights that you give to misclassification. That is, if the weight of the first category is 1 and the weight of the second category is 10, then each mistake in predicting the second category is equivalent to making 10 mistakes in predicting the first category.
 
 The default constructor initializes all the parameters with the default values tuned for the standalone classification tree:
 
@@ -229,21 +229,21 @@ Trains a decision tree.
 
 .. ocv:function:: bool CvDTree::train( const Mat& train_data,  int tflag, const Mat& responses,  const Mat& var_idx=Mat(), const Mat& sample_idx=Mat(), const Mat& var_type=Mat(), const Mat& missing_mask=Mat(), CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:function:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
+.. ocv:cfunction:: bool CvDTree::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:function:: bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
+.. ocv:cfunction:: bool CvDTree::train( CvMLData* trainData, CvDTreeParams params=CvDTreeParams() )
 
-.. ocv:function:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
+.. ocv:cfunction:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
 
 .. ocv:pyfunction:: cv2.CvDTree.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
 
 There are four ``train`` methods in :ocv:class:`CvDTree`:
 
-* The **first two** methods follow the generic ``CvStatModel::train`` conventions. It is the most complete form. Both data layouts (``tflag=CV_ROW_SAMPLE`` and ``tflag=CV_COL_SAMPLE``) are supported, as well as sample and variable subsets, missing measurements, arbitrary combinations of input and output variable types, and so on. The last parameter contains all of the necessary training parameters (see the :ref:`CvDTreeParams` description).
+* The **first two** methods follow the generic :ocv:func:`CvStatModel::train` conventions. It is the most complete form. Both data layouts (``tflag=CV_ROW_SAMPLE`` and ``tflag=CV_COL_SAMPLE``) are supported, as well as sample and variable subsets, missing measurements, arbitrary combinations of input and output variable types, and so on. The last parameter contains all of the necessary training parameters (see the :ocv:class:`CvDTreeParams` description).
 
 * The **third** method uses :ocv:class:`CvMLData` to pass training data to a decision tree.
 
-* The **last** method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed :ref:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``subsampleIdx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``subsampleIdx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
+* The **last** method ``train`` is mostly used for building tree ensembles. It takes the pre-constructed :ocv:class:`CvDTreeTrainData` instance and an optional subset of the training set. The indices in ``subsampleIdx`` are counted relatively to the ``_sample_idx`` , passed to the ``CvDTreeTrainData`` constructor. For example, if ``_sample_idx=[1, 5, 7, 100]`` , then ``subsampleIdx=[0,3]`` means that the samples ``[1, 100]`` of the original training set are used.
 
 
 
@@ -251,19 +251,19 @@ CvDTree::predict
 ----------------
 Returns the leaf node of a decision tree corresponding to the input vector.
 
-.. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missing_data_mask=Mat(), bool raw_mode=false ) const
+.. ocv:function:: CvDTreeNode* CvDTree::predict( const Mat& sample, const Mat& missingDataMask=Mat(), bool preprocessedInput=false ) const
 
-.. ocv:function:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
+.. ocv:cfunction:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
 
 .. ocv:pyfunction:: cv2.CvDTree.predict(sample[, missingDataMask[, preprocessedInput]]) -> retval
 
     :param sample: Sample for prediction.
 
-    :param missing_data: Optional input missing measurement mask.
+    :param missingDataMask: Optional input missing measurement mask.
 
     :param preprocessedInput: This parameter is normally set to ``false``, implying a regular input. If it is ``true``, the method assumes that all the values of the discrete input variables have been already normalized to :math:`0` to :math:`num\_of\_categories_i-1` ranges since the decision tree uses such normalized representation internally. It is useful for faster prediction with tree ensembles. For ordered input variables, the flag is not used.
        
-The method traverses the decision tree and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the :ref:`CvDTreeNode` structure, for example: ``dtree->predict(sample,mask)->value``.
+The method traverses the decision tree and returns the reached leaf node as output. The prediction result, either the class label or the estimated function value, may be retrieved as the ``value`` field of the :ocv:class:`CvDTreeNode` structure, for example: ``dtree->predict(sample,mask)->value``.
 
 
 
@@ -271,7 +271,7 @@ CvDTree::calc_error
 -------------------
 Returns error of the decision tree.
 
-.. ocv:function:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
+.. ocv:cfunction:: float CvDTree::calc_error( CvMLData* trainData, int type, std::vector<float> *resp = 0 )
 
     :param data: Data for the decision tree.
     
@@ -292,7 +292,7 @@ Returns the variable importance array.
 
 .. ocv:function:: Mat CvDTree::getVarImportance()
 
-.. ocv:function:: const CvMat* CvDTree::get_var_importance()
+.. ocv:cfunction:: const CvMat* CvDTree::get_var_importance()
 
 
 CvDTree::get_root
@@ -314,7 +314,7 @@ CvDTree::get_data
 -----------------
 Returns used train data of the decision tree.
 
-.. ocv:function:: const CvDTreeTrainData* CvDTree::get_data() const
+.. ocv:cfunction:: const CvDTreeTrainData* CvDTree::get_data() const
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.

@@ -114,19 +114,19 @@ The constructors
 
     :param start_step: The start step of the EM algorithm: 
 
-        * **CvEM::START_E_STEP** Start with Expectation step. You need to provide means :math:`a_k` of mixtures to use this option. Optionally you can pass weights :math:`\pi_k` and covariance matrices :math:`S_k` of mixtures.
+        * **CvEM::START_E_STEP** Start with Expectation step. You need to provide means :math:`a_k` of mixture components to use this option. Optionally you can pass weights :math:`\pi_k` and covariance matrices :math:`S_k` of mixture components.
         * **CvEM::START_M_STEP** Start with Maximization step. You need to provide initial probabilites :math:`p_{i,k}` to use this option.
         * **CvEM::START_AUTO_STEP** Start with Expectation step. You need not provide any parameters because they will be estimated by the k-means algorithm.
 
     :param term_crit: The termination criteria of the EM algorithm. The EM algorithm can be terminated by the number of iterations ``term_crit.max_iter`` (number of M-steps) or when relative change of likelihood logarithm is less than ``term_crit.epsilon``.
 
-    :param probs: Initial probabilities :math:`p_{i,k}` of sample :math:`i` to belong to mixture :math:`k`. It is a floating-point matrix of :math:`nsamples \times nclusters` size. It is used and must be not NULL only when ``start_step=CvEM::START_M_STEP``.
+    :param probs: Initial probabilities :math:`p_{i,k}` of sample :math:`i` to belong to mixture component :math:`k`. It is a floating-point matrix of :math:`nsamples \times nclusters` size. It is used and must be not NULL only when ``start_step=CvEM::START_M_STEP``.
 
-    :param weights: Initial weights of mixtures :math:`\pi_k`. It is a floating-point vector with :math:`nclusters` elements. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``. 
+    :param weights: Initial weights :math:`\pi_k` of mixture components. It is a floating-point vector with :math:`nclusters` elements. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``. 
 
-    :param means: Initial means of mixtures :math:`a_k`. It is a floating-point matrix of :math:`nclusters \times dims` size. It is used used and must be not NULL only when ``start_step=CvEM::START_E_STEP``.
+    :param means: Initial means :math:`a_k` of mixture components. It is a floating-point matrix of :math:`nclusters \times dims` size. It is used used and must be not NULL only when ``start_step=CvEM::START_E_STEP``.
 
-    :param covs: Initial covariance matrices of mixtures :math:`S_k`. Each of covariance matrices is a valid square floating-point matrix of :math:`dims \times dims` size. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``.
+    :param covs: Initial covariance matrices :math:`S_k` of mixture components. Each of covariance matrices is a valid square floating-point matrix of :math:`dims \times dims` size. It is used (if not NULL) only when ``start_step=CvEM::START_E_STEP``.
 
 The default constructor represents a rough rule-of-the-thumb:
 
@@ -167,15 +167,13 @@ Estimates the Gaussian mixture parameters from a sample set.
 
     :param labels: The optional output "class label" for each sample: :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
-    Estimates the Gaussian mixture parameters from a sample set.
-
 Unlike many of the ML models, EM is an unsupervised learning algorithm and it does not take responses (class labels or function values) as input. Instead, it computes the
 *Maximum Likelihood Estimate* of the Gaussian mixture parameters from an input sample set, stores all the parameters inside the structure:
 :math:`p_{i,k}` in ``probs``,
 :math:`a_k` in ``means`` ,
 :math:`S_k` in ``covs[k]``,
 :math:`\pi_k` in ``weights`` , and optionally computes the output "class label" for each sample:
-:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture for each sample).
+:math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
 :ref:`Bayes classifier`.
@@ -242,7 +240,7 @@ Returns vectors of probabilities for each training sample.
 
 .. ocv:function:: const CvMat* CvEM::get_probs() const
 
-Returns probabilites :math:`p_{i,k}` of sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) to belong to a mixture component :math:`k`.
+For each training sample :math:`i` (that have been passed to the constructor or to :ocv:func:`CvEM::train`) returns probabilites :math:`p_{i,k}` to belong to a mixture component :math:`k`.
 
 
 CvEM::getLikelihood

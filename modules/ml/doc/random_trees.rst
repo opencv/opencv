@@ -87,7 +87,16 @@ The constructors.
 
 For meaning of other parameters see :ocv:func:`CvDTreeParams::CvDTreeParams`.
 
-The default constructor sets all parameters to some default values and they are different from default values of :ref:`CvDTreeParams`.
+The default constructor sets all parameters to default values which are different from default values of :ocv:class:`CvDTreeParams`:
+
+::
+
+    CvRTParams::CvRTParams() : CvDTreeParams( 5, 10, 0, false, 10, 0, false, false, 0 ),
+        calc_var_importance(false), nactive_vars(0)
+    {
+        term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.1 );
+    }
+
 
 CvRTrees
 --------
@@ -99,11 +108,11 @@ CvRTrees::train
 ---------------
 Trains the Random Trees model.
 
-.. ocv:function:: bool CvRTrees::train( CvMLData* data, CvRTParams params=CvRTParams() )
-
 .. ocv:function:: bool CvRTrees::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvRTParams params=CvRTParams() )
 
-.. ocv:function:: bool CvRTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvRTParams params=CvRTParams() )
+.. ocv:cfunction:: bool CvRTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvRTParams params=CvRTParams() )
+
+.. ocv:cfunction:: bool CvRTrees::train( CvMLData* data, CvRTParams params=CvRTParams() )
 
 .. ocv:pyfunction:: cv2.CvRTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
 
@@ -115,7 +124,7 @@ Predicts the output for an input sample.
 
 .. ocv:function:: double CvRTrees::predict(  const Mat& sample,  const Mat& missing=Mat() ) const
 
-.. ocv:function:: float CvRTrees::predict( const CvMat* sample, const CvMat* missing = 0 ) const
+.. ocv:cfunction:: float CvRTrees::predict( const CvMat* sample, const CvMat* missing = 0 ) const
 
 .. ocv:pyfunction:: cv2.CvRTrees.predict(sample[, missing]) -> retval
 
@@ -132,7 +141,7 @@ Returns a fuzzy-predicted class label.
 
 .. ocv:function:: float CvRTrees::predict_prob( const cv::Mat& sample, const cv::Mat& missing = cv::Mat() ) const
 
-.. ocv:function:: float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing = 0 ) const
+.. ocv:cfunction:: float CvRTrees::predict_prob( const CvMat* sample, const CvMat* missing = 0 ) const
 
 .. ocv:pyfunction:: cv2.CvRTrees.predict_prob(sample[, missing]) -> retval
 
@@ -149,7 +158,7 @@ Returns the variable importance array.
 
 .. ocv:function:: Mat CvRTrees::getVarImportance()
 
-.. ocv:function:: const CvMat* CvRTrees::get_var_importance()
+.. ocv:cfunction:: const CvMat* CvRTrees::get_var_importance()
 
 The method returns the variable importance vector, computed at the training stage when ``CvRTParams::calc_var_importance`` is set to true. If this flag was set to false, the ``NULL`` pointer is returned. This differs from the decision trees where variable importance can be computed anytime after the training.
 
@@ -158,7 +167,7 @@ CvRTrees::get_proximity
 -----------------------
 Retrieves the proximity measure between two training samples.
 
-.. ocv:function:: float CvRTrees::get_proximity( const CvMat* sample1, const CvMat* sample2, const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const
+.. ocv:cfunction:: float CvRTrees::get_proximity( const CvMat* sample1, const CvMat* sample2, const CvMat* missing1 = 0, const CvMat* missing2 = 0 ) const
 
     :param sample_1: The first sample.
 
@@ -174,7 +183,7 @@ CvRTrees::calc_error
 --------------------
 Returns error of the random forest.
 
-.. ocv:function:: float CvRTrees::calc_error( CvMLData* data, int type, std::vector<float> *resp = 0 )
+.. ocv:cfunction:: float CvRTrees::calc_error( CvMLData* data, int type, std::vector<float> *resp = 0 )
 
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the random forest as predictor.
 
@@ -192,7 +201,7 @@ CvRTrees::get_rng
 -----------------
 Returns the state of the used random number generator.
 
-.. ocv:function:: CvRNG* CvRTrees::get_rng()
+.. ocv:cfunction:: CvRNG* CvRTrees::get_rng()
 
 
 CvRTrees::get_tree_count

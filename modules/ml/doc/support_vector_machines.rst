@@ -227,7 +227,7 @@ is minimal.
 If there is no need to optimize a parameter, the corresponding grid step should be set to any value less than or equal to 1. For example, to avoid optimization in ``gamma``, set ``gamma_grid.step = 0``, ``gamma_grid.min_val``, ``gamma_grid.max_val`` as arbitrary numbers. In this case, the value ``params.gamma`` is taken for ``gamma``.
 
 And, finally, if the optimization in a parameter is required but
-the corresponding grid is unknown, you may call the function :ocv:func:`CvSVM::get_default_grid`. To generate a grid, for example, for ``gamma``, call :ocv:func:`CvSVM::get_default_grid(CvSVM::GAMMA)`.
+the corresponding grid is unknown, you may call the function :ocv:func:`CvSVM::get_default_grid`. To generate a grid, for example, for ``gamma``, call ``CvSVM::get_default_grid(CvSVM::GAMMA)``.
 
 This function works for the classification
 (``params.svm_type=CvSVM::C_SVC`` or ``params.svm_type=CvSVM::NU_SVC``)

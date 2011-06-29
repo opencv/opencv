@@ -76,7 +76,7 @@ CvBoostParams
 
     Boosting training parameters.
 
-The structure is derived from :ref:`CvDTreeParams` but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
+The structure is derived from :ocv:class:`CvDTreeParams` but not all of the decision tree parameters are supported. In particular, cross-validation is not supported.
 
 All parameters are public. You can initialize them by a constructor and then override some of them directly if you want.
 
@@ -175,7 +175,21 @@ Predicts a response for an input sample.
 
 .. ocv:function:: float CvBoost::predict(  const Mat& sample, const Mat& missing=Mat(), const Range& slice=Range::all(), bool rawMode=false, bool returnSum=false ) const
 
+.. ocv:cfunction:: float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
+
 .. ocv:pyfunction:: cv2.CvBoost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
+
+    :param sample: Input sample.
+
+    :param missing: Optional mask of missing measurements. To handle missing measurements, the weak classifiers must include surrogate splits (see ``CvDTreeParams::use_surrogates``).
+
+    :param weak_responses: Optional output parameter, a floating-point vector with responses of each individual weak classifier. The number of elements in the vector must be equal to the slice length.
+
+    :param slice: Continuous subset of the sequence of weak classifiers to be used for prediction. By default, all the weak classifiers are used. 
+
+    :param raw_mode: Normally, it should be set to ``false``.
+    
+    :param return_sum: If ``true`` then return sum of votes instead of the class label.
 
 The method runs the sample through the trees in the ensemble and returns the output class label based on the weighted voting.
 
@@ -183,9 +197,11 @@ CvBoost::prune
 --------------
 Removes the specified weak classifiers.
 
-.. ocv:function:: void CvBoost::prune( CvSlice slice )
+.. ocv:cfunction:: void CvBoost::prune( CvSlice slice )
 
 .. ocv:pyfunction:: cv2.CvBoost.prune(slice) -> None
+
+    :param slice: Continuous subset of the sequence of weak classifiers to be removed.
 
 The method removes the specified weak classifiers from the sequence. 
 
@@ -196,7 +212,7 @@ CvBoost::calc_error
 -------------------
 Returns error of the boosted tree classifier.
 
-.. ocv:function:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
+.. ocv:cfunction:: float CvBoost::calc_error( CvMLData* _data, int type , std::vector<float> *resp = 0 )
 
 The method is identical to :ocv:func:`CvDTree::calc_error` but uses the boosted tree classifier as predictor.
 
@@ -205,9 +221,9 @@ CvBoost::get_weak_predictors
 ----------------------------
 Returns the sequence of weak tree classifiers.
 
-.. ocv:function:: CvSeq* CvBoost::get_weak_predictors()
+.. ocv:cfunction:: CvSeq* CvBoost::get_weak_predictors()
 
-The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the ``CvBoostTree`` class or to some of its derivatives.
+The method returns the sequence of weak classifiers. Each element of the sequence is a pointer to the :ocv:class:`CvBoostTree` class or to some of its derivatives.
 
 CvBoost::get_params
 -------------------
@@ -220,5 +236,5 @@ CvBoost::get_data
 -----------------
 Returns used train data of the boosted tree classifier.
 
-.. ocv:function:: const CvDTreeTrainData* CvBoost::get_data() const
+.. ocv:cfunction:: const CvDTreeTrainData* CvBoost::get_data() const
 

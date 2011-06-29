@@ -81,7 +81,7 @@ Deallocates memory and resets the model state.
 
 .. ocv:function:: void CvStatModel::clear()
 
-The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the :ocv:func:`CvStatModel::train` methods of the derived classes, from the methods :ocv:func:`CvStatModel::load`, :ocv:func:`CvStatModel::read()``, or even explicitly by the user.
+The method ``clear`` does the same job as the destructor: it deallocates all the memory occupied by the class members. But the object itself is not destructed and can be reused further. This method is called from the destructor, from the :ocv:func:`CvStatModel::train` methods of the derived classes, from the methods :ocv:func:`CvStatModel::load`, :ocv:func:`CvStatModel::read()`, or even explicitly by the user.
 
 CvStatModel::save
 -----------------
