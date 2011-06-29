@@ -397,8 +397,8 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
         __m128i v = _mm_loadu_si128((const __m128i*)cd);
         __m128 cyxyxA = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v, v), 16));
         __m128 cyxyxB = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v, v), 16));
-        __m128 cx = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
-        __m128 cy = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
+        __m128 cx = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(2, 0, 2, 0));
+        __m128 cy = _mm_shuffle_ps(cyxyxA, cyxyxB, _MM_SHUFFLE(3, 1, 3, 1));
         __m128 cmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(cx, cx), _mm_mul_ps(cy, cy)));
         __m128 crmag = _mm_rcp_ps(cmag);
         __m128 ncx = _mm_mul_ps(cx, crmag);
@@ -407,8 +407,8 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
         v = _mm_loadu_si128((const __m128i*)ccd);
         __m128 ccyxyxA = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v, v), 16));
         __m128 ccyxyxB = _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v, v), 16));
-        __m128 ccx = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(0, 2, 0, 2));
-        __m128 ccy = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(1, 3, 1, 3));
+        __m128 ccx = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(2, 0, 2, 0));
+        __m128 ccy = _mm_shuffle_ps(ccyxyxA, ccyxyxB, _MM_SHUFFLE(3, 1, 3, 1));
         __m128 ccmag = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(ccx, ccx), _mm_mul_ps(ccy, ccy)));
         __m128 ccrmag = _mm_rcp_ps(ccmag);
         __m128 nccx = _mm_mul_ps(ccx, ccrmag);
