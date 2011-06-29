@@ -44,8 +44,29 @@
 #ifdef HAVE_CUDA
 
 void print_info()
-{
+{    
+#if defined _WIN32
+#   if define _WIN64
+        puts("OS: Windows 64\n");
+#   else
+        puts("OS: Windows 32\n");
+#   endif
+#elif defined linux
+#   if defined _LP64
+        puts("OS: Linux 64\n");
+#   else
+        puts("OS: Linux 32\n");
+#   endif
+#elif defined __APPLE__
+#   if defined _LP64
+        puts("OS: Apple 64\n");
+#   else
+        puts("OS: Apple 32\n");
+#   endif
+#endif
+
     int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
+
 
     printf("Found %d CUDA devices\n\n", deviceCount);
 
@@ -57,12 +78,13 @@ void print_info()
         printf("\tCompute capability version: %d.%d\n", info.majorVersion(), info.minorVersion());
         printf("\tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0));
         printf("\tFree memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory() / 1024.0) / 1024.0));
-        if (!info.isCompatible())
-            printf("\tThis device is not compatible with current GPU module build\n");
-        printf("\n");
+        if (info.isCompatible())
+            puts("\tThis device is compatible with current GPU module build\n");
+        else
+            puts("\tThis device is NOT compatible with current GPU module build\n");
     }
     
-    printf("GPU module was compiled for next GPU archs:\n");
+    puts("GPU module was compiled for next GPU archs:");
     printf("\tBIN:%s\n", CUDA_ARCH_BIN);
     printf("\tPTX:%s\n\n", CUDA_ARCH_PTX);
 }
