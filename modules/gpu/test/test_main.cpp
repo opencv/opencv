@@ -46,7 +46,7 @@
 void print_info()
 {    
 #if defined _WIN32
-#   if define _WIN64
+#   if defined _WIN64
         puts("OS: Windows 64\n");
 #   else
         puts("OS: Windows 32\n");
@@ -64,6 +64,8 @@ void print_info()
         puts("OS: Apple 32\n");
 #   endif
 #endif
+
+    printf("CUDA version: %d\n\n", CUDART_VERSION);
 
     int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
 
