@@ -89,7 +89,7 @@ Saves the model to a file.
 
 .. ocv:function:: void CvStatModel::save( const char* filename, const char* name=0 )
 
-.. ocv:pyfunction:: cv2.CvStatModel.save(filename[, name]) -> None
+.. ocv:pyfunction:: cv2.StatModel.save(filename[, name]) -> None
 
 The method ``save`` saves the complete model state to the specified XML or YAML file with the specified name or default name (which depends on a particular class). *Data persistence* functionality from ``CxCore`` is used.
 
@@ -99,7 +99,7 @@ Loads the model from a file.
 
 .. ocv:function:: void CvStatModel::load( const char* filename, const char* name=0 )
 
-.. ocv:pyfunction:: cv2.CvStatModel.load(filename[, name]) -> None
+.. ocv:pyfunction:: cv2.StatModel.load(filename[, name]) -> None
 
 The method ``load`` loads the complete model state with the specified name (or default model-dependent name) from the specified XML or YAML file. The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
 

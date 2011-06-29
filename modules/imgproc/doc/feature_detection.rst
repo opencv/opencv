@@ -7,7 +7,7 @@ Feature Detection
 
 Canny
 ---------
-Finds edges in an image using the Canny algorithm.
+Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:function:: void Canny( InputArray image, OutputArray edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
 
@@ -242,7 +242,7 @@ Determines strong corners on an image.
     
     :param k: Free parameter of the Harris detector.
 
-The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]:
+The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]_:
 
 #.
     Function calculates the corner quality measure at every source image pixel using the
@@ -287,7 +287,7 @@ Finds circles in a grayscale image using the Hough transform.
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
     
-    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90].
+    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 
     :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
@@ -420,8 +420,7 @@ Finds line segments in a binary image using the probabilistic Hough transform.
     :param maxLineGap: Maximum allowed gap between points on the same line to link them.
 
 The function implements the probabilistic Hough transform algorithm for line detection, described in
-Matas00
-. See the line detection example below: ::
+[Matas00]_. See the line detection example below: ::
 
     /* This is a standalone program. Pass an image name as a first parameter
     of the program.  Switch between standard and probabilistic Hough transform
@@ -524,4 +523,10 @@ The corners can be found as local maximums of the functions, as shown below: ::
     dilate(corners, dilated_corners, Mat(), 1);
     Mat corner_mask = corners == dilated_corners;
 
+.. [Canny86] J. Canny. A Computational Approach to Edge Detection, IEEE Trans. on Pattern Analysis and Machine Intelligence, 8(6), pp. 679-698 (1986).
 
+.. [Matas00] Matas, J. and Galambos, C. and Kittler, J.V., “Robust Detection of Lines Using the Progressive Probabilistic Hough Transform”. CVIU 78 1, pp 119-137 (2000)
+
+.. [Shi94] J. Shi and C. Tomasi. Good features to track. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 593-600, June 1994.
+
+.. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., “Comparative study of Hough transform methods for circle finding”. Image Vision Comput. 8 1, pp 71–77 (1990)

@@ -10,8 +10,7 @@ A common machine learning task is supervised learning. In supervised learning, t
 :math:`x` and the output
 :math:`y` . Predicting the qualitative output is called *classification*, while predicting the quantitative output is called *regression*.
 
-Boosting is a powerful learning concept that provides a solution to the supervised classification learning task. It combines the performance of many "weak" classifiers to produce a powerful committee
-:ref:`[HTF01] <HTF01>` . A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. However, many of them smartly combine results to a strong classifier that often outperforms most "monolithic" strong classifiers such as SVMs and Neural Networks.
+Boosting is a powerful learning concept that provides a solution to the supervised classification learning task. It combines the performance of many "weak" classifiers to produce a powerful committee [HTF01]_. A weak classifier is only required to be better than chance, and thus can be very simple and computationally inexpensive. However, many of them smartly combine results to a strong classifier that often outperforms most "monolithic" strong classifiers such as SVMs and Neural Networks.
 
 Decision trees are the most popular weak classifiers used in boosting schemes. Often the simplest decision trees with only a single split node per tree (called ``stumps`` ) are sufficient.
 
@@ -23,8 +22,7 @@ The boosted model is based on
 :math:`x_i` is a
 :math:`K` -component vector. Each component encodes a feature relevant to the learning task at hand. The desired two-class output is encoded as -1 and +1.
 
-Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle AdaBoost
-:ref:`[FHT98] <FHT98>` . All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm, outlined below. Initially the same weight is assigned to each sample (step 2). Then, a weak classifier
+Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, LogitBoost, and Gentle AdaBoost [FHT98]_. All of them are very similar in their overall structure. Therefore, this chapter focuses only on the standard two-class Discrete AdaBoost algorithm, outlined below. Initially the same weight is assigned to each sample (step 2). Then, a weak classifier
 :math:`f_{m(x)}` is trained on the weighted training data (step 3a). Its weighted training error and scaling factor
 :math:`c_m` is computed (step 3b). The weights are increased for training samples that have been misclassified (step 3c). All weights are then normalized, and the process of finding the next weak classifier continues for another
 :math:`M` -1 times. The final classifier
@@ -55,20 +53,15 @@ Different variants of boosting are known as Discrete Adaboost, Real AdaBoost, Lo
 #. Classify new samples *x* using the formula: :math:`\textrm{sign} (\Sigma m = 1M c_m f_m(x))`         .
 
 
-.. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For M :math:`>` two classes, there is the **AdaBoost.MH** algorithm (described in :ref:`[FHT98] <FHT98>` ) that reduces the problem to the two-class problem, yet with a much larger training set.
+.. note:: Similar to the classical boosting methods, the current implementation supports two-class classifiers only. For ``M > 2`` classes, there is the **AdaBoost.MH** algorithm (described in [FHT98]_) that reduces the problem to the two-class problem, yet with a much larger training set.
 
 To reduce computation time for boosted models without substantially losing accuracy, the influence trimming technique can be employed. As the training algorithm proceeds and the number of trees in the ensemble is increased, a larger number of the training samples are classified correctly and with increasing confidence, thereby those samples receive smaller weights on the subsequent iterations. Examples with a very low relative weight have a small impact on the weak classifier training. Thus, such examples may be excluded during the weak classifier training without having much effect on the induced classifier. This process is controlled with the ``weight_trim_rate`` parameter. Only examples with the summary fraction ``weight_trim_rate`` of the total weight mass are used in the weak classifier training. Note that the weights for
 **all**
-training examples are recomputed at each training iteration. Examples deleted at a particular iteration may be used again for learning some of the weak classifiers further
-:ref:`[FHT98] <FHT98>` .
+training examples are recomputed at each training iteration. Examples deleted at a particular iteration may be used again for learning some of the weak classifiers further [FHT98]_.
 
-.. _HTF01:
+.. [HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction*. Springer Series in Statistics. 2001.
 
-[HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction*. Springer Series in Statistics. 2001.
-
-.. _FHT98:
-
-[FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. *Additive Logistic Regression: a Statistical View of Boosting*. Technical Report, Dept. of Statistics, Stanford University, 1998.
+.. [FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. *Additive Logistic Regression: a Statistical View of Boosting*. Technical Report, Dept. of Statistics, Stanford University, 1998.
 
 CvBoostParams
 -------------
@@ -151,6 +144,9 @@ Default and training constructors.
 
 .. ocv:cfunction:: CvBoost::CvBoost( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams() )
 
+.. ocv:pyfunction:: cv2.Boost(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> <Boost object>
+
+
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
 
 CvBoost::train
@@ -159,7 +155,7 @@ Trains a boosted tree classifier.
 
 .. ocv:function:: bool CvBoost::train( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvBoostParams params=CvBoostParams(), bool update=false )
 
-.. ocv:pyfunction:: cv2.CvBoost.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
+.. ocv:pyfunction:: cv2.Boost.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
 
 .. ocv:cfunction:: bool CvBoost::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvBoostParams params=CvBoostParams(), bool update=false )
 
@@ -177,7 +173,7 @@ Predicts a response for an input sample.
 
 .. ocv:cfunction:: float CvBoost::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weak_responses=0, CvSlice slice=CV_WHOLE_SEQ, bool raw_mode=false, bool return_sum=false ) const
 
-.. ocv:pyfunction:: cv2.CvBoost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
+.. ocv:pyfunction:: cv2.Boost.predict(sample[, missing[, slice[, rawMode[, returnSum]]]]) -> retval
 
     :param sample: Input sample.
 
@@ -199,7 +195,7 @@ Removes the specified weak classifiers.
 
 .. ocv:cfunction:: void CvBoost::prune( CvSlice slice )
 
-.. ocv:pyfunction:: cv2.CvBoost.prune(slice) -> None
+.. ocv:pyfunction:: cv2.Boost.prune(slice) -> None
 
     :param slice: Continuous subset of the sequence of weak classifiers to be removed.
 

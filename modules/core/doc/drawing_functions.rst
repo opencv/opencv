@@ -91,6 +91,9 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 .. ocv:cfunction:: void cvEllipse( CvArr* img, CvPoint center, CvSize axes, double angle, double startAngle, double endAngle, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
 .. ocv:pyoldfunction:: cv.Ellipse(img, center, axes, angle, startAngle, endAngle, color, thickness=1, lineType=8, shift=0)-> None
 
+.. ocv:cfunction:: void cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:pyoldfunction:: cv.EllipseBox(img, box, color, thickness=1, lineType=8, shift=0)-> None
+
     :param img: Image.
 
     :param center: Center of the ellipse.
@@ -103,7 +106,7 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 
     :param endAngle: Ending angle of the elliptic arc in degrees.
 
-    :param box: Alternative ellipse representation via  :ocv:class:`RotatedRect`. This means that the function draws an ellipse inscribed in the rotated rectangle.
+    :param box: Alternative ellipse representation via  :ocv:class:`RotatedRect` or ``CvBox2D``. This means that the function draws an ellipse inscribed in the rotated rectangle.
 
     :param color: Ellipse color.
 
@@ -263,6 +266,54 @@ That is, the following code renders some text, the tight box surrounding it, and
     putText(img, text, textOrg, fontFace, fontScale,
             Scalar::all(255), thickness, 8);
 
+
+InitFont
+--------
+Initializes font structure (OpenCV 1.x API).
+
+.. cfunction:: void cvInitFont(  CvFont* font, int fontFace, double hscale, double vscale, double shear=0, int thickness=1, int lineType=8 )
+
+    :param font: Pointer to the font structure initialized by the function 
+
+    :param fontFace: Font name identifier. Only a subset of Hershey fonts  http://sources.isc.org/utils/misc/hershey-font.txt  are supported now:
+
+            * **CV_FONT_HERSHEY_SIMPLEX** normal size sans-serif font 
+
+            * **CV_FONT_HERSHEY_PLAIN** small size sans-serif font 
+
+            * **CV_FONT_HERSHEY_DUPLEX** normal size sans-serif font (more complex than    ``CV_FONT_HERSHEY_SIMPLEX`` ) 
+
+            * **CV_FONT_HERSHEY_COMPLEX** normal size serif font 
+
+            * **CV_FONT_HERSHEY_TRIPLEX** normal size serif font (more complex than  ``CV_FONT_HERSHEY_COMPLEX`` ) 
+
+            * **CV_FONT_HERSHEY_COMPLEX_SMALL** smaller version of  ``CV_FONT_HERSHEY_COMPLEX`` 
+
+            * **CV_FONT_HERSHEY_SCRIPT_SIMPLEX** hand-writing style font 
+
+            * **CV_FONT_HERSHEY_SCRIPT_COMPLEX** more complex variant of  ``CV_FONT_HERSHEY_SCRIPT_SIMPLEX`` 
+
+         The parameter can be composited from one of the values above and an optional  ``CV_FONT_ITALIC``  flag, which indicates italic or oblique font. 
+
+
+    :param hscale: Horizontal scale.  If equal to  ``1.0f`` , the characters have the original width depending on the font type. If equal to  ``0.5f`` , the characters are of half the original width. 
+
+
+    :param vscale: Vertical scale. If equal to  ``1.0f`` , the characters have the original height depending on the font type. If equal to  ``0.5f`` , the characters are of half the original height. 
+
+
+    :param shear: Approximate tangent of the character slope relative to the vertical line.  A zero value means a non-italic font,  ``1.0f``  means about a 45 degree slope, etc. 
+
+
+    :param thickness: Thickness of the text strokes 
+
+
+    :param lineType: Type of the strokes, see  :ref:`Line`  description 
+
+
+The function initializes the font structure that can be passed to text rendering functions.
+
+.. seealso:: :ocv:cfunc:`PutText`
 
 
 line
@@ -427,6 +478,8 @@ Draws a text string.
     :param text: Text string to be drawn.
 
     :param org: Bottom-left corner of the text string in the image.
+
+    :param font: ``CvFont`` structure initialized using :ocv:cfunc:`InitFont`.
 
     :param fontFace: Font type. One of  ``FONT_HERSHEY_SIMPLEX``,  ``FONT_HERSHEY_PLAIN``, ``FONT_HERSHEY_DUPLEX``,  ``FONT_HERSHEY_COMPLEX``,  ``FONT_HERSHEY_TRIPLEX``, ``FONT_HERSHEY_COMPLEX_SMALL``,  ``FONT_HERSHEY_SCRIPT_SIMPLEX``, or  ``FONT_HERSHEY_SCRIPT_COMPLEX``,
            where each of the font ID's can be combined with  ``FONT_HERSHEY_ITALIC``  to get the slanted letters.

@@ -398,6 +398,8 @@ private:
     //switch (sz)
     {
       //default:
+      if( rotated_patterns_.empty() )
+          rotated_patterns_ = OrbPatterns::generateRotatedPatterns();
       pattern_data = reinterpret_cast<int*> (rotated_patterns_[angle_idx].data);
       //break;
     }
@@ -437,7 +439,7 @@ private:
 
 };
 
-std::vector<cv::Mat> ORB::OrbPatterns::rotated_patterns_ = OrbPatterns::generateRotatedPatterns();
+std::vector<cv::Mat> ORB::OrbPatterns::rotated_patterns_;
 
 //this is the definition for BIT_PATTERN
 #include "orb_pattern.hpp"

@@ -250,9 +250,7 @@ Computes the "minimal work" distance between two weighted point configurations.
     
     :param userdata: Optional pointer directly passed to the custom distance function.
 
-The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in :ref:`RubnerSept98` is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
-
-
+The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in [RubnerSept98]_ is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
 
 
 equalizeHist
@@ -262,6 +260,8 @@ Equalizes the histogram of a grayscale image.
 .. ocv:function:: void equalizeHist( InputArray src, OutputArray dst )
 
 .. ocv:pyfunction:: cv2.equalizeHist(src[, dst]) -> dst
+
+.. ocv:cfunction:: void cvEqualizeHist( const CvArr* src, CvArr* dst )
 
     :param src: Source 8-bit single channel image.
 
@@ -289,3 +289,296 @@ The function equalizes the histogram of the input image using the following algo
     :math:`\texttt{dst}(x,y) = H'(\texttt{src}(x,y))`
 
 The algorithm normalizes the brightness and increases the contrast of the image.
+
+
+Extra Histogram Functions (C API)
+---------------------------------
+
+In the rest of the section additional C functions operating on ``CvHistogram`` are described.
+
+CalcBackProjectPatch
+--------------------
+Locates a template within an image by using a histogram comparison.
+
+.. ocv:cfunction:: void cvCalcBackProjectPatch( IplImage** images, CvArr* dst, CvSize patch_size, CvHistogram* hist, int method, double factor )
+
+.. ocv:pyoldfunction:: cv.CalcBackProjectPatch(images, dst, patchSize, hist, method, factor)-> None
+    
+    :param images: Source images (though, you may pass CvMat** as well)     
+    
+    :param dst: Destination image 
+    
+    :param patch_size: Size of the patch slid though the source image 
+    
+    :param hist: Histogram 
+    
+    :param method: Comparison method, passed to  :ref:`CompareHist`  (see description of that function) 
+    
+    :param factor: Normalization factor for histograms, will affect the normalization scale of the destination image, pass 1 if unsure 
+    
+The function calculates the back projection by comparing histograms of the source image patches with the given histogram. The function is similar to :ocv:func:`MatchTemplate`, but instead of comparing raster patch with all its possible positions within the search window, the function ``CalcBackProjectPatch`` compares histograms. Below is the diagram of the algorithm: ::
+
+.. image:: pics/backprojectpatch.png
+
+
+CalcProbDensity
+---------------
+Divides one histogram by another.
+
+.. ocv:cfunction:: void  cvCalcProbDensity(  const CvHistogram* hist1, const CvHistogram* hist2, CvHistogram* dsthist, double scale=255 )
+
+.. ocv:pyoldfunction:: cv.CalcProbDensity(hist1, hist2, dsthist, scale=255)-> None
+    
+    :param hist1: first histogram (the divisor) 
+    
+    :param hist2: second histogram 
+    
+    :param dsthist: destination histogram 
+    
+    :param scale: scale factor for the destination histogram 
+    
+The function calculates the object probability density from the two histograms as:
+
+.. math::
+
+    \texttt{disthist} (I)= \forkthree{0}{if $\texttt{hist1}(I)=0$}{\texttt{scale}}{if $\texttt{hist1}(I) \ne 0$ and $\texttt{hist2}(I) > \texttt{hist1}(I)$}{\frac{\texttt{hist2}(I) \cdot \texttt{scale}}{\texttt{hist1}(I)}}{if $\texttt{hist1}(I) \ne 0$ and $\texttt{hist2}(I) \le \texttt{hist1}(I)$} 
+
+
+ClearHist
+---------
+Clears the histogram.
+
+.. ocv:cfunction:: void cvClearHist( CvHistogram* hist )
+.. ocv:pyoldfunction:: cv.ClearHist(hist)-> None
+
+    :param hist: Histogram 
+
+The function sets all of the histogram bins to 0 in the case of a dense histogram and removes all histogram bins in the case of a sparse array.
+
+
+CopyHist
+--------
+Copies a histogram.
+
+.. ocv:cfunction:: void cvCopyHist( const CvHistogram* src, CvHistogram** dst )
+
+    :param src: Source histogram 
+    
+    :param dst: Pointer to destination histogram 
+    
+The function makes a copy of the histogram. If the second histogram pointer ``*dst`` is NULL, a new histogram of the same size as  ``src`` is created. Otherwise, both histograms must have equal types and sizes. Then the function copies the source histogram's bin values to the destination histogram and sets the same bin value ranges as in ``src``.
+
+
+CreateHist
+----------
+Creates a histogram.
+
+.. ocv:cfunction:: CvHistogram* cvCreateHist( int dims, int* sizes, int type, float** ranges=NULL, int uniform=1 )
+
+.. ocv:pyoldfunction:: cv.CreateHist(dims, type, ranges, uniform=1) -> hist
+
+    :param dims: Number of histogram dimensions 
+    
+    :param sizes: Array of the histogram dimension sizes 
+    
+    :param type: Histogram representation format:  ``CV_HIST_ARRAY``  means that the histogram data is represented as a multi-dimensional dense array CvMatND;  ``CV_HIST_SPARSE``  means that histogram data is represented as a multi-dimensional sparse array CvSparseMat 
+    
+    :param ranges: Array of ranges for the histogram bins. Its meaning depends on the  ``uniform``  parameter value. The ranges are used for when the histogram is calculated or backprojected to determine which histogram bin corresponds to which value/tuple of values from the input image(s) 
+    
+    :param uniform: Uniformity flag; if not 0, the histogram has evenly
+        spaced bins and for every  :math:`0<=i<cDims`   ``ranges[i]`` 
+        is an array of two numbers: lower and upper boundaries for the i-th
+        histogram dimension.
+        The whole range [lower,upper] is then split
+        into  ``dims[i]``  equal parts to determine the  ``i-th``  input
+        tuple value ranges for every histogram bin. And if  ``uniform=0`` ,
+        then  ``i-th``  element of  ``ranges``  array contains ``dims[i]+1``  elements: :math:`\texttt{lower}_0, \texttt{upper}_0, 
+        \texttt{lower}_1, \texttt{upper}_1 = \texttt{lower}_2,
+        ...
+        \texttt{upper}_{dims[i]-1}` 
+        where :math:`\texttt{lower}_j`  and  :math:`\texttt{upper}_j` 
+        are lower and upper
+        boundaries of  ``i-th``  input tuple value for  ``j-th`` 
+        bin, respectively. In either case, the input values that are beyond
+        the specified range for a histogram bin are not counted by :ocv:cfunc:`CalcHist`  and filled with 0 by :ocv:cfunc:`CalcBackProject` 
+    
+The function creates a histogram of the specified size and returns a pointer to the created histogram. If the array ``ranges`` is 0, the histogram bin ranges must be specified later via the function  :ocv:cfunc:`SetHistBinRanges`. Though :ocv:cfunc:`CalcHist` and :ocv:cfunc:`CalcBackProject` may process 8-bit images without setting bin ranges, they assume thy are equally spaced in 0 to 255 bins.
+
+
+GetHistValue*D
+--------------
+Returns a pointer to the histogram bin.
+
+.. ocv:cfunction:: float cvGetHistValue_1D(hist, idx0)
+
+.. ocv:cfunction:: float cvGetHistValue_2D(hist, idx0, idx1)
+
+.. ocv:cfunction:: float cvGetHistValue_3D(hist, idx0, idx1, idx2)
+
+.. ocv:cfunction:: float cvGetHistValue_nD(hist, idx)
+    
+    :param hist: Histogram 
+    
+    :param idx0, idx1, idx2, idx3: Indices of the bin 
+    
+    :param idx: Array of indices 
+
+::
+
+    #define cvGetHistValue_1D( hist, idx0 ) 
+        ((float*)(cvPtr1D( (hist)->bins, (idx0), 0 ))
+    #define cvGetHistValue_2D( hist, idx0, idx1 ) 
+        ((float*)(cvPtr2D( (hist)->bins, (idx0), (idx1), 0 )))
+    #define cvGetHistValue_3D( hist, idx0, idx1, idx2 ) 
+        ((float*)(cvPtr3D( (hist)->bins, (idx0), (idx1), (idx2), 0 )))
+    #define cvGetHistValue_nD( hist, idx ) 
+        ((float*)(cvPtrND( (hist)->bins, (idx), 0 )))    
+
+..
+
+The macros ``GetHistValue`` return a pointer to the specified bin of the 1D, 2D, 3D or N-D histogram. In the case of a sparse histogram the function creates a new bin and sets it to 0, unless it exists already.
+
+
+GetMinMaxHistValue
+------------------
+Finds the minimum and maximum histogram bins.
+
+.. ocv:cfunction:: void cvGetMinMaxHistValue(  const CvHistogram* hist, float* min_value, float* max_value, int* min_idx=NULL, int* max_idx=NULL )
+    
+.. ocv:pyoldfunction:: cv.GetMinMaxHistValue(hist)-> (minValue, maxValue, minIdx, maxIdx)
+
+    :param hist: Histogram 
+    
+    :param min_value: Pointer to the minimum value of the histogram 
+    
+    :param max_value: Pointer to the maximum value of the histogram 
+    
+    :param min_idx: Pointer to the array of coordinates for the minimum 
+    
+    :param max_idx: Pointer to the array of coordinates for the maximum 
+    
+The function finds the minimum and maximum histogram bins and their positions. All of output arguments are optional. Among several extremas with the same value the ones with the minimum index (in lexicographical order) are returned. In the case of several maximums or minimums, the earliest in lexicographical order (extrema locations) is returned.
+
+
+MakeHistHeaderForArray
+----------------------
+Makes a histogram out of an array.
+
+.. ocv:cfunction:: CvHistogram*  cvMakeHistHeaderForArray(  int dims, int* sizes, CvHistogram* hist, float* data, float** ranges=NULL, int uniform=1 )
+    
+    :param dims: Number of histogram dimensions 
+    
+    :param sizes: Array of the histogram dimension sizes 
+    
+    :param hist: The histogram header initialized by the function 
+    
+    :param data: Array that will be used to store histogram bins 
+    
+    :param ranges: Histogram bin ranges, see  :ref:`CreateHist` 
+    
+    :param uniform: Uniformity flag, see  :ref:`CreateHist` 
+    
+The function initializes the histogram, whose header and bins are allocated by the user. :ocv:cfunc:`ReleaseHist` does not need to be called afterwards. Only dense histograms can be initialized this way. The function returns ``hist``.
+
+NormalizeHist
+-------------
+Normalizes the histogram.
+
+.. ocv:cfunction:: void cvNormalizeHist( CvHistogram* hist, double factor )
+.. ocv:pyoldfunction:: cv.NormalizeHist(hist, factor)-> None
+    
+    :param hist: Pointer to the histogram 
+    
+    :param factor: Normalization factor 
+    
+The function normalizes the histogram bins by scaling them, such that the sum of the bins becomes equal to  ``factor``.
+
+
+QueryHistValue*D
+----------------
+Queries the value of the histogram bin.
+
+.. ocv:cfunction:: float QueryHistValue_1D(CvHistogram hist, int idx0)
+.. ocv:cfunction:: float QueryHistValue_2D(CvHistogram hist, int idx0, int idx1)
+.. ocv:cfunction:: float QueryHistValue_3D(CvHistogram hist, int idx0, int idx1, int idx2)
+.. ocv:cfunction:: float QueryHistValue_nD(CvHistogram hist, const int* idx)
+
+.. ocv:pyoldfunction:: cv.QueryHistValue_1D(hist, idx0) -> float
+.. ocv:pyoldfunction:: cv.QueryHistValue_2D(hist, idx0, idx1) -> float
+.. ocv:pyoldfunction:: cv.QueryHistValue_3D(hist, idx0, idx1, idx2) -> float
+.. ocv:pyoldfunction:: cv.QueryHistValueND(hist, idx) -> float
+
+    :param hist: Histogram 
+    
+    :param idx0, idx1, idx2, idx3: Indices of the bin 
+    
+    :param idx: Array of indices 
+
+The macros return the value of the specified bin of the 1D, 2D, 3D or N-D histogram. In the case of a sparse histogram the function returns 0, if the bin is not present in the histogram no new bin is created.
+
+ReleaseHist
+-----------
+Releases the histogram.
+
+.. ocv:cfunction:: void cvReleaseHist( CvHistogram** hist )
+    
+    :param hist: Double pointer to the released histogram 
+    
+The function releases the histogram (header and the data). The pointer to the histogram is cleared by the function. If ``*hist`` pointer is already ``NULL``, the function does nothing.
+
+
+SetHistBinRanges
+----------------
+Sets the bounds of the histogram bins.
+
+.. ocv:cfunction:: void cvSetHistBinRanges(  CvHistogram* hist, float** ranges, int uniform=1 )
+
+    :param hist: Histogram 
+    
+    :param ranges: Array of bin ranges arrays, see  :ref:`CreateHist` 
+    
+    :param uniform: Uniformity flag, see  :ref:`CreateHist` 
+    
+The function is a stand-alone function for setting bin ranges in the histogram. For a more detailed description of the parameters ``ranges`` and ``uniform`` see the :ocv:cfunc:`CalcHist` function, that can initialize the ranges as well. Ranges for the histogram bins must be set before the histogram is calculated or the backproject of the histogram is calculated.
+
+
+ThreshHist
+----------
+Thresholds the histogram.
+
+.. ocv:cfunction:: void cvThreshHist( CvHistogram* hist, double threshold )
+.. ocv:pyoldfunction:: cv.ThreshHist(hist, threshold)-> None
+    
+    :param hist: Pointer to the histogram 
+    
+    :param threshold: Threshold level 
+    
+The function clears histogram bins that are below the specified threshold.
+
+
+CalcPGH
+-------
+Calculates a pair-wise geometrical histogram for a contour.
+
+.. ocv:cfunction:: void cvCalcPGH( const CvSeq* contour, CvHistogram* hist )
+.. ocv:pyoldfunction:: cv.CalcPGH(contour, hist)-> None
+    
+    :param contour: Input contour. Currently, only integer point coordinates are allowed 
+    
+    :param hist: Calculated histogram; must be two-dimensional 
+    
+The function calculates a 2D pair-wise geometrical histogram (PGH), described in [Iivarinen97]_ for the contour. The algorithm considers every pair of contour
+edges. The angle between the edges and the minimum/maximum distances
+are determined for every pair. To do this each of the edges in turn
+is taken as the base, while the function loops through all the other
+edges. When the base edge and any other edge are considered, the minimum
+and maximum distances from the points on the non-base edge and line of
+the base edge are selected. The angle between the edges defines the row
+of the histogram in which all the bins that correspond to the distance
+between the calculated minimum and maximum distances are incremented
+(that is, the histogram is transposed relatively to the definition in the original paper). The histogram can be used for contour matching.
+
+.. [RubnerSept98] Y. Rubner. C. Tomasi, L.J. Guibas. The Earth Mover’s Distance as a Metric for Image Retrieval. Technical Report STAN-CS-TN-98-86, Department of Computer Science, Stanford University, September 1998.
+
+.. [Iivarinen97] Jukka Iivarinen, Markus Peura, Jaakko Srel, and Ari Visa. Comparison of Combined Shape Descriptors for Irregular Objects, 8th British Machine Vision Conference, BMVC'97.
+http://www.cis.hut.fi/research/IA/paper/publications/bmvc97/bmvc97.html

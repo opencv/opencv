@@ -161,6 +161,8 @@ Default and training constructors.
 
 .. ocv:cfunction:: CvGBTrees::CvGBTrees( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams() )
 
+.. ocv:pyfunction:: cv2.GBTrees([trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]]) -> <GBTrees object>
+
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
 
 CvGBTrees::train
@@ -169,7 +171,7 @@ Trains a Gradient boosted tree model.
 
 .. ocv:function:: bool CvGBTrees::train(const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
 
-.. ocv:pyfunction:: cv2.CvGBTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
+.. ocv:pyfunction:: cv2.GBTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
 
 .. ocv:cfunction:: bool CvGBTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams(), bool update=false )
 
@@ -196,7 +198,7 @@ Predicts a response for an input sample.
 
 .. ocv:function:: float CvGBTrees::predict(const Mat& sample, const Mat& missing=Mat(), const Range& slice = Range::all(), int k=-1) const
 
-.. ocv:pyfunction:: cv2.CvGBTrees.predict(sample[, missing[, slice[, k]]]) -> retval
+.. ocv:pyfunction:: cv2.GBTrees.predict(sample[, missing[, slice[, k]]]) -> retval
 
 .. ocv:cfunction:: float CvGBTrees::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weakResponses=0, CvSlice slice = CV_WHOLE_SEQ, int k=-1 ) const
 
@@ -239,7 +241,7 @@ Clears the model.
 
 .. ocv:function:: void CvGBTrees::clear()
     
-.. ocv:pyfunction:: cv2.CvGBTrees.clear() -> None
+.. ocv:pyfunction:: cv2.GBTrees.clear() -> None
 
 The function deletes the data set information and all the weak models and sets all internal
 variables to the initial state. The function is called in :ocv:func:`CvGBTrees::train` and in the

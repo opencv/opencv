@@ -1,8 +1,7 @@
 Decision Trees
 ==============
 
-The ML classes discussed in this section implement Classification and Regression Tree algorithms described in `[Breiman84] <#paper_Breiman84>`_
-.
+The ML classes discussed in this section implement Classification and Regression Tree algorithms described in [Breiman84]_.
 
 The class
 :ocv:class:`CvDTree` represents a single decision tree that may be used alone or as a base class in tree ensembles (see
@@ -55,7 +54,6 @@ Besides the prediction that is an obvious use of decision trees, the tree can be
 
 Importance of each variable is computed over all the splits on this variable in the tree, primary and surrogate ones. Thus, to compute variable importance correctly, the surrogate splits must be enabled in the training parameters, even if there is no missing data.
 
-[Breiman84] Breiman, L., Friedman, J. Olshen, R. and Stone, C. (1984), *Classification and Regression Trees*, Wadsworth.
 
 CvDTreeSplit
 ------------
@@ -235,7 +233,7 @@ Trains a decision tree.
 
 .. ocv:cfunction:: bool CvDTree::train( CvDTreeTrainData* trainData, const CvMat* subsampleIdx )
 
-.. ocv:pyfunction:: cv2.CvDTree.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
+.. ocv:pyfunction:: cv2.DTree.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]) -> retval
 
 There are four ``train`` methods in :ocv:class:`CvDTree`:
 
@@ -255,7 +253,7 @@ Returns the leaf node of a decision tree corresponding to the input vector.
 
 .. ocv:cfunction:: CvDTreeNode* CvDTree::predict( const CvMat* sample, const CvMat* missingDataMask=0, bool preprocessedInput=false ) const
 
-.. ocv:pyfunction:: cv2.CvDTree.predict(sample[, missingDataMask[, preprocessedInput]]) -> retval
+.. ocv:pyfunction:: cv2.DTree.predict(sample[, missingDataMask[, preprocessedInput]]) -> retval
 
     :param sample: Sample for prediction.
 
@@ -294,6 +292,7 @@ Returns the variable importance array.
 
 .. ocv:cfunction:: const CvMat* CvDTree::get_var_importance()
 
+.. ocv:pyfunction:: cv2.DTree.getVarImportance() -> importanceVector
 
 CvDTree::get_root
 -----------------
@@ -318,4 +317,7 @@ Returns used train data of the decision tree.
 
 Example: building a tree for classifying mushrooms.  See the ``mushroom.cpp`` sample that demonstrates how to build and use the
 decision tree.
+
+
+.. [Breiman84] Breiman, L., Friedman, J. Olshen, R. and Stone, C. (1984), *Classification and Regression Trees*, Wadsworth.
 

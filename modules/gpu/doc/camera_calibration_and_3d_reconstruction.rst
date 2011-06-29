@@ -144,23 +144,24 @@ Class computing stereo correspondence using the belief propagation algorithm. ::
         ...
     };
 
-The class implements Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. *Efficient belief propagation for early vision*. International Journal of Computer Vision, 70(1), October 2006]. It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
+The class implements algorithm described in [Felzenszwalb2006]_ . It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
 
 .. note::
 
-	``StereoBeliefPropagation`` requires a lot of memory for message storage:
+    ``StereoBeliefPropagation`` requires a lot of memory for message storage:
 
-	.. math::
+    .. math::
 
-		width \_ step  \cdot height  \cdot ndisp  \cdot 4  \cdot (1 + 0.25)
+        width \_ step  \cdot height  \cdot ndisp  \cdot 4  \cdot (1 + 0.25)
 
-	and for data cost storage:
+    and for data cost storage:
 
-	.. math::
+    .. math::
 
-		width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}})
+        width\_step \cdot height \cdot ndisp \cdot (1 + 0.25 + 0.0625 +  \dotsm + \frac{1}{4^{levels}})
 
-	``width_step`` is the number of bytes in a line including padding.
+    ``width_step`` is the number of bytes in a line including padding.
+
 
 .. index:: gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
@@ -198,7 +199,7 @@ gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
     DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)
 
-For more details, see [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. *Efficient belief propagation for early vision*. International Journal of Computer Vision, 70(1), October 2006].
+For more details, see [Felzenszwalb2006]_.
 
 By default, :ocv:class:`StereoBeliefPropagation` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better performance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
@@ -300,7 +301,7 @@ Class computing stereo correspondence using the constant space belief propagatio
     };
 
 
-The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010]. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false``.
+The class implements algorithm described in [Yang2010]_. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false``.
 
 .. index:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
@@ -342,7 +343,7 @@ gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 
     DiscTerm =  \min (disc \_ single \_ jump  \cdot \lvert f_1-f_2  \rvert , max \_ disc \_ term)
 
-For more details, see [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010].
+For more details, see [Yang2010]_.
 
 By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better perfomance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
@@ -410,7 +411,7 @@ Class refinining a disparity map using joint bilateral filtering. ::
     };
 
 
-The class implements Q. Yang algorithm [Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010].
+The class implements [Yang2010]_ algorithm.
 
 .. index:: gpu::DisparityBilateralFilter::DisparityBilateralFilter
 
@@ -524,4 +525,8 @@ gpu::solvePnPRansac
     :param inliers: Output vector of inlier indices.   
 
 See Also :ocv:func:`solvePnPRansac`.
-  
+
+
+.. [Felzenszwalb2006] Pedro F. Felzenszwalb algorithm [Pedro F. Felzenszwalb and Daniel P. Huttenlocher. *Efficient belief propagation for early vision*. International Journal of Computer Vision, 70(1), October 2006
+
+.. [Yang2010] Q. Yang, L. Wang, and N. Ahuja. *A constant-space belief propagation algorithm for stereo matching*. In CVPR, 2010.

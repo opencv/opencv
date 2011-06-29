@@ -110,6 +110,7 @@ You can call :ocv:func:`destroyWindow` or :ocv:func:`destroyAllWindows` to close
 
     By default, ``flags == CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO | CV_GUI_EXPANDED``
 
+
 destroyWindow
 -------------
 Destroys a window.
@@ -134,7 +135,58 @@ Destroys all of the HighGUI windows.
 
 .. ocv:pyfunction:: cv2.destroyAllWindows() -> None
 
+.. ocv:cfunction:: void cvDestroyAllWindows()
+.. ocv:pyoldfunction:: cv.DestroyAllWindows()-> None
+
 The function ``destroyAllWindows`` destroys all of the opened HighGUI windows.
+
+
+MoveWindow
+----------
+Moves window to the specified position
+
+.. ocv:cfunction:: void cvMoveWindow( const char* name, int x, int y )
+.. ocv:pyoldfunction:: cv.MoveWindow(name, x, y)-> None
+
+    :param name: Window name
+    
+    :param x: The new x-coordinate of the window
+    
+    :param y: The new y-coordinate of the window
+
+
+ResizeWindow
+----------
+Resizes window to the specified size
+
+.. ocv:cfunction:: void cvResizeWindow( const char* name, int width, int height )
+.. ocv:pyoldfunction:: cv.ResizeWindow(name, width, height)-> None
+
+    :param name: Window name
+
+    :param width: The new window width
+
+    :param height: The new window height
+
+.. note::
+
+   * The specified window size is for the image area. Toolbars are not counted.
+   
+   * Only windows created without CV_WINDOW_AUTOSIZE flag can be resized.
+
+
+SetMouseCallback
+----------------
+Sets mouse handler for the specified window
+
+.. ocv:cfunction:: void cvSetMouseCallback( const char* name, CvMouseCallback onMouse, void* param=NULL )
+.. ocv:pyoldfunction:: cv.SetMouseCallback(name, onMouse, param) -> None
+
+    :param name: Window name
+    
+    :param onMouse: Mouse callback. See OpenCV samples, such as  https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/ffilldemo.cpp, on how to specify and use the callback.
+    
+    :param param: The optional parameter passed to the callback.
 
 
 setTrackbarPos

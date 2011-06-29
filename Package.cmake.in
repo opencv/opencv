@@ -89,8 +89,7 @@ if(WIN32)
 
     set(CPACK_NSIS_MENU_LINKS
         "http://opencv.willowgarage.com" "Start Page"
-        "doc\\\\opencv2refman_cpp.pdf" "The OpenCV C++ Reference Manual"
-        "doc\\\\opencv2refman_py.pdf" "The OpenCV Python Reference Manual"
+        "doc\\\\opencv2refman.pdf" "The OpenCV Reference Manual"
         "doc\\\\opencv_tutorials.pdf" "The OpenCV Tutorials for Beginners"
         "CMakeLists.txt" "The Build Script (open with CMake)"
         "samples\\\\c" "C Samples"

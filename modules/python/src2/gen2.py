@@ -443,7 +443,10 @@ class FuncInfo(object):
         # we write ClassName([args ...]) -> object
         if have_empty_constructor and len(self.variants) == 2:
             idx = self.variants[1].py_arglist != []
-            docstring_list = ["[" + self.variants[idx].py_docstring + "]"]
+            s = self.variants[idx].py_docstring
+            p1 = s.find("(")
+            p2 = s.rfind(")")
+            docstring_list = [s[:p1+1] + "[" + s[p1+2:p2] + "]" + s[p2:]]
             
         return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_KEYWORDS, "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),

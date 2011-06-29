@@ -488,9 +488,9 @@ Performs the per-element comparison of two arrays or an array and scalar value.
 
 .. ocv:pyoldfunction:: cv.CmpS(src1, src2, dst, cmpOp)-> None
 
-    :param src1: First source array or a scalar (in the case of ``cvCmp``, ``cv.Cmp``, ``cvCmpS``, ``cv.CmpS`` it is always an array)
+    :param src1: First source array or a scalar (in the case of ``cvCmp``, ``cv.Cmp``, ``cvCmpS``, ``cv.CmpS`` it is always an array). When it is array, it must have a single channel.
 
-    :param src2: Second source array or a scalar (in the case of ``cvCmp`` and ``cv.Cmp`` it is always an array; in the case of ``cvCmpS``, ``cv.CmpS`` it is always a scalar)
+    :param src2: Second source array or a scalar (in the case of ``cvCmp`` and ``cv.Cmp`` it is always an array; in the case of ``cvCmpS``, ``cv.CmpS`` it is always a scalar). When it is array, it must have a single channel.
     
     :param dst: Destination array that has the same size as the input array(s) and type= ``CV_8UC1`` .
     
@@ -644,24 +644,6 @@ The function returns the number of non-zero elements in ``mtx`` :
     :ocv:func:`norm`,
     :ocv:func:`minMaxLoc`,
     :ocv:func:`calcCovarMatrix`
-
-
-
-cubeRoot
---------
-Computes the cube root of an argument.
-
-.. ocv:function:: float cubeRoot(float val)
-
-.. ocv:pyfunction:: cv2.cubeRoot(val) -> retval
-
-.. ocv:cfunction:: float cvCbrt(float val)
-
-.. ocv:pyoldfunction:: cv.Cbrt(val)-> float
-
-    :param val: A function argument.
-
-The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
 
 
 
@@ -1135,25 +1117,6 @@ To extract a channel from a new-style matrix, use
 
 
 
-fastAtan2
----------
-Calculates the angle of a 2D vector in degrees.
-
-.. ocv:function:: float fastAtan2(float y, float x)
-
-.. ocv:pyfunction:: cv2.fastAtan2(y, x) -> retval
-
-.. ocv:cfunction:: float cvFastArctan(float y, float x)
-.. ocv:pyoldfunction:: cv.FastArctan(y, x)-> float
-
-    :param x: x-coordinate of the vector.
-
-    :param y: y-coordinate of the vector.
-
-The function ``fastAtan2`` calculates the full-range angle of an input 2D vector. The angle is measured in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
-
-
-
 flip
 --------
 Flips a 2D array around vertical, horizontal, or both axes.
@@ -1553,7 +1516,9 @@ Calculates the Mahalanobis distance between two vectors.
 
 .. ocv:pyfunction:: cv2.Mahalanobis(v1, v2, icovar) -> retval
 
-.. ocv:cfunction:: double cvMahalanobis( const CvArr* vec1, const CvArr* vec2, CvArr* mat)
+.. ocv:cfunction:: double cvMahalanobis( const CvArr* vec1, const CvArr* vec2, CvArr* icovar)
+
+.. ocv:pyoldfunction:: cv.Mahalanobis(vec1, vec2, icovar)-> None
 
     :param vec1: First 1D source vector.
 
@@ -1561,7 +1526,7 @@ Calculates the Mahalanobis distance between two vectors.
 
     :param icovar: Inverse covariance matrix.
 
-The function ``Mahalonobis`` calculates and returns the weighted distance between two vectors:
+The function ``Mahalanobis`` calculates and returns the weighted distance between two vectors:
 
 .. math::
 
@@ -2217,6 +2182,8 @@ Performs Principal Component Analysis of the supplied dataset.
 
 .. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, int maxComponents=0)
 
+.. ocv:pyfunction:: cv2.PCACompute(data[, mean[, eigenvectors[, maxComponents]]]) -> mean, eigenvectors
+
     :param data: Input samples stored as the matrix rows or as the matrix columns.
 
     :param mean: Optional mean value. If the matrix is empty ( ``Mat()`` ), the mean is computed from the data.
@@ -2243,6 +2210,8 @@ Projects vector(s) to the principal component subspace.
 
 .. ocv:function:: void PCA::project(InputArray vec, OutputArray result) const
 
+.. ocv:pyfunction:: cv2.PCAProject(vec, mean, eigenvectors[, result]) -> result
+
     :param vec: Input vector(s). They must have the same dimensionality and the same layout as the input data used at PCA phase. That is, if  ``CV_PCA_DATA_AS_ROWS``  are specified, then  ``vec.cols==data.cols``  (vector dimensionality) and  ``vec.rows``  is the number of vectors to project. The same is true for the  ``CV_PCA_DATA_AS_COLS``  case.
 
     :param result: Output vectors. In case of  ``CV_PCA_DATA_AS_COLS``  , the output matrix has as many columns as the number of input vectors. This means that  ``result.cols==vec.cols``  and the number of rows match the number of principal components (for example,  ``maxComponents``  parameter passed to the constructor).
@@ -2258,6 +2227,8 @@ Reconstructs vectors from their PC projections.
 .. ocv:function:: Mat PCA::backProject(InputArray vec) const
 
 .. ocv:function:: void PCA::backProject(InputArray vec, OutputArray result) const
+
+.. ocv:pyfunction:: cv2.PCABackProject(vec, mean, eigenvectors[, result]) -> result
 
     :param vec: Coordinates of the vectors in the principal component subspace. The layout and size are the same as of  ``PCA::project``  output vectors.
 
@@ -2719,35 +2690,6 @@ The second variant of the function is more convenient to use with
 
 
 
-saturate_cast
--------------
-Template function for accurate conversion from one primitive type to another.
-
-.. ocv:function:: template<...> _Tp saturate_cast(_Tp2 v)
-
-    :param v: Function parameter.
-
-The functions ``saturate_cast`` resemble the standard C++ cast operations, such as ``static_cast<T>()`` and others. They perform an efficient and accurate conversion from one primitive type to another (see the introduction chapter). ``saturate`` in the name means that when the input value ``v`` is out of the range of the target type, the result is not formed just by taking low bits of the input, but instead the value is clipped. For example: ::
-
-    uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
-    short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
-
-Such clipping is done when the target type is ``unsigned char`` , ``signed char`` , ``unsigned short`` or ``signed short`` . For 32-bit integers, no clipping is done.
-
-When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit), the floating-point value is first rounded to the nearest integer and then clipped if needed (when the target type is 8- or 16-bit).
-
-This operation is used in the simplest or most complex image processing functions in OpenCV.
-
-.. seealso::
-
-    :ocv:func:`add`,
-    :ocv:func:`subtract`,
-    :ocv:func:`multiply`,
-    :ocv:func:`divide`,
-    :ocv:func:`Mat::convertTo`
-
-
-
 scaleAdd
 --------
 Calculates the sum of a scaled array and another array.
@@ -3161,7 +3103,7 @@ The constructors.
 
 .. ocv:function:: SVD::SVD( InputArray A, int flags=0 )
 
-    :param A: Decomposed matrix.
+    :param src: Decomposed matrix.
 
     :param flags: Operation flags.
 
@@ -3175,14 +3117,13 @@ The first constructor initializes an empty ``SVD`` structure. The second constru
 :ocv:func:`SVD::operator ()` .
 
 
-
 SVD::operator ()
 ----------------
 Performs SVD of a matrix.
 
-.. ocv:function:: SVD& SVD::operator ()( InputArray A, int flags=0 )
+.. ocv:function:: SVD& SVD::operator()( InputArray src, int flags=0 )
 
-    :param A: Decomposed matrix.
+    :param src: Decomposed matrix.
 
     :param flags: Operation flags.
 
@@ -3196,35 +3137,81 @@ The operator performs the singular value decomposition of the supplied matrix. T
 :ocv:func:`Mat::create` .
 
 
+SVD::compute
+------------
+Performs SVD of a matrix
+
+.. ocv:function:: static void SVD::compute( InputArray src, OutputArray w, OutputArray u, OutputArray vt, int flags=0 )
+
+.. ocv:function:: static void SVD::compute( InputArray src, OutputArray w, int flags=0 )
+
+.. ocv:pyfunction:: cv2.SVDecomp(src[, w[, u[, vt[, flags]]]]) -> w, u, vt
+
+.. ocv:cfunction:: void cvSVD( CvArr* src, CvArr* w, CvArr* u=NULL, CvArr* v=NULL, int flags=0)
+
+.. ocv:pyoldfunction:: cv.SVD(src, w, u=None, v=None, flags=0)-> None
+
+    :param src: Decomposed matrix
+    
+    :param w: Computed singular values
+    
+    :param u: Computed left singular vectors
+    
+    :param v: Computed right singular vectors
+    
+    :param vt: Transposed matrix of right singular values
+    
+    :param flags: Opertion flags - see :ocv:func:`SVD::SVD`.
+
+The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator ()``, they store the results to the user-provided matrices. ::
+
+    Mat A, w, u, vt;
+    SVD::compute(A, w, u, vt);
+    
 
 SVD::solveZ
 -----------
 Solves an under-determined singular linear system.
 
-.. ocv:function:: static void SVD::solveZ( InputArray A, OutputArray x )
+.. ocv:function:: static void SVD::solveZ( InputArray src, OutputArray dst )
 
-    :param A: Left-hand-side matrix.
+    :param src: Left-hand-side matrix.
 
-    :param x: Found solution.
+    :param dst: Found solution.
 
 The method finds a unit-length solution ``x`` of a singular linear system 
 ``A*x = 0``. Depending on the rank of ``A``, there can be no solutions, a single solution or an infinite number of solutions. In general, the algorithm solves the following problem:
 
 .. math::
 
-    x^* =  \arg \min _{x:  \| x \| =1}  \| A  \cdot x  \|
-
+    dst =  \arg \min _{x:  \| x \| =1}  \| src  \cdot x  \|
 
 
 SVD::backSubst
 --------------
 Performs a singular value back substitution.
 
-.. ocv:function:: void SVD::backSubst( InputArray rhs, OutputArray x ) const
+.. ocv:function:: void SVD::backSubst( InputArray rhs, OutputArray dst ) const
 
-    :param rhs: Right-hand side of a linear system  ``A*x = rhs`` to be solved, where ``A`` has been previously decomposed using :ocv:func:`SVD::SVD`  or  :ocv:func:`SVD::operator ()` .
+.. ocv:function:: static void SVD::backSubst( InputArray w, InputArray u, InputArray vt, InputArray rhs, OutputArray dst )
+
+.. ocv:pyfunction:: cv2.SVBackSubst(w, u, vt, rhs[, dst]) -> dst
+
+.. ocv:cfunction:: void cvSVBkSb( const CvArr* w, const CvArr* u, const CvArr* v, const CvArr* rhs, CvArr* dst, int flags)
+
+.. ocv:pyoldfunction:: cv.SVBkSb(w, u, v, rhs, dst, flags)-> None
+
+    :param w: Singular values
     
-    :param x: Found solution of the system.
+    :param u: Left singular vectors
+    
+    :param v: Right singular vectors
+    
+    :param vt: Transposed matrix of right singular vectors.
+
+    :param rhs: Right-hand side of a linear system ``(u*w*v')*dst = rhs`` to be solved, where ``A`` has been previously decomposed.
+    
+    :param dst: Found solution of the system.
 
 The method computes a back substitution for the specified right-hand side:
 
@@ -3234,7 +3221,7 @@ The method computes a back substitution for the specified right-hand side:
 
 Using this technique you can either get a very accurate solution of the convenient linear system, or the best (in the least-squares terms) pseudo-solution of an overdetermined linear system. 
 
-.. note:: Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``A`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call :ocv:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
+.. note:: Explicit SVD with the further back substitution only makes sense if you need to solve many linear systems with the same left-hand side (for example, ``src`` ). If all you need is to solve a single system (possibly with multiple ``rhs`` immediately available), simply call :ocv:func:`solve` add pass ``DECOMP_SVD`` there. It does absolutely the same thing.
 
 
 

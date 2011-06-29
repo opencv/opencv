@@ -88,20 +88,12 @@ ML implements two algorithms for training MLP's. The first algorithm is a classi
 random sequential back-propagation algorithm.
 The second (default) one is a batch RPROP algorithm.
 
-References:
+.. [BackPropWikipedia] http://en.wikipedia.org/wiki/Backpropagation. Wikipedia article about the back-propagation algorithm.
 
-*
-    http://en.wikipedia.org/wiki/Backpropagation
-    . Wikipedia article about the back-propagation algorithm.
+.. [LeCun98] Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, *Efficient backprop*, in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
 
-*
-    Y. LeCun, L. Bottou, G.B. Orr and K.-R. Muller, *Efficient backprop*, in Neural Networks---Tricks of the Trade, Springer Lecture Notes in Computer Sciences 1524, pp.5-50, 1998.
-
-.. _RPROP93:
-
-*
-    [RPROP93] M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
-
+.. [RPROP93] M. Riedmiller and H. Braun, *A Direct Adaptive Method for Faster Backpropagation Learning: The RPROP Algorithm*, Proc. ICNN, San Francisco (1993).
+    
 
 CvANN_MLP_TrainParams
 ---------------------
@@ -119,7 +111,7 @@ The back-propagation algorithm parameters:
 
     Strength of the momentum term (the difference between weights on the 2 previous iterations). This parameter provides some inertia to smooth the random fluctuations of the weights. It can vary from 0 (the feature is disabled) to 1 and beyond. The value 0.1 or so is good enough
 
-The RPROP algorithm parameters (see :ref:`[RPROP93] <RPROP93>` for details):
+The RPROP algorithm parameters (see [RPROP93]_ for details):
 
 .. ocv:member:: double rp_dw0
 
@@ -192,6 +184,8 @@ The constructors.
 
 .. ocv:cfunction:: CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
+.. ocv:pyfunction:: cv2.ANN_MLP(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> <ANN_MLP object>
+
 The advanced constructor allows to create MLP with the specified topology. See :ocv:func:`CvANN_MLP::create` for details.
 
 CvANN_MLP::create
@@ -201,6 +195,8 @@ Constructs MLP with the specified topology.
 .. ocv:function:: void CvANN_MLP::create( const Mat& layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
 .. ocv:cfunction:: void CvANN_MLP::create( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+
+.. ocv:pyfunction:: cv2.ANN_MLP.create(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> None
 
     :param layerSizes: Integer vector specifying the number of neurons in each layer including the input and output layers.
 
@@ -217,6 +213,8 @@ Trains/updates MLP.
 .. ocv:function:: int CvANN_MLP::train( const Mat& inputs, const Mat& outputs, const Mat& sampleWeights, const Mat& sampleIdx=Mat(), CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
 .. ocv:cfunction:: int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
+
+.. ocv:pyfunction:: cv2.ANN_MLP.train(inputs, outputs, sampleWeights[, sampleIdx[, params[, flags]]]) -> niterations
 
     :param inputs: Floating-point matrix of input vectors, one vector per row.
 
@@ -246,6 +244,8 @@ Predicts responses for input samples.
 
 .. ocv:cfunction:: float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
 
+.. ocv:pyfunction:: cv2.ANN_MLP.predict(inputs, outputs) -> retval
+
     :param inputs: Input samples.
 
     :param outputs: Predicted responses for corresponding samples.
@@ -273,3 +273,4 @@ Returns neurons weights of the particular layer.
 .. ocv:function:: double* CvANN_MLP::get_weights(int layer)
 
     :param layer: Index of the particular layer.
+    

@@ -152,8 +152,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
         * **CV_CALIB_RATIONAL_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the backward compatibility, this extra flag should be explicitly specified to make the calibration function use the rational model and return 8 coefficients. If the flag is not set, the function computes  and returns  only 5 distortion coefficients.
 
 The function estimates the intrinsic camera
-parameters and extrinsic parameters for each of the views. The
-coordinates of 3D object points and their corresponding 2D projections
+parameters and extrinsic parameters for each of the views. The algorithm is based on [Zhang2000] and [BoughuetMCT]. The coordinates of 3D object points and their corresponding 2D projections
 in each view must be specified. That may be achieved by using an
 object with a known geometry and easily detectable feature points.
 Such an object is called a calibration rig or calibration pattern,
@@ -179,13 +178,7 @@ The function returns the final re-projection error.
 
 .. note::
 
-	If you use a non-square (=non-NxN) grid and	:ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns
-	bad values (zero distortion coefficients, an image center very far from
-	:math:`(w/2-0.5,h/2-0.5)` , and/or large differences between
-	:math:`f_x` and
-	:math:`f_y` (ratios of
-	10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in
-	:ocv:func:`FindChessboardCorners` .
+    If you use a non-square (=non-NxN) grid and	:ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns bad values (zero distortion coefficients, an image center very far from ``(w/2-0.5,h/2-0.5)``, and/or large differences between :math:`f_x` and :math:`f_y` (ratios of 10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in :ocv:func:`findChessboardCorners` .
 
 .. seealso::
 :ocv:func:`FindChessboardCorners`,
@@ -483,6 +476,8 @@ Finds the centers in the grid of circles.
 
 .. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
 
+.. ocv:pyfunction:: cv2.findCirclesGridDefault(image, patternSize[, centers[, flags]]) -> centers
+
     :param image: Grid view of source circles. It must be an 8-bit grayscale or color image.
 
     :param patternSize: Number of circles per a grid row and column ``( patternSize = Size(points_per_row, points_per_colum) )`` .
@@ -757,7 +752,24 @@ Computes an optimal affine transformation between two 3D point sets.
 The function estimates an optimal 3D affine transformation between two 3D point sets using the RANSAC algorithm.
 
 
+filterSpeckles
+--------------
+Filters off small noise blobs (speckles) in the disparity map
 
+.. ocv:function:: void filterSpeckles( InputOutputArray img, double newVal, int maxSpeckleSize, double maxDiff, InputOutputArray buf=noArray() );
+
+.. ocv:pyfunction:: cv2.filterSpeckles(img, newVal, maxSpeckleSize, maxDiff[, buf]) -> None
+
+    :param img: The input 16-bit signed disparity image
+    
+    :param newVal: The disparity value used to paint-off the speckles
+    
+    :param maxSpeckleSize: The maximum speckle size to consider it a speckle. Larger blobs are not affected by the algorithm
+    
+    :param maxDiff: Maximum difference between neighbor disparity pixels to put them into the same blob. Note that since StereoBM, StereoSGBM and may be other algorithms return a fixed-point disparity map, where disparity values are multiplied by 16, this scale factor should be taken into account when specifying this parameter value.
+    
+    :param buf: The optional temporary buffer to avoid memory allocation within the function.
+    
 
 getOptimalNewCameraMatrix
 -----------------------------
@@ -786,8 +798,8 @@ Returns the new camera matrix based on the free scaling parameter.
     
 The function computes and returns
 the optimal new camera matrix based on the free scaling parameter. By varying  this parameter, you may retrieve only sensible pixels ``alpha=0`` , keep all the original image pixels if there is valuable information in the corners ``alpha=1`` , or get something in between. When ``alpha>0`` , the undistortion result is likely to have some black pixels corresponding to "virtual" pixels outside of the captured distorted image. The original camera matrix, distortion coefficients, the computed new camera matrix, and ``newImageSize`` should be passed to
-:ocv:func:`InitUndistortRectifyMap` to produce the maps for
-:ocv:func:`Remap` .
+:ocv:func:`initUndistortRectifyMap` to produce the maps for
+:ocv:func:`remap` .
 
 
 
@@ -1047,6 +1059,8 @@ The constructors.
     
 The constructors initialize ``StereoBM`` state. You can then call ``StereoBM::operator()`` to compute disparity for a specific stereo pair.
 
+.. note:: In the C API you need to deallocate ``CvStereoBM`` state when it is not needed anymore using ``cvReleaseStereoBMState(&stereobm)``.
+
 StereoBM::operator()
 -----------------------
 Computes disparity using the BM algorithm for a rectified stereo pair.
@@ -1299,7 +1313,7 @@ stereoRectify
 
     :param alpha: Free scaling parameter. If it is -1  or absent, the function performs the default scaling. Otherwise, the parameter should be between 0 and 1.  ``alpha=0``  means that the rectified images are zoomed and shifted so that only valid pixels are visible (no black areas after rectification).  ``alpha=1``  means that the rectified image is decimated and shifted so that all the pixels from the original images from the cameras are retained in the rectified images (no source image pixels are lost). Obviously, any intermediate value yields an intermediate result between those two extreme cases.
 
-    :param newImageSize: New image resolution after rectification. The same size should be passed to  :ref:`InitUndistortRectifyMap` (see the  ``stereo_calib.cpp``  sample in OpenCV samples directory). When (0,0) is passed (default), it is set to the original  ``imageSize`` . Setting it to larger value can help you preserve details in the original image, especially when there is a big radial distortion.
+    :param newImageSize: New image resolution after rectification. The same size should be passed to  :ocv:func:`initUndistortRectifyMap` (see the  ``stereo_calib.cpp``  sample in OpenCV samples directory). When (0,0) is passed (default), it is set to the original  ``imageSize`` . Setting it to larger value can help you preserve details in the original image, especially when there is a big radial distortion.
 
     :param roi1, roi2: Optional output rectangles inside the rectified images where all the pixels are valid. If  ``alpha=0`` , the ROIs cover the whole images. Otherwise, they are likely to be smaller (see the picture below).
 
@@ -1338,7 +1352,7 @@ The function computes the rotation matrices for each camera that (virtually) mak
 
 As you can see, the first three columns of ``P1`` and ``P2`` will effectively be the new "rectified" camera matrices.
 The matrices, together with ``R1`` and ``R2`` , can then be passed to
-:ocv:func:`InitUndistortRectifyMap` to initialize the rectification map for each camera.
+:ocv:func:`initUndistortRectifyMap` to initialize the rectification map for each camera.
 
 See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizontal lines pass through the corresponding image regions. This means that the images are well rectified, which is what most stereo correspondence algorithms rely on. The green rectangles are ``roi1`` and ``roi2`` . You see that their interiors are all valid pixels.
 
@@ -1369,12 +1383,14 @@ stereoRectifyUncalibrated
 
 The function computes the rectification transformations without knowing intrinsic parameters of the cameras and their relative position in the space, which explains the suffix "uncalibrated". Another related difference from
 :ocv:func:`StereoRectify` is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations encoded by the homography matrices ``H1`` and ``H2`` . The function implements the algorithm
-Hartley99
-.
+[Hartley99]_.
 
 .. note::
 
-	While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion, it would be better to correct it before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using
-	:ocv:func:`calibrateCamera` . Then, the images can be corrected using
-	:ocv:func:`undistort` , or just the point coordinates can be corrected with
-	:ocv:func:`undistortPoints` .
+    While the algorithm does not need to know the intrinsic parameters of the cameras, it heavily depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion, it would be better to correct it before computing the fundamental matrix and calling this function. For example, distortion coefficients can be estimated for each head of stereo camera separately by using :ocv:func:`calibrateCamera` . Then, the images can be corrected using :ocv:func:`undistort` , or just the point coordinates can be corrected with :ocv:func:`undistortPoints` .
+
+.. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
+
+.. [Hartley99] Hartley, R.I., “Theory and Practice of Projective Rectification”. IJCV 35 2, pp 115-127 (1999)
+
+.. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.

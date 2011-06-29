@@ -67,6 +67,106 @@ The generic function ``deallocate`` deallocates the buffer allocated with
 
 
 
+fastAtan2
+---------
+Calculates the angle of a 2D vector in degrees.
+
+.. ocv:function:: float fastAtan2(float y, float x)
+
+.. ocv:pyfunction:: cv2.fastAtan2(y, x) -> retval
+
+.. ocv:cfunction:: float cvFastArctan(float y, float x)
+.. ocv:pyoldfunction:: cv.FastArctan(y, x)-> float
+
+    :param x: x-coordinate of the vector.
+
+    :param y: y-coordinate of the vector.
+
+The function ``fastAtan2`` calculates the full-range angle of an input 2D vector. The angle is measured in degrees and varies from 0 to 360 degrees. The accuracy is about 0.3 degrees.
+
+
+cubeRoot
+--------
+Computes the cube root of an argument.
+
+.. ocv:function:: float cubeRoot(float val)
+
+.. ocv:pyfunction:: cv2.cubeRoot(val) -> retval
+
+.. ocv:cfunction:: float cvCbrt(float val)
+
+.. ocv:pyoldfunction:: cv.Cbrt(val)-> float
+
+    :param val: A function argument.
+
+The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
+
+
+Ceil
+-----
+Rounds floating-point number to the nearest integer not smaller than the original.
+
+.. ocv:cfunction:: int cvCeil(double value)
+.. ocv:pyoldfunction:: cv.Ceil(value) -> int
+
+    :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
+
+The function computes an integer ``i`` such that:
+
+.. math::
+
+    i-1 < \texttt{value} \le i
+
+
+Floor
+-----
+Rounds floating-point number to the nearest integer not larger than the original.
+
+.. ocv:cfunction:: int cvFloor(double value)
+.. ocv:pyoldfunction:: cv.Floor(value) -> int
+
+    :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
+
+The function computes an integer ``i`` such that:
+
+.. math::
+
+    i \le \texttt{value} < i+1
+
+
+Round
+-----
+Rounds floating-point number to the nearest integer
+
+.. ocv:cfunction:: int cvRound(double value)
+.. ocv:pyoldfunction:: cv.Round(value) -> int
+
+    :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
+
+
+IsInf
+-----
+Determines if the argument is Infinity.
+
+.. ocv:cfunction:: int cvIsInf(double value)
+.. ocv:pyoldfunction:: cv.IsInf(value)-> int
+
+        :param value: The input floating-point value 
+
+The function returns 1 if the argument is a plus or minus infinity (as defined by IEEE754 standard) and 0 otherwise.
+
+IsNaN
+-----
+Determines if the argument is Not A Number.
+
+.. ocv:cfunction:: int cvIsNaN(double value)
+.. ocv:pyoldfunction:: cv.IsNaN(value)-> int
+
+        :param value: The input floating-point value 
+
+The function returns 1 if the argument is Not A Number (as defined by IEEE754 standard), 0 otherwise.
+
+
 CV_Assert
 ---------
 Checks a condition at runtime and throws exception if it fails
@@ -145,6 +245,7 @@ fastMalloc
 Allocates an aligned memory buffer.
 
 .. ocv:function:: void* fastMalloc(size_t size)
+.. ocv:cfunction:: void* cvAlloc( size_t size )
 
     :param size: Allocated buffer size.
 
@@ -157,13 +258,13 @@ fastFree
 Deallocates a memory buffer.
 
 .. ocv:function:: void fastFree(void* ptr)
+.. ocv:cfunction:: void cvFree( void** pptr )
 
     :param ptr: Pointer to the allocated buffer.
+    
+    :param pptr: Double pointer to the allocated buffer
 
-The function deallocates the buffer allocated with
-:ocv:func:`fastMalloc` .
-If NULL pointer is passed, the function does nothing.
-
+The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If NULL pointer is passed, the function does nothing. C version of the function clears the pointer *pptr to avoid problems with double memory deallocation.
 
 
 format
@@ -249,6 +350,32 @@ Returns the number of CPU ticks.
 The function returns the current number of CPU ticks on some architectures (such as x86, x64, PowerPC). On other platforms the function is equivalent to ``getTickCount``. It can also be used for very accurate time measurements, as well as for RNG initialization. Note that in case of multi-CPU systems a thread, from which ``getCPUTickCount`` is called, can be suspended and resumed at another CPU with its own counter. So, theoretically (and practically) the subsequent calls to the function do not necessary return the monotonously increasing values. Also, since a modern CPU varies the CPU frequency depending on the load, the number of CPU clocks spent in some code cannot be directly converted to time units. Therefore, ``getTickCount`` is generally a preferable solution for measuring execution time.
 
 
+saturate_cast
+-------------
+Template function for accurate conversion from one primitive type to another.
+
+.. ocv:function:: template<...> _Tp saturate_cast(_Tp2 v)
+
+    :param v: Function parameter.
+
+The functions ``saturate_cast`` resemble the standard C++ cast operations, such as ``static_cast<T>()`` and others. They perform an efficient and accurate conversion from one primitive type to another (see the introduction chapter). ``saturate`` in the name means that when the input value ``v`` is out of the range of the target type, the result is not formed just by taking low bits of the input, but instead the value is clipped. For example: ::
+
+    uchar a = saturate_cast<uchar>(-100); // a = 0 (UCHAR_MIN)
+    short b = saturate_cast<short>(33333.33333); // b = 32767 (SHRT_MAX)
+
+Such clipping is done when the target type is ``unsigned char`` , ``signed char`` , ``unsigned short`` or ``signed short`` . For 32-bit integers, no clipping is done.
+
+When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit), the floating-point value is first rounded to the nearest integer and then clipped if needed (when the target type is 8- or 16-bit).
+
+This operation is used in the simplest or most complex image processing functions in OpenCV.
+
+.. seealso::
+
+    :ocv:func:`add`,
+    :ocv:func:`subtract`,
+    :ocv:func:`multiply`,
+    :ocv:func:`divide`,
+    :ocv:func:`Mat::convertTo`
 
 setNumThreads
 -----------------

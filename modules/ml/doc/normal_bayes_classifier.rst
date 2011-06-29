@@ -7,7 +7,7 @@ Normal Bayes Classifier
 
 This simple classification model assumes that feature vectors from each class are normally distributed (though, not necessarily independently distributed). So, the whole data distribution function is assumed to be a Gaussian mixture, one component per  class. Using the training data the algorithm estimates mean vectors and covariance matrices for every class, and then it uses them for prediction.
 
-[Fukunaga90] K. Fukunaga. *Introduction to Statistical Pattern Recognition*. second ed., New York: Academic Press, 1990.
+.. [Fukunaga90] K. Fukunaga. *Introduction to Statistical Pattern Recognition*. second ed., New York: Academic Press, 1990.
 
 CvNormalBayesClassifier
 -----------------------
@@ -25,6 +25,8 @@ Default and training constructors.
 
 .. ocv:cfunction:: CvNormalBayesClassifier::CvNormalBayesClassifier( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0 )
 
+.. ocv:pyfunction:: cv2.NormalBayesClassifier(trainData, responses[, varIdx[, sampleIdx]]) -> <NormalBayesClassifier object>
+
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
 
 CvNormalBayesClassifier::train
@@ -33,7 +35,7 @@ Trains the model.
 
 .. ocv:function:: bool CvNormalBayesClassifier::train( const Mat& trainData, const Mat& responses, const Mat& varIdx = Mat(), const Mat& sampleIdx=Mat(), bool update=false )
 
-.. ocv:pyfunction:: cv2.CvNormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
+.. ocv:pyfunction:: cv2.NormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
 
 .. ocv:cfunction:: bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
 
@@ -52,7 +54,7 @@ Predicts the response for sample(s).
 
 .. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
-.. ocv:pyfunction:: cv2.CvNormalBayesClassifier.predict(samples) -> retval, results
+.. ocv:pyfunction:: cv2.NormalBayesClassifier.predict(samples) -> retval, results
 
 .. ocv:cfunction:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
 

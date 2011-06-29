@@ -1081,6 +1081,7 @@ class OCVObject(ObjectDescription):
     """Description of a C++ language object."""
 
     langname = "C++"
+    ismember = False
 
     doc_field_types = [
         TypedField('parameter', label=l_('Parameters'),
@@ -1111,9 +1112,11 @@ class OCVObject(ObjectDescription):
         node += pnode
 
     def attach_modifiers(self, node, obj):
-        lname = self.__class__.langname
-        node += nodes.strong(lname + ":", lname + ":")
-        node += addnodes.desc_name(" ", " ")
+        if not self.__class__.ismember:
+            lname = self.__class__.langname
+            node += nodes.strong(lname + ":", lname + ":")
+            node += addnodes.desc_name(" ", " ")
+            
         if obj.visibility != 'public':
             node += addnodes.desc_annotation(obj.visibility,
                                              obj.visibility)
@@ -1189,6 +1192,20 @@ class OCVClassObject(OCVObject):
         #self.attach_name(signode, cls.name)
         pass
 
+class OCVStructObject(OCVObject):
+
+    def get_index_text(self, name):
+        return _('%s (C structure)') % name
+
+    def parse_definition(self, parser):
+        return parser.parse_class()
+
+    def describe_signature(self, signode, cls):
+        #self.attach_modifiers(signode, cls)
+        #signode += addnodes.desc_annotation('class ', 'class ')
+        #self.attach_name(signode, cls.name)
+        pass
+
 
 class OCVTypeObject(OCVObject):
 
@@ -1210,6 +1227,8 @@ class OCVTypeObject(OCVObject):
 
 
 class OCVMemberObject(OCVObject):
+
+    ismember = True
 
     def get_index_text(self, name):
         if self.objtype == 'member':
@@ -1268,6 +1287,8 @@ class OCVFunctionObject(OCVObject):
 
     def get_index_text(self, name):
         lname = self.__class__.langname
+        if lname == "C" and name.startswith("cv"):
+            name = name[2:]
         return _('%s (%s function)') % (name, lname)
 
     def parse_definition(self, parser):
@@ -1344,6 +1365,7 @@ class OCVDomain(Domain):
     label = 'C++'
     object_types = {
         'class':    ObjType(l_('class'),    'class'),
+        'struct':    ObjType(l_('struct'),    'struct'),
         'function': ObjType(l_('function'), 'func', 'funcx'),
         'cfunction': ObjType(l_('cfunction'), 'cfunc', 'cfuncx'),
         'jfunction': ObjType(l_('jfunction'), 'jfunc', 'jfuncx'),
@@ -1355,6 +1377,7 @@ class OCVDomain(Domain):
 
     directives = {
         'class':        OCVClassObject,
+        'struct':       OCVStructObject,
         'function':     OCVFunctionObject,
         'cfunction':    OCVCFunctionObject,
         'jfunction':    OCVJavaFunctionObject,
@@ -1366,6 +1389,7 @@ class OCVDomain(Domain):
     }
     roles = {
         'class':  OCVXRefRole(),
+        'struct':  OCVXRefRole(),
         'func' :  OCVXRefRole(fix_parens=True),
         'funcx' :  OCVXRefRole(),
         'cfunc' :  OCVXRefRole(fix_parens=True),

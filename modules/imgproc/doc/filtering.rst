@@ -1044,9 +1044,13 @@ getStructuringElement
 -------------------------
 Returns a structuring element of the specified size and shape for morphological operations.
 
-.. ocv:function:: Mat getStructuringElement(int shape, Size esize, Point anchor=Point(-1,-1))
+.. ocv:function:: Mat getStructuringElement(int shape, Size ksize, Point anchor=Point(-1,-1))
 
 .. ocv:pyfunction:: cv2.getStructuringElement(shape, ksize[, anchor]) -> retval
+
+.. ocv:cfunction:: IplConvKernel* cvCreateStructuringElementEx( int cols, int rows, int anchorX, int anchorY, int shape, int* values=NULL )
+
+.. ocv:pyoldfunction:: cv.CreateStructuringElementEx(cols, rows, anchorX, anchorY, shape, values=None)-> kernel
 
     :param shape: Element shape that could be one of the following:
 
@@ -1063,10 +1067,22 @@ Returns a structuring element of the specified size and shape for morphological 
         .. math::
 
             E_{ij} =  \fork{1}{if i=\texttt{anchor.y} or j=\texttt{anchor.x}}{0}{otherwise}
+            
+      * **CV_SHAPE_CUSTOM**     - custom structuring element (OpenCV 1.x API)
 
-    :param esize: Size of the structuring element.
+    :param ksize: Size of the structuring element.
+
+    :param cols: Width of the structuring element
+    
+    :param rows: Height of the structuring element
 
     :param anchor: Anchor position within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the center. Note that only the shape of a cross-shaped element depends on the anchor position. In other cases the anchor just regulates how much the result of the morphological operation is shifted.
+    
+    :param anchorX: x-coordinate of the anchor
+    
+    :param anchorY: y-coordinate of the anchor
+    
+    :param values: integer array of ``cols``*``rows`` elements that specifies the custom shape of the structuring element, when ``shape=CV_SHAPE_CUSTOM``.
 
 The function constructs and returns the structuring element that can be further passed to
 :ocv:func:`createMorphologyFilter`,
@@ -1074,6 +1090,7 @@ The function constructs and returns the structuring element that can be further 
 :ocv:func:`dilate` or
 :ocv:func:`morphologyEx` . But you can also construct an arbitrary binary mask yourself and use it as the structuring element.
 
+.. note:: When using OpenCV 1.x C API, the created structuring element ``IplConvKernel* element`` must be released in the end using ``cvReleaseStructuringElement(&element)``.
 
 
 medianBlur
@@ -1277,6 +1294,54 @@ The function performs the upsampling step of the Gaussian pyramid construction  
 :ocv:func:`pyrDown`  multiplied by 4.
 
 
+pyrMeanShiftFiltering
+---------------------
+Performs initial step of meanshift segmentation of an image.
+
+.. ocv:function: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
+
+.. ocv:pyfunction:: cv2.pyrMeanShiftFiltering(src, sp, sr[, dst[, maxLevel[, termcrit]]]) -> dst
+
+.. ocv:cfunction:: void cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst, double sp,  double sr,  int max_level=1, CvTermCriteria termcrit= cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1))
+
+.. ocv:pyoldfunction:: cv.PyrMeanShiftFiltering(src, dst, sp, sr, maxLevel=1, termcrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 5, 1))-> None
+    
+    :param src: The source 8-bit, 3-channel image. 
+    
+    :param dst: The destination image of the same format and the same size as the source. 
+    
+    :param sp: The spatial window radius. 
+    
+    :param sr: The color window radius. 
+    
+    :param maxLevel: Maximum level of the pyramid for the segmentation. 
+    
+    :param termcrit: Termination criteria: when to stop meanshift iterations. 
+    
+       
+The function implements the filtering stage of meanshift segmentation, that is, the output of the function is the filtered "posterized" image with color gradients and fine-grain texture flattened. At every pixel 
+``(X,Y)`` of the input image (or down-sized input image, see below) the function executes meanshift
+iterations, that is, the pixel ``(X,Y)`` neighborhood in the joint space-color hyperspace is considered:
+
+    .. math::
+
+        (x,y): X- \texttt{sp} \le x  \le X+ \texttt{sp} , Y- \texttt{sp} \le y  \le Y+ \texttt{sp} , ||(R,G,B)-(r,g,b)||   \le \texttt{sr} 
+
+
+where  ``(R,G,B)`` and  ``(r,g,b)`` are the vectors of color components at ``(X,Y)`` and  ``(x,y)``, respectively (though, the algorithm does not depend on the color space used, so any 3-component color space can be used instead). Over the neighborhood the average spatial value  ``(X',Y')`` and average color vector  ``(R',G',B')`` are found and they act as the neighborhood center on the next iteration: 
+
+    .. math::
+
+        (X,Y)~(X',Y'), (R,G,B)~(R',G',B').
+    
+After the iterations over, the color components of the initial pixel (that is, the pixel from where the iterations started) are set to the final value (average color at the last iteration): 
+
+    .. math::
+        
+        I(X,Y) <- (R*,G*,B*)
+
+When ``maxLevel > 0``, the gaussian pyramid of ``maxLevel+1`` levels is built, and the above procedure is run on the smallest layer first. After that, the results are propagated to the larger layer and the iterations are run again only on those pixels where the layer colors differ by more than ``sr`` from the lower-resolution layer of the pyramid. That makes boundaries of color regions sharper. Note that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when ``maxLevel==0``).
+
 
 sepFilter2D
 ---------------
@@ -1312,6 +1377,57 @@ The function applies a separable linear filter to the image. That is, first, eve
 :ocv:func:`boxFilter`,
 :ocv:func:`blur` 
 
+
+Smooth
+------
+Smooths the image in one of several ways.
+
+.. ocv:cfunction:: void cvSmooth( const CvArr* src,  CvArr* dst,  int smoothtype=CV_GAUSSIAN,  int param1=3,  int param2=0,  double param3=0,  double param4=0)
+
+.. ocv:pyoldfunction:: cv.Smooth(src, dst, smoothtype=CV_GAUSSIAN, param1=3, param2=0, param3=0, param4=0)-> None
+
+    :param src: The source image 
+    
+    :param dst: The destination image 
+    
+    :param smoothtype: Type of the smoothing: 
+                
+            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ref:`Integral` 
+            
+               
+            * **CV_BLUR** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's) with subsequent scaling by  :math:`1/(\texttt{param1}\cdot\texttt{param2})` 
+            
+               
+            * **CV_GAUSSIAN** linear convolution with a  :math:`\texttt{param1}\times\texttt{param2}`  Gaussian kernel 
+            
+               
+            * **CV_MEDIAN** median filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture 
+            
+               
+            * **CV_BILATERAL** bilateral filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture, color sigma= ``param3``  and spatial sigma= ``param4`` . If  ``param1=0`` , the aperture square side is set to  ``cvRound(param4*1.5)*2+1`` . Information about bilateral filtering can be found at  http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html 
+            
+            
+    :param param1: The first parameter of the smoothing operation, the aperture width. Must be a positive odd number (1, 3, 5, ...) 
+    
+    :param param2: The second parameter of the smoothing operation, the aperture height. Ignored by  ``CV_MEDIAN``  and  ``CV_BILATERAL``  methods. In the case of simple scaled/non-scaled and Gaussian blur if  ``param2``  is zero, it is set to  ``param1`` . Otherwise it must be a positive odd number. 
+    
+    :param param3: In the case of a Gaussian parameter this parameter may specify Gaussian  :math:`\sigma`  (standard deviation). If it is zero, it is calculated from the kernel size:  
+        
+        .. math::
+        
+            \sigma  = 0.3 (n/2 - 1) + 0.8  \quad   \text{where}   \quad  n= \begin{array}{l l} \mbox{\texttt{param1} for horizontal kernel} \\ \mbox{\texttt{param2} for vertical kernel} \end{array} 
+        
+        Using standard sigma for small kernels ( :math:`3\times 3`  to  :math:`7\times 7` ) gives better speed. If  ``param3``  is not zero, while  ``param1``  and  ``param2``  are zeros, the kernel size is calculated from the sigma (to provide accurate enough operation). 
+    
+The function smooths an image using one of several methods. Every of the methods has some features and restrictions listed below:
+
+ * Blur with no scaling works with single-channel images only and supports accumulation of 8-bit to 16-bit format (similar to :ocv:func:`Sobel` and :ocv:func:`Laplace`) and 32-bit floating point to 32-bit floating-point format.
+
+ * Simple blur and Gaussian blur support 1- or 3-channel, 8-bit and 32-bit floating point images. These two methods can process images in-place.
+
+ * Median and bilateral filters work with 1- or 3-channel 8-bit images and can not process images in-place.
+
+.. note:: The function is now obsolete. Use :ocv:func:`GaussianBlur`, :ocv:func:`blur`, :ocv:func:`medianBlur` or :ocv:func:`bilateralFilter`.
 
 
 Sobel

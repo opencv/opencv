@@ -124,58 +124,10 @@ VideoCapture
 ------------
 .. ocv:class:: VideoCapture
 
-Class for video capturing from video files or cameras ::
+Class for video capturing from video files or cameras.
+The class provides C++ API for capturing video from cameras or for reading video files. Here is how the class can be used: ::
 
-    class VideoCapture
-    {
-    public:
-        // the default constructor
-        VideoCapture();
-        // the constructor that opens video file
-        VideoCapture(const string& filename);
-        // the constructor that starts streaming from the camera
-        VideoCapture(int device);
-
-        // the destructor
-        virtual ~VideoCapture();
-
-        // opens the specified video file
-        virtual bool open(const string& filename);
-
-        // starts streaming from the specified camera by its id
-        virtual bool open(int device);
-
-        // returns true if the file was open successfully or if the camera
-        // has been initialized succesfully
-        virtual bool isOpened() const;
-
-        // closes the camera stream or the video file
-        // (automatically called by the destructor)
-        virtual void release();
-
-        // grab the next frame or a set of frames from a multi-head camera;
-        // returns false if there are no more frames
-        virtual bool grab();
-        // reads the frame from the specified video stream
-        // (non-zero channel is only valid for multi-head camera live streams)
-        virtual bool retrieve(Mat& image, int channel=0);
-        // equivalent to grab() + retrieve(image, 0);
-        virtual VideoCapture& operator >> (Mat& image);
-
-        // sets the specified property propId to the specified value
-        virtual bool set(int propId, double value);
-        // retrieves value of the specified property
-        virtual double get(int propId);
-
-    protected:
-        ...
-    };
-
-
-The class provides C++ video capturing API. Here is how the class can be used: ::
-
-    #include "cv.h"
-    #include "highgui.h"
+    #include "opencv2/opencv.hpp"
 
     using namespace cv;
 
@@ -202,6 +154,9 @@ The class provides C++ video capturing API. Here is how the class can be used: :
     }
 
 
+.. note:: In C API the black-box structure ``CvCapture`` is used instead of ``VideoCapture``.
+
+
 VideoCapture::VideoCapture
 ------------------------------
 VideoCapture constructors.
@@ -212,20 +167,131 @@ VideoCapture constructors.
 
 .. ocv:function:: VideoCapture::VideoCapture(int device)
 
+.. ocv:pyfunction:: cv2.VideoCapture() -> <VideoCapture object>
+.. ocv:pyfunction:: cv2.VideoCapture(filename) -> <VideoCapture object>
+.. ocv:pyfunction:: cv2.VideoCapture(device) -> <VideoCapture object>
+
+.. ocv:cfunction:: CvCapture* cvCaptureFromCAM( int device )
+.. ocv:pyoldfunction:: cv.CaptureFromCAM(device) -> CvCapture
+.. ocv:cfunction:: CvCapture* cvCaptureFromFile( const char* filename )
+.. ocv:pyoldfunction:: cv.CaptureFromFile(filename) -> CvCapture
+
+    :param filename: name of the opened video file
+
+    :param device: id of the opened video capturing device (i.e. a camera index). If there is a single camera connected, just pass 0.
+
+.. note:: In C API, when you finished working with video, release ``CvCapture`` structure with ``cvReleaseCapture()``, or use ``Ptr<CvCapture>`` that calls ``cvReleaseCapture()`` automatically in the destructor.
+
+
+VideoCapture::open
+---------------------
+Open video file or a capturing device for video capturing
+
+.. ocv:function:: bool VideoCapture::open(const string& filename)
+.. ocv:function:: bool VideoCapture::open(int device)
+
+.. ocv:pyfunction:: cv2.VideoCapture.open(filename) -> successFlag
+.. ocv:pyfunction:: cv2.VideoCapture.open(device) -> successFlag
+
     :param filename: name of the opened video file
 
     :param device: id of the opened video capturing device (i.e. a camera index).
+
+The methods first call :ocv:cfunc:`VideoCapture::release` to close the already opened file or camera. 
+
+
+VideoCapture::isOpened
+----------------------
+Returns true if video capturing has been initialized already.
+
+.. ocv:function:: bool VideoCapture::isOpened()
+
+.. ocv:pyfunction:: cv2.VideoCapture.isOpened() -> flag
+
+If the previous call to ``VideoCapture`` constructor or ``VideoCapture::open`` succeeded, the method returns true.
+
+VideoCapture::release
+---------------------
+Closes video file or capturing device.
+
+.. ocv:function:: void VideoCapture::release()
+
+.. ocv:pyfunction:: cv2.VideoCapture.release()
+
+.. ocv:cfunction: void cvReleaseCapture(CvCapture** capture)
+
+The methods are automatically called by subsequent :ocv:func:`VideoCapture::open` and by ``VideoCapture`` destructor.
+
+The C function also deallocates memory and clears ``*capture`` pointer.
+
+
+VideoCapture::grab
+---------------------
+Grabs the next frame from video file or capturing device.
+
+.. ocv:function:: bool VideoCapture::grab()
+
+.. ocv:pyfunction:: cv2.VideoCapture.grab() -> successFlag
+
+.. ocv:cfunction: int cvGrabFrame(CvCapture* capture)
+
+.. ocv:pyoldfunction:: cv.GrabFrame(capture) -> int
+
+The methods/functions grab the next frame from video file or camera and return true (non-zero) in the case of success.
+
+The primary use of the function is in multi-camera environments, especially when the cameras do not have hardware synchronization. That is, you call ``VideoCapture::grab()`` for each camera and after that call the slower method ``VideoCapture::retrieve()`` to decode and get frame from each camera. This way the overhead on demosaicing or motion jpeg decompression etc. is eliminated and the retrieved frames from different cameras will be closer in time.
+
+Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the correct way of retrieving data from it is to call `VideoCapture::grab` first and then call :ocv:func:`VideoCapture::retrieve` one or more times with different values of the ``channel`` parameter. See https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/kinect_maps.cpp
+
+
+VideoCapture::retrieve
+----------------------
+Decodes and returns the grabbed video frame.
+
+.. ocv:function:: bool VideoCapture::retrieve(Mat& image, int channel=0)
+
+.. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, channel]]) -> successFlag, image
+
+.. ocv:cfunction: IplImage* cvRetrieveFrame(CvCapture* capture)
+
+.. ocv:pyoldfunction:: cv.RetrieveFrame(capture) -> iplimage
+
+The methods/functions decode and retruen the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
+
+.. note:: OpenCV 1.x functions ``cvRetrieveFrame`` and ``cv.RetrieveFrame`` return image stored inside the video capturing structure. It is not allowed to modify or release the image! You can copy the frame using :ocv:cfunc:`cvCloneImage` and then do whatever you want with the copy.
+
+
+VideoCapture::read
+----------------------
+Grabs, decodes and returns the next video frame.
+
+.. ocv:function:: VideoCapture& VideoCapture::operator >> (Mat& image)
+.. ocv:function:: bool VideoCapture::read(Mat& image)
+
+.. ocv:pyfunction:: cv2.VideoCapture.read([image]) -> successFlag, image
+
+.. ocv:cfunction: IplImage* cvQueryFrame(CvCapture* capture)
+
+.. ocv:pyoldfunction:: cv.QueryFrame(capture) -> iplimage
+
+The methods/functions combine :ocv:func:`VideoCapture::grab` and :ocv:func:`VideoCapture::retrieve` in one call. This is the most convenient method for reading video files or capturing data from decode and retruen the just grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more frames in video file), the methods return false and the functions return NULL pointer.
+
+.. note:: OpenCV 1.x functions ``cvRetrieveFrame`` and ``cv.RetrieveFrame`` return image stored inside the video capturing structure. It is not allowed to modify or release the image! You can copy the frame using :ocv:cfunc:`cvCloneImage` and then do whatever you want with the copy.
 
 
 VideoCapture::get
 ---------------------
 Returns the specified ``VideoCapture`` property 
 
-.. ocv:function:: double VideoCapture::get(int property_id)
+.. ocv:function:: double VideoCapture::get(int propId)
 
 .. ocv:pyfunction:: cv2.VideoCapture.get(propId) -> retval
 
-    :param property_id: Property identifier. It can be one of the following:
+.. ocv:cfunction:: double cvGetCaptureProperty( CvCapture* capture, int propId )
+.. ocv:pyoldfunction:: cv.GetCaptureProperty(capture, propId)->double
+
+
+    :param propId: Property identifier. It can be one of the following:
 
         * **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds or video capture timestamp.
 
@@ -272,11 +338,14 @@ VideoCapture::set
 ---------------------
 Sets a property in the ``VideoCapture``.
 
-.. ocv:function:: bool VideoCapture::set(int property_id, double value)
+.. ocv:function:: bool VideoCapture::set(int propertyId, double value)
 
 .. ocv:pyfunction:: cv2.VideoCapture.set(propId, value) -> retval
 
-    :param property_id: Property identifier. It can be one of the following:
+.. ocv:cfunction:: int cvSetCaptureProperty( CvCapture* capture, int propId, double value )
+.. ocv:pyoldfunction:: cv.SetCaptureProperty(capture, propId, value)->None
+
+    :param propId: Property identifier. It can be one of the following:
 
         * **CV_CAP_PROP_POS_MSEC** Current position of the video file in milliseconds.
 
@@ -318,43 +387,90 @@ Sets a property in the ``VideoCapture``.
 
     :param value: Value of the property.
 
+
+
 VideoWriter
 -----------
 .. ocv:class:: VideoWriter
 
-Video writer class. ::
+Video writer class.
 
-    class VideoWriter
-    {
-    public:
-        // default constructor
-        VideoWriter();
-        // constructor that calls open
-        VideoWriter(const string& filename, int fourcc,
-                    double fps, Size frameSize, bool isColor=true);
 
-        // the destructor
-        virtual ~VideoWriter();
 
-        // opens the file and initializes the video writer.
-        // filename - the output file name.
-        // fourcc - the codec
-        // fps - the number of frames per second
-        // frameSize - the video frame size
-        // isColor - specifies whether the video stream is color or grayscale
-        virtual bool open(const string& filename, int fourcc,
-                          double fps, Size frameSize, bool isColor=true);
+VideoWriter::VideoWriter
+------------------------
+VideoWriter constructors
 
-        // returns true if the writer has been initialized successfully
-        virtual bool isOpened() const;
+.. ocv:function:: VideoWriter::VideoWriter()
+.. ocv:function:: VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
 
-        // writes the next video frame to the stream
-        virtual VideoWriter& operator << (const Mat& image);
+.. ocv:pyfunction:: cv2.VideoWriter([filename, fourcc, fps, frameSize[, isColor]]) -> <VideoWriter object>
 
-    protected:
-        ...
-    };
+.. ocv:cfunction:: CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc, double fps, CvSize frameSize, int isColor=1 )
+.. ocv:pyoldfunction:: cv.CreateVideoWriter(filename, fourcc, fps, frameSize, isColor) -> CvVideoWriter
 
-For more detailed description see http://opencv.willowgarage.com/wiki/documentation/cpp/highgui/VideoWriter
-..
+.. ocv:pyfunction:: cv2.VideoWriter.isOpened() -> retval
+.. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
+.. ocv:pyfunction:: cv2.VideoWriter.write(image) -> None
+
+    :param filename: Name of the output video file. 
+
+    :param fourcc: 4-character code of codec used to compress the frames. For example, ``CV_FOURCC('P','I','M,'1')``  is a MPEG-1 codec, ``CV_FOURCC('M','J','P','G')``  is a motion-jpeg codec etc.
+
+    :param fps: Framerate of the created video stream. 
+
+    :param frameSize: Size of the  video frames. 
+
+    :param isColor: If it is not zero, the encoder will expect and encode color frames, otherwise it will work with grayscale frames (the flag is currently supported on Windows only). 
+
+The constructors/functions initialize video writers. On Linux FFMPEG is used to write videos; on Windows FFMPEG or VFW is used; on MacOSX QTKit is used.
+
+
+
+ReleaseVideoWriter
+------------------
+Releases the AVI writer.
+
+.. ocv:cfunction:: void cvReleaseVideoWriter( CvVideoWriter** writer )
+
+The function should be called after you finished using ``CvVideoWriter`` opened with :ocv:cfunc:`CreateVideoWriter`.
+
+
+VideoWriter::open
+-----------------
+Initializes or reinitializes video writer.
+
+.. ocv:function: bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
+
+.. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
+
+The method opens video writer. Parameters are the same as in the constructor :ocv:func:`VideoWriter::VideoWriter`.
+
+
+VideoWriter::isOpened
+---------------------
+Returns true if video writer has been successfully initialized.
+
+.. ocv:function: bool VideoWriter::isOpened()
+
+.. ocv:pyfunction:: cv2.VideoWriter.isOpened() -> retval
+
+
+VideoWriter::write
+------------------
+Writes the next video frame
+
+.. ocv:function:: VideoWriter& VideoWriter::operator << (const Mat& image)
+.. ocv:function:: void VideoWriter::write(const Mat& image)
+
+.. ocv:pyfunction:: cv2.VideoWriter.write(image) -> None
+
+.. ocv:cfunction:: int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
+.. ocv:pyoldfunction:: cv.WriteFrame(writer, image)->int
+
+    :param writer: Video writer structure (OpenCV 1.x API) 
+    
+    :param image: The written frame 
+    
+The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
 

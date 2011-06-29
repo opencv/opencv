@@ -29,7 +29,7 @@ Finds centers of clusters and groups input samples around the clusters.
 
             * **KMEANS_RANDOM_CENTERS** Select random initial centers in each attempt.
 
-            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii.
+            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii [Arthur2007].
 
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
@@ -76,3 +76,4 @@ http://en.wikipedia.org/wiki/Disjoint-set_data_structure
 . The function
 returns the number of equivalency classes.
 
+.. [Arthur2007] Arthur and S. Vassilvitskii “k-means++: the advantages of careful seeding”, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007

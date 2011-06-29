@@ -41,8 +41,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
             * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
             
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
-Bouguet00
-.
+[Bouguet00]_.
 
 
 
@@ -78,7 +77,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
             * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
-The function finds an optical flow for each ``prevImg`` pixel using the alorithm so that
+The function finds an optical flow for each ``prevImg`` pixel using the [Farneback2003]_ alorithm so that
 
 .. math::
 
@@ -143,7 +142,7 @@ Calculates the optical flow for two images using Horn-Schunck algorithm.
 
     :param criteria: Criteria of termination of velocity computing 
 
-The function computes the flow for every pixel of the first input image using the Horn and Schunck algorithm Horn81. The function is obsolete. To track sparse features, use :ocv:func:`calcOpticalFlowPyrLK`. To track all the pixels, use :ocv:func:`calcOpticalFlowFarneback`.
+The function computes the flow for every pixel of the first input image using the Horn and Schunck algorithm [Horn81]_. The function is obsolete. To track sparse features, use :ocv:func:`calcOpticalFlowPyrLK`. To track all the pixels, use :ocv:func:`calcOpticalFlowFarneback`.
 
 
 CalcOpticalFlowLK
@@ -165,7 +164,7 @@ Calculates the optical flow for two images using Lucas-Kanade algorithm.
 
     :param vely: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel 
 
-The function computes the flow for every pixel of the first input image using the Lucas and Kanade algorithm Lucas81. The function is obsolete. To track sparse features, use :ocv:func:`calcOpticalFlowPyrLK`. To track all the pixels, use :ocv:func:`calcOpticalFlowFarneback`.
+The function computes the flow for every pixel of the first input image using the Lucas and Kanade algorithm [Lucas81]_. The function is obsolete. To track sparse features, use :ocv:func:`calcOpticalFlowPyrLK`. To track all the pixels, use :ocv:func:`calcOpticalFlowFarneback`.
 
 
 estimateRigidTransform
@@ -243,9 +242,9 @@ That is, MHI pixels where the motion occurs are set to the current ``timestamp``
 The function, together with
 :ocv:func:`calcMotionGradient` and
 :ocv:func:`calcGlobalOrientation` , implements a motion templates technique described in
-Davis97
+[Davis97]_
 and
-Bradski00
+[Bradski00]_
 .
 See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the motion template functions.
 
@@ -364,8 +363,7 @@ Finds an object center, size, and orientation.
     :param criteria: Stop criteria for the underlying  :ocv:func:`meanShift` .
 
 The function implements the CAMSHIFT object tracking algrorithm
-Bradski98
-.
+[Bradski98]_.
 First, it finds an object center using
 :ocv:func:`meanShift` and then adjusts the window size and finds the optimal rotation. The function returns the rotated rectangle structure that includes the object position, size, and orientation. The next position of the search window can be obtained with ``RotatedRect::boundingRect()`` .
 
@@ -407,8 +405,7 @@ KalmanFilter
     Kalman filter class.
 
 The class implements a standard Kalman filter
-http://en.wikipedia.org/wiki/Kalman_filter
-. However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
+http://en.wikipedia.org/wiki/Kalman_filter, [Welch95]_. However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
 
 
 
@@ -421,6 +418,11 @@ The constructors.
 
 .. ocv:function:: KalmanFilter::KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F)
 
+.. ocv:pyfunction:: cv2.KalmanFilter(dynamParams, measureParams[, controlParams[, type]]) -> <KalmanFilter object>
+
+.. ocv:cfunction:: CvKalman* cvCreateKalman( int dynamParams, int measureParams, int controlParams=0 )
+.. ocv:pyoldfunction:: cv.CreateKalman(dynamParams, measureParams, controlParams=0) -> CvKalman
+
     The full constructor.
     
     :param dynamParams: Dimensionality of the state.
@@ -431,6 +433,7 @@ The constructors.
 
     :param type: Type of the created matrices that should be ``CV_32F`` or ``CV_64F``.
 
+.. note:: In C API when ``CvKalman* kalmanFilter`` structure is not needed anymore, it should be released with ``cvReleaseKalman(&kalmanFilter)``
 
 KalmanFilter::init
 ------------------
@@ -447,7 +450,6 @@ Re-initializes Kalman filter. The previous content is destroyed.
     :param type: Type of the created matrices that should be ``CV_32F`` or ``CV_64F``.
 
 
-
 KalmanFilter::predict
 ---------------------
 Computes a predicted state.
@@ -455,6 +457,9 @@ Computes a predicted state.
 .. ocv:function:: const Mat& KalmanFilter::predict(const Mat& control=Mat())
 
 .. ocv:pyfunction:: cv2.KalmanFilter.predict([, control]) -> retval
+
+.. ocv:cfunction:: const CvMat* cvKalmanPredict( CvKalman* kalman, const CvMat* control=NULL)
+.. ocv:pyoldfunction:: cv.KalmanPredict(kalman, control=None) -> cvmat
 
     :param control: The optional input control
 
@@ -466,6 +471,9 @@ Updates the predicted state from the measurement.
 .. ocv:function:: const Mat& KalmanFilter::correct(const Mat& measurement)
 
 .. ocv:pyfunction:: cv2.KalmanFilter.correct(measurement) -> retval
+
+.. ocv:cfunction:: const CvMat* cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement )
+.. ocv:pyoldfunction:: cv.KalmanCorrect(kalman, measurement) -> cvmat
 
     :param control: The measured system parameters
 
@@ -489,19 +497,17 @@ Base class for background/foreground segmentation. ::
 The class is only used to define the common interface for the whole family of background/foreground segmentation algorithms.
 
 
-
-
 BackgroundSubtractor::operator()
 -------------------------------
 Computes a foreground mask.
 
 .. ocv:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
+.. ocv:pyfunction:: cv2.BackgroundSubtractor.apply(image[, fgmask[, learningRate]]) -> fgmask
+
     :param image: Next video frame.
 
-    :param fgmask: Foreground mask as an 8-bit binary image.
-
-
+    :param fgmask: The output foreground mask as an 8-bit binary image.
 
 
 BackgroundSubtractor::getBackgroundImage
@@ -533,6 +539,8 @@ The contructors
 .. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 
 .. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
+
+.. ocv:pyfunction:: cv2.BackgroundSubtractorMOG(history, nmixtures, backgroundRatio[, noiseSigma]) -> <BackgroundSubtractorMOG object>
 
     :param history: Length of the history.
 
@@ -638,6 +646,23 @@ BackgroundSubtractorMOG2::getBackgroundImage
 --------------------------------------------
 Returns background image
 
-.. ocv:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
+.. ocv:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage)
 
-    See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
+See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
+
+
+.. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
+
+.. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
+
+.. [Bradski00] Davis, J.W. and Bradski, G.R. “Motion Segmentation and Pose Recognition with Motion History Gradients”, WACV00, 2000
+
+.. [Davis97] Davis, J.W. and Bobick, A.F. “The Representation and Recognition of Action Using Temporal Templates”, CVPR97, 1997
+
+.. [Farneback2003] Gunnar Farneback, Two-frame motion estimation based on polynomial expansion, Lecture Notes in Computer Science, 2003, (2749), , 363-370. 
+
+.. [Horn81] Berthold K.P. Horn and Brian G. Schunck. Determining Optical Flow. Artificial Intelligence, 17, pp. 185-203, 1981.
+
+.. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
+
+.. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995

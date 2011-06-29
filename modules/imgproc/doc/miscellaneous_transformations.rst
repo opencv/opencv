@@ -421,7 +421,9 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
     :param src: 8-bit, single-channel (binary) source image.
 
     :param dst: Output image with calculated distances. It is a 32-bit floating-point, single-channel image of the same size as  ``src`` .
+    
     :param distanceType: Type of distance. It can be  ``CV_DIST_L1, CV_DIST_L2`` , or  ``CV_DIST_C`` .
+    
     :param maskSize: Size of the distance transform mask. It can be 3, 5, or  ``CV_DIST_MASK_PRECISE``  (the latter option is only supported by the first function). In case of the ``CV_DIST_L1``  or  ``CV_DIST_C``  distance type, the parameter is forced to 3 because a  :math:`3\times 3`  mask gives the same result as  :math:`5\times 5`  or any larger aperture.
 
     :param labels: Optional output 2D array of labels (the discrete Voronoi diagram). It has the type  ``CV_32SC1``  and the same size as  ``src`` . See the details below.
@@ -430,11 +432,10 @@ The functions ``distanceTransform`` calculate the approximate or precise
 distance from every binary image pixel to the nearest zero pixel.
 For zero image pixels, the distance will obviously be zero.
 
-When ``maskSize == CV_DIST_MASK_PRECISE`` and ``distanceType == CV_DIST_L2`` , the function runs the algorithm described in
-Felzenszwalb04.
+When ``maskSize == CV_DIST_MASK_PRECISE`` and ``distanceType == CV_DIST_L2`` , the function runs the algorithm described in [Felzenszwalb04]_.
 
 In other cases, the algorithm
-Borgefors86
+[Borgefors86]_
 is used. This means that
 for a pixel the function finds the shortest path to the nearest zero pixel
 consisting of basic shifts: horizontal,
@@ -608,7 +609,7 @@ Restores the selected region in an image using the region neighborhood.
 
             * **INPAINT_NS** 	Navier-Stokes based method.
 
-            * **INPAINT_TELEA** 	Method by Alexandru Telea  Telea04.
+            * **INPAINT_TELEA** 	Method by Alexandru Telea  [Telea04]_.
 
 The function reconstructs the selected image area from the pixel near the area boundary. The function may be used to remove dust and scratches from a scanned photo, or to remove undesirable objects from still images or video. See
 http://en.wikipedia.org/wiki/Inpainting
@@ -765,7 +766,7 @@ Performs a marker-based image segmentation using the watershed algrorithm.
 
 The function implements one of the variants
 of watershed, non-parametric marker-based segmentation algorithm,
-described in [Meyer92]. Before passing the image to the
+described in [Meyer92]_. Before passing the image to the
 function, you have to roughly outline the desired regions in the image ``markers`` with positive (
 :math:`>0` ) indices. So, every region is
 represented as one or more connected components with the pixel values
@@ -827,3 +828,11 @@ Runs the GrabCut algorithm.
 
 The function implements the `GrabCut image segmentation algorithm <http://en.wikipedia.org/wiki/GrabCut>`_.
 See the sample grabcut.cpp to learn how to use the function.
+
+.. [Borgefors86] Borgefors, Gunilla, “Distance transformations in digital images”. Comput. Vision Graph. Image Process. 34 3, pp 344–371 (1986)
+
+.. [Felzenszwalb04] Felzenszwalb, Pedro F. and Huttenlocher, Daniel P. “Distance Transforms of Sampled Functions”, TR2004-1963, TR2004-1963 (2004)
+
+.. [Meyer92] Meyer, F. “Color image segmentation”, ICIP92, 1992
+
+.. [Telea04] Alexandru Telea, “An Image Inpainting Technique Based on the Fast Marching Method”. Journal of Graphics, GPU, and Game Tools 9 1, pp 23-34 (2004)

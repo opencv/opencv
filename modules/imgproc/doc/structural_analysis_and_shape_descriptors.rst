@@ -98,9 +98,8 @@ Calculates the seven Hu invariants.
     :param moments: Input moments computed with  :ocv:func:`moments` .
     :param h: Output Hu invariants.
 
-The function calculates the seven Hu invariants (see
-http://en.wikipedia.org/wiki/Image_moment
-) defined as:
+The function calculates the seven Hu invariants (introduced in [Hu62]_; see also
+http://en.wikipedia.org/wiki/Image_moment) defined as:
 
 .. math::
 
@@ -149,13 +148,12 @@ Finds contours in a binary image.
 
             * **CV_CHAIN_APPROX_SIMPLE** compresses horizontal, vertical, and diagonal segments and leaves only their end points. For example, an up-right rectangular contour is encoded with 4 points.
 
-            * **CV_CHAIN_APPROX_TC89_L1,CV_CHAIN_APPROX_TC89_KCOS** applies one of the flavors of the Teh-Chin chain approximation algorithm. See  TehChin89 for details.
+            * **CV_CHAIN_APPROX_TC89_L1,CV_CHAIN_APPROX_TC89_KCOS** applies one of the flavors of the Teh-Chin chain approximation algorithm. See  [TehChin89]_ for details.
 
     :param offset: Optional offset by which every contour point is shifted. This is useful if the contours are extracted from the image ROI and then they should be analyzed in the whole image context.
 
 The function retrieves contours from the binary image using the algorithm
-Suzuki85
-. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
+[Suzuki85]_. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
 
 **Note**:
 Source ``image`` is modified by this function.
@@ -381,20 +379,55 @@ Finds the convex hull of a point set.
 
 .. ocv:pyfunction:: cv2.convexHull(points[, hull[, returnPoints[, clockwise]]]) -> hull
 
+.. ocv:cfunction:: CvSeq* cvConvexHull2( const CvArr* input, void* storage=NULL, int orientation=CV_CLOCKWISE, int returnPoints=0 )
+
+.. ocv:pyoldfunction:: cv.ConvexHull2(points, storage, orientation=CV_CLOCKWISE, returnPoints=0)-> convexHull
+
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
     :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case ``hull`` elements will be the convex hull points themselves.
+    
+    :param storage: The output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
 
     :param clockwise: Orientation flag. If true, the output convex hull will be oriented clockwise. Otherwise, it will be oriented counter-clockwise. The usual screen coordinate system is assumed where the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
+    
+    :param orientation: Convex hull orientation parameter in the old API, ``CV_CLOCKWISE`` or ``CV_COUNTERCLOCKWISE``.
     
     :param returnPoints: Operation flag. In the case of matrix, when the flag is true, the function will return convex hull points, otherwise it will return indices of the convex hull points. When the output array is ``std::vector``, the flag is ignored, and the output depends on the type of the vector - ``std::vector<int>`` implies ``returnPoints=true``, ``std::vector<Point>`` implies ``returnPoints=false``.
 
 The functions find the convex hull of a 2D point set using the Sklansky's algorithm
-Sklansky82
+[Sklansky82]_
 that has
 *O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
 
 
+ConvexityDefects
+----------------
+Finds the convexity defects of a contour.
+
+.. ocv:cfunction:: CvSeq* cvConvexityDefects(  const CvArr* contour, const CvArr* convexhull, CvMemStorage* storage=NULL )
+
+.. ocv:pyoldfunction:: cv.ConvexityDefects(contour, convexhull, storage)-> convexityDefects
+
+    :param contour: Input contour 
+    
+    :param convexhull: Convex hull obtained using  :ocv:cfunc:`ConvexHull2`  that should contain pointers or indices to the contour points, not the hull points themselves (the  ``returnPoints``  parameter in  :ocv:cfunc:`ConvexHull2`  should be 0) 
+    
+    :param storage: Container for the output sequence of convexity defects. If it is NULL, the contour or hull (in that order) storage is used 
+    
+The function finds all convexity defects of the input contour and returns a sequence of the ``CvConvexityDefect`` structures, where ``CvConvexityDetect`` is defined as: ::
+
+     struct CvConvexityDefect
+     {
+        CvPoint* start; // point of the contour where the defect begins
+        CvPoint* end; // point of the contour where the defect ends
+        CvPoint* depth_point; // the farthest from the convex hull point within the defect
+        float depth; // distance between the farthest point and the convex hull
+     };
+
+Here is the picture displaying convexity defects of a hand contour:
+
+.. image:: pics/defects.png
 
 fitEllipse
 --------------
@@ -404,11 +437,18 @@ Fits an ellipse around a set of 2D points.
 
 .. ocv:pyfunction:: cv2.fitEllipse(points) -> retval
 
-    :param points: Input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
+.. ocv:cfunction:: CvBox2D cvFitEllipse2( const CvArr* points )
+.. ocv:pyoldfunction:: cv.FitEllipse2(points)-> Box2D
 
-The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed.
+    :param points: The input 2D point set, stored in:
+    
+        * ``std::vector<>`` or ``Mat`` (C++ interface).
 
+        * ``CvSeq*`` or ``CvMat*`` (C interface)
 
+        * Nx2 numpy array (Python interface)
+
+The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
 
 fitLine
 -----------
@@ -489,7 +529,16 @@ Tests a contour convexity.
 
 .. ocv:pyfunction:: cv2.isContourConvex(contour) -> retval
 
-    :param contour: The input vector of 2D points, stored in ``std::vector<>`` or ``Mat``.
+.. ocv:cfunction:: int cvCheckContourConvexity( const CvArr* contour )
+.. ocv:pyoldfunction:: cv.CheckContourConvexity(contour)-> int
+
+    :param contour: The input vector of 2D points, stored in:
+    
+            * ``std::vector<>`` or ``Mat`` (C++ interface).
+
+            * ``CvSeq*`` or ``CvMat*`` (C interface)
+
+            * Nx2 numpy array (Python interface)
 
 The function tests whether the input contour is convex or not. The contour must be simple, that is, without self-intersections. Otherwise, the function output is undefined.
 
@@ -631,3 +680,12 @@ Here is a sample output of the function where each image pixel is tested against
 
 .. image:: pics/pointpolygon.png
 
+.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. A Buyer’s Guide to Conic Fitting. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
+
+.. [Hu62] M. Hu. Visual Pattern Recognition by Moment Invariants, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
+
+.. [Sklansky82] Sklansky, J., “Finding the Convex Hull of a Simple Polygon”. PRL 1 $number, pp 79-83 (1982)
+
+.. [Suzuki85] Suzuki, S. and Abe, K., “Topological Structural Analysis of Digitized Binary Images by Border Following”. CVGIP 30 1, pp 32-46 (1985)
+
+.. [TehChin89] Teh, C.H. and Chin, R.T., “On the Detection of Dominant Points on Digital Curve”. PAMI 11 8, pp 859-872 (1989)

@@ -7,29 +7,11 @@ Originally, support vector machines (SVM) was a technique for building an optima
 
 The solution is optimal, which means that the margin between the separating hyper-plane and the nearest feature vectors from both classes (in case of 2-class classifier) is maximal. The feature vectors that are the closest to the hyper-plane are called *support vectors*, which means that the position of other vectors does not affect the hyper-plane (the decision function).
 
-There are a lot of good references on SVM. You may consider starting with the following:
+SVM implementation in OpenCV is based on [LibSVM]_.
 
-*
-    [Burges98] C. Burges. *A tutorial on support vector machines for pattern recognition*, Knowledge Discovery and Data Mining 2(2), 1998.
-    (available online at
-    http://citeseer.ist.psu.edu/burges98tutorial.html
-    ).
+.. [Burges98] C. Burges. *A tutorial on support vector machines for pattern recognition*, Knowledge Discovery and Data Mining 2(2), 1998 (available online at http://citeseer.ist.psu.edu/burges98tutorial.html)
 
-*
-    Chih-Chung Chang and Chih-Jen Lin. *LIBSVM - A Library for Support Vector Machines* 
-    (
-    http://www.csie.ntu.edu.tw/~cjlin/libsvm/
-    )
-
-For details of implementation and various SVM formulations see:
-
-.. _LIBSVM:
-
-*
-    [LibSVM] C.-C. Chang and C.-J. Lin. *LIBSVM: a library for support vector machines*, ACM Transactions on Intelligent Systems and Technology, 2:27:1--27:27, 2011. 
-    (
-    http://www.csie.ntu.edu.tw/~cjlin/papers/libsvm.pdf
-    )
+.. [LibSVM] C.-C. Chang and C.-J. Lin. *LIBSVM: a library for support vector machines*, ACM Transactions on Intelligent Systems and Technology, 2:27:1--27:27, 2011. (http://www.csie.ntu.edu.tw/~cjlin/papers/libsvm.pdf)
 
 
 CvParamGrid
@@ -121,7 +103,7 @@ The constructors.
 
         * **CvSVM::NU_SVR** :math:`\nu`-Support Vector Regression. :math:`\nu` is used instead of ``p``.
 
-        See :ref:`[LibSVM] <LibSVM>` for details.
+        See [LibSVM]_ for details.
 
     :param kernel_type: Type of a SVM kernel. Possible values are:
 
@@ -178,6 +160,8 @@ Default and training constructors.
 
 .. ocv:cfunction:: CvSVM::CvSVM( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
 
+.. ocv:pyfunction:: cv2.SVM(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> <SVM object>
+
 The constructors follow conventions of :ocv:func:`CvStatModel::CvStatModel`. See :ocv:func:`CvStatModel::train` for parameters descriptions.
 
 CvSVM::train
@@ -188,7 +172,7 @@ Trains an SVM.
 
 .. ocv:cfunction:: bool CvSVM::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, CvSVMParams params=CvSVMParams() )
 
-.. ocv:pyfunction:: cv2.CvSVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
+.. ocv:pyfunction:: cv2.SVM.train(trainData, responses[, varIdx[, sampleIdx[, params]]]) -> retval
 
 The method trains the SVM model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations: 
 
@@ -211,6 +195,8 @@ Trains an SVM with optimal parameters.
 .. ocv:function:: bool CvSVM::train_auto( const Mat& trainData, const Mat& responses, const Mat& varIdx, const Mat& sampleIdx, CvSVMParams params, int k_fold = 10, CvParamGrid Cgrid = CvSVM::get_default_grid(CvSVM::C), CvParamGrid gammaGrid = CvSVM::get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = CvSVM::get_default_grid(CvSVM::P), CvParamGrid nuGrid  = CvSVM::get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = CvSVM::get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE), bool balanced=false)
 
 .. ocv:cfunction:: bool CvSVM::train_auto( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx, const CvMat* sampleIdx, CvSVMParams params, int kfold = 10, CvParamGrid Cgrid = get_default_grid(CvSVM::C), CvParamGrid gammaGrid = get_default_grid(CvSVM::GAMMA), CvParamGrid pGrid = get_default_grid(CvSVM::P), CvParamGrid nuGrid = get_default_grid(CvSVM::NU), CvParamGrid coeffGrid = get_default_grid(CvSVM::COEF), CvParamGrid degreeGrid = get_default_grid(CvSVM::DEGREE), bool balanced=false )
+
+.. ocv:pyfunction:: cv2.SVM.train_auto(trainData, responses, varIdx, sampleIdx, params[, k_fold[, Cgrid[, gammaGrid[, pGrid[, nuGrid[, coeffGrid[, degreeGrid[, balanced]]]]]]]]) -> retval
 
     :param k_fold: Cross-validation parameter. The training set is divided into ``k_fold`` subsets. One subset is used to train the model, the others form the test set. So, the SVM algorithm is executed ``k_fold`` times.
  
@@ -243,6 +229,8 @@ Predicts the response for input sample(s).
 .. ocv:cfunction:: float CvSVM::predict( const CvMat* sample, bool returnDFVal=false ) const
 
 .. ocv:cfunction:: float CvSVM::predict( const CvMat* samples, CvMat* results ) const
+
+.. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 
     :param sample(s): Input sample(s) for prediction.
 
@@ -292,6 +280,8 @@ Retrieves a number of support vectors and the particular vector.
 
 .. ocv:function:: const float* CvSVM::get_support_vector(int i) const
 
+.. ocv:pyfunction:: cv2.SVM.get_support_vector_count() -> nsupportVectors
+
     :param i: Index of the particular support vector.
 
 The methods can be used to retrieve a set of support vectors.
@@ -301,3 +291,5 @@ CvSVM::get_var_count
 Returns the number of used features (variables count).
 
 .. ocv:function:: int CvSVM::get_var_count() const
+
+.. ocv:pyfunction:: cv2.SVM.get_var_count() -> nvars

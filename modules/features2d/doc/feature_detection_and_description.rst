@@ -3,8 +3,6 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
-
-
 FAST
 --------
 Detects corners using the FAST algorithm
@@ -52,37 +50,47 @@ StarDetector
 ------------
 .. ocv:class:: StarDetector
 
-Class implementing the ``Star`` keypoint detector. ::
+Class implementing the ``Star`` keypoint detector, a modified version of the ``CenSurE`` keypoint detector described in [Agrawal08]_.
 
-    class StarDetector : CvStarDetectorParams
-    {
-    public:
-        // default constructor
-        StarDetector();
-        // the full constructor that initializes all the algorithm parameters:
-        // maxSize - maximum size of the features. The following
-        //      values of the parameter are supported:
-        //      4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128
-        // responseThreshold - threshold for the approximated laplacian,
-        //      used to eliminate weak features. The larger it is,
-        //      the less features will be retrieved
-        // lineThresholdProjected - another threshold for the laplacian to
-        //      eliminate edges
-        // lineThresholdBinarized - another threshold for the feature
-        //      size to eliminate edges.
-        // The larger the 2nd threshold, the more points you get.
-        StarDetector(int maxSize, int responseThreshold,
-                     int lineThresholdProjected,
-                     int lineThresholdBinarized,
-                     int suppressNonmaxSize);
+.. [Agrawal08] Agrawal, M. and Konolige, K. and Blas, M.R. "CenSurE: Center Surround Extremas for Realtime Feature Detection and Matching", ECCV08, 2008
 
-        // finds keypoints in an image
-        void operator()(const Mat& image, vector<KeyPoint>& keypoints) const;
-    };
+StarDetector::StarDetector
+--------------------------
+The Star Detector constructor
 
-The class implements a modified version of the ``CenSurE`` keypoint detector described in
-[Agrawal08].
+.. ocv:function:: StarDetector::StarDetector()
 
+.. ocv:function:: StarDetector::StarDetector(int maxSize, int responseThreshold, int lineThresholdProjected, int lineThresholdBinarized, int suppressNonmaxSize)
+
+.. ocv:pyfunction:: cv2.StarDetector(maxSize, responseThreshold, lineThresholdProjected, lineThresholdBinarized, suppressNonmaxSize) -> <StarDetector object>
+
+    :param maxSize: maximum size of the features. The following values are supported: 4, 6, 8, 11, 12, 16, 22, 23, 32, 45, 46, 64, 90, 128. In the case of a different value the result is undefined.
+    
+    :param responseThreshold: threshold for the approximated laplacian, used to eliminate weak features. The larger it is, the less features will be retrieved
+    
+    :param lineThresholdProjected: another threshold for the laplacian to eliminate edges    
+
+    :param lineThresholdBinarized: yet another threshold for the feature size to eliminate edges. The larger the 2nd threshold, the more points you get.
+
+StarDetector::operator()
+------------------------
+Finds keypoints in an image
+        
+.. ocv:function:: void StarDetector::operator()(const Mat& image, vector<KeyPoint>& keypoints)
+
+.. ocv:pyfunction:: cv2.StarDetector.detect(image) -> keypoints
+
+.. ocv:cfunction:: CvSeq* cvGetStarKeypoints( const CvArr* image, CvMemStorage* storage, CvStarDetectorParams params=cvStarDetectorParams() )
+
+.. ocv:pyoldfunction:: cv.GetStarKeypoints(image, storage, params)-> keypoints
+
+    :param image: The input 8-bit grayscale image
+    
+    :param keypoints: The output vector of keypoints
+    
+    :param storage: The memory storage used to store the keypoints (OpenCV 1.x API only)
+    
+    :param params: The algorithm parameters stored in ``CvStarDetectorParams`` (OpenCV 1.x API only)
 
 
 SIFT
@@ -177,38 +185,82 @@ SURF
 ----
 .. ocv:class:: SURF
 
-Class for extracting Speeded Up Robust Features from an image. ::
+Class for extracting Speeded Up Robust Features from an image [Bay06]_. The class is derived from ``CvSURFParams`` structure, which specifies the algorithm parameters:
 
-    class SURF : public CvSURFParams
-    {
-    public:
-        // c:function::default constructor
-        SURF();
-        // constructor that initializes all the algorithm parameters
-        SURF(double _hessianThreshold, int _nOctaves=4,
-             int _nOctaveLayers=2, bool _extended=false);
-        // returns the number of elements in each descriptor (64 or 128)
-        int descriptorSize() const;
-        // detects keypoints using fast multi-scale Hessian detector
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints) const;
-        // detects keypoints and computes the SURF descriptors for them;
-        // output vector "descriptors" stores elements of descriptors and has size
-        // equal descriptorSize()*keypoints.size() as each descriptor is
-        // descriptorSize() elements of this vector.
-        void operator()(const Mat& img, const Mat& mask,
-                        vector<KeyPoint>& keypoints,
-                        vector<float>& descriptors,
-                        bool useProvidedKeypoints=false) const;
-    };
-
-The class implements the Speeded Up Robust Features descriptor 
-[Bay06].
-There is a fast multi-scale Hessian keypoint detector that can be used to find keypoints
-(default option). But the descriptors can be also computed for the user-specified keypoints.
-The algorithm can be used for object tracking and localization, image stitching, and so on. See the ``find_obj.cpp`` demo in the OpenCV samples directory.
+    .. ocv:member:: int extended
+    
+        * 0 means that the basic descriptors (64 elements each) shall be computed
+        * 1 means that the extended descriptors (128 elements each) shall be computed
+       
+    .. ocv:member:: int upright
+    
+        * 0 means that detector computes orientation of each feature.
+        * 1 means that the orientation is not computed (which is much, much faster). For example, if you match images from a stereo pair, or do image stitching, the matched features likely have very similar angles, and you can speed up feature extraction by setting ``upright=1``.
+        
+    .. ocv:member:: double hessianThreshold
+    
+        Threshold for the keypoint detector. Only features, whose hessian is larger than ``hessianThreshold`` are retained by the detector. Therefore, the larger the value, the less keypoints you will get. A good default value could be from 300 to 500, depending from the image contrast.
+        
+    .. ocv:member:: int nOctaves
+    
+        The number of a gaussian pyramid octaves that the detector uses. It is set to 4 by default. If you want to get very large features, use the larger value. If you want just small features, decrease it.
+        
+    .. ocv:member:: int nOctaveLayers
+    
+        The number of images within each octave of a gaussian pyramid. It is set to 2 by default.
 
 
+.. [Bay06] Bay, H. and Tuytelaars, T. and Van Gool, L. "SURF: Speeded Up Robust Features", 9th European Conference on Computer Vision, 2006
+
+
+SURF::SURF
+----------
+The SURF extractor constructors.
+
+.. ocv:function:: SURF::SURF()
+
+.. ocv:function:: SURF::SURF(double hessianThreshold, int nOctaves=4, int nOctaveLayers=2, bool extended=false, bool upright=false)
+
+.. ocv:pyfunction:: cv2.SURF(_hessianThreshold[, _nOctaves[, _nOctaveLayers[, _extended[, _upright]]]]) -> <SURF object>
+
+    :param hessianThreshold: Threshold for hessian keypoint detector used in SURF.
+    
+    :param nOctaves: Number of pyramid octaves the keypoint detector will use.
+    
+    :param nOctaveLayers: Number of octave layers within each octave.
+    
+    :param extended: Extended descriptor flag (true - use extended 128-element descriptors; false - use 64-element descriptors).
+    
+    :param upright: Up-right or rotated features flag (true - do not compute orientation of features; false - compute orientation).
+
+
+SURF::operator()
+----------------
+Detects keypoints and computes SURF descriptors for them.
+
+.. ocv:function:: void SURF::operator()(const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints)
+.. ocv:function:: void SURF::operator()(const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints, vector<float>& descriptors, bool useProvidedKeypoints=false)
+
+.. ocv:pyfunction:: cv2.SURF.detect(img, mask) -> keypoints
+.. ocv:pyfunction:: cv2.SURF.detect(img, mask[, useProvidedKeypoints]) -> keypoints, descriptors
+
+.. ocv:cfunction:: void cvExtractSURF( const CvArr* image, const CvArr* mask, CvSeq** keypoints, CvSeq** descriptors, CvMemStorage* storage, CvSURFParams params )
+
+.. ocv:pyoldfunction:: cv.ExtractSURF(image, mask, storage, params)-> (keypoints, descriptors)
+
+    :param image: Input 8-bit grayscale image
+    
+    :param mask: Optional input mask that marks the regions where we should detect features.
+    
+    :param keypoints: The input/output vector of keypoints
+    
+    :param descriptors: The output concatenated vectors of descriptors. Each descriptor is 64- or 128-element vector, as returned by ``SURF::descriptorSize()``. So the total size of ``descriptors`` will be ``keypoints.size()*descriptorSize()``.
+    
+    :param useProvidedKeypoints: Boolean flag. If it is true, the keypoint detector is not run. Instead, the provided vector of keypoints is used and the algorithm just computes their descriptors.
+    
+    :param storage: Memory storage for the output keypoints and descriptors in OpenCV 1.x API.
+    
+    :param params: SURF algorithm parameters in OpenCV 1.x API.
 
 
 ORB

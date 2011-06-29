@@ -3,6 +3,35 @@ Cascade Classification
 
 .. highlight:: cpp
 
+Haar Feature-based Cascade Classifier for Object Detection
+----------------------------------------------------------
+
+The object detector described below has been initially proposed by Paul Viola [Viola01]_ and improved by Rainer Lienhart [Lienhart02]_.
+
+First, a classifier (namely a *cascade of boosted classifiers working with haar-like features*) is trained with a few hundred sample views of a particular object (i.e., a face or a car), called positive examples, that are scaled to the same size (say, 20x20), and negative examples - arbitrary images of the same size.
+
+After a classifier is trained, it can be applied to a region of interest (of the same size as used during the training) in an input image. The classifier outputs a "1" if the region is likely to show the object (i.e., face/car), and "0" otherwise. To search for the object in the whole image one can move the search window across the image and check every location using the classifier. The classifier is designed so that it can be easily "resized" in order to be able to find the objects of interest at different sizes, which is more efficient than resizing the image itself. So, to find an object of an unknown size in the image the scan procedure should be done several times at different scales.
+
+The word "cascade" in the classifier name means that the resultant classifier consists of several simpler classifiers (*stages*) that are applied subsequently to a region of interest until at some stage the candidate is rejected or all the stages are passed. The word "boosted" means that the classifiers at every stage of the cascade are complex themselves and they are built out of basic classifiers using one of four different ``boosting`` techniques (weighted voting). Currently Discrete Adaboost, Real Adaboost, Gentle Adaboost and Logitboost are supported. The basic classifiers are decision-tree classifiers with at least 2 leaves. Haar-like features are the input to the basic classifers, and are calculated as described below. The current algorithm uses the following Haar-like features:
+
+
+.. image:: pics/haarfeatures.png
+
+
+The feature used in a particular classifier is specified by its shape (1a, 2b etc.), position within the region of interest and the scale (this scale is not the same as the scale used at the detection stage, though these two scales are multiplied). For example, in the case of the third line feature (2c) the response is calculated as the difference between the sum of image pixels under the rectangle covering the whole feature (including the two white stripes and the black stripe in the middle) and the sum of the image pixels under the black stripe multiplied by 3 in order to compensate for the differences in the size of areas. The sums of pixel values over a rectangular regions are calculated rapidly using integral images (see below and the :ocv:func:`integral` description).
+
+To see the object detector at work, have a look at the facedetect demo:
+https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/facedetect.cpp
+
+The following reference is for the detection part only. There is a separate application called  ``opencv_traincascade`` that can train a cascade of boosted classifiers from a set of samples.
+
+.. note:: In the new C++ interface it is also possible to use LBP (local binary pattern) features in addition to Haar-like features.
+
+.. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at http://www.ai.mit.edu/people/viola/
+
+.. [Lienhart02] Rainer Lienhart and Jochen Maydt. An Extended Set of Haar-like Features for Rapid Object Detection. IEEE ICIP 2002, Vol. 1, pp. 900-903, Sep. 2002. This paper, as well as the extended technical report, can be retrieved at http://www.lienhart.de/Publications/publications.html
+
+
 FeatureEvaluator
 ----------------
 .. ocv:class:: FeatureEvaluator
@@ -111,82 +140,15 @@ CascadeClassifier
 -----------------
 .. ocv:class:: CascadeClassifier
 
-Cascade classifier class for object detection. ::
-
-    class CascadeClassifier
-    {
-    public:
-            // structure for storing a tree node
-        struct CV_EXPORTS DTreeNode
-        {
-            int featureIdx; // index of the feature on which we perform the split
-            float threshold; // split threshold of ordered features only
-            int left; // left child index in the tree nodes array
-            int right; // right child index in the tree nodes array
-        };
-
-        // structure for storing a decision tree
-        struct CV_EXPORTS DTree
-        {
-            int nodeCount; // nodes count
-        };
-
-        // structure for storing a cascade stage (BOOST only for now)
-        struct CV_EXPORTS Stage
-        {
-            int first; // first tree index in tree array
-            int ntrees; // number of trees
-            float threshold; // threshold of stage sum
-        };
-
-        enum { BOOST = 0 }; // supported stage types
-
-        // mode of detection (see parameter flags in function HaarDetectObjects)
-        enum { DO_CANNY_PRUNING = CV_HAAR_DO_CANNY_PRUNING,
-               SCALE_IMAGE = CV_HAAR_SCALE_IMAGE,
-               FIND_BIGGEST_OBJECT = CV_HAAR_FIND_BIGGEST_OBJECT,
-               DO_ROUGH_SEARCH = CV_HAAR_DO_ROUGH_SEARCH };
-
-        CascadeClassifier(); // default constructor
-        CascadeClassifier(const string& filename);
-        ~CascadeClassifier(); // destructor
-
-        bool empty() const;
-        bool load(const string& filename);
-        bool read(const FileNode& node);
-
-        void detectMultiScale( const Mat& image, vector<Rect>& objects,
-                               double scaleFactor=1.1, int minNeighbors=3,
-                                                       int flags=0, Size minSize=Size());
-
-        bool setImage( Ptr<FeatureEvaluator>&, const Mat& );
-        int runAt( Ptr<FeatureEvaluator>&, Point );
-
-        bool is_stump_based; // true, if the trees are stumps
-
-        int stageType; // stage type (BOOST only for now)
-        int featureType; // feature type (HAAR or LBP for now)
-        int ncategories; // number of categories (for categorical features only)
-        Size origWinSize; // size of training images
-
-        vector<Stage> stages; // vector of stages (BOOST for now)
-        vector<DTree> classifiers; // vector of decision trees
-        vector<DTreeNode> nodes; // vector of tree nodes
-        vector<float> leaves; // vector of leaf values
-        vector<int> subsets; // subsets of split by categorical feature
-
-        Ptr<FeatureEvaluator> feval; // pointer to feature evaluator
-        Ptr<CvHaarClassifierCascade> oldCascade; // pointer to old cascade
-    };
-
-
-
+Cascade classifier class for object detection.
 
 CascadeClassifier::CascadeClassifier
 ----------------------------------------
 Loads a classifier from a file.
 
 .. ocv:function:: CascadeClassifier::CascadeClassifier(const string& filename)
+
+.. ocv:pyfunction:: cv2.CascadeClassifier(filename) -> <CascadeClassifier object>
 
     :param filename: Name of the file from which the classifier is loaded.
 
@@ -231,6 +193,12 @@ Detects objects of different sizes in the input image. The detected objects are 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image, rejectLevels, levelWeights[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects
 
+.. ocv:cfunction:: CvSeq* cvHaarDetectObjects( const CvArr* image, CvHaarClassifierCascade* cascade, CvMemStorage* storage, double scaleFactor=1.1, int minNeighbors=3, int flags=0, CvSize minSize=cvSize(0, 0), CvSize maxSize=cvSize(0, 0) )
+
+.. ocv:pyoldfunction:: cv.HaarDetectObjects(image, cascade, storage, scaleFactor=1.1, minNeighbors=3, flags=0, minSize=(0, 0))-> detectedObjects
+
+    :param cascade: Haar classifier cascade (OpenCV 1.x API only). It can be loaded from XML or YAML file using :ocv:cfunc:`Load`. When the cascade is not needed anymore, release it using ``cvReleaseHaarClassifierCascade(&cascade)``.
+
     :param image: Matrix of the type   ``CV_8U``  containing an image where objects are detected.
 
     :param objects: Vector of rectangles where each rectangle contains the detected object.
@@ -247,21 +215,32 @@ Detects objects of different sizes in the input image. The detected objects are 
 
 CascadeClassifier::setImage
 -------------------------------
-Sets an image for detection that is called by ``detectMultiScale`` at each image level.
+Sets an image for detection.
 
 .. ocv:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
+
+.. ocv:cfunction:: void cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascade, const CvArr* sum, const CvArr* sqsum, const CvArr* tiltedSum, double scale )
+
+    :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
 
     :param feval: Pointer to the feature evaluator used for computing features.
 
     :param image: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
 
+The function is automatically called by :ocv:func:`CascadeClassifier::detectMultiScale` at every image scale. But if you want to test various locations manually using :ocv:func:`CascadeClassifier::runAt`, you need to call the function before, so that the integral images are computed.
+
+.. note:: in the old API you need to supply integral images (that can be obtained using :ocv:cfunc:`Integral`) instead of the original image.
 
 
 CascadeClassifier::runAt
 ----------------------------
-Runs the detector at the specified point. Use ``setImage`` to set the image for the detector to work with.
+Runs the detector at the specified point.
 
 .. ocv:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt )
+
+.. ocv:cfunction:: int cvRunHaarClassifierCascade( CvHaarClassifierCascade* cascade, CvPoint pt, int startStage=0 )
+
+    :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
 
     :param feval: Feature evaluator used for computing features.
 
@@ -270,13 +249,13 @@ Runs the detector at the specified point. Use ``setImage`` to set the image for 
 The function returns 1 if the cascade classifier detects an object in the given location.
 Otherwise, it returns negated index of the stage at which the candidate has been rejected.
 
-
+Use :ocv:func:`CascadeClassifier::setImage` to set the image for the detector to work with.
 
 groupRectangles
 -------------------
 Groups the object candidate rectangles.
 
-.. ocv:function:: void groupRectangles(vector<Rect>& rectList,                     int groupThreshold, double eps=0.2)
+.. ocv:function:: void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2)
 
 .. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> None
 .. ocv:pyfunction:: cv2.groupRectangles(rectList, groupThreshold[, eps]) -> weights

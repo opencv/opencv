@@ -9,7 +9,7 @@ gpu::HOGDescriptor
 ------------------
 .. ocv:class:: gpu::HOGDescriptor
 
-Class providing a histogram of Oriented Gradients [Navneet Dalal and Bill Triggs. *Histogram of oriented gradients for human detection*. 2005.] descriptor and detector.
+The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detector.
 ::
 
     struct CV_EXPORTS HOGDescriptor
@@ -326,3 +326,4 @@ gpu::CascadeClassifier_GPU::detectMultiScale
 
 .. seealso:: :ocv:func:`CascadeClassifier::detectMultiScale` 
 
+.. [Dalal2005] Navneet Dalal and Bill Triggs. *Histogram of oriented gradients for human detection*. 2005.
