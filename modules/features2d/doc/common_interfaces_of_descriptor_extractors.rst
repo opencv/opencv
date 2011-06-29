@@ -9,7 +9,7 @@ represented as vectors in a multidimensional space. All objects that implement t
 descriptor extractors inherit the
 :ocv:class:`DescriptorExtractor` interface.
 
-.. index:: DescriptorExtractor
+
 
 DescriptorExtractor
 -------------------
@@ -47,13 +47,13 @@ distances between descriptors. Therefore, a collection of
 descriptors is represented as
 :ocv:class:`Mat` , where each row is a keypoint descriptor.
 
-.. index:: DescriptorExtractor::compute
+
 
 DescriptorExtractor::compute
 --------------------------------
-.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
-    Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
+.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 
     :param image: Image.
 
@@ -71,33 +71,33 @@ DescriptorExtractor::compute
 
     :param descriptors: Descriptor collection. ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`` set.
 
-.. index:: DescriptorExtractor::read
+
 
 DescriptorExtractor::read
 -----------------------------
-.. ocv:function:: void DescriptorExtractor::read( const FileNode& fn )
+Reads the object of a descriptor extractor from a file node.
 
-    Reads the object of a descriptor extractor from a file node.
+.. ocv:function:: void DescriptorExtractor::read( const FileNode& fn )
 
     :param fn: File node from which the detector is read.
 
-.. index:: DescriptorExtractor::write
+
 
 DescriptorExtractor::write
 ------------------------------
-.. ocv:function:: void DescriptorExtractor::write( FileStorage& fs ) const
+Writes the object of a descriptor extractor to a file storage.
 
-    Writes the object of a descriptor extractor to a file storage.
+.. ocv:function:: void DescriptorExtractor::write( FileStorage& fs ) const
 
     :param fs: File storage where the detector is written.
 
-.. index:: DescriptorExtractor::create
+
 
 DescriptorExtractor::create
 -------------------------------
-.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
+Creates a descriptor extractor by name.
 
-    Creates a descriptor extractor by name.
+.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
 
     :param descriptorExtractorType: Descriptor extractor type.
 
@@ -112,9 +112,7 @@ A combined format is also supported: descriptor extractor adapter name ( ``"Oppo
 :ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
 for example: ``"OpponentSIFT"`` .
 
-.. index:: SiftDescriptorExtractor
 
-.. _SiftDescriptorExtractor:
 
 SiftDescriptorExtractor
 -----------------------
@@ -144,9 +142,7 @@ Wrapping class for computing descriptors by using the
     }
 
 
-.. index:: SurfDescriptorExtractor
 
-.. _SurfDescriptorExtractor:
 
 SurfDescriptorExtractor
 -----------------------
@@ -170,9 +166,7 @@ Wrapping class for computing descriptors by using the
     }
 
 
-.. index:: OrbDescriptorExtractor
 
-.. _OrbDescriptorExtractor:
 
 OrbDescriptorExtractor
 ---------------------------
@@ -196,7 +190,7 @@ Wrapping class for computing descriptors by using the
     }
 
 
-.. index:: CalonderDescriptorExtractor
+
 
 CalonderDescriptorExtractor
 ---------------------------
@@ -219,10 +213,6 @@ Wrapping class for computing descriptors by using the
         ...
     }
 
-
-.. index:: OpponentColorDescriptorExtractor
-
-.. _OpponentColorDescriptorExtractor:
 
 OpponentColorDescriptorExtractor
 --------------------------------
@@ -248,9 +238,6 @@ them into a single color descriptor. ::
     };
 
 
-.. index:: BriefDescriptorExtractor
-
-.. _BriefDescriptorExtractor:
 
 BriefDescriptorExtractor
 ------------------------

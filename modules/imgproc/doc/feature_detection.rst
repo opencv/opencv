@@ -3,13 +3,18 @@ Feature Detection
 
 .. highlight:: cpp
 
-.. index:: Canny
+
 
 Canny
 ---------
+Finds edges in an image using the [Canny86]_ algorithm.
+
 .. ocv:function:: void Canny( InputArray image, OutputArray edges, double threshold1, double threshold2, int apertureSize=3, bool L2gradient=false )
 
-    Finds edges in an image using the Canny algorithm.
+.. ocv:pyfunction:: cv2.Canny(image, threshold1, threshold2[, edges[, apertureSize[, L2gradient]]]) -> edges
+
+.. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int apertureSize=3 )
+.. ocv:pyoldfunction:: cv.Canny(image, edges, threshold1, threshold2, apertureSize=3)-> None
 
     :param image: Single-channel 8-bit input image.
 
@@ -26,14 +31,18 @@ Canny
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
-.. index:: cornerEigenValsAndVecs
+
 
 cornerEigenValsAndVecs
 ----------------------
+Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
 .. ocv:function:: void cornerEigenValsAndVecs( InputArray src, OutputArray dst, int blockSize, int apertureSize, int borderType=BORDER_DEFAULT )
 
-    Calculates eigenvalues and eigenvectors of image blocks for corner detection.
+.. ocv:pyfunction:: cv2.cornerEigenValsAndVecs(src, blockSize, ksize[, dst[, borderType]]) -> dst
+
+.. ocv:cfunction:: void cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv, int blockSize, int apertureSize=3 )
+.. ocv:pyoldfunction:: cv.CornerEigenValsAndVecs(image, eigenvv, blockSize, apertureSize=3)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -73,14 +82,18 @@ See Also:
 :ocv:func:`cornerHarris`,
 :ocv:func:`preCornerDetect`
 
-.. index:: cornerHarris
+
 
 cornerHarris
 ------------
+Harris edge detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int apertureSize, double k, int borderType=BORDER_DEFAULT )
 
-    Harris edge detector.
+.. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
+
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harrisDst, int blockSize, int apertureSize=3, double k=0.04 )
+.. ocv:pyoldfunction:: cv.CornerHarris(image, harrisDst, blockSize, apertureSize=3, k=0.04)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -108,14 +121,18 @@ The function runs the Harris edge detector on the image. Similarly to
 
 Corners in the image can be found as the local maxima of this response map.
 
-.. index:: cornerMinEigenVal
+
 
 cornerMinEigenVal
 -----------------
+Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
 .. ocv:function:: void cornerMinEigenVal( InputArray src, OutputArray dst, int blockSize, int apertureSize=3, int borderType=BORDER_DEFAULT )
 
-    Calculates the minimal eigenvalue of gradient matrices for corner detection.
+.. ocv:pyfunction:: cv2.cornerMinEigenVal(src, blockSize[, dst[, ksize[, borderType]]]) -> dst
+
+.. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int blockSize, int apertureSize=3 )
+.. ocv:pyoldfunction:: cv.CornerMinEigenVal(image, eigenval, blockSize, apertureSize=3)-> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -132,13 +149,19 @@ The function is similar to
 :math:`\min(\lambda_1, \lambda_2)` in terms of the formulae in the
 :ocv:func:`cornerEigenValsAndVecs` description.
 
-.. index:: cornerSubPix
+
 
 cornerSubPix
 ----------------
+Refines the corner locations.
+
 .. ocv:function:: void cornerSubPix( InputArray image, InputOutputArray corners, Size winSize, Size zeroZone, TermCriteria criteria )
 
-    Refines the corner locations.
+.. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> None
+
+.. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize winSize, CvSize zeroZone, CvTermCriteria criteria )
+
+.. ocv:pyoldfunction:: cv.FindCornerSubPix(image, corners, winSize, zeroZone, criteria)-> corners
 
     :param image: Input image.
 
@@ -188,14 +211,18 @@ where the gradients are summed within a neighborhood ("search window") of
 The algorithm sets the center of the neighborhood window at this new center
 :math:`q` and then iterates until the center stays within a set threshold.
 
-.. index:: goodFeaturesToTrack
+
 
 goodFeaturesToTrack
 -------------------
+Determines strong corners on an image.
 
 .. ocv:function:: void goodFeaturesToTrack( InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=noArray(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
 
-    Determines strong corners on an image.
+.. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
+
+.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners int* cornerCount double qualityLevel double minDistance const CvArr* mask=NULL int blockSize=3 int useHarris=0 double k=0.04 )
+.. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -215,7 +242,7 @@ goodFeaturesToTrack
     
     :param k: Free parameter of the Harris detector.
 
-The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]:
+The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]_:
 
 #.
     Function calculates the corner quality measure at every source image pixel using the
@@ -246,20 +273,21 @@ See Also: :ocv:func:`cornerMinEigenVal`,
 :ocv:func:`PlanarObjectDetector`, 
 :ocv:func:`OneWayDescriptor`
 
-.. index:: HoughCircles
+
 
 HoughCircles
 ------------
+Finds circles in a grayscale image using the Hough transform.
 
 .. ocv:function:: void HoughCircles( InputArray image, OutputArray circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
 
-    Finds circles in a grayscale image using the Hough transform.
+.. ocv:pyfunction:: cv2.HoughCircles(image, method, dp, minDist[, circles[, param1[, param2[, minRadius[, maxRadius]]]]]) -> circles
 
     :param image: 8-bit, single-channel, grayscale input image.
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
     
-    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90].
+    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 
     :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
@@ -312,14 +340,19 @@ See Also:
 :ocv:func:`fitEllipse`,
 :ocv:func:`minEnclosingCircle`
 
-.. index:: HoughLines
+
 
 HoughLines
 ----------
+Finds lines in a binary image using the standard Hough transform.
 
 .. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
 
-    Finds lines in a binary image using the standard Hough transform.
+.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
+
+.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
+
+.. ocv:pyoldfunction:: cv.HoughLines2(image, storage, method, rho, theta, threshold, param1=0, param2=0)-> lines
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -333,20 +366,44 @@ HoughLines
 
     :param srn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution is  ``rho``  and the accurate accumulator resolution is  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0`` , the classical Hough transform is used. Otherwise, both these parameters should be positive.
 
-    :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta`` .
+    :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
     
-The function implements the standard or standard multi-scale Hough transform algorithm for line detection. See
-:ocv:func:`HoughLinesP` for the code example. Also see http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
+    :param method: The Hough transform variant, one of the following: 
+         
+            * **CV_HOUGH_STANDARD** classical or standard Hough transform. Every line is represented by two floating-point numbers  :math:`(\rho, \theta)` , where  :math:`\rho`  is a distance between (0,0) point and the line, and  :math:`\theta`  is the angle between x-axis and the normal to the line. Thus, the matrix must be (the created sequence will be) of  ``CV_32FC2``  type 
+            
+               
+            * **CV_HOUGH_PROBABILISTIC** probabilistic Hough transform (more efficient in case if picture contains a few long linear segments). It returns line segments rather than the whole line. Each segment is represented by starting and ending points, and the matrix must be (the created sequence will be) of  ``CV_32SC4``  type 
+             
+            * **CV_HOUGH_MULTI_SCALE** multi-scale variant of the classical Hough transform. The lines are encoded the same way as  ``CV_HOUGH_STANDARD``
+    
 
+    :param param1: The first method-dependent parameter:
+    
+        *  For the classical Hough transform it is not used (0).
+    
+        *  For the probabilistic Hough transform it is the minimum line length.
+    
+        *  For the multi-scale Hough transform it is ``srn``. 
 
-.. index:: HoughLinesP
+    :param param2: The second method-dependent parameter: 
+    
+        *  For the classical Hough transform it is not used (0).
+    
+        *  For the probabilistic Hough transform it is the maximum gap between line segments lying on the same line to treat them as a single line segment (that is, to join them).
+    
+        *  For the multi-scale Hough transform it is ``stn``.
+
+The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
+See also the example in :ocv:func:`HoughLinesP` description.
 
 HoughLinesP
 -----------
+Finds line segments in a binary image using the probabilistic Hough transform.
 
 .. ocv:function:: void HoughLinesP( InputArray image, OutputArray lines, double rho, double theta, int threshold, double minLineLength=0, double maxLineGap=0 )
 
-    Finds line segments in a binary image using the probabilistic Hough transform.
+.. ocv:pyfunction:: cv2.HoughLinesP(image, rho, theta, threshold[, lines[, minLineLength[, maxLineGap]]]) -> lines
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -363,8 +420,7 @@ HoughLinesP
     :param maxLineGap: Maximum allowed gap between points on the same line to link them.
 
 The function implements the probabilistic Hough transform algorithm for line detection, described in
-Matas00
-. See the line detection example below: ::
+[Matas00]_. See the line detection example below: ::
 
     /* This is a standalone program. Pass an image name as a first parameter
     of the program.  Switch between standard and probabilistic Hough transform
@@ -427,14 +483,18 @@ And this is the output of the above program in case of the probabilistic Hough t
 
 .. image:: pics/houghp.png
 
-.. index:: preCornerDetect
+
 
 preCornerDetect
 ---------------
+Calculates a feature map for corner detection.
 
 .. ocv:function:: void preCornerDetect( InputArray src, OutputArray dst, int apertureSize, int borderType=BORDER_DEFAULT )
 
-    Calculates a feature map for corner detection.
+.. ocv:pyfunction:: cv2.preCornerDetect(src, ksize[, dst[, borderType]]) -> dst
+
+.. ocv:cfunction:: void cvPreCornerDetect( const CvArr* image, CvArr* corners, int apertureSize=3 )
+.. ocv:pyoldfunction:: cv.PreCornerDetect(image, corners, apertureSize=3)-> None
 
     :param src: Source single-channel 8-bit of floating-point image.
 
@@ -463,4 +523,10 @@ The corners can be found as local maximums of the functions, as shown below: ::
     dilate(corners, dilated_corners, Mat(), 1);
     Mat corner_mask = corners == dilated_corners;
 
+.. [Canny86] J. Canny. A Computational Approach to Edge Detection, IEEE Trans. on Pattern Analysis and Machine Intelligence, 8(6), pp. 679-698 (1986).
 
+.. [Matas00] Matas, J. and Galambos, C. and Kittler, J.V., “Robust Detection of Lines Using the Progressive Probabilistic Hough Transform”. CVIU 78 1, pp 119-137 (2000)
+
+.. [Shi94] J. Shi and C. Tomasi. Good features to track. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 593-600, June 1994.
+
+.. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., “Comparative study of Hough transform methods for circle finding”. Image Vision Comput. 8 1, pp 71–77 (1990)

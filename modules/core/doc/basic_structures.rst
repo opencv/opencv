@@ -645,7 +645,7 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including ``std::sort()`` .
 
-.. _MatrixExpressions:
+
 
 Matrix Expressions
 ------------------

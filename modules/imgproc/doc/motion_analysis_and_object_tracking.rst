@@ -3,13 +3,16 @@ Motion Analysis and Object Tracking
 
 .. highlight:: cpp
 
-.. index:: accumulate
-
 accumulate
 --------------
+Adds an image to the accumulator.
+
 .. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
-    Adds an image to the accumulator.
+.. ocv:pyfunction:: cv2.accumulate(src, dst[, mask]) -> dst
+
+.. ocv:cfunction:: void cvAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.Acc(src, dst, mask=None)-> None
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -27,18 +30,23 @@ The function supports multi-channel images. Each channel is processed independen
 
 The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateSquare
+
 
 accumulateSquare
 --------------------
+Adds the square of a source image to the accumulator.
+
 .. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
-    Adds the square of a source image to the accumulator.
+.. ocv:pyfunction:: cv2.accumulateSquare(src, dst[, mask]) -> dst
+
+.. ocv:cfunction:: void cvSquareAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.SquareAcc(src, dst, mask=None)-> None
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -46,36 +54,41 @@ accumulateSquare
 
     :param mask: Optional operation mask.
 
-The function adds the input image ``src`` or its selected region, raised to power 2, to the accumulator ``dst`` :
+The function adds the input image ``src`` or its selected region, raised to a power of 2, to the accumulator ``dst`` :
 
 .. math::
 
     \texttt{dst} (x,y)  \leftarrow \texttt{dst} (x,y) +  \texttt{src} (x,y)^2  \quad \text{if} \quad \texttt{mask} (x,y)  \ne 0
 
-The function supports multi-channel images Each channel is processed independently.
+The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateProduct
+
 
 accumulateProduct
 ---------------------
+Adds the per-element product of two input images to the accumulator.
+
 .. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
-    Adds the per-element product of two input images to the accumulator.
+.. ocv:pyfunction:: cv2.accumulateProduct(src1, src2, dst[, mask]) -> dst
 
-    :param src1: The first input image, 1- or 3-channel, 8-bit or 32-bit floating point.
+.. ocv:cfunction:: void cvMultiplyAcc( const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.MultiplyAcc(src1, src2, dst, mask=None)-> None
 
-    :param src2: The second input image of the same type and the same size as  ``src1`` .
+    :param src1: First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
+
+    :param src2: Second input image of the same type and the same size as  ``src1`` .
 	
     :param dst: Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point.
 
     :param mask: Optional operation mask.
 
-The function adds the product of 2 images or their selected regions to the accumulator ``dst`` :
+The function adds the product of two images or their selected regions to the accumulator ``dst`` :
 
 .. math::
 
@@ -83,18 +96,23 @@ The function adds the product of 2 images or their selected regions to the accum
 
 The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulate`,
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateWeighted`
 
-.. index:: accumulateWeighted
+
 
 accumulateWeighted
 ----------------------
+Updates a running average.
+
 .. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
-    Updates a running average.
+.. ocv:pyfunction:: cv2.accumulateWeighted(src, dst, alpha[, mask]) -> dst
+
+.. ocv:cfunction:: void cvRunningAvg( const CvArr* src, CvArr* dst, double alpha, const CvArr* mask=NULL )
+.. ocv:pyoldfunction:: cv.RunningAvg(src, dst, alpha, mask=None)-> None
 
     :param src: Input image as 1- or 3-channel, 8-bit or 32-bit floating point.
 
@@ -113,7 +131,7 @@ The function calculates the weighted sum of the input image ``src`` and the accu
 That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets" about earlier images).
 The function supports multi-channel images. Each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`accumulate`,
 :ocv:func:`accumulateSquare`,
 :ocv:func:`accumulateProduct` 

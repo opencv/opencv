@@ -3,16 +3,17 @@ Clustering
 
 .. highlight:: cpp
 
-.. index:: kmeans
-
-.. _kmeans:
-
 kmeans
 ------
+Finds centers of clusters and groups input samples around the clusters.
 
-.. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria termcrit, int attempts, int flags, OutputArray centers=noArray() )
+.. ocv:function:: double kmeans( InputArray samples, int clusterCount, InputOutputArray labels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
 
-    Finds centers of clusters and groups input samples around the clusters.
+.. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
+
+.. ocv:cfunction:: int cvKMeans2(const CvArr* samples, int nclusters, CvArr* labels, CvTermCriteria criteria, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* centers=0, double* compactness=0)
+
+.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, criteria)-> None
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
@@ -20,7 +21,7 @@ kmeans
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
-    :param termcrit: Flag to specify the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``termcrit.epsilon``. As soon as each of the cluster centers moves by less than ``termcrit.epsilon`` on some iteration, the algorithm stops.
+    :param criteria: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``criteria.epsilon``. As soon as each of the cluster centers moves by less than ``criteria.epsilon`` on some iteration, the algorithm stops.
 
     :param attempts: Flag to specify the number of times the algorithm is executed using different initial labelings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 
@@ -28,7 +29,7 @@ kmeans
 
             * **KMEANS_RANDOM_CENTERS** Select random initial centers in each attempt.
 
-            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii.
+            * **KMEANS_PP_CENTERS** Use ``kmeans++`` center initialization by Arthur and Vassilvitskii [Arthur2007].
 
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
@@ -53,15 +54,13 @@ Basically, you can use only the core of the function, set the number of
 attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( ``flags`` = ``KMEANS_USE_INITIAL_LABELS`` ) flag, and then choose the best (most-compact) clustering.
 
-.. index:: partition
-
 partition
 -------------
+Splits an element set into equivalency classes.
+
 .. ocv:function:: template<typename _Tp, class _EqPredicate> int
 
-.. ocv:function:: partition( const vector<_Tp>& vec, vector<int>& labels,               _EqPredicate predicate=_EqPredicate())
-
-    Splits an element set into equivalency classes.
+.. ocv:function:: partition( const vector<_Tp>& vec, vector<int>& labels, _EqPredicate predicate=_EqPredicate())
 
     :param vec: Set of elements stored as a vector.
 
@@ -77,3 +76,4 @@ http://en.wikipedia.org/wiki/Disjoint-set_data_structure
 . The function
 returns the number of equivalency classes.
 
+.. [Arthur2007] Arthur and S. Vassilvitskii “k-means++: the advantages of careful seeding”, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007

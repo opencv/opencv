@@ -162,5 +162,3 @@ FileNodeIterator
 .. ocv:class:: FileNodeIterator
 
 The class ``FileNodeIterator`` is used to iterate through sequences and mappings. A standard STL notation, with ``node.begin()``, ``node.end()`` denoting the beginning and the end of a sequence, stored in ``node``.  See the data reading sample in the beginning of the section.
-
-

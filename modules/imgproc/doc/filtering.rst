@@ -1,9 +1,7 @@
-.. _ImageFiltering:
-
-.. highlight:: cpp
-
 Image Filtering
 ===============
+
+.. highlight:: cpp
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images (represented as
 :ocv:func:`Mat`'s). It means that for each pixel location
@@ -14,13 +12,13 @@ Another common feature of the functions and classes described in this section is
 :math:`3 \times 3` filter, then, when processing the left-most pixels in each row, you need pixels to the left of them, that is, outside of the image. You can let these pixels be the same as the left-most image pixels ("replicated border" extrapolation method), or assume that all the non-existing pixels are zeros ("contant border" extrapolation method), and so on.
 OpenCV enables you to specify the extrapolation method. For details, see the function  :ocv:func:`borderInterpolate`  and discussion of the  ``borderType``  parameter in various functions below.
 
-.. index:: BaseColumnFilter
+
 
 BaseColumnFilter
 ----------------
 .. ocv:class:: BaseColumnFilter
 
-Base class for filters with single-column kernels ::
+Base class for filters with single-column kernels. ::
 
     class BaseColumnFilter
     {
@@ -55,7 +53,7 @@ where
 :math:`F` is a filtering function but, as it is represented as a class, it can produce any side effects, memorize previously processed data, and so on. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
-See Also:
+.. seealso::
 :ocv:func:`BaseRowFilter`,
 :ocv:func:`BaseFilter`,
 :ocv:func:`FilterEngine`,
@@ -63,13 +61,13 @@ See Also:
 :ocv:func:`getLinearColumnFilter`,
 :ocv:func:`getMorphologyColumnFilter`
 
-.. index:: BaseFilter
+
 
 BaseFilter
 ----------
 .. ocv:class:: BaseFilter
 
-Base class for 2D image filters ::
+Base class for 2D image filters. ::
 
     class BaseFilter
     {
@@ -105,20 +103,20 @@ where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
-See Also:
+.. seealso::
 :ocv:func:`BaseColumnFilter`,
 :ocv:func:`BaseRowFilter`,
 :ocv:func:`FilterEngine`,
 :ocv:func:`getLinearFilter`,
 :ocv:func:`getMorphologyFilter`
 
-.. index:: BaseRowFilter
+
 
 BaseRowFilter
 -------------
 .. ocv:class:: BaseRowFilter
 
-Base class for filters with single-row kernels ::
+Base class for filters with single-row kernels. ::
 
     class BaseRowFilter
     {
@@ -146,7 +144,7 @@ where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
-See Also:
+.. seealso::
 :ocv:func:`BaseColumnFilter`,
 :ocv:func:`Filter`,
 :ocv:func:`FilterEngine`,
@@ -154,13 +152,13 @@ See Also:
 :ocv:func:`getMorphologyRowFilter`,
 :ocv:func:`getRowSumFilter`
 
-.. index:: FilterEngine
+
 
 FilterEngine
 ------------
 .. ocv:class:: FilterEngine
 
-Generic image filtering class ::
+Generic image filtering class. ::
 
     class FilterEngine
     {
@@ -290,7 +288,7 @@ This class makes it easier to combine filtering operations with other operations
     }
 
 
-If you do not need that much control of the filtering process, you can simply use the ``FilterEngine::apply`` method. Here is how the method is actually implemented: ::
+If you do not need that much control of the filtering process, you can simply use the ``FilterEngine::apply`` method. The method is implemented as follows: ::
 
     void FilterEngine::apply(const Mat& src, Mat& dst,
         const Rect& srcRoi, Point dstOfs, bool isolated)
@@ -322,7 +320,7 @@ If you do not need that much control of the filtering process, you can simply us
     }
 
 
-Unlike the earlier versions of OpenCV, now the filtering operations fully support the notion of image ROI, that is, pixels outside of the ROI but inside the image can be used in the filtering operations. For example, you can take a ROI of a single pixel and filter it. This will be a filter response at that particular pixel. However, it is possible to emulate the old behavior by passing ``isolated=false`` to ``FilterEngine::start`` or ``FilterEngine::apply`` . You can pass the ROI explicitly to ``FilterEngine::apply``  or construct a new matrix headers: ::
+Unlike the earlier versions of OpenCV, now the filtering operations fully support the notion of image ROI, that is, pixels outside of the ROI but inside the image can be used in the filtering operations. For example, you can take a ROI of a single pixel and filter it. This will be a filter response at that particular pixel. However, it is possible to emulate the old behavior by passing ``isolated=false`` to ``FilterEngine::start`` or ``FilterEngine::apply`` . You can pass the ROI explicitly to ``FilterEngine::apply``  or construct new matrix headers: ::
 
     // compute dI/dx derivative at src(x,y)
 
@@ -357,7 +355,7 @@ Explore the data types. As it was mentioned in the
 *
     In case of non-separable filtering, ``bufType``     must be the same as ``srcType``     . The source data is copied to the temporary buffer, if needed, and then just passed to ``FilterEngine::filter2D``     . That is, the input type for ``filter2D``     is ``srcType``     (= ``bufType``     ) and the output type is ``dstType``     .
 
-See Also:
+.. seealso::
 :ocv:func:`BaseColumnFilter`,
 :ocv:func:`BaseFilter`,
 :ocv:func:`BaseRowFilter`,
@@ -368,13 +366,15 @@ See Also:
 :ocv:func:`createMorphologyFilter`,
 :ocv:func:`createSeparableLinearFilter`
 
-.. index:: bilateralFilter
+
 
 bilateralFilter
 -------------------
+Applies the bilateral filter to an image.
+
 .. ocv:function:: void bilateralFilter( InputArray src, OutputArray dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT )
 
-    Applies the bilateral filter to an image.
+.. ocv:pyfunction:: cv2.bilateralFilter(src, d, sigmaColor, sigmaSpace[, dst[, borderType]]) -> dst
 
     :param src: Source 8-bit or floating-point, 1-channel or 3-channel image.
 
@@ -388,22 +388,24 @@ bilateralFilter
 
 The function applies bilateral filtering to the input image, as described in
 http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html
-``bilateralFilter`` can do a very good job of reducing unwanted noise while keep edges fairly sharp. However it is very slow compared to most filters.
+``bilateralFilter`` can reduce unwanted noise very well while keeping edges fairly sharp. However, it is very slow compared to most filters.
 
-*Sigma values*: For simplicity, you can set the 2 sigma values to be the same. If they are small (< 10) then the filter will not have much effect, whereas if they are large (> 150) then they will have a very strong effect, making the image look "cartoonish".
+*Sigma values*: For simplicity, you can set the 2 sigma values to be the same. If they are small (< 10), the filter will not have much effect, whereas if they are large (> 150), they will have a very strong effect, making the image look "cartoonish".
 
 *Filter size*: Large filters (d > 5) are very slow, so it is recommended to use d=5 for real-time applications, and perhaps d=9 for offline applications that need heavy noise filtering.
 
-This filter doesn't work inplace.
+This filter does not work inplace.
 
 
-.. index:: blur
+
 
 blur
 --------
+Smoothes an image using the normalized box filter.
+
 .. ocv:function:: void blur( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
 
-    Smoothes an image using the normalized box filter.
+.. ocv:pyfunction:: cv2.blur(src, ksize[, dst[, anchor[, borderType]]]) -> dst
 
     :param src: Source image.
 
@@ -423,19 +425,21 @@ The function smoothes an image using the kernel:
 
 The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFilter(src, dst, src.type(), anchor, true, borderType)`` .
 
-See Also:
+.. seealso::
 :ocv:func:`boxFilter`,
 :ocv:func:`bilateralFilter`,
 :ocv:func:`GaussianBlur`,
 :ocv:func:`medianBlur` 
 
-.. index:: borderInterpolate
+
 
 borderInterpolate
 ---------------------
+Computes the source location of an extrapolated pixel.
+
 .. ocv:function:: int borderInterpolate( int p, int len, int borderType )
 
-    Computes the source location of an extrapolated pixel.
+.. ocv:pyfunction:: cv2.borderInterpolate(p, len, borderType) -> retval
 
     :param p: 0-based coordinate of the extrapolated pixel along one of the axes, likely <0 or >= ``len`` .
     
@@ -443,7 +447,7 @@ borderInterpolate
 
     :param borderType: Border type, one of the  ``BORDER_*`` , except for  ``BORDER_TRANSPARENT``  and  ``BORDER_ISOLATED`` . When  ``borderType==BORDER_CONSTANT`` , the function always returns -1, regardless of  ``p``  and  ``len`` .
 
-The function computes and returns the coordinate of the donor pixel, corresponding to the specified extrapolated pixel when using the specified extrapolation border mode. For example, if we use ``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image ``img`` , it will be ::
+The function computes and returns the coordinate of a donor pixel corresponding to the specified extrapolated pixel when using the specified extrapolation border mode. For example, if you use ``BORDER_WRAP`` mode in the horizontal direction, ``BORDER_REFLECT_101`` in the vertical direction and want to compute value of the "virtual" pixel ``Point(-5, 100)`` in a floating-point image ``img`` , it looks like: ::
 
     float val = img.at<float>(borderInterpolate(100, img.rows, BORDER_REFLECT_101),
                               borderInterpolate(-5, img.cols, BORDER_WRAP));
@@ -453,17 +457,19 @@ Normally, the function is not called directly. It is used inside
 :ocv:func:`FilterEngine` and
 :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
 
-See Also:
+.. seealso::
 :ocv:func:`FilterEngine`,
 :ocv:func:`copyMakeBorder`
 
-.. index:: boxFilter
+
 
 boxFilter
 -------------
+Smoothes an image using the box filter.
+
 .. ocv:function:: void boxFilter( InputArray src, OutputArray dst, int ddepth, Size ksize, Point anchor=Point(-1,-1), bool normalize=true, int borderType=BORDER_DEFAULT )
 
-    Smoothes an image using the box filter.
+.. ocv:pyfunction:: cv2.boxFilter(src, ddepth, ksize[, dst[, anchor[, normalize[, borderType]]]]) -> dst
 
     :param src: Source image.
 
@@ -493,38 +499,42 @@ Unnormalized box filter is useful for computing various integral characteristics
 and so on). If you need to compute pixel sums over variable-size windows, use
 :ocv:func:`integral` .
 
-See Also:
+.. seealso::
 :ocv:func:`boxFilter`,
 :ocv:func:`bilateralFilter`,
 :ocv:func:`GaussianBlur`,
 :ocv:func:`medianBlur`,
 :ocv:func:`integral` 
 
-.. index:: buildPyramid
+
 
 buildPyramid
 ----------------
-.. ocv:function:: void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxlevel )
+Constructs the Gaussian pyramid for an image.
 
-    Constructs the Gaussian pyramid for an image.
+.. ocv:function:: void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxlevel )
 
     :param src: Source image. Check  :ocv:func:`pyrDown`  for the list of supported types.
 
-    :param dst: Destination vector of  ``maxlevel+1``  images of the same type as  ``src`` . ``dst[0]``  will be the same as  ``src`` .  ``dst[1]``  is the next pyramid layer,
-        a smoothed and down-sized  ``src``  , and so on.
+    :param dst: Destination vector of  ``maxlevel+1``  images of the same type as  ``src`` . ``dst[0]``  will be the same as  ``src`` .  ``dst[1]``  is the next pyramid layer, a smoothed and down-sized  ``src``  , and so on.
 
     :param maxlevel: 0-based index of the last (the smallest) pyramid layer. It must be non-negative.
 
 The function constructs a vector of images and builds the Gaussian pyramid by recursively applying
 :ocv:func:`pyrDown` to the previously built pyramid layers, starting from ``dst[0]==src`` .
 
-.. index:: copyMakeBorder
+
 
 copyMakeBorder
 ------------------
+Forms a border around an image.
+
 .. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
 
-    Forms a border around an image.
+.. ocv:pyfunction:: cv2.copyMakeBorder(src, top, bottom, left, right, borderType[, dst[, value]]) -> dst
+
+.. ocv:cfunction:: void cvCopyMakeBorder( const CvArr* src, CvArr* dst, CvPoint offset, int bordertype, CvScalar value=cvScalarAll(0) )
+.. ocv:pyoldfunction:: cv.CopyMakeBorder(src, dst, offset, bordertype, value=(0, 0, 0, 0))-> None
 
     :param src: Source image.
 
@@ -556,19 +566,19 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
     ...
 
 
-See Also:
+.. seealso::
 :ocv:func:`borderInterpolate`
-.. index:: createBoxFilter
+
 
 createBoxFilter
 -------------------
+Returns a box filter engine.
+
 .. ocv:function:: Ptr<FilterEngine> createBoxFilter( int srcType, int dstType,                                 Size ksize, Point anchor=Point(-1,-1), bool normalize=true, int borderType=BORDER_DEFAULT)
 
 .. ocv:function:: Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,                                   int ksize, int anchor=-1)
 
 .. ocv:function:: Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType,                                   int ksize, int anchor=-1, double scale=1)
-
-    Returns a box filter engine.
 
     :param srcType: Source image type.
 
@@ -595,18 +605,18 @@ The function itself is used by
 :ocv:func:`blur` and
 :ocv:func:`boxFilter` .
 
-See Also:
+.. seealso::
 :ocv:func:`FilterEngine`,
 :ocv:func:`blur`,
 :ocv:func:`boxFilter` 
 
-.. index:: createDerivFilter
+
 
 createDerivFilter
 ---------------------
-.. ocv:function:: Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,                                     int dx, int dy, int ksize, int borderType=BORDER_DEFAULT )
+Returns an engine for computing image derivatives.
 
-    Returns an engine for computing image derivatives.
+.. ocv:function:: Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,                                     int dx, int dy, int ksize, int borderType=BORDER_DEFAULT )
 
     :param srcType: Source image type.
 
@@ -626,19 +636,19 @@ The function :ocv:func:`createDerivFilter` is a small convenience function that 
 :ocv:func:`Sobel` and
 :ocv:func:`Scharr` .
 
-See Also:
+.. seealso::
 :ocv:func:`createSeparableLinearFilter`,
 :ocv:func:`getDerivKernels`,
 :ocv:func:`Scharr`,
 :ocv:func:`Sobel` 
 
-.. index:: createGaussianFilter
+
 
 createGaussianFilter
 ------------------------
-.. ocv:function:: Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,                                   double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT)
+Returns an engine for smoothing images with the Gaussian filter.
 
-    Returns an engine for smoothing images with the Gaussian filter.
+.. ocv:function:: Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,                                   double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT)
 
     :param type: Source and destination image type.
 
@@ -655,20 +665,20 @@ The function :ocv:func:`createGaussianFilter` computes Gaussian kernel coefficie
 :ocv:func:`getGaussianKernel` and then
 :ocv:func:`createSeparableFilter` directly.
 
-See Also:
+.. seealso::
 :ocv:func:`createSeparableLinearFilter`,
 :ocv:func:`getGaussianKernel`,
 :ocv:func:`GaussianBlur` 
 
-.. index:: createLinearFilter
+
 
 createLinearFilter
 ----------------------
+Creates a non-separable linear filter engine.
+
 .. ocv:function:: Ptr<FilterEngine> createLinearFilter(int srcType, int dstType, InputArray kernel, Point _anchor=Point(-1,-1), double delta=0, int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar())
 
 .. ocv:function:: Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,                               InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int bits=0)
-
-    Creates a non-separable linear filter engine.
 
     :param srcType: Source image type.
 
@@ -689,14 +699,16 @@ createLinearFilter
 The function returns a pointer to a 2D linear filter for the specified kernel, the source array type, and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to the
 :ocv:func:`FilterEngine` constructor.
 
-See Also:
+.. seealso::
 :ocv:func:`createSeparableLinearFilter`,
 :ocv:func:`FilterEngine`,
 :ocv:func:`filter2D`
-.. index:: createMorphologyFilter
+
 
 createMorphologyFilter
 --------------------------
+Creates an engine for non-separable morphological operations.
+
 .. ocv:function:: Ptr<FilterEngine> createMorphologyFilter(int op, int type,    InputArray element, Point anchor=Point(-1,-1), int rowBorderType=BORDER_CONSTANT, int columnBorderType=-1, const Scalar& borderValue=morphologyDefaultBorderValue())
 
 .. ocv:function:: Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray element,                                    Point anchor=Point(-1,-1))
@@ -707,9 +719,7 @@ createMorphologyFilter
 
 .. ocv:function:: Scalar morphologyDefaultBorderValue()
 
-    Creates an engine for non-separable morphological operations.
-
-    :param op: Morphology operation id,  ``MORPH_ERODE``  or  ``MORPH_DILATE`` .
+    :param op: Morphology operation ID,  ``MORPH_ERODE``  or  ``MORPH_DILATE`` .
     
     :param type: Input/output image type.
 
@@ -731,22 +741,22 @@ The functions construct primitive morphological filtering operations or a filter
 Note that
 :ocv:func:`createMorphologyFilter` analyzes the structuring element shape and builds a separable morphological filter engine when the structuring element is square.
 
-See Also:
+.. seealso::
 :ocv:func:`erode`,
 :ocv:func:`dilate`,
 :ocv:func:`morphologyEx`,
 :ocv:func:`FilterEngine`
-.. index:: createSeparableLinearFilter
+
 
 createSeparableLinearFilter
 -------------------------------
+Creates an engine for a separable linear filter.
+
 .. ocv:function:: Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,                         InputArray rowKernel, InputArray columnKernel, Point anchor=Point(-1,-1), double delta=0,                         int rowBorderType=BORDER_DEFAULT, int columnBorderType=-1, const Scalar& borderValue=Scalar())
 
 .. ocv:function:: Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,                         InputArray columnKernel, int anchor, int symmetryType, double delta=0, int bits=0)
 
 .. ocv:function:: Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,                         InputArray rowKernel, int anchor, int symmetryType)
-
-    Creates an engine for a separable linear filter.
 
     :param srcType: Source array type.
 
@@ -776,18 +786,23 @@ The functions construct primitive separable linear filtering operations or a fil
 :ocv:func:`createMorphologyFilter` is smart enough to figure out the ``symmetryType`` for each of the two kernels, the intermediate ``bufType``  and, if filtering can be done in integer arithmetics, the number of ``bits`` to encode the filter coefficients. If it does not work for you, it is possible to call ``getLinearColumnFilter``,``getLinearRowFilter`` directly and then pass them to the
 :ocv:func:`FilterEngine` constructor.
 
-See Also:
+.. seealso::
 :ocv:func:`sepFilter2D`,
 :ocv:func:`createLinearFilter`,
 :ocv:func:`FilterEngine`,
 :ocv:func:`getKernelType`
-.. index:: dilate
+
 
 dilate
 ----------
+Dilates an image by using a specific structuring element.
+
 .. ocv:function:: void dilate( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
-    Dilates an image by using a specific structuring element.
+.. ocv:pyfunction:: cv2.dilate(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
+
+.. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
+.. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
     :param src: Source image.
 
@@ -811,17 +826,22 @@ The function dilates the source image using the specified structuring element th
 
 The function supports the in-place mode. Dilation can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`erode`,
 :ocv:func:`morphologyEx`,
 :ocv:func:`createMorphologyFilter`
-.. index:: erode
+
 
 erode
 ---------
+Erodes an image by using a specific structuring element.
+
 .. ocv:function:: void erode( InputArray src, OutputArray dst, InputArray element, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
-    Erodes an image by using a specific structuring element.
+.. ocv:pyfunction:: cv2.erode(src, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
+
+.. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
+.. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
     :param src: Source image.
 
@@ -845,18 +865,23 @@ The function erodes the source image using the specified structuring element tha
 
 The function supports the in-place mode. Erosion can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
-See Also:
+.. seealso::
 :ocv:func:`dilate`,
 :ocv:func:`morphologyEx`,
 :ocv:func:`createMorphologyFilter`
 
-.. index:: filter2D
+
 
 filter2D
 ------------
+Convolves an image with the kernel.
+
 .. ocv:function:: void filter2D( InputArray src, OutputArray dst, int ddepth, InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
 
-    Convolves an image with the kernel.
+.. ocv:pyfunction:: cv2.filter2D(src, ddepth, kernel[, dst[, anchor[, delta[, borderType]]]]) -> dst
+
+.. ocv:cfunction:: void cvFilter2D( const CvArr* src, CvArr* dst, const CvMat* kernel, CvPoint anchor=cvPoint(-1, -1))
+.. ocv:pyoldfunction:: cv.Filter2D(src, dst, kernel, anchor=(-1, -1))-> None
 
     :param src: Source image.
 
@@ -885,19 +910,21 @@ That is, the kernel is not mirrored around the anchor point. If you need a real 
 
 The function uses the DFT-based algorithm in case of sufficiently large kernels (~``11 x 11`` or larger) and the direct algorithm (that uses the engine retrieved by :ocv:func:`createLinearFilter` ) for small kernels.
 
-See Also:
+.. seealso::
 :ocv:func:`sepFilter2D`,
 :ocv:func:`createLinearFilter`,
 :ocv:func:`dft`,
 :ocv:func:`matchTemplate`
 
-.. index:: GaussianBlur
+
 
 GaussianBlur
 ----------------
+Smoothes an image using a Gaussian filter.
+
 .. ocv:function:: void GaussianBlur( InputArray src, OutputArray dst, Size ksize, double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT )
 
-    Smoothes an image using a Gaussian filter.
+.. ocv:pyfunction:: cv2.GaussianBlur(src, ksize, sigma1[, dst[, sigma2[, borderType]]]) -> dst
 
     :param src: Source image.
 
@@ -911,20 +938,22 @@ GaussianBlur
 
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
 
-See Also:
+.. seealso::
 :ocv:func:`sepFilter2D`,
 :ocv:func:`filter2D`,
 :ocv:func:`blur`,
 :ocv:func:`boxFilter`,
 :ocv:func:`bilateralFilter`,
 :ocv:func:`medianBlur`
-.. index:: getDerivKernels
+
 
 getDerivKernels
 -------------------
+Returns filter coefficients for computing spatial image derivatives.
+
 .. ocv:function:: void getDerivKernels( OutputArray kx, OutputArray ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
 
-    Returns filter coefficients for computing spatial image derivatives.
+.. ocv:pyfunction:: cv2.getDerivKernels(dx, dy, ksize[, kx[, ky[, normalize[, ktype]]]]) -> kx, ky
 
     :param kx: Output matrix of row filter coefficients. It has the type  ``ktype`` .
     
@@ -947,13 +976,15 @@ The function computes and returns the filter coefficients for spatial image deri
 :ocv:func:`sepFilter2D` or to
 :ocv:func:`createSeparableLinearFilter` .
 
-.. index:: getGaussianKernel
+
 
 getGaussianKernel
 ---------------------
+Returns Gaussian filter coefficients.
+
 .. ocv:function:: Mat getGaussianKernel( int ksize, double sigma, int ktype=CV_64F )
 
-    Returns Gaussian filter coefficients.
+.. ocv:pyfunction:: cv2.getGaussianKernel(ksize, sigma[, ktype]) -> retval
 
     :param ksize: Aperture size. It should be odd ( :math:`\texttt{ksize} \mod 2 = 1` ) and positive.
 
@@ -974,23 +1005,23 @@ where
 
 Two of such generated kernels can be passed to
 :ocv:func:`sepFilter2D` or to
-:ocv:func:`createSeparableLinearFilter`. Those functions automatically recognize smoothing kernels (i.e. symmetrical kernel with sum of weights = 1) and handle them accordingly. You may also use the higher-level
+:ocv:func:`createSeparableLinearFilter`. Those functions automatically recognize smoothing kernels (a symmetrical kernel with sum of weights equal to 1) and handle them accordingly. You may also use the higher-level
 :ocv:func:`GaussianBlur`.
 
-See Also:
+.. seealso::
 :ocv:func:`sepFilter2D`,
 :ocv:func:`createSeparableLinearFilter`,
 :ocv:func:`getDerivKernels`,
 :ocv:func:`getStructuringElement`,
 :ocv:func:`GaussianBlur` 
 
-.. index:: getKernelType
+
 
 getKernelType
 -----------------
-.. ocv:function:: int getKernelType(InputArray kernel, Point anchor)
+Returns the kernel type.
 
-    Returns the kernel type.
+.. ocv:function:: int getKernelType(InputArray kernel, Point anchor)
 
     :param kernel: 1D array of the kernel coefficients to analyze.
 
@@ -1007,13 +1038,19 @@ The function analyzes the kernel coefficients and returns the corresponding kern
     * **KERNEL_SMOOTH** All the kernel elements are non-negative and summed to 1. For example, the Gaussian kernel is both smooth kernel and symmetrical, so the function returns  ``KERNEL_SMOOTH | KERNEL_SYMMETRICAL`` .
     * **KERNEL_INTEGER** All the kernel coefficients are integer numbers. This flag can be combined with  ``KERNEL_SYMMETRICAL``  or  ``KERNEL_ASYMMETRICAL`` .
     
-.. index:: getStructuringElement
+
 
 getStructuringElement
 -------------------------
-.. ocv:function:: Mat getStructuringElement(int shape, Size esize, Point anchor=Point(-1,-1))
+Returns a structuring element of the specified size and shape for morphological operations.
 
-    Returns a structuring element of the specified size and shape for morphological operations.
+.. ocv:function:: Mat getStructuringElement(int shape, Size ksize, Point anchor=Point(-1,-1))
+
+.. ocv:pyfunction:: cv2.getStructuringElement(shape, ksize[, anchor]) -> retval
+
+.. ocv:cfunction:: IplConvKernel* cvCreateStructuringElementEx( int cols, int rows, int anchorX, int anchorY, int shape, int* values=NULL )
+
+.. ocv:pyoldfunction:: cv.CreateStructuringElementEx(cols, rows, anchorX, anchorY, shape, values=None)-> kernel
 
     :param shape: Element shape that could be one of the following:
 
@@ -1030,24 +1067,39 @@ getStructuringElement
         .. math::
 
             E_{ij} =  \fork{1}{if i=\texttt{anchor.y} or j=\texttt{anchor.x}}{0}{otherwise}
+            
+      * **CV_SHAPE_CUSTOM**     - custom structuring element (OpenCV 1.x API)
 
-    :param esize: Size of the structuring element.
+    :param ksize: Size of the structuring element.
+
+    :param cols: Width of the structuring element
+    
+    :param rows: Height of the structuring element
 
     :param anchor: Anchor position within the element. The default value  :math:`(-1, -1)`  means that the anchor is at the center. Note that only the shape of a cross-shaped element depends on the anchor position. In other cases the anchor just regulates how much the result of the morphological operation is shifted.
+    
+    :param anchorX: x-coordinate of the anchor
+    
+    :param anchorY: y-coordinate of the anchor
+    
+    :param values: integer array of ``cols``*``rows`` elements that specifies the custom shape of the structuring element, when ``shape=CV_SHAPE_CUSTOM``.
 
-The function constructs and returns the structuring element that can be then passed to
+The function constructs and returns the structuring element that can be further passed to
 :ocv:func:`createMorphologyFilter`,
 :ocv:func:`erode`,
 :ocv:func:`dilate` or
 :ocv:func:`morphologyEx` . But you can also construct an arbitrary binary mask yourself and use it as the structuring element.
 
-.. index:: medianBlur
+.. note:: When using OpenCV 1.x C API, the created structuring element ``IplConvKernel* element`` must be released in the end using ``cvReleaseStructuringElement(&element)``.
+
 
 medianBlur
 --------------
+Smoothes an image using the median filter.
+
 .. ocv:function:: void medianBlur( InputArray src, OutputArray dst, int ksize )
 
-    Smoothes an image using the median filter.
+.. ocv:pyfunction:: cv2.medianBlur(src, ksize[, dst]) -> dst
 
     :param src: Source 1-, 3-, or 4-channel image. When  ``ksize``  is 3 or 5, the image depth should be  ``CV_8U`` ,  ``CV_16U`` ,  or  ``CV_32F`` . For larger aperture sizes, it can only be  ``CV_8U`` .
     
@@ -1058,19 +1110,24 @@ medianBlur
 The function smoothes an image using the median filter with the
 :math:`\texttt{ksize} \times \texttt{ksize}` aperture. Each channel of a multi-channel image is processed independently. In-place operation is supported.
 
-See Also:
+.. seealso::
 :ocv:func:`bilateralFilter`,
 :ocv:func:`blur`,
 :ocv:func:`boxFilter`,
 :ocv:func:`GaussianBlur`
 
-.. index:: morphologyEx
+
 
 morphologyEx
 ----------------
+Performs advanced morphological transformations.
+
 .. ocv:function:: void morphologyEx( InputArray src, OutputArray dst, int op, InputArray element,                   Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
 
-    Performs advanced morphological transformations.
+.. ocv:pyfunction:: cv2.morphologyEx(src, op, kernel[, dst[, anchor[, iterations[, borderType[, borderValue]]]]]) -> dst
+
+.. ocv:cfunction:: void cvMorphologyEx( const CvArr* src, CvArr* dst, CvArr* temp, IplConvKernel* element, int operation, int iterations=1 )
+.. ocv:pyoldfunction:: cv.MorphologyEx(src, dst, temp, element, operation, iterations=1)-> None
 
     :param src: Source image.
 
@@ -1130,18 +1187,24 @@ Morphological gradient:
 
 Any of the operations can be done in-place.
 
-See Also:
+.. seealso::
 :ocv:func:`dilate`,
 :ocv:func:`erode`,
 :ocv:func:`createMorphologyFilter`
 
-.. index:: Laplacian
+
 
 Laplacian
 -------------
+Calculates the Laplacian of an image.
+
 .. ocv:function:: void Laplacian( InputArray src, OutputArray dst, int ddepth, int ksize=1, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
-    Calculates the Laplacian of an image.
+.. ocv:pyfunction:: cv2.Laplacian(src, ddepth[, dst[, ksize[, scale[, delta[, borderType]]]]]) -> dst
+
+.. ocv:cfunction:: void cvLaplace( const CvArr* src, CvArr* dst, int ksize=3)
+
+.. ocv:pyoldfunction:: cv.Laplace(src, dst, ksize=3)-> None
 
     :param src: Source image.
 
@@ -1170,17 +1233,22 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
 
     \vecthreethree {0}{1}{0}{1}{-4}{1}{0}{1}{0}
 
-See Also:
+.. seealso::
 :ocv:func:`Sobel`,
 :ocv:func:`Scharr`
 
-.. index:: pyrDown
+
 
 pyrDown
 -----------
+Smoothes an image and downsamples it.
+
 .. ocv:function:: void pyrDown( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
-    Smoothes an image and downsamples it.
+.. ocv:pyfunction:: cv2.pyrDown(src[, dst[, dstsize]]) -> dst
+
+.. ocv:cfunction:: void cvPyrDown( const CvArr* src, CvArr* dst, int filter=CV_GAUSSIAN_5x5 )
+.. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5)-> None
 
     :param src: Source image.
 
@@ -1201,13 +1269,15 @@ The function performs the downsampling step of the Gaussian pyramid construction
 
 Then, it downsamples the image by rejecting even rows and columns.
 
-.. index:: pyrUp
+
 
 pyrUp
 ---------
+Upsamples an image and then smoothes it.
+
 .. ocv:function:: void pyrUp( InputArray src, OutputArray dst, const Size& dstsize=Size())
 
-    Upsamples an image and then smoothes it.
+.. ocv:pyfunction:: cv2.pyrUp(src[, dst[, dstsize]]) -> dst
 
     :param src: Source image.
 
@@ -1223,13 +1293,63 @@ pyrUp
 The function performs the upsampling step of the Gaussian pyramid construction  though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
 :ocv:func:`pyrDown`  multiplied by 4.
 
-.. index:: sepFilter2D
+
+pyrMeanShiftFiltering
+---------------------
+Performs initial step of meanshift segmentation of an image.
+
+.. ocv:function: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
+
+.. ocv:pyfunction:: cv2.pyrMeanShiftFiltering(src, sp, sr[, dst[, maxLevel[, termcrit]]]) -> dst
+
+.. ocv:cfunction:: void cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst, double sp,  double sr,  int max_level=1, CvTermCriteria termcrit= cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1))
+
+.. ocv:pyoldfunction:: cv.PyrMeanShiftFiltering(src, dst, sp, sr, maxLevel=1, termcrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 5, 1))-> None
+    
+    :param src: The source 8-bit, 3-channel image. 
+    
+    :param dst: The destination image of the same format and the same size as the source. 
+    
+    :param sp: The spatial window radius. 
+    
+    :param sr: The color window radius. 
+    
+    :param maxLevel: Maximum level of the pyramid for the segmentation. 
+    
+    :param termcrit: Termination criteria: when to stop meanshift iterations. 
+    
+       
+The function implements the filtering stage of meanshift segmentation, that is, the output of the function is the filtered "posterized" image with color gradients and fine-grain texture flattened. At every pixel 
+``(X,Y)`` of the input image (or down-sized input image, see below) the function executes meanshift
+iterations, that is, the pixel ``(X,Y)`` neighborhood in the joint space-color hyperspace is considered:
+
+    .. math::
+
+        (x,y): X- \texttt{sp} \le x  \le X+ \texttt{sp} , Y- \texttt{sp} \le y  \le Y+ \texttt{sp} , ||(R,G,B)-(r,g,b)||   \le \texttt{sr} 
+
+
+where  ``(R,G,B)`` and  ``(r,g,b)`` are the vectors of color components at ``(X,Y)`` and  ``(x,y)``, respectively (though, the algorithm does not depend on the color space used, so any 3-component color space can be used instead). Over the neighborhood the average spatial value  ``(X',Y')`` and average color vector  ``(R',G',B')`` are found and they act as the neighborhood center on the next iteration: 
+
+    .. math::
+
+        (X,Y)~(X',Y'), (R,G,B)~(R',G',B').
+    
+After the iterations over, the color components of the initial pixel (that is, the pixel from where the iterations started) are set to the final value (average color at the last iteration): 
+
+    .. math::
+        
+        I(X,Y) <- (R*,G*,B*)
+
+When ``maxLevel > 0``, the gaussian pyramid of ``maxLevel+1`` levels is built, and the above procedure is run on the smallest layer first. After that, the results are propagated to the larger layer and the iterations are run again only on those pixels where the layer colors differ by more than ``sr`` from the lower-resolution layer of the pyramid. That makes boundaries of color regions sharper. Note that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when ``maxLevel==0``).
+
 
 sepFilter2D
 ---------------
+Applies a separable linear filter to an image.
+
 .. ocv:function:: void sepFilter2D( InputArray src, OutputArray dst, int ddepth, InputArray rowKernel, InputArray columnKernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
 
-    Applies a separable linear filter to an image.
+.. ocv:pyfunction:: cv2.sepFilter2D(src, ddepth, kernelX, kernelY[, dst[, anchor[, delta[, borderType]]]]) -> dst
 
     :param src: Source image.
 
@@ -1249,7 +1369,7 @@ sepFilter2D
 
 The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with the 1D kernel ``rowKernel`` . Then, every column of the result is filtered with the 1D kernel ``columnKernel`` . The final result shifted by ``delta`` is stored in ``dst`` .
 
-See Also:
+.. seealso::
 :ocv:func:`createSeparableLinearFilter`,
 :ocv:func:`filter2D`,
 :ocv:func:`Sobel`,
@@ -1257,13 +1377,69 @@ See Also:
 :ocv:func:`boxFilter`,
 :ocv:func:`blur` 
 
-.. index:: Sobel
+
+Smooth
+------
+Smooths the image in one of several ways.
+
+.. ocv:cfunction:: void cvSmooth( const CvArr* src,  CvArr* dst,  int smoothtype=CV_GAUSSIAN,  int param1=3,  int param2=0,  double param3=0,  double param4=0)
+
+.. ocv:pyoldfunction:: cv.Smooth(src, dst, smoothtype=CV_GAUSSIAN, param1=3, param2=0, param3=0, param4=0)-> None
+
+    :param src: The source image 
+    
+    :param dst: The destination image 
+    
+    :param smoothtype: Type of the smoothing: 
+                
+            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ref:`Integral` 
+            
+               
+            * **CV_BLUR** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's) with subsequent scaling by  :math:`1/(\texttt{param1}\cdot\texttt{param2})` 
+            
+               
+            * **CV_GAUSSIAN** linear convolution with a  :math:`\texttt{param1}\times\texttt{param2}`  Gaussian kernel 
+            
+               
+            * **CV_MEDIAN** median filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture 
+            
+               
+            * **CV_BILATERAL** bilateral filter with a  :math:`\texttt{param1}\times\texttt{param1}`  square aperture, color sigma= ``param3``  and spatial sigma= ``param4`` . If  ``param1=0`` , the aperture square side is set to  ``cvRound(param4*1.5)*2+1`` . Information about bilateral filtering can be found at  http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.html 
+            
+            
+    :param param1: The first parameter of the smoothing operation, the aperture width. Must be a positive odd number (1, 3, 5, ...) 
+    
+    :param param2: The second parameter of the smoothing operation, the aperture height. Ignored by  ``CV_MEDIAN``  and  ``CV_BILATERAL``  methods. In the case of simple scaled/non-scaled and Gaussian blur if  ``param2``  is zero, it is set to  ``param1`` . Otherwise it must be a positive odd number. 
+    
+    :param param3: In the case of a Gaussian parameter this parameter may specify Gaussian  :math:`\sigma`  (standard deviation). If it is zero, it is calculated from the kernel size:  
+        
+        .. math::
+        
+            \sigma  = 0.3 (n/2 - 1) + 0.8  \quad   \text{where}   \quad  n= \begin{array}{l l} \mbox{\texttt{param1} for horizontal kernel} \\ \mbox{\texttt{param2} for vertical kernel} \end{array} 
+        
+        Using standard sigma for small kernels ( :math:`3\times 3`  to  :math:`7\times 7` ) gives better speed. If  ``param3``  is not zero, while  ``param1``  and  ``param2``  are zeros, the kernel size is calculated from the sigma (to provide accurate enough operation). 
+    
+The function smooths an image using one of several methods. Every of the methods has some features and restrictions listed below:
+
+ * Blur with no scaling works with single-channel images only and supports accumulation of 8-bit to 16-bit format (similar to :ocv:func:`Sobel` and :ocv:func:`Laplace`) and 32-bit floating point to 32-bit floating-point format.
+
+ * Simple blur and Gaussian blur support 1- or 3-channel, 8-bit and 32-bit floating point images. These two methods can process images in-place.
+
+ * Median and bilateral filters work with 1- or 3-channel 8-bit images and can not process images in-place.
+
+.. note:: The function is now obsolete. Use :ocv:func:`GaussianBlur`, :ocv:func:`blur`, :ocv:func:`medianBlur` or :ocv:func:`bilateralFilter`.
+
 
 Sobel
 ---------
+Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
+
 .. ocv:function:: void Sobel( InputArray src, OutputArray dst, int ddepth, int xorder, int yorder, int ksize=3, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
-    Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
+.. ocv:pyfunction:: cv2.Sobel(src, ddepth, dx, dy[, dst[, ksize[, scale[, delta[, borderType]]]]]) -> dst
+
+.. ocv:cfunction:: void cvSobel( const CvArr* src, CvArr* dst, int xorder, int yorder, int apertureSize=3 )
+.. ocv:pyoldfunction:: cv.Sobel(src, dst, xorder, yorder, apertureSize=3)-> None
 
     :param src: Source image.
 
@@ -1323,20 +1499,22 @@ The second case corresponds to a kernel of:
 
     \vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}
 
-See Also:
+.. seealso::
 :ocv:func:`Scharr`,
 :ocv:func:`Lapacian`,
 :ocv:func:`sepFilter2D`,
 :ocv:func:`filter2D`,
 :ocv:func:`GaussianBlur`
 
-.. index:: Scharr
+
 
 Scharr
 ----------
+Calculates the first x- or y- image derivative using Scharr operator.
+
 .. ocv:function:: void Scharr( InputArray src, OutputArray dst, int ddepth, int xorder, int yorder,            double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
-    Calculates the first x- or y- image derivative using Scharr operator.
+.. ocv:pyfunction:: cv2.Scharr(src, ddepth, dx, dy[, dst[, scale[, delta[, borderType]]]]) -> dst
 
     :param src: Source image.
 

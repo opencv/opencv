@@ -1,5 +1,5 @@
 ############################
-OpenCV 2.x C++ API Reference
+OpenCV API Reference
 ############################
 
 .. toctree::

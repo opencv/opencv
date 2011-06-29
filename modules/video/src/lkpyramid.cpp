@@ -67,7 +67,9 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     CV_Assert( prevImg.size() == nextImg.size() &&
         prevImg.type() == nextImg.type() );
 
-    size_t npoints = prevPtsMat.total();
+    int npoints;
+    CV_Assert( (npoints = prevPtsMat.checkVector(2, CV_32F, true)) >= 0 );
+    
     if( npoints == 0 )
     {
         _nextPts.release();
@@ -76,24 +78,31 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         return;
     }
     
-    CV_Assert( prevPtsMat.isContinuous() );
-    const Point2f* prevPts = (const Point2f*)prevPtsMat.data;
+    if( !(flags & OPTFLOW_USE_INITIAL_FLOW) )
+        _nextPts.create(prevPtsMat.size(), prevPtsMat.type(), -1, true);
     
-    _nextPts.create((int)npoints, 1, prevPtsMat.type(), -1, true);
     Mat nextPtsMat = _nextPts.getMat();
-    CV_Assert( nextPtsMat.isContinuous() );
+    CV_Assert( nextPtsMat.checkVector(2, CV_32F, true) == npoints );
+    
+    const Point2f* prevPts = (const Point2f*)prevPtsMat.data;
     Point2f* nextPts = (Point2f*)nextPtsMat.data;
     
     _status.create((int)npoints, 1, CV_8U, -1, true);
-    Mat statusMat = _status.getMat();
+    Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.data;
-    for( size_t i = 0; i < npoints; i++ )
+    float* err = 0;
+    
+    for( int i = 0; i < npoints; i++ )
         status[i] = true;
-    _err.create((int)npoints, 1, CV_32F, -1, true);
-    Mat errMat = _err.getMat();
-    CV_Assert( errMat.isContinuous() );
-    float* err = (float*)errMat.data;
+    
+    if( _err.needed() )
+    {
+        _err.create((int)npoints, 1, CV_32F, -1, true);
+        errMat = _err.getMat();
+        CV_Assert( errMat.isContinuous() );
+        err = (float*)errMat.data;
+    }
 
     vector<Mat> prevPyr, nextPyr;
 
@@ -194,7 +203,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         copyMakeBorder( derivJ, _derivJ, winSize.height, winSize.height,
             winSize.width, winSize.width, BORDER_CONSTANT );*/
 
-        for( size_t ptidx = 0; ptidx < npoints; ptidx++ )
+        for( int ptidx = 0; ptidx < npoints; ptidx++ )
         {
             Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
             Point2f nextPt;
@@ -274,7 +283,8 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
             double D = A11*A22 - A12*A12;
             double minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
                 4.*A12*A12))/(2*winSize.width*winSize.height);
-            err[ptidx] = (float)minEig;
+            if( err )
+                err[ptidx] = (float)minEig;
 
             if( D < DBL_EPSILON )
             {

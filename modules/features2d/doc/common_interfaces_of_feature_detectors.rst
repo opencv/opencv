@@ -12,57 +12,60 @@ KeyPoint
 --------
 .. ocv:class:: KeyPoint
 
-Data structure for salient point detectors. ::
+Data structure for salient point detectors.
 
-    class KeyPoint
-    {
-    public:
-        // the default constructor
-        KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0),
-                     class_id(-1) {}
-        // the full constructor
-        KeyPoint(Point2f _pt, float _size, float _angle=-1,
-                float _response=0, int _octave=0, int _class_id=-1)
-                : pt(_pt), size(_size), angle(_angle), response(_response),
-                  octave(_octave), class_id(_class_id) {}
-        // another form of the full constructor
-        KeyPoint(float x, float y, float _size, float _angle=-1,
-                float _response=0, int _octave=0, int _class_id=-1)
-                : pt(x, y), size(_size), angle(_angle), response(_response),
-                  octave(_octave), class_id(_class_id) {}
-        // converts vector of keypoints to vector of points
-        static void convert(const std::vector<KeyPoint>& keypoints,
-                            std::vector<Point2f>& points2f,
-                            const std::vector<int>& keypointIndexes=std::vector<int>());
-        // converts vector of points to the vector of keypoints, where each
-        // keypoint is assigned to the same size and the same orientation
-        static void convert(const std::vector<Point2f>& points2f,
-                            std::vector<KeyPoint>& keypoints,
-                            float size=1, float response=1, int octave=0,
-                            int class_id=-1);
+    .. ocv:member:: Point2f pt
+    
+        coordinates of the keypoint
+        
+    .. ocv:member:: float size
+    
+         diameter of the meaningful keypoint neighborhood
+         
+    .. ocv:member:: float angle
+    
+        computed orientation of the keypoint (-1 if not applicable)
+        
+    .. ocv:member:: float response
+    
+        the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+        
+    .. ocv:member:: int octave
+    
+        octave (pyramid layer) from which the keypoint has been extracted
+        
+    .. ocv:member:: int class_id
+    
+        object id that can be used to clustered keypoints by an object they belong to
 
-        // computes overlap for pair of keypoints;
-        // overlap is a ratio between area of keypoint regions intersection and
-        // area of keypoint regions union (now keypoint region is a circle)
-        static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
+KeyPoint::KeyPoint
+------------------
+The keypoint constructors
 
-        Point2f pt; // coordinates of the keypoints
-        float size; // diameter of the meaningful keypoint neighborhood
-        float angle; // computed orientation of the keypoint (-1 if not applicable)
-        float response; // the response by which the most strong keypoints
-                        // have been selected. Can be used for further sorting
-                        // or subsampling
-        int octave; // octave (pyramid layer) from which the keypoint has been extracted
-        int class_id; // object class (if the keypoints need to be clustered by
-                      // an object they belong to)
-    };
+.. ocv:function:: KeyPoint::KeyPoint()
 
-    // writes vector of keypoints to the file storage
-    void write(FileStorage& fs, const string& name, const vector<KeyPoint>& keypoints);
-    // reads vector of keypoints from the specified file storage node
-    void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
+.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
 
-..
+.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint(x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]) -> <KeyPoint object>
+
+    :param x: x-coordinate of the keypoint
+    
+    :param y: y-coordinate of the keypoint
+    
+    :param _pt: x & y coordinates of the keypoint
+    
+    :param _size: keypoint diameter
+    
+    :param _angle: keypoint orientation
+    
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+    
+    :param _octave: pyramid octave in which the keypoint has been detected
+    
+    :param _class_id: object id
+
 
 FeatureDetector
 ---------------
@@ -93,9 +96,9 @@ Abstract base class for 2D image feature detectors. ::
 
 FeatureDetector::detect
 ---------------------------
-.. ocv:function:: void FeatureDetector::detect( const Mat& image,                                vector<KeyPoint>& keypoints,                                 const Mat& mask=Mat() ) const
+Detects keypoints in an image (first variant) or image set (second variant).
 
-    Detects keypoints in an image (first variant) or image set (second variant).
+.. ocv:function:: void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
 
     :param image: Image.
 
@@ -113,25 +116,25 @@ FeatureDetector::detect
 
 FeatureDetector::read
 -------------------------
-.. ocv:function:: void FeatureDetector::read( const FileNode& fn )
+Reads a feature detector object from a file node.
 
-    Reads a feature detector object from a file node.
+.. ocv:function:: void FeatureDetector::read( const FileNode& fn )
 
     :param fn: File node from which the detector is read.
 
 FeatureDetector::write
 --------------------------
-.. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
+Writes a feature detector object to a file storage.
 
-    Writes a feature detector object to a file storage.
+.. ocv:function:: void FeatureDetector::write( FileStorage& fs ) const
 
     :param fs: File storage where the detector is written.
 
 FeatureDetector::create
 ---------------------------
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+Creates a feature detector by its name.
 
-    Creates a feature detector by its name.
+.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
 
     :param detectorType: Feature detector type.
 
@@ -457,12 +460,11 @@ Example of creating ``DynamicAdaptedFeatureDetector`` : ::
                                   new FastAdjuster(20,true)));
 
 
-								  
 DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector
 ----------------------------------------------------------------
-.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
+The constructor
 
-    Constructs the class.
+.. ocv:function:: DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(       const Ptr<AdjusterAdapter>& adjuster,       int min_features,   int max_features,   int max_iters )
 
     :param adjuster:  :ocv:class:`AdjusterAdapter`  that detects features and adjusts parameters.
 
@@ -497,9 +499,9 @@ See
 
 AdjusterAdapter::tooFew
 ---------------------------
-.. ocv:function:: void AdjusterAdapter::tooFew(int min, int n_detected)
+Adjusts the detector parameters to detect more features.
 
-    Adjusts the detector parameters to detect more features.
+.. ocv:function:: void AdjusterAdapter::tooFew(int min, int n_detected)
 
     :param min: Minimum desired number of features.
 
@@ -514,9 +516,9 @@ Example: ::
 
 AdjusterAdapter::tooMany
 ----------------------------
-.. ocv:function:: void AdjusterAdapter::tooMany(int max, int n_detected)
+Adjusts the detector parameters to detect less features.
 
-    Adjusts the detector parameters to detect less features.
+.. ocv:function:: void AdjusterAdapter::tooMany(int max, int n_detected)
 
     :param max: Maximum desired number of features.
 
@@ -532,9 +534,9 @@ Example: ::
 
 AdjusterAdapter::good
 -------------------------
-.. ocv:function:: bool AdjusterAdapter::good() const
+Returns false if the detector parameters cannot be adjusted any more. 
 
-    Returns false if the detector parameters cannot be adjusted any more. 
+.. ocv:function:: bool AdjusterAdapter::good() const
 
 Example: ::
 
@@ -545,6 +547,8 @@ Example: ::
 
 AdjusterAdapter::create
 -------------------------
+Creates an adjuster adapter by name
+
 .. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
 
     Creates an adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supports ``"FAST"``, ``"STAR"``, and ``"SURF"`` only.
