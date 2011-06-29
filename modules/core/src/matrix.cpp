@@ -148,7 +148,7 @@ static void updateContinuityFlag(Mat& m)
             break;
     }
     
-    int64 t = (int64)(m.step[0]/CV_ELEM_SIZE(m.flags))*m.size[0];
+    int64 t = (int64)m.step[0]*m.size[0];
     if( j <= i && t == (int)t )
         m.flags |= Mat::CONTINUOUS_FLAG;
     else
