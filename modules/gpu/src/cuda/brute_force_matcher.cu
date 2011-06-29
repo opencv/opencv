@@ -646,9 +646,9 @@ namespace cv { namespace gpu { namespace bfmatcher
             matchCached_caller<16, 16, 64, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
         else if (queryDescs.cols < 128)
             matchCached_caller<16, 16, 128, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
-        else if (queryDescs.cols == 128)
+        else if (queryDescs.cols == 128 && cc_12)
             matchCached_caller<16, 16, 128, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
-        else if (queryDescs.cols < 256)
+        else if (queryDescs.cols < 256 && cc_12)
             matchCached_caller<16, 16, 256, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
         else if (queryDescs.cols == 256 && cc_12)
             matchCached_caller<16, 16, 256, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);

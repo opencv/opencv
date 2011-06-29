@@ -39,329 +39,516 @@
 //
 //M*/
 
-#include <iostream>
-#include <cmath>
-#include <limits>
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace gpu;
+#ifdef HAVE_CUDA
 
-class CV_GpuNppFilterTest : public cvtest::BaseTest
+struct FilterTest
 {
-public:
-    CV_GpuNppFilterTest(const char* /*test_name*/, const char* /*test_funcs*/) {}
-    virtual ~CV_GpuNppFilterTest() {}
+    static cv::Mat img_rgba;
+    static cv::Mat img_gray;
 
-protected:
-    void run(int);
-    virtual int test(const Mat& img) = 0;
-    
-    int test8UC1(const Mat& img)
+    static void SetUpTestCase() 
     {
-        cv::Mat img_C1;
-        cvtColor(img, img_C1, CV_BGR2GRAY);
-        return test(img_C1);
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
     }
 
-    int test8UC4(const Mat& img)
+    static void TearDownTestCase() 
     {
-        cv::Mat img_C4;
-        cvtColor(img, img_C4, CV_BGR2BGRA);
-        return test(img_C4);
-    }
-        
-    int CheckNorm(const Mat& m1, const Mat& m2, const Size& ksize)
-    {
-        Rect roi = Rect(ksize.width, ksize.height, m1.cols - 2 * ksize.width, m1.rows - 2 * ksize.height);
-        Mat m1ROI = m1(roi);
-        Mat m2ROI = m2(roi);
-
-        double res = norm(m1ROI, m2ROI, NORM_INF);
-
-        // Max difference (2.0) in GaussianBlur
-        if (res <= 2)
-            return cvtest::TS::OK;
-        
-        ts->printf(cvtest::TS::LOG, "Norm: %f\n", res);
-        return cvtest::TS::FAIL_GENERIC;
+        img_rgba.release();
+        img_gray.release();
     }
 };
 
-void CV_GpuNppFilterTest::run( int )
-{    
-    cv::Mat img = cv::imread(std::string(ts->get_data_path()) + "stereobp/aloe-L.png");
-    
-    if (img.empty())
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-        return;
-    }
+cv::Mat FilterTest::img_rgba;
+cv::Mat FilterTest::img_gray;
 
-    //run tests
-    int testResult = cvtest::TS::OK;
-
-    if (test8UC1(img) != cvtest::TS::OK)
-        testResult = cvtest::TS::FAIL_GENERIC;
-
-    if (test8UC4(img) != cvtest::TS::OK)
-        testResult = cvtest::TS::FAIL_GENERIC;
-
-    ts->set_failed_test_info(testResult);
-
-    ts->set_failed_test_info(cvtest::TS::OK);
+static double checkNorm(const cv::Mat& m1, const cv::Mat& m2, const cv::Size& ksize)
+{
+    cv::Rect roi(ksize.width, ksize.height, m1.cols - 2 * ksize.width, m1.rows - 2 * ksize.height);
+    cv::Mat m1ROI = m1(roi);
+    cv::Mat m2ROI = m2(roi);
+    return checkNorm(m1ROI, m2ROI);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+static double checkNorm(const cv::Mat& m1, const cv::Mat& m2, int ksize)
+{
+    return checkNorm(m1, m2, cv::Size(ksize, ksize));
+}
+
+#define EXPECT_MAT_NEAR_KSIZE(mat1, mat2, ksize, eps) \
+    { \
+        ASSERT_EQ(mat1.type(), mat2.type()); \
+        ASSERT_EQ(mat1.size(), mat2.size()); \
+        EXPECT_LE(checkNorm(mat1, mat2, ksize), eps); \
+    }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
 // blur
-struct CV_GpuNppImageBlurTest : public CV_GpuNppFilterTest
+
+struct Blur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
-    CV_GpuNppImageBlurTest() : CV_GpuNppFilterTest( "GPU-NppImageBlur", "blur" ) {}
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size ksize;
 
-    int test(const Mat& img)
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        int ksizes[] = {3, 5, 7};
-        int ksizes_num = sizeof(ksizes) / sizeof(int);
+        devInfo = std::tr1::get<0>(GetParam());
+        ksize = cv::Size(std::tr1::get<1>(GetParam()), std::tr1::get<2>(GetParam()));
 
-        int test_res = cvtest::TS::OK;
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        for (int i = 0; i < ksizes_num; ++i)
-        {
-            for (int j = 0; j < ksizes_num; ++j)
-            {
-                Size ksize(ksizes[i], ksizes[j]);
-
-                ts->printf(cvtest::TS::LOG, "\nksize = (%dx%d)\n", ksizes[i], ksizes[j]);
-
-                Mat cpudst;
-                cv::blur(img, cpudst, ksize);
-
-                GpuMat gpu1(img);
-                GpuMat gpudst;
-                cv::gpu::blur(gpu1, gpudst, ksize);
-
-                if (CheckNorm(cpudst, gpudst, ksize) != cvtest::TS::OK)
-                    test_res = cvtest::TS::FAIL_GENERIC;
-            }
-        }
-
-        return test_res;
+        cv::blur(img_rgba, dst_gold_rgba, ksize);
+        cv::blur(img_gray, dst_gold_gray, ksize);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Sobel
-struct CV_GpuNppImageSobelTest : public CV_GpuNppFilterTest
+TEST_P(Blur, Accuracy)
 {
-    CV_GpuNppImageSobelTest() : CV_GpuNppFilterTest( "GPU-NppImageSobel", "Sobel" ) {}
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-    int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(ksize);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::blur(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, ksize);
+        cv::gpu::blur(cv::gpu::GpuMat(img_gray), dev_dst_gray, ksize);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 1.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Blur, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(3, 5, 7), 
+                        testing::Values(3, 5, 7)));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// sobel
+
+struct Sobel : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, std::pair<int, int> > >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int ksize;
+    int dx, dy;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        int ksizes[] = {3, 5, 7};
-        int ksizes_num = sizeof(ksizes) / sizeof(int);
+        devInfo = std::tr1::get<0>(GetParam());
+        ksize = std::tr1::get<1>(GetParam());
+        std::pair<int, int> d = std::tr1::get<2>(GetParam());
+        dx = d.first; dy = d.second;
 
-        int dx = 1, dy = 0;
-
-        int test_res = cvtest::TS::OK;
-
-        for (int i = 0; i < ksizes_num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "\nksize = %d\n", ksizes[i]);
-
-            Mat cpudst;
-            cv::Sobel(img, cpudst, -1, dx, dy, ksizes[i]);
-
-            GpuMat gpu1(img);
-            GpuMat gpudst;
-            cv::gpu::Sobel(gpu1, gpudst, -1, dx, dy, ksizes[i]);
-
-            if (CheckNorm(cpudst, gpudst, Size(ksizes[i], ksizes[i])) != cvtest::TS::OK)
-                test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Sobel(img_rgba, dst_gold_rgba, -1, dx, dy, ksize);
+        cv::Sobel(img_gray, dst_gold_gray, -1, dx, dy, ksize);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Scharr
-struct CV_GpuNppImageScharrTest : public CV_GpuNppFilterTest
+TEST_P(Sobel, Accuracy)
 {
-    CV_GpuNppImageScharrTest() : CV_GpuNppFilterTest( "GPU-NppImageScharr", "Scharr" ) {}
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-    int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(ksize);
+    PRINT_PARAM(dx);
+    PRINT_PARAM(dy);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::Sobel(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, -1, dx, dy, ksize);
+        cv::gpu::Sobel(cv::gpu::GpuMat(img_gray), dev_dst_gray, -1, dx, dy, ksize);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Sobel, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(3, 5, 7), 
+                        testing::Values(std::make_pair(1, 0), std::make_pair(0, 1), std::make_pair(1, 1), std::make_pair(2, 0), std::make_pair(2, 1), std::make_pair(0, 2), std::make_pair(1, 2), std::make_pair(2, 2))));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// scharr
+
+struct Scharr : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<int, int> > >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int dx, dy;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        int dx = 1, dy = 0;
+        devInfo = std::tr1::get<0>(GetParam());
+        std::pair<int, int> d = std::tr1::get<1>(GetParam());
+        dx = d.first; dy = d.second;
 
-        Mat cpudst;
-        cv::Scharr(img, cpudst, -1, dx, dy);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(img);
-        GpuMat gpudst;
-        cv::gpu::Scharr(gpu1, gpudst, -1, dx, dy);
-                
-        return CheckNorm(cpudst, gpudst, Size(3, 3));
+        cv::Scharr(img_rgba, dst_gold_rgba, -1, dx, dy);
+        cv::Scharr(img_gray, dst_gold_gray, -1, dx, dy);
     }
 };
 
-
-////////////////////////////////////////////////////////////////////////////////
-// GaussianBlur
-struct CV_GpuNppImageGaussianBlurTest : public CV_GpuNppFilterTest
+TEST_P(Scharr, Accuracy)
 {
-    CV_GpuNppImageGaussianBlurTest() : CV_GpuNppFilterTest( "GPU-NppImageGaussianBlur", "GaussianBlur" ) {}
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-    int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(dx);
+    PRINT_PARAM(dy);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::Scharr(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, -1, dx, dy);
+        cv::gpu::Scharr(cv::gpu::GpuMat(img_gray), dev_dst_gray, -1, dx, dy);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Scharr, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(std::make_pair(1, 0), std::make_pair(0, 1))));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// gaussianBlur
+
+struct GaussianBlur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Size ksize;
+
+    double sigma1, sigma2;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        int ksizes[] = {3, 5, 7};
-        int ksizes_num = sizeof(ksizes) / sizeof(int);
+        devInfo = std::tr1::get<0>(GetParam());
+        ksize = cv::Size(std::tr1::get<1>(GetParam()), std::tr1::get<2>(GetParam()));
 
-        int test_res = cvtest::TS::OK;
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        const double sigma1 = 3.0;
-
-        for (int i = 0; i < ksizes_num; ++i)
-        {
-            for (int j = 0; j < ksizes_num; ++j)
-            {
-                cv::Size ksize(ksizes[i], ksizes[j]);
-
-                ts->printf(cvtest::TS::LOG, "ksize = (%dx%d)\t\n", ksizes[i], ksizes[j]);
-
-                Mat cpudst;
-                cv::GaussianBlur(img, cpudst, ksize, sigma1);
-
-                GpuMat gpu1(img);
-                GpuMat gpudst;
-                cv::gpu::GaussianBlur(gpu1, gpudst, ksize, sigma1);
-
-                if (CheckNorm(cpudst, gpudst, ksize) != cvtest::TS::OK)
-                    test_res = cvtest::TS::FAIL_GENERIC;
-            }
-        }
-
-        return test_res;
+        sigma1 = rng.uniform(0.1, 1.0); 
+        sigma2 = rng.uniform(0.1, 1.0);
+        
+        cv::GaussianBlur(img_rgba, dst_gold_rgba, ksize, sigma1, sigma2);
+        cv::GaussianBlur(img_gray, dst_gold_gray, ksize, sigma1, sigma2);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Laplacian
-struct CV_GpuNppImageLaplacianTest : public CV_GpuNppFilterTest
+TEST_P(GaussianBlur, Accuracy)
 {
-    CV_GpuNppImageLaplacianTest() : CV_GpuNppFilterTest( "GPU-NppImageLaplacian", "Laplacian" ) {}
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-    int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(ksize);
+    PRINT_PARAM(sigma1);
+    PRINT_PARAM(sigma2);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::GaussianBlur(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, ksize, sigma1, sigma2);
+        cv::gpu::GaussianBlur(cv::gpu::GpuMat(img_gray), dev_dst_gray, ksize, sigma1, sigma2);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, ksize, 3.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, ksize, 3.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(3, 5, 7), 
+                        testing::Values(3, 5, 7)));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// laplacian
+
+struct Laplacian : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int ksize;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        int ksizes[] = {1, 3};
-        int ksizes_num = sizeof(ksizes) / sizeof(int);
+        devInfo = std::tr1::get<0>(GetParam());
+        ksize = std::tr1::get<1>(GetParam());
 
-        int test_res = cvtest::TS::OK;
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        for (int i = 0; i < ksizes_num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "\nksize = %d\n", ksizes[i]);
-
-            Mat cpudst;
-            cv::Laplacian(img, cpudst, -1, ksizes[i]);
-
-            GpuMat gpu1(img);
-            GpuMat gpudst;
-            cv::gpu::Laplacian(gpu1, gpudst, -1, ksizes[i]);
-
-            if (CheckNorm(cpudst, gpudst, Size(3, 3)) != cvtest::TS::OK)
-                test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        cv::Laplacian(img_rgba, dst_gold_rgba, -1, ksize);
+        cv::Laplacian(img_gray, dst_gold_gray, -1, ksize);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Erode
-class CV_GpuErodeTest : public CV_GpuNppFilterTest
+TEST_P(Laplacian, Accuracy)
 {
-public:
-    CV_GpuErodeTest() : CV_GpuNppFilterTest( "GPU-NppErode", "erode" ) {} 
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-protected:
-	virtual int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(ksize);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::Laplacian(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, -1, ksize);
+        cv::gpu::Laplacian(cv::gpu::GpuMat(img_gray), dev_dst_gray, -1, ksize);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Laplacian, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(1, 3)));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// erode
+
+struct Erode : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Mat kernel;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        Mat kernel(Mat::ones(3, 3, CV_8U));
+        devInfo = GetParam();
 
-	    cv::Mat cpuRes;
-        cv::erode(img, cpuRes, kernel);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-	    GpuMat gpuRes;
-        cv::gpu::erode(GpuMat(img), gpuRes, kernel);
+        kernel = cv::Mat::ones(3, 3, CV_8U);
 
-	    return CheckNorm(cpuRes, gpuRes, Size(3, 3));
+        cv::erode(img_rgba, dst_gold_rgba, kernel);
+        cv::erode(img_gray, dst_gold_gray, kernel);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Dilate
-class CV_GpuDilateTest : public CV_GpuNppFilterTest
+TEST_P(Erode, Accuracy)
 {
-public:
-    CV_GpuDilateTest() : CV_GpuNppFilterTest( "GPU-NppDilate", "dilate" ) {} 
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-protected:
-	virtual int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::erode(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, kernel);
+        cv::gpu::erode(cv::gpu::GpuMat(img_gray), dev_dst_gray, kernel);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Erode, testing::ValuesIn(devices()));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// dilate
+
+struct Dilate : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Mat kernel;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        Mat kernel(Mat::ones(3, 3, CV_8U));
+        devInfo = GetParam();
 
-	    cv::Mat cpuRes;
-        cv::dilate(img, cpuRes, kernel);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-	    GpuMat gpuRes;
-        cv::gpu::dilate(GpuMat(img), gpuRes, kernel);
-	
-	    return CheckNorm(cpuRes, gpuRes, Size(3, 3));
+        kernel = cv::Mat::ones(3, 3, CV_8U);
+
+        cv::dilate(img_rgba, dst_gold_rgba, kernel);
+        cv::dilate(img_gray, dst_gold_gray, kernel);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// MorphologyEx
-class CV_GpuMorphExTest : public CV_GpuNppFilterTest
+TEST_P(Dilate, Accuracy)
 {
-public:
-    CV_GpuMorphExTest() : CV_GpuNppFilterTest( "GPU-NppMorphologyEx", "morphologyEx" ) {} 
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-protected:
-	virtual int test(const Mat& img)
+    PRINT_PARAM(devInfo);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::dilate(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, kernel);
+        cv::gpu::dilate(cv::gpu::GpuMat(img_gray), dev_dst_gray, kernel);
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 3, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 3, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, Dilate, testing::ValuesIn(devices()));
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// morphEx
+
+static const int morphOps[] = {cv::MORPH_OPEN, CV_MOP_CLOSE, CV_MOP_GRADIENT, CV_MOP_TOPHAT, CV_MOP_BLACKHAT};
+static const char* morphOps_str[] = {"MORPH_OPEN", "MOP_CLOSE", "MOP_GRADIENT", "MOP_TOPHAT", "MOP_BLACKHAT"};
+
+struct MorphEx : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int morphOpsIdx;
+
+    cv::Mat kernel;
+
+    cv::Mat dst_gold_rgba;
+    cv::Mat dst_gold_gray;
+
+    using FilterTest::SetUpTestCase;
+    using FilterTest::TearDownTestCase;
+    
+    virtual void SetUp()
     {
-        static int ops[] = { MORPH_OPEN, CV_MOP_CLOSE, CV_MOP_GRADIENT, CV_MOP_TOPHAT, CV_MOP_BLACKHAT};
-        const char *names[] = { "MORPH_OPEN", "CV_MOP_CLOSE", "CV_MOP_GRADIENT", "CV_MOP_TOPHAT", "CV_MOP_BLACKHAT"};
-        int num = sizeof(ops)/sizeof(ops[0]);
+        devInfo = std::tr1::get<0>(GetParam());
+        morphOpsIdx = std::tr1::get<1>(GetParam());
 
-        GpuMat kernel(Mat::ones(3, 3, CV_8U));
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        int res = cvtest::TS::OK;
+        kernel = cv::Mat::ones(3, 3, CV_8U);
 
-        for(int i = 0; i < num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "Tesing %s\n", names[i]);
-
-	        cv::Mat cpuRes;
-            cv::morphologyEx(img, cpuRes, ops[i], (Mat)kernel);
-
-	        GpuMat gpuRes;
-            cv::gpu::morphologyEx(GpuMat(img), gpuRes, ops[i], kernel);
-
-            if (cvtest::TS::OK != CheckNorm(cpuRes, gpuRes, Size(4, 4)))
-                res = cvtest::TS::FAIL_GENERIC;
-        }
-        return res;
+        cv::morphologyEx(img_rgba, dst_gold_rgba, morphOps[morphOpsIdx], kernel);
+        cv::morphologyEx(img_gray, dst_gold_gray, morphOps[morphOpsIdx], kernel);
     }
 };
 
+TEST_P(MorphEx, Accuracy)
+{
+    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
 
-TEST(blur, accuracy) { CV_GpuNppImageBlurTest test; test.safe_run(); }
-TEST(sobel, accuracy) { CV_GpuNppImageSobelTest test; test.safe_run(); }
-TEST(scharr, accuracy) { CV_GpuNppImageScharrTest test; test.safe_run(); }
-TEST(gaussianBlur, accuracy) { CV_GpuNppImageGaussianBlurTest test; test.safe_run(); }
-TEST(laplcaian, accuracy) { CV_GpuNppImageLaplacianTest test; test.safe_run(); }
-TEST(erode, accuracy) { CV_GpuErodeTest test; test.safe_run(); }
-TEST(dilate, accuracy) { CV_GpuDilateTest test; test.safe_run(); }
-TEST(morphEx, accuracy) { CV_GpuMorphExTest test;  test.safe_run(); }
+    const char* morphOpStr = morphOps_str[morphOpsIdx];
+
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(morphOpStr);
+
+    cv::Mat dst_rgba;
+    cv::Mat dst_gray;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst_rgba;
+        cv::gpu::GpuMat dev_dst_gray;
+
+        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_rgba), dev_dst_rgba, morphOps[morphOpsIdx], cv::gpu::GpuMat(kernel));
+        cv::gpu::morphologyEx(cv::gpu::GpuMat(img_gray), dev_dst_gray, morphOps[morphOpsIdx], cv::gpu::GpuMat(kernel));
+
+        dev_dst_rgba.download(dst_rgba);
+        dev_dst_gray.download(dst_gray);
+    );
+
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_rgba, dst_rgba, 4, 0.0);
+    EXPECT_MAT_NEAR_KSIZE(dst_gold_gray, dst_gray, 4, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Filter, MorphEx, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Range(0, 5)));
+
+#endif // HAVE_CUDA

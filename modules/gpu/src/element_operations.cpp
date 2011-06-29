@@ -211,22 +211,42 @@ void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream&
 
 void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
-    static const caller_t callers[] = {0, NppArithmScalar<1, nppiMulC_32f_C1R>::calc, NppArithmScalar<2, nppiMulC_32fc_C1R>::calc};
+    CV_Assert(src.type() == CV_32FC1);
 
-    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+    dst.create(src.size(), src.type());
 
-    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    cudaStream_t cudaStream = StreamAccessor::getStream(stream);
+
+    NppStreamHandler h(cudaStream);
+
+    nppSafeCall( nppiMulC_32f_C1R(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
+
+    if (cudaStream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
-    static const caller_t callers[] = {0, NppArithmScalar<1, nppiDivC_32f_C1R>::calc, NppArithmScalar<2, nppiDivC_32fc_C1R>::calc};
+    CV_Assert(src.type() == CV_32FC1);
 
-    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+    dst.create(src.size(), src.type());
 
-    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    cudaStream_t cudaStream = StreamAccessor::getStream(stream);
+
+    NppStreamHandler h(cudaStream);
+
+    nppSafeCall( nppiDivC_32f_C1R(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
+
+    if (cudaStream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 

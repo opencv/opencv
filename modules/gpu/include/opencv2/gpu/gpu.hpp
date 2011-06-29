@@ -124,6 +124,8 @@ namespace cv
             // Checks whether the GPU module can be run on the given device
             bool isCompatible() const;
 
+            int deviceID() const { return device_id_; }
+
         private:
             void query();
             void queryMemory(size_t& free_memory, size_t& total_memory) const;
@@ -517,14 +519,14 @@ namespace cv
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
         CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
         //! multiplies matrix to a scalar (c = a * s)
-        //! supports CV_32FC1 and CV_32FC2 type
+        //! supports CV_32FC1 type
         CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
 
         //! computes element-wise quotient of the two arrays (c = a / b)
         //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
         CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
         //! computes element-wise quotient of matrix and scalar (c = a / s)
-        //! supports CV_32FC1 and CV_32FC2 type
+        //! supports CV_32FC1 type
         CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
 
         //! computes exponent of each matrix element (b = e**a)
@@ -1412,9 +1414,9 @@ namespace cv
             void radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
-        private:
             DistType distType;
 
+        private:
             std::vector<GpuMat> trainDescCollection;
         };
 

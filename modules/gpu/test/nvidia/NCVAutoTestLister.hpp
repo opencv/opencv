@@ -15,15 +15,22 @@
 
 #include "NCVTest.hpp"
 
+enum OutputLevel
+{
+    OutputLevelNone,
+    OutputLevelCompact,
+    OutputLevelFull
+};
+
 class NCVAutoTestLister
 {
 public:
 
-    NCVAutoTestLister(std::string testSuiteName, NcvBool bStopOnFirstFail=false, NcvBool bCompactOutput=true)
+    NCVAutoTestLister(std::string testSuiteName, OutputLevel outputLevel = OutputLevelCompact, NcvBool bStopOnFirstFail=false)
         :
     testSuiteName(testSuiteName),
-    bStopOnFirstFail(bStopOnFirstFail),
-    bCompactOutput(bCompactOutput)
+    outputLevel(outputLevel),
+    bStopOnFirstFail(bStopOnFirstFail)
     {
     }
 
@@ -38,7 +45,7 @@ public:
         Ncv32u nFailed = 0;
         Ncv32u nFailedMem = 0;
 
-        if (bCompactOutput)
+        if (outputLevel == OutputLevelCompact)
         {
             printf("Test suite '%s' with %d tests\n", 
                 testSuiteName.c_str(),
@@ -52,7 +59,7 @@ public:
             NCVTestReport curReport;
             bool res = curTest.executeTest(curReport);
 
-            if (!bCompactOutput)
+            if (outputLevel == OutputLevelFull)
             {
                 printf("Test %3i %16s; Consumed mem GPU = %8d, CPU = %8d; %s\n",
                     i,
@@ -65,7 +72,7 @@ public:
             if (res)
             {
                 nPassed++;
-                if (bCompactOutput)
+                if (outputLevel == OutputLevelCompact)
                 {
                     printf(".");
                 }
@@ -75,7 +82,7 @@ public:
                 if (!curReport.statsText["rcode"].compare("FAILED"))
                 {
                     nFailed++;
-                    if (bCompactOutput)
+                    if (outputLevel == OutputLevelCompact)
                     {
                         printf("x");
                     }
@@ -87,7 +94,7 @@ public:
                 else
                 {
                     nFailedMem++;
-                    if (bCompactOutput)
+                    if (outputLevel == OutputLevelCompact)
                     {
                         printf("m");
                     }
@@ -95,17 +102,20 @@ public:
             }
             fflush(stdout);
         }
-        if (bCompactOutput)
+        if (outputLevel == OutputLevelCompact)
         {
             printf("\n");
         }
 
-        printf("Test suite '%s' complete: %d total, %d passed, %d memory errors, %d failed\n\n", 
-            testSuiteName.c_str(),
-            (int)(this->tests.size()),
-            nPassed,
-            nFailedMem,
-            nFailed);
+        if (outputLevel != OutputLevelNone)
+        {
+            printf("Test suite '%s' complete: %d total, %d passed, %d memory errors, %d failed\n\n", 
+                testSuiteName.c_str(),
+                (int)(this->tests.size()),
+                nPassed,
+                nFailedMem,
+                nFailed);
+        }
 
         bool passed = nFailed == 0 && nFailedMem == 0;
         return passed;
@@ -121,9 +131,9 @@ public:
 
 private:
 
-    NcvBool bStopOnFirstFail;
-    NcvBool bCompactOutput;
     std::string testSuiteName;
+    OutputLevel outputLevel;
+    NcvBool bStopOnFirstFail;
     std::vector<INCVTest *> tests;
 };
 
