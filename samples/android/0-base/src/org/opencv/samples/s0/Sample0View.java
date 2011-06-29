@@ -1,4 +1,4 @@
-package org.opencv.samples;
+package org.opencv.samples.s0;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -69,10 +69,12 @@ class Sample0View extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     public void surfaceDestroyed(SurfaceHolder holder) {
         mThreadRun = false;
         if(mCamera != null) {
-            mCamera.stopPreview();
-            mCamera.setPreviewCallback(null);
-            mCamera.release();
-            mCamera = null;
+            synchronized(Sample0View.this) {
+                mCamera.stopPreview();
+                mCamera.setPreviewCallback(null);
+                mCamera.release();
+                mCamera = null;
+            }
         }
     }
 

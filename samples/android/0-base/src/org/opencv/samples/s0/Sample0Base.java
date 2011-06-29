@@ -1,4 +1,4 @@
-package org.opencv.samples;
+package org.opencv.samples.s0;
 
 import android.app.Activity;
 import android.os.Bundle;
