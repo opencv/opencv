@@ -1,5 +1,6 @@
 package org.opencv.test;
 
+import org.opencv.Mat;
 import org.opencv.core;
 
 public class coreTest extends OpenCVTestCase {
@@ -13,11 +14,32 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testLUTMatMatMat() {
-		fail("Not yet implemented");
+	    Mat lut = new Mat(1, 256, Mat.CvType.CV_8UC1);
+	    
+	    lut.setTo(0);
+	    core.LUT(grayRnd, lut, dst);
+	    assertMatEqual(gray0, dst);
+	    
+	    lut.setTo(255);
+	    core.LUT(grayRnd, lut, dst);
+	    assertMatEqual(gray255, dst);
 	}
 
-	public void testMahalanobis() {
-		fail("Not yet implemented");
+	public void testMahalanobis() {	
+		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
+		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);		
+		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL
+		covar.inv();
+		
+		Mat line1 = grayRnd_32f.submat(0, 1, 0, grayRnd_32f.cols());
+		Mat line2 = grayRnd_32f.submat(1, 2, 0, grayRnd_32f.cols());
+		
+		double d = 0.0;
+		d = core.Mahalanobis(line1, line1, covar);
+		assertEquals(0.0, d);
+		
+		d = core.Mahalanobis(line1, line2, covar);
+		assertTrue(d > 0.0);
 	}
 
 	public void testAbsdiff() {
@@ -80,11 +102,21 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCalcCovarMatrixMatMatMatIntInt() {
-		fail("Not yet implemented");
+		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
+		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);
+		
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL
+		assertMatEqual(gray0_32f, covar);
+		assertMatEqual(gray0_32f_1d, mean);
 	}
 
 	public void testCalcCovarMatrixMatMatMatInt() {
-		fail("Not yet implemented");
+		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_64FC1);
+		Mat mean = new Mat(1, matSize, Mat.CvType.CV_64FC1);
+		
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1); //FIXME: CV_COVAR_NORMAL
+		assertMatEqual(gray0_64f, covar);
+		assertMatEqual(gray0_64f_1d, mean);
 	}
 
 	public void testCartToPolarMatMatMatMatBoolean() {

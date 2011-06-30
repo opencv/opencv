@@ -18,6 +18,15 @@ public class OpenCVTestCase extends AndroidTestCase {
     static Mat gray127;
     static Mat gray128;
     static Mat gray255;
+    
+    static Mat grayRnd;    
+    static Mat grayRnd_32f;
+    
+    static Mat gray0_32f;    
+    static Mat gray0_32f_1d;
+    
+    static Mat gray0_64f;    
+    static Mat gray0_64f_1d;
 
     static Mat dst;
 
@@ -33,6 +42,17 @@ public class OpenCVTestCase extends AndroidTestCase {
         gray127 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray127.setTo(127.0);
         gray128 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray128.setTo(128.0);
         gray255 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray255.setTo(256.0);
+        
+        Mat low  = new Mat(1, 1, Mat.CvType.CV_16UC1); low.setTo(0);
+        Mat high = new Mat(1, 1, Mat.CvType.CV_16UC1); high.setTo(256);
+        grayRnd = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); core.randu(grayRnd, low, high);
+        grayRnd_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); core.randu(grayRnd_32f, low, high);
+        
+        gray0_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); gray0_32f.setTo(0.0);
+        gray0_32f_1d = new Mat(1, matSize, Mat.CvType.CV_32FC1); gray0_32f_1d.setTo(0.0);
+        
+        gray0_64f = new Mat(matSize, matSize, Mat.CvType.CV_64FC1); gray0_64f.setTo(0.0);
+        gray0_64f_1d = new Mat(1, matSize, Mat.CvType.CV_64FC1); gray0_64f_1d.setTo(0.0);
 
         dst = new Mat(0, 0, Mat.CvType.CV_8UC1);
         assertTrue(dst.empty());
