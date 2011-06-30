@@ -45,10 +45,6 @@ if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
 
-if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)" AND NOT ANDROID)
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
-endif()
-
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
@@ -72,15 +68,14 @@ endif()
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
 # ----------------------------------------------------------------------------
-#  Current version number:
+#  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
-set(OPENCV_VERSION "2.3.1")
+FILE(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/modules/core/include/opencv2/core/version.hpp" OPENCV_VERSION_PARTS REGEX "#define CV_.+OR_VERSION[ ]+[0-9]+" )
+string(REGEX REPLACE ".+CV_MAJOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_MAJOR "${OPENCV_VERSION_PARTS}")
+string(REGEX REPLACE ".+CV_MINOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_MINOR "${OPENCV_VERSION_PARTS}")
+string(REGEX REPLACE ".+CV_SUBMINOR_VERSION[ ]+([0-9]+).*" "\\1" OPENCV_VERSION_PATCH "${OPENCV_VERSION_PARTS}")
+set(OPENCV_VERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
 
-string(REGEX MATCHALL "[0-9]+" OPENCV_VERSION_PARTS "${OPENCV_VERSION}")
-
-list(GET OPENCV_VERSION_PARTS 0 OPENCV_VERSION_MAJOR)
-list(GET OPENCV_VERSION_PARTS 1 OPENCV_VERSION_MINOR)
-list(GET OPENCV_VERSION_PARTS 2 OPENCV_VERSION_PATCH)
 
 set(OPENCV_SOVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}")
 
@@ -109,16 +104,12 @@ endif()
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for libraries" )
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory for applications" )
 
-if(ANDROID)
+if(ANDROID OR WIN32)
     set(OPENCV_DOC_INSTALL_PATH doc)
-elseif(WIN32)
-    set(OPENCV_DOC_INSTALL_PATH doc)
+elseif(OPENCV_MANGLED_INSTALL_PATHS)
+    set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
 else()
-    if(OPENCV_MANGLED_INSTALL_PATHS)
-        set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
-    else()
-        set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
-    endif()
+    set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
 if(ANDROID)
@@ -130,8 +121,8 @@ endif()
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# in case of cross compilation this macro will search packages
-# for host system instead of packages for target system
+# search packages for host system instead of packages for target system
+# in case of cross compilation thess macro should be defined by toolchain file
 if(NOT COMMAND find_host_package)
     macro(find_host_package)
         find_package(${ARGN})
@@ -207,10 +198,10 @@ if(SVNVERSION_PATH)
     if(SVNVERSION_RESULT MATCHES "exported")
        # This is NOT a svn repository:
        set(OPENCV_SVNVERSION "")
-	   message(STATUS "SVNVERSION: exported")
+       message(STATUS "SVNVERSION: exported")
     else()
         set(OPENCV_SVNVERSION " svn:${SVNVERSION_RESULT}")
-	    message(STATUS "SVNVERSION: ${OPENCV_SVNVERSION}")
+        message(STATUS "SVNVERSION: ${OPENCV_SVNVERSION}")
     endif()
 else()
     # We don't have svnversion:
@@ -237,7 +228,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
                   OUTPUT_STRIP_TRAILING_WHITESPACE)           
         
     # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
-    #  Look for the version number
+    # Look for the version number
     string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
 
     # Split the three parts:
@@ -673,6 +664,50 @@ else()
     SET(BUILD_JAVA_SUPPORT OFF CACHE BOOL "Build with Java support" FORCE)
 endif()
 
+if (BUILD_JAVA_SUPPORT AND (BUILD_EXAMPLES OR BUILD_TESTS))
+    file(TO_CMAKE_PATH "$ENV{ANT_DIR}" ANT_DIR_ENV_PATH)
+    file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
+
+    if(ANDROID)
+        file(TO_CMAKE_PATH "$ENV{ANDROID_SDK}" ANDROID_SDK_ENV_PATH)
+        
+        #find android SDK
+        find_host_program(ANDROID_EXECUTABLE
+            NAMES android.bat android
+            PATHS "${ANDROID_SDK_ENV_PATH}/tools/"
+                  "${ProgramFiles_ENV_PATH}/Android/android-sdk/tools/"
+                  "/opt/android-sdk/tools/"
+                  "/opt/android-sdk-linux_x86/tools/"
+                  "/opt/android-sdk-mac_x86/tools/"
+                  "/opt/android-sdk-linux_86/tools/"
+                  "/opt/android-sdk-mac_86/tools/"
+            )
+        if(ANDROID_EXECUTABLE)
+            message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
+        endif()
+    endif()
+
+    #find apache ant
+    find_host_program(ANT_EXECUTABLE NAMES ant.bat ant
+        PATHS "${ANT_DIR_ENV_PATH}/bin"
+              "${ProgramFiles_ENV_PATH}/apache-ant/bin"
+        )
+    if(ANT_EXECUTABLE)
+        execute_process(COMMAND ${ANT_EXECUTABLE} -version
+            OUTPUT_VARIABLE ANT_VERSION_FULL
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" ANT_VERSION "${ANT_VERSION_FULL}")
+        
+        message(STATUS "    Found apache ant ${ANT_VERSION}: ${ANT_EXECUTABLE}")
+    endif()
+
+    if (ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND ANT_VERSION VERSION_GREATER 1.8)
+        SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
+    else()
+        SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
+    endif()
+endif()
+
 #YV
 ############################### QT ################################
 
@@ -957,6 +992,10 @@ include_directories("."
 # Should be set to true for development
 set(OPENCV_WARNINGS_ARE_ERRORS OFF CACHE BOOL "Treat warnings as errors")
 
+if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
+endif()
+
 set(EXTRA_C_FLAGS "")
 set(EXTRA_C_FLAGS_RELEASE "")
 set(EXTRA_C_FLAGS_DEBUG "")
@@ -1060,7 +1099,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     if(ENABLE_PROFILING)
         set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -pg -g")
     elseif(NOT APPLE)
-		# Remove unreferenced functions: function level linking
+        # Remove unreferenced functions: function level linking
         set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -ffunction-sections")
     endif()
 
