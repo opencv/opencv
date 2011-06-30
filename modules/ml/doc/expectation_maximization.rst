@@ -62,7 +62,7 @@ Alternatively, the algorithm may start with the M-step when the initial values f
 :math:`p_{i,k}` can be provided. Another alternative when
 :math:`p_{i,k}` are unknown is to use a simpler clustering algorithm to pre-cluster the input samples and thus obtain initial
 :math:`p_{i,k}` . Often (including macnine learning) the
-:ref:`kmeans` algorithm is used for that purpose.
+:ocv:func:`kmeans` algorithm is used for that purpose.
 
 One of the main problems of the EM algorithm is a large number
 of parameters to estimate. The majority of the parameters reside in
@@ -176,7 +176,7 @@ Unlike many of the ML models, EM is an unsupervised learning algorithm and it do
 :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
-:ref:`Bayes classifier`.
+:ocv:class:`CvBayesClassifier`.
 
 For an example of clustering random samples of the multi-Gaussian distribution using EM, see ``em.cpp`` sample in the OpenCV distribution.
 

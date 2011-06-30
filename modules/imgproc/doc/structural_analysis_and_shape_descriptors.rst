@@ -77,9 +77,10 @@ The moments of a contour are defined in the same way but computed using Green's 
 http://en.wikipedia.org/wiki/Green_theorem
 ). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
 
-See Also:
-:ocv:func:`contourArea`,
-:ocv:func:`arcLength`
+.. seealso::
+
+    :ocv:func:`contourArea`,
+    :ocv:func:`arcLength`
 
 
 
@@ -87,7 +88,7 @@ HuMoments
 -------------
 Calculates the seven Hu invariants.
 
-.. ocv:function:: void HuMoments( const Moments& moments, double h[7] )
+.. ocv:function:: void HuMoments( const Moments& moments, double* hu )
 
 .. ocv:pyfunction:: cv2.HuMoments(m) -> hu
 
@@ -96,14 +97,14 @@ Calculates the seven Hu invariants.
 .. ocv:pyoldfunction:: cv.GetHuMoments(moments) -> hu
 
     :param moments: Input moments computed with  :ocv:func:`moments` .
-    :param h: Output Hu invariants.
+    :param hu: Output Hu invariants.
 
 The function calculates the seven Hu invariants (introduced in [Hu62]_; see also
 http://en.wikipedia.org/wiki/Image_moment) defined as:
 
 .. math::
 
-    \begin{array}{l} h[0]= \eta _{20}+ \eta _{02} \\ h[1]=( \eta _{20}- \eta _{02})^{2}+4 \eta _{11}^{2} \\ h[2]=( \eta _{30}-3 \eta _{12})^{2}+ (3 \eta _{21}- \eta _{03})^{2} \\ h[3]=( \eta _{30}+ \eta _{12})^{2}+ ( \eta _{21}+ \eta _{03})^{2} \\ h[4]=( \eta _{30}-3 \eta _{12})( \eta _{30}+ \eta _{12})[( \eta _{30}+ \eta _{12})^{2}-3( \eta _{21}+ \eta _{03})^{2}]+(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ h[5]=( \eta _{20}- \eta _{02})[( \eta _{30}+ \eta _{12})^{2}- ( \eta _{21}+ \eta _{03})^{2}]+4 \eta _{11}( \eta _{30}+ \eta _{12})( \eta _{21}+ \eta _{03}) \\ h[6]=(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}]-( \eta _{30}-3 \eta _{12})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ \end{array}
+    \begin{array}{l} hu[0]= \eta _{20}+ \eta _{02} \\ hu[1]=( \eta _{20}- \eta _{02})^{2}+4 \eta _{11}^{2} \\ hu[2]=( \eta _{30}-3 \eta _{12})^{2}+ (3 \eta _{21}- \eta _{03})^{2} \\ hu[3]=( \eta _{30}+ \eta _{12})^{2}+ ( \eta _{21}+ \eta _{03})^{2} \\ hu[4]=( \eta _{30}-3 \eta _{12})( \eta _{30}+ \eta _{12})[( \eta _{30}+ \eta _{12})^{2}-3( \eta _{21}+ \eta _{03})^{2}]+(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ hu[5]=( \eta _{20}- \eta _{02})[( \eta _{30}+ \eta _{12})^{2}- ( \eta _{21}+ \eta _{03})^{2}]+4 \eta _{11}( \eta _{30}+ \eta _{12})( \eta _{21}+ \eta _{03}) \\ hu[6]=(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}]-( \eta _{30}-3 \eta _{12})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ \end{array}
 
 where
 :math:`\eta_{ji}` stands for
@@ -111,8 +112,7 @@ where
 
 These values are proved to be invariants to the image scale, rotation, and reflection except the seventh one, whose sign is changed by reflection. This invariance is proved with the assumption of infinite image resolution. In case of raster images, the computed Hu invariants for the original and transformed images are a bit different.
 
-See Also:
-:ocv:func:`matchShapes`
+.. seealso:: :ocv:func:`matchShapes`
 
 
 findContours
@@ -286,7 +286,7 @@ Approximates Freeman chain(s) with a polygonal curve.
     
     :param storage: Storage location for the resulting polylines 
     
-    :param method: Approximation method (see the description of the function  :ref:`FindContours` ) 
+    :param method: Approximation method (see the description of the function  :ocv:cfunc:`FindContours` ) 
     
     :param parameter: Method parameter (not used now) 
     
@@ -469,7 +469,9 @@ Fits a line to a 2D or 3D point set.
 
     :param param: Numerical parameter ( ``C`` ) for some types of distances. If it is 0, an optimal value is chosen.
 
-    :param reps, aeps: Sufficient accuracy for the radius (distance between the coordinate origin and the line) and angle, respectively. 0.01 would be a good default value for both.
+    :param reps: Sufficient accuracy for the radius (distance between the coordinate origin and the line).
+    
+    :param aeps: Sufficient accuracy for the angle. 0.01 would be a good default value for ``reps`` and ``aeps``.
 
 The function ``fitLine`` fits a line to a 2D or 3D point set by minimizing
 :math:`\sum_i \rho(r_i)` where

@@ -60,10 +60,11 @@ where
 
 The function can process the image in-place.
 
-See Also:
-:ocv:func:`threshold`,
-:ocv:func:`blur`,
-:ocv:func:`GaussianBlur`
+.. seealso::
+
+    :ocv:func:`threshold`,
+    :ocv:func:`blur`,
+    :ocv:func:`GaussianBlur`
 
 
 
@@ -579,10 +580,7 @@ where
 
 Use these functions to either mark a connected component with the specified color in-place, or build a mask and then extract the contour, or copy the region to another image, and so on. Various modes of the function are demonstrated in the ``floodfill.cpp`` sample.
 
-See Also:
-:ocv:func:`findContours`
-
-
+.. seealso:: :ocv:func:`findContours`
 
 
 
@@ -743,13 +741,13 @@ Currently, Otsu's method is implemented only for 8-bit images.
 
 .. image:: pics/threshold.png
 
-See Also:
-:ocv:func:`adaptiveThreshold`,
-:ocv:func:`findContours`,
-:ocv:func:`compare`,
-:ocv:func:`min`,
-:ocv:func:`max`
+.. seealso::
 
+    :ocv:func:`adaptiveThreshold`,
+    :ocv:func:`findContours`,
+    :ocv:func:`compare`,
+    :ocv:func:`min`,
+    :ocv:func:`max`
 
 
 watershed
@@ -787,9 +785,7 @@ example, when such tangent components exist in the initial
 marker image. Visual demonstration and usage example of the function
 can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
 
-See Also:
-:ocv:func:`findContours`
-
+.. seealso:: :ocv:func:`findContours`
 
 
 grabCut
@@ -814,7 +810,9 @@ Runs the GrabCut algorithm.
 
     :param rect: ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background". The parameter is only used when  ``mode==GC_INIT_WITH_RECT`` .
     
-    :param bgdModel, fgdModel: Temporary arrays used for segmentation. Do not modify them while you are processing the same image.
+    :param bgdModel: Temporary array for the background model. Do not modify it while you are processing the same image.
+    
+    :param fgdModel: Temporary arrays for the foreground model. Do not modify it while you are processing the same image.
 
     :param iterCount: Number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with  ``mode==GC_INIT_WITH_MASK``  or  ``mode==GC_EVAL`` .
     

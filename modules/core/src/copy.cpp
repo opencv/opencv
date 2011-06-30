@@ -171,11 +171,12 @@ void Mat::copyTo( OutputArray _dst ) const
             
             // to handle the copying 1xn matrix => nx1 std vector.
             Size sz = size() == dst.size() ?
-                getContinuousSize(*this, dst, (int)elemSize()) :
-                getContinuousSize(*this, (int)elemSize());
+                getContinuousSize(*this, dst) :
+                getContinuousSize(*this);
+            size_t len = sz.width*elemSize();
             
             for( ; sz.height--; sptr += step, dptr += dst.step )
-                memcpy( dptr, sptr, sz.width );
+                memcpy( dptr, sptr, len );
         }
         return;
     }

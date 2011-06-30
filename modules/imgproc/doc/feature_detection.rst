@@ -77,10 +77,11 @@ After that it finds eigenvectors and eigenvalues of
 
 The output of the function can be used for robust edge or corner detection.
 
-See Also:
-:ocv:func:`cornerMinEigenVal`,
-:ocv:func:`cornerHarris`,
-:ocv:func:`preCornerDetect`
+.. seealso::
+
+    :ocv:func:`cornerMinEigenVal`,
+    :ocv:func:`cornerHarris`,
+    :ocv:func:`preCornerDetect`
 
 
 
@@ -221,7 +222,8 @@ Determines strong corners on an image.
 
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
-.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners int* cornerCount double qualityLevel double minDistance const CvArr* mask=NULL int blockSize=3 int useHarris=0 double k=0.04 )
+.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners, int* cornerCount, double qualityLevel, double minDistance, const CvArr* mask=NULL, int blockSize=3, int useHarris=0, double k=0.04 )
+
 .. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
@@ -266,12 +268,14 @@ The function can be used to initialize a point-based tracker of an object.
 
 **Note**: If the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > {B}, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
 
-See Also: :ocv:func:`cornerMinEigenVal`, 
-:ocv:func:`cornerHarris`, 
-:ocv:func:`calcOpticalFlowPyrLK`, 
-:ocv:func:`estimateRigidMotion`, 
-:ocv:func:`PlanarObjectDetector`, 
-:ocv:func:`OneWayDescriptor`
+.. seealso::
+
+    :ocv:func:`cornerMinEigenVal`, 
+    :ocv:func:`cornerHarris`, 
+    :ocv:func:`calcOpticalFlowPyrLK`, 
+    :ocv:func:`estimateRigidMotion`, 
+    :ocv:func:`PlanarObjectDetector`, 
+    :ocv:func:`OneWayDescriptor`
 
 
 
@@ -336,10 +340,10 @@ The function finds circles in a grayscale image using a modification of the Houg
 
 **Note**: Usually the function detects the centers of circles well. However, it may fail to find correct radii. You can assist to the function by specifying the radius range ( ``minRadius`` and ``maxRadius`` ) if you know it. Or, you may ignore the returned radius, use only the center, and find the correct radius using an additional procedure.
 
-See Also:
-:ocv:func:`fitEllipse`,
-:ocv:func:`minEnclosingCircle`
+.. seealso::
 
+    :ocv:func:`fitEllipse`,
+    :ocv:func:`minEnclosingCircle`
 
 
 HoughLines

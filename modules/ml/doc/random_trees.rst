@@ -32,25 +32,13 @@ For the random trees usage example, please, see letter_recog.cpp sample in OpenC
 
 **References:**
 
-*
-    *Machine Learning*, Wald I, July 2002.
+  * *Machine Learning*, Wald I, July 2002. http://stat-www.berkeley.edu/users/breiman/wald2002-1.pdf
 
-    http://stat-www.berkeley.edu/users/breiman/wald2002-1.pdf
+  * *Looking Inside the Black Box*, Wald II, July 2002. http://stat-www.berkeley.edu/users/breiman/wald2002-2.pdf
 
-*
-    *Looking Inside the Black Box*, Wald II, July 2002.
+  * *Software for the Masses*, Wald III, July 2002. http://stat-www.berkeley.edu/users/breiman/wald2002-3.pdf
 
-    http://stat-www.berkeley.edu/users/breiman/wald2002-2.pdf
-
-*
-    *Software for the Masses*, Wald III, July 2002.
-
-    http://stat-www.berkeley.edu/users/breiman/wald2002-3.pdf
-
-*
-    And other articles from the web site
-    http://www.stat.berkeley.edu/users/breiman/RandomForests/cc_home.htm
-    .
+  * And other articles from the web site http://www.stat.berkeley.edu/users/breiman/RandomForests/cc_home.htm
 
 CvRTParams
 ----------

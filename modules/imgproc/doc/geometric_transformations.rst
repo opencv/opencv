@@ -14,8 +14,8 @@ In case when you specify the forward mapping
 :math:`\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}` and then use the above formula.
 
 The actual implementations of the geometrical transformations, from the most generic
-:ref:`Remap` and to the simplest and the fastest
-:ref:`Resize` , need to solve two main problems with the above formula:
+:ocv:func:`remap` and to the simplest and the fastest
+:ocv:func:`resize` , need to solve two main problems with the above formula:
 
 *
     Extrapolation of non-existing pixels. Similarly to the filtering functions described in the previous section, for some
@@ -31,7 +31,7 @@ The actual implementations of the geometrical transformations, from the most gen
     , where a polynomial function is fit into some neighborhood of the computed pixel
     :math:`(f_x(x,y), f_y(x,y))`   ,  and then the value of the polynomial at
     :math:`(f_x(x,y), f_y(x,y))`     is taken as the interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-    :ref:`Resize`   for details.
+    :ocv:func:`resize`   for details.
 
 convertMaps
 -----------
@@ -66,10 +66,11 @@ The function converts a pair of maps for
 *
     Reverse conversion. Obviously, the reconstructed floating-point maps will not be exactly the same as the originals.
 
-See Also:
-:ocv:func:`remap`,
-:ocv:func:`undisort`,
-:ocv:func:`initUndistortRectifyMap`
+.. seealso::
+
+    :ocv:func:`remap`,
+    :ocv:func:`undisort`,
+    :ocv:func:`initUndistortRectifyMap`
 
 
 
@@ -77,11 +78,12 @@ getAffineTransform
 ----------------------
 Calculates an affine transform from three pairs of the corresponding points.
 
-.. ocv:function:: Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+.. ocv:function:: Mat getAffineTransform( const Point2f* src, const Point2f* dst )
 
 .. ocv:pyfunction:: cv2.getAffineTransform(src, dst) -> retval
 
 .. ocv:cfunction:: CvMat* cvGetAffineTransform( const CvPoint2D32f* src, const CvPoint2D32f* dst, CvMat* mapMatrix )
+
 .. ocv:pyoldfunction:: cv.GetAffineTransform(src, dst, mapMatrix)-> None
 
     :param src: Coordinates of triangle vertices in the source image.
@@ -102,9 +104,10 @@ where
     src(i)=(x_i, y_i),
     i=0,1,2
 
-See Also:
-:ocv:func:`warpAffine`,
-:ocv:func:`transform`
+.. seealso::
+
+    :ocv:func:`warpAffine`,
+    :ocv:func:`transform`
 
 
 
@@ -112,11 +115,12 @@ getPerspectiveTransform
 ---------------------------
 Calculates a perspective transform from four pairs of the corresponding points.
 
-.. ocv:function:: Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+.. ocv:function:: Mat getPerspectiveTransform( const Point2f* src, const Point2f* dst )
 
 .. ocv:pyfunction:: cv2.getPerspectiveTransform(src, dst) -> retval
 
 .. ocv:cfunction:: CvMat* cvGetPerspectiveTransform( const CvPoint2D32f* src, const CvPoint2D32f* dst, CvMat* mapMatrix )
+
 .. ocv:pyoldfunction:: cv.GetPerspectiveTransform(src, dst, mapMatrix)-> None
 
     :param src: Coordinates of quadrangle vertices in the source image.
@@ -137,10 +141,11 @@ where
     src(i)=(x_i, y_i),
     i=0,1,2,3
 
-See Also:
-:ocv:func:`findHomography`,
-:ocv:func:`warpPerspective`,
-:ocv:func:`perspectiveTransform`
+.. seealso::
+
+    :ocv:func:`findHomography`,
+    :ocv:func:`warpPerspective`,
+    :ocv:func:`perspectiveTransform`
 
 
 getRectSubPix
@@ -178,9 +183,10 @@ outside. In this case, the replication border mode (see
 :ocv:func:`borderInterpolate` ) is used to extrapolate
 the pixel values outside of the image.
 
-See Also:
-:ocv:func:`warpAffine`,
-:ocv:func:`warpPerspective`
+.. seealso::
+
+    :ocv:func:`warpAffine`,
+    :ocv:func:`warpPerspective`
 
 
 getRotationMatrix2D
@@ -217,12 +223,11 @@ where
 
 The transformation maps the rotation center to itself. If this is not the target, adjust the shift.
 
-See Also:
-:ocv:func:`getAffineTransform`,
-:ocv:func:`warpAffine`,
-:ocv:func:`transform`
+.. seealso::
 
-
+    :ocv:func:`getAffineTransform`,
+    :ocv:func:`warpAffine`,
+    :ocv:func:`transform`
 
 
 
@@ -268,21 +273,22 @@ Remaps an image to log-polar space.
 
     :param flags: A combination of interpolation methods and the following optional flags: 
             
-            * **CV_WARP_FILL_OUTLIERS** fills all of the destination image pixels. If some of them correspond to outliers in the source image, they are set to zero 
-        
+            *  **CV_WARP_FILL_OUTLIERS** fills all of the destination image pixels. If some of them correspond to outliers in the source image, they are set to zero 
            
-            * **CV_WARP_INVERSE_MAP** See below 
+            *  **CV_WARP_INVERSE_MAP** See below 
 
 The function ``cvLogPolar`` transforms the source image using the following transformation:
 
-  * Forward transformation (``CV_WARP_INVERSE_MAP``is not set):
+  *
+    Forward transformation (``CV_WARP_INVERSE_MAP``is not set):
 
         .. math::
 
             dst( \phi , \rho ) = src(x,y) 
 
 
-  * Inverse transformation (``CV_WARP_INVERSE_MAP`` is set):
+  *
+    Inverse transformation (``CV_WARP_INVERSE_MAP`` is set):
 
         .. math::
 
@@ -408,12 +414,11 @@ If you want to decimate the image by factor of 2 in each direction, you can call
 
 To shrink an image, it will generally look best with CV_INTER_AREA interpolation, whereas to enlarge an image, it will generally look best with CV_INTER_CUBIC (slow) or CV_INTER_LINEAR (faster but still looks OK).
 
-See Also:
-:ocv:func:`warpAffine`,
-:ocv:func:`warpPerspective`,
-:ocv:func:`remap` 
+.. seealso::
 
-
+    :ocv:func:`warpAffine`,
+    :ocv:func:`warpPerspective`,
+    :ocv:func:`remap` 
 
 
 warpAffine
@@ -454,12 +459,13 @@ when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is firs
 :ocv:func:`invertAffineTransform` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
-See Also:
-:ocv:func:`warpPerspective`,
-:ocv:func:`resize`,
-:ocv:func:`remap`,
-:ocv:func:`getRectSubPix`,
-:ocv:func:`transform`
+.. seealso::
+
+    :ocv:func:`warpPerspective`,
+    :ocv:func:`resize`,
+    :ocv:func:`remap`,
+    :ocv:func:`getRectSubPix`,
+    :ocv:func:`transform`
 
 
 .. note:: ``cvGetQuadrangleSubPix`` is similar to ``cvWarpAffine``, but the outliers are extrapolated using replication border mode.
@@ -500,12 +506,13 @@ when the flag ``WARP_INVERSE_MAP`` is set. Otherwise, the transformation is firs
 :ocv:func:`invert` and then put in the formula above instead of ``M`` .
 The function cannot operate in-place.
 
-See Also:
-:ocv:func:`warpAffine`,
-:ocv:func:`resize`,
-:ocv:func:`remap`,
-:ocv:func:`getRectSubPix`,
-:ocv:func:`perspectiveTransform`
+.. seealso::
+
+    :ocv:func:`warpAffine`,
+    :ocv:func:`resize`,
+    :ocv:func:`remap`,
+    :ocv:func:`getRectSubPix`,
+    :ocv:func:`perspectiveTransform`
 
 
 
@@ -528,27 +535,27 @@ Computes the undistortion and rectification transformation map.
     
     :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
-    :param R: Optional rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is assumed. In ``cvInitUndistortMap`` R assumed to be an identity matrix.
+    :param R: Optional rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2`` , computed by  :ocv:func:`stereoRectify`  can be passed here. If the matrix is empty, the identity transformation is assumed. In ``cvInitUndistortMap`` R assumed to be an identity matrix.
 
     :param newCameraMatrix: New camera matrix  :math:`A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}` .
     
     :param size: Undistorted image size.
 
-    :param m1type: Type of the first output map that can be  ``CV_32FC1``  or  ``CV_16SC2`` . See  :ref:`convertMaps` for details.
+    :param m1type: Type of the first output map that can be  ``CV_32FC1``  or  ``CV_16SC2`` . See  :ocv:func:`convertMaps` for details.
     
     :param map1: The first output map.
 
     :param map2: The second output map.
 
 The function computes the joint undistortion and rectification transformation and represents the result in the form of maps for
-:ref:`Remap` . The undistorted image looks like original, as if it is captured with a camera using the camera matrix ``=newCameraMatrix`` and zero distortion. In case of a monocular camera, ``newCameraMatrix`` is usually equal to ``cameraMatrix`` , or it can be computed by
-:ref:`GetOptimalNewCameraMatrix` for a better control over scaling. In case of a stereo camera, ``newCameraMatrix`` is normally set to ``P1`` or ``P2`` computed by
-:ref:`StereoRectify` .
+:ocv:func:`remap` . The undistorted image looks like original, as if it is captured with a camera using the camera matrix ``=newCameraMatrix`` and zero distortion. In case of a monocular camera, ``newCameraMatrix`` is usually equal to ``cameraMatrix`` , or it can be computed by
+:ocv:func:`getOptimalNewCameraMatrix` for a better control over scaling. In case of a stereo camera, ``newCameraMatrix`` is normally set to ``P1`` or ``P2`` computed by
+:ocv:func:`stereoRectify` .
 
 Also, this new camera is oriented differently in the coordinate space, according to ``R`` . That, for example, helps to align two heads of a stereo camera so that the epipolar lines on both images become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
 
 The function actually builds the maps for the inverse mapping algorithm that is used by
-:ref:`Remap` . That is, for each pixel
+:ocv:func:`remap` . That is, for each pixel
 :math:`(u, v)` in the destination (corrected and rectified) image, the function computes the corresponding coordinates in the source image (that is, in the original image from camera). The following process is applied:
 
 .. math::
@@ -559,9 +566,9 @@ where
 :math:`(k_1, k_2, p_1, p_2[, k_3])` are the distortion coefficients.
 
 In case of a stereo camera, this function is called twice: once for each camera head, after
-:ref:`StereoRectify` , which in its turn is called after
-:ref:`StereoCalibrate` . But if the stereo camera was not calibrated, it is still possible to compute the rectification transformations directly from the fundamental matrix using
-:ref:`StereoRectifyUncalibrated` . For each camera, the function computes homography ``H`` as the rectification transformation in a pixel domain, not a rotation matrix ``R`` in 3D space. ``R`` can be computed from ``H`` as
+:ocv:func:`stereoRectify` , which in its turn is called after
+:ocv:func:`stereoCalibrate` . But if the stereo camera was not calibrated, it is still possible to compute the rectification transformations directly from the fundamental matrix using
+:ocv:func:`stereoRectifyUncalibrated` . For each camera, the function computes homography ``H`` as the rectification transformation in a pixel domain, not a rotation matrix ``R`` in 3D space. ``R`` can be computed from ``H`` as
 
 .. math::
 
@@ -586,7 +593,7 @@ Returns the default new camera matrix.
 
     :param centerPrincipalPoint: Location of the principal point in the new camera matrix. The parameter indicates whether this location should be at the image center or not.
 
-The function returns the camera matrix that is either an exact copy of the input ``cameraMatrix`` (when ``centerPrinicipalPoint=false`` ), or the modified one (when ``centerPrincipalPoint`` =true).
+The function returns the camera matrix that is either an exact copy of the input ``cameraMatrix`` (when ``centerPrinicipalPoint=false`` ), or the modified one (when ``centerPrincipalPoint=true``).
 
 In the latter case, the new camera matrix will be:
 
@@ -601,8 +608,8 @@ where
 :math:`(1,1)` elements of ``cameraMatrix`` , respectively.
 
 By default, the undistortion functions in OpenCV (see 
-:ref:`initUndistortRectifyMap`,
-:ref:`undistort`) do not move the principal point. However, when you work with stereo, it is important to move the principal points in both views to the same y-coordinate (which is required by most of stereo correspondence algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for each view where the principal points are located at the center.
+:ocv:func:`initUndistortRectifyMap`,
+:ocv:func:`undistort`) do not move the principal point. However, when you work with stereo, it is important to move the principal points in both views to the same y-coordinate (which is required by most of stereo correspondence algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for each view where the principal points are located at the center.
 
 
 
@@ -638,10 +645,10 @@ The function is simply a combination of
 Those pixels in the destination image, for which there is no correspondent pixels in the source image, are filled with zeros (black color).
 
 A particular subset of the source image that will be visible in the corrected image can be regulated by ``newCameraMatrix`` . You can use
-:ref:`GetOptimalNewCameraMatrix` to compute the appropriate ``newCameraMatrix``  depending on your requirements.
+:ocv:func:`getOptimalNewCameraMatrix` to compute the appropriate ``newCameraMatrix``  depending on your requirements.
 
 The camera matrix and the distortion parameters can be determined using
-:ref:`calibrateCamera` . If the resolution of images is different from the resolution used at the calibration stage,
+:ocv:func:`calibrateCamera` . If the resolution of images is different from the resolution used at the calibration stage,
 :math:`f_x, f_y, c_x` and
 :math:`c_y` need to be scaled accordingly, while the distortion coefficients remain the same.
 
@@ -665,14 +672,14 @@ Computes the ideal point coordinates from the observed point coordinates.
     
     :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
-    :param R: Rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2``  computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used.
+    :param R: Rectification transformation in the object space (3x3 matrix).  ``R1``  or  ``R2``  computed by  :ocv:func:`stereoRectify`  can be passed here. If the matrix is empty, the identity transformation is used.
 
-    :param P: New camera matrix (3x3) or new projection matrix (3x4).  ``P1``  or  ``P2``  computed by  :ref:`StereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used.
+    :param P: New camera matrix (3x3) or new projection matrix (3x4).  ``P1``  or  ``P2``  computed by  :ocv:func:`stereoRectify`  can be passed here. If the matrix is empty, the identity new camera matrix is used.
 
 The function is similar to
-:ref:`undistort` and
-:ref:`initUndistortRectifyMap`  but it operates on a sparse set of points instead of a raster image. Also the function performs a reverse transformation to
-:ref:`projectPoints` . In case of a 3D object, it does not reconstruct its 3D coordinates, but for a planar object, it does, up to a translation vector, if the proper ``R`` is specified. ::
+:ocv:func:`undistort` and
+:ocv:func:`initUndistortRectifyMap`  but it operates on a sparse set of points instead of a raster image. Also the function performs a reverse transformation to
+:ocv:func:`projectPoints` . In case of a 3D object, it does not reconstruct its 3D coordinates, but for a planar object, it does, up to a translation vector, if the proper ``R`` is specified. ::
 
     // (u,v) is the input point, (u', v') is the output point
     // camera_matrix=[fx 0 cx; 0 fy cy; 0 0 1]

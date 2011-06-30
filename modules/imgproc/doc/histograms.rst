@@ -145,9 +145,7 @@ The functions ``calcBackProject`` calculate the back project of the histogram. T
 This is an approximate algorithm of the
 :ocv:func:`CAMShift` color object tracker.
 
-See Also:
-:ocv:func:`calcHist`
-
+.. seealso:: :ocv:func:`calcHist`
 
 
 compareHist
@@ -312,7 +310,7 @@ Locates a template within an image by using a histogram comparison.
     
     :param hist: Histogram 
     
-    :param method: Comparison method, passed to  :ref:`CompareHist`  (see description of that function) 
+    :param method: Comparison method, passed to  :ocv:cfunc:`CompareHist`  (see description of that function) 
     
     :param factor: Normalization factor for histograms, will affect the normalization scale of the destination image, pass 1 if unsure 
     
@@ -419,7 +417,11 @@ Returns a pointer to the histogram bin.
     
     :param hist: Histogram 
     
-    :param idx0, idx1, idx2, idx3: Indices of the bin 
+    :param idx0: 0-th index 
+    
+    :param idx1: 1-st index
+    
+    :param idx2: 2-nd index
     
     :param idx: Array of indices 
 
@@ -474,9 +476,9 @@ Makes a histogram out of an array.
     
     :param data: Array that will be used to store histogram bins 
     
-    :param ranges: Histogram bin ranges, see  :ref:`CreateHist` 
+    :param ranges: Histogram bin ranges, see  :ocv:cfunc:`CreateHist` 
     
-    :param uniform: Uniformity flag, see  :ref:`CreateHist` 
+    :param uniform: Uniformity flag, see  :ocv:cfunc:`CreateHist` 
     
 The function initializes the histogram, whose header and bins are allocated by the user. :ocv:cfunc:`ReleaseHist` does not need to be called afterwards. Only dense histograms can be initialized this way. The function returns ``hist``.
 
@@ -510,7 +512,11 @@ Queries the value of the histogram bin.
 
     :param hist: Histogram 
     
-    :param idx0, idx1, idx2, idx3: Indices of the bin 
+    :param idx0: 0-th index
+    
+    :param idx1: 1-st index
+    
+    :param idx2: 2-nd index
     
     :param idx: Array of indices 
 
@@ -535,9 +541,9 @@ Sets the bounds of the histogram bins.
 
     :param hist: Histogram 
     
-    :param ranges: Array of bin ranges arrays, see  :ref:`CreateHist` 
+    :param ranges: Array of bin ranges arrays, see  :ocv:cfunc:`CreateHist` 
     
-    :param uniform: Uniformity flag, see  :ref:`CreateHist` 
+    :param uniform: Uniformity flag, see  :ocv:cfunc:`CreateHist` 
     
 The function is a stand-alone function for setting bin ranges in the histogram. For a more detailed description of the parameters ``ranges`` and ``uniform`` see the :ocv:cfunc:`CalcHist` function, that can initialize the ranges as well. Ranges for the histogram bins must be set before the histogram is calculated or the backproject of the histogram is calculated.
 
@@ -580,5 +586,4 @@ between the calculated minimum and maximum distances are incremented
 
 .. [RubnerSept98] Y. Rubner. C. Tomasi, L.J. Guibas. The Earth Mover’s Distance as a Metric for Image Retrieval. Technical Report STAN-CS-TN-98-86, Department of Computer Science, Stanford University, September 1998.
 
-.. [Iivarinen97] Jukka Iivarinen, Markus Peura, Jaakko Srel, and Ari Visa. Comparison of Combined Shape Descriptors for Irregular Objects, 8th British Machine Vision Conference, BMVC'97.
-http://www.cis.hut.fi/research/IA/paper/publications/bmvc97/bmvc97.html
+.. [Iivarinen97] Jukka Iivarinen, Markus Peura, Jaakko Srel, and Ari Visa. Comparison of Combined Shape Descriptors for Irregular Objects, 8th British Machine Vision Conference, BMVC'97. http://www.cis.hut.fi/research/IA/paper/publications/bmvc97/bmvc97.html

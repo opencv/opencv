@@ -271,7 +271,7 @@ InitFont
 --------
 Initializes font structure (OpenCV 1.x API).
 
-.. cfunction:: void cvInitFont(  CvFont* font, int fontFace, double hscale, double vscale, double shear=0, int thickness=1, int lineType=8 )
+.. ocv:cfunction:: void cvInitFont(  CvFont* font, int fontFace, double hscale, double vscale, double shear=0, int thickness=1, int lineType=8 )
 
     :param font: Pointer to the font structure initialized by the function 
 
@@ -308,7 +308,7 @@ Initializes font structure (OpenCV 1.x API).
     :param thickness: Thickness of the text strokes 
 
 
-    :param lineType: Type of the strokes, see  :ref:`Line`  description 
+    :param lineType: Type of the strokes, see  :ocv:func:`line`  description 
 
 
 The function initializes the font structure that can be passed to text rendering functions.
