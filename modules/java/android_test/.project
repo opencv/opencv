@@ -3,7 +3,6 @@
 	<name>OpenCV_Test</name>
 	<comment></comment>
 	<projects>
-		<project>OpenCVJavaAPI</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
