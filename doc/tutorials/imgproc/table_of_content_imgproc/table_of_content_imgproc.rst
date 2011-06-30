@@ -239,3 +239,38 @@ In this section you will learn about the image processing (manipulation) functio
                          :height: 100pt
                          :width:  100pt
 
+* :ref:`remap`
+
+  ===================== ==============================================
+   |Remap|              *Title:* **Remapping**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to manipulate pixels locations
+
+  ===================== ==============================================
+  
+  .. |Remap| image:: images/imgtrans/Remap_Tutorial_Cover.jpg
+                   :height: 100pt
+                   :width:  100pt
+
+
+* :ref:`warp_affine`
+
+  ===================== ==============================================
+   |WarpAffine|         *Title:* **Affine Transforms**
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to rotate, translate and scale our images
+
+  ===================== ==============================================
+  
+  .. |WarpAffine| image:: images/imgtrans/Warp_Affine_Tutorial_Cover.jpg
+                        :height: 100pt
+                        :width:  100pt
+
