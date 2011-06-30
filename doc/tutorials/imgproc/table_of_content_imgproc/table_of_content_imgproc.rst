@@ -20,6 +20,8 @@ In this section you will learn about the image processing (manipulation) functio
    ../imgtrans/canny_detector/canny_detector
    ../imgtrans/hough_lines/hough_lines
    ../imgtrans/hough_circle/hough_circle
+   ../imgtrans/remap/remap
+   ../imgtrans/warp_affine/warp_affine
 
 .. |Author_AnaH| unicode:: Ana U+0020 Huam U+00E1 n
 
