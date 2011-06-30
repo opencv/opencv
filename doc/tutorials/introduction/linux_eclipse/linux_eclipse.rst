@@ -111,19 +111,16 @@ Making a project
 
 #. We are only missing one final step: To tell OpenCV where the OpenCV headers and libraries are. For this, do the following:
 
-    *
-      Go to  **Project-->Properties**
+    * Go to  **Project-->Properties**
 
      .. image:: images/a8.png
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 8
         :align: center
 
-    *
-      In **C/C++ Build**, click on **Settings**. At the right, choose the **Tool Settings** Tab. Here we will enter the headers and libraries info:
+    * In **C/C++ Build**, click on **Settings**. At the right, choose the **Tool Settings** Tab. Here we will enter the headers and libraries info:
 
-      a.
-        In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should include the path of the folder where opencv was installed. In our example, this is ``/usr/local/include/opencv``.
+      a. In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should include the path of the folder where opencv was installed. In our example, this is ``/usr/local/include/opencv``.
 
          .. image:: images/a9.png
             :height: 400px 
@@ -144,79 +141,47 @@ Making a project
                -I/usr/local/include/opencv -I/usr/local/include 
 
 
-      b.
-        Now go to **GCC C++ Linker**,there you have to fill two spaces:
+      b. Now go to **GCC C++ Linker**,there you have to fill two spaces:
 
-          First in **Library search path (-L)** you have to write the path to where the opencv libraries reside, in my case the path is:
-          
-          ::
+         First in **Library search path (-L)** you have to write the path to where the opencv libraries reside, in my case the path is:
+         ::
           
             /usr/local/lib
           
-          Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first on the list below are enough (for simple applications) . In my case, I am putting all of them since I plan to use the whole bunch:
-
-          * In **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first on the list below are enough (for simple applications) . In my case, I am putting all of them since I plan to use the whole bunch:
-
-          opencv_core      
-          opencv_imgproc     
-          opencv_highgui
-          opencv_ml       
-          opencv_video      
-          opencv_features2d
-          opencv_calib3d   
-          opencv_objdetect   
-          opencv_contrib
-          opencv_legacy    
-          opencv_flann
+         Then in **Libraries(-l)** add the OpenCV libraries that you may need. Usually just the 3 first on the list below are enough (for simple applications) . In my case, I am putting all of them since I plan to use the whole bunch:
 
 
-            * opencv_core      
-            * opencv_imgproc     
-            * opencv_highgui
-            * opencv_ml       
-            * opencv_video      
-            * opencv_features2d
-            * opencv_calib3d   
-            * opencv_objdetect   
-            * opencv_contrib
-            * opencv_legacy    
-            * opencv_flann
-          
-          .. image:: images/Eclipse_Tutorial_Screenshot-10.png
+         opencv_core      
+         opencv_imgproc     
+         opencv_highgui
+         opencv_ml       
+         opencv_video      
+         opencv_features2d
+         opencv_calib3d   
+         opencv_objdetect   
+         opencv_contrib
+         opencv_legacy    
+         opencv_flann
+
+         .. image:: images/a10.png
              :height: 400px 
              :alt: Eclipse Tutorial Screenshot 10
              :align: center 
-          .. image:: images/a10.png
-             :height: 400px 
-             :alt: Eclipse Tutorial Screenshot 10
-             :align: center 
+             
+         If you don't know where your libraries are (or you are just psychotic and want to make sure the path is fine), type in **Terminal**:
 
-          .. note::
-          If you don't know where your libraries are (or you are just psychotic and want to make sure the path is fine), type in **Terminal**:
+         .. code-block:: bash
+         
+            pkg-config --libs opencv
 
-             If you don't know where your libraries are (or you are just psychotic and want to make sure the path is fine), type in **Terminal**:
-          .. code-block:: bash
 
-             .. code-block:: bash
-            
-                pkg-config --libs opencv
-             pkg-config --libs opencv
+         My output (in case you want to check) was:
+         .. code-block:: bash
+            -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann  
 
-             My output (in case you want to check) was:
-          My output (in case you want to check) was:
-
-             .. code-block:: bash
-          .. code-block:: bash
-
-                -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann  
-             -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann  
-
-          Now you are done. Click **OK**
-
+         Now you are done. Click **OK**
 
     * Your project should be ready to be built. For this, go to **Project->Build all**   
- 
-      .. image:: images/Eclipse_Tutorial_Screenshot-11.png
 
       .. image:: images/a11.png
          :height: 400px 
@@ -225,7 +190,6 @@ Making a project
 
       In the Console you should get something like 
 
-      .. image:: images/Eclipse_Tutorial_Screenshot-12.png
       .. image:: images/a12.png
          :height: 200px 
          :alt: Eclipse Tutorial Screenshot 12
@@ -243,14 +207,12 @@ So, now we have an executable ready to run. If we were to use the Terminal, we w
    cd <DisplayImage_directory>
    cd src
    ./DisplayImage ../images/HappyLittleFish.jpg
-  
 
 Assuming that the image to use as the argument would be located in <DisplayImage_directory>/images/HappyLittleFish.jpg. We can still do this, but let's do it from Eclipse:
 
 
 #. Go to **Run->Run Configurations** 
 
-   .. image:: images/Eclipse_Tutorial_Screenshot-13.png
    .. image:: images/a13.png
       :height: 300px 
       :alt: Eclipse Tutorial Screenshot 13
@@ -260,7 +222,6 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 
 #. Now, in the right side of the window, choose the **Arguments** Tab. Write the path of the image file we want to open (path relative to the workspace/DisplayImage folder). Let's use **HappyLittleFish.jpg**:
 
-   .. image:: images/Eclipse_Tutorial_Screenshot-14.png
    .. image:: images/a14.png
       :height: 300px 
       :alt: Eclipse Tutorial Screenshot 14
@@ -268,11 +229,9 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 
 #. Click on the **Apply** button and then in Run. An OpenCV window should pop up with the fish image (or whatever you used).
 
-   .. image:: images/Eclipse_Tutorial_Screenshot-15.png
    .. image:: images/a15.png
       :alt: Eclipse Tutorial Screenshot 15
       :align: center 
 
 
-#. Congratulations! You are ready to have fun with OpenCV using Eclipse.
 #. Congratulations! You are ready to have fun with OpenCV using Eclipse.
