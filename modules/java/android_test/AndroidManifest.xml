@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.opencv_test"
+      android:versionCode="1"
+      android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="8" />
+    <instrumentation android:targetPackage="org.opencv_test" android:name="android.test.InstrumentationTestRunner" />
+    <application android:icon="@drawable/icon" android:label="@string/app_name">
+
+    <uses-library android:name="android.test.runner" />
+    </application>
+</manifest>
