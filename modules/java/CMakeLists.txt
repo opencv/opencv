@@ -136,5 +136,29 @@ foreach(java_file ${java_project_files} ${generated_java_sources})
     endif()
 endforeach()
 
+#android test project
+if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)
+    SET(test_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
+    SET(test_target OpenCV_JavaAPI_Tests)
+
+    add_custom_target(${test_target} ALL)
+    add_dependencies(${test_target} opencv_java opencv_java_api)
+
+    file(RELATIVE_PATH OPENCV_REFERENCE_PATH "${test_dir}" "${CMAKE_BINARY_DIR}")
+
+    add_custom_command(
+        TARGET ${test_target}
+        WORKING_DIRECTORY ${test_dir}
+        COMMAND ${CMAKE_COMMAND} -E remove -f "${test_dir}/default.properties"
+        COMMAND ${CMAKE_COMMAND} -E touch "${test_dir}/default.properties"
+        COMMAND ${ANDROID_EXECUTABLE} update project --name "${test_target}" --target 7 --library "${OPENCV_REFERENCE_PATH}" --path .
+        COMMAND ${ANT_EXECUTABLE} debug
+        COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/bin/${test_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${test_target}-debug.apk"
+        )
+
+    LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/bin/${test_target}-debug.apk" "${test_dir}/build.xml" "${test_dir}/local.properties" "${test_dir}/proguard.cfg")
+
+endif()
+
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${additional_clean_files}")
 
