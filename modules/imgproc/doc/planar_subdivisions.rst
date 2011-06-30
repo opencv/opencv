@@ -30,34 +30,34 @@ Planar subdivision.
 
 Planar subdivision is the subdivision of a plane into a set of
 non-overlapped regions (facets) that cover the whole plane. The above
-structure describes a subdivision built on a 2d point set, where the points
+structure describes a subdivision built on a 2D point set, where the points
 are linked together and form a planar graph, which, together with a few
 edges connecting the exterior subdivision points (namely, convex hull points)
 with infinity, subdivides a plane into facets by its edges.
 
-For every subdivision there exists a dual subdivision in which facets and
-points (subdivision vertices) swap their roles, that is, a facet is
+For every subdivision, there is a dual subdivision in which facets and
+points (subdivision vertices) swap their roles. This means that a facet is
 treated as a vertex (called a virtual point below) of the dual subdivision and
-the original subdivision vertices become facets. On the picture below
-original subdivision is marked with solid lines and dual subdivision
+the original subdivision vertices become facets. In the figure below, the
+original subdivision is marked with solid lines and dual subdivision -
 with dotted lines.
 
 .. image:: pics/subdiv.png
 
-OpenCV subdivides a plane into triangles using Delaunay's
+OpenCV subdivides a plane into triangles using the Delaunay's
 algorithm. Subdivision is built iteratively starting from a dummy
 triangle that includes all the subdivision points for sure. In this
-case the dual subdivision is a Voronoi diagram of the input 2d point set. The
-subdivisions can be used for the 3d piece-wise transformation of a plane,
+case, the dual subdivision is a Voronoi diagram of the input 2D point set. The
+subdivisions can be used for the 3D piece-wise transformation of a plane,
 morphing, fast location of points on the plane, building special graphs
-(such as NNG,RNG) and so forth.
+(such as NNG,RNG), and so forth.
 
 CvQuadEdge2D
 ------------
 
 .. ocv:struct:: CvQuadEdge2D
 
-Quad-edge of planar subdivision.
+Quad-edge of a planar subdivision.
 
 ::
 
@@ -79,7 +79,7 @@ Quad-edge of planar subdivision.
 
 ..
 
-Quad-edge is a basic element of subdivision containing four edges (e, eRot, reversed e and reversed eRot):
+Quad-edge is a basic element of a subdivision containing four edges (e, eRot, reversed e, and reversed eRot):
 
 .. image:: pics/quadedge.png
 
@@ -88,7 +88,7 @@ CvSubdiv2DPoint
 
 .. ocv:struct:: CvSubdiv2DPoint
 
-Point of original or dual subdivision.
+Point of an original or dual subdivision.
 
 ::
 
@@ -109,37 +109,36 @@ Point of original or dual subdivision.
 ..
 
 * id
-    This integer can be used to index auxillary data associated with each vertex of the planar subdivision
+    This integer can be used to index auxillary data associated with each vertex of the planar subdivision.
 
 CalcSubdivVoronoi2D
 -------------------
-Calculates the coordinates of Voronoi diagram cells.
+Calculates the coordinates of the Voronoi diagram cells.
 
 .. ocv:cfunction:: void cvCalcSubdivVoronoi2D(  CvSubdiv2D* subdiv )
 .. ocv:pyoldfunction:: cv.CalcSubdivVoronoi2D(subdiv)-> None
 
-    :param subdiv: Delaunay subdivision, in which all the points are already added
+    :param subdiv: Delaunay subdivision, in which all the points are already added.
 
 The function calculates the coordinates
-of virtual points. All virtual points corresponding to some vertex of the
+of virtual points. All virtual points corresponding to a vertex of the
 original subdivision form (when connected together) a boundary of the Voronoi
 cell at that point.
 
 ClearSubdivVoronoi2D
 --------------------
+Removes all virtual points.
 
 .. ocv:cfunction:: void cvClearSubdivVoronoi2D( CvSubdiv2D* subdiv )
 .. ocv:pyoldfunction:: cv.ClearSubdivVoronoi2D(subdiv)-> None
 
-    Removes all virtual points.
-
-    :param subdiv: Delaunay subdivision
+    :param subdiv: Delaunay subdivision.
 
 The function removes all of the virtual points. It
 is called internally in 
 :ocv:cfunc:`CalcSubdivVoronoi2D`
 if the subdivision
-was modified after previous call to the function.
+was modified after the previous call to the function.
 
 CreateSubdivDelaunay2D
 ----------------------
@@ -148,15 +147,15 @@ Creates an empty Delaunay triangulation.
 .. ocv:cfunction:: CvSubdiv2D* cvCreateSubdivDelaunay2D(  CvRect rect, CvMemStorage* storage )
 .. ocv:pyoldfunction:: cv.CreateSubdivDelaunay2D(rect, storage)-> emptyDelaunayTriangulation
 
-    :param rect: Rectangle that includes all of the 2d points that are to be added to the subdivision
+    :param rect: Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
-    :param storage: Container for subdivision
+    :param storage: Container for the subdivision.
 
 The function creates an empty Delaunay
-subdivision, where 2d points can be added using the function
+subdivision where 2D points can be added using the function
 :ocv:cfunc:`SubdivDelaunay2DInsert`
 . All of the points to be added must be within
-the specified rectangle, otherwise a runtime error will be raised.
+the specified rectangle, otherwise a runtime error is raised.
 
 Note that the triangulation is a single large triangle that covers the given rectangle.  Hence the three vertices of this triangle are outside the rectangle 
 ``rect``
@@ -164,14 +163,14 @@ Note that the triangulation is a single large triangle that covers the given rec
 
 FindNearestPoint2D
 ------------------
-Finds the closest subdivision vertex to the given point.
+Finds the subdivision vertex closest to the given point.
 
 .. ocv:cfunction:: CvSubdiv2DPoint* cvFindNearestPoint2D(  CvSubdiv2D* subdiv, CvPoint2D32f pt )
 .. ocv:pyoldfunction:: cv.FindNearestPoint2D(subdiv, pt)-> point
 
-    :param subdiv: Delaunay or another subdivision
+    :param subdiv: Delaunay or another subdivision.
 
-    :param pt: Input point
+    :param pt: Input point.
 
 The function is another function that
 locates the input point within the subdivision. It finds the subdivision vertex that
@@ -188,10 +187,10 @@ Returns the edge destination.
 .. ocv:cfunction:: CvSubdiv2DPoint* cvSubdiv2DEdgeDst(  CvSubdiv2DEdge edge )
 .. ocv:pyoldfunction:: cv.Subdiv2DEdgeDst(edge)-> point
 
-    :param edge: Subdivision edge (not a quad-edge)
+    :param edge: Subdivision edge (not a quad-edge).
 
 The function returns the edge destination. The
-returned pointer may be NULL if the edge is from dual subdivision and
+returned pointer may be NULL if the edge is from a dual subdivision and
 the virtual point coordinates are not calculated yet. The virtual points
 can be calculated using the function 
 :ocv:cfunc:`CalcSubdivVoronoi2D`.
@@ -203,9 +202,9 @@ Returns one of the edges related to the given edge.
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DGetEdge( CvSubdiv2DEdge edge, CvNextEdgeType type )
 .. ocv:pyoldfunction:: cv.Subdiv2DGetEdge(edge, type)-> CvSubdiv2DEdge
 
-    :param edge: Subdivision edge (not a quad-edge)
+    :param edge: Subdivision edge (not a quad-edge).
 
-    :param type: Specifies which of the related edges to return, one of the following:
+    :param type: Parameter specifying which of the related edges to return. The following values are possible:
 
         * **CV_NEXT_AROUND_ORG** next around the edge origin ( ``eOnext``  on the picture below if  ``e``  is the input edge)
 
@@ -229,18 +228,18 @@ The function returns one of the edges related to the input edge.
 
 Subdiv2DNextEdge
 ----------------
-Returns next edge around the edge origin
+Returns next edge around the edge origin.
 
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DNextEdge( CvSubdiv2DEdge edge )
 .. ocv:pyoldfunction:: cv.Subdiv2DNextEdge(edge)-> CvSubdiv2DEdge
 
-    :param edge: Subdivision edge (not a quad-edge)
+    :param edge: Subdivision edge (not a quad-edge).
 
 The function returns the next edge around the edge origin: 
 ``eOnext``
 on the picture above if 
 ``e``
-is the input edge)
+is the input edge).
 
 Subdiv2DLocate
 --------------
@@ -249,15 +248,15 @@ Returns the location of a point within a Delaunay triangulation.
 .. ocv:cfunction:: CvSubdiv2DPointLocation  cvSubdiv2DLocate(  CvSubdiv2D* subdiv, CvPoint2D32f pt, CvSubdiv2DEdge* edge, CvSubdiv2DPoint** vertex=NULL )
 .. ocv:pyoldfunction:: cv.Subdiv2DLocate(subdiv, pt) -> (loc, where)
 
-    :param subdiv: Delaunay or another subdivision
+    :param subdiv: Delaunay or another subdivision.
 
-    :param pt: The point to locate
+    :param pt: Point to locate.
 
-    :param edge: The output edge the point falls onto or right to
+    :param edge: Output edge the point falls onto or right to.
 
-    :param vertex: Optional output vertex double pointer the input point coinsides with
+    :param vertex: Optional output vertex double pointer the input point coinsides with.
 
-The function locates the input point within the subdivision. There are 5 cases:
+The function locates the input point within the subdivision. There are five cases:
 
 *
     The point falls into some facet. The function returns 
@@ -297,9 +296,9 @@ Returns another edge of the same quad-edge.
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DRotateEdge(  CvSubdiv2DEdge edge, int rotate )
 .. ocv:pyoldfunction:: cv.Subdiv2DRotateEdge(edge, rotate)-> CvSubdiv2DEdge
 
-    :param edge: Subdivision edge (not a quad-edge)
+    :param edge: Subdivision edge (not a quad-edge).
 
-    :param rotate: Specifies which of the edges of the same quad-edge as the input one to return, one of the following:
+    :param rotate: Parameter specifying which of the edges of the same quad-edge as the input one to return. The following values are possible:
 
             * **0** the input edge ( ``e``  on the picture below if  ``e``  is the input edge)
 
@@ -318,9 +317,9 @@ Inserts a single point into a Delaunay triangulation.
 .. ocv:cfunction:: CvSubdiv2DPoint*  cvSubdivDelaunay2DInsert(  CvSubdiv2D* subdiv, CvPoint2D32f pt)
 .. ocv:pyoldfunction:: cv.SubdivDelaunay2DInsert(subdiv, pt)-> point
 
-    :param subdiv: Delaunay subdivision created by the function  :ocv:cfunc:`CreateSubdivDelaunay2D`
+    :param subdiv: Delaunay subdivision created by the function  :ocv:cfunc:`CreateSubdivDelaunay2D`.
 
-    :param pt: Inserted point
+    :param pt: Inserted point.
 
 The function inserts a single point into a subdivision and modifies the subdivision topology appropriately. If a point with the same coordinates exists already, no new point is added. The function returns a pointer to the allocated point. No virtual point coordinates are calculated at this stage.
 
