@@ -48,6 +48,10 @@
     #define NCV_EXPORTS
 #endif
 
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <cuda_runtime.h>
 
 
