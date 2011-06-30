@@ -80,12 +80,38 @@ set(OPENCV_VERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VER
 set(OPENCV_SOVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}")
 
 if(WIN32)
+    set(OPENCV_DLL_VERSION_SUFFIX "")
     # Postfix of DLLs:
-    set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+    if(${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
+        set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_mingw")
+    endif()
+
+    if(${CMAKE_GENERATOR} MATCHES "Visual.*")
+        set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_vs")
+
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 8 2005.*")
+            set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2005")
+        endif()
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 9 2008.*")
+            set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2008")
+        endif()
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 10.*")
+            set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2010")
+        endif()                                     
+    endif()
+
+    if(${CMAKE_GENERATOR} MATCHES "Visual Studio.*Win64")
+        set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_64")
+    endif()
+
+    if(NOT BUILD_SHARED_LIBS)
+        set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}l")
+    endif()
+
+    set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}${OPENCV_DLL_VERSION_SUFFIX}")
     set(OPENCV_DEBUG_POSTFIX d)
 else()
     # Postfix of so's:
-    #set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
     set(OPENCV_DLLVERSION "")
     set(OPENCV_DEBUG_POSTFIX)
 endif()
@@ -196,9 +222,9 @@ if(SVNVERSION_PATH)
     execute_process(COMMAND ${SVNVERSION_PATH} -n ${OpenCV_SOURCE_DIR} OUTPUT_VARIABLE SVNVERSION_RESULT)
 
     if(SVNVERSION_RESULT MATCHES "exported")
-       # This is NOT a svn repository:
-       set(OPENCV_SVNVERSION "")
-       message(STATUS "SVNVERSION: exported")
+        # This is NOT a svn repository:
+        set(OPENCV_SVNVERSION "")
+        message(STATUS "SVNVERSION: exported")
     else()
         set(OPENCV_SVNVERSION " svn:${SVNVERSION_RESULT}")
         message(STATUS "SVNVERSION: ${OPENCV_SVNVERSION}")
@@ -623,7 +649,7 @@ if(WIN32)
     set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
 endif()
 
-IF ("${PYTHON_VERSION_MAJOR_MINOR}" VERSION_GREATER 2.5)
+IF ("${PYTHON_VERSION_MAJOR_MINOR}" VERSION_GREATER 2.5.-1)
     SET(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} -B)
 ENDIF()
 
@@ -1627,3 +1653,9 @@ message(STATUS "")
 message(STATUS "    cvconfig.h is in:           ${OPENCV_CONFIG_FILE_INCLUDE_DIR}")
 message(STATUS "-----------------------------------------------------------------")
 message(STATUS "")
+
+# warn in the case of in-source build
+if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+    message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
+endif()
+
