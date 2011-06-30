@@ -5,7 +5,14 @@
 
 add_subdirectory(c)
 add_subdirectory(cpp)
-add_subdirectory(gpu)
+
+if(NOT ANDROID)
+    add_subdirectory(gpu)
+endif()
+
+if(ANDROID AND CAN_BUILD_ANDROID_PROJECTS)
+   add_subdirectory(android)
+endif()
 
 if(0)
 add_subdirectory(swig_python)

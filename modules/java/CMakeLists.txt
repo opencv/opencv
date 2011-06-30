@@ -12,6 +12,8 @@ ENDIF()
 SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 
+SET(additional_clean_files "")
+
 foreach(module ${OPENCV_JAVA_MODULES})
     IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist")
         FILE(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist" headers_to_parse)
@@ -100,6 +102,7 @@ IF(ANDROID)
                 COMMENT "Generating ${lib_file_name}"
                 )
             install(FILES "${CMAKE_BINARY_DIR}/${lib_file_name}" DESTINATION . COMPONENT main)
+            LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/${lib_file_name}")
         endif()
     endforeach()
 
@@ -111,6 +114,7 @@ IF(ANDROID)
             DEPENDS "${jni_file}"
             COMMENT "Generating jni/${jni_file_name}"
             )
+        LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/jni/${jni_file_name}")
     endforeach()
 ENDIF()
 
@@ -126,8 +130,11 @@ foreach(java_file ${java_project_files} ${generated_java_sources})
         DEPENDS "${JAVA_OUTPUT_DIR}"
         COMMENT "Generating src/org/opencv/${java_file_name}"
         )
+    LIST(APPEND additional_clean_files "${JAVA_OUTPUT_DIR}/${java_file_name}")
     if(ANDROID)
         install(FILES "${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION src/org/opencv COMPONENT main)
     endif()
 endforeach()
+
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${additional_clean_files}")
 
