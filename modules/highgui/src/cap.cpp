@@ -127,8 +127,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         CV_CAP_MIL,
         CV_CAP_QT,
         CV_CAP_UNICAP,
+#ifdef HAVE_OPENNI
         CV_CAP_OPENNI,
+#endif
+#ifdef HAVE_ANDROID_NATIVE_CAMERA
         CV_CAP_ANDROID,
+#endif
         -1
     };
 
