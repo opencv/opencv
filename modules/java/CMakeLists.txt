@@ -151,7 +151,7 @@ if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)
         WORKING_DIRECTORY ${test_dir}
         COMMAND ${CMAKE_COMMAND} -E remove -f "${test_dir}/default.properties"
         COMMAND ${CMAKE_COMMAND} -E touch "${test_dir}/default.properties"
-        COMMAND ${ANDROID_EXECUTABLE} update project --name "${test_target}" --target 7 --library "${OPENCV_REFERENCE_PATH}" --path .
+        COMMAND ${ANDROID_EXECUTABLE} update project --name "${test_target}" --target android-8 --library "${OPENCV_REFERENCE_PATH}" --path .
         COMMAND ${ANT_EXECUTABLE} debug
         COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/bin/${test_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${test_target}-debug.apk"
         )

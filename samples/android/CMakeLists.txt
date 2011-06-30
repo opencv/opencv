@@ -50,7 +50,7 @@ if (BUILD_EXAMPLES)
             WORKING_DIRECTORY ${sample_dir}
             COMMAND ${CMAKE_COMMAND} -E remove -f "${sample_dir}/default.properties"
             COMMAND ${CMAKE_COMMAND} -E touch "${sample_dir}/default.properties"
-            COMMAND ${ANDROID_EXECUTABLE} update project --name "${sample}" --target 7 ${opencv_reference} --path .
+            COMMAND ${ANDROID_EXECUTABLE} update project --name "${sample}" --target android-8 ${opencv_reference} --path .
             COMMAND ${ANT_EXECUTABLE} debug
             COMMAND ${CMAKE_COMMAND} -E copy "${sample_dir}/bin/${sample}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${sample}-debug.apk"
         )
