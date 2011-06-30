@@ -13,6 +13,7 @@ differential loss function, some popular ones are implemented.
 Decision trees (:ocv:class:`CvDTree`) usage as base learners allows to process ordered
 and categorical variables.
 
+.. _Training GBT:
 
 Training the GBT model
 ----------------------
@@ -67,7 +68,7 @@ The following loss functions are implemented for regression problems:
     \delta\cdot\left(|y-f(x)|-\dfrac{\delta}{2}\right) & : |y-f(x)|>\delta\\
     \dfrac{1}{2}\cdot(y-f(x))^2 & : |y-f(x)|\leq\delta \end{array} \right.`,
     
-	where :math:`\delta` is the :math:`\alpha`-quantile estimation of the
+    where :math:`\delta` is the :math:`\alpha`-quantile estimation of the
     :math:`|y-f(x)|`. In the current implementation :math:`\alpha=0.2`.
 
 
@@ -88,9 +89,10 @@ where :math:`f_0` is the initial guess (the best constant model) and :math:`\nu`
 is a regularization parameter from the interval :math:`(0,1]`, futher called
 *shrinkage*.
 
+.. _Predicting with GBT:
 
 Predicting with the GBT Model
--------------------------
+-----------------------------
 
 To get the GBT model prediciton, you need to compute the sum of responses of
 all the trees in the ensemble. For regression problems, it is the answer.
@@ -118,7 +120,7 @@ CvGBTreesParams::CvGBTreesParams
 .. ocv:function:: CvGBTreesParams::CvGBTreesParams( int loss_function_type, int weak_count, float shrinkage, float subsample_portion, int max_depth, bool use_surrogates )
 
    :param loss_function_type: Type of the loss function used for training
-    (see :ref:`Training the GBT model`). It must be one of the
+    (see :ref:`Training GBT`). It must be one of the
     following types: ``CvGBTrees::SQUARED_LOSS``, ``CvGBTrees::ABSOLUTE_LOSS``,
     ``CvGBTrees::HUBER_LOSS``, ``CvGBTrees::DEVIANCE_LOSS``. The first three
     types are used for regression problems, and the last one for
@@ -128,7 +130,7 @@ CvGBTreesParams::CvGBTreesParams
     count of trees in the GBT model, where ``K`` is the output classes count
     (equal to one in case of a regression).
   
-   :param shrinkage: Regularization parameter (see :ref:`Training the GBT model`).
+   :param shrinkage: Regularization parameter (see :ref:`Training GBT`).
     
    :param subsample_portion: Portion of the whole training set used for each algorithm iteration.
     Subset is generated randomly. For more information see
@@ -222,13 +224,13 @@ Predicts a response for an input sample.
     only one model.
     
    :param k: Number of tree ensembles built in case of the classification problem
-    (see :ref:`Training the GBT model`). Use this
+    (see :ref:`Training GBT`). Use this
     parameter to change the ouput to sum of the trees' predictions in the
     ``k``-th ensemble only. To get the total GBT model prediction, ``k`` value
     must be -1. For regression problems, ``k`` is also equal to -1.
  
 The method predicts the response corresponding to the given sample
-(see :ref:`Predicting with the GBT model`).
+(see :ref:`Predicting with GBT`).
 The result is either the class label or the estimated function value. The
 :ocv:func:`predict` method enables using the parallel version of the GBT model
 prediction if the OpenCV is built with the TBB library. In this case, predictions

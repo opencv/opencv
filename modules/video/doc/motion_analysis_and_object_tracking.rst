@@ -205,10 +205,10 @@ In case of point sets, the problem is formulated as follows: you need to find a 
     when ``fullAffine=false`` .
 
 .. seealso::
-   :ocv:func:`getAffineTransform`,
-   :ocv:func:`getPerspectiveTransform`,
-   :ocv:func:`findHomography`
 
+    :ocv:func:`getAffineTransform`,
+    :ocv:func:`getPerspectiveTransform`,
+    :ocv:func:`findHomography`
 
 
 
@@ -242,12 +242,8 @@ That is, MHI pixels where the motion occurs are set to the current ``timestamp``
 The function, together with
 :ocv:func:`calcMotionGradient` and
 :ocv:func:`calcGlobalOrientation` , implements a motion templates technique described in
-[Davis97]_
-and
-[Bradski00]_
-.
+[Davis97]_ and [Bradski00]_.
 See also the OpenCV sample ``motempl.c`` that demonstrates the use of all the motion template functions.
-
 
 
 calcMotionGradient
@@ -267,7 +263,9 @@ Calculates a gradient orientation of a motion history image.
 
     :param orientation: Output motion gradient orientation image that has the same type and the same size as  ``mhi`` . Each pixel of the image is a motion orientation, from 0 to 360 degrees.
 
-    :param delta1, delta2: Minimum and maximum allowed difference between  ``mhi``  values within a pixel neighorhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
+    :param delta1: Minimal (or maximal) allowed difference between  ``mhi``  values within a pixel neighorhood.
+    
+    :param delta2: Maximal (or minimal) allowed difference between  ``mhi``  values within a pixel neighorhood. That is, the function finds the minimum ( :math:`m(x,y)` ) and maximum ( :math:`M(x,y)` )  ``mhi``  values over  :math:`3 \times 3`  neighborhood of each pixel and marks the motion orientation at  :math:`(x, y)`  as valid only if
 
         .. math::
 
@@ -354,6 +352,7 @@ Finds an object center, size, and orientation.
 .. ocv:pyfunction:: cv2.CamShift(probImage, window, criteria) -> retval, window
 
 .. ocv:cfunction:: int cvCamShift( const CvArr* probImage, CvRect window, CvTermCriteria criteria, CvConnectedComp* comp, CvBox2D* box=NULL )
+
 .. ocv:pyoldfunction:: cv.CamShift(probImage, window, criteria)-> (int, comp, box)
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` .
@@ -501,7 +500,7 @@ BackgroundSubtractor::operator()
 --------------------------------
 Computes a foreground mask.
 
-.. ocv:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+.. ocv:function:: void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
 .. ocv:pyfunction:: cv2.BackgroundSubtractor.apply(image[, fgmask[, learningRate]]) -> fgmask
 
@@ -514,7 +513,7 @@ BackgroundSubtractor::getBackgroundImage
 ----------------------------------------
 Computes a background image.
 
-.. ocv:function:: virtual void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
+.. ocv:function:: void BackgroundSubtractor::getBackgroundImage(OutputArray backgroundImage) const
 
     :param backgroundImage: The output background image.
     
@@ -559,7 +558,7 @@ BackgroundSubtractorMOG::operator()
 -----------------------------------
 Updates the background model and returns the foreground mask
 
-.. ocv:function:: virtual void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+.. ocv:function:: void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
 Parameters are the same as in ``BackgroundSubtractor::operator()``
 
@@ -636,17 +635,16 @@ BackgroundSubtractorMOG2::operator()
 ------------------------------------
 Updates the background model and computes the foreground mask
 
-.. ocv:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
+.. ocv:function:: void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
 
-    See ``BackgroundSubtractor::operator ()``.
-
+    See :ocv:func:`BackgroundSubtractor::operator()`.
 
 
 BackgroundSubtractorMOG2::getBackgroundImage
 --------------------------------------------
 Returns background image
 
-.. ocv:function:: virtual void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage)
+.. ocv:function:: void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage)
 
 See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 

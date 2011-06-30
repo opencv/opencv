@@ -18,7 +18,7 @@ Computes an absolute value of each matrix element.
 
     * ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``     
 
-    * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to :ocv:funcx:`convertScaleAbs`(A, C, alpha, beta)`
+    * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to :ocv:funcx:`convertScaleAbs` (A, C, alpha, beta)
     
 The output matrix has the same size and the same type as the input one except for the last case, where ``C`` is ``depth=CV_8U`` .
 
@@ -2172,7 +2172,7 @@ PCA constructors
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
 The default constructor initializes an empty PCA structure. The second constructor initializes the structure and calls
-:ocv:func:`PCA::operator ()` .
+:ocv:func:`PCA::operator()` .
 
 
 
@@ -3114,7 +3114,7 @@ The constructors.
         * **SVD::FULL_UV** When the matrix is not square, by default the algorithm produces  ``u``  and  ``vt``  matrices of sufficiently large size for the further  ``A``  reconstruction. If, however, ``FULL_UV``  flag is specified, ``u``  and  ``vt``  will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
-:ocv:func:`SVD::operator ()` .
+:ocv:func:`SVD::operator()` .
 
 
 SVD::operator ()
@@ -3163,7 +3163,7 @@ Performs SVD of a matrix
     
     :param flags: Opertion flags - see :ocv:func:`SVD::SVD`.
 
-The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator ()``, they store the results to the user-provided matrices. ::
+The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 
     Mat A, w, u, vt;
     SVD::compute(A, w, u, vt);
@@ -3231,7 +3231,7 @@ Calculates the sum of array elements.
 
 .. ocv:function:: Scalar sum(InputArray arr)
 
-.. ocv:function:: cv2.sumElems(arr) -> retval
+.. ocv:pyfunction:: cv2.sumElems(arr) -> retval
 
 .. ocv:cfunction:: CvScalar cvSum(const CvArr* arr)
 .. ocv:pyoldfunction:: cv.Sum(arr)-> CvScalar

@@ -115,6 +115,7 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
 .. note:: The GPU filters do not support the in-place mode.
 
 .. seealso:: 
+
    :ocv:class:`gpu::BaseRowFilter_GPU`, 
    :ocv:class:`gpu::BaseColumnFilter_GPU`, 
    :ocv:class:`gpu::BaseFilter_GPU`, 
@@ -454,11 +455,13 @@ gpu::getLinearRowFilter_GPU
 
     :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate`. For details on limitations, see below.
 
-    There are two versions of the algorithm: NPP and OpenCV.
-    * NPP version is called when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
-    * OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside the image.
+There are two versions of the algorithm: NPP and OpenCV.
+        
+        * NPP version is called when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
+        
+        * OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``,``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside the image.
 
-See Also:,:ocv:func:`createSeparableLinearFilter` .
+.. seealso:: :ocv:func:`createSeparableLinearFilter` .
 
 .. index:: gpu::getLinearColumnFilter_GPU
 
@@ -496,12 +499,15 @@ gpu::createSeparableLinearFilter_GPU
 
     :param dstType: Destination array type.  ``CV_8UC1``, ``CV_8UC4``, ``CV_16SC1``, ``CV_16SC2``, ``CV_32SC1``, ``CV_32FC1``  destination types are supported.
 
-    :param rowKernel, columnKernel: Filter coefficients.
+    :param rowKernel: Horizontal filter coefficients.
+    
+    :param columnKernel: Vertical filter coefficients.
 
     :param anchor: Anchor position within the kernel. Negative values mean that anchor is positioned at the aperture center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method in the horizontal and vertical directions For details, see  :ocv:func:`borderInterpolate`. For details on limitations, see :ocv:func:`gpu::getLinearRowFilter_GPU`, cpp:ocv:func:`gpu::getLinearColumnFilter_GPU`.
-
+    :param rowBorderType: Pixel extrapolation method in the vertical direction For details, see  :ocv:func:`borderInterpolate`. For details on limitations, see :ocv:func:`gpu::getLinearRowFilter_GPU`, cpp:ocv:func:`gpu::getLinearColumnFilter_GPU`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`gpu::getLinearColumnFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
 
@@ -519,11 +525,15 @@ gpu::sepFilter2D
 
     :param ddepth: Destination image depth.  ``CV_8U``, ``CV_16S``, ``CV_32S``, and  ``CV_32F`` are supported.
 
-    :param kernelX, kernelY: Filter coefficients.
+    :param kernelX: Horizontal filter coefficients.
+    
+    :param kernelY: Vertical filter coefficients.
 
     :param anchor: Anchor position within the kernel. The default value ``(-1, 1)`` means that the anchor is at the kernel center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`sepFilter2D`
 
@@ -545,7 +555,10 @@ gpu::createDerivFilter_GPU
 
     :param ksize: Aperture size. See  :ocv:func:`getDerivKernels` for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
+    
 
 .. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createDerivFilter`
 
@@ -571,7 +584,9 @@ gpu::Sobel
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. For details, see  :ocv:func:`getDerivKernels` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Sobel`
 
@@ -595,7 +610,9 @@ gpu::Scharr
 
     :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels`  for details.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`  and :ocv:func:`Scharr` .
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`Scharr`
 
@@ -615,7 +632,9 @@ gpu::createGaussianFilter_GPU
 
     :param sigmaY: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigmaY}\leftarrow\texttt{sigmaX}` .
 
-    :param rowBorderType, columnBorderType: Border type to use. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::createSeparableLinearFilter_GPU`, :ocv:func:`createGaussianFilter`
 
@@ -633,9 +652,13 @@ gpu::GaussianBlur
 
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. If they are zeros, they are computed from  ``sigmaX``  and  ``sigmaY`` .
 
-    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize``, ``sigmaX``, and  ``sigmaY`` .
+    :param sigmaX: Gaussian kernel standard deviation in X direction. 
+    
+    :param sigmaY: Gaussian kernel standard deviation in Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height``, respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modification of all this semantics, you are recommended to specify all of  ``ksize``, ``sigmaX``, and  ``sigmaY`` .
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
 
 .. seealso:: :ocv:func:`gpu::createGaussianFilter_GPU`, :ocv:func:`GaussianBlur`
 

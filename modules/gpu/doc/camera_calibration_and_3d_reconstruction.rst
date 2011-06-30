@@ -487,7 +487,7 @@ gpu::reprojectImageTo3D
 
     :param xyzw: Output 4-channel floating-point image of the same size as  ``disp`` . Each element of  ``xyzw(x,y)``  contains 3D coordinates  ``(x,y,z,1)``  of the point  ``(x,y)`` , computed from the disparity map.
 
-    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained via  :ref:`StereoRectify` .
+    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained via  :ocv:func:`stereoRectify` .
 
     :param stream: Stream for the asynchronous version.
 

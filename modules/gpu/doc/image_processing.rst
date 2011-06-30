@@ -3,7 +3,7 @@ Image Processing
 
 .. highlight:: cpp
 
-.. index:: gpu::meanShiftFiltering
+
 
 gpu::meanShiftFiltering
 ---------------------------
@@ -21,7 +21,7 @@ gpu::meanShiftFiltering
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-.. index:: gpu::meanShiftProc
+
 
 gpu::meanShiftProc
 ----------------------
@@ -41,10 +41,8 @@ gpu::meanShiftProc
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-.. seealso::
-   :ocv:func:`gpu::meanShiftFiltering` 
+.. seealso:: :ocv:func:`gpu::meanShiftFiltering` 
 
-.. index:: gpu::meanShiftSegmentation
 
 gpu::meanShiftSegmentation
 ------------------------------
@@ -64,7 +62,7 @@ gpu::meanShiftSegmentation
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-.. index:: gpu::integral
+
 
 gpu::integral
 -----------------
@@ -80,10 +78,9 @@ gpu::integral
 
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
-.. seealso::
-   :ocv:func:`integral` 
+.. seealso:: :ocv:func:`integral` 
 
-.. index:: gpu::sqrIntegral
+
 
 gpu::sqrIntegral
 --------------------
@@ -95,7 +92,7 @@ gpu::sqrIntegral
 
     :param sqsum: Squared integral image containing 64-bit unsigned integer values packed into  ``CV_64FC1`` .
 
-.. index:: gpu::columnSum
+
 
 gpu::columnSum
 ------------------
@@ -107,7 +104,7 @@ gpu::columnSum
 
     :param sum: Destination image of the  ``CV_32FC1`` type.
 
-.. index:: gpu::cornerHarris
+
 
 gpu::cornerHarris
 ---------------------
@@ -127,10 +124,8 @@ gpu::cornerHarris
 
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
-.. seealso::
-   :ocv:func:`cornerHarris` 
+.. seealso:: :ocv:func:`cornerHarris` 
 
-.. index:: gpu::cornerMinEigenVal
 
 gpu::cornerMinEigenVal
 --------------------------
@@ -152,7 +147,7 @@ gpu::cornerMinEigenVal
 
 .. seealso:: :ocv:func:`cornerMinEigenVal`
 
-.. index:: gpu::mulSpectrums
+
 
 gpu::mulSpectrums
 ---------------------
@@ -172,10 +167,8 @@ gpu::mulSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-.. seealso::
-   :ocv:func:`mulSpectrums` 
+.. seealso:: :ocv:func:`mulSpectrums` 
 
-.. index:: gpu::mulAndScaleSpectrums
 
 gpu::mulAndScaleSpectrums
 -----------------------------
@@ -197,10 +190,9 @@ gpu::mulAndScaleSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-.. seealso::
-   :ocv:func:`mulSpectrums` 
+.. seealso:: :ocv:func:`mulSpectrums` 
 
-.. index:: gpu::dft
+
 
 gpu::dft
 ------------
@@ -236,10 +228,9 @@ gpu::dft
     *
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
-.. seealso::
-   :ocv:func:`dft` 
+.. seealso:: :ocv:func:`dft` 
 
-.. index:: gpu::convolve
+
 
 gpu::convolve
 -----------------
@@ -259,7 +250,7 @@ gpu::convolve
 
     :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
-.. index:: gpu::ConvolveBuf
+
 
 gpu::ConvolveBuf
 ----------------
@@ -280,7 +271,7 @@ Class providing a memory buffer for the :ocv:func:`gpu::convolve` function.
     };
 
 
-.. index:: gpu::ConvolveBuf::ConvolveBuf
+
 
 gpu::ConvolveBuf::ConvolveBuf
 ---------------------------------
@@ -294,7 +285,7 @@ gpu::ConvolveBuf::ConvolveBuf
     Constructs a buffer for the 
     :ocv:func:`convolve` function with respective arguments.
 
-.. index:: gpu::matchTemplate
+
 
 gpu::matchTemplate
 ----------------------
@@ -324,10 +315,8 @@ gpu::matchTemplate
     * ``CV_TM_SQDIFF``
     * ``CV_TM_CCORR``
 
-.. seealso::
-   :ocv:func:`matchTemplate` 
+.. seealso:: :ocv:func:`matchTemplate` 
 
-.. index:: gpu::remap
 
 gpu::remap
 --------------
@@ -351,10 +340,8 @@ The function transforms the source image using the specified map:
 
 Values of pixels with non-integer coordinates are computed using the bilinear interpolation.
 
-.. seealso:: 
-   :ocv:func:`remap` 
+.. seealso:: :ocv:func:`remap` 
 
-.. index:: gpu::cvtColor
 
 gpu::cvtColor
 -----------------
@@ -376,10 +363,9 @@ gpu::cvtColor
 
 3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
-.. seealso::
-   :ocv:func:`cvtColor` 
+.. seealso:: :ocv:func:`cvtColor` 
 
-.. index:: gpu::threshold
+
 
 gpu::threshold
 ------------------
@@ -401,10 +387,9 @@ gpu::threshold
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-   :ocv:func:`threshold` 
+.. seealso:: :ocv:func:`threshold` 
 
-.. index:: gpu::resize
+
 
 gpu::resize
 ---------------
@@ -439,7 +424,7 @@ gpu::resize
 
 .. seealso:: :ocv:func:`resize` 
 
-.. index:: gpu::warpAffine
+
 
 gpu::warpAffine
 -------------------
@@ -457,10 +442,9 @@ gpu::warpAffine
 
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-.. seealso::
-   :ocv:func:`warpAffine` 
+.. seealso:: :ocv:func:`warpAffine` 
 
-.. index:: gpu::warpPerspective
+
 
 gpu::warpPerspective
 ------------------------
@@ -478,10 +462,9 @@ gpu::warpPerspective
 
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
-.. seealso::
-   :ocv:func:`warpPerspective` 
+.. seealso:: :ocv:func:`warpPerspective` 
 
-.. index:: gpu::rotate
+
 
 gpu::rotate
 ---------------
@@ -503,10 +486,9 @@ gpu::rotate
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
-.. seealso::
-   :ocv:func:`gpu::warpAffine` 
+.. seealso:: :ocv:func:`gpu::warpAffine` 
 
-.. index:: gpu::copyMakeBorder
+
 
 gpu::copyMakeBorder
 -----------------------
@@ -518,14 +500,18 @@ gpu::copyMakeBorder
 
     :param dst: Destination image with the same type as  ``src``. The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
 
-    :param top, bottom, left, right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
+    :param top:
+    
+    :param bottom:
+    
+    :param left:
+    
+    :param right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
     :param value: Border value.
 
-.. seealso::
-   :ocv:func:`copyMakeBorder`
+.. seealso:: :ocv:func:`copyMakeBorder`
 
-.. index:: gpu::rectStdDev
 
 gpu::rectStdDev
 -------------------
@@ -541,7 +527,7 @@ gpu::rectStdDev
 
     :param rect: Rectangular window.
 
-.. index:: gpu::evenLevels
+
 
 gpu::evenLevels
 -------------------
@@ -557,13 +543,11 @@ gpu::evenLevels
 
     :param upperLevel: Upper boundary value of the greatest level.
 
-.. index:: gpu::histEven
-
 gpu::histEven
 -----------------
 .. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
 
-.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4])
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, int* histSize, int* lowerLevel, int* upperLevel)
 
     Calculates a histogram with evenly distributed bins.
 
@@ -577,13 +561,11 @@ gpu::histEven
 
     :param upperLevel: Upper boundary of highest-level bin.
 
-.. index:: gpu::histRange
-
 gpu::histRange
 ------------------
 .. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
 
-.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4])
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels)
 
     Calculates a histogram with bins determined by the ``levels`` array.
 

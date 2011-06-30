@@ -78,7 +78,7 @@ The structure represents a possible decision tree node split. It has public memb
 
     Pointer to the next split in the node list of splits.
 
-.. ocv:member:: int subset[2]
+.. ocv:member:: int[] subset
 
     Bit array indicating the value subset in case of split on a categorical variable. The rule is:
 
@@ -90,13 +90,11 @@ The structure represents a possible decision tree node split. It has public memb
 
 .. ocv:member:: float ord.c 
 
-    The threshold value in case of split on an ordered variable. The rule is: 
+    The threshold value in case of split on an ordered variable. The rule is: ::
 
-::
-
-    if var_value < c 
-      then next_node<-left 
-      else next_node<-right
+        if var_value < c 
+          then next_node<-left 
+          else next_node<-right
 
 .. ocv:member:: int ord.split_point
 
@@ -125,7 +123,7 @@ The structure represents a node in a decision tree. It has public members:
 
     Pointer to the parent node.
 
-.. ocv:mebmer:: CvDTreeNode* left
+.. ocv:member:: CvDTreeNode* left
 
     Pointer to the left child node.
 
@@ -137,7 +135,7 @@ The structure represents a node in a decision tree. It has public members:
 
     Pointer to the first (primary) split in the node list of splits.
 
-.. ocv:mebmer:: int sample_count
+.. ocv:member:: int sample_count
 
     The number of samples that fall into the node at the training stage. It is used to resolve the difficult cases - when the variable for the primary split is missing and all the variables for other surrogate splits are missing too. In this case the sample is directed to the left if ``left->sample_count > right->sample_count`` and to the right otherwise. 
 

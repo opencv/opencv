@@ -92,7 +92,7 @@ you can use::
    Ptr<T> ptr = new T(...);
 
 That is, ``Ptr<T> ptr`` incapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the 
-:ref:`Ptr` 
+:ocv:class:`Ptr` 
 description for details.
 
 .. _AutomaticAllocation:
@@ -176,7 +176,7 @@ Multi-channel (``n``-channel) types can be specified using the following options
 
 .. note:: ``CV_32FC1 == CV_32F``, ``CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)``, and ``CV_MAKETYPE(depth, n) == ((x&7)<<3) + (n-1)``. This means that the  constant type is formed from the ``depth``, taking the lowest 3 bits, and the number of channels minus 1, taking the next ``log2(CV_CN_MAX)`` bits.
 
-Examples::
+Examples: ::
 
    Mat mtx(3, 3, CV_32F); // make a 3x3 floating-point matrix
    Mat cmtx(10, 1, CV_64FC2); // make a 10x1 2-channel floating-point

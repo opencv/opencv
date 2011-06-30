@@ -659,7 +659,7 @@ class FunctionTests(OpenCVTests):
         self.assert_(li[0] != None)
 
     def test_InPaint(self):
-        src = self.get_sample("doc/pics/building.jpg")
+        src = self.get_sample("samples/cpp/building.jpg")
         msk = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_8U, 1)
         damaged = cv.CloneMat(src)
         repaired = cv.CreateImage(cv.GetSize(src), cv.IPL_DEPTH_8U, 3)
@@ -866,7 +866,7 @@ class FunctionTests(OpenCVTests):
 
     def yield_line_image(self):
         """ Needed by HoughLines tests """
-        src = self.get_sample("doc/pics/building.jpg", 0)
+        src = self.get_sample("samples/cpp/building.jpg", 0)
         dst = cv.CreateImage(cv.GetSize(src), 8, 1)
         cv.Canny(src, dst, 50, 200, 3)
         return dst
@@ -2104,7 +2104,7 @@ class DocumentFragmentTests(OpenCVTests):
     """ Test the fragments of code that are included in the documentation """
     def setUp(self):
         OpenCVTests.setUp(self)
-        sys.path.append("../doc/python_fragments")
+        sys.path.append(".")
 
     def test_precornerdetect(self):
         from precornerdetect import precornerdetect
@@ -2118,7 +2118,7 @@ class DocumentFragmentTests(OpenCVTests):
 
     def test_findstereocorrespondence(self):
         from findstereocorrespondence import findstereocorrespondence
-        (l,r) = [self.get_sample("doc/pics/tsukuba_%s.png" % c, cv.CV_LOAD_IMAGE_GRAYSCALE) for c in "lr"]
+        (l,r) = [self.get_sample("samples/cpp/tsukuba_%s.png" % c, cv.CV_LOAD_IMAGE_GRAYSCALE) for c in "lr"]
 
         (disparity_left, disparity_right) = findstereocorrespondence(l, r)
 
@@ -2129,7 +2129,7 @@ class DocumentFragmentTests(OpenCVTests):
     def test_calchist(self):
         from calchist import hs_histogram
         i1 = self.get_sample("samples/c/lena.jpg")
-        i2 = self.get_sample("doc/pics/building.jpg")
+        i2 = self.get_sample("samples/cpp/building.jpg")
         i3 = cv.CloneMat(i1)
         cv.Flip(i3, i3, 1)
         h1 = hs_histogram(i1)

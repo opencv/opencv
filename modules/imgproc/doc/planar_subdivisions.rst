@@ -137,7 +137,7 @@ ClearSubdivVoronoi2D
 
 The function removes all of the virtual points. It
 is called internally in 
-:ref:`CalcSubdivVoronoi2D`
+:ocv:cfunc:`CalcSubdivVoronoi2D`
 if the subdivision
 was modified after previous call to the function.
 
@@ -154,7 +154,7 @@ Creates an empty Delaunay triangulation.
 
 The function creates an empty Delaunay
 subdivision, where 2d points can be added using the function
-:ref:`SubdivDelaunay2DInsert`
+:ocv:cfunc:`SubdivDelaunay2DInsert`
 . All of the points to be added must be within
 the specified rectangle, otherwise a runtime error will be raised.
 
@@ -177,7 +177,7 @@ The function is another function that
 locates the input point within the subdivision. It finds the subdivision vertex that
 is the closest to the input point. It is not necessarily one of vertices
 of the facet containing the input point, though the facet (located using
-:ref:`Subdiv2DLocate`
+:ocv:cfunc:`Subdiv2DLocate`
 ) is used as a starting
 point. The function returns a pointer to the found subdivision vertex.
 
@@ -194,8 +194,7 @@ The function returns the edge destination. The
 returned pointer may be NULL if the edge is from dual subdivision and
 the virtual point coordinates are not calculated yet. The virtual points
 can be calculated using the function 
-:ref:`CalcSubdivVoronoi2D`
-.
+:ocv:cfunc:`CalcSubdivVoronoi2D`.
 
 Subdiv2DGetEdge
 ---------------
@@ -319,7 +318,7 @@ Inserts a single point into a Delaunay triangulation.
 .. ocv:cfunction:: CvSubdiv2DPoint*  cvSubdivDelaunay2DInsert(  CvSubdiv2D* subdiv, CvPoint2D32f pt)
 .. ocv:pyoldfunction:: cv.SubdivDelaunay2DInsert(subdiv, pt)-> point
 
-    :param subdiv: Delaunay subdivision created by the function  :ref:`CreateSubdivDelaunay2D`
+    :param subdiv: Delaunay subdivision created by the function  :ocv:cfunc:`CreateSubdivDelaunay2D`
 
     :param pt: Inserted point
 

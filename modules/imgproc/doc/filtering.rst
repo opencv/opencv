@@ -54,13 +54,13 @@ where
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
+
    :ocv:func:`BaseRowFilter`,
    :ocv:func:`BaseFilter`,
    :ocv:func:`FilterEngine`,
    :ocv:func:`getColumnSumFilter`,
    :ocv:func:`getLinearColumnFilter`,
    :ocv:func:`getMorphologyColumnFilter`
-
 
 
 BaseFilter
@@ -104,11 +104,12 @@ where
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
-   :ocv:func:`BaseColumnFilter`,
-   :ocv:func:`BaseRowFilter`,
-   :ocv:func:`FilterEngine`,
-   :ocv:func:`getLinearFilter`,
-   :ocv:func:`getMorphologyFilter`
+
+    :ocv:func:`BaseColumnFilter`,
+    :ocv:func:`BaseRowFilter`,
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`getLinearFilter`,
+    :ocv:func:`getMorphologyFilter`
 
 
 
@@ -145,12 +146,13 @@ where
 :ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
-   :ocv:func:`BaseColumnFilter`,
-   :ocv:func:`Filter`,
-   :ocv:func:`FilterEngine`,
-   :ocv:func:`getLinearRowFilter`,
-   :ocv:func:`getMorphologyRowFilter`,
-   :ocv:func:`getRowSumFilter`
+
+    :ocv:func:`BaseColumnFilter`,
+    :ocv:func:`Filter`,
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`getLinearRowFilter`,
+    :ocv:func:`getMorphologyRowFilter`,
+    :ocv:func:`getRowSumFilter`
 
 
 
@@ -356,6 +358,7 @@ Explore the data types. As it was mentioned in the
     In case of non-separable filtering, ``bufType``     must be the same as ``srcType``     . The source data is copied to the temporary buffer, if needed, and then just passed to ``FilterEngine::filter2D``     . That is, the input type for ``filter2D``     is ``srcType``     (= ``bufType``     ) and the output type is ``dstType``     .
 
 .. seealso::
+
    :ocv:func:`BaseColumnFilter`,
    :ocv:func:`BaseFilter`,
    :ocv:func:`BaseRowFilter`,
@@ -426,11 +429,11 @@ The function smoothes an image using the kernel:
 The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFilter(src, dst, src.type(), anchor, true, borderType)`` .
 
 .. seealso::
+
    :ocv:func:`boxFilter`,
    :ocv:func:`bilateralFilter`,
    :ocv:func:`GaussianBlur`,
    :ocv:func:`medianBlur` 
-
 
 
 borderInterpolate
@@ -458,8 +461,9 @@ Normally, the function is not called directly. It is used inside
 :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
 
 .. seealso::
-   :ocv:func:`FilterEngine`,
-   :ocv:func:`copyMakeBorder`
+
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`copyMakeBorder`
 
 
 
@@ -500,11 +504,12 @@ and so on). If you need to compute pixel sums over variable-size windows, use
 :ocv:func:`integral` .
 
 .. seealso::
-   :ocv:func:`boxFilter`,
-   :ocv:func:`bilateralFilter`,
-   :ocv:func:`GaussianBlur`,
-   :ocv:func:`medianBlur`,
-   :ocv:func:`integral` 
+
+    :ocv:func:`boxFilter`,
+    :ocv:func:`bilateralFilter`,
+    :ocv:func:`GaussianBlur`,
+    :ocv:func:`medianBlur`,
+    :ocv:func:`integral` 
 
 
 
@@ -540,7 +545,13 @@ Forms a border around an image.
 
     :param dst: Destination image of the same type as  ``src``  and the size  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
     
-    :param top, bottom, left, right: Parameter specifying how many pixels in each direction from the source image rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``  mean that 1 pixel-wide border needs to be built.
+    :param top:
+    
+    :param bottom:
+    
+    :param left:
+    
+    :param right: Parameter specifying how many pixels in each direction from the source image rectangle to extrapolate. For example,  ``top=1, bottom=1, left=1, right=1``  mean that 1 pixel-wide border needs to be built.
 
     :param borderType: Border type. See  :ocv:func:`borderInterpolate` for details.
     
@@ -567,7 +578,8 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
 
 
 .. seealso::
-   :ocv:func:`borderInterpolate`
+
+	:ocv:func:`borderInterpolate`
 
 
 createBoxFilter
@@ -606,9 +618,10 @@ The function itself is used by
 :ocv:func:`boxFilter` .
 
 .. seealso::
-   :ocv:func:`FilterEngine`,
-   :ocv:func:`blur`,
-   :ocv:func:`boxFilter` 
+
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`blur`,
+    :ocv:func:`boxFilter` 
 
 
 
@@ -637,10 +650,11 @@ The function :ocv:func:`createDerivFilter` is a small convenience function that 
 :ocv:func:`Scharr` .
 
 .. seealso::
-   :ocv:func:`createSeparableLinearFilter`,
-   :ocv:func:`getDerivKernels`,
-   :ocv:func:`Scharr`,
-   :ocv:func:`Sobel` 
+
+    :ocv:func:`createSeparableLinearFilter`,
+    :ocv:func:`getDerivKernels`,
+    :ocv:func:`Scharr`,
+    :ocv:func:`Sobel` 
 
 
 
@@ -666,9 +680,10 @@ The function :ocv:func:`createGaussianFilter` computes Gaussian kernel coefficie
 :ocv:func:`createSeparableFilter` directly.
 
 .. seealso::
-   :ocv:func:`createSeparableLinearFilter`,
-   :ocv:func:`getGaussianKernel`,
-   :ocv:func:`GaussianBlur` 
+
+    :ocv:func:`createSeparableLinearFilter`,
+    :ocv:func:`getGaussianKernel`,
+    :ocv:func:`GaussianBlur` 
 
 
 
@@ -692,7 +707,9 @@ Creates a non-separable linear filter engine.
 
     :param bits: Number of the fractional bits. the parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
     
     :param borderValue: Border vaule used in case of a constant border.
 
@@ -700,9 +717,10 @@ The function returns a pointer to a 2D linear filter for the specified kernel, t
 :ocv:func:`FilterEngine` constructor.
 
 .. seealso::
-  :ocv:func:`createSeparableLinearFilter`,
-  :ocv:func:`FilterEngine`,
-  :ocv:func:`filter2D`
+
+    :ocv:func:`createSeparableLinearFilter`,
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`filter2D`
 
 
 createMorphologyFilter
@@ -729,7 +747,9 @@ Creates an engine for non-separable morphological operations.
 
     :param anchor: Anchor position within the structuring element. Negative values mean that the anchor is at the kernel center.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
     
     :param borderValue: Border value in case of a constant border. The default value, \   ``morphologyDefaultBorderValue`` , has a special meaning. It is transformed  :math:`+\inf`  for the erosion and to  :math:`-\inf`  for the dilation, which means that the minimum (maximum) is effectively computed only over the pixels that are inside the image.
 
@@ -742,10 +762,11 @@ Note that
 :ocv:func:`createMorphologyFilter` analyzes the structuring element shape and builds a separable morphological filter engine when the structuring element is square.
 
 .. seealso::
-   :ocv:func:`erode`,
-   :ocv:func:`dilate`,
-   :ocv:func:`morphologyEx`,
-   :ocv:func:`FilterEngine`
+
+    :ocv:func:`erode`,
+    :ocv:func:`dilate`,
+    :ocv:func:`morphologyEx`,
+    :ocv:func:`FilterEngine`
 
 
 createSeparableLinearFilter
@@ -774,7 +795,9 @@ Creates an engine for a separable linear filter.
 
     :param bits: Number of the fractional bits. The parameter is used when the kernel is an integer matrix representing fixed-point filter coefficients.
 
-    :param rowBorderType, columnBorderType: Pixel extrapolation methods in the horizontal and vertical directions. See  :ocv:func:`borderInterpolate` for details.
+    :param rowBorderType: Pixel extrapolation method in the vertical direction. For details, see  :ocv:func:`borderInterpolate`.
+    
+    :param columnBorderType: Pixel extrapolation method in the horizontal direction.
     
     :param borderValue: Border value used in case of a constant border.
 
@@ -787,10 +810,11 @@ The functions construct primitive separable linear filtering operations or a fil
 :ocv:func:`FilterEngine` constructor.
 
 .. seealso::
-   :ocv:func:`sepFilter2D`,
-   :ocv:func:`createLinearFilter`,
-   :ocv:func:`FilterEngine`,
-   :ocv:func:`getKernelType`
+
+    :ocv:func:`sepFilter2D`,
+    :ocv:func:`createLinearFilter`,
+    :ocv:func:`FilterEngine`,
+    :ocv:func:`getKernelType`
 
 
 dilate
@@ -827,9 +851,10 @@ The function dilates the source image using the specified structuring element th
 The function supports the in-place mode. Dilation can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
 .. seealso::
-   :ocv:func:`erode`,
-   :ocv:func:`morphologyEx`,
-   :ocv:func:`createMorphologyFilter`
+
+    :ocv:func:`erode`,
+    :ocv:func:`morphologyEx`,
+    :ocv:func:`createMorphologyFilter`
 
 
 erode
@@ -866,9 +891,10 @@ The function erodes the source image using the specified structuring element tha
 The function supports the in-place mode. Erosion can be applied several ( ``iterations`` ) times. In case of multi-channel images, each channel is processed independently.
 
 .. seealso::
-   :ocv:func:`dilate`,
-   :ocv:func:`morphologyEx`,
-   :ocv:func:`createMorphologyFilter`
+
+    :ocv:func:`dilate`,
+    :ocv:func:`morphologyEx`,
+    :ocv:func:`createMorphologyFilter`
 
 
 
@@ -911,10 +937,11 @@ That is, the kernel is not mirrored around the anchor point. If you need a real 
 The function uses the DFT-based algorithm in case of sufficiently large kernels (~``11 x 11`` or larger) and the direct algorithm (that uses the engine retrieved by :ocv:func:`createLinearFilter` ) for small kernels.
 
 .. seealso::
-   :ocv:func:`sepFilter2D`,
-   :ocv:func:`createLinearFilter`,
-   :ocv:func:`dft`,
-   :ocv:func:`matchTemplate`
+
+    :ocv:func:`sepFilter2D`,
+    :ocv:func:`createLinearFilter`,
+    :ocv:func:`dft`,
+    :ocv:func:`matchTemplate`
 
 
 
@@ -932,13 +959,16 @@ Smoothes an image using a Gaussian filter.
     
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. Or, they can be zero's and then they are computed from  ``sigma*`` .
     
-    :param sigmaX, sigmaY: Gaussian kernel standard deviations in X and Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If they are both zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX`` ,  and  ``sigmaY`` .
+    :param sigmaX: Gaussian kernel standard deviation in X direction.
+    
+    :param sigmaY: Gaussian kernel standard deviation in Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If both sigmas are zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX`` ,  and  ``sigmaY`` .
     
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
 
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
 
 .. seealso::
+
    :ocv:func:`sepFilter2D`,
    :ocv:func:`filter2D`,
    :ocv:func:`blur`,
@@ -1009,6 +1039,7 @@ Two of such generated kernels can be passed to
 :ocv:func:`GaussianBlur`.
 
 .. seealso::
+
    :ocv:func:`sepFilter2D`,
    :ocv:func:`createSeparableLinearFilter`,
    :ocv:func:`getDerivKernels`,
@@ -1111,10 +1142,11 @@ The function smoothes an image using the median filter with the
 :math:`\texttt{ksize} \times \texttt{ksize}` aperture. Each channel of a multi-channel image is processed independently. In-place operation is supported.
 
 .. seealso::
-   :ocv:func:`bilateralFilter`,
-   :ocv:func:`blur`,
-   :ocv:func:`boxFilter`,
-   :ocv:func:`GaussianBlur`
+
+    :ocv:func:`bilateralFilter`,
+    :ocv:func:`blur`,
+    :ocv:func:`boxFilter`,
+    :ocv:func:`GaussianBlur`
 
 
 
@@ -1188,9 +1220,10 @@ Morphological gradient:
 Any of the operations can be done in-place.
 
 .. seealso::
-   :ocv:func:`dilate`,
-   :ocv:func:`erode`,
-   :ocv:func:`createMorphologyFilter`
+
+    :ocv:func:`dilate`,
+    :ocv:func:`erode`,
+    :ocv:func:`createMorphologyFilter`
 
 
 
@@ -1234,8 +1267,9 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
     \vecthreethree {0}{1}{0}{1}{-4}{1}{0}{1}{0}
 
 .. seealso::
-   :ocv:func:`Sobel`,
-   :ocv:func:`Scharr`
+
+    :ocv:func:`Sobel`,
+    :ocv:func:`Scharr`
 
 
 
@@ -1370,6 +1404,7 @@ Applies a separable linear filter to an image.
 The function applies a separable linear filter to the image. That is, first, every row of ``src`` is filtered with the 1D kernel ``rowKernel`` . Then, every column of the result is filtered with the 1D kernel ``columnKernel`` . The final result shifted by ``delta`` is stored in ``dst`` .
 
 .. seealso::
+
    :ocv:func:`createSeparableLinearFilter`,
    :ocv:func:`filter2D`,
    :ocv:func:`Sobel`,
@@ -1392,7 +1427,7 @@ Smooths the image in one of several ways.
     
     :param smoothtype: Type of the smoothing: 
                 
-            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ref:`Integral` 
+            * **CV_BLUR_NO_SCALE** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's). If you want to smooth different pixels with different-size box kernels, you can use the integral image that is computed using  :ocv:func:`integral` 
             
                
             * **CV_BLUR** linear convolution with  :math:`\texttt{param1}\times\texttt{param2}`  box kernel (all 1's) with subsequent scaling by  :math:`1/(\texttt{param1}\cdot\texttt{param2})` 
@@ -1500,11 +1535,12 @@ The second case corresponds to a kernel of:
     \vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}
 
 .. seealso::
-   :ocv:func:`Scharr`,
-   :ocv:func:`Lapacian`,
-   :ocv:func:`sepFilter2D`,
-   :ocv:func:`filter2D`,
-   :ocv:func:`GaussianBlur`
+
+    :ocv:func:`Scharr`,
+    :ocv:func:`Lapacian`,
+    :ocv:func:`sepFilter2D`,
+    :ocv:func:`filter2D`,
+    :ocv:func:`GaussianBlur`
 
 
 

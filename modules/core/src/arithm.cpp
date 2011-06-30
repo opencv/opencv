@@ -988,9 +988,14 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             c = src1.channels();
         }
 
-        Size sz = getContinuousSize(src1, src2, dst, c);
-        func(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, 0);
-        return;
+        Size sz = getContinuousSize(src1, src2, dst);
+        size_t len = sz.width*(size_t)c;
+        if( len == (size_t)(int)len )
+        {
+            sz.width = (int)len;
+            func(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, 0);
+            return;
+        }
     }
 
     if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
@@ -1045,6 +1050,9 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = total;
 
+        if( blocksize*c > INT_MAX )
+            blocksize = INT_MAX/c;
+        
         if( haveMask )
         {
             blocksize = std::min(blocksize, blocksize0);

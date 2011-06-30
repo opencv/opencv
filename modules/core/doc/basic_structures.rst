@@ -648,6 +648,7 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including ``std::sort()`` .
 
 
+.. _MatrixExpressions:
 
 Matrix Expressions
 ------------------
@@ -701,6 +702,8 @@ Below is the formal description of the ``Mat`` methods.
 
 Mat::Mat
 ------------
+Various Mat constructors
+
 .. ocv:function:: Mat::Mat()
                   
 .. ocv:function:: Mat::Mat(int rows, int cols, int type)
@@ -740,8 +743,6 @@ Mat::Mat
 .. ocv:function:: Mat::Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0)
                   
 .. ocv:function:: Mat::Mat(const Mat& m, const Range* ranges)
-
-    Provides various array constructors.
 
     :param ndims: Array dimensionality.
 
@@ -786,23 +787,22 @@ often the default constructor is enough, and the proper matrix will be allocated
 
 Mat::~Mat
 ------------
+The Mat destructor.
+
 .. ocv:function:: Mat::~Mat()
 
-    Provides a matrix destructor.
-
-The matrix destructor calls
-:ocv:func:`Mat::release` .
+The matrix destructor calls :ocv:func:`Mat::release` .
 
 
 Mat::operator =
 -------------------
+Provides matrix assignment operators.
+
 .. ocv:function:: Mat& Mat::operator = (const Mat& m)
 
 .. ocv:function:: Mat& Mat::operator = (const MatExpr_Base& expr)
 
 .. ocv:function:: Mat& operator = (const Scalar& s)
-
-    Provides matrix assignment operators.
 
     :param m: Assigned, right-hand-side matrix. Matrix assignment is an O(1) operation. This means that no data is copied but the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ocv:func:`Mat::release` .
 
@@ -815,18 +815,18 @@ These are available assignment operators. Since they all are very different, mak
 
 Mat::operator MatExpr
 -------------------------
-.. ocv:function:: Mat::operator MatExpr_<Mat, Mat>() const
+Provides a ``Mat`` -to- ``MatExpr`` cast operator.
 
-    Provides a ``Mat`` -to- ``MatExpr`` cast operator.
+.. ocv:function:: Mat::operator MatExpr_<Mat, Mat>() const
 
 The cast operator should not be called explicitly. It is used internally by the
 :ref:`MatrixExpressions` engine.
 
 Mat::row
 ------------
-.. ocv:function:: Mat Mat::row(int i) const
+Creates a matrix header for the specified matrix row.
 
-    Creates a matrix header for the specified matrix row.
+.. ocv:function:: Mat Mat::row(int i) const
 
     :param i: A 0-based row index.
 
@@ -847,8 +847,7 @@ The method makes a new header for the specified matrix row and returns it. This 
         A.row(i) = A.row(j); // will not work
 
 
-    This happens because ``A.row(i)`` forms a temporary header that is further assigned to another header. Remember that each of these operations is O(1), that is, no data is copied. Thus, the above assignment is not true if you may have expected the j-th row to be copied to the i-th row. To achieve that, you should either turn this simple assignment into an expression or use the
-    :ocv:func:`Mat::copyTo` method: ::
+    This happens because ``A.row(i)`` forms a temporary header that is further assigned to another header. Remember that each of these operations is O(1), that is, no data is copied. Thus, the above assignment is not true if you may have expected the j-th row to be copied to the i-th row. To achieve that, you should either turn this simple assignment into an expression or use the :ocv:func:`Mat::copyTo` method: ::
 
         Mat A;
         ...
@@ -860,9 +859,9 @@ The method makes a new header for the specified matrix row and returns it. This 
 
 Mat::col
 ------------
-.. ocv:function:: Mat Mat::col(int j) const
+Creates a matrix header for the specified matrix column.
 
-    Creates a matrix header for the specified matrix column.
+.. ocv:function:: Mat Mat::col(int j) const
 
     :param j: A 0-based column index.
 
@@ -872,11 +871,11 @@ The method makes a new header for the specified matrix column and returns it. Th
 
 Mat::rowRange
 -----------------
+Creates a matrix header for the specified row span.
+
 .. ocv:function:: Mat Mat::rowRange(int startrow, int endrow) const
 
 .. ocv:function:: Mat Mat::rowRange(const Range& r) const
-
-    Creates a matrix header for the specified row span.
 
     :param startrow: A 0-based start index of the row span.
 
@@ -890,11 +889,11 @@ The method makes a new header for the specified row span of the matrix. Similarl
 
 Mat::colRange
 -----------------
+Creates a matrix header for the specified row span.
+
 .. ocv:function:: Mat Mat::colRange(int startcol, int endcol) const
 
 .. ocv:function:: Mat Mat::colRange(const Range& r) const
-
-    Creates a matrix header for the specified row span.
 
     :param startcol: A 0-based start index of the column span.
 
@@ -908,11 +907,11 @@ The method makes a new header for the specified column span of the matrix. Simil
 
 Mat::diag
 -------------
+Extracts a diagonal from a matrix, or creates a diagonal matrix.
+
 .. ocv:function:: Mat Mat::diag(int d) const
 
 .. ocv:function:: static Mat Mat::diag(const Mat& matD)
-
-    Extracts a diagonal from a matrix, or creates a diagonal matrix.
 
     :param d: Index of the diagonal, with the following values:
 
@@ -930,19 +929,19 @@ The method makes a new header for the specified matrix diagonal. The new matrix 
 
 Mat::clone
 --------------
-.. ocv:function:: Mat Mat::clone() const
+Creates a full copy of the array and the underlying data.
 
-    Creates a full copy of the array and the underlying data.
+.. ocv:function:: Mat Mat::clone() const
 
 The method creates a full copy of the array. The original ``step[]`` is not taken into account. So, the array copy is a continuous array occupying ``total()*elemSize()`` bytes.
 
 
 Mat::copyTo
 ---------------
+Copies the matrix to another one.
+
 .. ocv:function:: void Mat::copyTo( OutputArray m ) const
 .. ocv:function:: void Mat::copyTo( OutputArray m, InputArray mask ) const
-
-    Copies the matrix to another one.
 
     :param m: Destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
 
@@ -961,9 +960,9 @@ When the operation mask is specified, and the ``Mat::create`` call shown above r
 
 Mat::convertTo
 ------------------
-.. ocv:function:: void Mat::convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const
+Converts an array to another datatype with optional scaling.
 
-    Converts an array to another datatype with optional scaling.
+.. ocv:function:: void Mat::convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const
 
     :param m: Destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
 
@@ -982,9 +981,9 @@ The method converts source pixel values to the target datatype. ``saturate_cast<
 
 Mat::assignTo
 -----------------
-.. ocv:function:: void Mat::assignTo( Mat& m, int type=-1 ) const
+Provides a functional form of ``convertTo``.
 
-    Provides a functional form of ``convertTo``.
+.. ocv:function:: void Mat::assignTo( Mat& m, int type=-1 ) const
 
     :param m: Destination array.
 
@@ -995,9 +994,9 @@ This is an internally used method called by the
 
 Mat::setTo
 --------------
-.. ocv:function:: Mat& Mat::setTo(const Scalar& s, InputArray mask=noArray())
+Sets all or some of the array elements to the specified value.
 
-    Sets all or some of the array elements to the specified value.
+.. ocv:function:: Mat& Mat::setTo(const Scalar& s, InputArray mask=noArray())
 
     :param s: Assigned scalar converted to the actual array type.
 
@@ -1006,9 +1005,9 @@ Mat::setTo
 
 Mat::reshape
 ----------------
-.. ocv:function:: Mat Mat::reshape(int cn, int rows=0) const
+Changes the shape and/or the number of channels of a 2D matrix without copying the data.
 
-    Changes the shape and/or the number of channels of a 2D matrix without copying the data.
+.. ocv:function:: Mat Mat::reshape(int cn, int rows=0) const
 
     :param cn: New number of channels. If the parameter is 0, the number of channels remains the same.
 
@@ -1039,9 +1038,9 @@ For example, if there is a set of 3D points stored as an STL vector, and you wan
 
 Mat::t
 ----------
-.. ocv:function:: MatExpr Mat::t() const
+Transposes a matrix.
 
-    Transposes a matrix.
+.. ocv:function:: MatExpr Mat::t() const
 
 The method performs matrix transposition by means of matrix expressions. It does not perform the actual transposition but returns a temporary matrix transposition object that can be further used as a part of more complex matrix expressions or can be assigned to a matrix: ::
 
@@ -1051,9 +1050,9 @@ The method performs matrix transposition by means of matrix expressions. It does
 
 Mat::inv
 ------------
-.. ocv:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
+Inverses a matrix.
 
-    Inverses a matrix.
+.. ocv:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
 
     :param method: Matrix inversion method. Possible values are the following:
 
@@ -1068,9 +1067,9 @@ The method performs a matrix inversion by means of matrix expressions. This mean
 
 Mat::mul
 ------------
-.. ocv:function:: MatExpr Mat::mul(InputArray m, double scale=1) const
+Performs an element-wise multiplication or division of the two matrices.
 
-    Performs an element-wise multiplication or division of the two matrices.
+.. ocv:function:: MatExpr Mat::mul(InputArray m, double scale=1) const
 
     :param m: Another array of the same type and the same size as ``*this``, or a matrix expression.
 
@@ -1085,9 +1084,9 @@ Example: ::
 
 Mat::cross
 --------------
-.. ocv:function:: Mat Mat::cross(InputArray m) const
+Computes a cross-product of two 3-element vectors.
 
-    Computes a cross-product of two 3-element vectors.
+.. ocv:function:: Mat Mat::cross(InputArray m) const
 
     :param m: Another cross-product operand.
 
@@ -1096,9 +1095,9 @@ The method computes a cross-product of two 3-element vectors. The vectors must b
 
 Mat::dot
 ------------
-.. ocv:function:: double Mat::dot(InputArray m) const
+Computes a dot-product of two vectors.
 
-    Computes a dot-product of two vectors.
+.. ocv:function:: double Mat::dot(InputArray m) const
 
     :param m: Another dot-product operand.
 
@@ -1107,11 +1106,11 @@ The method computes a dot-product of two matrices. If the matrices are not singl
 
 Mat::zeros
 --------------
+Returns a zero array of the specified size and type.
+
 .. ocv:function:: static MatExpr Mat::zeros(int rows, int cols, int type)
 .. ocv:function:: static MatExpr Mat::zeros(Size size, int type)
 .. ocv:function:: static MatExpr Mat::zeros(int ndims, const int* sizes, int type)
-
-    Returns a zero array of the specified size and type.
 
     :param ndims: Array dimensionality.
 
@@ -1136,11 +1135,11 @@ In the example above, a new matrix is allocated only if ``A`` is not a 3x3 float
 
 Mat::ones
 -------------
+Returns an array of all 1's of the specified size and type.
+
 .. ocv:function:: static MatExpr Mat::ones(int rows, int cols, int type)
 .. ocv:function:: static MatExpr Mat::ones(Size size, int type)
 .. ocv:function:: static MatExpr Mat::ones(int ndims, const int* sizes, int type)
-
-    Returns an array of all 1's of the specified size and type.
 
     :param ndims: Array dimensionality.
 
@@ -1165,10 +1164,10 @@ The above operation does not form a 100x100 matrix of 1's and then multiply it b
 
 Mat::eye
 ------------
+Returns an identity matrix of the specified size and type.
+
 .. ocv:function:: static MatExpr Mat::eye(int rows, int cols, int type)
 .. ocv:function:: static MatExpr Mat::eye(Size size, int type)
-
-    Returns an identity matrix of the specified size and type.
 
     :param rows: Number of rows.
 
@@ -1188,11 +1187,11 @@ The method returns a Matlab-style identity matrix initializer, similarly to
 
 Mat::create
 ---------------
+Allocates new array data if needed.
+
 .. ocv:function:: void Mat::create(int rows, int cols, int type)
 .. ocv:function:: void Mat::create(Size size, int type)
 .. ocv:function:: void Mat::create(int ndims, const int* sizes, int type)
-
-    Allocates new array data if needed.
 
     :param ndims: New array dimensionality.
 
@@ -1242,9 +1241,9 @@ because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::cre
 
 Mat::addref
 ---------------
-.. ocv:function:: void Mat::addref()
+Increments the reference counter.
 
-    Increments the reference counter.
+.. ocv:function:: void Mat::addref()
 
 The method increments the reference counter associated with the matrix data. If the matrix header points to an external data set (see
 :ocv:func:`Mat::Mat` ), the reference counter is NULL, and the method has no effect in this case. Normally, to avoid memory leaks, the method should not be called explicitly. It is called implicitly by the matrix assignment operator. The reference counter increment is an atomic operation on the platforms that support it. Thus, it is safe to operate on the same matrices asynchronously in different threads.
@@ -1252,9 +1251,9 @@ The method increments the reference counter associated with the matrix data. If 
 
 Mat::release
 ----------------
-.. ocv:function:: void Mat::release()
+Decrements the reference counter and deallocates the matrix if needed.
 
-    Decrements the reference counter and deallocates the matrix if needed.
+.. ocv:function:: void Mat::release()
 
 The method decrements the reference counter associated with the matrix data. When the reference counter reaches 0, the matrix data is deallocated and the data and the reference counter pointers are set to NULL's. If the matrix header points to an external data set (see
 :ocv:func:`Mat::Mat` ), the reference counter is NULL, and the method has no effect in this case.
@@ -1263,10 +1262,10 @@ This method can be called manually to force the matrix data deallocation. But si
 
 Mat::resize
 ---------------
+Changes the number of matrix rows.
+
 .. ocv:function:: void Mat::resize( size_t sz )
 .. ocv:function:: void Mat::resize( size_t sz, const Scalar& s )
-
-    Changes the number of matrix rows.
 
     :param sz: New number of rows.
     :param s: Value assigned to the newly added elements.
@@ -1276,9 +1275,9 @@ The methods change the number of matrix rows. If the matrix is reallocated, the 
 
 Mat::reserve
 ---------------
-.. ocv:function:: void Mat::reserve( size_t sz )
+Reserves space for the certain number of rows.
 
-    Reserves space for the certain number of rows.
+.. ocv:function:: void Mat::reserve( size_t sz )
 
     :param sz: Number of rows.
 
@@ -1286,10 +1285,10 @@ The method reserves space for ``sz`` rows. If the matrix already has enough spac
 
 Mat::push_back
 --------------
+Adds elements to the bottom of the matrix.
+
 .. ocv:function:: template<typename T> void Mat::push_back(const T& elem)
 .. ocv:function:: void Mat::push_back(const Mat& elem)
-
-    Adds elements to the bottom of the matrix.
 
     :param elem: Added element(s).
 
@@ -1297,9 +1296,9 @@ The methods add one or more elements to the bottom of the matrix. They emulate t
 
 Mat::pop_back
 -------------
-.. ocv:function:: template<typename T> void Mat::pop_back(size_t nelems=1)
+Removes elements from the bottom of the matrix.
 
-    Removes elements from the bottom of the matrix.
+.. ocv:function:: template<typename T> void Mat::pop_back(size_t nelems=1)
 
     :param nelems: Number of removed rows. If it is greater than the total number of rows, an exception is thrown.
 
@@ -1308,9 +1307,9 @@ The method removes one or more rows from the bottom of the matrix.
 
 Mat::locateROI
 ------------------
-.. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
+Locates the matrix header within a parent matrix.
 
-    Locates the matrix header within a parent matrix.
+.. ocv:function:: void Mat::locateROI( Size& wholeSize, Point& ofs ) const
 
     :param wholeSize: Output parameter that contains the size of the whole matrix containing ``*this`` is a part.
 
@@ -1325,9 +1324,9 @@ After you extracted a submatrix from a matrix using
 
 Mat::adjustROI
 ------------------
-.. ocv:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
+Adjusts a submatrix size and position within the parent matrix.
 
-    Adjusts a submatrix size and position within the parent matrix.
+.. ocv:function:: Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
 
     :param dtop: Shift of the top submatrix boundary upwards.
 
@@ -1350,19 +1349,19 @@ It is your responsibility to make sure ``adjustROI`` does not cross the parent m
 The function is used internally by the OpenCV filtering functions, like
 :ocv:func:`filter2D` , morphological operations, and so on.
 
-See Also:
-:ocv:func:`copyMakeBorder` 
+.. seealso:: :ocv:func:`copyMakeBorder` 
 
 
 Mat::operator()
 -------------------
+Extracts a rectangular submatrix.
+
 .. ocv:function:: Mat Mat::operator()( Range rowRange, Range colRange ) const
 
 .. ocv:function:: Mat Mat::operator()( const Rect& roi ) const
 
 .. ocv:function:: Mat Mat::operator()( const Ranges* ranges ) const
 
-    Extracts a rectangular submatrix.
 
     :param rowRange: Start and end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use ``Range::all()``.    
     
@@ -1381,9 +1380,10 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 
 Mat::operator CvMat
 -----------------------
+Creates the ``CvMat`` header for the matrix.
+
 .. ocv:function:: Mat::operator CvMat() const
 
-    Creates the ``CvMat`` header for the matrix.
 
 The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
 
@@ -1399,25 +1399,25 @@ where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structu
 
 Mat::operator IplImage
 --------------------------
-.. ocv:function:: Mat::operator IplImage() const
+Creates the ``IplImage`` header for the matrix.
 
-    Creates the ``IplImage`` header for the matrix.
+.. ocv:function:: Mat::operator IplImage() const
 
 The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
 
 Mat::total
 --------------
-.. ocv:function:: size_t Mat::total() const
+Returns the total number of array elements.
 
-    Returns the total number of array elements.
+.. ocv:function:: size_t Mat::total() const
 
 The method returns the number of array elements (a number of pixels if the array represents an image).
 
 Mat::isContinuous
 ---------------------
-.. ocv:function:: bool Mat::isContinuous() const
+Reports whether the matrix is continuous or not.
 
-    Reports whether the matrix is continuous or not.
+.. ocv:function:: bool Mat::isContinuous() const
 
 The method returns ``true`` if the matrix elements are stored continuously without gaps at the end of each row. Otherwise, it returns ``false``. Obviously, ``1x1`` or ``1xN`` matrices are always continuous. Matrices created with
 :ocv:func:`Mat::create` are always continuous. But if you extract a part of the matrix using
@@ -1486,36 +1486,36 @@ Another OpenCV idiom in this function, a call of
 
 Mat::elemSize
 -----------------
-.. ocv:function:: size_t Mat::elemSize(void) const
+Returns  the matrix element size in bytes.
 
-    Returns  the matrix element size in bytes.
+.. ocv:function:: size_t Mat::elemSize(void) const
 
 The method returns the matrix element size in bytes. For example, if the matrix type is ``CV_16SC3`` , the method returns ``3*sizeof(short)`` or 6.
 
 
 Mat::elemSize1
 ------------------
-.. ocv:function:: size_t Mat::elemSize() const
+Returns the size of each matrix element channel in bytes.
 
-    Returns the size of each matrix element channel in bytes.
+.. ocv:function:: size_t Mat::elemSize() const
 
 The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is ``CV_16SC3`` , the method returns ``sizeof(short)`` or 2.
 
 
 Mat::type
 -------------
-.. ocv:function:: int Mat::type() const
+Returns the type of a matrix element.
 
-    Returns the type of a matrix element.
+.. ocv:function:: int Mat::type() const
 
 The method returns a matrix element type. This is an identifier compatible with the ``CvMat`` type system, like ``CV_16SC3`` or 16-bit signed 3-channel array, and so on.
 
 
 Mat::depth
 --------------
-.. ocv:function:: int Mat::depth() const
+Returns the depth of a matrix element.
 
-    Returns the depth of a matrix element.
+.. ocv:function:: int Mat::depth() const
 
 The method returns the identifier of the matrix element depth (the type of each individual channel). For example, for a 16-bit signed 3-channel array, the method returns ``CV_16S`` . A complete list of matrix types contains the following values:
 
@@ -1536,18 +1536,18 @@ The method returns the identifier of the matrix element depth (the type of each 
 
 Mat::channels
 -----------------
-.. ocv:function:: int Mat::channels() const
+Returns the number of matrix channels.
 
-    Returns the number of matrix channels.
+.. ocv:function:: int Mat::channels() const
 
 The method returns the number of matrix channels.
 
 
 Mat::step1
 --------------
-.. ocv:function:: size_t Mat::step1() const
+Returns a normalized step.
 
-    Returns a normalized step.
+.. ocv:function:: size_t Mat::step1() const
 
 The method returns a matrix step divided by
 :ocv:func:`Mat::elemSize1()` . It can be useful to quickly access an arbitrary matrix element.
@@ -1555,24 +1555,26 @@ The method returns a matrix step divided by
 
 Mat::size
 -------------
+Returns a matrix size.
+
 .. ocv:function:: Size Mat::size() const
 
-    Returns a matrix size.
-
-The method returns a matrix size: ``Size(cols, rows)`` .
+The method returns a matrix size: ``Size(cols, rows)`` . When the matrix is more than 2-dimensional, the returned size is (-1, -1).
 
 
 Mat::empty
 --------------
-.. ocv:function:: bool Mat::empty() const
+Returns ``true`` if the array has no elemens.
 
-    Returns ``true`` if the array has no elemens.
+.. ocv:function:: bool Mat::empty() const
 
 The method returns ``true`` if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL. Because of ``pop_back()`` and ``resize()`` methods ``M.total() == 0`` does not imply that ``M.data == NULL`` .
 
 
 Mat::ptr
 ------------
+Returns a pointer to the specified matrix row.
+
 .. ocv:function:: uchar* Mat::ptr(int i=0)
 
 .. ocv:function:: const uchar* Mat::ptr(int i=0) const
@@ -1580,8 +1582,6 @@ Mat::ptr
 .. ocv:function:: template<typename _Tp> _Tp* Mat::ptr(int i=0)
 
 .. ocv:function:: template<typename _Tp> const _Tp* Mat::ptr(int i=0) const
-
-    Returns a pointer to the specified matrix row.
 
     :param i: A 0-based row index.
 
@@ -1591,6 +1591,8 @@ The methods return ``uchar*`` or typed pointer to the specified matrix row. See 
 
 Mat::at
 -----------
+Returns a reference to the specified array element.
+
 .. ocv:function:: template<typename T> T& Mat::at(int i) const
 
 .. ocv:function:: template<typename T> const T& Mat::at(int i) const
@@ -1611,12 +1613,12 @@ Mat::at
 
 .. ocv:function:: template<typename T> const T& Mat::at(const int* idx) const
 
-    Returns a reference to the specified array element.
-
-    :param i, j, k: Indices along the dimensions 0, 1, and 2, respectively.
+    :param i: Index along the dimension 0
+    :param j: Index along the dimension 1
+    :param k: Index along the dimension 2
 
     :param pt: Element position specified as  ``Point(j,i)`` .    
-    
+
     :param idx: Array of  ``Mat::dims``  indices.
 
 The template methods return a reference to the specified array element. For the sake of higher performance, the index range checks are only performed in the Debug configuration.
@@ -1634,9 +1636,11 @@ The example below initializes a Hilbert matrix: ::
 
 Mat::begin
 --------------
-.. ocv:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin() template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
+Returns the matrix iterator and sets it to the first matrix element.
 
-    Returns the matrix iterator and sets it to the first matrix element.
+.. ocv:function:: template<typename _Tp> MatIterator_<_Tp> Mat::begin()
+
+.. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::begin() const
 
 The methods return the matrix read-only or read-write iterators. The use of matrix iterators is very similar to the use of bi-directional STL iterators. In the example below, the alpha blending function is rewritten using the matrix iterators: ::
 
@@ -1673,10 +1677,11 @@ The methods return the matrix read-only or read-write iterators. The use of matr
 
 Mat::end
 ------------
-.. ocv:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end()
-.. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
+Returns the matrix iterator and sets it to the after-last matrix element.
 
-    Returns the matrix iterator and sets it to the after-last matrix element.
+.. ocv:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end()
+
+.. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
 
