@@ -73,6 +73,11 @@ if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif()
 
+# ----------------------------------------------------------------------------
+# Build static or dynamic libs?
+# Default: dynamic libraries:
+# ----------------------------------------------------------------------------
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
 # ----------------------------------------------------------------------------
 #  Current version number:
@@ -94,21 +99,21 @@ if(WIN32)
         set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_mingw")
     endif()
 
-    if(${CMAKE_GENERATOR} MATCHES "Visual*")
+    if(${CMAKE_GENERATOR} MATCHES "Visual.*")
         set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_vs")
 
-        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 8 2005*")
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 8 2005.*")
             set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2005")
         endif()
-        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 9 2008*")
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 9 2008.*")
             set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2008")
         endif()
-        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 10.0*")
+        if(${CMAKE_GENERATOR} MATCHES "Visual Studio 10.*")
             set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}2010")
         endif()                                     
     endif()
 
-    if(${CMAKE_GENERATOR} MATCHES "Visual Studio*64")
+    if(${CMAKE_GENERATOR} MATCHES "Visual Studio.*Win64")
         set(OPENCV_DLL_VERSION_SUFFIX "${OPENCV_DLL_VERSION_SUFFIX}_64")
     endif()
 
@@ -120,17 +125,9 @@ if(WIN32)
     set(OPENCV_DEBUG_POSTFIX d)
 else()
     # Postfix of so's:
-    #set(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
     set(OPENCV_DLLVERSION "")
     set(OPENCV_DEBUG_POSTFIX)
 endif()
-
-
-# ----------------------------------------------------------------------------
-# Build static or dynamic libs?
-# Default: dynamic libraries:
-# ----------------------------------------------------------------------------
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 
 # ----------------------------------------------------------------------------
 # Use statically or dynamically linked CRT?
