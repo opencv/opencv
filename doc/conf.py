@@ -319,7 +319,8 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'hough_circles' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghcircles%s', None),
 	    'remap' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#remap%s', None),
 	    'warp_affine' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-warpaffine%s' , None),
-	    'get_rotation_matrix_2d' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getrotationmatrix2d%s', None)
+	    'get_rotation_matrix_2d' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getrotationmatrix2d%s', None),
+            'get_affine_transform' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getaffinetransform%s', None)
            }
 
 
