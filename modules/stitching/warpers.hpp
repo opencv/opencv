@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+ /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -48,7 +48,7 @@ class Warper
 {
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
-    static cv::Ptr<Warper> createByCameraFocal(float focal, int type);
+    static cv::Ptr<Warper> createByCameraFocal(float focal, int type, bool try_gpu = false);
 
     virtual ~Warper() {}
     virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat& R, cv::Mat &dst,
@@ -73,10 +73,10 @@ template <class P>
 class WarperBase : public Warper
 {   
 public:
-    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
-                   int interp_mode, int border_mode);
+    virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+                           int interp_mode, int border_mode);
 
-    cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R);
+    virtual cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R);
 
 protected:
     // Detects ROI of the destination image. It's correct for any projection.
@@ -95,7 +95,6 @@ struct PlaneProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
-
     float plane_dist;
 };
 
@@ -129,8 +128,20 @@ class SphericalWarper : public WarperBase<SphericalProjector>
 public:
     SphericalWarper(float scale = 300.f) { projector_.scale = scale; }
 
-private:  
+protected:
     void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
+};
+
+
+class SphericalWarperGpu : public SphericalWarper
+{
+public:
+    SphericalWarperGpu(float scale = 300.f) : SphericalWarper(scale) {}
+    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+                   int interp_mode, int border_mode);
+
+private:
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
 };
 
 

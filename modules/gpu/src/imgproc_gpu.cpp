@@ -56,6 +56,8 @@ void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&)
 void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
 void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
+void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, double, double,
+                                     GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_nogpu(); }
 void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -76,7 +78,11 @@ void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int) { throw_nogpu(); }
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&) { throw_nogpu(); }
-void cv::gpu::downsample(const GpuMat&, GpuMat&, int) { throw_nogpu(); }
+void cv::gpu::downsample(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::upsample(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::pyrDown(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::pyrUp(const GpuMat&, GpuMat&) { throw_nogpu(); }
+
 
 
 #else /* !defined (HAVE_CUDA) */
@@ -502,6 +508,30 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
     M.convertTo(coeffsMat, coeffsMat.type());
 
     nppWarpCaller(src, dst, coeffs, dsize, flags, npp_warpPerspective_8u, npp_warpPerspective_16u, npp_warpPerspective_32s, npp_warpPerspective_32f, StreamAccessor::getStream(s));
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// buildWarpSphericalMaps
+
+namespace cv { namespace gpu { namespace imgproc
+{
+    void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                                const float r[9], const float rinv[9], float f, float s,
+                                float half_w, float half_h, cudaStream_t stream);
+}}}
+
+void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+                                     GpuMat& map_x, GpuMat& map_y, Stream& stream)
+{
+    CV_Assert(R.size() == Size(3,3) && R.isContinuous() && R.type() == CV_32F);
+    Mat Rinv = R.inv();
+    CV_Assert(Rinv.isContinuous());
+
+    map_x.create(dst_roi.size(), CV_32F);
+    map_y.create(dst_roi.size(), CV_32F);
+    imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
+                                    f, s, 0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1333,32 +1363,96 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     cufftSafeCall(cufftDestroy(planC2R));
 }
 
+
 ////////////////////////////////////////////////////////////////////
 // downsample
 
 namespace cv { namespace gpu { namespace imgproc
 {
-    template <typename T>
-    void downsampleCaller(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst);
+    template <typename T, int cn>
+    void downsampleCaller(const DevMem2D src, DevMem2D dst);
 }}}
 
-void cv::gpu::downsample(const GpuMat& src, GpuMat& dst, int k)
+
+void cv::gpu::downsample(const GpuMat& src, GpuMat& dst)
 {
-    CV_Assert(src.channels() == 1);    
+    CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
 
-    dst.create((src.rows + k - 1) / k, (src.cols + k - 1) / k, src.type());
+    typedef void (*Caller)(const DevMem2D, DevMem2D);
+    static const Caller callers[6][4] =
+        {{imgproc::downsampleCaller<uchar,1>, imgproc::downsampleCaller<uchar,2>,
+          imgproc::downsampleCaller<uchar,3>, imgproc::downsampleCaller<uchar,4>},
+         {0,0,0,0}, {0,0,0,0},
+         {imgproc::downsampleCaller<short,1>, imgproc::downsampleCaller<short,2>,
+          imgproc::downsampleCaller<short,3>, imgproc::downsampleCaller<short,4>},
+         {0,0,0,0},
+         {imgproc::downsampleCaller<float,1>, imgproc::downsampleCaller<float,2>,
+          imgproc::downsampleCaller<float,3>, imgproc::downsampleCaller<float,4>}};
 
-    switch (src.depth())
-    {
-    case CV_8U:
-        imgproc::downsampleCaller<uchar>(src, dst.rows, dst.cols, k, dst);
-        break;
-    case CV_32F:
-        imgproc::downsampleCaller<float>(src, dst.rows, dst.cols, k, dst);
-        break;
-    default:
-        CV_Error(CV_StsUnsupportedFormat, "bad image depth in downsample function");
-    }
+    Caller caller = callers[src.depth()][src.channels()-1];
+    if (!caller)
+        CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
+
+    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
+    caller(src, dst.reshape(1));
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// upsample
+
+namespace cv { namespace gpu { namespace imgproc
+{
+    template <typename T, int cn>
+    void upsampleCaller(const DevMem2D src, DevMem2D dst);
+}}}
+
+
+void cv::gpu::upsample(const GpuMat& src, GpuMat& dst)
+{
+    CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
+
+    typedef void (*Caller)(const DevMem2D, DevMem2D);
+    static const Caller callers[6][5] =
+        {{imgproc::upsampleCaller<uchar,1>, imgproc::upsampleCaller<uchar,2>,
+          imgproc::upsampleCaller<uchar,3>, imgproc::upsampleCaller<uchar,4>},
+         {0,0,0,0}, {0,0,0,0},
+         {imgproc::upsampleCaller<short,1>, imgproc::upsampleCaller<short,2>,
+          imgproc::upsampleCaller<short,3>, imgproc::upsampleCaller<short,4>},
+         {0,0,0,0},
+         {imgproc::upsampleCaller<float,1>, imgproc::upsampleCaller<float,2>,
+          imgproc::upsampleCaller<float,3>, imgproc::upsampleCaller<float,4>}};
+
+    Caller caller = callers[src.depth()][src.channels()-1];
+    if (!caller)
+        CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
+
+    dst.create(src.rows*2, src.cols*2, src.type());
+    caller(src, dst.reshape(1));
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// pyrDown
+
+void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst)
+{
+    Mat ker = getGaussianKernel(5, 0, std::max(CV_32F, src.depth()));
+    GpuMat buf;
+    sepFilter2D(src, buf, src.depth(), ker, ker);
+    downsample(buf, dst);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// pyrUp
+
+void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst)
+{
+    GpuMat buf;
+    upsample(src, buf);
+    Mat ker = getGaussianKernel(5, 0, std::max(CV_32F, src.depth())) * 2;
+    sepFilter2D(buf, dst, buf.depth(), ker, ker);
 }
 
 #endif /* !defined (HAVE_CUDA) */

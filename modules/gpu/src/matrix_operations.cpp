@@ -594,8 +594,9 @@ void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
 void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
 {
     if (m.type() == type && m.rows >= rows && m.cols >= cols)
-        return;
-    m.create(rows, cols, type);
+        m = m(Rect(0, 0, cols, rows));
+    else
+        m.create(rows, cols, type);
 }
 
 

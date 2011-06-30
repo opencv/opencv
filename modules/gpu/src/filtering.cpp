@@ -192,7 +192,8 @@ namespace
             Size src_size = src.size();
 
             dst.create(src_size, dstType);
-            dstBuf.create(src_size, bufType);
+            ensureSizeIsEnough(src_size, bufType, dstBuf);
+            //dstBuf.create(src_size, bufType);
 
             if (stream)
             {
@@ -717,7 +718,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
     CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_16SC1 || srcType == CV_16SC2 
-        || srcType == CV_32SC1 || srcType == CV_32FC1);
+        || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(srcType) == CV_MAT_CN(bufType));
 
@@ -746,6 +747,9 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
         break;
     case CV_16SC2:
         func = filters::linearRowFilter_gpu<short2, float2>;
+        break;
+    case CV_16SC3:
+        func = filters::linearRowFilter_gpu<short3, float3>;
         break;
     case CV_32SC1:
         func = filters::linearRowFilter_gpu<int, float>;
@@ -827,8 +831,8 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
    
-    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 || dstType == CV_16SC1 || dstType == CV_16SC2 
-        || dstType == CV_32SC1 || dstType == CV_32FC1);
+    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 || dstType == CV_16SC1 || dstType == CV_16SC2
+        || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
 
@@ -857,6 +861,9 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
         break;
     case CV_16SC2:
         func = filters::linearColumnFilter_gpu<float2, short2>;
+        break;
+    case CV_16SC3:
+        func = filters::linearColumnFilter_gpu<float3, short3>;
         break;
     case CV_32SC1:
         func = filters::linearColumnFilter_gpu<float, int>;

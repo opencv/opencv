@@ -47,14 +47,14 @@ using namespace cv;
 
 static const float WEIGHT_EPS = 1e-5f;
 
-Ptr<Blender> Blender::createDefault(int type)
+Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
         return new Blender();
     if (type == FEATHER)
         return new FeatherBlender();
     if (type == MULTI_BAND)
-        return new MultiBandBlender();
+        return new MultiBandBlender(try_gpu);
     CV_Error(CV_StsBadArg, "unsupported blending method");
     return NULL;
 }
@@ -153,6 +153,13 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 }
 
 
+MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
+{
+    setNumBands(num_bands);
+    can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
+}
+
+
 void MultiBandBlender::prepare(Rect dst_roi)
 {
     dst_roi_final_ = dst_roi;
@@ -222,14 +229,14 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     int right = br_new.x - tl.x - img.cols;
 
     // Create the source image Laplacian pyramid
-    vector<Mat> src_pyr_gauss(num_bands_ + 1);
-    copyMakeBorder(img, src_pyr_gauss[0], top, bottom, left, right, 
+    Mat img_with_border;
+    copyMakeBorder(img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
-    for (int i = 0; i < num_bands_; ++i)
-        pyrDown(src_pyr_gauss[i], src_pyr_gauss[i + 1]);
     vector<Mat> src_pyr_laplace;
-    createLaplacePyr(src_pyr_gauss, src_pyr_laplace);
-    src_pyr_gauss.clear();
+    if (can_use_gpu_)
+        createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
+    else
+        createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
 
     // Create the weight map Gaussian pyramid
     Mat weight_map;
@@ -267,7 +274,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
         }
         x_tl /= 2; y_tl /= 2; 
         x_br /= 2; y_br /= 2;
-    }    
+    }
 }
 
 
@@ -319,19 +326,41 @@ void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 }
 
 
-void createLaplacePyr(const vector<Mat> &pyr_gauss, vector<Mat> &pyr_laplace)
+void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
-    if (pyr_gauss.size() == 0)
-        return;
-    pyr_laplace.resize(pyr_gauss.size());
+    pyr.resize(num_levels + 1);
+    pyr[0] = img;
+    for (int i = 0; i < num_levels; ++i)
+        pyrDown(pyr[i], pyr[i + 1]);
     Mat tmp;
-    for (size_t i = 0; i < pyr_laplace.size() - 1; ++i)
+    for (int i = 0; i < num_levels; ++i)
     {
-        pyrUp(pyr_gauss[i + 1], tmp, pyr_gauss[i].size());
-        subtract(pyr_gauss[i], tmp, pyr_laplace[i]);
+        pyrUp(pyr[i + 1], tmp, pyr[i].size());
+        subtract(pyr[i], tmp, pyr[i]);
     }
-    pyr_laplace[pyr_laplace.size() - 1] = pyr_gauss[pyr_laplace.size() - 1].clone();
 }
+
+
+void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
+{
+    pyr.resize(num_levels + 1);
+
+    vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
+    gpu_pyr[0] = img;
+    for (int i = 0; i < num_levels; ++i)
+        gpu::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
+
+    gpu::GpuMat tmp;
+    for (int i = 0; i < num_levels; ++i)
+    {
+        gpu::pyrUp(gpu_pyr[i + 1], tmp);
+        gpu::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
+        pyr[i] = gpu_pyr[i];
+    }
+
+    pyr[num_levels] = gpu_pyr[num_levels];
+}
+
 
 
 void restoreImageFromLaplacePyr(vector<Mat> &pyr)

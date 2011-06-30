@@ -49,6 +49,14 @@
 #include "npp.h"
 #include "NPP_staging.hpp"
 
+#ifndef CV_PI_F
+  #ifndef CV_PI
+    #define CV_PI_F 3.14159265f
+  #else
+    #define CV_PI_F ((float)CV_PI)
+  #endif
+#endif
+
 namespace cv
 {
     namespace gpu

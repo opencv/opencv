@@ -40,7 +40,7 @@
 //
 //M*/
 
-// We follow to methods described in these two papers:
+// We follow to these papers:
 // 1) Construction of panoramic mosaics with global and local alignment. 
 //    Heung-Yeung Shum and Richard Szeliski. 2000.
 // 2) Eliminating Ghosting and Exposure Artifacts in Image Mosaics. 
@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
 
     // Warp images and their masks
     Ptr<Warper> warper = Warper::createByCameraFocal(static_cast<float>(warped_image_scale * seam_work_aspect), 
-                                                     warp_type);
+                                                     warp_type, try_gpu);
     for (int i = 0; i < num_images; ++i)
     {
         corners[i] = warper->warp(images[i], static_cast<float>(cameras[i].focal * seam_work_aspect), 
@@ -522,7 +522,7 @@ int main(int argc, char* argv[])
 
             // Update warped image scale
             warped_image_scale *= static_cast<float>(compose_work_aspect);
-            warper = Warper::createByCameraFocal(warped_image_scale, warp_type);
+            warper = Warper::createByCameraFocal(warped_image_scale, warp_type, try_gpu);
 
             // Update corners and sizes
             for (int i = 0; i < num_images; ++i)
@@ -565,19 +565,19 @@ int main(int argc, char* argv[])
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
         img.release();
-        mask.release();
+        mask.release();       
 
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size());
         mask_warped = seam_mask & mask_warped;
 
         if (static_cast<Blender*>(blender) == 0)
-        {
-            blender = Blender::createDefault(blend_type);
+        {            
+            blender = Blender::createDefault(blend_type, try_gpu);
             Size dst_sz = resultRoi(corners, sizes).size();
             float blend_width = sqrt(static_cast<float>(dst_sz.area())) * blend_strength / 100.f;
             if (blend_width < 1.f)
-                blender = Blender::createDefault(Blender::NO);
+                blender = Blender::createDefault(Blender::NO, try_gpu);
             else if (blend_type == Blender::MULTI_BAND)
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(static_cast<Blender*>(blender));
@@ -594,7 +594,7 @@ int main(int argc, char* argv[])
         }
 
         // Blend the current image
-        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
+        blender->feed(img_warped_s, mask_warped, corners[img_idx]);        
     }
    
     Mat result, result_mask;

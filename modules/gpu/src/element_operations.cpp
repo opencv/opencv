@@ -174,9 +174,22 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
 }
 
+namespace cv { namespace gpu { namespace mathfunc
+{
+    template <typename T>
+    void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
+}}}
+
 void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
+    if (src1.depth() == CV_16S && src2.depth() == CV_16S)
+    {
+        CV_Assert(src1.size() == src2.size());
+        dst.create(src1.size(), src1.type());
+        mathfunc::subtractCaller<short>(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+    }
+    else
+        nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)

@@ -824,3 +824,45 @@ TEST(solvePnPRansac)
         GPU_OFF;
     }
 }
+
+
+TEST(GaussianBlur)
+{
+    for (int size = 1000; size < 10000; size += 3000)
+    {
+        SUBTEST << "16SC3, size " << size;
+
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        GaussianBlur(src, dst, Size(5,5), 0);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size < 10000; size += 3000)
+    {
+        SUBTEST << "8UC4, size " << size;
+
+        Mat src; gen(src, size, size, CV_8UC4, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        GaussianBlur(src, dst, Size(5,5), 0);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        GPU_OFF;
+    }
+}

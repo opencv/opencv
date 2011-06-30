@@ -622,6 +622,10 @@ namespace cv
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
 
+        //! builds spherical warping maps
+        CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+                                               GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
         //! rotate 8bit single or four channel image
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         //! supports CV_8UC1, CV_8UC4 types
@@ -721,12 +725,21 @@ namespace cv
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
 
         //! downsamples image
-        CV_EXPORTS void downsample(const GpuMat& src, GpuMat& dst, int k=2);
+        CV_EXPORTS void downsample(const GpuMat& src, GpuMat& dst);
+
+        //! upsamples image
+        CV_EXPORTS void upsample(const GpuMat& src, GpuMat &dst);
+
+        //! smoothes the source image and downsamples it
+        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst);
+
+        //! upsamples the source image and then smoothes it
+        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst);
 
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
         CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
-            GpuMat& result, Stream& stream = Stream::Null());
+            GpuMat& result, Stream& stream = Stream::Null());       
 
         ////////////////////////////// Matrix reductions //////////////////////////////
 

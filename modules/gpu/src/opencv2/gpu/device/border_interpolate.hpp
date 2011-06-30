@@ -104,13 +104,13 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
-            return saturate_cast<D>(data[idx_low(i) * step]);
+            return saturate_cast<D>(*(const D*)((const char*)data + idx_low(i)*step));
         }
 
         template <typename T>
         __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
-            return saturate_cast<D>(data[idx_high(i) * step]);
+            return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
     private:
@@ -174,13 +174,13 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
-            return saturate_cast<D>(data[idx_low(i) * step]);
+            return saturate_cast<D>(*(const D*)((const char*)data + idx_low(i)*step));
         }
 
         template <typename T>
         __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
-            return saturate_cast<D>(data[idx_high(i) * step]);
+            return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
     private:
@@ -222,13 +222,13 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
-            return i >= 0 ? saturate_cast<D>(data[i * step]) : val;
+            return i >= 0 ? saturate_cast<D>(*(const D*)((const char*)data + i*step)) : val;
         }
 
         template <typename T>
         __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
-            return i < len ? saturate_cast<D>(data[i * step]) : val;
+            return i < len ? saturate_cast<D>(*(const D*)((const char*)data + i*step)) : val;
         }
 
         bool is_range_safe(int mini, int maxi) const 
@@ -241,6 +241,25 @@ namespace cv { namespace gpu { namespace device
         int step;
         D val;
     };
+
+
+    template <typename OutT>
+    struct BrdConstant
+    {
+        BrdConstant(int w, int h, const OutT &val = VecTraits<OutT>::all(0)) : w(w), h(h), val(val) {}
+
+        __device__ __forceinline__ OutT at(int x, int y, const uchar* data, int step) const
+        {
+            if (x >= 0 && x <= w - 1 && y >= 0 && y <= h - 1)
+                return ((const OutT*)(data + y * step))[x];
+            return val;
+        }
+
+    private:
+        int w, h;
+        OutT val;
+    };
+
 }}}
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

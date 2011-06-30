@@ -647,4 +647,26 @@ namespace cv { namespace gpu { namespace mathfunc
     template void threshold_gpu<int>(const DevMem2D& src, const DevMem2D& dst, int thresh, int maxVal, int type, cudaStream_t stream);
     template void threshold_gpu<float>(const DevMem2D& src, const DevMem2D& dst, float thresh, float maxVal, int type, cudaStream_t stream);
     template void threshold_gpu<double>(const DevMem2D& src, const DevMem2D& dst, double thresh, double maxVal, int type, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // subtract
+
+    template <typename T>
+    class SubtractOp
+    {
+    public:
+        __device__ __forceinline__ T operator()(const T& l, const T& r) const
+        {
+            return l - r;
+        }
+    };
+
+    template <typename T>
+    void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
+    {
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, SubtractOp<T>(), stream);
+    }
+
+    template void subtractCaller<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
 }}}

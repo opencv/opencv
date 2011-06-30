@@ -49,7 +49,7 @@ class Blender
 {
 public:
     enum { NO, FEATHER, MULTI_BAND };
-    static cv::Ptr<Blender> createDefault(int type);
+    static cv::Ptr<Blender> createDefault(int type, bool try_gpu = false);
 
     void prepare(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
     virtual void prepare(cv::Rect dst_roi);
@@ -83,7 +83,7 @@ private:
 class MultiBandBlender : public Blender
 {
 public:
-    MultiBandBlender(int num_bands = 5) { setNumBands(num_bands); }
+    MultiBandBlender(int try_gpu = false, int num_bands = 5);
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
 
@@ -96,6 +96,7 @@ private:
     std::vector<cv::Mat> dst_pyr_laplace_;
     std::vector<cv::Mat> dst_band_weights_;
     cv::Rect dst_roi_final_;
+    bool can_use_gpu_;
 };
 
 
@@ -106,7 +107,8 @@ void normalize(const cv::Mat& weight, cv::Mat& src);
 
 void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
 
-void createLaplacePyr(const std::vector<cv::Mat>& pyr_gauss, std::vector<cv::Mat>& pyr_laplace);
+void createLaplacePyr(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
+void createLaplacePyrGpu(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
 
 // Restores source image in-place (result will be stored in pyr[0])
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);

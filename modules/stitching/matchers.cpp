@@ -257,15 +257,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 namespace 
 {
-    class PairLess
-    {
-    public:
-        bool operator()(const pair<int,int>& l, const pair<int,int>& r) const
-        {
-            return l.first < r.first || (l.first == r.first && l.second < r.second);
-        }
-    };
-    typedef set<pair<int,int>,PairLess> MatchesSet;
+    typedef set<pair<int,int> > MatchesSet;
 
     // These two classes are aimed to find features matches only, not to 
     // estimate homography

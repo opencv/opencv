@@ -42,14 +42,6 @@
 
 #include "internal_shared.hpp"
 
-#ifndef CV_PI_F
-  #ifndef CV_PI
-    #define CV_PI_F 3.14159265f
-  #else
-    #define CV_PI_F ((float)CV_PI)
-  #endif
-#endif
-
 // Other values are not supported
 #define CELL_WIDTH 8
 #define CELL_HEIGHT 8
