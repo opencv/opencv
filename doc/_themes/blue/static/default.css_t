@@ -261,14 +261,14 @@ pre {
 }
 
 tt {
-    color: {{ theme_headtext_color }}
+    color: {{ theme_headtextcolor }};
     background-color: #ecf0f3;
     padding: 0 1px 0 1px;
     font-size: 1.2em;
 }
 
 tt.descname {
-    color: {{ theme_headtext_color }}
+    color: {{ theme_headtextcolor }};
     background-color: #ecf0f3;
     padding: 0 1px 0 1px;
     font-size: 1.4em;
@@ -283,7 +283,7 @@ dl.function > dt:first-child {
     margin-bottom: 7px;
 }
 
-dl.cfunction > dt:first-child {
+dl.c\:function > dt:first-child {
     margin-bottom: 7px;
     color: #8080B0;
 }
@@ -307,4 +307,8 @@ table.field-list {
 
 ul.simple {
     list-style: none;
+}
+
+.enumeratevisibleitems .simple {
+list-style: square; 
 }

@@ -16,7 +16,7 @@ gpu::transpose
     :param dst: Destination matrix.
 
 .. seealso::
-:ocv:func:`transpose` 
+   :ocv:func:`transpose` 
 
 .. index:: gpu::flip
 
@@ -40,7 +40,7 @@ gpu::flip
             
 
 .. seealso::
-:ocv:func:`flip` 
+   :ocv:func:`flip` 
 
 .. index:: gpu::LUT
 
@@ -58,7 +58,7 @@ gpu::LUT
             
 
 .. seealso:: 
-:ocv:func:`LUT` 
+   :ocv:func:`LUT` 
 
 .. index:: gpu::merge
 
@@ -83,7 +83,7 @@ gpu::merge
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: 
-:ocv:func:`merge` 
+   :ocv:func:`merge` 
 
 .. index:: gpu::split
 
@@ -106,7 +106,7 @@ gpu::split
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: 
-:ocv:func:`split`
+   :ocv:func:`split`
 
 .. index:: gpu::magnitude
 
@@ -131,7 +131,7 @@ gpu::magnitude
     :param stream: Stream for the asynchronous version.
 
 .. seealso::
-:ocv:func:`magnitude` 
+   :ocv:func:`magnitude` 
 
 .. index:: gpu::magnitudeSqr
 
@@ -176,7 +176,7 @@ gpu::phase
     :param stream: Stream for the asynchronous version.
 
 .. seealso::
-:ocv:func:`phase` 
+   :ocv:func:`phase` 
 
 .. index:: gpu::cartToPolar
 
@@ -201,7 +201,7 @@ gpu::cartToPolar
     :param stream: Stream for the asynchronous version.
 
 .. seealso::
-:ocv:func:`cartToPolar` 
+   :ocv:func:`cartToPolar` 
 
 .. index:: gpu::polarToCart
 
@@ -226,4 +226,4 @@ gpu::polarToCart
     :param stream: Stream for the asynchronous version.
 
 .. seealso::
-:ocv:func:`polarToCart` 
+   :ocv:func:`polarToCart` 

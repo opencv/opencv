@@ -37,6 +37,7 @@ Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compi
     typedef DevMem2D_<unsigned char> DevMem2D;
     typedef DevMem2D_<float> DevMem2Df;
     typedef DevMem2D_<int> DevMem2Di;
+
 ..
 
 
@@ -108,6 +109,7 @@ Base storage class for GPU memory with reference counting. Its interface matches
 Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`gpu::DevMem2D_` and :ocv:class:`gpu::PtrStep_` so it can be passed directly to the kernel.
 
 .. note:: In contrast with :ocv:class:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to a size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix. 
+
 ::
 
     class CV_EXPORTS GpuMat
@@ -144,10 +146,10 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
 
 .. note:: 
 
-	You are not recommended to leave static or global ``GpuMat`` variables allocated, that is, to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
+    You are not recommended to leave static or global ``GpuMat`` variables allocated, that is, to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
 
 .. seealso:: 
-:ocv:class:`Mat`
+   :ocv:class:`Mat`
 
 .. index:: gpu::CudaMem
 
@@ -166,8 +168,8 @@ Class with reference counting wrapping special memory type allocation functions 
     ``ALLOC_WRITE_COMBINED``  sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
 
 .. note:: 
+   Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
 
-	Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
 ::
 
     class CV_EXPORTS CudaMem
@@ -235,8 +237,8 @@ gpu::Stream
 This class encapsulates a queue of asynchronous calls. Some functions have overloads with the additional ``gpu::Stream`` parameter. The overloads do initialization work (allocate output buffers, upload constants, and so on), start the GPU kernel, and return before results are ready. You can check whether all operations are complete via :ocv:func:`gpu::Stream::queryIfComplete`. You can asynchronously upload/download data from/to page-locked buffers, using the :ocv:class:`gpu::CudaMem` or :ocv:class:`Mat` header that points to a region of :ocv:class:`gpu::CudaMem`.
 
 .. note::
- 
-	Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe. 
+   Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe. 
+
 ::
 
     class CV_EXPORTS Stream
@@ -324,11 +326,11 @@ gpu::createContinuous
     The following wrappers are also available:
     
     
-		* .. ocv:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
+        * .. ocv:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
     
-		* .. ocv:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
+        * .. ocv:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
     
-		* .. ocv:function:: GpuMat gpu::createContinuous(Size size, int type)
+        * .. ocv:function:: GpuMat gpu::createContinuous(Size size, int type)
 
     Matrix is called continuous if its elements are stored continuously, that is, without gaps at the end of each row.
 

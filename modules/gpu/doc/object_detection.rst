@@ -74,7 +74,7 @@ gpu::HOGDescriptor::HOGDescriptor
    double threshold_L2hys=0.2, bool gamma_correction=true,
    int nlevels=DEFAULT_NLEVELS)??check the output??
 
-	Creates the ``HOG`` descriptor and detector.
+    Creates the ``HOG`` descriptor and detector.
 
    :param win_size: Detection window size. Align to block size and block stride.
 
@@ -150,7 +150,7 @@ gpu::HOGDescriptor::detect
    vector<Point>\& found_locations, double hit_threshold=0,
    Size win_stride=Size(), Size padding=Size())??see output??
 
-	Performs object detection without a multi-scale window.
+    Performs object detection without a multi-scale window.
 
    :param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
 
@@ -171,7 +171,7 @@ gpu::HOGDescriptor::detectMultiScale
    Size win_stride=Size(), Size padding=Size(),
    double scale0=1.05, int group_threshold=2)??the same??
 
-	Performs object detection with a multi-scale window.
+    Performs object detection with a multi-scale window.
 
    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
@@ -195,7 +195,7 @@ gpu::HOGDescriptor::getDescriptors
    Size win_stride, GpuMat\& descriptors,
    int descr_format=DESCR_FORMAT_COL_BY_COL)?? the same??
 
-	Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
+    Returns block descriptors computed for the whole image. The function is mainly used to learn the classifier.
 
    :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
 
@@ -302,6 +302,7 @@ gpu::CascadeClassifier_GPU::detectMultiScale
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
     The function returns the number of detected objects, so you can retrieve them as in the following example: 
+
 ::
 
     gpu::CascadeClassifier_GPU cascade_gpu(...);

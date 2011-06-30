@@ -187,7 +187,7 @@ Signals an error and raises an exception.
     :param exc: Exception to throw.
 
     :param code: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .   
-	
+    
     :param msg: Text of the error message.
 
     :param args: ``printf`` -like formatted error message in parentheses.
@@ -268,7 +268,7 @@ The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If N
 
 
 format
-----------
+------
 Returns a text string formatted using the ``printf`` -like expression.
 
 .. ocv:function:: string format( const char* fmt, ... )
@@ -289,8 +289,8 @@ Returns the number of threads used by OpenCV.
 The function returns the number of threads that is used by OpenCV.
 
 .. seealso::
-:ocv:func:`setNumThreads`,
-:ocv:func:`getThreadNum` 
+   :ocv:func:`setNumThreads`,
+   :ocv:func:`getThreadNum` 
 
 
 
@@ -303,8 +303,8 @@ Returns the index of the currently executed thread.
 The function returns a 0-based index of the currently executed thread. The function is only valid inside a parallel OpenMP region. When OpenCV is built without OpenMP support, the function always returns 0.
 
 .. seealso::
-:ocv:func:`setNumThreads`,
-:ocv:func:`getNumThreads` .
+   :ocv:func:`setNumThreads`,
+   :ocv:func:`getNumThreads` .
 
 
 
@@ -388,8 +388,8 @@ Sets the number of threads used by OpenCV.
 The function sets the number of threads used by OpenCV in parallel OpenMP regions. If ``nthreads=0`` , the function uses the default number of threads that is usually equal to the number of the processing cores.
 
 .. seealso::
-:ocv:func:`getNumThreads`,
-:ocv:func:`getThreadNum` 
+   :ocv:func:`getNumThreads`,
+   :ocv:func:`getThreadNum` 
 
 
 

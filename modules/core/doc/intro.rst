@@ -175,6 +175,7 @@ Multi-channel (``n``-channel) types can be specified using the following options
 * ``CV_8UC(n)`` ... ``CV_64FC(n)`` or ``CV_MAKETYPE(CV_8U, n)`` ... ``CV_MAKETYPE(CV_64F, n)`` macros when the number of channels is more than 4 or unknown at the compilation time.
 
 .. note:: ``CV_32FC1 == CV_32F``, ``CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)``, and ``CV_MAKETYPE(depth, n) == ((x&7)<<3) + (n-1)``. This means that the  constant type is formed from the ``depth``, taking the lowest 3 bits, and the number of channels minus 1, taking the next ``log2(CV_CN_MAX)`` bits.
+
 Examples::
 
    Mat mtx(3, 3, CV_32F); // make a 3x3 floating-point matrix

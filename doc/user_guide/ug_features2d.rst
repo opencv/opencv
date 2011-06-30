@@ -14,7 +14,7 @@ Matching keypoints
 ==================
 
 The code
--------
+--------
 We will start with a short sample ``opencv/samples/cpp/matcher_simple.cpp``: ::
 
     Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);

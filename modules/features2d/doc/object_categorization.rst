@@ -94,6 +94,7 @@ BOWKMeansTrainer
 
 BOWKMeansTrainer::BOWKMeansTrainer
 ----------------------------------
+
 The constructor.
 
 .. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
@@ -193,6 +194,7 @@ Returns an image discriptor size if the vocabulary is set. Otherwise, it returns
 
 BOWImgDescriptorExtractor::descriptorType
 ---------------------------------------------
+
 Returns an image descriptor type.
 
 .. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const

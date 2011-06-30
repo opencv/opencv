@@ -148,7 +148,7 @@ This is an approximate algorithm of the
 See Also:
 :ocv:func:`calcHist`
 
-
+.. _compareHist:
 
 compareHist
 -----------
@@ -368,6 +368,7 @@ Copies a histogram.
     
 The function makes a copy of the histogram. If the second histogram pointer ``*dst`` is NULL, a new histogram of the same size as  ``src`` is created. Otherwise, both histograms must have equal types and sizes. Then the function copies the source histogram's bin values to the destination histogram and sets the same bin value ranges as in ``src``.
 
+.. _createhist:
 
 CreateHist
 ----------

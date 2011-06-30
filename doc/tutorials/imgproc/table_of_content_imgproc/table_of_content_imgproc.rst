@@ -13,6 +13,13 @@ In this section you will learn about the image processing (manipulation) functio
    ../opening_closing_hats/opening_closing_hats
    ../pyramids/pyramids
    ../threshold/threshold
+   ../imgtrans/filter_2d/filter_2d
+   ../imgtrans/copyMakeBorder/copyMakeBorder
+   ../imgtrans/sobel_derivatives/sobel_derivatives
+   ../imgtrans/laplace_operator/laplace_operator
+   ../imgtrans/canny_detector/canny_detector
+   ../imgtrans/hough_lines/hough_lines
+   ../imgtrans/hough_circle/hough_circle
 
 .. |Author_AnaH| unicode:: Ana U+0020 Huam U+00E1 n
 
@@ -126,7 +133,7 @@ In this section you will learn about the image processing (manipulation) functio
                       :width:  100pt
 
 
-* :ref:`copyMakeBorder`
+* :ref:`copyMakeBorderTutorial`
 
   ===================== ==============================================
    |CopyMakeBorder|     *Title:* **Adding borders to your images**

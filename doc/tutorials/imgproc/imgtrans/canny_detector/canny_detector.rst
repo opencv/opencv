@@ -27,12 +27,12 @@ Steps
    .. math::
    
       K = \dfrac{1}{159}\begin{bmatrix}
-			    2 & 4 & 5 & 4 & 2 \\
-			    4 & 9 & 12 & 9 & 4 \\
-			    5 & 12 & 15 & 12 & 5 \\
-			    4 & 9 & 12 & 9 & 4 \\
-			    2 & 4 & 5 & 4 & 2 
-              		    \end{bmatrix} 
+                2 & 4 & 5 & 4 & 2 \\
+                4 & 9 & 12 & 9 & 4 \\
+                5 & 12 & 15 & 12 & 5 \\
+                4 & 9 & 12 & 9 & 4 \\
+                2 & 4 & 5 & 4 & 2 
+                        \end{bmatrix} 
 
 
 #. Find the intensity gradient of the image. For this, we follow a procedure analogous to Sobel: 
@@ -206,7 +206,8 @@ Explanation
 #. Create a window to display the results
 
    .. code-block:: cpp
-     namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+
+      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
 #. Create a Trackbar for the user to enter the lower threshold for our Canny detector:
 

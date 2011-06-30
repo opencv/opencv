@@ -215,7 +215,7 @@ If you need a more flexible type, use :ocv:class:`Mat` . The elements of the mat
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
 
-	
+    
 Vec
 ---
 .. ocv:class:: Vec
@@ -302,6 +302,8 @@ The static method ``Range::all()`` returns a special variable that means "the wh
         }
     }
 
+
+.. _Ptr: 
 
 Ptr
 ---
@@ -838,23 +840,23 @@ The method makes a new header for the specified matrix row and returns it. This 
 
 .. note::
 
-	In the current implementation, the following code does not work as expected: ::
+    In the current implementation, the following code does not work as expected: ::
 
-		Mat A;
-		...
-		A.row(i) = A.row(j); // will not work
+        Mat A;
+        ...
+        A.row(i) = A.row(j); // will not work
 
 
-	This happens because ``A.row(i)`` forms a temporary header that is further assigned to another header. Remember that each of these operations is O(1), that is, no data is copied. Thus, the above assignment is not true if you may have expected the j-th row to be copied to the i-th row. To achieve that, you should either turn this simple assignment into an expression or use the
-	:ocv:func:`Mat::copyTo` method: ::
+    This happens because ``A.row(i)`` forms a temporary header that is further assigned to another header. Remember that each of these operations is O(1), that is, no data is copied. Thus, the above assignment is not true if you may have expected the j-th row to be copied to the i-th row. To achieve that, you should either turn this simple assignment into an expression or use the
+    :ocv:func:`Mat::copyTo` method: ::
 
-		Mat A;
-		...
-		// works, but looks a bit obscure.
-		A.row(i) = A.row(j) + 0;
+        Mat A;
+        ...
+        // works, but looks a bit obscure.
+        A.row(i) = A.row(j) + 0;
 
-		// this is a bit longe, but the recommended method.
-		Mat Ai = A.row(i); M.row(j).copyTo(Ai);
+        // this is a bit longe, but the recommended method.
+        Mat Ai = A.row(i); M.row(j).copyTo(Ai);
 
 Mat::col
 ------------
@@ -954,6 +956,8 @@ The method copies the matrix data to another matrix. Before copying the data, th
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
 When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+
+.. _Mat::convertTo:
 
 Mat::convertTo
 ------------------
@@ -1116,7 +1120,7 @@ Mat::zeros
     :param cols: Number of columns.
 
     :param size: Alternative to the matrix size specification ``Size(cols, rows)``  .   
-	
+    
     :param sizes: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
@@ -1145,8 +1149,8 @@ Mat::ones
     :param cols: Number of columns.
 
     :param size: Alternative to the matrix size specification  ``Size(cols, rows)``  .   
-	
-	:param sizes: Array of integers specifying the array shape.
+    
+    :param sizes: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
 
@@ -1171,7 +1175,7 @@ Mat::eye
     :param cols: Number of columns.
 
     :param size: Alternative matrix size specification as  ``Size(cols, rows)`` .     
-	
+    
     :param type: Created matrix type.
 
 The method returns a Matlab-style identity matrix initializer, similarly to
@@ -1197,7 +1201,7 @@ Mat::create
     :param cols: New number of columns.
 
     :param size: Alternative new matrix size specification:  ``Size(cols, rows)``     
-	
+    
     :param sizes: Array of integers specifying a new array shape.
 
     :param type: New matrix type.
@@ -1207,7 +1211,7 @@ This is one of the key ``Mat`` methods. Most new-style OpenCV functions and meth
 #.
     If the current array shape and the type match the new ones, return immediately. Otherwise, de-reference the previous data by calling
     :ocv:func:`Mat::release`. 
-	
+    
 #.
     Initialize the new header.
 
@@ -1361,9 +1365,9 @@ Mat::operator()
     Extracts a rectangular submatrix.
 
     :param rowRange: Start and end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use ``Range::all()``.    
-	
+    
     :param colRange: Start and end column of the extracted submatrix. The upper boundary is not included. To select all the columns, use  ``Range::all()``.    
-	
+    
     :param roi: Extracted submatrix specified as a rectangle.
 
     :param ranges: Array of selected ranges along each array dimension.
@@ -1612,7 +1616,7 @@ Mat::at
     :param i, j, k: Indices along the dimensions 0, 1, and 2, respectively.
 
     :param pt: Element position specified as  ``Point(j,i)`` .    
-	
+    
     :param idx: Array of  ``Mat::dims``  indices.
 
 The template methods return a reference to the specified array element. For the sake of higher performance, the index range checks are only performed in the Debug configuration.
@@ -1728,7 +1732,7 @@ To use ``Mat_`` for multi-channel images/matrices, pass ``Vec`` as a ``Mat_`` pa
 
 
 NAryMatIterator
---------------
+---------------
 .. ocv:class:: NAryMatIterator
 
 n-ary multi-dimensional array iterator. ::

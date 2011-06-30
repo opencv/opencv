@@ -231,6 +231,7 @@ Explanation
       Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );   
       /// Gradient Y  
       Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );   
+
    The function takes the following arguments:
 
    * *src_gray*: In our example, the input image. Here it is *CV_8U* 

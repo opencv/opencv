@@ -34,6 +34,7 @@ where:
 * :math:`A` is a camera matrix, or a matrix of intrinsic parameters
 * :math:`(cx, cy)` is a principal point that is usually at the image center
 * :math:`fx, fy` are the focal lengths expressed in pixel-related units
+
 Thus, if an image from the camera is
 scaled by a factor, all of these parameters should
 be scaled (multiplied/divided, respectively) by the same factor. The
@@ -532,7 +533,7 @@ Finds an object pose from 3D-2D point correspondences.
     :param imagePoints: Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, where N is the number of points.  ``vector<Point2f>``  can be also passed here.
 
     :param cameraMatrix: Input camera matrix  :math:`A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}` .
-	
+    
     :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param rvec: Output rotation vector (see  :ocv:func:`Rodrigues` ) that, together with  ``tvec`` , brings points from the model coordinate system to the camera coordinate system.
@@ -595,7 +596,7 @@ Calculates a fundamental matrix from the corresponding points in two images.
     :param points1: Array of  ``N``  points from the first image. The point coordinates should be floating-point (single or double precision).
 
     :param points2: Array of the second image points of the same size and format as  ``points1`` .
-	
+    
     :param method: Method for computing a fundamental matrix.
 
             * **CV_FM_7POINT** for a 7-point algorithm.  :math:`N = 7`
@@ -603,7 +604,7 @@ Calculates a fundamental matrix from the corresponding points in two images.
             * **CV_FM_RANSAC** for the RANSAC algorithm.  :math:`N \ge 8`
             * **CV_FM_LMEDS** for the LMedS algorithm.  :math:`N \ge 8`
     
-	:param param1: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
+    :param param1: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
 
     :param param2: Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of confidence (probability) that the estimated matrix is correct.
 
@@ -789,7 +790,7 @@ Returns the new camera matrix based on the free scaling parameter.
     :param imageSize: Original image size.
 
     :param alpha: Free scaling parameter between 0 (when all the pixels in the undistorted image are valid) and 1 (when all the source image pixels are retained in the undistorted image). See  :ref:`StereoRectify` for details.
-	
+    
     :param newCameraMatrix: Output new camera matrix.
 
     :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
@@ -1205,8 +1206,7 @@ stereoCalibrate
 
     :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
 
-    :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , 
-	:math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
+    :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , :math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
 
     :param distCoeffs1: Input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. The output vector length depends on the flags.
 
@@ -1239,7 +1239,7 @@ stereoCalibrate
             * **CV_CALIB_FIX_ASPECT_RATIO** Optimize :math:`f^{(j)}_y` . Fix the ratio  :math:`f^{(j)}_x/f^{(j)}_y` .
 
             * **CV_CALIB_SAME_FOCAL_LENGTH** Enforce  :math:`f^{(0)}_x=f^{(1)}_x`  and  :math:`f^{(0)}_y=f^{(1)}_y` .
-			
+            
             * **CV_CALIB_ZERO_TANGENT_DIST** Set tangential distortion coefficients for each camera to zeros and fix there.
 
             * **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** Do not change the corresponding radial distortion coefficient during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
@@ -1391,6 +1391,6 @@ The function computes the rectification transformations without knowing intrinsi
 
 .. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
 
-.. [Hartley99] Hartley, R.I., ‚ÄúTheory and Practice of Projective Rectification‚Äù. IJCV 35 2, pp 115-127 (1999)
+.. [Hartley99] Hartley, R.I., ìTheory and Practice of Projective Rectificationî. IJCV 35 2, pp 115-127 (1999)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.

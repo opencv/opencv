@@ -42,7 +42,7 @@ gpu::meanShiftProc
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
 .. seealso::
-:ocv:func:`gpu::meanShiftFiltering` 
+   :ocv:func:`gpu::meanShiftFiltering` 
 
 .. index:: gpu::meanShiftSegmentation
 
@@ -81,7 +81,7 @@ gpu::integral
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
 .. seealso::
-:ocv:func:`integral` 
+   :ocv:func:`integral` 
 
 .. index:: gpu::sqrIntegral
 
@@ -128,7 +128,7 @@ gpu::cornerHarris
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
 .. seealso::
-:ocv:func:`cornerHarris` 
+   :ocv:func:`cornerHarris` 
 
 .. index:: gpu::cornerMinEigenVal
 
@@ -173,7 +173,7 @@ gpu::mulSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 .. seealso::
-:ocv:func:`mulSpectrums` 
+   :ocv:func:`mulSpectrums` 
 
 .. index:: gpu::mulAndScaleSpectrums
 
@@ -198,7 +198,7 @@ gpu::mulAndScaleSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 .. seealso::
-:ocv:func:`mulSpectrums` 
+   :ocv:func:`mulSpectrums` 
 
 .. index:: gpu::dft
 
@@ -237,7 +237,7 @@ gpu::dft
         If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
 
 .. seealso::
-:ocv:func:`dft` 
+   :ocv:func:`dft` 
 
 .. index:: gpu::convolve
 
@@ -325,7 +325,7 @@ gpu::matchTemplate
     * ``CV_TM_CCORR``
 
 .. seealso::
-:ocv:func:`matchTemplate` 
+   :ocv:func:`matchTemplate` 
 
 .. index:: gpu::remap
 
@@ -352,7 +352,7 @@ The function transforms the source image using the specified map:
 Values of pixels with non-integer coordinates are computed using the bilinear interpolation.
 
 .. seealso:: 
-:ocv:func:`remap` 
+   :ocv:func:`remap` 
 
 .. index:: gpu::cvtColor
 
@@ -377,7 +377,7 @@ gpu::cvtColor
 3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
 .. seealso::
-:ocv:func:`cvtColor` 
+   :ocv:func:`cvtColor` 
 
 .. index:: gpu::threshold
 
@@ -402,7 +402,7 @@ gpu::threshold
     :param stream: Stream for the asynchronous version.
 
 .. seealso::
-:ocv:func:`threshold` 
+   :ocv:func:`threshold` 
 
 .. index:: gpu::resize
 
@@ -458,7 +458,7 @@ gpu::warpAffine
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 .. seealso::
-:ocv:func:`warpAffine` 
+   :ocv:func:`warpAffine` 
 
 .. index:: gpu::warpPerspective
 
@@ -479,7 +479,7 @@ gpu::warpPerspective
     :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
 
 .. seealso::
-:ocv:func:`warpPerspective` 
+   :ocv:func:`warpPerspective` 
 
 .. index:: gpu::rotate
 
@@ -504,7 +504,7 @@ gpu::rotate
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
 
 .. seealso::
-:ocv:func:`gpu::warpAffine` 
+   :ocv:func:`gpu::warpAffine` 
 
 .. index:: gpu::copyMakeBorder
 
@@ -523,7 +523,7 @@ gpu::copyMakeBorder
     :param value: Border value.
 
 .. seealso::
-:ocv:func:`copyMakeBorder`
+   :ocv:func:`copyMakeBorder`
 
 .. index:: gpu::rectStdDev
 

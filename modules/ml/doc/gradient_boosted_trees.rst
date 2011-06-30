@@ -84,7 +84,7 @@ As a result, you get the following model:
 
 .. math:: f(x) = f_0 + \nu\cdot\sum^M_{i=1}T_i(x) ,
 
-where :math:`f_0` is an initial guess (the best constant model) and :math:`\nu`
+where :math:`f_0` is the initial guess (the best constant model) and :math:`\nu`
 is a regularization parameter from the interval :math:`(0,1]`, futher called
 *shrinkage*.
 

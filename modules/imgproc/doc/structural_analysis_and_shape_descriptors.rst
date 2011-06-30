@@ -31,13 +31,7 @@ The function computes moments, up to the 3rd order, of a vector shape or a raste
         Moments( const CvMoments& moments );
         operator CvMoments() const;
 
-        // spatial moments
-        double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
-        // central moments
-        double  mu20, mu11, mu02, mu30, mu21, mu12, mu03;
-        // central normalized moments
-        double  nu20, nu11, nu02, nu30, nu21, nu12, nu03;
-    };
+    ..
 
 
 In case of a raster image, the spatial moments :math:`\texttt{Moments::m}_{ji}` are computed as:
@@ -178,7 +172,7 @@ Draws contours outlines or filled contours.
     :param contourIdx: Parameter indicating a contour to draw. If it is negative, all the contours are drawn.
 
     :param color: Color of the contours.
-	
+    
     :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
         drawn.
 
@@ -680,12 +674,12 @@ Here is a sample output of the function where each image pixel is tested against
 
 .. image:: pics/pointpolygon.png
 
-.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. A Buyer‚Äôs Guide to Conic Fitting. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
+.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. A Buyerís Guide to Conic Fitting. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
 
 .. [Hu62] M. Hu. Visual Pattern Recognition by Moment Invariants, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
 
-.. [Sklansky82] Sklansky, J., ‚ÄúFinding the Convex Hull of a Simple Polygon‚Äù. PRL 1 $number, pp 79-83 (1982)
+.. [Sklansky82] Sklansky, J., ìFinding the Convex Hull of a Simple Polygonî. PRL 1 $number, pp 79-83 (1982)
 
-.. [Suzuki85] Suzuki, S. and Abe, K., ‚ÄúTopological Structural Analysis of Digitized Binary Images by Border Following‚Äù. CVGIP 30 1, pp 32-46 (1985)
+.. [Suzuki85] Suzuki, S. and Abe, K., ìTopological Structural Analysis of Digitized Binary Images by Border Followingî. CVGIP 30 1, pp 32-46 (1985)
 
-.. [TehChin89] Teh, C.H. and Chin, R.T., ‚ÄúOn the Detection of Dominant Points on Digital Curve‚Äù. PAMI 11 8, pp 859-872 (1989)
+.. [TehChin89] Teh, C.H. and Chin, R.T., ìOn the Detection of Dominant Points on Digital Curveî. PAMI 11 8, pp 859-872 (1989)

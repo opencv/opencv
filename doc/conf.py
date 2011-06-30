@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'ocv']
+extensions = ['sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'ocv', 'sphinx.ext.doctest']
 doctest_test_doctest_blocks = 'block'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -170,7 +170,7 @@ htmlhelp_basename = 'opencv'
 
 # OpenCV docs use some custom LaTeX macros in the formulae. Make sure we include the definitions
 pngmath_latex_preamble = r"""
-\usepackage{euler}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
+\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
 \newcommand{\matTT}[9]{
 \[
 \left|\begin{array}{ccc}

@@ -81,4 +81,3 @@ You should get a nice window as the one shown below:
 .. image:: images/GCC_CMake_Example_Tutorial.png
    :alt: Display Image - Lena
    :align: center
-

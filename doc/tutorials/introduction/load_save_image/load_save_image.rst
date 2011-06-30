@@ -15,7 +15,7 @@ Goals
 
 In this tutorial you will learn how to:
 
-* Load an image using :imread:`imread <> `
+* Load an image using :imread:`imread <>`
 * Transform an image from RGB to Grayscale format by using :cvt_color:`cvtColor <>`
 * Save your transformed image in a file on disk (using :imwrite:`imwrite <>`)
 

@@ -33,7 +33,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
     :param maxLevel: 0-based maximal pyramid level number. If set to 0, pyramids are not used (single level). If set to 1, two levels are used, and so on.
 
     :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
-	
+    
     :param derivLambda: Relative weight of the spatial image derivatives impact to the optical flow estimation. If  ``derivLambda=0`` , only the image intensity is used. If  ``derivLambda=1`` , only derivatives are used. Any other values between 0 and 1 mean that both derivatives and the image intensity are used (in the corresponding proportions).
 
     :param flags: Operation flags:
@@ -70,7 +70,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
     :param polyN: Size of the pixel neighborhood used to find polynomial expansion in each pixel. Larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically,  ``polyN`` =5 or 7.
 
     :param polySigma: Standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion. For  ``polyN=5`` ,  you can set  ``polySigma=1.1`` . For  ``polyN=7`` , a good value would be  ``polySigma=1.5`` .
-	
+    
     :param flags: Operation flags that can be a combination of the following:
 
             * **OPTFLOW_USE_INITIAL_FLOW** Use the input  ``flow``  as an initial flow approximation.
@@ -205,9 +205,9 @@ In case of point sets, the problem is formulated as follows: you need to find a 
     when ``fullAffine=false`` .
 
 .. seealso::
-:ocv:func:`getAffineTransform`,
-:ocv:func:`getPerspectiveTransform`,
-:ocv:func:`findHomography`
+   :ocv:func:`getAffineTransform`,
+   :ocv:func:`getPerspectiveTransform`,
+   :ocv:func:`findHomography`
 
 
 
@@ -383,7 +383,7 @@ Finds an object on a back projection image.
 .. ocv:pyoldfunction:: cv.MeanShift(probImage, window, criteria)-> comp
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` for details.
-	
+    
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
@@ -498,7 +498,7 @@ The class is only used to define the common interface for the whole family of ba
 
 
 BackgroundSubtractor::operator()
--------------------------------
+--------------------------------
 Computes a foreground mask.
 
 .. ocv:function:: virtual void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
@@ -633,7 +633,7 @@ The constructors.
 
 
 BackgroundSubtractorMOG2::operator()
------------------------------------
+------------------------------------
 Updates the background model and computes the foreground mask
 
 .. ocv:function:: virtual void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
