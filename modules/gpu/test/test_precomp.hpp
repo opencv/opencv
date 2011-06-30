@@ -50,7 +50,6 @@
 #include <string>
 #include <algorithm>
 #include <iterator>
-#include <cuda_runtime_api.h>
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"

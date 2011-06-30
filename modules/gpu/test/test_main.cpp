@@ -42,6 +42,7 @@
 #include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+#include <cuda_runtime_api.h>
 
 void print_info()
 {    
