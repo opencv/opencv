@@ -195,6 +195,13 @@ struct AddWeightedOp : public BaseAddOp
 struct MulOp : public BaseElemWiseOp
 {
     MulOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {};
+    void getValueRange(int depth, double& minval, double& maxval)
+    {
+        minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
+        maxval = depth < CV_32S ? cvtest::getMaxVal(depth) : depth == CV_32S ? 1000000 : 1000.;
+        minval = std::max(minval, -30000.);
+        maxval = std::min(maxval, 30000.);
+    }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::multiply(src[0], src[1], dst, alpha);
