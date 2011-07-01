@@ -462,7 +462,7 @@ gives more accurate results). For ``a``,``b`` , and ``c`` , OpenCV uses the valu
     ``CV_DIST_L2``  :math:`(5\times 5)`  a=1, b=1.4, c=2.1969 \
     ==============  ===================  ======================
 
-Typically, for a fast, coarse distance estimation ``CV_DIST_L2``,a
+Typically, for a fast, coarse distance estimation ``CV_DIST_L2``, a
 :math:`3\times 3` mask is used. For a more accurate distance estimation ``CV_DIST_L2`` , a
 :math:`5\times 5` mask or the precise algorithm is used.
 Note that both the precise and the approximate algorithms are linear on the number of pixels.
