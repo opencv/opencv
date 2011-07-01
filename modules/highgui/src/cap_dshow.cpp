@@ -2985,6 +2985,7 @@ bool CvCaptureCAM_DShow::setProperty( int property_id, double value )
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
         height = cvRound(value);
+        break;
     default:
         return false;
     }

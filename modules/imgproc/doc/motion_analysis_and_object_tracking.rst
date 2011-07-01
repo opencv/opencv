@@ -63,9 +63,10 @@ The function adds the input image ``src`` or its selected region, raised to a po
 The function supports multi-channel images. Each channel is processed independently.
 
 .. seealso::
-:ocv:func:`accumulateSquare`,
-:ocv:func:`accumulateProduct`,
-:ocv:func:`accumulateWeighted`
+
+    :ocv:func:`accumulateSquare`,
+    :ocv:func:`accumulateProduct`,
+    :ocv:func:`accumulateWeighted`
 
 
 
@@ -97,9 +98,10 @@ The function adds the product of two images or their selected regions to the acc
 The function supports multi-channel images. Each channel is processed independently.
 
 .. seealso::
-:ocv:func:`accumulate`,
-:ocv:func:`accumulateSquare`,
-:ocv:func:`accumulateWeighted`
+
+    :ocv:func:`accumulate`,
+    :ocv:func:`accumulateSquare`,
+    :ocv:func:`accumulateWeighted`
 
 
 
@@ -132,6 +134,7 @@ That is, ``alpha`` regulates the update speed (how fast the accumulator "forgets
 The function supports multi-channel images. Each channel is processed independently.
 
 .. seealso::
-:ocv:func:`accumulate`,
-:ocv:func:`accumulateSquare`,
-:ocv:func:`accumulateProduct` 
+
+    :ocv:func:`accumulate`,
+    :ocv:func:`accumulateSquare`,
+    :ocv:func:`accumulateProduct` 

@@ -24,6 +24,7 @@ Applies an adaptive threshold to an array.
     :param adaptiveMethod: Adaptive thresholding algorithm to use, ``ADAPTIVE_THRESH_MEAN_C``  or  ``ADAPTIVE_THRESH_GAUSSIAN_C`` . See the details below.
 
     :param thresholdType: Thresholding type that must be either  ``THRESH_BINARY``  or  ``THRESH_BINARY_INV`` .
+	
     :param blockSize: Size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on.
 
     :param C: Constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
@@ -88,8 +89,8 @@ Converts an image from one color space to another.
     :param dstCn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
 
 The function converts an input image from one color
-space to another. In case of transformation to-from RGB color space, the order of the channels should be specified explicitly (RGB or BGR).
-Note that the default color format in OpenCV is often referred to as RGB but it is actually BGR (the bytes are reversed). So the first byte in a standard (24-bit) color image will be an 8-bit Blue component, the second byte will be Green and the third byte will be Red. The fourth, fifth and sixth bytes would then be the 2nd pixel (Blue then Green then Red) and so on.
+space to another. In case of a transformation to-from RGB color space, the order of the channels should be specified explicitly (RGB or BGR).
+Note that the default color format in OpenCV is often referred to as RGB but it is actually BGR (the bytes are reversed). So the first byte in a standard (24-bit) color image will be an 8-bit Blue component, the second byte will be Green, and the third byte will be Red. The fourth, fifth, and sixth bytes would then be the second pixel (Blue, then Green, then Red), and so on.
 
 The conventional ranges for R, G, and B channel values are:
 
@@ -104,12 +105,12 @@ The conventional ranges for R, G, and B channel values are:
 
 In case of linear transformations, the range does not matter.
 But in case of a non-linear transformation, an input RGB image should be normalized to the proper value range to get the correct results, for example, for RGB
-:math:`\rightarrow` L*u*v* transformation. For example, if you have a 32-bit floating-point image directly converted from an 8-bit image without any scaling, then it will have the 0..255 value range, instead of 0..1 assumed by the function. So, before calling ``cvtColor`` , you need first to scale the image down: ::
+:math:`\rightarrow` L*u*v* transformation. For example, if you have a 32-bit floating-point image directly converted from an 8-bit image without any scaling, then it will have the 0..255 value range instead of 0..1 assumed by the function. So, before calling ``cvtColor`` , you need first to scale the image down: ::
 
     img *= 1./255;
     cvtColor(img, img, CV_BGR2Luv);
 
-If you use ``cvtColor`` with 8-bit images then conversion will have lost some information. For many applications this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
+If you use ``cvtColor`` with 8-bit images, the conversion will have some information lost. For many applications, this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
 
 The function can do the following transformations:
 
@@ -522,7 +523,7 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
         \texttt{src} (x',y')- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} (x',y')+ \texttt{upDiff}
 
-    in the case of grayscale image and floating range
+    in case of a grayscale image and floating range
 
 * 
 
@@ -530,7 +531,7 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
         \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)- \texttt{loDiff} \leq \texttt{src} (x,y)  \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)+ \texttt{upDiff}
 
-    in the case of grayscale image and fixed range
+    in case of a grayscale image and fixed range
 
 *
 
@@ -548,7 +549,7 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
         \texttt{src} (x',y')_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} (x',y')_b+ \texttt{upDiff} _b
 
-    in the case of color image and floating range
+    in case of a color image and floating range
 
 
 *
@@ -567,16 +568,16 @@ The functions ``floodFill`` fill a connected component starting from the seed po
 
         \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b- \texttt{loDiff} _b \leq \texttt{src} (x,y)_b \leq \texttt{src} ( \texttt{seed} .x, \texttt{seed} .y)_b+ \texttt{upDiff} _b
 
-    in the case of color image and fixed range
+    in case of a color image and fixed range
 
 where
 :math:`src(x',y')` is the value of one of pixel neighbors that is already known to belong to the component. That is, to be added to the connected component, a color/brightness of the pixel should be close enough to:
 
 *
-    Color/brightness of one of its neighbors that already belong to the connected component in case of floating range.
+    Color/brightness of one of its neighbors that already belong to the connected component in case of a floating range.
 
 *
-    Color/brightness of the seed point in case of fixed range.
+    Color/brightness of the seed point in case of a fixed range.
 
 Use these functions to either mark a connected component with the specified color in-place, or build a mask and then extract the contour, or copy the region to another image, and so on. Various modes of the function are demonstrated in the ``floodfill.cpp`` sample.
 
@@ -638,13 +639,13 @@ Calculates the integral of an image.
 
     :param sum: Integral image as  :math:`(W+1)\times (H+1)` , 32-bit integer or floating-point (32f or 64f).
 
-    :param sqsum: Integral image for squared pixel values. It will be :math:`(W+1)\times (H+1)`, double-precision floating-point (64f) array.
+    :param sqsum: Integral image for squared pixel values. It is :math:`(W+1)\times (H+1)`, double-precision floating-point (64f) array.
 
-    :param tilted: Integral for the image rotated by 45 degrees. It will be :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
+    :param tilted: Integral for the image rotated by 45 degrees. It is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
     
     :param sdepth: Desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
 
-The functions calculate one or more integral images for the source image as following:
+The functions calculate one or more integral images for the source image as follows:
 
 .. math::
 
@@ -658,7 +659,7 @@ The functions calculate one or more integral images for the source image as foll
 
     \texttt{tilted} (X,Y) =  \sum _{y<Y,abs(x-X+1) \leq Y-y-1}  \texttt{image} (x,y)
 
-Using these integral images, you can calculate sum, mean and standard deviation over a specific up-right or rotated rectangular region of the image in a constant time, for example:
+Using these integral images, you can calculate sa um, mean, and standard deviation over a specific up-right or rotated rectangular region of the image in a constant time, for example:
 
 .. math::
 
@@ -685,7 +686,7 @@ Applies a fixed-level threshold to each array element.
 .. ocv:cfunction:: double cvThreshold( const CvArr* src, CvArr* dst, double threshold, double maxValue, int thresholdType )
 .. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
-    :param src: Source array (single-channel, 8-bit of 32-bit floating point)
+    :param src: Source array (single-channel, 8-bit of 32-bit floating point).
 
     :param dst: Destination array of the same size and type as  ``src`` .
     
@@ -735,9 +736,9 @@ types of thresholding supported by the function. They are determined by ``thresh
 
 Also, the special value ``THRESH_OTSU`` may be combined with
 one of the above values. In this case, the function determines the optimal threshold
-value using Otsu's algorithm and uses it instead of the specified ``thresh`` .
+value using the Otsu's algorithm and uses it instead of the specified ``thresh`` .
 The function returns the computed threshold value.
-Currently, Otsu's method is implemented only for 8-bit images.
+Currently, the Otsu's method is implemented only for 8-bit images.
 
 .. image:: pics/threshold.png
 
@@ -822,15 +823,15 @@ Runs the GrabCut algorithm.
 
         * **GC_INIT_WITH_MASK** 	The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined. Then, all the pixels outside of the ROI are automatically initialized with  ``GC_BGD`` .
 
-        * **GC_EVAL** 	The value means that algorithm should just resume.
+        * **GC_EVAL** 	The value means that the algorithm should just resume.
 
 The function implements the `GrabCut image segmentation algorithm <http://en.wikipedia.org/wiki/GrabCut>`_.
-See the sample grabcut.cpp to learn how to use the function.
+See the sample ``grabcut.cpp`` to learn how to use the function.
 
-.. [Borgefors86] Borgefors, Gunilla, “Distance transformations in digital images”. Comput. Vision Graph. Image Process. 34 3, pp 344–371 (1986)
+.. [Borgefors86] Borgefors, Gunilla, *Distance transformations in digital images*. Comput. Vision Graph. Image Process. 34 3, pp 344–371 (1986)
 
-.. [Felzenszwalb04] Felzenszwalb, Pedro F. and Huttenlocher, Daniel P. “Distance Transforms of Sampled Functions”, TR2004-1963, TR2004-1963 (2004)
+.. [Felzenszwalb04] Felzenszwalb, Pedro F. and Huttenlocher, Daniel P. *Distance Transforms of Sampled Functions*, TR2004-1963, TR2004-1963 (2004)
 
-.. [Meyer92] Meyer, F. “Color image segmentation”, ICIP92, 1992
+.. [Meyer92] Meyer, F. *Color Image Segmentation*, ICIP92, 1992
 
-.. [Telea04] Alexandru Telea, “An Image Inpainting Technique Based on the Fast Marching Method”. Journal of Graphics, GPU, and Game Tools 9 1, pp 23-34 (2004)
+.. [Telea04] Alexandru Telea, *An Image Inpainting Technique Based on the Fast Marching Method*. Journal of Graphics, GPU, and Game Tools 9 1, pp 23-34 (2004)

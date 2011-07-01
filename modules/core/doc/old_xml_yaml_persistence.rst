@@ -299,6 +299,7 @@ Then, it is possible to get hashed "x" and "y" pointers to speed up decoding of 
         cvReleaseFileStorage( &fs );
         return 0;
     }
+
 ..
 
 Please note that whatever method of accessing a map you are using, it is
@@ -620,20 +621,21 @@ Starts the next stream.
 
 The function finishes the currently written stream and starts the next stream. In the case of XML the file with multiple streams looks like this: ::
 
-<opencv_storage>
-<!-- stream #1 data -->
-</opencv_storage>
-<opencv_storage>
-<!-- stream #2 data -->
-</opencv_storage>
-...
+    <opencv_storage>
+    <!-- stream #1 data -->
+    </opencv_storage>
+    <opencv_storage>
+    <!-- stream #2 data -->
+    </opencv_storage>
+    ...
 
-The a YAML file will look like this:
-%YAML:1.0
-# stream #1 data
-...
----
-# stream #2 data
+The a YAML file will look like this: ::
+
+    %YAML:1.0
+    # stream #1 data
+    ...
+    ---
+    # stream #2 data
 
 This is useful for concatenating files or for resuming the writing process.
 

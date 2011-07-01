@@ -281,7 +281,7 @@ Remaps an image to log-polar space.
 The function ``cvLogPolar`` transforms the source image using the following transformation:
 
   *
-    Forward transformation (``CV_WARP_INVERSE_MAP``is not set):
+    Forward transformation (``CV_WARP_INVERSE_MAP`` is not set):
 
         .. math::
 

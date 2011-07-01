@@ -97,7 +97,7 @@ BOWKMeansTrainer::BOWKMeansTrainer
 
 The constructor.
 
-.. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
+.. ocv:function:: BOWKMeansTrainer::BOWKMeansTrainer( int clusterCount, const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS )
 
     See :ocv:func:`kmeans` function parameters.
 

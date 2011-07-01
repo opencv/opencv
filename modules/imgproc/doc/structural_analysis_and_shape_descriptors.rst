@@ -5,7 +5,7 @@ Structural Analysis and Shape Descriptors
 
 moments
 -----------
-Calculates all of the moments up to the third order of a polygon or rasterized shape
+Calculates all of the moments up to the third order of a polygon or rasterized shape.
 
 .. ocv:function:: Moments moments( InputArray array, bool binaryImage=false )
 
@@ -18,9 +18,9 @@ Calculates all of the moments up to the third order of a polygon or rasterized s
 
     :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
     
-    :param moments: The output moments
+    :param moments: Output moments.
 
-The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The results are returned in a structure ``Moments``, defined as: ::
+The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The results are returned in the structure ``Moments`` defined as: ::
 
     class Moments
     {
@@ -31,16 +31,13 @@ The function computes moments, up to the 3rd order, of a vector shape or a raste
         Moments( const CvMoments& moments );
         operator CvMoments() const;
 
-    ..
-
-
 In case of a raster image, the spatial moments :math:`\texttt{Moments::m}_{ji}` are computed as:
 
 .. math::
 
-    \texttt{m} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot x^j  \cdot y^i \right );
+    \texttt{m} _{ji}= \sum _{x,y}  \left ( \texttt{array} (x,y)  \cdot x^j  \cdot y^i \right )
 
-the central moments
+The central moments
 :math:`\texttt{Moments::mu}_{ji}` are computed as:
 
 .. math::
@@ -52,9 +49,9 @@ where
 
 .. math::
 
-    \bar{x} = \frac{\texttt{m}_{10}}{\texttt{m}_{00}} , \; \bar{y} = \frac{\texttt{m}_{01}}{\texttt{m}_{00}};
+    \bar{x} = \frac{\texttt{m}_{10}}{\texttt{m}_{00}} , \; \bar{y} = \frac{\texttt{m}_{01}}{\texttt{m}_{00}}
 
-and the normalized central moments
+The normalized central moments
 :math:`\texttt{Moments::nu}_{ij}` are computed as:
 
 .. math::
@@ -66,7 +63,7 @@ and the normalized central moments
 :math:`\texttt{nu}_{00}=1` 
 :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
 
-The moments of a contour are defined in the same way but computed using Green's formula
+The moments of a contour are defined in the same way but computed using the Green's formula
 (see
 http://en.wikipedia.org/wiki/Green_theorem
 ). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
@@ -80,7 +77,7 @@ http://en.wikipedia.org/wiki/Green_theorem
 
 HuMoments
 -------------
-Calculates the seven Hu invariants.
+Calculates seven Hu invariants.
 
 .. ocv:function:: void HuMoments( const Moments& moments, double* hu )
 
@@ -93,7 +90,7 @@ Calculates the seven Hu invariants.
     :param moments: Input moments computed with  :ocv:func:`moments` .
     :param hu: Output Hu invariants.
 
-The function calculates the seven Hu invariants (introduced in [Hu62]_; see also
+The function calculates seven Hu invariants (introduced in [Hu62]_; see also
 http://en.wikipedia.org/wiki/Image_moment) defined as:
 
 .. math::
@@ -187,7 +184,7 @@ Draws contours outlines or filled contours.
 
 The function draws contour outlines in the image if
 :math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
-:math:`\texttt{thickness}<0` . Here is the example on how to retrieve connected components from the binary image and label them: ::
+:math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
 
     #include "cv.h"
     #include "highgui.h"
@@ -240,15 +237,15 @@ Approximates a polygonal curve(s) with the specified precision.
 
 .. ocv:cfunction:: CvSeq* cvApproxPoly( const void* curve, int headerSize, CvMemStorage* storage, int method, double epsilon, int recursive=0 )
 
-    :param curve: Input vector of 2d point, stored in:
+    :param curve: Input vector of a 2D point stored in:
         
         * ``std::vector`` or ``Mat`` (C++ interface)
         
-        * ``Nx2`` numpy array (Python interface).
+        * ``Nx2`` numpy array (Python interface)
         
         * ``CvSeq`` or `` ``CvMat`` (C interface) 
 
-    :param approxCurve: Result of the approximation. The type should match the type of the input curve. In the case of C interface the approximated curve is stored in the memory storage and pointer to it is returned.
+    :param approxCurve: Result of the approximation. The type should match the type of the input curve. In case of C interface the approximated curve is stored in the memory storage and pointer to it is returned.
 
     :param epsilon: Parameter specifying the approximation accuracy. This is the maximum distance between the original curve and its approximation.
 
@@ -256,16 +253,16 @@ Approximates a polygonal curve(s) with the specified precision.
     
     :param headerSize: Header size of the approximated curve. Normally, ``sizeof(CvContour)`` is used.
     
-    :param storage: Memory storage where the approximated curve will be stored.
+    :param storage: Memory storage where the approximated curve is stored.
     
-    :param method: The contour approximation algorithm. Only ``CV_POLY_APPROX_DP`` is supported.
+    :param method: Contour approximation algorithm. Only ``CV_POLY_APPROX_DP`` is supported.
     
-    :param recursive: The recursion flag. If it is non-zero and ``curve`` is ``CvSeq*``, the function ``cvApproxPoly`` will approximate all the contours accessible from ``curve`` by ``h_next`` and ``v_next`` links.
+    :param recursive: Recursion flag. If it is non-zero and ``curve`` is ``CvSeq*``, the function ``cvApproxPoly`` approximates all the contours accessible from ``curve`` by ``h_next`` and ``v_next`` links.
 
-The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices, so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
+The functions ``approxPolyDP`` approximate a curve or a polygon with another curve/polygon with less vertices so that the distance between them is less or equal to the specified precision. It uses the Douglas-Peucker algorithm
 http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
 
-See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp on how to use the function.
+See http://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/contours.cpp for the function usage model.
 
 
 ApproxChains
@@ -276,19 +273,19 @@ Approximates Freeman chain(s) with a polygonal curve.
 
 .. ocv:pyoldfunction:: cv.ApproxChains(chain, storage, method=CV_CHAIN_APPROX_SIMPLE, parameter=0, minimalPerimeter=0, recursive=0)-> contours
     
-    :param chain: Pointer to the approximated Freeman chain that can refer to other chains     
+    :param chain: Pointer to the approximated Freeman chain that can refer to other chains.     
     
-    :param storage: Storage location for the resulting polylines 
+    :param storage: Storage location for the resulting polylines. 
     
-    :param method: Approximation method (see the description of the function  :ocv:cfunc:`FindContours` ) 
+    :param method: Approximation method (see the description of the function  :ocv:cfunc:`FindContours` ). 
     
-    :param parameter: Method parameter (not used now) 
+    :param parameter: Method parameter (not used now). 
     
-    :param minimalPerimeter: Approximates only those contours whose perimeters are not less than  ``minimal_perimeter`` . Other chains are removed from the resulting structure   
+    :param minimalPerimeter: Approximates only those contours whose perimeters are not less than  ``minimal_perimeter`` . Other chains are removed from the resulting structure.   
     
-    :param recursive: Recursion flag. If it is non-zero, the function approximates all chains that can be obtained to from  ``chain``  by using the  ``h_next``  or  ``v_next`` links. Otherwise, the single input chain is approximated.
+    :param recursive: Recursion flag. If it is non-zero, the function approximates all chains that can be obtained from  ``chain``  by using the  ``h_next``  or  ``v_next`` links. Otherwise, the single input chain is approximated.
     
-This is a stand-alone contour approximation routine, not represented in the new interface. When :ocv:cfunc:`FindContours` retrieves contours as Freeman chains, it calls to the function to get approximated contours, represented as polygons.
+This is a standalone contour approximation routine, not represented in the new interface. When :ocv:cfunc:`FindContours` retrieves contours as Freeman chains, it calls the function to get approximated contours, represented as polygons.
 
 
 arcLength
@@ -339,14 +336,15 @@ Calculates a contour area.
 .. ocv:cfunction:: double cvContourArea( const CvArr* contour, CvSlice slice=CV_WHOLE_SEQ )
 .. ocv:pyoldfunction:: cv.ContourArea(contour, slice=CV_WHOLE_SEQ)-> double
 
-    :param contour: Input vector of 2d points (contour vertices), stored in ``std::vector`` or ``Mat``.
-    :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking sign of the area. By default the parameter is ``false``, which means that the absolute value is returned.
+    :param contour: Input vector of 2D points (contour vertices), stored in ``std::vector`` or ``Mat``.
+    :param orientation: Oriented area flag. If it is true, the function returns a signed area value, depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can determine orientation of a contour by taking the sign of an area. By default, the parameter is ``false``, which means that the absolute value is returned.
 
 The function computes a contour area. Similarly to
 :ocv:func:`moments` , the area is computed using the Green formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
 :ocv:func:`drawContours` or
 :ocv:func:`fillPoly` , can be different.
-Here is a short example: ::
+
+Example: ::
 
     vector<Point> contour;
     contour.push_back(Point2f(0, 0));
@@ -379,15 +377,15 @@ Finds the convex hull of a point set.
 
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
-    :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case ``hull`` elements will be the convex hull points themselves.
+    :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case, the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case, ``hull`` elements aree the convex hull points themselves.
     
-    :param storage: The output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
+    :param storage: Output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
 
-    :param clockwise: Orientation flag. If true, the output convex hull will be oriented clockwise. Otherwise, it will be oriented counter-clockwise. The usual screen coordinate system is assumed where the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
+    :param clockwise: Orientation flag. If it is true, the output convex hull is oriented clockwise. Otherwise, it is oriented counter-clockwise. The usual screen coordinate system is assumed so that the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
     
     :param orientation: Convex hull orientation parameter in the old API, ``CV_CLOCKWISE`` or ``CV_COUNTERCLOCKWISE``.
     
-    :param returnPoints: Operation flag. In the case of matrix, when the flag is true, the function will return convex hull points, otherwise it will return indices of the convex hull points. When the output array is ``std::vector``, the flag is ignored, and the output depends on the type of the vector - ``std::vector<int>`` implies ``returnPoints=true``, ``std::vector<Point>`` implies ``returnPoints=false``.
+    :param returnPoints: Operation flag. In case of a matrix, when the flag is true, the function returns convex hull points. Otherwise, it returns indices of the convex hull points. When the output array is ``std::vector``, the flag is ignored, and the output depends on the type of the vector: ``std::vector<int>`` implies ``returnPoints=true``, ``std::vector<Point>`` implies ``returnPoints=false``.
 
 The functions find the convex hull of a 2D point set using the Sklansky's algorithm
 [Sklansky82]_
@@ -403,11 +401,11 @@ Finds the convexity defects of a contour.
 
 .. ocv:pyoldfunction:: cv.ConvexityDefects(contour, convexhull, storage)-> convexityDefects
 
-    :param contour: Input contour 
+    :param contour: Input contour. 
     
-    :param convexhull: Convex hull obtained using  :ocv:cfunc:`ConvexHull2`  that should contain pointers or indices to the contour points, not the hull points themselves (the  ``returnPoints``  parameter in  :ocv:cfunc:`ConvexHull2`  should be 0) 
+    :param convexhull: Convex hull obtained using  :ocv:cfunc:`ConvexHull2`  that should contain pointers or indices to the contour points, not the hull points themselves (the  ``returnPoints``  parameter in  :ocv:cfunc:`ConvexHull2`  should be zero). 
     
-    :param storage: Container for the output sequence of convexity defects. If it is NULL, the contour or hull (in that order) storage is used 
+    :param storage: Container for the output sequence of convexity defects. If it is NULL, the contour or hull (in that order) storage is used. 
     
 The function finds all convexity defects of the input contour and returns a sequence of the ``CvConvexityDefect`` structures, where ``CvConvexityDetect`` is defined as: ::
 
@@ -419,7 +417,7 @@ The function finds all convexity defects of the input contour and returns a sequ
         float depth; // distance between the farthest point and the convex hull
      };
 
-Here is the picture displaying convexity defects of a hand contour:
+The figure below displays convexity defects of a hand contour:
 
 .. image:: pics/defects.png
 
@@ -434,15 +432,15 @@ Fits an ellipse around a set of 2D points.
 .. ocv:cfunction:: CvBox2D cvFitEllipse2( const CvArr* points )
 .. ocv:pyoldfunction:: cv.FitEllipse2(points)-> Box2D
 
-    :param points: The input 2D point set, stored in:
+    :param points: Input 2D point set, stored in:
     
-        * ``std::vector<>`` or ``Mat`` (C++ interface).
+        * ``std::vector<>`` or ``Mat`` (C++ interface)
 
         * ``CvSeq*`` or ``CvMat*`` (C interface)
 
         * Nx2 numpy array (Python interface)
 
-The function calculates the ellipse that fits (in least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
+The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
 
 fitLine
 -----------
@@ -457,9 +455,9 @@ Fits a line to a 2D or 3D point set.
 
     :param points: Input vector of 2D or 3D points, stored in ``std::vector<>`` or ``Mat``.
 
-    :param line: Output line parameters. In case of 2D fitting it should be a vector of 4 elements (like ``Vec4f``) - ``(vx, vy, x0, y0)``,  where  ``(vx, vy)``  is a normalized vector collinear to the line and  ``(x0, y0)``  is a point on the line. In case of 3D fitting, it should be a vector of 6 elements (like  ``Vec6f``) - ``(vx, vy, vz, x0, y0, z0)``, where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
+    :param line: Output line parameters. In case of 2D fitting, it should be a vector of 4 elements (like ``Vec4f``) - ``(vx, vy, x0, y0)``,  where  ``(vx, vy)``  is a normalized vector collinear to the line and  ``(x0, y0)``  is a point on the line. In case of 3D fitting, it should be a vector of 6 elements (like  ``Vec6f``) - ``(vx, vy, vz, x0, y0, z0)``, where ``(vx, vy, vz)`` is a normalized vector collinear to the line and ``(x0, y0, z0)`` is a point on the line.
 
-    :param distType: Distance used by the M-estimator (see the discussion).
+    :param distType: Distance used by the M-estimator (see the discussion below).
 
     :param param: Numerical parameter ( ``C`` ) for some types of distances. If it is 0, an optimal value is chosen.
 
@@ -471,7 +469,7 @@ The function ``fitLine`` fits a line to a 2D or 3D point set by minimizing
 :math:`\sum_i \rho(r_i)` where
 :math:`r_i` is a distance between the
 :math:`i^{th}` point, the line and
-:math:`\rho(r)` is a distance function, one of:
+:math:`\rho(r)` is a distance function, one of the following:
 
 * distType=CV\_DIST\_L2
 
@@ -528,9 +526,9 @@ Tests a contour convexity.
 .. ocv:cfunction:: int cvCheckContourConvexity( const CvArr* contour )
 .. ocv:pyoldfunction:: cv.CheckContourConvexity(contour)-> int
 
-    :param contour: The input vector of 2D points, stored in:
+    :param contour: Input vector of 2D points, stored in:
     
-            * ``std::vector<>`` or ``Mat`` (C++ interface).
+            * ``std::vector<>`` or ``Mat`` (C++ interface)
 
             * ``CvSeq*`` or ``CvMat*`` (C interface)
 
@@ -552,9 +550,9 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 .. ocv:pyoldfunction:: cv.MinAreaRect2(points, storage=None)-> CvBox2D
 
-    :param points: The input vector of 2D points, stored in:
+    :param points: Input vector of 2D points, stored in:
     
-        * ``std::vector<>`` or ``Mat`` (C++ interface).
+        * ``std::vector<>`` or ``Mat`` (C++ interface)
         
         * ``CvSeq*`` or ``CvMat*`` (C interface)
         
@@ -576,9 +574,9 @@ Finds a circle of the minimum area enclosing a 2D point set.
 
 .. ocv:pyoldfunction:: cv.MinEnclosingCircle(points)-> (int, center, radius)
 
-    :param points: The input vector of 2D points, stored in:
+    :param points: Input vector of 2D points, stored in:
     
-        * ``std::vector<>`` or ``Mat`` (C++ interface).
+        * ``std::vector<>`` or ``Mat`` (C++ interface)
         
         * ``CvSeq*`` or ``CvMat*`` (C interface)
         
@@ -603,9 +601,9 @@ Compares two shapes.
 .. ocv:cfunction:: double cvMatchShapes( const void* object1, const void* object2, int method, double parameter=0 )
 .. ocv:pyoldfunction:: cv.MatchShapes(object1, object2, method, parameter=0)-> None
 
-    :param object1: The first contour or grayscale image.
+    :param object1: First contour or grayscale image.
 
-    :param object2: The second contour or grayscale image.
+    :param object2: Second contour or grayscale image.
 
     :param method: Comparison method: ``CV_CONTOUR_MATCH_I1`` , \ ``CV_CONTOURS_MATCH_I2`` \
         or ``CV_CONTOURS_MATCH_I3``  (see the details below).
@@ -672,16 +670,16 @@ is +1, -1, and 0, respectively. Otherwise, the return value
 is a signed distance between the point and the nearest contour
 edge.
 
-Here is a sample output of the function where each image pixel is tested against the contour.
+See below a sample output of the function where each image pixel is tested against the contour.
 
 .. image:: pics/pointpolygon.png
 
-.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. A Buyer’s Guide to Conic Fitting. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
+.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. *A Buyer’s Guide to Conic Fitting*. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
 
-.. [Hu62] M. Hu. Visual Pattern Recognition by Moment Invariants, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
+.. [Hu62] M. Hu. *Visual Pattern Recognition by Moment Invariants*, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
 
-.. [Sklansky82] Sklansky, J., “Finding the Convex Hull of a Simple Polygon”. PRL 1 $number, pp 79-83 (1982)
+.. [Sklansky82] Sklansky, J., *Finding the Convex Hull of a Simple Polygon*. PRL 1 $number, pp 79-83 (1982)
 
-.. [Suzuki85] Suzuki, S. and Abe, K., “Topological Structural Analysis of Digitized Binary Images by Border Following”. CVGIP 30 1, pp 32-46 (1985)
+.. [Suzuki85] Suzuki, S. and Abe, K., *Topological Structural Analysis of Digitized Binary Images by Border Following*. CVGIP 30 1, pp 32-46 (1985)
 
-.. [TehChin89] Teh, C.H. and Chin, R.T., “On the Detection of Dominant Points on Digital Curve”. PAMI 11 8, pp 859-872 (1989)
+.. [TehChin89] Teh, C.H. and Chin, R.T., *On the Detection of Dominant Points on Digital Curve*. PAMI 11 8, pp 859-872 (1989)
