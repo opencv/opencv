@@ -547,7 +547,7 @@ int main(int argc, char* argv[])
         else
             img = full_img;
         full_img.release();
-        Size img_size = img.size();
+        Size img_size = img.size();                
 
         // Warp the current image
         warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R,

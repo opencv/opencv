@@ -109,8 +109,20 @@ public:
         projector_.scale = scale;
     }
 
-private:
+protected:
     void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
+};
+
+
+class PlaneWarperGpu : public PlaneWarper
+{
+public:
+    PlaneWarperGpu(float plane_dist = 1.f, float scale = 1.f) : PlaneWarper(plane_dist, scale) {}
+    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+                   int interp_mode, int border_mode);
+
+private:
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
 };
 
 
@@ -158,11 +170,23 @@ class CylindricalWarper : public WarperBase<CylindricalProjector>
 public:
     CylindricalWarper(float scale = 300.f) { projector_.scale = scale; }
 
-private:
+protected:
     void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br)
     {
         WarperBase<CylindricalProjector>::detectResultRoiByBorder(dst_tl, dst_br);
     }
+};
+
+
+class CylindricalWarperGpu : public CylindricalWarper
+{
+public:
+    CylindricalWarperGpu(float scale = 300.f) : CylindricalWarper(scale) {}
+    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+                   int interp_mode, int border_mode);
+
+private:
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
 };
 
 #include "warpers_inl.hpp"

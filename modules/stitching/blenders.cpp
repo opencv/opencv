@@ -233,10 +233,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     copyMakeBorder(img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
     vector<Mat> src_pyr_laplace;
-    if (can_use_gpu_)
-        createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
-    else
-        createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
+    createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
 
     // Create the weight map Gaussian pyramid
     Mat weight_map;
@@ -341,6 +338,7 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 }
 
 
+#if 0
 void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
     pyr.resize(num_levels + 1);
@@ -360,7 +358,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 
     pyr[num_levels] = gpu_pyr[num_levels];
 }
-
+#endif
 
 
 void restoreImageFromLaplacePyr(vector<Mat> &pyr)

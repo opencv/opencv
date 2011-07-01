@@ -622,6 +622,14 @@ namespace cv
         //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
 
+        //! builds plane warping maps
+        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist,
+                                           GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
+        //! builds cylindrical warping maps
+        CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+                                                 GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
         //! builds spherical warping maps
         CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
                                                GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());

@@ -986,7 +986,52 @@ namespace cv { namespace gpu { namespace imgproc
         __constant__ float crinv[9];
         __constant__ float cf, cs;
         __constant__ float chalf_w, chalf_h;
+        __constant__ float cdist;
     }
+
+
+    class PlaneMapper
+    {
+    public:
+        static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+        {
+            using namespace build_warp_maps;
+
+            float x_ = u / cs;
+            float y_ = v / cs;
+
+            float z;
+            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*cdist;
+            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*cdist;
+            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*cdist;
+
+            x = cf*x/z + chalf_w;
+            y = cf*y/z + chalf_h;
+        }
+    };
+
+
+    class CylindricalMapper
+    {
+    public:
+        static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+        {
+            using namespace build_warp_maps;
+
+            u /= cs;
+            float x_ = sinf(u);
+            float y_ = v / cs;
+            float z_ = cosf(u);
+
+            float z;
+            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*z_;
+            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*z_;
+            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*z_;
+
+            x = cf*x/z + chalf_w;
+            y = cf*y/z + chalf_h;
+        }
+    };
 
 
     class SphericalMapper
@@ -1033,6 +1078,55 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
+    void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                            const float r[9], const float rinv[9], float f, float s, float dist,
+                            float half_w, float half_h, cudaStream_t stream)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cdist, &dist, sizeof(float)));
+
+        int cols = map_x.cols;
+        int rows = map_x.rows;
+
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        buildWarpMapsKernel<PlaneMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+        cudaSafeCall(cudaGetLastError());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                                  const float r[9], const float rinv[9], float f, float s,
+                                  float half_w, float half_h, cudaStream_t stream)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+
+        int cols = map_x.cols;
+        int rows = map_x.rows;
+
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        buildWarpMapsKernel<CylindricalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+        cudaSafeCall(cudaGetLastError());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
     void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
                                 const float r[9], const float rinv[9], float f, float s,
                                 float half_w, float half_h, cudaStream_t stream)
@@ -1058,4 +1152,5 @@ namespace cv { namespace gpu { namespace imgproc
 
 
 }}}
+
 
