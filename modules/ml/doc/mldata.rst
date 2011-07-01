@@ -58,7 +58,7 @@ CvMLData::read_csv
 ------------------
 Reads the data set from a ``.csv``-like ``filename`` file and stores all read values in a matrix. 
 
-.. ocv:function:: int CvMLData::read_csv(const char* filename);
+.. ocv:function:: int CvMLData::read_csv(const char* filename)
 
     :param filename: The input file name
 
@@ -80,7 +80,7 @@ CvMLData::get_responses
 -----------------------
 Returns a pointer to the matrix of response values
 
-.. ocv:function:: const CvMat* CvMLData::get_responses();
+.. ocv:function:: const CvMat* CvMLData::get_responses()
 
 The method returns a pointer to the matrix of response values or throws an exception if the data has not been loaded from the file yet. 
 
@@ -100,7 +100,7 @@ CvMLData::set_response_idx
 --------------------------
 Specifies index of response column in the data matrix
 
-.. ocv:function:: void CvMLData::set_response_idx( int idx );
+.. ocv:function:: void CvMLData::set_response_idx( int idx )
 
 The method sets the index of a response column in the ``values`` matrix (see :ocv:func:`CvMLData::get_values`) or throws an exception if the data has not been loaded from the file yet. 
 
@@ -121,7 +121,7 @@ CvMLData::set_train_test_split
 ------------------------------
 Divides the read data set into two disjoint training and test subsets. 
 
-.. ocv:function:: void CvMLData::set_train_test_split( const CvTrainTestSplit * spl );
+.. ocv:function:: void CvMLData::set_train_test_split( const CvTrainTestSplit * spl )
 
 This method sets parameters for such a split using ``spl`` (see :ocv:class:`CvTrainTestSplit`) or throws an exception if the data has not been loaded from the file yet. 
 
@@ -144,7 +144,7 @@ CvMLData::mix_train_and_test_idx
 --------------------------------
 Mixes the indices of training and test samples
 
-.. ocv:function:: void CvMLData::mix_train_and_test_idx();
+.. ocv:function:: void CvMLData::mix_train_and_test_idx()
     
 The method shuffles the indices of training and test samples preserving sizes of training and test subsets if the data split is set by :ocv:func:`CvMLData::get_values`. If the data has not been loaded from the file yet, an exception is thrown.
 
@@ -152,7 +152,7 @@ CvMLData::get_var_idx
 ---------------------
 Returns the indices of the active variables in the data matrix
 
-.. ocv:function:: const CvMat* CvMLData::get_var_idx();
+.. ocv:function:: const CvMat* CvMLData::get_var_idx()
     
 The method returns the indices of variables (columns) used in the ``values`` matrix (see :ocv:func:`CvMLData::get_values`). 
 
@@ -162,7 +162,7 @@ CvMLData::chahge_var_idx
 ------------------------
 Enables or disables particular variable in the loaded data
 
-.. ocv:function:: void CvMLData::chahge_var_idx( int vi, bool state );
+.. ocv:function:: void CvMLData::chahge_var_idx( int vi, bool state )
 
 By default, after reading the data set all variables in the ``values`` matrix (see :ocv:func:`CvMLData::get_values`) are used. But you may want to use only a subset of variables and include/exclude (depending on ``state`` value) a variable with the ``vi`` index from the used subset. If the data has not been loaded from the file yet, an exception is thrown.
     
@@ -170,7 +170,7 @@ CvMLData::get_var_types
 -----------------------
 Returns a matrix of the variable types. 
 
-.. ocv:function:: const CvMat* CvMLData::get_var_types();
+.. ocv:function:: const CvMat* CvMLData::get_var_types()
     
 The function returns a single-row matrix of the type ``CV_8UC1``, where each element is set to either ``CV_VAR_ORDERED`` or ``CV_VAR_CATEGORICAL``. The number of columns is equal to the number of variables. If data has not been loaded from file yet an exception is thrown.
     
@@ -178,7 +178,7 @@ CvMLData::set_var_types
 -----------------------
 Sets the variables types in the loaded data.
 
-.. ocv:function:: void CvMLData::set_var_types( const char* str );
+.. ocv:function:: void CvMLData::set_var_types( const char* str )
 
 In the string, a variable type is followed by a list of variables indices. For example: ``"ord[0-17],cat[18]"``, ``"ord[0,2,4,10-12], cat[1,3,5-9,13,14]"``, ``"cat"`` (all variables are categorical), ``"ord"`` (all variables are ordered). 
 
@@ -194,7 +194,7 @@ CvMLData::change_var_type
 -------------------------
 Changes type of the specified variable
 
-.. ocv:function:: void CvMLData::change_var_type( int var_idx, int type);
+.. ocv:function:: void CvMLData::change_var_type( int var_idx, int type)
     
 The method changes type of variable with index ``var_idx`` from existing type to ``type`` ( ``CV_VAR_ORDERED`` or ``CV_VAR_CATEGORICAL``).
      
@@ -202,7 +202,7 @@ CvMLData::set_delimiter
 -----------------------
 Sets the delimiter in the file used to separate input numbers
 
-.. ocv:function:: void CvMLData::set_delimiter( char ch );
+.. ocv:function:: void CvMLData::set_delimiter( char ch )
 
 The method sets the delimiter for variables in a file. For example: ``','`` (default), ``';'``, ``' '`` (space), or other characters. The floating-point separator ``'.'`` is not allowed.
 
@@ -217,7 +217,7 @@ CvMLData::set_miss_ch
 ---------------------
 Sets the character used to specify missing values
 
-.. ocv:function:: void CvMLData::set_miss_ch( char ch );
+.. ocv:function:: void CvMLData::set_miss_ch( char ch )
 
 The method sets the character used to specify missing values. For example: ``'?'`` (default), ``'-'``. The floating-point separator ``'.'`` is not allowed.
 

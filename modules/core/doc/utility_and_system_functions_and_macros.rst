@@ -264,7 +264,7 @@ Deallocates a memory buffer.
     
     :param pptr: Double pointer to the allocated buffer
 
-The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If NULL pointer is passed, the function does nothing. C version of the function clears the pointer *pptr to avoid problems with double memory deallocation.
+The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If NULL pointer is passed, the function does nothing. C version of the function clears the pointer ``*pptr`` to avoid problems with double memory deallocation.
 
 
 format
