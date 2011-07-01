@@ -84,7 +84,7 @@ Converts an image from one color space to another.
 
     :param dst: Destination image of the same size and depth as  ``src`` .
     
-	:param code: Color space conversion code. See the description below.
+    :param code: Color space conversion code. See the description below.
 
     :param dstCn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
 
