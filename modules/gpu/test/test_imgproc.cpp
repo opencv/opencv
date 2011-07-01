@@ -2041,4 +2041,82 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Blend, testing::Combine(
                         testing::Values(CV_8U, CV_32F),
                         testing::Range(1, 5)));
 
+////////////////////////////////////////////////////////
+// pyrDown
+
+struct PyrDown : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(PyrDown, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+
+    cv::Mat src;
+    readImage("stereobm/aloe-L.png").convertTo(src, CV_16S);
+
+    cv::Mat dst_gold;
+    cv::pyrDown(src, dst_gold);
+
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::pyrDown(cv::gpu::GpuMat(src), d_dst);
+    cv::Mat dst_mine = d_dst;
+
+    ASSERT_EQ(dst_gold.cols, dst_mine.cols);
+    ASSERT_EQ(dst_gold.rows, dst_mine.rows);
+    ASSERT_EQ(dst_gold.type(), dst_mine.type());
+
+    double err = cvtest::crossCorr(dst_gold, dst_mine) /
+            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst_mine,cv::NORM_L2));
+    ASSERT_NEAR(err, 1., 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::ValuesIn(devices()));
+
+////////////////////////////////////////////////////////
+// pyrUp
+
+struct PyrUp: testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(PyrUp, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+
+    cv::Mat src;
+    readImage("stereobm/aloe-L.png").convertTo(src, CV_16S);
+
+    cv::Mat dst_gold;
+    cv::pyrUp(src, dst_gold);
+
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::pyrUp(cv::gpu::GpuMat(src), d_dst);
+    cv::Mat dst_mine = d_dst;
+
+    ASSERT_EQ(dst_gold.cols, dst_mine.cols);
+    ASSERT_EQ(dst_gold.rows, dst_mine.rows);
+    ASSERT_EQ(dst_gold.type(), dst_mine.type());
+
+    double err = cvtest::crossCorr(dst_gold, dst_mine) /
+            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst_mine,cv::NORM_L2));
+    ASSERT_NEAR(err, 1., 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::ValuesIn(devices()));
+
 #endif // HAVE_CUDA
