@@ -394,7 +394,7 @@ public class Mat {
     }
 	
 	// native stuff
-	static { System.loadLibrary("opencv_java"); ); }
+	static { System.loadLibrary("opencv_java"); }
 	protected long nativeObj;
 	private static native long nCreateMat();
 	private static native long nCreateMat(int rows, int cols, int type);

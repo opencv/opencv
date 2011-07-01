@@ -277,7 +277,7 @@ public class %(module)s {
 """ % {"module" : module})
         self.cpp_code.write( "\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) \
                             for f in srcfiles]) )
-        self.cpp_code.write("\n\n")
+        self.cpp_code.write('\n\nextern "C" {\n\n')
 
         # step 2: generate the code for global constants
         self.gen_consts()
@@ -288,8 +288,9 @@ public class %(module)s {
         # step 4: generate code for the classes
         #self.gen_classes() # !!! tempory disabled !!!
 
-        # java module tail
+        # module tail
         self.java_code.write("}\n")
+        self.cpp_code.write('} // extern "C"\n')
 
         self.save(output_path, module+".java", self.java_code)
         self.save(output_path, module+".cpp",  self.cpp_code)
@@ -449,16 +450,6 @@ public class %(module)s {
             rtype = type_dict[fi.ctype]["jni_type"]
             self.cpp_code.write ( Template( \
 """
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
-  ($args);
-
-#ifdef __cplusplus
-}
-#endif
 
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
   ($args)
@@ -467,6 +458,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
     //LOGD("$module :: $fname");
     $ret( $cvname( $cvargs ) );
 }
+
 
 """ ).substitute( \
         rtype = rtype, \
