@@ -532,7 +532,7 @@ void ORB::operator()(const cv::Mat &image, const cv::Mat &mask, std::vector<cv::
 void ORB::operator()(const cv::Mat &image_in, const cv::Mat &mask, std::vector<cv::KeyPoint> & keypoints_in_out,
                      cv::Mat & descriptors, bool do_keypoints, bool do_descriptors)
 {
-  if ((!do_keypoints) && (!do_descriptors))
+  if (((!do_keypoints) && (!do_descriptors)) || (image_in.empty()))
     return;
 
   cv::Mat image;
