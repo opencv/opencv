@@ -383,6 +383,10 @@ public class Mat {
 		return nativeObj;
 	}
 	
+    static public Mat eye(int rows, int cols, CvType type) {
+        return new Mat( nEye(rows, cols, type.toInt()) );
+    }
+	
 	// native stuff
 	static { System.loadLibrary("opencv_java"); }
 	protected long nativeObj;
@@ -414,5 +418,6 @@ public class Mat {
 	private static native double nDot(long self, long mat);
 	private static native long nCross(long self, long mat);
 	private static native long nInv(long self);
+    private static native long nEye(int rows, int cols, int type);
 
 }

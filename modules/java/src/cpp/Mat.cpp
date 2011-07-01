@@ -218,6 +218,14 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCross
  */
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
   (JNIEnv *, jclass, jlong);
+  
+/*
+ * Class:     org_opencv_Mat
+ * Method:    nEye
+ * Signature: (III)J
+ */
+JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
+  (JNIEnv *, jclass, jint, jint, jint);
 
 #ifdef __cplusplus
 }
@@ -584,6 +592,12 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
 	(JNIEnv* env, jclass cls, jlong self)
 {
 	return 0; //NYI
+}
+
+JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
+    (JNIEnv* env, jclass cls, jint _rows, jint _cols, jint _type)
+{
+    return (jlong) new cv::Mat(cv::Mat::eye( _rows, _cols, _type ));
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__III
