@@ -67,7 +67,7 @@ The normalized central moments
 
     \texttt{nu} _{ji}= \frac{\texttt{mu}_{ji}}{\texttt{m}_{00}^{(i+j)/2+1}} .
 
-**Note**:
+.. note::
 :math:`\texttt{mu}_{00}=\texttt{m}_{00}`,
 :math:`\texttt{nu}_{00}=1` 
 :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
@@ -155,7 +155,7 @@ Finds contours in a binary image.
 The function retrieves contours from the binary image using the algorithm
 [Suzuki85]_. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
 
-**Note**:
+.. note::
 Source ``image`` is modified by this function.
 
 
