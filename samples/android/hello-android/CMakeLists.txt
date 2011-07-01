@@ -8,7 +8,7 @@ IF( NOT PROJECT_NAME )
   IF ( NOT "x$ENV{PROJECT_NAME}" STREQUAL "x" )
     SET( PROJECT_NAME $ENV{PROJECT_NAME} )
   ELSE()
-    SET( PROJECT_NAME HelloAndroid )
+    SET( PROJECT_NAME hello-android )
   ENDIF()
 ENDIF()
 SET( PROJECT_NAME ${PROJECT_NAME} CACHE STRING "The name of your project")
@@ -19,7 +19,6 @@ PROJECT( ${PROJECT_NAME} )
 # Find OpenCV
 #########################################################
 
-SET( OpenCV_DIR ${CMAKE_SOURCE_DIR}/../../build CACHE PATH "The path where you built opencv for android" )
 FIND_PACKAGE( OpenCV REQUIRED )
 
 #########################################################
@@ -55,7 +54,7 @@ message( STATUS "")
 message( STATUS "General configuration for ${PROJECT_NAME} =====================================")
 message( STATUS "")
 message( STATUS "    OpenCV path:                ${OpenCV_DIR}")
-message( STATUS "    Compiler:                   ${CMAKE_COMPILER}")
+message( STATUS "    Compiler:                   ${CMAKE_CXX_COMPILER}")
 message( STATUS "    C++ flags (Release):        ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
 message( STATUS "    C++ flags (Debug):          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
 if(WIN32)

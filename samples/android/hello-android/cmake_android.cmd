@@ -1,9 +1,9 @@
 @ECHO OFF
 SETLOCAL
 PUSHD %~dp0
-SET PROJECT_NAME=HelloAndroid
+SET PROJECT_NAME=hello-android
 SET BUILD_DIR=build_armeabi
 SET ARM_TARGET=armeabi
-CALL ..\..\scripts\build.cmd %*
+CALL ..\..\..\android\scripts\build.cmd %*
 POPD
 ENDLOCAL

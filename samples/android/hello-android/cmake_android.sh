@@ -2,7 +2,7 @@
 cd `dirname $0`
 
 BUILD_DIR=build_armeabi
-opencv_android=`pwd`/../..
+opencv_android=`pwd`/../../../android
 opencv_build_dir=$opencv_android/$BUILD_DIR
 
 mkdir -p $BUILD_DIR

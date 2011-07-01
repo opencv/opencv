@@ -85,6 +85,7 @@ if (BUILD_EXAMPLES)
     endmacro()
 
     file(GLOB android_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
+    list(REMOVE_ITEM android_samples hello-android)
     list(SORT android_samples)
 
     foreach(sample ${android_samples})
@@ -92,6 +93,13 @@ if (BUILD_EXAMPLES)
             ADD_ANDROID_SAMPLE(${sample})
         endif()
     endforeach()
+
+    #hello-android sample
+    ADD_EXECUTABLE( hello-android hello-android/main.cpp )
+    ADD_DEPENDENCIES(hello-android ${sample_dependencies})
+    TARGET_LINK_LIBRARIES(hello-android ${OPENCV_LINKER_LIBS} ${sample_dependencies})
+    set_target_properties(hello-android PROPERTIES OUTPUT_NAME hello-android RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")
+
 
     set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${additional_clean_files}")
 endif()

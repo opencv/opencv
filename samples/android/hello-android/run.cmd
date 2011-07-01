@@ -15,12 +15,10 @@ SETLOCAL ENABLEEXTENSIONS || (ECHO Unable to enable command extensions. & EXIT \
 
 PUSHD %~dp0
 :: project specific settings
-SET PROJECT_NAME=HelloAndroid
-SET BUILD_DIR=build_armeabi
-SET ARM_TARGET=armeabi
+SET PROJECT_NAME=hello-android
 
 :: try to load config file
-SET CFG_PATH=..\..\scripts\wincfg.cmd
+SET CFG_PATH=..\..\..\android\scripts\wincfg.cmd
 IF EXIST %CFG_PATH% CALL %CFG_PATH%
 
 :: check if sdk path defined
@@ -28,11 +26,8 @@ IF NOT DEFINED ANDROID_SDK (ECHO. & ECHO You should set an environment variable 
 (PUSHD "%ANDROID_SDK%" 2>NUL && POPD) || (ECHO. & ECHO Directory "%ANDROID_SDK%" specified by ANDROID_SDK variable does not exist & GOTO end)
 SET adb=%ANDROID_SDK%\platform-tools\adb.exe
 
-::binary output path is different for emulator build
-IF "%ARM_TARGET%"=="armeabi" (SET OUT_DIR=armeabi) ELSE (SET OUT_DIR=armeabi-v7a)
-
 :: copy file to device (usually takes 10 seconds or more)
-%adb% push .\bin\%OUT_DIR%\%PROJECT_NAME% /data/bin/sample/%PROJECT_NAME% || GOTO end
+%adb% push .\bin\%PROJECT_NAME% /data/bin/sample/%PROJECT_NAME% || GOTO end
 
 :: set execute permission
 %adb% shell chmod 777 /data/bin/sample/%PROJECT_NAME% || GOTO end
