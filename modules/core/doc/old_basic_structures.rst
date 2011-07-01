@@ -24,7 +24,7 @@ CvPoint
 
     constructs ``CvPoint`` structure.
 
-.. ocv:cfunction:: CvPoint cvPointFrom32f( CvPoint32f pt );
+.. ocv:cfunction:: CvPoint cvPointFrom32f( CvPoint32f pt )
 
     converts ``CvPoint2D32f`` to ``CvPoint``.
 

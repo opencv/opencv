@@ -31,9 +31,10 @@ The function supports multi-channel images. Each channel is processed independen
 The functions ``accumulate*`` can be used, for example, to collect statistics of a scene background viewed by a still camera and for the further foreground-background segmentation.
 
 .. seealso::
-:ocv:func:`accumulateSquare`,
-:ocv:func:`accumulateProduct`,
-:ocv:func:`accumulateWeighted`
+
+    :ocv:func:`accumulateSquare`,
+    :ocv:func:`accumulateProduct`,
+    :ocv:func:`accumulateWeighted`
 
 
 
