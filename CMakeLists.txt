@@ -858,7 +858,6 @@ if(WIN32)
 
     if(WITH_VIDEOINPUT)
         set(HAVE_VIDEOINPUT 1)
-        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} strmiids)
     endif()
     
     if (MSVC)
