@@ -39,7 +39,6 @@ set(CMAKE_MODULE_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "" CACHE INTERNAL "" FORCE)
 set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "" CACHE INTERNAL "" FORCE)
-
 set(CMAKE_VERBOSE OFF CACHE BOOL "Verbose mode")
 if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
@@ -403,7 +402,7 @@ endif()
 set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")
 set(WITH_IPP OFF CACHE BOOL "Include Intel IPP support")
 set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
-set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
+set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
 
@@ -922,8 +921,6 @@ if(WITH_CUDA)
         unset(CUDA_ARCH_BIN CACHE)
         unset(CUDA_ARCH_PTX CACHE)  
     endif() 
-else()
-  set(HAVE_CUDA 0)
 endif()
 
 
@@ -1020,7 +1017,6 @@ include_directories("."
 # ----------------------------------------------------------------------------
 # Should be set to true for development
 set(OPENCV_WARNINGS_ARE_ERRORS OFF CACHE BOOL "Treat warnings as errors")
-
 if (WIN32 AND ${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
 endif()
@@ -1233,7 +1229,6 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenCVConfig-version.cmake.in" "${CM
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"
 # -------------------------------------------------------------------------------------------
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}/opencv" "\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_PREFIX}\"")
-
 
 set(CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE "")
 if(ANDROID)
