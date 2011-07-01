@@ -8,7 +8,7 @@ import android.util.Log;
 
 public class OpenCVTestCase extends AndroidTestCase {
 
-    static String TAG = "OpenCV";
+    static String TAG = "OpenCV_JavaAPI_Tests";
     static int matSize = 10;
 
     static Mat gray0;
@@ -22,13 +22,19 @@ public class OpenCVTestCase extends AndroidTestCase {
     static Mat grayRnd;    
     static Mat grayRnd_32f;
     
+    static Mat grayE_32f;
+    
     static Mat gray0_32f;    
     static Mat gray0_32f_1d;
     
     static Mat gray0_64f;    
     static Mat gray0_64f_1d;
+    
+    static Mat rgba0;
+    static Mat rgba128;    
 
-    static Mat dst;
+    static Mat dst_gray;
+    static Mat dst_gray_32f;
 
     @Override
     protected void setUp() throws Exception {
@@ -48,14 +54,21 @@ public class OpenCVTestCase extends AndroidTestCase {
         grayRnd = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); core.randu(grayRnd, low, high);
         grayRnd_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); core.randu(grayRnd_32f, low, high);
         
+        grayE_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); grayE_32f = Mat.eye(matSize, matSize, Mat.CvType.CV_32FC1);
+        
         gray0_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); gray0_32f.setTo(0.0);
         gray0_32f_1d = new Mat(1, matSize, Mat.CvType.CV_32FC1); gray0_32f_1d.setTo(0.0);
         
         gray0_64f = new Mat(matSize, matSize, Mat.CvType.CV_64FC1); gray0_64f.setTo(0.0);
         gray0_64f_1d = new Mat(1, matSize, Mat.CvType.CV_64FC1); gray0_64f_1d.setTo(0.0);
+        
+        rgba0 = new Mat(matSize, matSize, Mat.CvType.CV_8UC4); rgba0.setTo(0, 0, 0, 0);
+        rgba128 = new Mat(matSize, matSize, Mat.CvType.CV_8UC4); rgba128.setTo(128, 128, 128, 128);        
 
-        dst = new Mat(0, 0, Mat.CvType.CV_8UC1);
-        assertTrue(dst.empty());
+        dst_gray = new Mat(0, 0, Mat.CvType.CV_8UC1);
+        assertTrue(dst_gray.empty());
+        dst_gray_32f = new Mat(0, 0, Mat.CvType.CV_32FC1);
+        assertTrue(dst_gray_32f.empty());
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {

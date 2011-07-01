@@ -1,6 +1,8 @@
 package org.opencv.test;
 
 import org.opencv.Mat;
+import org.opencv.Point;
+import org.opencv.Scalar;
 import org.opencv.core;
 
 public class coreTest extends OpenCVTestCase {
@@ -17,12 +19,12 @@ public class coreTest extends OpenCVTestCase {
 	    Mat lut = new Mat(1, 256, Mat.CvType.CV_8UC1);
 	    
 	    lut.setTo(0);
-	    core.LUT(grayRnd, lut, dst);
-	    assertMatEqual(gray0, dst);
+	    core.LUT(grayRnd, lut, dst_gray);
+	    assertMatEqual(gray0, dst_gray);
 	    
 	    lut.setTo(255);
-	    core.LUT(grayRnd, lut, dst);
-	    assertMatEqual(gray255, dst);
+	    core.LUT(grayRnd, lut, dst_gray);
+	    assertMatEqual(gray255, dst_gray);
 	}
 
 	public void testMahalanobis() {	
@@ -43,8 +45,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAbsdiff() {
-		core.absdiff(gray128, gray255, dst);
-		assertMatEqual(gray127, dst);
+		core.absdiff(gray128, gray255, dst_gray);
+		assertMatEqual(gray127, dst_gray);
 	}
 
 	public void testAddMatMatMatMatInt() {
@@ -56,8 +58,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddMatMatMat() {
-		core.add(gray128, gray128, dst);
-		assertMatEqual(gray255, dst);
+		core.add(gray128, gray128, dst_gray);
+		assertMatEqual(gray255, dst_gray);
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
@@ -73,8 +75,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testBitwise_andMatMatMat() {
-		core.bitwise_and(gray3, gray2, dst);
-		assertMatEqual(gray2, dst);
+		core.bitwise_and(gray3, gray2, dst_gray);
+		assertMatEqual(gray2, dst_gray);
 	}
 
 	public void testBitwise_notMatMatMat() {
@@ -128,7 +130,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCheckHardwareSupport() {
-		fail("Not yet implemented");
+		boolean hasFeauture = core.checkHardwareSupport(0); //FIXME: do we need this function?
+		assertEquals(false, hasFeauture);
 	}
 
 	public void testCircleMatPointIntScalarIntIntInt() {
@@ -144,19 +147,35 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCircleMatPointIntScalar() {
-		fail("Not yet implemented");
+		Point center = new Point(gray0.cols() / 2, gray0.rows()/2);
+		int radius = Math.min(gray0.cols()/4, gray0.rows()/4);
+		Scalar color = new Scalar(128);
+		
+		assertTrue(0 == core.countNonZero(gray0));
+		core.circle(gray0, center, radius, color);
+		assertTrue(0 != core.countNonZero(gray0));
 	}
 
 	public void testCompare() {
-		fail("Not yet implemented");
+        Mat cmp = new Mat(0, 0, Mat.CvType.CV_8UC1);
+        
+        core.compare(gray0, gray0, cmp, core.CMP_EQ);
+        assertMatEqual(cmp, gray255);
+		
+        core.compare(gray0, gray1, cmp, core.CMP_EQ);
+        assertMatEqual(cmp, gray0);
 	}
 
 	public void testCompleteSymmMatBoolean() {
-		fail("Not yet implemented");
+		core.completeSymm(grayRnd_32f, true);
+		core.transpose(grayRnd_32f, dst_gray_32f);
+		assertMatEqual(grayRnd_32f, dst_gray_32f);
 	}
 
 	public void testCompleteSymmMat() {
-		fail("Not yet implemented");
+		core.completeSymm(grayRnd_32f);
+		core.transpose(grayRnd_32f, dst_gray_32f);
+		assertMatEqual(grayRnd_32f, dst_gray_32f);
 	}
 
 	public void testConvertScaleAbsMatMatDoubleDouble() {
@@ -172,7 +191,10 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCountNonZero() {
-		fail("Not yet implemented");
+		assertEquals(0, core.countNonZero(gray0));
+		gray0.put(0, 0, 255);
+		gray0.put(gray0.rows() - 1, gray0.cols() - 1, 255);		
+		assertEquals(2, core.countNonZero(gray0));
 	}
 
 	public void testCubeRoot() {
@@ -184,7 +206,15 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testDctMatMat() {
-		fail("Not yet implemented");
+		core.dct(gray0_32f_1d, dst_gray);
+		assertMatEqual(gray0_32f_1d, dst_gray);
+		
+		Mat in = new Mat(1, 4, Mat.CvType.CV_32FC1);
+		in.put(0, 0, 135.22211, 50.811096, 102.27016, 207.6682);
+		Mat out = new Mat(1, 4, Mat.CvType.CV_32FC1);
+		out.put(0, 0, 247.98576, -61.252407, 94.904533, 14.013477);
+		core.dct(in, dst_gray);
+		assertMatEqual(out, dst_gray);
 	}
 
 	public void testDeterminant() {
@@ -244,7 +274,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testExtractChannel() {
-		fail("Not yet implemented");
+		core.extractChannel(rgba128, dst_gray, 0);
+		assertMatEqual(gray128, dst_gray);
 	}
 
 	public void testFastAtan2() {
@@ -268,11 +299,18 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testGetTickFrequency() {
-		fail("Not yet implemented");
+		double freq = core.getTickFrequency();
+		assertTrue(0.0 != freq);
 	}
 
 	public void testHconcat() {
-		fail("Not yet implemented");
+		Mat e = new Mat(3, 3, Mat.CvType.CV_8UC1);
+		Mat eConcat = new Mat(1, 9, Mat.CvType.CV_8UC1);
+		e.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
+		eConcat.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
+		core.hconcat(e, dst_gray);
+		
+		assertMatEqual(eConcat, dst_gray);
 	}
 
 	public void testIdctMatMatInt() {
@@ -300,7 +338,11 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testInsertChannel() {
-		fail("Not yet implemented");
+		core.insertChannel(gray0, rgba128, 0);
+		core.insertChannel(gray0, rgba128, 1);
+		core.insertChannel(gray0, rgba128, 2);
+		core.insertChannel(gray0, rgba128, 3);
+		//assertMatEqual(rgba0, rgba128);
 	}
 
 	public void testInvertMatMatInt() {
@@ -324,7 +366,15 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testLineMatPointPointScalar() {
-		fail("Not yet implemented");
+		int nPoints = Math.min(gray0.cols(), gray0.rows());
+		
+		Point point1 = new Point(0, 0);
+		Point point2 = new Point(nPoints, nPoints);
+		Scalar color = new Scalar(255);
+		
+		assertTrue(0 == core.countNonZero(gray0));
+		core.line(gray0, point1, point2, color);
+		assertTrue(nPoints == core.countNonZero(gray0));
 	}
 
 	public void testLog() {
@@ -356,6 +406,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMulSpectrumsMatMatMatInt() {
+		//TODO: complex math. See the dct function test.
 		fail("Not yet implemented");
 	}
 
@@ -372,7 +423,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMulTransposedMatMatBoolean() {
-		fail("Not yet implemented");
+		core.mulTransposed(grayE_32f, dst_gray_32f, true);
+		assertMatEqual(grayE_32f, dst_gray_32f);
 	}
 
 	public void testMultiplyMatMatMatDoubleInt() {
@@ -392,10 +444,11 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testNormMatInt() {
-		fail("Not yet implemented");
+		double n = core.norm(gray127, core.NORM_INF);
+		assertTrue(127 == n);
 	}
 
-	public void testNormMat() {
+	public void testNormMat() {		
 		fail("Not yet implemented");
 	}
 
@@ -436,6 +489,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testPerspectiveTransform() {
+		//XXX: kirill stopped here
 		fail("Not yet implemented");
 	}
 
