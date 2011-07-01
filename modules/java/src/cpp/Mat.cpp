@@ -292,7 +292,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nClone
 }
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
-#define PUT_ITEM(T, R, C) for(int ch=0; ch<me->channels() & count>0; ch++,count--) *((T*)me->ptr(R, C)+ch) = cv::saturate_cast<T>(*(src+ch))
+#define PUT_ITEM(T, R, C) for(int ch=0; ch<me->channels() && count>0; ch++,count--) *((T*)me->ptr(R, C)+ch) = cv::saturate_cast<T>(*(src+ch))
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
@@ -306,7 +306,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 	double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
 	double* src = values;
 	int r, c;
-	for(c=col; c<me->cols & count>0; c++)
+	for(c=col; c<me->cols && count>0; c++)
 	{
 		switch(me->depth()) {
 			case CV_8U:  PUT_ITEM(uchar,  row, c); break;
@@ -320,8 +320,8 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 		src++;
 	}
 
-	for(r=row+1; r<me->rows & count>0; r++)
-		for(c=0; c<me->cols & count>0; c++)
+	for(r=row+1; r<me->rows && count>0; r++)
+		for(c=0; c<me->cols && count>0; c++)
 		{
 			switch(me->depth()) {
 				case CV_8U:  PUT_ITEM(uchar,  r, c); break;
@@ -475,7 +475,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetS
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -489,7 +489,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetI
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_32S) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -503,7 +503,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetF
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_32F) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -517,7 +517,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetD
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_64F) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -526,12 +526,36 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetD
 	return res;
 }
 
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_Mat_nGet
+	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count)
+{
+	cv::Mat* me = (cv::Mat*) self;
+	if(! self) return 0; // no native object behind
+	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
+
+	jdoubleArray res = env->NewDoubleArray(me->channels());
+	if(res){
+		jdouble buff[me->channels()];
+		int i;
+		switch(me->depth()){
+			case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(row, col) + i); break;
+			case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
+			case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
+			case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
+			case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
+			case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
+			case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+		}
+		env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
+	}
+	return res;
+}
 
 JNIEXPORT void JNICALL Java_org_opencv_Mat_nSetTo
   (JNIEnv* env, jclass cls, jlong self, jdouble v0, jdouble v1, jdouble v2, jdouble v3)
 {
     cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
-    me->setTo( cv::Scalar(v0, v1, v2, v3), cv::Mat() );
+    me->setTo( cv::Scalar(v0, v1, v2, v3) );
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_Mat_nCopyTo

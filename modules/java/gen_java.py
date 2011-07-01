@@ -6,34 +6,56 @@ try:
 except:
     from StringIO import StringIO
 
-ctype2j = {
-    # c       : (j, jn, jni, jni code)
-    ""        : ("", "long", "jlong", ""), # c-tor
-    "void"    : ("void", "void", "void", ""),
-    "bool"    : ("boolean", "boolean","jboolean", "Z"),
-    "int"     : ("int", "int", "jint", "I"),
-    "long"    : ("int", "int", "jint", "I"),
-    "float"   : ("float", "float", "jfloat", "F"),
-    "double"  : ("double", "double", "jdouble", "D"),
-    "size_t"  : ("long", "long", "jlong", "J"),
-    "env"     : ("", "", "JNIEnv*", ""), # dummy 'env'
-    "cls"     : ("", "", "jclass", ""), # dummy 'cls'
-#
-    "Mat"     : ("Mat",  (("size_t", ".nativeObj"),), "*%(n)s", "J"),
-    "Point"   : ("Point", (("double", ".x"), ("double", ".y")), "cv::Point((int)%(n)s_x, (int)%(n)s_y)", "DD"),
-    "Point2f" : ("Point", (("double", ".x"), ("double", ".y")), "cv::Point2f((float)%(n)s_x, (float)%(n)s_y)", "DD"),
-    "Point2d" : ("Point", (("double", ".x"), ("double", ".y")), "cv::Point2d(%(n)s_x, %(n)s_y)", "DD"),
-    "Point3i" : ("Point", (("double", ".x"), ("double", ".y"), ("double", ".z")),\
-                            "cv::Point3i((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)", "DDD"),
-    "Point3f" : ("Point", (("double", ".x"), ("double", ".y"), ("double", ".z")),\
-                            "cv::Point3f((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)", "DDD"),
-    "Point3d" : ("Point", (("double", ".x"), ("double", ".y"), ("double", ".z")),\
-                            "cv::Point3d(%(n)s_x, %(n)s_y, %(n)s_z)", "DDD"),
-    "Rect"    : ("Rect",  (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")), \
-                            "cv::Rect(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "IIII"),
-    "Size"    : ("Size",  (("int", ".width"), ("int", ".height")), "cv::Size(%(n)s_width, %(n)s_height)", "II"),
-    "Scalar"  : ("Scalar",  (("double", ".v0"), ("double", ".v1"), ("double", ".v2"), ("double", ".v3")),\
-                             "cv::Scalar(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)", "DDDD"),
+# c_type    : { java/jni correspondence }
+type_dict = {
+# "simple"  : { j_type : "?", jn_type : "?", jni_type : "?", suffix : "?" },
+    ""        : { "j_type" : "", "jn_type" : "long", "jni_type" : "jlong" }, # c-tor ret_type
+    "void"    : { "j_type" : "void", "jn_type" : "void", "jni_type" : "void" },
+    "env"     : { "j_type" : "", "jn_type" : "", "jni_type" : "JNIEnv*"},
+    "cls"     : { "j_type" : "", "jn_type" : "", "jni_type" : "jclass"},
+    "bool"    : { "j_type" : "boolean", "jn_type" : "boolean", "jni_type" : "jboolean", "suffix" : "Z" },
+    "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "int", "suffix" : "I" },
+    "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "int", "suffix" : "I" },
+    "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
+    "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
+    "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
+    "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
+    #"+Mat+"   : { "j_type" : "Mat", "jn_type" : "long", "jn_name" : "%s.nativeObj", "jni_type" : "jlong", "suffix" : "J" },
+# "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
+    "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var" : "cv::Mat %(n)s(%(n)s_nativeObj ? *((cv::Mat*)%(n)s_nativeObj) : cv::Mat())", "jni_type" : "jlong",
+                  "suffix" : "J" },
+    "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
+                  "jni_var" : "cv::Point %(n)s((int)%(n)s_x, (int)%(n)s_y)",
+                  "suffix" : "DD"},
+    "Point2f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
+                  "jni_var" : "cv::Point2f %(n)s((float)%(n)s_x, (float)%(n)s_y)",
+                  "suffix" : "DD"},
+    "Point2d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
+                  "jni_var" : "cv::Point2d %(n)s(%(n)s_x, %(n)s_y)",
+                  "suffix" : "DD"},
+    "Point3i" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
+                  "jni_var" : "cv::Point3i %(n)s((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)",
+                  "suffix" : "DDD"},
+    "Point3f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
+                  "jni_var" : "cv::Point3f %(n)s((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)",
+                  "suffix" : "DDD"},
+    "Point3d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
+                  "jni_var" : "cv::Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)",
+                  "suffix" : "DDD"},
+    "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
+                  "jni_var" : "cv::Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)",
+                  "suffix" : "IIII"},
+    "Size"    : { "j_type" : "Size",  "jn_args" : (("int", ".width"), ("int", ".height")),
+                  "jni_var" : "cv::Size %(n)s(%(n)s_width, %(n)s_height)",
+                  "suffix" : "II"},
+    "Scalar"  : { "j_type" : "Scalar",  "jn_args" : (("double", ".v0"), ("double", ".v1"), ("double", ".v2"), ("double", ".v3")),
+                  "jni_var" : "cv::Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)",
+                  "suffix" : "DDDD"},
+    "string"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+                  "jni_type" : "jstring", "jni_name" : "n_%(n)s",
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s);',
+                  "suffix" : "Ljava_lang_String_2"},
 
 }
 
@@ -95,13 +117,13 @@ class FuncInfo(object):
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = decl[1] or ""
         self.args = []
-        self.jni_suffix = "__"
-        if self.classname and self.ctype and not self.static: # non-static class methods except c-tors
-            self.jni_suffix += "J" # artifical 'self'
+        #self.jni_suffix = "__"
+        #if self.classname and self.ctype and not self.static: # non-static class methods except c-tors
+        #    self.jni_suffix += "J" # artifical 'self'
         for a in decl[3]:
             ai = ArgInfo(a)
             self.args.append(ai)
-            self.jni_suffix += ctype2j.get(ai.ctype, ["","","",""])[3]
+        #    self.jni_suffix += ctype2j.get(ai.ctype, ["","","",""])[3]
 
 
 
@@ -139,10 +161,13 @@ class JavaWrapperGenerator(object):
                     (classinfo.name, classinfo.cname)
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
-        if classinfo.name in ctype2j:
+        if classinfo.name in type_dict:
             print "Duplicated class: " + classinfo.name
             sys.exit(-1)
-        ctype2j[classinfo.name] = (classinfo.jname, (("size_t", ".nativeObj"),), "*%(n)s", "J")
+        type_dict[classinfo.name] = \
+            { "j_type" : classinfo.name,  "jn_args" : (("__int64", ".nativeObj"),),
+              "jni_name" : "(*((cv::"+classinfo.name+"*)%s_nativeObj))",
+              "suffix" : "J" }
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -287,87 +312,73 @@ public class %(module)s {
         c_decl = "%s %s %s(%s)" % \
             ( fi.static, fi.ctype, fi.cname, \
               ", ".join(a.ctype + " " + a.name + [""," = "+a.defval][bool(a.defval)] for a in fi.args) )
-        indent = ""
+        indent = " " * 4
         if fi.classname:
-            indent = " " * 4
-        self.java_code.write( "\n    %s// %s\n" % (indent, c_decl) )
+            indent += " " * 4
+        self.java_code.write( "\n%s// %s\n" % (indent, c_decl) )
         self.cpp_code.write( "\n//\n//%s\n//\n" % c_decl )
         # check if we 'know' all the types
-        if fi.ctype and fi.ctype!="Mat" and fi.ctype[0].isupper(): # ret val is class, NYI (TODO!)
-            self.java_code.write( "    %s// Return type '%s' is not yet supported, skipping the function\n\n"\
-                                  % (indent, fi.ctype) )
+        type_info = type_dict.get(fi.ctype)
+        if not (type_info and type_info.get("jn_type")): # unsupported ret type
+            msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
+            self.java_code.write( indent + msg )
+            self.cpp_code.write( msg )
             print "SKIP:", c_decl, "\n\tdue to RET type", fi.ctype
             return
-        types = [fi.ctype]
-        types.extend([a.ctype for a in fi.args])
-        for t in types:
-            if t not in ctype2j:
-                self.java_code.write( "    %s// Unknown type '%s', skipping the function\n\n" % (indent, t) )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", t
-                return
         for a in fi.args:
-            if a.ctype[0].isupper() and a.ctype != "Mat" and a.out: # C++ reference to a class (gcc disallows temp obj reference)
-                self.java_code.write( "    %s// Unknown type '%s&', skipping the function\n\n" % (indent, t) )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype + "&"
+            if a.ctype not in type_dict:
+                msg = "// Unknown type '%s', skipping the function\n\n" % a.ctype
+                self.java_code.write( indent + msg )
+                self.cpp_code.write( msg )
+                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype
                 return
-        if fi.cname == "minEnclosingCircle":
-                self.java_code.write( "    %s// Temporary skipping the function %s\n\n" % (indent, fi.cname) )
-                print "SKIP:", c_decl, "\n\tdue to Temporary filtering"
+            if a.ctype != "Mat" and "jn_args" in type_dict[a.ctype] and a.out: # complex out args not yet supported
+                msg = "// Unsupported type '%s&', skipping the function\n\n" % a.ctype
+                self.java_code.write( indent + msg )
+                self.cpp_code.write( msg )
+                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype
                 return
 
         self.ported_func_counter += 1
+
         # java args
-        args = fi.args[:]
+        args = fi.args[:] # copy
         if args and args[-1].defval:
             isoverload = True
-        suffix = fi.jni_suffix
 
         while True:
 
-            # java native method args
+             # java native method args
             jn_args = []
-            if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
-                jn_args.append(ArgInfo([ "size_t", "nativeObj", "", [], "" ])) # adding 'this'
-            for a in args:
-                if a.ctype[0].isupper(): # Point/Rect/...
-                    #"Point" : ("Point", [["int", ".x"], ["int", ".y"]], ...)
-                    fields = ctype2j[a.ctype][1]
-                    for f in fields:
-                        jn_args.append( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                else:
-                    jn_args.append(a)
-
             # jni (cpp) function args
             jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
-            if fi.classname and fi.ctype and not fi.static:
-                jni_args.append(ArgInfo([ "size_t", "self", "", [], "" ]))
+            suffix = "__"
+            if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
+                # adding 'self'
+                jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
+                jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
+                suffix += "J"
             for a in args:
-                if a.ctype[0].isupper(): # Point/Rect/...
-                    #"Point" : ("Point", [["int", ".x"], ["int", ".y"]], ...)
-                    fields = ctype2j[a.ctype][1]
+                suffix += type_dict[a.ctype].get("suffix") or ""
+                fields = type_dict[a.ctype].get("jn_args") or []
+                if fields: # complex type
                     for f in fields:
+                        jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
                         jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_"), "", [], "" ]) )
                 else:
+                    jn_args.append(a)
                     jni_args.append(a)
 
             # java part:
             # private java NATIVE method decl
             # e.g.
             # private static native void n_add(long src1, long src2, long dst, long mask, int dtype);
-            jn_type = ""
-            if fi.ctype == "Mat":
-                jn_type = "long"
-            elif fi.ctype[0].isupper():
-                jn_type = "NYI" # TODO: NYI
-            else:
-                jn_type = ctype2j[fi.ctype][1]
-
             self.java_code.write( Template(\
-                "    ${indent}private static native $jn_type $jn_name($jn_args);\n").substitute(\
+                "${indent}private static native $jn_type $jn_name($jn_args);\n").substitute(\
                 indent = indent, \
-                jn_type=jn_type, \
-                jn_name=fi.jn_name, \
-                jn_args=", ".join(["%s %s" % (ctype2j[a.ctype][1], a.name.replace(".","_")) for a in jn_args])
+                jn_type = type_dict[fi.ctype]["jn_type"], \
+                jn_name = fi.jn_name, \
+                jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_")) for a in jn_args])
             ) );
 
             # java part:
@@ -375,11 +386,11 @@ public class %(module)s {
             # e.g.
             # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
             # { n_add( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
-            impl_code = " return $jn_name($jn_args_call); "
+            impl_code = "return $jn_name($jn_args_call);"
             if fi.ctype == "void":
-                impl_code = " $jn_name($jn_args_call); "
+                impl_code = "$jn_name($jn_args_call);"
             elif fi.ctype == "": # c-tor
-                impl_code = " nativeObj = $jn_name($jn_args_call); "
+                impl_code = "nativeObj = $jn_name($jn_args_call);"
             elif fi.ctype in self.classes: # wrapped class
                 impl_code = " return new %s( $jn_name($jn_args_call) ); " % \
                     self.classes[fi.ctype].jname
@@ -389,18 +400,18 @@ public class %(module)s {
                 static = fi.static
 
             self.java_code.write( Template(\
-                "    ${indent}public $static $j_type $j_name($j_args)").substitute(\
+                "${indent}public $static $j_type $j_name($j_args)").substitute(\
                 indent = indent, \
                 static=static, \
-                j_type=ctype2j[fi.ctype][0], \
+                j_type=type_dict[fi.ctype]["j_type"], \
                 j_name=fi.jname, \
-                j_args=", ".join(["%s %s" % (ctype2j[a.ctype][0], a.name) for a in args]) \
+                j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]) \
             ) )
 
-            self.java_code.write( Template("\n    $indent{ " + impl_code + " }\n").substitute(\
+            self.java_code.write( Template("\n$indent{ " + impl_code + " }\n").substitute(\
                 indent = indent, \
                 jn_name=fi.jn_name, \
-                jn_args_call=", ".join([a.name + ["",".nativeObj"][ctype2j[a.ctype][0]=="Mat"] for a in jn_args])\
+                jn_args_call=", ".join( [a.name for a in jn_args] )\
             ) )
 
             # cpp part:
@@ -408,10 +419,8 @@ public class %(module)s {
             ret = "return "
             if fi.ctype == "void":
                 ret = ""
-            elif fi.ctype == "Mat":
-                ret = "return (jlong) new cv::Mat"
-            elif fi.ctype[0].isupper():
-                ret = NYI # NYI
+            elif fi.ctype in self.classes: # wrapped class:
+                ret = "return (jlong) new cv::" + self.classes[fi.ctype].jname
 
             cvname = "cv::" + fi.name
             j2cvargs = []
@@ -421,32 +430,18 @@ public class %(module)s {
                 elif fi.static:
                     cvname = "cv::%s::%s" % (fi.classname, fi.name)
                 else:
-                    cvname = "%s->%s" % ("me", fi.name)
+                    cvname = "me->" + fi.name
                     j2cvargs.append(\
-                        "cv::%s* me = (cv::%s*) self; //TODO: check for NULL" % \
-                            (fi.classname, fi.classname) \
+                        "cv::%(cls)s* me = (cv::%(cls)s*) self; //TODO: check for NULL" \
+                            % { "cls" : fi.classname} \
                     )
             cvargs = []
             for a in args:
-                cva = a.name
-                if a.ctype[0].isupper(): # Point/Rect/...
-                    # "Point" : ("Point", (("int", ".x"), ("int", ".y")), "Point(%(n)s_x, %(n)s_y)", "II")
-                    # Point(p_x, p_y)
-                    cva = ctype2j[a.ctype][2] % {"n" : a.name}
-                    if a.ctype == "Mat":
-                        j2cvargs.append("cv::Mat* %s = (cv::Mat*) %s_nativeObj; //TODO: check for NULL"\
-                                        % (a.name, a.name))
-                    pass
-                cvargs.append(cva)
+                cvargs.append( type_dict[a.ctype].get("jni_name", "%(n)s") % {"n" : a.name})
+                if "jni_var" in type_dict[a.ctype]: # complex type
+                    j2cvargs.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
 
-            rtype = "NYI"
-            if fi.ctype == "Mat":
-                rtype = "jlong"
-            elif fi.ctype[0].isupper():
-                rtype = "NYI" # TODO: NYI
-            else:
-                rtype = ctype2j[fi.ctype][2]
-
+            rtype = type_dict[fi.ctype]["jni_type"]
             self.cpp_code.write ( Template( \
 """
 #ifdef __cplusplus
@@ -471,7 +466,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         rtype = rtype, \
         module = self.module, \
         fname = fi.jni_name + ["",suffix][isoverload], \
-        args = ", ".join(["%s %s" % (ctype2j[a.ctype][2], a.name) for a in jni_args]), \
+        args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         j2cv = "\n    ".join([a for a in j2cvargs]), \
         ret = ret, \
         cvname = cvname, \
@@ -481,7 +476,6 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
             # processing args with default values
             if args and args[-1].defval:
                 a = args.pop()
-                suffix = suffix[0:-len(ctype2j[a.ctype][3])]
             else:
                 break
 

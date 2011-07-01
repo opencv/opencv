@@ -10,6 +10,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import org.opencv.Mat;
+import org.opencv.Point;
+import org.opencv.Scalar;
 import org.opencv.Size;
 import org.opencv.core;
 import org.opencv.imgproc;
@@ -142,6 +144,7 @@ class Sample1View extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                 break;
             case Sample1Java.VIEW_MODE_RGBA:
                 imgproc.cvtColor(mYuv, mRgba, imgproc.CV_YUV420i2RGB, 4);
+                core.putText(mRgba, "OpenCV + Android", new Point(10,100), 3/*CV_FONT_HERSHEY_COMPLEX*/, 2, new Scalar(0, 255,0, 255), 3);
                 break;
             case Sample1Java.VIEW_MODE_CANNY:
                 imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);

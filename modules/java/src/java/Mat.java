@@ -339,6 +339,15 @@ public class Mat {
 		throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
 	}
 
+	public double[] get(int row, int col) {
+		checkNull();
+		//CvType t = type();
+		//if(t.depth() == CvType.CV_64F) {
+			return nGet(nativeObj, row, col);
+		//}
+		//throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+	}
+
 
 	public void setTo(double v0, double v1, double v2, double v3) {
 		checkNull();
@@ -399,6 +408,7 @@ public class Mat {
 	private static native int nGetI(long self, int row, int col, int count, int[] vals);
 	private static native int nGetF(long self, int row, int col, int count, float[] vals);
 	private static native int nGetD(long self, int row, int col, int count, double[] vals);
+	private static native double[] nGet(long self, int row, int col);
 	private static native void nSetTo(long self, double v0, double v1, double v2, double v3);
 	private static native void nCopyTo(long self, long mat);
 	private static native double nDot(long self, long mat);
