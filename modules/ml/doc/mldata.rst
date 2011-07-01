@@ -70,7 +70,7 @@ CvMLData::get_values
 --------------------
 Returns a pointer to the matrix of predictors and response values
 
-.. ocv:function:: const CvMat* CvMLData::get_values() const;
+.. ocv:function:: const CvMat* CvMLData::get_values() const
 
 The method returns a pointer to the matrix of predictor and response ``values``  or ``0`` if the data has not been loaded from the file yet. 
 
@@ -90,7 +90,7 @@ CvMLData::get_missing
 ---------------------
 Returns a pointer to the mask matrix of missing values
 
-.. ocv:function:: const CvMat* CvMLData::get_missing() const;
+.. ocv:function:: const CvMat* CvMLData::get_missing() const
 
 The method returns a pointer to the mask matrix of missing values or throws an exception if the data has not been loaded from the file yet. 
 
@@ -110,7 +110,7 @@ CvMLData::get_response_idx
 --------------------------
 Returns index of the response column in the loaded data matrix
 
-.. ocv:function:: int CvMLData::get_response_idx() const;
+.. ocv:function:: int CvMLData::get_response_idx() const
 
 The method returns the index of a response column in the ``values`` matrix (see :ocv:func:`CvMLData::get_values`) or throws an exception if the data has not been loaded from the file yet.
 
@@ -129,7 +129,7 @@ CvMLData::get_train_sample_idx
 ------------------------------
 Returns the matrix of sample indices for a training subset
 
-.. ocv:function:: const CvMat* CvMLData::get_train_sample_idx() const;
+.. ocv:function:: const CvMat* CvMLData::get_train_sample_idx() const
 
 The method returns the matrix of sample indices for a training subset. This is a single-row  matrix of the type ``CV_32SC1``. If data split is not set, the method returns ``0``. If the data has not been loaded from the file yet, an exception is thrown.
 
@@ -137,7 +137,7 @@ CvMLData::get_test_sample_idx
 -----------------------------
 Returns the matrix of sample indices for a testing subset
 
-.. ocv:function:: const CvMat* CvMLData::get_test_sample_idx() const;
+.. ocv:function:: const CvMat* CvMLData::get_test_sample_idx() const
 
     
 CvMLData::mix_train_and_test_idx
@@ -186,7 +186,7 @@ CvMLData::get_var_type
 ----------------------
 Returns type of the specified variable
 
-.. ocv:function:: int CvMLData::get_var_type( int var_idx ) const;
+.. ocv:function:: int CvMLData::get_var_type( int var_idx ) const
 
 The method returns the type of a variable by the index ``var_idx`` ( ``CV_VAR_ORDERED`` or ``CV_VAR_CATEGORICAL``).
     
@@ -210,7 +210,7 @@ CvMLData::get_delimiter
 -----------------------
 Returns the currently used delimiter character.
 
-.. ocv:function:: char CvMLData::get_delimiter() const;
+.. ocv:function:: char CvMLData::get_delimiter() const
 
 
 CvMLData::set_miss_ch
@@ -225,13 +225,13 @@ CvMLData::get_miss_ch
 ---------------------
 Returns the currently used missing value character.
 
-.. ocv:function:: char CvMLData::get_miss_ch() const;
+.. ocv:function:: char CvMLData::get_miss_ch() const
 
 CvMLData::get_class_labels_map
 -------------------------------
 Returns a map that converts strings to labels.
 
-.. ocv:function:: const std::map<std::string, int>& CvMLData::get_class_labels_map() const;
+.. ocv:function:: const std::map<std::string, int>& CvMLData::get_class_labels_map() const
 
 The method returns a map that converts string class labels to the numerical class labels. It can be used to get an original class label as in a file.
 

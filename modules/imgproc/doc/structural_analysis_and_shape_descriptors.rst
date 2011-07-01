@@ -683,7 +683,7 @@ See below a sample output of the function where each image pixel is tested again
 
 .. image:: pics/pointpolygon.png
 
-.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. *A Buyer’s Guide to Conic Fitting*. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
+.. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. *A Buyer's Guide to Conic Fitting*. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
 
 .. [Hu62] M. Hu. *Visual Pattern Recognition by Moment Invariants*, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
 
