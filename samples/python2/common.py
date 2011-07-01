@@ -1,5 +1,5 @@
 import numpy as np
-import cv2
+import cv2, cv
 import os
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
@@ -57,3 +57,29 @@ def mtx2rvec(R):
 def draw_str(dst, (x, y), s):
     cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, linetype=cv2.CV_AA)
     cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), linetype=cv2.CV_AA)
+
+class Sketcher:
+    def __init__(self, windowname, dests, colors_func):
+        self.prev_pt = None
+        self.windowname = windowname
+        self.dests = dests
+        self.colors_func = colors_func
+        self.dirty = False
+        self.show()
+        cv2.setMouseCallback(self.windowname, self.on_mouse)
+
+    def show(self):
+        cv2.imshow(self.windowname, self.dests[0])
+
+    def on_mouse(self, event, x, y, flags, param):
+        pt = (x, y)
+        if event == cv.CV_EVENT_LBUTTONDOWN:
+            self.prev_pt = pt
+        if self.prev_pt and flags & cv.CV_EVENT_FLAG_LBUTTON:
+            for dst, color in zip(self.dests, self.colors_func()):
+                cv.Line(dst, self.prev_pt, pt, color, 5)
+            self.dirty = True
+            self.prev_pt = pt
+            self.show()
+        else:
+            self.prev_pt = None
