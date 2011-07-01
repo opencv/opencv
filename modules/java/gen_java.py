@@ -20,10 +20,10 @@ type_dict = {
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
-    #"+Mat+"   : { "j_type" : "Mat", "jn_type" : "long", "jn_name" : "%s.nativeObj", "jni_type" : "jlong", "suffix" : "J" },
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-                  "jni_var" : "cv::Mat %(n)s(%(n)s_nativeObj ? *((cv::Mat*)%(n)s_nativeObj) : cv::Mat())", "jni_type" : "jlong",
+                  "jni_var" : "cv::Mat& %(n)s = *((cv::Mat*)%(n)s_nativeObj); //cv::Mat& %(n)s = (%(n)s_nativeObj ? *((cv::Mat*)%(n)s_nativeObj) : cv::Mat())",
+                  "jni_type" : "jlong", #"jni_name" : "*%(n)s",
                   "suffix" : "J" },
     "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
                   "jni_var" : "cv::Point %(n)s((int)%(n)s_x, (int)%(n)s_y)",
@@ -166,7 +166,7 @@ class JavaWrapperGenerator(object):
             sys.exit(-1)
         type_dict[classinfo.name] = \
             { "j_type" : classinfo.name,  "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*((cv::"+classinfo.name+"*)%s_nativeObj))",
+              "jni_name" : "(*((cv::"+classinfo.name+"*)%(n)s_nativeObj))",
               "suffix" : "J" }
 
 
@@ -268,6 +268,11 @@ public class %(module)s {
 """// This file is auto-generated, please don't edit!
 
 #include <jni.h>
+/*
+#include <android/log.h>
+#define TEGRA_LOG_TAG "OpenCV_for_Android"
+#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, TEGRA_LOG_TAG, __VA_ARGS__))
+*/
 
 """ % {"module" : module})
         self.cpp_code.write( "\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) \
@@ -459,6 +464,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
   ($args)
 {
     $j2cv
+    //LOGD("$module :: $fname");
     $ret( $cvname( $cvargs ) );
 }
 

@@ -1,5 +1,7 @@
 package org.opencv;
 
+//import android.util.Log;
+
 public class Mat {
 
 	public static class CvType {
@@ -113,7 +115,7 @@ public class Mat {
 					s = "CV_USRTYPE1";
 			}
 			
-			return s + "(" + channels() + ")";
+			return s + "C(" + channels() + ")";
 		}
 		
 		// hashCode() has to be overridden if equals() is
@@ -135,6 +137,10 @@ public class Mat {
 		this.nativeObj = nativeMat;
 	}
 	
+	public Mat() {
+		this( nCreateMat() );
+	}
+
 	public Mat(int rows, int cols, CvType type) {
 		this( nCreateMat(rows, cols, type.toInt()) );
 	}
@@ -388,8 +394,9 @@ public class Mat {
     }
 	
 	// native stuff
-	static { System.loadLibrary("opencv_java"); }
+	static { System.loadLibrary("opencv_java"); ); }
 	protected long nativeObj;
+	private static native long nCreateMat();
 	private static native long nCreateMat(int rows, int cols, int type);
 	private static native long nCreateMat(int rows, int cols, int type, double v0, double v1, double v2, double v3);
 	private static native void nDispose(long self);

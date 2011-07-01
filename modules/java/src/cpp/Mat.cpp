@@ -1,8 +1,21 @@
 #include <jni.h>
+/*
+#include <android/log.h>
+#define TEGRA_LOG_TAG "MAT_CPP"
+#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, TEGRA_LOG_TAG, __VA_ARGS__))
+*/
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+/*
+ * Class:     org_opencv_Mat
+ * Method:    nCreateMat
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__
+  (JNIEnv *, jclass);
+
 /*
  * Class:     org_opencv_Mat
  * Method:    nCreateMat
@@ -594,6 +607,12 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
 	return 0; //NYI
 }
 
+JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new cv::Mat();
+}
+
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
     (JNIEnv* env, jclass cls, jint _rows, jint _cols, jint _type)
 {
@@ -603,7 +622,8 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__III
   (JNIEnv* env, jclass cls, jint _rows, jint _cols, jint _type)
 {
-    return (jlong) new cv::Mat( _rows, _cols, _type );
+    //LOGD("called with r=%d, c=%d", _rows, _cols);
+    return (jlong) new cv::Mat( _rows, _cols, _type );;
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__IIIDDDD
