@@ -119,7 +119,7 @@ endif()
 #name mangling
 set(OPENCV_INCLUDE_PREFIX include)
 if(UNIX AND NOT ANDROID AND BUILD_SHARED_LIBS)
-    option(OPENCV_MANGLED_INSTALL_PATHS "Enables mangled install paths, that help with side by side installs" False)
+    option(OPENCV_MANGLED_INSTALL_PATHS "Enables mangled install paths, that help with side by side installs." False)
     if(OPENCV_MANGLED_INSTALL_PATHS)
       set(OPENCV_INCLUDE_PREFIX include/opencv-${OPENCV_VERSION})
     endif()
@@ -403,7 +403,7 @@ endif()
 set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")
 set(WITH_IPP OFF CACHE BOOL "Include Intel IPP support")
 set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
-set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
+set(WITH_CUDA OFF CACHE BOOL "Include NVidia Cuda Runtime support")
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
 
@@ -922,6 +922,8 @@ if(WITH_CUDA)
         unset(CUDA_ARCH_BIN CACHE)
         unset(CUDA_ARCH_PTX CACHE)  
     endif() 
+else()
+  set(HAVE_CUDA 0)
 endif()
 
 
@@ -1350,13 +1352,21 @@ set(libdir      "\${exec_prefix}/lib")
 set(includedir  "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
 set(VERSION     ${OPENCV_VERSION})
 
-set(OPENCV_PC_FILE_NAME "opencv.pc")
+set(OPENCV_PC_FILE_NAME opencv.pc)
 #need to be explicit with naming the pc file and version number for side by side installs to work.
 if(OPENCV_MANGLED_INSTALL_PATHS)
+  SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core )
+  #be explicit about the library names.
+  set(OpenCV_LIB_COMPONENTS_ )
+  foreach( CVLib ${OpenCV_LIB_COMPONENTS})
+    set(OpenCV_LIB_COMPONENTS_ "${OpenCV_LIB_COMPONENTS_} ${libdir}/lib${CVLib}.so.${OPENCV_VERSION}" )
+  endforeach()
+  set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
   set(OPENCV_PC_FILE_NAME "opencv-${OPENCV_VERSION}.pc")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv-XXX.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
+else()
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
 endif()
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/opencv.pc.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME}" @ONLY IMMEDIATE)
 
 if(UNIX AND NOT ANDROID)
   install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig)
