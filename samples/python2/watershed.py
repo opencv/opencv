@@ -36,7 +36,7 @@ class App:
 
     def run(self):
         while True:
-            ch = cv2.waitKey(10)
+            ch = cv2.waitKey(50)
             if ch == 27:
                 break
             if ch >= ord('1') and ch <= ord('7'):
@@ -52,7 +52,6 @@ class App:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
                 self.sketch.show()
-                cv2.destroyWindow('watershed')
 
 
 if __name__ == '__main__':
