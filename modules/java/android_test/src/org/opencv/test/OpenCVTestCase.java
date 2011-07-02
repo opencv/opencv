@@ -19,6 +19,8 @@ public class OpenCVTestCase extends AndroidTestCase {
     static Mat gray128;
     static Mat gray255;
     
+    static Mat gray255_32f;
+    
     static Mat grayRnd;    
     static Mat grayRnd_32f;
     
@@ -48,6 +50,8 @@ public class OpenCVTestCase extends AndroidTestCase {
         gray127 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray127.setTo(127.0);
         gray128 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray128.setTo(128.0);
         gray255 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray255.setTo(256.0);
+        
+        gray255_32f = new Mat(matSize, matSize, Mat.CvType.CV_32FC1); gray255_32f.setTo(255.0);
         
         Mat low  = new Mat(1, 1, Mat.CvType.CV_16UC1); low.setTo(0);
         Mat high = new Mat(1, 1, Mat.CvType.CV_16UC1); high.setTo(256);

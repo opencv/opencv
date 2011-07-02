@@ -63,11 +63,14 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
-		fail("Not yet implemented");
+		Mat dst = new Mat();
+		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, gray255_32f.depth());
+		assertTrue(gray255_32f.depth() == dst.depth());
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMat() {
-		fail("Not yet implemented");
+		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst_gray);
+		assertMatEqual(gray255, dst_gray);		
 	}
 
 	public void testBitwise_andMatMatMatMat() {
@@ -164,6 +167,11 @@ public class coreTest extends OpenCVTestCase {
 		
         core.compare(gray0, gray1, cmp, core.CMP_EQ);
         assertMatEqual(cmp, gray0);
+        
+        core.compare(gray0, grayRnd, cmp, core.CMP_EQ);
+        double nBlackPixels = core.countNonZero(cmp);
+        double nNonBlackpixels = core.countNonZero(grayRnd);
+        assertTrue((nBlackPixels+nNonBlackpixels) == grayRnd.rows()*grayRnd.cols());
 	}
 
 	public void testCompleteSymmMatBoolean() {
@@ -419,7 +427,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMulTransposedMatMatBooleanMat() {
-		fail("Not yet implemented");
+		core.mulTransposed(grayRnd_32f, dst_gray_32f, true, grayRnd_32f);
+		assertMatEqual(gray0_32f, dst_gray_32f);
 	}
 
 	public void testMulTransposedMatMatBoolean() {
