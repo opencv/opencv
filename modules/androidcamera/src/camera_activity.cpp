@@ -238,7 +238,7 @@ void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vecto
     dp = opendir (folderPath.c_str());
     if (dp != NULL)
     {
-        while (ep = readdir (dp)) {
+        while ((ep = readdir (dp))) {
             const char* cur_name=ep->d_name;
             if (strstr(cur_name, PREFIX_CAMERA_WRAPPER_LIB)) {
                 listLibs.push_back(cur_name);
@@ -261,7 +261,7 @@ std::string CameraWrapperConnector::getPathLibFolder()
         LOGD("Library base address: %p", dl_info.dli_fbase);
 
         char addrBuf[18];
-        sprintf(addrBuf, "%x-", dl_info.dli_fbase);
+        sprintf(addrBuf, "%p-", dl_info.dli_fbase);
         int addrLength = strlen(addrBuf);
 
         char lineBuf[2048];

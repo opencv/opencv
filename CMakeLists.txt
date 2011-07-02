@@ -11,18 +11,33 @@
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
-# Add these standard paths to the search paths for FIND_LIBRARY
-# to find libraries from these locations first
-if(UNIX)
-    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
-endif()
+# Following block can broke build in case of cross-compilng
+# but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
+# so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
+if(NOT CMAKE_TOOLCHAIN_FILE)
+    # Add these standard paths to the search paths for FIND_LIBRARY
+    # to find libraries from these locations first
+    if(UNIX)
+        set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
+    endif()
 
-# it _must_ go before PROJECT(OpenCV) in order to work
-if(WIN32)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-else()
-    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
-endif()
+    # it _must_ go before PROJECT(OpenCV) in order to work
+    if(WIN32)
+        set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
+    else()
+        set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
+    endif()
+
+    if(MSVC)
+        set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
+    endif()
+endif(NOT CMAKE_TOOLCHAIN_FILE)
+
+# --------------------------------------------------------------
+# Top level OpenCV project
+# --------------------------------------------------------------
+cmake_minimum_required(VERSION 2.4)
+project(OpenCV)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -43,13 +58,6 @@ set(CMAKE_VERBOSE OFF CACHE BOOL "Verbose mode")
 if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
-
-if(MSVC)
-    set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
-endif()
-
-cmake_minimum_required(VERSION 2.4)
-project(OpenCV)
 
 # --------------------------------------------------------------
 # Indicate CMake 2.7 and above that we don't want to mix relative
@@ -607,15 +615,15 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
       OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
-if(UNIX)
+if(CMAKE_HOST_UNIX)
     set(PYTHON_PLUGIN_INSTALL_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages/opencv)
-    if(APPLE)
+    if(CMAKE_HOST_APPLE)
         set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages CACHE PATH "Where to install the python packages.")
     else() #debian based assumed, install to the dist-packages.
        set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
     endif()
 endif()
-if(WIN32)
+if(CMAKE_HOST_WIN32)
     get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE CACHE)
     set(PYTHON_PLUGIN_INSTALL_PATH "${PYTHON_PATH}/Lib/site-packages/opencv")
     set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
@@ -657,9 +665,7 @@ endif()
 # Java support
 # ===================================================
 if (PYTHON_EXECUTABLE AND ANDROID)
-    SET(BUILD_JAVA_SUPPORT ON CACHE BOOL "Build with Java support")
-else()
-    SET(BUILD_JAVA_SUPPORT OFF CACHE BOOL "Build with Java support" FORCE)
+    option(BUILD_JAVA_SUPPORT "Build with Java support" TRUE)
 endif()
 
 if (BUILD_JAVA_SUPPORT AND (BUILD_EXAMPLES OR BUILD_TESTS))
@@ -1464,14 +1470,14 @@ macro(status text)
         string(LENGTH "${text}" status_text_length)
         if (status_text_length LESS status_placeholder_length)
             string(SUBSTRING "${text}${status_placeholder}" 0 ${status_placeholder_length} status_text)
-        elseif (status_then OR status_else)
+        elseif (DEFINED status_then OR DEFINED status_else)
             message(STATUS "${text}")
             SET(status_text "${status_placeholder}")
         else()
             SET(status_text "${text}")
         endif()
 
-        if (status_then OR status_else)
+        if (DEFINED status_then OR DEFINED status_else)
             if(${status_cond})
                 string(REPLACE ";" " " status_then "${status_then}")
                 message(STATUS "${status_text}" "${status_then}")
@@ -1535,7 +1541,7 @@ status("    JPEG:"      NOT WITH_JPEG OR JPEG_FOUND        THEN ${JPEG_FOUND}   
 status("    PNG:"       NOT WITH_PNG OR PNG_FOUND          THEN ${PNG_FOUND}    ELSE build)
 status("    TIFF:"      NOT WITH_TIFF OR TIFF_FOUND        THEN ${TIFF_FOUND}   ELSE build)
 status("    JPEG 2000:" NOT WITH_JASPER OR JASPER_FOUND    THEN ${JASPER_FOUND} ELSE build)
-status("    OpenEXR:"   NOT WITH_OPENEXRR OR OPENEXR_FOUND THEN YES             ELSE NO)
+status("    OpenEXR:"   WITH_OPENEXR OR OPENEXR_FOUND      THEN YES             ELSE NO)
 
 status("    OpenNI:"    NOT HAVE_OPENNI OR HAVE_OPENNI_PRIME_SENSOR_MODULE
                             THEN NO
@@ -1572,22 +1578,9 @@ elseif(WIN32)
     status("  Video I/O:"        HAVE_VIDEOINPUT     THEN DirectShow ELSE NO)
 endif()
 
-# interfaces to other languages
-status("")
-status("  Interfaces:")
-status("    Python:"              BUILD_NEW_PYTHON_SUPPORT THEN YES ELSE NO)
-status("    Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE}" ELSE NO)
-status("    Python numpy:"        PYTHON_USE_NUMPY         THEN YES ELSE "NO (Python interface will not cover OpenCV 2.x API)")
-status("    Java:"                BUILD_JAVA_SUPPORT       THEN YES ELSE NO)
-
-if(ANDROID)
-    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE}" ELSE NO)
-    status("    ant:"             ANT_EXECUTABLE           THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})" ELSE NO)
-endif()
-
 # Other third-party libraries
 status("")
-status("  Other third-party dependencies:")
+status("  Other third-party libraries:")
 
 if(WITH_IPP AND IPP_FOUND)
     status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
@@ -1604,6 +1597,19 @@ endif()
 
 status("    Use Cuda:"  HAVE_CUDA  THEN YES ELSE NO)
 status("    Use Eigen:" HAVE_EIGEN THEN YES ELSE NO)
+
+# interfaces to other languages
+status("")
+status("  Interfaces:")
+status("    Python:"              BUILD_NEW_PYTHON_SUPPORT THEN YES ELSE NO)
+status("    Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_MAJOR_MINOR})" ELSE NO)
+status("    Python numpy:"        PYTHON_USE_NUMPY         THEN YES ELSE "NO (Python interface will not cover OpenCV 2.x API)")
+status("    Java:"                BUILD_JAVA_SUPPORT       THEN YES ELSE NO)
+
+if(ANDROID)
+    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE}" ELSE NO)
+    status("    ant:"             ANT_EXECUTABLE           THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})" ELSE NO)
+endif()
 
 # documentation
 status("")
@@ -1635,4 +1641,3 @@ status("")
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
-
