@@ -13,7 +13,9 @@ add_subdirectory(features2d)
 add_subdirectory(flann)
 
 if(MSVC OR MINGW)
-  add_subdirectory(ffmpeg)
+  if(NOT BUILD_WITH_STATIC_CRT)
+     add_subdirectory(ffmpeg)
+  endif()
 endif()
 
 if(BUILD_TESTS)

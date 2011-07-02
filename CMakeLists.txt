@@ -710,10 +710,9 @@ if (WITH_TBB)
                 else()
                     get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIR}/../lib" ABSOLUTE)                          
                    
-                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64*)
+                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64* OR MSVC64)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
-                    endif()                   
-                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
+                    elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/ia32")
                     endif()
 
