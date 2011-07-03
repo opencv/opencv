@@ -1351,7 +1351,7 @@ ADD_CUSTOM_TARGET(uninstall
 #   CPack target
 # ----------------------------------------------------------------------------
 
-set(BUILD_PACKAGE OFF CACHE BOOL "Build a installer with the SDK")
+set(BUILD_PACKAGE ON CACHE BOOL "Enables 'make package_source' command")
 
 if(BUILD_PACKAGE)
 
