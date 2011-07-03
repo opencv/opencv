@@ -114,15 +114,15 @@ icvInitFFMPEG(void)
 #endif
         }
     #elif defined HAVE_FFMPEG
-        icvCreateFileCapture_FFMPEG_p = cvCreateFileCapture_FFMPEG;
-        icvReleaseCapture_FFMPEG_p = cvReleaseCapture_FFMPEG;
-        icvGrabFrame_FFMPEG_p = cvGrabFrame_FFMPEG;
-        icvRetrieveFrame_FFMPEG_p = cvRetrieveFrame_FFMPEG;
-        icvSetCaptureProperty_FFMPEG_p = cvSetCaptureProperty_FFMPEG;
-        icvGetCaptureProperty_FFMPEG_p = cvGetCaptureProperty_FFMPEG;
-        icvCreateVideoWriter_FFMPEG_p = cvCreateVideoWriter_FFMPEG;
-        icvReleaseVideoWriter_FFMPEG_p = cvReleaseVideoWriter_FFMPEG;
-        icvWriteFrame_FFMPEG_p = cvWriteFrame_FFMPEG;
+        icvCreateFileCapture_FFMPEG_p = (CvCreateFileCapture_Plugin)cvCreateFileCapture_FFMPEG;
+        icvReleaseCapture_FFMPEG_p = (CvReleaseCapture_Plugin)cvReleaseCapture_FFMPEG;
+        icvGrabFrame_FFMPEG_p = (CvGrabFrame_Plugin)cvGrabFrame_FFMPEG;
+        icvRetrieveFrame_FFMPEG_p = (CvRetrieveFrame_Plugin)cvRetrieveFrame_FFMPEG;
+        icvSetCaptureProperty_FFMPEG_p = (CvSetCaptureProperty_Plugin)cvSetCaptureProperty_FFMPEG;
+        icvGetCaptureProperty_FFMPEG_p = (CvGetCaptureProperty_Plugin)cvGetCaptureProperty_FFMPEG;
+        icvCreateVideoWriter_FFMPEG_p = (CvCreateVideoWriter_Plugin)cvCreateVideoWriter_FFMPEG;
+        icvReleaseVideoWriter_FFMPEG_p = (CvReleaseVideoWriter_Plugin)cvReleaseVideoWriter_FFMPEG;
+        icvWriteFrame_FFMPEG_p = (CvWriteFrame_Plugin)cvWriteFrame_FFMPEG;
     #endif
         
         ffmpegInitialized = 1;
@@ -190,7 +190,11 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     if( result->open( filename ))
         return result;
     delete result;
+#if defined WIN32 || defined _WIN32
     return cvCreateFileCapture_VFW(filename);
+#else
+    return 0;
+#endif    
 }
 
 
@@ -240,6 +244,9 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return result;
     delete result;
-
+#if defined WIN32 || defined _WIN32
     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
+#else
+    return 0;
+#endif    
 }

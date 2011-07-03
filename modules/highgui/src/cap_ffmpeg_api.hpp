@@ -8,6 +8,8 @@ extern "C"
 
 #if defined WIN32 || defined _WIN32
 #define OPENCV_FFMPEG_API __declspec(dllexport)
+#else
+#define OPENCV_FFMPEG_API
 #endif
 
 enum
