@@ -41,12 +41,10 @@
 
 #include "precomp.hpp"
 
-#if defined WIN32 || defined _WIN32
-#include "cap_ffmpeg_api.hpp"
-
-static HMODULE icvFFOpenCV = 0;
-#elif defined HAVE_FFMPEG
+#ifdef HAVE_FFMPEG
 #include "cap_ffmpeg_impl.hpp"
+#else
+#include "cap_ffmpeg_api.hpp"
 #endif
 
 static CvCreateFileCapture_Plugin icvCreateFileCapture_FFMPEG_p = 0;
@@ -72,7 +70,7 @@ icvInitFFMPEG(void)
         #endif
             ".dll";
 
-        icvFFOpenCV = LoadLibrary( module_name );
+        static HMODULE icvFFOpenCV = LoadLibrary( module_name );
         if( icvFFOpenCV )
         {
             icvCreateFileCapture_FFMPEG_p =
