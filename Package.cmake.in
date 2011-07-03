@@ -67,6 +67,7 @@ set(CPACK_SOURCE_IGNORE_FILES
 if(NOT WIN32)
     set(CPACK_SOURCE_IGNORE_FILES
     "/lib/"
+    "\\\\.dll$"
     "${CPACK_SOURCE_IGNORE_FILES}")
 endif()
 

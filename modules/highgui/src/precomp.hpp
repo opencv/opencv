@@ -147,11 +147,11 @@ CvCapture* cvCreateFileCapture_XINE (const char* filename);
 #define CV_CAP_GSTREAMER_V4L2		2
 #define CV_CAP_GSTREAMER_FILE		3
 
-CvCapture * cvCreateCapture_GStreamer(int type, const char *filename);
-CVAPI(CvCapture*) cvCreateFileCapture_FFMPEG (const char* filename);
+CvCapture* cvCreateCapture_GStreamer(int type, const char *filename);
+CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char* filename);
 
 
-CVAPI(CvVideoWriter*) cvCreateVideoWriter_FFMPEG ( const char* filename, int fourcc,
+CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
 
 CvCapture * cvCreateFileCapture_QT (const char  * filename);

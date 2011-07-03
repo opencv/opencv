@@ -75,9 +75,15 @@ endif()
 
 # ----------------------------------------------------------------------------
 # Build static or dynamic libs?
-# Default: dynamic libraries:
+# Default: dynamic libraries
 # ----------------------------------------------------------------------------
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+
+# ----------------------------------------------------------------------------
+# Include debug info into debug libs?
+# Default: yes
+# ----------------------------------------------------------------------------
+set(BUILD_WITH_DEBUG_INFO ON CACHE BOOL "Include debug info into debug libs")
 
 # ----------------------------------------------------------------------------
 #  Current version number:
@@ -106,7 +112,7 @@ endif()
 # Use statically or dynamically linked CRT?
 # Default: dynamic
 # ----------------------------------------------------------------------------
-if(MSVC AND NOT BUILD_SHARED_LIBS)
+if(WIN32 AND NOT BUILD_SHARED_LIBS)
   option (BUILD_WITH_STATIC_CRT "Enables use of staticaly linked CRT" OFF)
 endif()
   
@@ -147,9 +153,25 @@ if(MSVC)
         endforeach(flag_var)
 
     endif(BUILD_WITH_STATIC_CRT)
+
+    if(NOT BUILD_WITH_DEBUG_INFO)
+        string(REPLACE "/debug" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/debug" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/debug" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/Zi" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+        string(REPLACE "/Zi" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    endif()
+
 endif(MSVC)
-
-
 
 # ----------------------------------------------------------------------------
 #  Variables for cvconfig.h.cmake
@@ -951,7 +973,9 @@ if(MSVC)
     #    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /D _BIND_TO_CURRENT_CRT_VERSION=1 /D _BIND_TO_CURRENT_VCLIBS_VERSION=1")
     #endif()
 
-    set(EXTRA_EXE_LINKER_FLAGS_RELEASE "${EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+    if(BUILD_WITH_DEBUG_INFO)
+        set(EXTRA_EXE_LINKER_FLAGS_RELEASE "${EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+    endif()
 
     #if(ENABLE_OPENMP)
     #    set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /openmp")
@@ -959,13 +983,19 @@ if(MSVC)
 
     # Remove unreferenced functions: function level linking
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /Gy")
-    set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /Zi")
+    if(BUILD_WITH_DEBUG_INFO)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /Zi")
+    endif()
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
 
     # High level of warnings.
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall")
+
+    if(BUILD_WITH_STATIC_CRT)
+        set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -static-libstdc++")
+    endif()
 
     # The -Wno-long-long is required in 64bit systems when including sytem headers.
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64*)
@@ -1065,16 +1095,22 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     #endif()
 
     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
-    set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -ggdb3 -DDEBUG -D_DEBUG")
+    set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
 
+    if(BUILD_WITH_DEBUG_INFO)
+       set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -ggdb3")
+    endif()
 endif()
 
 if(MSVC)
-    if(ENABLE_SSE)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE")
-    endif()
-    if(ENABLE_SSE2)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+    # 64-bit MSVC compiler uses SSE/SSE2 by default
+    if(NOT MSVC64)
+       if(ENABLE_SSE)
+          set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE")
+       endif()
+       if(ENABLE_SSE2)
+          set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+       endif()
     endif()
     if(ENABLE_SSE3)
        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE3")
