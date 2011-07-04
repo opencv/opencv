@@ -64,8 +64,17 @@ FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
 
 add_library(${target} SHARED ${handwrittren_cpp_sources} ${generated_cpp_sources})
 target_link_libraries(${target} ${dependent_libs} ${dependent_extra_libs} ${OPENCV_LINKER_LIBS})
+
 if(ANDROID)
     target_link_libraries(${target} jnigraphics)
+
+    # force strip library before install/strip command
+    # because samples and tests will make a copy of library before install
+    ADD_CUSTOM_COMMAND(
+        TARGET ${target}
+        POST_BUILD
+        COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${target}.so"
+        )
 endif()
 
 #add_dependencies(${the_target} ${dependent_extra_libs} ${dependent_libs})

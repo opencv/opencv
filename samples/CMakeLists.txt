@@ -10,7 +10,7 @@ if(NOT ANDROID)
     add_subdirectory(gpu)
 endif()
 
-if(ANDROID AND CAN_BUILD_ANDROID_PROJECTS)
+if(BUILD_ANDROID_EXAMPLES)
    add_subdirectory(android)
 endif()
 

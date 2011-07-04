@@ -3,7 +3,7 @@
 #
 # ----------------------------------------------------------------------------
 
-if (BUILD_EXAMPLES)
+if (BUILD_ANDROID_EXAMPLES)
     project(android_samples)
 
     include_directories(
@@ -98,7 +98,7 @@ if (BUILD_EXAMPLES)
     endforeach()
 
     #hello-android sample
-    ADD_EXECUTABLE( hello-android hello-android/main.cpp )
+    ADD_EXECUTABLE(hello-android hello-android/main.cpp)
     ADD_DEPENDENCIES(hello-android ${sample_dependencies})
     TARGET_LINK_LIBRARIES(hello-android ${OPENCV_LINKER_LIBS} ${sample_dependencies})
     set_target_properties(hello-android PROPERTIES OUTPUT_NAME hello-android RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")

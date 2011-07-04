@@ -668,7 +668,7 @@ if (PYTHON_EXECUTABLE AND ANDROID)
     option(BUILD_JAVA_SUPPORT "Build with Java support" TRUE)
 endif()
 
-if (BUILD_JAVA_SUPPORT AND (BUILD_EXAMPLES OR BUILD_TESTS))
+if (BUILD_JAVA_SUPPORT)
     file(TO_CMAKE_PATH "$ENV{ANT_DIR}" ANT_DIR_ENV_PATH)
     file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
 
@@ -711,6 +711,10 @@ if (BUILD_JAVA_SUPPORT AND (BUILD_EXAMPLES OR BUILD_TESTS))
     else()
         SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
     endif()
+endif()
+
+if(CAN_BUILD_ANDROID_PROJECTS)
+    option(BUILD_ANDROID_EXAMPLES "Build examples for Android platform" TRUE)
 endif()
 
 #YV
@@ -1441,7 +1445,7 @@ add_subdirectory(doc)
 add_subdirectory(data)
 add_subdirectory(3rdparty)
 
-if(BUILD_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
+if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
     add_subdirectory(samples)
 endif()
 
@@ -1507,6 +1511,11 @@ if(WIN32)
 else()
     status("    Linker flags (Release):" ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_RELEASE})
     status("    Linker flags (Debug):"   ${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
+endif()
+
+if(ANDROID)
+    status("    Floating point type:" ${ARM_TARGET})
+    status("    Native API level:" android-${ANDROID_API_LEVEL})
 endif()
 
 #YV
@@ -1626,7 +1635,7 @@ status("    Examples:" BUILD_EXAMPLES  THEN YES ELSE NO)
 
 if(ANDROID)
    status("    Android tests:" BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
-   status("    Android examples:" BUILD_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)
+   status("    Android examples:" BUILD_ANDROID_EXAMPLES THEN YES ELSE NO)
 endif()
 
 # auxiliary
