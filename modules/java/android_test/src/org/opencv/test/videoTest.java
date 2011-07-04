@@ -7,11 +7,11 @@ public class videoTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
-	public void testCalcMotionGradientMatMatMatDoubleDoubleInt() {
+	public void testCalcMotionGradientMatMatMatDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testCalcMotionGradientMatMatMatDoubleDouble() {
+	public void testCalcMotionGradientMatMatMatDoubleDoubleInt() {
 		fail("Not yet implemented");
 	}
 

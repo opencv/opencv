@@ -1,15 +1,6 @@
 package org.opencv.test;
 
-import java.io.FileOutputStream;
-
-import org.opencv.Mat;
 import org.opencv.highgui;
-
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
-import android.graphics.BitmapFactory;
-import android.util.Log;
 
 
 public class highguiTest extends OpenCVTestCase {
@@ -39,14 +30,6 @@ public class highguiTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 	
-	public void testImreadStringInt() {
-		dst = highgui.imread(LENA, 0);
-		assertTrue(!dst.empty());
-		assertEquals(1, dst.channels());
-		assertTrue(512 == dst.cols());
-		assertTrue(512 == dst.rows());
-	}
-
 	public void testImreadString() {		
 		dst = highgui.imread(LENA);
 		assertTrue(!dst.empty());
@@ -55,16 +38,25 @@ public class highguiTest extends OpenCVTestCase {
 		assertTrue(512 == dst.rows());
 	}
 
+	public void testImreadStringInt() {
+		dst = highgui.imread(LENA, 0);
+		assertTrue(!dst.empty());
+		assertEquals(1, dst.channels());
+		assertTrue(512 == dst.cols());
+		assertTrue(512 == dst.rows());
+	}
+
 	public void testImshow() {
+		//XXX: do we need this function?
 		fail("Not yet implemented");
 	}
 
-	public void testNamedWindowStringInt() {
+	public void testNamedWindowString() {
 		//XXX: do not export this function
 		fail("Do not export this function");
 	}
 
-	public void testNamedWindowString() {
+	public void testNamedWindowStringInt() {
 		//XXX: do not export this function
 		fail("Do not export this function");
 	}
@@ -84,12 +76,12 @@ public class highguiTest extends OpenCVTestCase {
 		fail("Do not export this function");
 	}
 
-	public void testWaitKeyInt() {
+	public void testWaitKey() {
 		//XXX: we need this function if only imshow will be implemented
 		fail("Not yet implemented");
 	}
 
-	public void testWaitKey() {
+	public void testWaitKeyInt() {
 		//XXX: we need this function if only imshow will be implemented
 		fail("Not yet implemented");
 	}

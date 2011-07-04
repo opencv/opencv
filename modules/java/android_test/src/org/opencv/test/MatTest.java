@@ -8,71 +8,19 @@ public class MatTest extends OpenCVTestCase {
 		super.test_1("Mat");
 	}
 
-	public void testFinalize() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatLong() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatIntIntCvType() {
-		Mat gray = new Mat(1, 1, Mat.CvType.CV_8UC1);
-		assertFalse(gray.empty());
-		
-		Mat rgb = new Mat(1, 1, Mat.CvType.CV_8UC3);
-		assertFalse(rgb.empty());
-	}
-
-	public void testMatIntIntCvTypeDoubleDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatIntIntCvTypeDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatIntIntCvTypeDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatIntIntCvTypeDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testDispose() {
-		fail("Not yet implemented");
-	}
-
-	public void testToString() {
-		fail("Not yet implemented");
-	}
-
-	public void testEmpty() {
-		fail("Not yet implemented");
-	}
-
-	public void testType() {
-		fail("Not yet implemented");
-	}
-
-	public void testDepth() {
-		fail("Not yet implemented");
-	}
-
 	public void testChannels() {
 		fail("Not yet implemented");
 	}
 
-	public void testElemSize() {
+	public void testClone() {
 		fail("Not yet implemented");
 	}
 
-	public void testRows() {
-		assertEquals(matSize, gray0.rows());
+	public void testCol() {
+		fail("Not yet implemented");
 	}
 
-	public void testHeight() {
+	public void testColRange() {
 		fail("Not yet implemented");
 	}
 
@@ -80,15 +28,71 @@ public class MatTest extends OpenCVTestCase {
 		assertEquals(matSize, gray0.rows());
 	}
 
-	public void testWidth() {
+	public void testCopyTo() {
 		fail("Not yet implemented");
 	}
 
-	public void testTotal() {
+	public void testCross() {
 		fail("Not yet implemented");
 	}
 
 	public void testDataAddr() {
+		fail("Not yet implemented");
+	}
+
+	public void testDepth() {
+		fail("Not yet implemented");
+	}
+
+	public void testDispose() {
+		fail("Not yet implemented");
+	}
+
+	public void testDot() {
+		fail("Not yet implemented");
+	}
+
+	public void testElemSize() {
+		fail("Not yet implemented");
+	}
+
+	public void testEmpty() {
+		fail("Not yet implemented");
+	}
+
+	public void testFinalize() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetIntIntByteArray() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetIntIntDoubleArray() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetIntIntFloatArray() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetIntIntIntArray() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetIntIntShortArray() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetNativeObjAddr() {
+		fail("Not yet implemented");
+	}
+
+	public void testHeight() {
+		fail("Not yet implemented");
+	}
+
+	public void testInv() {
 		fail("Not yet implemented");
 	}
 
@@ -100,27 +104,35 @@ public class MatTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
-	public void testSubmat() {
+	public void testMatIntIntCvType() {
+		Mat gray = new Mat(1, 1, Mat.CvType.CV_8UC1);
+		assertFalse(gray.empty());
+		
+		Mat rgb = new Mat(1, 1, Mat.CvType.CV_8UC3);
+		assertFalse(rgb.empty());
+	}
+
+	public void testMatIntIntCvTypeDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testRowRange() {
+	public void testMatIntIntCvTypeDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testRow() {
+	public void testMatIntIntCvTypeDoubleDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testColRange() {
+	public void testMatIntIntCvTypeDoubleDoubleDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testCol() {
+	public void testMatLong() {
 		fail("Not yet implemented");
 	}
 
-	public void testClone() {
+	public void testPutIntIntByteArray() {
 		fail("Not yet implemented");
 	}
 
@@ -140,35 +152,19 @@ public class MatTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
-	public void testPutIntIntByteArray() {
+	public void testRow() {
 		fail("Not yet implemented");
 	}
 
-	public void testGetIntIntByteArray() {
+	public void testRowRange() {
 		fail("Not yet implemented");
 	}
 
-	public void testGetIntIntShortArray() {
-		fail("Not yet implemented");
+	public void testRows() {
+		assertEquals(matSize, gray0.rows());
 	}
 
-	public void testGetIntIntIntArray() {
-		fail("Not yet implemented");
-	}
-
-	public void testGetIntIntFloatArray() {
-		fail("Not yet implemented");
-	}
-
-	public void testGetIntIntDoubleArray() {
-		fail("Not yet implemented");
-	}
-
-	public void testSetToDoubleDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testSetToDoubleDoubleDouble() {
+	public void testSetToDouble() {
 		fail("Not yet implemented");
 	}
 
@@ -176,27 +172,31 @@ public class MatTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
-	public void testSetToDouble() {
+	public void testSetToDoubleDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testCopyTo() {
+	public void testSetToDoubleDoubleDoubleDouble() {
 		fail("Not yet implemented");
 	}
 
-	public void testDot() {
+	public void testSubmat() {
 		fail("Not yet implemented");
 	}
 
-	public void testCross() {
+	public void testToString() {
 		fail("Not yet implemented");
 	}
 
-	public void testInv() {
+	public void testTotal() {
 		fail("Not yet implemented");
 	}
 
-	public void testGetNativeObjAddr() {
+	public void testType() {
+		fail("Not yet implemented");
+	}
+
+	public void testWidth() {
 		fail("Not yet implemented");
 	}
 }
