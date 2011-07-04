@@ -138,8 +138,11 @@ endforeach()
 
 #android test project
 if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)
-    SET(test_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
-    SET(test_target OpenCV_JavaAPI_Tests)
+    file(COPY android_test DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" PATTERN ".svn" EXCLUDE)
+    SET(test_dir "${CMAKE_CURRENT_BINARY_DIR}/android_test")
+    
+    SET(test_name opencv_test_java)
+    SET(test_target ${test_name}_android)
 
     add_custom_target(${test_target} ALL)
     add_dependencies(${test_target} opencv_java opencv_java_api)
@@ -151,14 +154,12 @@ if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)
         WORKING_DIRECTORY ${test_dir}
         COMMAND ${CMAKE_COMMAND} -E remove -f "${test_dir}/default.properties"
         COMMAND ${CMAKE_COMMAND} -E touch "${test_dir}/default.properties"
-        COMMAND ${ANDROID_EXECUTABLE} update project --name "${test_target}" --target android-8 --library "${OPENCV_REFERENCE_PATH}" --path .
+        COMMAND ${ANDROID_EXECUTABLE} update project --name "${test_name}" --target android-8 --library "${OPENCV_REFERENCE_PATH}" --path .
         COMMAND ${ANT_EXECUTABLE} debug
-        COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/bin/${test_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${test_target}-debug.apk"
+        COMMAND ${CMAKE_COMMAND} -E copy "${test_dir}/bin/${test_name}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${test_name}.apk"
         )
 
-    LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/bin/${test_target}-debug.apk" "${test_dir}/build.xml" "${test_dir}/local.properties" "${test_dir}/proguard.cfg")
-
+    LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/bin/${test_name}.apk" "${test_dir}/build.xml" "${test_dir}/local.properties" "${test_dir}/proguard.cfg")
 endif()
 
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${additional_clean_files}")
-

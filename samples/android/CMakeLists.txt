@@ -29,7 +29,8 @@ if (BUILD_EXAMPLES)
 
     macro(ADD_ANDROID_SAMPLE sample_name)
         #message(STATUS "Build android sample: '${sample_name}'")
-        SET(sample_dir "${CMAKE_CURRENT_SOURCE_DIR}/${sample}")
+        #SET(sample_dir "${CMAKE_CURRENT_SOURCE_DIR}/${sample}")
+        SET(sample_dir "${CMAKE_CURRENT_BINARY_DIR}/${sample}")
         
         add_custom_target(${sample} ALL)
         add_dependencies(${sample} opencv_java opencv_java_api)
@@ -52,10 +53,10 @@ if (BUILD_EXAMPLES)
             COMMAND ${CMAKE_COMMAND} -E touch "${sample_dir}/default.properties"
             COMMAND ${ANDROID_EXECUTABLE} update project --name "${sample}" --target android-8 ${opencv_reference} --path .
             COMMAND ${ANT_EXECUTABLE} debug
-            COMMAND ${CMAKE_COMMAND} -E copy "${sample_dir}/bin/${sample}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${sample}-debug.apk"
+            COMMAND ${CMAKE_COMMAND} -E copy "${sample_dir}/bin/${sample}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${sample}.apk"
         )
 
-        LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/bin/${sample}-debug.apk" "${sample_dir}/build.xml" "${sample_dir}/local.properties" "${sample_dir}/proguard.cfg")
+        LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/bin/${sample}.apk" "${sample_dir}/build.xml" "${sample_dir}/local.properties" "${sample_dir}/proguard.cfg")
         
         if(IS_DIRECTORY "${sample_dir}/jni")
             INCLUDE_DIRECTORIES("${sample_dir}/jni")
@@ -87,6 +88,8 @@ if (BUILD_EXAMPLES)
     file(GLOB android_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
     list(REMOVE_ITEM android_samples hello-android)
     list(SORT android_samples)
+    
+    file(COPY ${android_samples} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" PATTERN ".svn" EXCLUDE)
 
     foreach(sample ${android_samples})
         if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${sample}/AndroidManifest.xml)
