@@ -26,7 +26,7 @@ add_custom_target(docs
                     ${CMAKE_CURRENT_SOURCE_DIR}/.. .
                   COMMAND ${CMAKE_COMMAND} -E copy_directory
                     ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
-                  COMMAND ${CMAKE_COMMAND} -E copy
+                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman
