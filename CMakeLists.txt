@@ -59,6 +59,12 @@ if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
 
+if (WIN32)
+    if(${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
+        set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
+    endif()
+endif()
+
 # --------------------------------------------------------------
 # Indicate CMake 2.7 and above that we don't want to mix relative
 #  and absolute paths in linker lib lists.
@@ -73,6 +79,12 @@ endif()
 # Default: dynamic libraries
 # ----------------------------------------------------------------------------
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+
+# ----------------------------------------------------------------------------
+# Include debug info into debug libs?
+# Default: yes
+# ----------------------------------------------------------------------------
+set(BUILD_WITH_DEBUG_INFO ON CACHE BOOL "Include debug info into debug libs")
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -144,8 +156,8 @@ endif()
 # Use statically or dynamically linked CRT?
 # Default: dynamic
 # ----------------------------------------------------------------------------
-if(MSVC AND NOT BUILD_SHARED_LIBS)
-  option (BUILD_WITH_STATIC_CRT "Enables use of staticaly linked CRT" OFF)
+if(WIN32 AND NOT BUILD_SHARED_LIBS)
+  option (BUILD_WITH_STATIC_CRT "Enables use of staticaly linked CRT" ON)
 endif()
   
 if(MSVC)
@@ -180,6 +192,27 @@ if(MSVC)
            endif()
         endforeach(flag_var)
     endif(BUILD_WITH_STATIC_CRT)
+
+    if(NOT BUILD_WITH_DEBUG_INFO)
+        string(REPLACE "/debug" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/debug" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/debug" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/DEBUG" "" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL:YES" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+        string(REPLACE "/INCREMENTAL " "/INCREMENTAL:NO " CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+
+        string(REPLACE "/Zi" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+        string(REPLACE "/Zi" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    endif()
+
 endif(MSVC)
 
 # ----------------------------------------------------------------------------
@@ -790,10 +823,9 @@ if (WITH_TBB)
                 else()
                     get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIR}/../lib" ABSOLUTE)                          
                    
-                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64*)
+                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*|x86_64* OR MSVC64)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
-                    endif()                   
-                    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
+                    elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86*|i386*|i686*)
                         set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/ia32")
                     endif()
 
@@ -1022,16 +1054,24 @@ if(MSVC)
     #    set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /D _BIND_TO_CURRENT_CRT_VERSION=1 /D _BIND_TO_CURRENT_VCLIBS_VERSION=1")
     #endif()
 
-    set(EXTRA_EXE_LINKER_FLAGS_RELEASE "${EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+    if(BUILD_WITH_DEBUG_INFO)
+        set(EXTRA_EXE_LINKER_FLAGS_RELEASE "${EXTRA_EXE_LINKER_FLAGS_RELEASE} /debug")
+    endif()
 
     # Remove unreferenced functions: function level linking
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} /Gy")
-    set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /Zi")
+    if(BUILD_WITH_DEBUG_INFO)
+       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /Zi")
+    endif()
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
     # High level of warnings.
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall")
+
+    if(BUILD_WITH_STATIC_CRT)
+        set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -static-libstdc++")
+    endif()
 
     # The -Wno-long-long is required in 64bit systems when including sytem headers.
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64*)
@@ -1113,15 +1153,21 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 
     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -DNDEBUG")
-    set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -ggdb3 -DDEBUG -D_DEBUG")
+    set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
+    if(BUILD_WITH_DEBUG_INFO)
+       set(EXTRA_C_FLAGS_DEBUG "${EXTRA_C_FLAGS_DEBUG} -ggdb3")
+    endif()
 endif()
 
 if(MSVC)
-    if(ENABLE_SSE)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE")
-    endif()
-    if(ENABLE_SSE2)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+    # 64-bit MSVC compiler uses SSE/SSE2 by default
+    if(NOT MSVC64)
+       if(ENABLE_SSE)
+          set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE")
+       endif()
+       if(ENABLE_SSE2)
+          set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE2")
+       endif()
     endif()
     if(ENABLE_SSE3)
        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} /arch:SSE3")
@@ -1365,7 +1411,7 @@ ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/c
 #   CPack target
 # ----------------------------------------------------------------------------
 
-set(BUILD_PACKAGE OFF CACHE BOOL "Build a installer with the SDK")
+set(BUILD_PACKAGE ON CACHE BOOL "Enables 'make package_source' command")
 
 if(BUILD_PACKAGE)
     configure_file(
@@ -1376,7 +1422,7 @@ if(BUILD_PACKAGE)
     include(${CMAKE_BINARY_DIR}/.cpack/Package.cmake)
 
     set(root_files README)
-    file(GLOB root_src_files *.in *.cmake CMakeLists.txt)
+    file(GLOB root_src_files *.in *.cmake *.rst CMakeLists.txt)
 
     if (NOT WIN32)
         install(FILES ${root_files}
@@ -1401,27 +1447,8 @@ if(BUILD_PACKAGE)
             COMPONENT src
             )
 
-        if(CMAKE_INSTALL_DEBUG_LIBRARIES)
-            foreach(m calib3d core contrib features2d ffmpeg flann gpu highgui imgproc legacy ml objdetect video)
-                install(FILES  ${EXECUTABLE_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.dll
-                    DESTINATION bin COMPONENT main)
-                install(FILES  ${LIBRARY_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.lib
-                    DESTINATION lib COMPONENT main)
-            endforeach()
-        endif()
-
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
         install(DIRECTORY 3rdparty android modules doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
-        #install(DIRECTORY doc DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.rst" "*.tex")
-        #install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
-        #install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
-
-        # install TBB dlls
-        if(WIN32 AND HAVE_TBB)
-            string(REGEX REPLACE "/lib" "/bin" TBB_DLL_DIR "${TBB_LIB_DIR}")
-            install(PROGRAMS "${TBB_DLL_DIR}/tbb.dll" DESTINATION bin COMPONENT main)
-            install(PROGRAMS "${TBB_DLL_DIR}/tbb_debug.dll" DESTINATION bin COMPONENT main)
-        endif()
     endif()
 endif()
 

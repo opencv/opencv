@@ -579,7 +579,7 @@ Copy
 ----
 Copies one array to another.
 
-.. cfunction:: void cvCopy(const CvArr* src, CvArr* dst, const CvArr* mask=NULL)
+.. ocv:cfunction:: void cvCopy(const CvArr* src, CvArr* dst, const CvArr* mask=NULL)
 .. ocv:pyoldfunction:: cv.Copy(src, dst, mask=None)-> None
 
     :param src: The source array 
@@ -1635,7 +1635,7 @@ SetIPLAllocators
 ----------------
 Makes OpenCV use IPL functions for allocating IplImage and IplROI structures.
 
-.. cfunction:: void cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,                          Cv_iplAllocateImageData allocate_data, Cv_iplDeallocate deallocate,                          Cv_iplCreateROI create_roi, Cv_iplCloneImage clone_image )
+.. ocv:cfunction:: void cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,                          Cv_iplAllocateImageData allocate_data, Cv_iplDeallocate deallocate,                          Cv_iplCreateROI create_roi, Cv_iplCloneImage clone_image )
 
 Normally, the function is not called directly. Instead, a simple macro ``CV_TURN_ON_IPL_COMPATIBILITY()`` is used that calls ``cvSetIPLAllocators`` and passes there pointers to IPL allocation functions. ::
 

@@ -4,20 +4,11 @@
 # (c) Copyrights 2008 Hartmut Seichter, HIT Lab NZ
 #
 
-if(MSVC)
-    set(CMAKE_INSTALL_DEBUG_LIBRARIES 1)
-endif()
-#if(ENABLE_OPENMP)
-#    set(CMAKE_INSTALL_OPENMP_LIBRARIES 1)
-#endif()
-include(InstallRequiredSystemLibraries)
-
 set(CPACK_PACKAGE_NAME "OpenCV")
 set(CPACK_PACKAGE_VENDOR "OpenCV project opencvlibrary.sourceforge.net")
 
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenCV SDK for ${CMAKE_GENERATOR} is an All-In-One package for developing computer vision applications")
 
-#set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/README")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/doc/license.txt")
 
 set(CPACK_PACKAGE_VERSION_MAJOR "${OPENCV_VERSION_MAJOR}")
@@ -32,13 +23,11 @@ set(CPACK_COMPONENTS_ALL main src Unspecified)
 
 set(CPACK_COMPONENT_main_DISPLAY_NAME "Binaries and the Documentation")
 set(CPACK_COMPONENT_src_DISPLAY_NAME "The source code")
-#set(CPACK_COMPONENT_py_DISPLAY_NAME "Python Bindings")
 
 set(CPACK_ALL_INSTALL_TYPES Full)
 
 set(CPACK_COMPONENT_MAIN_INSTALL_TYPES Full)
 set(CPACK_COMPONENT_SRC_INSTALL_TYPES Full)
-#set(CPACK_COMPONENT_py_INSTALL_TYPES Full)
 
 set(CPACK_SOURCE_IGNORE_FILES
     "/\\\\.svn/"
@@ -67,6 +56,7 @@ set(CPACK_SOURCE_IGNORE_FILES
 if(NOT WIN32)
     set(CPACK_SOURCE_IGNORE_FILES
     "/lib/"
+    "\\\\.dll$"
     "${CPACK_SOURCE_IGNORE_FILES}")
 endif()
 

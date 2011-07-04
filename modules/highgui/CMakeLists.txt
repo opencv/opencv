@@ -82,6 +82,7 @@ source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 set(highgui_srcs
     src/cap.cpp
     src/cap_images.cpp
+    src/cap_ffmpeg.cpp
     src/loadsave.cpp
     src/precomp.cpp
     src/utils.cpp
@@ -118,7 +119,7 @@ if(WIN32)
     if(NOT HAVE_QT)
         set(highgui_srcs ${highgui_srcs} src/window_w32.cpp)
     endif()
-    set(highgui_srcs ${highgui_srcs} src/cap_vfw.cpp src/cap_cmu.cpp src/cap_w32.cpp src/cap_dshow.cpp)
+    set(highgui_srcs ${highgui_srcs} src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
     if(HAVE_MIL)
         set(highgui_srcs ${highgui_srcs} src/cap_mil.cpp)
     endif()
@@ -144,7 +145,6 @@ if(UNIX)
     endif()
 
     if(HAVE_FFMPEG)
-        set(highgui_srcs ${highgui_srcs} src/cap_ffmpeg.cpp)
         if(BZIP2_LIBRARIES)
             set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} ${BZIP2_LIBRARIES})
         endif()

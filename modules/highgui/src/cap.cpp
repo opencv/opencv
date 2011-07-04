@@ -283,16 +283,9 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
 {
     CvCapture * result = 0;
 
-    #ifdef WIN32
     if (! result)
-        result = cvCreateFileCapture_Win32 (filename);
-    #endif
+        result = cvCreateFileCapture_FFMPEG_proxy (filename);
 
-    #ifdef HAVE_FFMPEG
-        if (! result)
-            result = cvCreateFileCapture_FFMPEG (filename);
-    #endif
-    
     #ifdef HAVE_XINE
     if (! result)
         result = cvCreateFileCapture_XINE (filename);
@@ -328,20 +321,14 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 	if(!fourcc || !fps)
 		result = cvCreateVideoWriter_Images(filename);
 
-	#ifdef WIN32
 	if(!result)
-		result = cvCreateVideoWriter_Win32(filename, fourcc, fps, frameSize, is_color);
-	#endif
+		result = cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color);
 
 /*	#ifdef HAVE_XINE
 	if(!result)
 		result = cvCreateVideoWriter_XINE(filename, fourcc, fps, frameSize, is_color);
 	#endif
 */
-	#ifdef HAVE_FFMPEG
-	if(!result)
-		result = cvCreateVideoWriter_FFMPEG(filename, fourcc, fps, frameSize, is_color);
-	#endif
 
 	#ifdef HAVE_QUICKTIME
 	if(!result)

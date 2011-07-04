@@ -14,10 +14,6 @@ add_subdirectory(core)
 add_subdirectory(features2d)
 add_subdirectory(flann)
 
-if(MSVC OR MINGW)
-  add_subdirectory(ffmpeg)
-endif()
-
 if(BUILD_TESTS)
   add_subdirectory(ts)
 endif()

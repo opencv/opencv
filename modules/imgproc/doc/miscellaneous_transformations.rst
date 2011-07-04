@@ -84,7 +84,7 @@ Converts an image from one color space to another.
 
     :param dst: Destination image of the same size and depth as  ``src`` .
     
-	:param code: Color space conversion code. See the description below.
+    :param code: Color space conversion code. See the description below.
 
     :param dstCn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
 
@@ -462,7 +462,7 @@ gives more accurate results). For ``a``,``b`` , and ``c`` , OpenCV uses the valu
     ``CV_DIST_L2``  :math:`(5\times 5)`  a=1, b=1.4, c=2.1969 \
     ==============  ===================  ======================
 
-Typically, for a fast, coarse distance estimation ``CV_DIST_L2``,a
+Typically, for a fast, coarse distance estimation ``CV_DIST_L2``, a
 :math:`3\times 3` mask is used. For a more accurate distance estimation ``CV_DIST_L2`` , a
 :math:`5\times 5` mask or the precise algorithm is used.
 Note that both the precise and the approximate algorithms are linear on the number of pixels.
@@ -498,7 +498,9 @@ Fills a connected component with the given color.
 
     :param mask: (For the second function only) Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller. The function uses and updates the mask, so you take responsibility of initializing the  ``mask``  content. Flood-filling cannot go across non-zero pixels in the mask. For example, an edge detector output can be used as a mask to stop filling at edges. It is possible to use the same mask in multiple calls to the function to make sure the filled area does not overlap.  
 	
-	**Note** : Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
+	.. note::
+	Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
+	
     :param seed: Starting point.
 
     :param newVal: New value of the repainted domain pixels.
@@ -780,7 +782,7 @@ should be set to 0's. In the function output, each pixel in
 markers is set to a value of the "seed" components or to -1 at
 boundaries between the regions.
 
-**Note**: Every two neighbor connected
+.. note:: Every two neighbor connected
 components are not necessarily separated by a watershed boundary (-1's pixels); for
 example, when such tangent components exist in the initial
 marker image. Visual demonstration and usage example of the function

@@ -20,9 +20,9 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
     :param edges: Output edge map. It has the same size and type as  ``image`` .
 
-    :param threshold1: The first threshold for the hysteresis procedure.
+    :param threshold1: First threshold for the hysteresis procedure.
 
-    :param threshold2: The second threshold for the hysteresis procedure.
+    :param threshold2: Second threshold for the hysteresis procedure.
 
     :param apertureSize: Aperture size for the  :ocv:func:`Sobel`  operator.
 
@@ -65,7 +65,7 @@ For every pixel
 where the derivatives are computed using the
 :ocv:func:`Sobel` operator.
 
-After that it finds eigenvectors and eigenvalues of
+After that, it finds eigenvectors and eigenvalues of
 :math:`M` and stores them in the destination image as
 :math:`(\lambda_1, \lambda_2, x_1, y_1, x_2, y_2)` where
 
@@ -112,7 +112,7 @@ The function runs the Harris edge detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
 :ocv:func:`cornerEigenValsAndVecs` , for each pixel
 :math:`(x, y)` it calculates a
-:math:`2\times2` gradient covariation matrix
+:math:`2\times2` gradient covariance matrix
 :math:`M^{(x,y)}` over a
 :math:`\texttt{blockSize} \times \texttt{blockSize}` neighborhood. Then, it computes the following characteristic:
 
@@ -146,7 +146,7 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
     :param boderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
 The function is similar to
-:ocv:func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariation matrix of derivatives, that is,
+:ocv:func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariance matrix of derivatives, that is,
 :math:`\min(\lambda_1, \lambda_2)` in terms of the formulae in the
 :ocv:func:`cornerEigenValsAndVecs` description.
 
@@ -174,7 +174,7 @@ Refines the corner locations.
 
     :param criteria: Criteria for termination of the iterative process of corner refinement. That is, the process of corner position refinement stops either after ``criteria.maxCount`` iterations or when the corner position moves by less than ``criteria.epsilon`` on some iteration.
 
-The function iterates to find the sub-pixel accurate location of corners or radial saddle points, as shown on the picture below.
+The function iterates to find the sub-pixel accurate location of corners or radial saddle points, as shown on the figure below.
 
 .. image:: pics/cornersubpix.png
 
@@ -262,11 +262,11 @@ The function finds the most prominent corners in the image or in the specified i
     The remaining corners are sorted by the quality measure in the descending order.
 
 #.
-    Then the function throws away each corner for which there is a stronger corner at a distance less than ``maxDistance``.
+    Function throws away each corner for which there is a stronger corner at a distance less than ``maxDistance``.
     
 The function can be used to initialize a point-based tracker of an object.
 
-**Note**: If the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > {B}, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
+.. note:: If the function is called with different values ``A`` and ``B`` of the parameter ``qualityLevel`` , and ``A`` > {B}, the vector of returned corners with ``qualityLevel=A`` will be the prefix of the output vector with ``qualityLevel=B`` .
 
 .. seealso::
 
@@ -291,21 +291,23 @@ Finds circles in a grayscale image using the Hough transform.
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
     
-    :param method: The detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
+    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 
     :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
     :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
 
-    :param param1: The first method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the higher threshold of the two passed to  the :ocv:func:`Canny`  edge detector (the lower one is twice smaller).
+    :param param1: First method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the higher threshold of the two passed to  the :ocv:func:`Canny`  edge detector (the lower one is twice smaller).
 
-    :param param2: The second method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected. Circles, corresponding to the larger accumulator values, will be returned first
+    :param param2: Second method-specific parameter. In case of  ``CV_HOUGH_GRADIENT`` , it is the accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected. Circles, corresponding to the larger accumulator values, will be returned first.
 
     :param minRadius: Minimum circle radius.
 
     :param maxRadius: Maximum circle radius.
 
-The function finds circles in a grayscale image using a modification of the Hough transform. Here is a short usage example: ::
+The function finds circles in a grayscale image using a modification of the Hough transform. 
+
+Example: ::
 
     #include <cv.h>
     #include <highgui.h>
@@ -338,7 +340,7 @@ The function finds circles in a grayscale image using a modification of the Houg
         return 0;
     }
 
-**Note**: Usually the function detects the centers of circles well. However, it may fail to find correct radii. You can assist to the function by specifying the radius range ( ``minRadius`` and ``maxRadius`` ) if you know it. Or, you may ignore the returned radius, use only the center, and find the correct radius using an additional procedure.
+.. note:: Usually the function detects the centers of circles well. However, it may fail to find correct radii. You can assist to the function by specifying the radius range ( ``minRadius`` and ``maxRadius`` ) if you know it. Or, you may ignore the returned radius, use only the center, and find the correct radius using an additional procedure.
 
 .. seealso::
 
@@ -372,31 +374,31 @@ Finds lines in a binary image using the standard Hough transform.
 
     :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
     
-    :param method: The Hough transform variant, one of the following: 
+    :param method: One of the following Hough transform variants: 
          
             * **CV_HOUGH_STANDARD** classical or standard Hough transform. Every line is represented by two floating-point numbers  :math:`(\rho, \theta)` , where  :math:`\rho`  is a distance between (0,0) point and the line, and  :math:`\theta`  is the angle between x-axis and the normal to the line. Thus, the matrix must be (the created sequence will be) of  ``CV_32FC2``  type 
             
                
-            * **CV_HOUGH_PROBABILISTIC** probabilistic Hough transform (more efficient in case if picture contains a few long linear segments). It returns line segments rather than the whole line. Each segment is represented by starting and ending points, and the matrix must be (the created sequence will be) of  ``CV_32SC4``  type 
+            * **CV_HOUGH_PROBABILISTIC** probabilistic Hough transform (more efficient in case if the picture contains a few long linear segments). It returns line segments rather than the whole line. Each segment is represented by starting and ending points, and the matrix must be (the created sequence will be) of  the ``CV_32SC4``  type. 
              
-            * **CV_HOUGH_MULTI_SCALE** multi-scale variant of the classical Hough transform. The lines are encoded the same way as  ``CV_HOUGH_STANDARD``
+            * **CV_HOUGH_MULTI_SCALE** multi-scale variant of the classical Hough transform. The lines are encoded the same way as  ``CV_HOUGH_STANDARD``.
     
 
-    :param param1: The first method-dependent parameter:
+    :param param1: First method-dependent parameter:
     
-        *  For the classical Hough transform it is not used (0).
+        *  For the classical Hough transform, it is not used (0).
     
-        *  For the probabilistic Hough transform it is the minimum line length.
+        *  For the probabilistic Hough transform, it is the minimum line length.
     
-        *  For the multi-scale Hough transform it is ``srn``. 
+        *  For the multi-scale Hough transform, it is ``srn``. 
 
-    :param param2: The second method-dependent parameter: 
+    :param param2: Second method-dependent parameter: 
     
-        *  For the classical Hough transform it is not used (0).
+        *  For the classical Hough transform, it is not used (0).
     
-        *  For the probabilistic Hough transform it is the maximum gap between line segments lying on the same line to treat them as a single line segment (that is, to join them).
+        *  For the probabilistic Hough transform, it is the maximum gap between line segments lying on the same line to treat them as a single line segment (that is, to join them).
     
-        *  For the multi-scale Hough transform it is ``stn``.
+        *  For the multi-scale Hough transform, it is ``stn``.
 
 The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
 See also the example in :ocv:func:`HoughLinesP` description.
@@ -426,7 +428,7 @@ Finds line segments in a binary image using the probabilistic Hough transform.
 The function implements the probabilistic Hough transform algorithm for line detection, described in
 [Matas00]_. See the line detection example below: ::
 
-    /* This is a standalone program. Pass an image name as a first parameter
+    /* This is a standalone program. Pass an image name as the first parameter
     of the program.  Switch between standard and probabilistic Hough transform
     by changing "#if 1" to "#if 0" and back */
     #include <cv.h>
@@ -527,10 +529,10 @@ The corners can be found as local maximums of the functions, as shown below: ::
     dilate(corners, dilated_corners, Mat(), 1);
     Mat corner_mask = corners == dilated_corners;
 
-.. [Canny86] J. Canny. A Computational Approach to Edge Detection, IEEE Trans. on Pattern Analysis and Machine Intelligence, 8(6), pp. 679-698 (1986).
+.. [Canny86] J. Canny. *A Computational Approach to Edge Detection*, IEEE Trans. on Pattern Analysis and Machine Intelligence, 8(6), pp. 679-698 (1986).
 
-.. [Matas00] Matas, J. and Galambos, C. and Kittler, J.V., “Robust Detection of Lines Using the Progressive Probabilistic Hough Transform”. CVIU 78 1, pp 119-137 (2000)
+.. [Matas00] Matas, J. and Galambos, C. and Kittler, J.V., *Robust Detection of Lines Using the Progressive Probabilistic Hough Transform*. CVIU 78 1, pp 119-137 (2000)
 
-.. [Shi94] J. Shi and C. Tomasi. Good features to track. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 593-600, June 1994.
+.. [Shi94] J. Shi and C. Tomasi. *Good Features to Track*. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 593-600, June 1994.
 
-.. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., “Comparative study of Hough transform methods for circle finding”. Image Vision Comput. 8 1, pp 71–77 (1990)
+.. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., *Comparative study of Hough transform methods for circle finding*. Image Vision Comput. 8 1, pp 71–77 (1990)

@@ -252,7 +252,7 @@ Returns the location of a point within a Delaunay triangulation.
 
     :param pt: Point to locate.
 
-    :param edge: Output edge the point falls onto or right to.
+    :param edge: Output edge that the point belongs to or is located to the right of it.
 
     :param vertex: Optional output vertex double pointer the input point coinsides with.
 

@@ -14,7 +14,7 @@ Calculates all of the moments up to the third order of a polygon or rasterized s
 .. ocv:cfunction:: void cvMoments( const CvArr* array, CvMoments* moments, int binary=0 )
 .. ocv:pyoldfunction:: cv.Moments(array, binary=0) -> moments
 
-    :param array: A raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
+    :param array: Raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
 
     :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
     
@@ -58,7 +58,7 @@ The normalized central moments
 
     \texttt{nu} _{ji}= \frac{\texttt{mu}_{ji}}{\texttt{m}_{00}^{(i+j)/2+1}} .
 
-**Note**:
+.. note::
 :math:`\texttt{mu}_{00}=\texttt{m}_{00}`,
 :math:`\texttt{nu}_{00}=1` 
 :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
@@ -146,7 +146,7 @@ Finds contours in a binary image.
 The function retrieves contours from the binary image using the algorithm
 [Suzuki85]_. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
 
-**Note**:
+.. note::
 Source ``image`` is modified by this function.
 
 
