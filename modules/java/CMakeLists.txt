@@ -5,7 +5,7 @@ project(opencv_java)
 
 SET(OPENCV_JAVA_MODULES objdetect features2d imgproc video highgui ml core)
 SET(OPENCV_EXTRA_JAVA_MODULES calib3d contrib legacy flann)
-IF(ANDROID AND NOT BUILD_SHARED_LIBS)
+IF(WITH_ANDROID_CAMERA AND NOT BUILD_SHARED_LIBS)
     LIST(APPEND OPENCV_EXTRA_JAVA_MODULES androidcamera)
 ENDIF()
 

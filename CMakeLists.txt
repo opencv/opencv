@@ -664,7 +664,7 @@ endif()
 
 # Java support
 # ===================================================
-if (PYTHON_EXECUTABLE AND ANDROID)
+if (PYTHON_EXECUTABLE AND ANDROID AND ANDROID_API_LEVEL GREATER 7)
     option(BUILD_JAVA_SUPPORT "Build with Java support" TRUE)
 endif()
 
@@ -953,7 +953,9 @@ if(WIN32)
 endif()
 
 ############## Android source tree for native camera ###############
-if(ANDROID)
+if(ANDROID AND ANDROID_API_LEVEL GREATER 7)
+    option(WITH_ANDROID_CAMERA "Build with native Android camera support" TRUE)
+
     SET (ANDROID_SOURCE_TREE "ANDROID_SOURCE_TREE-NOTFOUND" CACHE PATH 
 "Path to Android source tree.
 Set this variable to path to your Android sources to compile
@@ -1276,7 +1278,7 @@ if(ANDROID)
     endif()
     if(BUILD_ANDROID_CAMERA_WRAPPER)
         set(CMAKE_CAMERA_LIBS_CONFIGCMAKE "native_camera_r${ANDROID_VERSION}")
-    else()
+    elseif(WITH_ANDROID_CAMERA)
         SET(CMAKE_CAMERA_LIBS_CONFIGCMAKE "")
         file(GLOB CMAKE_CAMERA_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lib/libnative_camera_r*.so")
         foreach(cam_lib ${CMAKE_CAMERA_LIBS})
@@ -1575,10 +1577,14 @@ if(UNIX AND NOT APPLE)
     status("    Xine:"           HAVE_XINE           THEN YES ELSE NO)
 
     if(ANDROID)
-        if(BUILD_ANDROID_CAMERA_WRAPPER)
-            status("    AndroidNativeCamera:" "build for Android ${ANDROID_VERSION}")
+        if(WITH_ANDROID_CAMERA)
+            if(BUILD_ANDROID_CAMERA_WRAPPER)
+                status("    AndroidNativeCamera:" "build for Android ${ANDROID_VERSION}")
+            else()
+                status("    AndroidNativeCamera:" ARMEABI_V7A THEN use prebuilt libraries ELSE NO)
+            endif()
         else()
-            status("    AndroidNativeCamera:" ARMEABI_V7A THEN use prebuilt libraries ELSE NO)
+            status("    AndroidNativeCamera:" "NO (native camera requires Android API level 8 or higher)")
         endif()
     endif()
 elseif(APPLE)
@@ -1613,7 +1619,11 @@ status("  Interfaces:")
 status("    Python:"              BUILD_NEW_PYTHON_SUPPORT THEN YES ELSE NO)
 status("    Python interpreter:"  PYTHON_EXECUTABLE        THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_MAJOR_MINOR})" ELSE NO)
 status("    Python numpy:"        PYTHON_USE_NUMPY         THEN YES ELSE "NO (Python interface will not cover OpenCV 2.x API)")
-status("    Java:"                BUILD_JAVA_SUPPORT       THEN YES ELSE NO)
+if(ANDROID AND ANDROID_API_LEVEL LESS 8)
+    status("    Java:" "NO (Java API requires Android API level 8 or higher)")
+else()
+    status("    Java:" BUILD_JAVA_SUPPORT THEN YES ELSE NO)
+endif()
 
 if(ANDROID)
     status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE}" ELSE NO)

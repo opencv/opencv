@@ -211,7 +211,7 @@ if(APPLE)
     endif()
 endif(APPLE)
 
-if(ANDROID)
+if(WITH_ANDROID_CAMERA)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
   set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
@@ -333,7 +333,7 @@ if(NOT ZLIB_FOUND)
     add_dependencies(${the_target} zlib)
 endif()
 
-if(ANDROID)
+if(WITH_ANDROID_CAMERA)
     add_dependencies(${the_target} opencv_androidcamera)
 endif()
 
@@ -377,7 +377,7 @@ if(BUILD_TESTS)
                       "${CMAKE_CURRENT_BINARY_DIR}")
 
   set(test_deps opencv_ts opencv_highgui opencv_imgproc)
-  if(ANDROID)
+  if(WITH_ANDROID_CAMERA)
     set(test_deps ${test_deps} opencv_androidcamera)
   endif()
 

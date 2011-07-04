@@ -27,6 +27,7 @@
 #      - OpenCV_LIB_COMPONENTS
 #      - OpenCV_EXTRA_COMPONENTS
 #      - OpenCV_USE_MANGLED_PATHS
+#      - OpenCV_HAVE_ANDROID_CAMERA
 #
 # =================================================================================================
 
@@ -45,8 +46,11 @@ set(OpenCV_USE_MANGLED_PATHS @OPENCV_MANGLED_INSTALL_PATHS@)
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
-#Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
+# Get the absolute path with no ../.. relative marks, to eliminate implicit linker warnings
 get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../.." REALPATH)
+
+# Presence of Android native camera support
+set (OpenCV_HAVE_ANDROID_CAMERA @WITH_ANDROID_CAMERA@)
 
 # ======================================================
 # Include directories to add to the user project:
@@ -71,7 +75,7 @@ SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_c
 #libraries order is very important because linker from Android NDK is one-pass linker
 if(NOT ANDROID)
     LIST(INSERT OpenCV_LIB_COMPONENTS 0 opencv_gpu)
-ELSEIF(NOT OpenCV_SHARED)
+ELSEIF(NOT OpenCV_SHARED AND OpenCV_HAVE_ANDROID_CAMERA)
     LIST(APPEND OpenCV_LIB_COMPONENTS opencv_androidcamera)
 endif()
 
@@ -138,20 +142,18 @@ ENDIF()
 # ======================================================
 #  Android camera helper macro
 # ======================================================
-IF (ANDROID)
+IF (OpenCV_HAVE_ANDROID_CAMERA)
   macro( COPY_NATIVE_CAMERA_LIBS target )
-    IF( ARMEABI_V7A)
-      get_target_property(target_location ${target} LOCATION)
-      get_filename_component(target_location "${target_location}" PATH)
-      file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
-      foreach(wrapper ${camera_wrappers})
-          ADD_CUSTOM_COMMAND(
-            TARGET ${target}
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
-            )
-      endforeach()
-    ENDIF( ARMEABI_V7A )
+    get_target_property(target_location ${target} LOCATION)
+    get_filename_component(target_location "${target_location}" PATH)
+    file(GLOB camera_wrappers "${OpenCV_LIB_DIR}/libnative_camera_r*.so")
+    foreach(wrapper ${camera_wrappers})
+      ADD_CUSTOM_COMMAND(
+        TARGET ${target}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy "${wrapper}" "${target_location}"
+      )
+    endforeach()
   endmacro()
 ENDIF(ANDROID)
 

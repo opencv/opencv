@@ -3,8 +3,10 @@ if(ANDROID)
   if(ANDROID_API_LEVEL LESS 8)
     ADD_DEFINITIONS(-DGTEST_HAS_CLONE=0)
   endif()
-
-  add_subdirectory(androidcamera)
+  
+  IF(WITH_ANDROID_CAMERA)
+      add_subdirectory(androidcamera)
+  endif()
 endif()
 
 add_subdirectory(calib3d)
