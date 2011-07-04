@@ -9,9 +9,8 @@ from common import draw_str
 
 w, h = 512, 512
 
-a = np.zeros((h, w, 1), np.float32)
+a = np.zeros((h, w), np.float32)
 cv2.randu(a, np.array([0]), np.array([1]))
-a.shape = (h, w)
 
 def process_scale(a_lods, lod):
     d = a_lods[lod] - cv2.pyrUp(a_lods[lod+1])
