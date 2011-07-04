@@ -200,11 +200,11 @@ public class imgprocTest extends OpenCVTestCase {
 		public void testBlurMatMatSize() {
 			 Size sz = new Size(3, 3);
 			 
-			 imgproc.blur(gray0, dst_gray, sz);
-			 assertMatEqual(gray0, dst_gray);
+			 imgproc.blur(gray0, dst, sz);
+			 assertMatEqual(gray0, dst);
 			 
-			 imgproc.blur(gray255, dst_gray, sz);
-			 assertMatEqual(gray255, dst_gray);
+			 imgproc.blur(gray255, dst, sz);
+			 assertMatEqual(gray255, dst);
 		}
 
 		public void testBorderInterpolate() {
@@ -225,8 +225,8 @@ public class imgprocTest extends OpenCVTestCase {
 
 		public void testBoxFilterMatMatIntSize() {
             Size sz = new Size(3, 3);
-			imgproc.boxFilter(gray0, dst_gray, 8, sz);
-			assertMatEqual(gray0, dst_gray);
+			imgproc.boxFilter(gray0, dst, 8, sz);
+			assertMatEqual(gray0, dst);
 		}
 
 		public void testCompareHist() {

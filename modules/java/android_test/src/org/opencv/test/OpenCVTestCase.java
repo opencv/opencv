@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 
 import org.opencv.Mat;
 import org.opencv.core;
+import org.opencv.highgui;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -18,6 +19,11 @@ public class OpenCVTestCase extends AndroidTestCase {
     static String LENA = "/data/data/org.opencv.test/files/lena.jpg";
     
     static int matSize = 10;
+    
+    //Naming notation: channels_[type]_[dimension]_value
+    //examples: gray0   - single channel 8U 2d Mat filled with 0
+    //          grayRnd - single channel 8U 2d Mat filled with random numbers
+    //          gray0_32f_1d - refactor ;)
 
     static Mat gray0;
     static Mat gray1;
@@ -41,20 +47,15 @@ public class OpenCVTestCase extends AndroidTestCase {
     static Mat gray0_64f_1d;
     
     static Mat rgba0;
-    static Mat rgba128;    
+    static Mat rgba128;
+    
+    static Mat rgbLena;
 
-    static Mat dst_gray;
-    static Mat dst_gray_32f;
+    static Mat dst;
 
     @Override
     protected void setUp() throws Exception {
-        // Log.e(TAG, "setUp");
         super.setUp();
-        
-        //Naming notation: channels_[type]_[dimension]_value
-        //examples: gray0   - single channel 8U 2d Mat filled with 0
-        //          grayRnd - single channel 8U 2d Mat filled with random numbers
-        //          gray0_32f_1d - refactor ;)
 
         gray0 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray0.setTo(0.0);
         gray1 = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); gray1.setTo(1.0);
@@ -92,11 +93,11 @@ public class OpenCVTestCase extends AndroidTestCase {
 		catch (Exception e) {
 		   Log.e(TAG, "Tried to write lena.jpg, but: " + e.toString());
 		}
+		
+		rgbLena = highgui.imread(LENA);
 
-        dst_gray = new Mat();
-        assertTrue(dst_gray.empty());
-        dst_gray_32f = new Mat();
-        assertTrue(dst_gray_32f.empty());
+        dst = new Mat();
+        assertTrue(dst.empty());
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {

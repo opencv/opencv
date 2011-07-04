@@ -40,15 +40,19 @@ public class highguiTest extends OpenCVTestCase {
 	}
 	
 	public void testImreadStringInt() {
-		dst_gray = highgui.imread(LENA, 0);
-		assertTrue(!dst_gray.empty());
-		assertEquals(1, dst_gray.channels());
+		dst = highgui.imread(LENA, 0);
+		assertTrue(!dst.empty());
+		assertEquals(1, dst.channels());
+		assertTrue(512 == dst.cols());
+		assertTrue(512 == dst.rows());
 	}
 
 	public void testImreadString() {		
-		dst_gray = highgui.imread(LENA);
-		assertTrue(!dst_gray.empty());
-		assertEquals(3, dst_gray.channels());
+		dst = highgui.imread(LENA);
+		assertTrue(!dst.empty());
+		assertEquals(3, dst.channels());
+		assertTrue(512 == dst.cols());
+		assertTrue(512 == dst.rows());
 	}
 
 	public void testImshow() {

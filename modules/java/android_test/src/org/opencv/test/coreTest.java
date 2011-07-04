@@ -19,12 +19,12 @@ public class coreTest extends OpenCVTestCase {
 	    Mat lut = new Mat(1, 256, Mat.CvType.CV_8UC1);
 	    
 	    lut.setTo(0);
-	    core.LUT(grayRnd, lut, dst_gray);
-	    assertMatEqual(gray0, dst_gray);
+	    core.LUT(grayRnd, lut, dst);
+	    assertMatEqual(gray0, dst);
 	    
 	    lut.setTo(255);
-	    core.LUT(grayRnd, lut, dst_gray);
-	    assertMatEqual(gray255, dst_gray);
+	    core.LUT(grayRnd, lut, dst);
+	    assertMatEqual(gray255, dst);
 	}
 
 	public void testMahalanobis() {	
@@ -45,8 +45,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAbsdiff() {
-		core.absdiff(gray128, gray255, dst_gray);
-		assertMatEqual(gray127, dst_gray);
+		core.absdiff(gray128, gray255, dst);
+		assertMatEqual(gray127, dst);
 	}
 
 	public void testAddMatMatMatMatInt() {
@@ -58,8 +58,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddMatMatMat() {
-		core.add(gray128, gray128, dst_gray);
-		assertMatEqual(gray255, dst_gray);
+		core.add(gray128, gray128, dst);
+		assertMatEqual(gray255, dst);
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
@@ -69,8 +69,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMat() {
-		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst_gray);
-		assertMatEqual(gray255, dst_gray);		
+		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst);
+		assertMatEqual(gray255, dst);		
 	}
 
 	public void testBitwise_andMatMatMatMat() {
@@ -78,8 +78,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testBitwise_andMatMatMat() {
-		core.bitwise_and(gray3, gray2, dst_gray);
-		assertMatEqual(gray2, dst_gray);
+		core.bitwise_and(gray3, gray2, dst);
+		assertMatEqual(gray2, dst);
 	}
 
 	public void testBitwise_notMatMatMat() {
@@ -177,14 +177,14 @@ public class coreTest extends OpenCVTestCase {
 
 	public void testCompleteSymmMatBoolean() {
 		core.completeSymm(grayRnd_32f, true);
-		core.transpose(grayRnd_32f, dst_gray_32f);
-		assertMatEqual(grayRnd_32f, dst_gray_32f);
+		core.transpose(grayRnd_32f, dst);
+		assertMatEqual(grayRnd_32f, dst);
 	}
 
 	public void testCompleteSymmMat() {
 		core.completeSymm(grayRnd_32f);
-		core.transpose(grayRnd_32f, dst_gray_32f);
-		assertMatEqual(grayRnd_32f, dst_gray_32f);
+		core.transpose(grayRnd_32f, dst);
+		assertMatEqual(grayRnd_32f, dst);
 	}
 
 	public void testConvertScaleAbsMatMatDoubleDouble() {
@@ -215,15 +215,15 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testDctMatMat() {
-		core.dct(gray0_32f_1d, dst_gray);
-		assertMatEqual(gray0_32f_1d, dst_gray);
+		core.dct(gray0_32f_1d, dst);
+		assertMatEqual(gray0_32f_1d, dst);
 		
 		Mat in = new Mat(1, 4, Mat.CvType.CV_32FC1);
 		in.put(0, 0, 135.22211, 50.811096, 102.27016, 207.6682);
 		Mat out = new Mat(1, 4, Mat.CvType.CV_32FC1);
 		out.put(0, 0, 247.98576, -61.252407, 94.904533, 14.013477);
-		core.dct(in, dst_gray);
-		assertMatEqual(out, dst_gray);
+		core.dct(in, dst);
+		assertMatEqual(out, dst);
 	}
 
 	public void testDeterminant() {
@@ -283,8 +283,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testExtractChannel() {
-		core.extractChannel(rgba128, dst_gray, 0);
-		assertMatEqual(gray128, dst_gray);
+		core.extractChannel(rgba128, dst, 0);
+		assertMatEqual(gray128, dst);
 	}
 
 	public void testFastAtan2() {
@@ -317,9 +317,9 @@ public class coreTest extends OpenCVTestCase {
 		Mat eConcat = new Mat(1, 9, Mat.CvType.CV_8UC1);
 		e.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
 		eConcat.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
-		core.hconcat(e, dst_gray);
+		core.hconcat(e, dst);
 		
-		assertMatEqual(eConcat, dst_gray);
+		assertMatEqual(eConcat, dst);
 	}
 
 	public void testIdctMatMatInt() {
@@ -428,13 +428,13 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMulTransposedMatMatBooleanMat() {
-		core.mulTransposed(grayRnd_32f, dst_gray_32f, true, grayRnd_32f);
-		assertMatEqual(gray0_32f, dst_gray_32f);
+		core.mulTransposed(grayRnd_32f, dst, true, grayRnd_32f);
+		assertMatEqual(gray0_32f, dst);
 	}
 
 	public void testMulTransposedMatMatBoolean() {
-		core.mulTransposed(grayE_32f, dst_gray_32f, true);
-		assertMatEqual(grayE_32f, dst_gray_32f);
+		core.mulTransposed(grayE_32f, dst, true);
+		assertMatEqual(grayE_32f, dst);
 	}
 
 	public void testMultiplyMatMatMatDoubleInt() {
