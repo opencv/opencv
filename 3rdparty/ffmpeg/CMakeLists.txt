@@ -7,7 +7,7 @@ endif()
 set(module_bare_name "opencv_ffmpeg${FFMPEG_SUFFIX}.dll")
 set(module_name "${CMAKE_CURRENT_SOURCE_DIR}/${module_bare_name}")
 
-get_target_property(bin_dir opencv_core LOCATION)
+get_target_property(bin_dir opencv_traincascade LOCATION)
 get_filename_component(bin_dir ${bin_dir} PATH) 
 
 message(STATUS "ffmpeg output dir: ${bin_dir}")
