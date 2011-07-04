@@ -30,7 +30,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testMahalanobis() {	
 		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
 		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);		
-		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL
+		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL instead of magic numbers
 		covar.inv();
 		
 		Mat line1 = grayRnd_32f.submat(0, 1, 0, grayRnd_32f.cols());
@@ -110,7 +110,7 @@ public class coreTest extends OpenCVTestCase {
 		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
 		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);
 		
-		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //FIXME: CV_COVAR_NORMAL instead of magic numbers
 		assertMatEqual(gray0_32f, covar);
 		assertMatEqual(gray0_32f_1d, mean);
 	}
@@ -119,7 +119,7 @@ public class coreTest extends OpenCVTestCase {
 		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_64FC1);
 		Mat mean = new Mat(1, matSize, Mat.CvType.CV_64FC1);
 		
-		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1); //FIXME: CV_COVAR_NORMAL
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1); //FIXME: CV_COVAR_NORMAL instead of magic numbers
 		assertMatEqual(gray0_64f, covar);
 		assertMatEqual(gray0_64f_1d, mean);
 	}
@@ -133,7 +133,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCheckHardwareSupport() {
-		boolean hasFeauture = core.checkHardwareSupport(0); //FIXME: do we need this function?
+		//FIXME: do we need this function?
+		boolean hasFeauture = core.checkHardwareSupport(0);
 		assertEquals(false, hasFeauture);
 	}
 
@@ -414,7 +415,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMulSpectrumsMatMatMatInt() {
-		//TODO: complex math. See the dct function test.
+		//TODO: nice example
 		fail("Not yet implemented");
 	}
 
@@ -498,7 +499,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testPerspectiveTransform() {
-		//XXX: kirill stopped here
+		//TODO: nice example
 		fail("Not yet implemented");
 	}
 
@@ -571,6 +572,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSetUseOptimized() {
+		//FIXME: do we need this function?
 		fail("Not yet implemented");
 	}
 
@@ -627,6 +629,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testUseOptimized() {
+		//XXX: do we need this function?
 		fail("Not yet implemented");
 	}
 
