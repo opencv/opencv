@@ -328,7 +328,7 @@ Building the library
    To test your build just go into the :file:`Build/bin/Debug` or :file:`Build/bin/Release` directory and start a couple of applications like the *contours.exe*. If they run, you are done. Otherwise, something definitely went awfully wrong. In this case you should contact us via our :opencv_group:`user group <>`. 
    If everything is okay the *contours.exe* output should resemble the following image (if built with Qt support): 
    
-   .. image:: images\WindowsQtContoursOutput.jpg
+   .. image:: images/WindowsQtContoursOutput.jpg
       :alt: A good output result
       :align: center
    
