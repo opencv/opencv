@@ -31,7 +31,8 @@ class App:
     def watershed(self):
         m = self.markers.copy()
         cv2.watershed(self.img, m)
-        vis = np.uint8( (self.img + self.colors[np.maximum(m, 0)]) / 2 )
+        overlay = self.colors[np.maximum(m, 0)]
+        vis = cv2.addWeighted(self.img, 0.5, overlay, 0.5, 0.0, dtype=cv2.CV_8UC3)
         cv2.imshow('watershed', vis)
 
     def run(self):
