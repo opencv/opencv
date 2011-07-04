@@ -1,28 +1,16 @@
-Tutorials
-###########
+###############
+OpenCV Tutorials
+###############
 
 The following links describe a set of basic OpenCV  tutorials. All the source code mentioned here is provide as part of the OpenCV regular releases, so check before you start copy & pasting the code. The list of tutorials below is automatically generated from reST files located in our SVN repository.
 
 As always, we would be happy to hear your comments and receive your contributions on any tutorial.
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   
-   introduction/table_of_content_introduction/table_of_content_introduction
-   core/table_of_content_core/table_of_content_core
-   imgproc/table_of_content_imgproc/table_of_content_imgproc
-   highgui/table_of_content_highgui/table_of_content_highgui
-   calib3d/table_of_content_calib3d/table_of_content_calib3d
-   features2d/table_of_content_features2d/table_of_content_features2d
-   video/table_of_content_video/table_of_content_video
-   objdetect/table_of_content_objdetect/table_of_content_objdetect
-   ml/table_of_content_ml/table_of_content_ml
-   gpu/table_of_content_gpu/table_of_content_gpu
-   general/table_of_content_general/table_of_content_general
-   
 *  :ref:`Table-Of-Content-Introduction`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+  
    =========== =======================================================
    |Introduct| You will learn how to setup OpenCV on your computer!
   
@@ -35,6 +23,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-Core`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+  
    =========== =======================================================
    |Core|      Here you will learn the about the basic building blocks of the library. A must read and know for     understanding how to manipulate the images on a pixel level.
   
@@ -47,6 +38,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-ImgProc`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |ImgProc|   In this section you will learn about the image processing (manipulation) functions inside OpenCV.
   
@@ -59,6 +53,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-HighGui`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |HighGui|   This section contains valuable tutorials about how to read/save your image/video files and how to use the built-in graphical user interface of the library. 
   
@@ -71,6 +68,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-Calib3D`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |Calib3D|   Although we got most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out from the 2D images information about the 3D world. 
   
@@ -83,6 +83,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-Feature2D`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |Featur2D|  Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.
   
@@ -94,7 +97,10 @@ As always, we would be happy to hear your comments and receive your contribution
                  :alt: feature2D Icon
 
 *  :ref:`Table-Of-Content-Video`
-
+ 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |Video|     Look here in order to find use on your video stream algoritms like: motion extraction, feature tracking and foreground extractions. 
   
@@ -107,6 +113,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-ObjDetect`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+  
    =========== =======================================================
    |ObjDetect| Ever wondered how your digital camera detects peoples and faces? Look here to find out!
   
@@ -118,7 +127,10 @@ As always, we would be happy to hear your comments and receive your contribution
                  :alt: objdetect Icon
 
 *  :ref:`Table-Of-Content-Ml`
-
+   
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |ml|        Use the powerfull machine learning classes for statistical classification, regression and clustering of data.
   
@@ -131,6 +143,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-GPU`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |GPU|       Squeeze out every little computation power from your system by using the power of your video card to run the OpenCV algorithms. 
   
@@ -143,6 +158,9 @@ As always, we would be happy to hear your comments and receive your contribution
 
 *  :ref:`Table-Of-Content-General`
 
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+   
    =========== =======================================================
    |General|   These tutorials are the bottom of the iceberg as they link together multiple of the modules presented above in order to solve complex problems.
   
@@ -153,3 +171,18 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: General Icon
 
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   introduction/table_of_content_introduction/table_of_content_introduction
+   core/table_of_content_core/table_of_content_core
+   imgproc/table_of_content_imgproc/table_of_content_imgproc
+   highgui/table_of_content_highgui/table_of_content_highgui
+   calib3d/table_of_content_calib3d/table_of_content_calib3d
+   features2d/table_of_content_features2d/table_of_content_features2d
+   video/table_of_content_video/table_of_content_video
+   objdetect/table_of_content_objdetect/table_of_content_objdetect
+   ml/table_of_content_ml/table_of_content_ml
+   gpu/table_of_content_gpu/table_of_content_gpu
+   general/table_of_content_general/table_of_content_general

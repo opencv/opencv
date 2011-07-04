@@ -309,6 +309,47 @@ ul.simple {
     list-style: none;
 }
 
-.enumeratevisibleitems .simple {
+.enumeratevisibleitemswithsquare ul {
 list-style: square; 
+margin-bottom: 0px;
+margin-left: 0px;
+margin-right: 0px;
+margin-top: 0px;
 }
+
+.enumeratevisibleitemswithsquare li {
+margin-bottom: 0.2em;
+margin-left: 0px;
+margin-right: 0px;
+margin-top: 0.2em;
+ }
+ 
+ .enumeratevisibleitemswithsquare p {
+ margin-bottom: 0px;
+ }
+ 
+ .enumeratevisibleitemswithsquare dl{
+margin-bottom: 0px;
+margin-left: 0px;
+margin-right: 0px;
+margin-top: 0px;
+ }
+ 
+ .toctableopencv
+ {
+   width: 100% ; 
+   table-layout: fixed;
+ }
+ 
+
+  .toctableopencv colgroup col:first-child
+  {
+    width: 100pt !important;
+    max-width: 100pt !important;
+    min-width: 100pt !important;
+  }
+  
+  .toctableopencv colgroup col:nth-child(2) 
+  {
+    width: 100% !important;
+  }
