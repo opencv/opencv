@@ -10,7 +10,7 @@ public class MatTest extends OpenCVTestCase {
 
 	public void testChannels() {
 		//fail("Not yet implemented");
-		utils.Log(grayRnd.dump());
+		//utils.Log(grayRnd.dump());
 	}
 
 	public void testClone() {

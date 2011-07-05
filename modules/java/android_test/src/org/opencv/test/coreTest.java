@@ -35,8 +35,9 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
-		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, gray255_32f.depth());
-		assertTrue(core.CV_32F == dst.depth());
+		fail("Not yet implemented");
+		//core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, gray255_32f.depth());
+		//assertTrue(core.CV_32F == dst.depth());
 	}
 
 	public void testBitwise_andMatMatMat() {

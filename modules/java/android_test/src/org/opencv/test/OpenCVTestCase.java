@@ -8,9 +8,7 @@ import org.opencv.highgui;
 
 
 public class OpenCVTestCase extends TestCase {
-    
-    static String LENA = "/data/data/org.opencv.test/files/lena.jpg";
-    
+       
     static int matSize = 10;
     
     static Mat dst;
@@ -72,11 +70,11 @@ public class OpenCVTestCase extends TestCase {
         
         gray0_64f = new Mat(matSize, matSize, Mat.CvType.CV_64FC1); gray0_64f.setTo(0.0);
         gray0_64f_1d = new Mat(1, matSize, Mat.CvType.CV_64FC1); gray0_64f_1d.setTo(0.0);
-        
-        rgbLena = highgui.imread(LENA);
-        
+               
         rgba0 = new Mat(matSize, matSize, Mat.CvType.CV_8UC4); rgba0.setTo(0, 0, 0, 0);
         rgba128 = new Mat(matSize, matSize, Mat.CvType.CV_8UC4); rgba128.setTo(128, 128, 128, 128);
+        
+        rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {
@@ -93,10 +91,8 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public void test_1(String label) {
-        utils.Log("================================================");
-        utils.Log("=============== " + label);
-        utils.Log("================================================");
-        
-        new utils().ExportLena();
+    	OpenCVTestRunner.Log("================================================");
+    	OpenCVTestRunner.Log("=============== " + label);
+    	OpenCVTestRunner.Log("================================================");
     }
 }

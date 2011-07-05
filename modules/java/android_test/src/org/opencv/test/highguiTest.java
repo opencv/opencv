@@ -31,7 +31,7 @@ public class highguiTest extends OpenCVTestCase {
 	}
 	
 	public void testImreadString() {		
-		dst = highgui.imread(LENA);
+		dst = highgui.imread(OpenCVTestRunner.LENA_PATH);
 		assertTrue(!dst.empty());
 		assertEquals(3, dst.channels());
 		assertTrue(512 == dst.cols());
@@ -39,7 +39,7 @@ public class highguiTest extends OpenCVTestCase {
 	}
 
 	public void testImreadStringInt() {
-		dst = highgui.imread(LENA, 0);
+		dst = highgui.imread(OpenCVTestRunner.LENA_PATH, 0);
 		assertTrue(!dst.empty());
 		assertEquals(1, dst.channels());
 		assertTrue(512 == dst.cols());
