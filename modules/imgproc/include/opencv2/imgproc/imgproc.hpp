@@ -455,9 +455,9 @@ CV_EXPORTS_W void preCornerDetect( InputArray src, OutputArray dst, int ksize,
                                    int borderType=BORDER_DEFAULT );
 
 //! adjusts the corner locations with sub-pixel accuracy to maximize the certain cornerness criteria
-CV_EXPORTS void cornerSubPix( InputArray image, InputOutputArray corners,
-                              Size winSize, Size zeroZone,
-                              TermCriteria criteria );
+CV_EXPORTS_W void cornerSubPix( InputArray image, InputOutputArray corners,
+                                Size winSize, Size zeroZone,
+                                TermCriteria criteria );
 
 //! finds the strong enough corners where the cornerMinEigenVal() or cornerHarris() report the local maxima
 CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
@@ -807,7 +807,7 @@ enum
 };
 
 //! retrieves contours and the hierarchical information from black-n-white image.
-CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset=Point());
 
@@ -816,16 +816,16 @@ CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contou
                               int mode, int method, Point offset=Point());
 
 //! draws contours in the image
-CV_EXPORTS void drawContours( InputOutputArray image, InputArrayOfArrays contours,
+CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
                               int contourIdx, const Scalar& color,
                               int thickness=1, int lineType=8,
                               InputArray hierarchy=noArray(),
                               int maxLevel=INT_MAX, Point offset=Point() );
 
 //! approximates contour or a curve using Douglas-Peucker algorithm
-CV_EXPORTS void approxPolyDP( InputArray curve,
-                              OutputArray approxCurve,
-                              double epsilon, bool closed );
+CV_EXPORTS_W void approxPolyDP( InputArray curve,
+                                OutputArray approxCurve,
+                                double epsilon, bool closed );
 
 //! computes the contour perimeter (closed=true) or a curve length
 CV_EXPORTS_W double arcLength( InputArray curve, bool closed );
@@ -842,8 +842,8 @@ CV_EXPORTS_W void minEnclosingCircle( InputArray points,
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 //! computes convex hull for a set of 2D points.
-CV_EXPORTS void convexHull( InputArray points, OutputArray hull,
-                            bool clockwise=false, bool returnPoints=true );
+CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull,
+                              bool clockwise=false, bool returnPoints=true );
 
 //! returns true iff the contour is convex. Does not support contours with self-intersection
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
@@ -852,8 +852,8 @@ CV_EXPORTS_W bool isContourConvex( InputArray contour );
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
 //! fits line to the set of 2D points using M-estimator algorithm
-CV_EXPORTS void fitLine( InputArray points, OutputArray line, int distType,
-                         double param, double reps, double aeps );
+CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
+                           double param, double reps, double aeps );
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
         
