@@ -180,9 +180,13 @@ public class Mat {
 				rows() + "*" + cols() + "*" + type() + 
 				", isCont=" + isContinuous() + ", isSubmat=" + isSubmatrix() +
 				", nativeObj=0x" + Long.toHexString(nativeObj) + 
-				", dataAddr=0x" + Long.toHexString(dataAddr()) + 
+				", dataAddr=0x" + Long.toHexString(dataAddr()) +  
 				" ]";
 	}
+	
+    public String dump() {
+    	return nDump(nativeObj);
+    }
 	
 	public boolean empty() {
 		if(nativeObj == 0) return true;
@@ -426,5 +430,6 @@ public class Mat {
 	private static native long nCross(long self, long mat);
 	private static native long nInv(long self);
     private static native long nEye(int rows, int cols, int type);
+    private static native String nDump(long self);
 
 }

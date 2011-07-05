@@ -240,6 +240,14 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
   (JNIEnv *, jclass, jint, jint, jint);
 
+/*
+ * Class:     org_opencv_Mat
+ * Method:    nDump
+ * Signature: (J)S
+ */
+JNIEXPORT jstring JNICALL Java_org_opencv_Mat_nDump
+  (JNIEnv *, jclass, jlong);
+
 #ifdef __cplusplus
 }
 #endif
@@ -617,6 +625,15 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
     (JNIEnv* env, jclass cls, jint _rows, jint _cols, jint _type)
 {
     return (jlong) new cv::Mat(cv::Mat::eye( _rows, _cols, _type ));
+}
+
+JNIEXPORT jstring JNICALL Java_org_opencv_Mat_nDump
+  (JNIEnv *env, jclass cls, jlong self)
+{
+	cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
+    std::stringstream s;
+    s << *me;
+	return env->NewStringUTF(s.str().c_str());
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__III
