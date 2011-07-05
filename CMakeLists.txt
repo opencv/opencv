@@ -59,12 +59,6 @@ if(CMAKE_VERBOSE)
     set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
 
-if (WIN32)
-    if(${CMAKE_GENERATOR} MATCHES "(MinGW)|(MSYS)")
-        set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "")
-    endif()
-endif()
-
 # --------------------------------------------------------------
 # Indicate CMake 2.7 and above that we don't want to mix relative
 #  and absolute paths in linker lib lists.

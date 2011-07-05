@@ -155,7 +155,7 @@ IF (OpenCV_HAVE_ANDROID_CAMERA)
       )
     endforeach()
   endmacro()
-ENDIF(ANDROID)
+ENDIF()
 
 # ======================================================
 #  Version variables:
