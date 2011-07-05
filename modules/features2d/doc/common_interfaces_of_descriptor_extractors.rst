@@ -119,7 +119,7 @@ SiftDescriptorExtractor
 .. ocv:class:: SiftDescriptorExtractor
 
 Wrapping class for computing descriptors by using the
-:ocv:class::`SIFT` class. ::
+:ocv:class:`SIFT` class. ::
 
     class SiftDescriptorExtractor : public DescriptorExtractor
     {
