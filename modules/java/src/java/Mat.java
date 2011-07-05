@@ -21,31 +21,22 @@ public class Mat {
 		this( rows, cols, new CvType(depth, 1) );
 	}
 
-	public Mat(int rows, int cols, CvType type, double v0, double v1, double v2, double v3) {
-		this( nCreateMat(rows, cols, type.toInt(), v0, v1, v2, v3) );
+	public Mat(int rows, int cols, CvType type, Scalar val) {
+		this( nCreateMat(rows, cols, type.toInt(), val.v0, val.v1, val.v2, val.v3) );
 	}
 
-	public Mat(int rows, int cols, CvType type, double v0, double v1, double v2) {
-		this( nCreateMat(rows, cols, type.toInt(), v0, v1, v2, 0) );
-	}
-
-	public Mat(int rows, int cols, CvType type, double v0, double v1) {
-		this( nCreateMat(rows, cols, type.toInt(), v0, v1, 0, 0) );
-	}
-
-	public Mat(int rows, int cols, CvType type, double v0) {
-		this( nCreateMat(rows, cols, type.toInt(), v0, 0, 0, 0) );
+	public Mat(int rows, int cols, int depth, Scalar val) {
+		this( rows, cols, new CvType(depth, 1), val );
 	}
 
 	public void dispose() {
-		if(nativeObj != 0)
-			nDispose(nativeObj);
-		nativeObj = 0;
+		nRelease(nativeObj);
 	}
 	
 	@Override
 	protected void finalize() throws Throwable {
-		dispose();
+		nDelete(nativeObj);
+		nativeObj = 0;
 		super.finalize();
 	}
 
@@ -235,13 +226,10 @@ public class Mat {
 	}
 
 
-	public void setTo(double v0, double v1, double v2, double v3) {
+	public void setTo(Scalar val) {
 		checkNull();
-		nSetTo(nativeObj, v0, v1, v2, v3);
+		nSetTo(nativeObj, val.v0, val.v1, val.v2, val.v3);
 	}
-	public void setTo(double v0, double v1, double v2) { setTo(v0, v1, v2, 0); }
-	public void setTo(double v0, double v1) { setTo(v0, v1, 0, 0); }
-	public void setTo(double v0) { setTo(v0, 0, 0, 0); }
 	
 	public void copyTo(Mat m) {
 		checkNull();
@@ -279,7 +267,8 @@ public class Mat {
 	private static native long nCreateMat();
 	private static native long nCreateMat(int rows, int cols, int type);
 	private static native long nCreateMat(int rows, int cols, int type, double v0, double v1, double v2, double v3);
-	private static native void nDispose(long self);
+	private static native void nRelease(long self);
+	private static native void nDelete(long self);
 	private static native int nType(long self);
 	private static native int nRows(long self);
 	private static native int nCols(long self);

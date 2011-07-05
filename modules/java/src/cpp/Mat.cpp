@@ -5,255 +5,12 @@
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, TEGRA_LOG_TAG, __VA_ARGS__))
 */
 
+
+#include "opencv2/core/core.hpp"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Class:     org_opencv_Mat
- * Method:    nCreateMat
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__
-  (JNIEnv *, jclass);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nCreateMat
- * Signature: (III)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__III
-  (JNIEnv *, jclass, jint, jint, jint);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nCreateMat
- * Signature: (IIIDDDD)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__IIIDDDD
-  (JNIEnv *, jclass, jint, jint, jint, jdouble, jdouble, jdouble, jdouble);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nDispose
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_org_opencv_Mat_nDispose
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nType
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nType
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nRows
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nRows
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nCols
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nCols
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nData
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nData
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nIsEmpty
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_org_opencv_Mat_nIsEmpty
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nIsCont
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_org_opencv_Mat_nIsCont
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nIsSubmat
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_org_opencv_Mat_nIsSubmat
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nSubmat
- * Signature: (JIIII)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nSubmat
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jint);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nClone
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nClone
-  (JNIEnv *, jclass, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nPutD
- * Signature: (JIII[D)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jdoubleArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nPutF
- * Signature: (JIII[F)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutF
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jfloatArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nPutI
- * Signature: (JIII[I)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutI
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jintArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nPutS
- * Signature: (JIII[S)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutS
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jshortArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nPutB
- * Signature: (JIII[B)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutB
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jbyteArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nGetB
- * Signature: (JIII[B)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetB
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jbyteArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nGetS
- * Signature: (JIII[S)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetS
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jshortArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nGetI
- * Signature: (JIII[I)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetI
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jintArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nGetF
- * Signature: (JIII[F)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetF
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jfloatArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nGetD
- * Signature: (JIII[D)I
- */
-JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetD
-  (JNIEnv *, jclass, jlong, jint, jint, jint, jdoubleArray);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nSetTo
- * Signature: (JDDDD)V
- */
-JNIEXPORT void JNICALL Java_org_opencv_Mat_nSetTo
-  (JNIEnv *, jclass, jlong, jdouble, jdouble, jdouble, jdouble);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nCopyTo
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_org_opencv_Mat_nCopyTo
-  (JNIEnv *, jclass, jlong, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nDot
- * Signature: (JJ)D
- */
-JNIEXPORT jdouble JNICALL Java_org_opencv_Mat_nDot
-  (JNIEnv *, jclass, jlong, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nCross
- * Signature: (JJ)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCross
-  (JNIEnv *, jclass, jlong, jlong);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nInv
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
-  (JNIEnv *, jclass, jlong);
-  
-/*
- * Class:     org_opencv_Mat
- * Method:    nEye
- * Signature: (III)J
- */
-JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nEye
-  (JNIEnv *, jclass, jint, jint, jint);
-
-/*
- * Class:     org_opencv_Mat
- * Method:    nDump
- * Signature: (J)S
- */
-JNIEXPORT jstring JNICALL Java_org_opencv_Mat_nDump
-  (JNIEnv *, jclass, jlong);
-
-#ifdef __cplusplus
-}
-#endif
-
-
-#include "opencv2/core/core.hpp"
 
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nType
 	(JNIEnv* env, jclass cls, jlong self)
@@ -369,6 +126,10 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 }
 
 
+#ifdef __cplusplus
+}
+#endif
+
 template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, char* buff)
 {
 	if(! m) return 0;
@@ -397,6 +158,11 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
 	}
 	return res;
 }
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutB
 	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
@@ -455,6 +221,10 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutF
 }
 
 
+#ifdef __cplusplus
+}
+#endif
+
 
 template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* buff)
 {
@@ -484,6 +254,11 @@ template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* 
 	}
 	return res;
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nGetB
 	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jbyteArray vals)
@@ -649,10 +424,20 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__IIIDDDD
     return (jlong) new cv::Mat( _rows, _cols, _type, cv::Scalar(v0, v1, v2, v3) );
 }
 
-JNIEXPORT void JNICALL Java_org_opencv_Mat_nDispose
+JNIEXPORT void JNICALL Java_org_opencv_Mat_nDelete
   (JNIEnv* env, jclass cls, jlong self)
 {
     cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
     delete me;
 }
 
+JNIEXPORT void JNICALL Java_org_opencv_Mat_nRelease
+  (JNIEnv* env, jclass cls, jlong self)
+{
+    cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
+    me->release();
+}
+
+#ifdef __cplusplus
+}
+#endif
