@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import org.opencv.CvType;
 import org.opencv.Mat;
 import org.opencv.Size;
 import org.opencv.core;
@@ -62,16 +63,16 @@ class Sample4View extends SurfaceView implements SurfaceHolder.Callback, Runnabl
             
             // initialize all required Mats before usage to minimize number of auxiliary jni calls
             if(mYuv != null) mYuv.dispose();
-            mYuv = new Mat(mFrameHeight+mFrameHeight/2, mFrameWidth, Mat.CvType.CV_8UC1);
+            mYuv = new Mat(mFrameHeight+mFrameHeight/2, mFrameWidth, CvType.CV_8UC1);
             
             if(mRgba != null) mRgba.dispose();
-            mRgba = new Mat(mFrameHeight, mFrameWidth, Mat.CvType.CV_8UC4);
+            mRgba = new Mat(mFrameHeight, mFrameWidth, CvType.CV_8UC4);
             
             if(mGraySubmat != null) mGraySubmat.dispose();
             mGraySubmat = mYuv.submat(0, mFrameHeight, 0, mFrameWidth); 
 
             if(mIntermediateMat != null) mIntermediateMat.dispose();
-            mIntermediateMat = new Mat(mFrameHeight, mFrameWidth, Mat.CvType.CV_8UC1);
+            mIntermediateMat = new Mat(mFrameHeight, mFrameWidth, CvType.CV_8UC1);
         }
     }
 
@@ -148,7 +149,7 @@ class Sample4View extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                 imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
                 break;
             case Sample4Mixed.VIEW_MODE_SOBEL:
-                imgproc.Sobel(mGraySubmat, mIntermediateMat, core.CV_8U, 1, 1);
+                imgproc.Sobel(mGraySubmat, mIntermediateMat, CvType.CV_8U, 1, 1);
                 core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 8);
                 imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
                 break;

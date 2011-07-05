@@ -245,8 +245,12 @@ public class %(module)s {
 	static {
 		System.loadLibrary("opencv_java");
 	}
+""" % {"module" : module} )
 
-    public static final int
+        if module == "core":
+            self.java_code.write(\
+"""
+    private static final int
             CV_8U  = 0,
             CV_8S  = 1,
             CV_16U = 2,
@@ -254,15 +258,21 @@ public class %(module)s {
             CV_32S = 4,
             CV_32F = 5,
             CV_64F = 6,
-            CV_USRTYPE1 = 7,
+            CV_USRTYPE1 = 7;
+
+""" )
+
+        if module == "imgproc":
+            self.java_code.write(\
+"""
+    public static final int
             IPL_BORDER_CONSTANT = 0,
             IPL_BORDER_REPLICATE = 1,
             IPL_BORDER_REFLECT = 2,
             IPL_BORDER_WRAP = 3,
             IPL_BORDER_REFLECT_101 = 4,
             IPL_BORDER_TRANSPARENT = 5;
-""" % {"module" : module} )
-
+""" )
         # cpp module header
         self.cpp_code.write(\
 """// This file is auto-generated, please don't edit!
