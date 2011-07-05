@@ -1,6 +1,8 @@
 package org.opencv.test;
 
+import org.opencv.CvType;
 import org.opencv.Mat;
+import org.opencv.Scalar;
 
 public class MatTest extends OpenCVTestCase {
 	
@@ -9,20 +11,26 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testChannels() {
-		//fail("Not yet implemented");
-		//utils.Log(grayRnd.dump());
+		assertEquals(1, gray0.channels());
+		assertEquals(3, rgbLena.channels());
+		assertEquals(4, rgba0.channels());
 	}
 
 	public void testClone() {
-		fail("Not yet implemented");
+		dst = gray0.clone();
+		assertMatEqual(gray0, dst);
 	}
 
 	public void testCol() {
-		fail("Not yet implemented");
+		Mat col = gray0.col(0);
+		assertEquals(1, col.cols());
+		assertEquals(gray0.rows(), col.rows());
 	}
 
 	public void testColRange() {
-		fail("Not yet implemented");
+		Mat cols = gray0.colRange(0, gray0.cols()/2);
+		assertEquals(gray0.cols()/2, cols.cols());
+		assertEquals(gray0.rows(), cols.rows());
 	}
 
 	public void testCols() {
@@ -42,7 +50,8 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testDepth() {
-		fail("Not yet implemented");
+		assertEquals(CvType.CV_8U, gray0.depth());
+		assertEquals(CvType.CV_32F, gray0_32f.depth());
 	}
 
 	public void testDispose() {
@@ -52,16 +61,29 @@ public class MatTest extends OpenCVTestCase {
 	public void testDot() {
 		fail("Not yet implemented");
 	}
+	
+	public void testDump() {
+		fail("Not yet implemented");
+	}
 
 	public void testElemSize() {
 		fail("Not yet implemented");
 	}
 
 	public void testEmpty() {
+		assertTrue(dst.empty());
+		assertTrue(!gray0.empty());
+	}
+	
+	public void testEye() {
 		fail("Not yet implemented");
 	}
 
 	public void testFinalize() {
+		fail("Not yet implemented");
+	}
+	
+	public void testGetIntInt() {
 		fail("Not yet implemented");
 	}
 
@@ -86,47 +108,74 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testGetNativeObjAddr() {
-		fail("Not yet implemented");
+		assertTrue(0 != gray0.getNativeObjAddr());
 	}
 
 	public void testHeight() {
-		fail("Not yet implemented");
+		assertEquals(gray0.rows(), gray0.height());
+		assertEquals(rgbLena.rows(), rgbLena.height());
+		assertEquals(rgba128.rows(), rgba128.height());
 	}
 
 	public void testInv() {
 		fail("Not yet implemented");
+		//dst = grayE_32f.inv();
+		//assertMatEqual(grayE_32f, dst);
 	}
 
 	public void testIsContinuous() {
-		fail("Not yet implemented");
+		assertTrue(gray0.isContinuous());
+		
+		Mat subMat = gray0.submat(0, 0, gray0.rows()/2, gray0.cols()/2);
+		assertFalse(subMat.isContinuous());
 	}
 
 	public void testIsSubmatrix() {
-		fail("Not yet implemented");
+		assertFalse(gray0.isSubmatrix());
+		Mat subMat = gray0.submat(0, 0, gray0.rows()/2, gray0.cols()/2);
+		assertTrue(subMat.isSubmatrix());
+	}
+	
+	public void testMat() {
+		Mat m = new Mat();
+		assertTrue(null != m);
+		assertTrue(m.empty());
 	}
 
 	public void testMatIntIntCvType() {
-		Mat gray = new Mat(1, 1, Mat.CvType.CV_8UC1);
+		Mat gray = new Mat(1, 1, CvType.CV_8UC1);
 		assertFalse(gray.empty());
 		
-		Mat rgb = new Mat(1, 1, Mat.CvType.CV_8UC3);
+		Mat rgb = new Mat(1, 1, CvType.CV_8UC3);
 		assertFalse(rgb.empty());
 	}
 
-	public void testMatIntIntCvTypeDouble() {
-		fail("Not yet implemented");
+	public void testMatIntIntCvTypeScalar() {
+		Mat gray = new Mat(1, 1, CvType.CV_8UC1, new Scalar(127));
+		assertFalse(gray.empty());
+		assertMatEqual(gray, gray127);
+		
+		Mat rgb = new Mat(1, 1, CvType.CV_8UC4, new Scalar(128));
+		assertFalse(rgb.empty());
+		//FIXME: assertMatEqual(rgb, rgba128);
 	}
 
-	public void testMatIntIntCvTypeDoubleDouble() {
-		fail("Not yet implemented");
+	public void testMatIntIntInt() {
+		Mat gray = new Mat(1, 1, CvType.CV_8U);
+		assertFalse(gray.empty());
+		
+		Mat rgb = new Mat(1, 1, CvType.CV_8U);
+		assertFalse(rgb.empty());
 	}
 
-	public void testMatIntIntCvTypeDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testMatIntIntCvTypeDoubleDoubleDoubleDouble() {
-		fail("Not yet implemented");
+	public void testMatIntIntIntScalar() {
+		Mat m1 = new Mat(1, 1, CvType.CV_8U, new Scalar(127));
+		assertFalse(m1.empty());
+		assertMatEqual(m1, gray127);
+		
+		Mat m2 = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
+		assertFalse(m2.empty());
+		assertMatEqual(m2, gray0_32f);
 	}
 
 	public void testMatLong() {
@@ -154,50 +203,52 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testRow() {
-		fail("Not yet implemented");
+		Mat row = gray0.row(0);
+		assertEquals(1, row.rows());
+		assertEquals(gray0.cols(), row.cols());
 	}
 
 	public void testRowRange() {
-		fail("Not yet implemented");
+		Mat rows = gray0.rowRange(0, gray0.rows()/2);
+		assertEquals(gray0.rows()/2, rows.rows());
+		assertEquals(gray0.cols(), rows.cols());
 	}
 
 	public void testRows() {
 		assertEquals(matSize, gray0.rows());
 	}
 
-	public void testSetToDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testSetToDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testSetToDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testSetToDoubleDoubleDoubleDouble() {
-		fail("Not yet implemented");
+	public void testSetTo() {
+		gray0.setTo(new Scalar(127));
+		assertMatEqual(gray127, gray0);
 	}
 
 	public void testSubmat() {
-		fail("Not yet implemented");
+		Mat submat = gray0.submat(0, gray0.rows()/2, 0, gray0.cols()/2);
+		assertEquals(gray0.rows()/2, submat.rows());
+		assertEquals(gray0.cols()/2, submat.cols());
 	}
 
 	public void testToString() {
-		fail("Not yet implemented");
+		assertTrue(null != gray0.toString());
 	}
 
 	public void testTotal() {
-		fail("Not yet implemented");
+		int nElements = gray0.rows() * gray0.cols();
+		assertEquals(nElements, gray0.total());
 	}
 
 	public void testType() {
-		fail("Not yet implemented");
+		assertEquals(CvType.CV_8UC1, gray0.type());
+		//TODO: assertEquals(CvType.CV_8U, gray0.type());
+		assertEquals(CvType.CV_32FC1, gray0_32f.type());
+		assertEquals(CvType.CV_8UC3, rgbLena.type());
 	}
 
 	public void testWidth() {
-		fail("Not yet implemented");
+		assertEquals(gray0.cols(), gray0.width());
+		assertEquals(rgbLena.cols(), rgbLena.width());
+		assertEquals(rgba128.cols(), rgba128.width());
 	}
+
 }

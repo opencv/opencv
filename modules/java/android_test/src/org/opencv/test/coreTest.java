@@ -1,5 +1,6 @@
 package org.opencv.test;
 
+import org.opencv.CvType;
 import org.opencv.Mat;
 import org.opencv.Point;
 import org.opencv.Scalar;
@@ -74,8 +75,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCalcCovarMatrixMatMatMatInt() {
-		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_64FC1);
-		Mat mean = new Mat(1, matSize, Mat.CvType.CV_64FC1);
+		Mat covar = new Mat(matSize, matSize, CvType.CV_64FC1);
+		Mat mean = new Mat(1, matSize, CvType.CV_64FC1);
 		
 		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1); //TODO: CV_COVAR_NORMAL instead of magic numbers
 		assertMatEqual(gray0_64f, covar);
@@ -83,10 +84,10 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCalcCovarMatrixMatMatMatIntInt() {
-		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
-		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);
+		Mat covar = new Mat(matSize, matSize, CvType.CV_32FC1);
+		Mat mean = new Mat(1, matSize, CvType.CV_32FC1);
 		
-		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //TODO: CV_COVAR_NORMAL instead of magic numbers
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, CvType.CV_32F); //TODO: CV_COVAR_NORMAL instead of magic numbers
 		assertMatEqual(gray0_32f, covar);
 		assertMatEqual(gray0_32f_1d, mean);
 	}
@@ -128,16 +129,14 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCompare() {
-        Mat cmp = new Mat(0, 0, Mat.CvType.CV_8UC1);
-        
-        core.compare(gray0, gray0, cmp, core.CMP_EQ);
-        assertMatEqual(cmp, gray255);
+        core.compare(gray0, gray0, dst, core.CMP_EQ);
+        assertMatEqual(dst, gray255);
 		
-        core.compare(gray0, gray1, cmp, core.CMP_EQ);
-        assertMatEqual(cmp, gray0);
+        core.compare(gray0, gray1, dst, core.CMP_EQ);
+        assertMatEqual(dst, gray0);
         
-        core.compare(gray0, grayRnd, cmp, core.CMP_EQ);
-        double nBlackPixels = core.countNonZero(cmp);
+        core.compare(gray0, grayRnd, dst, core.CMP_EQ);
+        double nBlackPixels = core.countNonZero(dst);
         double nNonBlackpixels = core.countNonZero(grayRnd);
         assertTrue((nBlackPixels + nNonBlackpixels) == grayRnd.total());
 	}
@@ -181,9 +180,9 @@ public class coreTest extends OpenCVTestCase {
 		core.dct(gray0_32f_1d, dst);
 		assertMatEqual(gray0_32f_1d, dst);
 		
-		Mat in = new Mat(1, 4, Mat.CvType.CV_32FC1);
+		Mat in = new Mat(1, 4, CvType.CV_32FC1);
 		in.put(0, 0, 135.22211, 50.811096, 102.27016, 207.6682);
-		Mat out = new Mat(1, 4, Mat.CvType.CV_32FC1);
+		Mat out = new Mat(1, 4, CvType.CV_32FC1);
 		out.put(0, 0, 247.98576, -61.252407, 94.904533, 14.013477);
 		
 		core.dct(in, dst);
@@ -281,8 +280,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testHconcat() {
-		Mat e = new Mat(3, 3, Mat.CvType.CV_8UC1);
-		Mat eConcat = new Mat(1, 9, Mat.CvType.CV_8UC1);
+		Mat e = Mat.eye(3, 3, CvType.CV_8UC1);
+		Mat eConcat = new Mat(1, 9, CvType.CV_8UC1);
 		e.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
 		eConcat.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
 		
@@ -359,13 +358,13 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testLUTMatMatMat() {
-	    Mat lut = new Mat(1, 256, Mat.CvType.CV_8UC1);
+	    Mat lut = new Mat(1, 256, CvType.CV_8UC1);
 	    
-	    lut.setTo(0);
+    	lut.setTo(new Scalar(0));
 	    core.LUT(grayRnd, lut, dst);
 	    assertMatEqual(gray0, dst);
 	    
-	    lut.setTo(255);
+	    lut.setTo(new Scalar(255));
 	    core.LUT(grayRnd, lut, dst);
 	    assertMatEqual(gray255, dst);
 	}
@@ -379,9 +378,9 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testMahalanobis() {	
-		Mat covar = new Mat(matSize, matSize, Mat.CvType.CV_32FC1);
-		Mat mean = new Mat(1, matSize, Mat.CvType.CV_32FC1);		
-		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, Mat.CvType.CV_32F); //TODO: CV_COVAR_NORMAL instead of magic numbers
+		Mat covar = new Mat(matSize, matSize, CvType.CV_32FC1);
+		Mat mean = new Mat(1, matSize, CvType.CV_32FC1);		
+		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, CvType.CV_32F); //TODO: CV_COVAR_NORMAL instead of magic numbers
 		covar.inv();
 		
 		Mat line1 = grayRnd_32f.submat(0, 1, 0, grayRnd_32f.cols());
