@@ -321,7 +321,10 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'warp_affine' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-warpaffine%s' , None),
 	    'get_rotation_matrix_2d' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getrotationmatrix2d%s', None),
             'get_affine_transform' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getaffinetransform%s', None),
-            'equalize_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#equalizeHist%s', None)
+            'equalize_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#equalizeHist%s', None),
+	    'split' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#split%s', None),
+	    'calc_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcHist%s', None),
+            'normalize' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#normalize%s', None)
            }
 
 
