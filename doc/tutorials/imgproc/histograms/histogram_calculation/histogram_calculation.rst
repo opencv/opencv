@@ -6,7 +6,6 @@ Histogram Calculation
 Goal
 =====
 
-
 In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
