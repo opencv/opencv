@@ -7,7 +7,6 @@ In this section you will learn about the image processing (manipulation) functio
 
 .. include:: ../../definitions/tocDefinitions.rst
 
-
  
 + 
   .. tabularcolumns:: m{100pt} m{300pt}
@@ -387,6 +386,28 @@ In this section you will learn about the image processing (manipulation) functio
   
 .. toctree::
    :hidden:
+
+   ../gausian_median_blur_bilateral_filter/gausian_median_blur_bilateral_filter
+   ../erosion_dilatation/erosion_dilatation
+   ../opening_closing_hats/opening_closing_hats
+   ../pyramids/pyramids
+   ../threshold/threshold
+   ../imgtrans/filter_2d/filter_2d
+   ../imgtrans/copyMakeBorder/copyMakeBorder
+   ../imgtrans/sobel_derivatives/sobel_derivatives
+   ../imgtrans/laplace_operator/laplace_operator
+   ../imgtrans/canny_detector/canny_detector
+   ../imgtrans/hough_lines/hough_lines
+   ../imgtrans/hough_circle/hough_circle
+   ../imgtrans/remap/remap
+   ../imgtrans/warp_affine/warp_affine
+   ../histograms/histogram_equalization/histogram_equalization
+   ../histograms/histogram_calculation/histogram_calculation
+   ../histograms/histogram_comparison/histogram_comparison
+   ../histograms/back_projection/back_projection
+   ../histograms/template_matching/template_matching
+
+
 
 
 
