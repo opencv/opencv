@@ -325,7 +325,8 @@ margin-top: 0.2em;
  }
  
  .enumeratevisibleitemswithsquare p {
- margin-bottom: 0px;
+ margin-bottom: 0pt;
+ margin-top: 1pt;
  }
  
  .enumeratevisibleitemswithsquare dl{

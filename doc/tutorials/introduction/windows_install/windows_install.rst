@@ -30,18 +30,17 @@ Installation by using the pre-built libraries
 
 #. Make sure you have admin rights. Start the setup and follow the wizard. Agree to the \" License Agreement \" . 
 
-#. Adding the OpenCV library to the system path is a good decision unless you want to play around with multiple flavors of the same OpenCV version. You will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it. 
-
-   .. note:: 
-      A good and safe way to check your systems **PATH** folders is by using the \"*Path Editor*\" application. You can download it `from here <http://www.redfernplace.com/software-projects/patheditor/>`_. Use this if you are not sure the systems path was updated with the OpenCV entry. You can also add manually new folders to the systems **PATH** by using this application. 
+#. While adding the OpenCV library to the system path is a good decision for a better control of this we will do it manually. Therefore, make sure you do not set this option. 
 
 #. Most of the time it is a good idea to install the source files as this will allow for you to debug into the OpenCV library, if it is necessary. Therefore, just follow the default settings of the wizard and finish the installation. 
 
-#. In the end you can check the installation at the chosen path. If you added the OpenCV Path to the system PATH inside the *Path Editor* you should see an entry with the *bin* folder of the OpenCV directory. 
+#. You can check the installation at the chosen path as you can see below. 
 
-.. image:: images/OpenCV_Install_Directory.jpg
-   :alt: An example of how the installation directory should look in case of success.
-   :align: center
+   .. image:: images/OpenCV_Install_Directory.jpg
+      :alt: An example of how the installation directory should look in case of success.
+      :align: center
+
+#. To finalize the installation go to the :ref:`WindowsSetPathAndEnviromentVariable` section. 
 
 .. _CppTutWindowsMakeOwn: 
 
@@ -234,9 +233,12 @@ Building the library
       
       .. code-block:: bash
          
-         setx QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
+         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
       
-      Also, add the built binary files path to the system path by using the `Path Editor <http://www.redfernplace.com/software-projects/patheditor/>`_. In our case this is :file:`D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`. 
+      .. |PathEditor| replace:: Path Editor
+      .. _PathEditor: http://www.redfernplace.com/software-projects/patheditor/
+      
+      Also, add the built binary files path to the system path by using the  |PathEditor|_. In our case this is :file:`D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`. 
       
       .. note:: 
       
@@ -335,9 +337,34 @@ Building the library
    .. note::
 
       If you use the GPU module (CUDA libraries) make sure you also upgrade to the latest drivers of your GPU. Error messages containing invalid entries in (or cannot find) the nvcuda.dll are caused mostly by old video card drivers. For testing the GPU (if built) run the *performance_gpu.exe* sample application.
+
+.. _WindowsSetPathAndEnviromentVariable:
+
+Set the OpenCV enviroment variable and add it to the systems path
+=================================================================
+
+First we set an enviroment variable to make easier our work. This will hold the install directory of our OpenCV library that we use in our projects. Start up a command window and enter:
+
+.. code-block:: bash
+
+   setx -m OPENCV_DIR D:\OpenCV\Build\Install
+
+Here the directory is where you have your OpenCV binaries (*installed* or *built*). Inside this you should have folders like *bin* and *include*. The -m should be added if you wish to make the settings computer wise, instead of user wise. 
+
+If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path.This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
+
+.. code-block:: bash
+
+   %OPENCV_DIR%\bin
+
+.. image:: images/PathEditorOpenCVInsertNew.jpg
+   :alt: Right click to insert new path manually. 
+   :align: center
    
-   Now you can continue reading the tutorials with the :ref:`Windows_Visual_Studio_How_To` section. There you will find out how to use the OpenCV library in your own projects with the help of the Microsoft Visual Studio IDE. 
+.. image:: images/PathEditorOpenCVSetPath.jpg
+   :alt: Add the entry. 
+   :align: center
 
+Save it to the registry and you are done. If you ever change the location of your install directories or want to try out your applicaton with a different build all you will need to do is to update the OPENCV_DIR variable via the *setx* command inside a command window. 
 
-
-
+Now you can continue reading the tutorials with the :ref:`Windows_Visual_Studio_How_To` section. There you will find out how to use the OpenCV library in your own projects with the help of the Microsoft Visual Studio IDE. 
