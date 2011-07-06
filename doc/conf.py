@@ -326,7 +326,9 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'calc_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcHist%s', None),
             'normalize' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#normalize%s', None),
 	    'match_template' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_object_detection.html?#matchTemplate%s', None),
-	    'min_max_loc' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#minMaxLoc%s', None)
+	    'min_max_loc' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#minMaxLoc%s', None),
+	    'mix_channels' : ( 'http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#mixChannels%s', None),
+	    'calc_back_project' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcBackProject%s', None)
            }
 
 
