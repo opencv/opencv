@@ -24,7 +24,7 @@ In this section you will learn about the image processing (manipulation) functio
   
   ===================== ==============================================
   
-  .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.png
+  .. |ImageProcessing_1| image:: images/Smoothing_Tutorial_Cover.jpg
                          :height: 90pt
                          :width:  90pt
   
@@ -283,21 +283,111 @@ In this section you will learn about the image processing (manipulation) functio
   .. |WarpAffine| image:: images/imgtrans/Warp_Affine_Tutorial_Cover.jpg
                         :height: 90pt
                         :width:  90pt
+
++ 
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
+  ===================== ==============================================
+   |HistEqualization|   **Title:** :ref:`histogram_equalization`
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to improve the contrast in our images
+
+  ===================== ==============================================
+  
+  .. |HistEqualization| image:: images/histograms/Histogram_Equalization_Tutorial_Cover.jpg
+                              :height: 90pt
+                              :width:  90pt
+
++ 
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
+  ===================== ==============================================
+   |HistCalculation|    **Title:** :ref:`histogram_calculation`
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to create and generate histograms
+
+  ===================== ==============================================
+  
+  .. |HistCalculation| image:: images/histograms/Histogram_Calculation_Tutorial_Cover.jpg
+                             :height: 90pt
+                             :width:  90pt
+
++ 
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
+  ===================== ==============================================
+   |HistComparison|     **Title:** :ref:`histogram_comparison`
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn to calculate metrics between histograms
+
+  ===================== ==============================================
+  
+  .. |HistComparison| image:: images/histograms/Histogram_Comparison_Tutorial_Cover.jpg
+                            :height: 90pt
+                            :width:  90pt
+
++ 
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
+  ===================== ==============================================
+   |BackProjection|     **Title:** :ref:`back_projection`
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to use histograms to find similar objects in images
+
+  ===================== ==============================================
+  
+  .. |BackProjection| image:: images/histograms/Back_Projection_Tutorial_Cover.jpg
+                            :height: 90pt
+                            :width:  90pt
+
++ 
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
+  ===================== ==============================================
+   |TemplateMatching|   **Title:** :ref:`template_matching`
+
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+
+                        Where we learn how to match templates in an image
+
+  ===================== ==============================================
+  
+  .. |TemplateMatching| image:: images/histograms/Template_Matching_Tutorial_Cover.jpg
+                              :height: 90pt
+                              :width:  90pt
+
   
 .. toctree::
    :hidden:
 
-   ../gausian_median_blur_bilateral_filter/gausian_median_blur_bilateral_filter
-   ../erosion_dilatation/erosion_dilatation
-   ../opening_closing_hats/opening_closing_hats
-   ../pyramids/pyramids
-   ../threshold/threshold
-   ../imgtrans/filter_2d/filter_2d
-   ../imgtrans/copyMakeBorder/copyMakeBorder
-   ../imgtrans/sobel_derivatives/sobel_derivatives
-   ../imgtrans/laplace_operator/laplace_operator
-   ../imgtrans/canny_detector/canny_detector
-   ../imgtrans/hough_lines/hough_lines
-   ../imgtrans/hough_circle/hough_circle
-   ../imgtrans/remap/remap
-   ../imgtrans/warp_affine/warp_affine
+
+
+

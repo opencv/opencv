@@ -6,77 +6,83 @@ Smoothing Images
 Goal
 =====
 
-In this tutorial you will learn how to:
+In this tutorial you will learn how to apply diverse linear filters to smooth images using OpenCV functions such as:
 
-* Apply diverse linear filters to smooth images using OpenCV functions such as:
+.. container:: enumeratevisibleitemswithsquare
 
-  * :blur:`blur <>`
-  * :gaussian_blur:`GaussianBlur <>`
-  * :median_blur:`medianBlur <>`
-  * :bilateral_filter:`bilateralFilter <>`
+   * :blur:`blur <>`
+   * :gaussian_blur:`GaussianBlur <>`
+   * :median_blur:`medianBlur <>`
+   * :bilateral_filter:`bilateralFilter <>`
 
-Cool Theory
-============
+Theory
+======
 
 .. note::
    The explanation below belongs to the book `Computer Vision: Algorithms and Applications <http://szeliski.org/Book/>`_  by Richard Szeliski and to *LearningOpenCV* 
 
-* *Smoothing*, also called *blurring*, is a simple and frequently used image processing operation. 
+.. container:: enumeratevisibleitemswithsquare
 
-* There are many reasons for smoothing. In this tutorial we will focus on smoothing in order to reduce noise (other uses will be seen in the following tutorials).
+   * *Smoothing*, also called *blurring*, is a simple and frequently used image processing operation. 
 
-* To perform a smoothing operation we will apply a *filter* to our image. The most common type of filters are *linear*, in which an output pixel's value (i.e. :math:`g(i,j)`) is determined as a weighted sum of input pixel values (i.e. :math:`f(i+k,j+l)`) :
+   * There are many reasons for smoothing. In this tutorial we will focus on smoothing in order to reduce noise (other uses will be seen in the following tutorials).
 
-  .. math::
-     g(i,j) = \sum_{k,l} f(i+k, j+l) h(k,l)
+   * To perform a smoothing operation we will apply a *filter* to our image. The most common type of filters are *linear*, in which an output pixel's value (i.e. :math:`g(i,j)`) is determined as a weighted sum of input pixel values (i.e. :math:`f(i+k,j+l)`) :
 
-  :math:`h(k,l)` is called the *kernel*, which is nothing more than the coefficients of the filter.
+     .. math::
+        g(i,j) = \sum_{k,l} f(i+k, j+l) h(k,l)
+
+     :math:`h(k,l)` is called the *kernel*, which is nothing more than the coefficients of the filter.
     
 
- It helps to visualize a *filter* as a window of coefficients sliding across the image.
+     It helps to visualize a *filter* as a window of coefficients sliding across the image.
 
-* There are many kind of filters, here we will mention the most used:
+   * There are many kind of filters, here we will mention the most used:
 
 Normalized Box Filter
 -----------------------
 
-* This filter is the simplest of all! Each output pixel is the *mean* of its kernel neighbors ( all of them contribute with equal weights) 
+.. container:: enumeratevisibleitemswithsquare
 
-* Just in case, the kernel is below:
+   * This filter is the simplest of all! Each output pixel is the *mean* of its kernel neighbors ( all of them contribute with equal weights) 
 
-.. math::
+   * The kernel is below:
+
+     .. math::
    
-   K = \dfrac{1}{K_{width} \cdot K_{height}} \begin{bmatrix}
-    1 & 1 & 1 & ... & 1 \\
-    1 & 1 & 1 & ... & 1 \\
-    . & . & . & ... & 1 \\
-    . & . & . & ... & 1 \\
-    1 & 1 & 1 & ... & 1
-   \end{bmatrix} 
+        K = \dfrac{1}{K_{width} \cdot K_{height}} \begin{bmatrix}
+            1 & 1 & 1 & ... & 1 \\
+            1 & 1 & 1 & ... & 1 \\
+            . & . & . & ... & 1 \\
+            . & . & . & ... & 1 \\
+            1 & 1 & 1 & ... & 1
+           \end{bmatrix} 
 
 
 Gaussian Filter
 ---------------
-* Probably the most useful filter (although not the fastest). Gaussian filtering is done by convolving each point in the input array with a *Gaussian kernel* and then summing them all to produce the output array.
 
-* Just to make the picture clearer, remember how a 1D Gaussian kernel look like?
+.. container:: enumeratevisibleitemswithsquare
 
-  .. image:: images/Smoothing_Tutorial_theory_gaussian_0.jpg
-             :height: 200px
-             :align: center 
+   * Probably the most useful filter (although not the fastest). Gaussian filtering is done by convolving each point in the input array with a *Gaussian kernel* and then summing them all to produce the output array.
 
-  Assuming that an image is 1D, you can notice that the pixel located in the middle would have the biggest weight. The weight of its neighbors decreases as the spatial distance between them and the center pixel increases. 
+   * Just to make the picture clearer, remember how a 1D Gaussian kernel look like?
+
+     .. image:: images/Smoothing_Tutorial_theory_gaussian_0.jpg
+              :height: 100pt
+              :align: center 
+
+     Assuming that an image is 1D, you can notice that the pixel located in the middle would have the biggest weight. The weight of its neighbors decreases as the spatial distance between them and the center pixel increases. 
 
 .. note::
 
-   * Remember that a 2D Gaussian can be represented as :
+   Remember that a 2D Gaussian can be represented as :
    
-     .. math::
+   .. math::
      
-        G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }
+      G_{0}(x, y) = A  e^{ \dfrac{ -(x - \mu_{x})^{2} }{ 2\sigma^{2}_{x} } +  \dfrac{ -(y - \mu_{y})^{2} }{ 2\sigma^{2}_{y} } }
 
-     where :math:`\mu` is the mean (the peak) and :math:`\sigma` represents the variance (per each of the variables :math:`x` and :math:`y`)
-
+   where :math:`\mu` is the mean (the peak) and :math:`\sigma` represents the variance (per each of the variables :math:`x` and :math:`y`)
 
 
 Median Filter
@@ -88,19 +94,32 @@ The median filter run through each element of the signal (in this case the image
 Bilateral Filter
 -----------------
 
-* So far, we have explained some filters which main goal is to *smooth* an input image. However, sometimes the filters do not only dissolve the noise, but also smooth away the *edges*. To avoid this (at certain extent at least), we can use a bilateral filter.
+.. container:: enumeratevisibleitemswithsquare
 
-* In an analogous way as the Gaussian filter,  the bilateral filter also considers the neighboring pixels with  weights assigned to each of them. These weights have two components, the first of which is the same weighting used by the Gaussian filter. The second component takes into account the difference in intensity between the neighboring pixels and the evaluated one. 
+   * So far, we have explained some filters which main goal is to *smooth* an input image. However, sometimes the filters do not only dissolve the noise, but also smooth away the *edges*. To avoid this (at certain extent at least), we can use a bilateral filter.
 
-* For a more detailed explanation you can check `this link <http://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html>`_  
+   * In an analogous way as the Gaussian filter,  the bilateral filter also considers the neighboring pixels with  weights assigned to each of them. These weights have two components, the first of which is the same weighting used by the Gaussian filter. The second component takes into account the difference in intensity between the neighboring pixels and the evaluated one. 
 
-
+   * For a more detailed explanation you can check `this link <http://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html>`_  
 
 
 Code
 ======
 
-This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Image_Processing/Smoothing.cpp>`_
+.. container:: enumeratevisibleitemswithsquare
+
+   * **What does this program do?**
+ 
+     .. container:: enumeratevisibleitemswithsquare
+
+        * Loads an image
+        * Applies 4 different kinds of filters (explained in Theory) and show the filtered images sequentially
+
+   * **Downloadable code**:
+     Click `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgProc/Smoothing.cpp>`_
+
+   * **Code at glance:**
+
 
 .. code-block:: cpp
 
@@ -213,13 +232,15 @@ Explanation
 
    We specify 4 arguments (more details, check the Reference):
 
-   * *src*: Source image
+   .. container:: enumeratevisibleitemswithsquare
 
-   * *dst*: Destination image
+      + *src*: Source image
 
-   * *Size( w,h )*: Defines the size of the kernel to be used ( of width *w* pixels and height *h* pixels) 
+      + *dst*: Destination image
 
-   * *Point(-1, -1)*: Indicates where the anchor point (the pixel evaluated) is located with respect to the neighborhood. If there is a negative value, then the center of the kernel is considered the anchor point.  
+      + *Size( w,h )*: Defines the size of the kernel to be used ( of width *w* pixels and height *h* pixels) 
+
+      + *Point(-1, -1)*: Indicates where the anchor point (the pixel evaluated) is located with respect to the neighborhood. If there is a negative value, then the center of the kernel is considered the anchor point.  
     
 #. **Gaussian Filter:**
 
@@ -233,15 +254,17 @@ Explanation
 
    Here we use 4 arguments (more details, check the OpenCV reference):
 
-   * *src*: Source image
+   .. container:: enumeratevisibleitemswithsquare
 
-   * *dst*: Destination image
+      + *src*: Source image
 
-   * *Size(w, h)*: The size of the kernel to be used (the neighbors to be considered). :math:`w` and :math:`h` have to be odd and positive numbers otherwise thi size will be calculated using the :math:`\sigma_{x}` and :math:`\sigma_{y}` arguments.
+      + *dst*: Destination image
 
-   * :math:`\sigma_{x}`: The standard deviation in x. Writing :math:`0` implies that :math:`\sigma_{x}` is calculated using kernel size.
+      + *Size(w, h)*: The size of the kernel to be used (the neighbors to be considered). :math:`w` and :math:`h` have to be odd and positive numbers otherwise thi size will be calculated using the :math:`\sigma_{x}` and :math:`\sigma_{y}` arguments.
+
+      + :math:`\sigma_{x}`: The standard deviation in x. Writing :math:`0` implies that :math:`\sigma_{x}` is calculated using kernel size.
    
-   * :math:`\sigma_{y}`: The standard deviation in y. Writing :math:`0` implies that :math:`\sigma_{y}` is calculated using kernel size.
+      + :math:`\sigma_{y}`: The standard deviation in y. Writing :math:`0` implies that :math:`\sigma_{y}` is calculated using kernel size.
     
 
 #. **Median Filter:**
@@ -256,11 +279,13 @@ Explanation
 
    We use three arguments:
 
-   * *src*: Source image
+   .. container:: enumeratevisibleitemswithsquare
 
-   * *dst*: Destination image, must be the same type as *src*
+      + *src*: Source image
+
+      + *dst*: Destination image, must be the same type as *src*
    
-   * *i*: Size of the kernel (only one because we use a square window). Must be odd. 
+      + *i*: Size of the kernel (only one because we use a square window). Must be odd. 
 
 
 #. **Bilateral Filter**
@@ -275,24 +300,29 @@ Explanation
  
    We use 5 arguments:
 
-   * *src*: Source image
+   .. container:: enumeratevisibleitemswithsquare
 
-   * *dst*: Destination image
+      + *src*: Source image
 
-   * *d*: The diameter of each pixel neighborhood.
+      + *dst*: Destination image
+
+      + *d*: The diameter of each pixel neighborhood.
   
-   * :math:`\sigma_{Color}`: Standard deviation in the color space.
+      + :math:`\sigma_{Color}`: Standard deviation in the color space.
   
-   * :math:`\sigma_{Space}`: Standard deviation in the coordinate space (in pixel terms)
+      + :math:`\sigma_{Space}`: Standard deviation in the coordinate space (in pixel terms)
 
 
 Results
 ========
 
-* The code opens an image (in this case *lena.png*) and display it under the effects of the 4 filters explained. 
+.. container:: enumeratevisibleitemswithsquare
 
-* Here is a snapshot of the image smoothed using *medianBlur*:
+   * The code opens an image (in this case *lena.png*) and display it under the effects of the 4 filters explained. 
 
-  .. image:: images/Smoothing_Tutorial_Result_Median_Filter.png
-     :alt: Smoothing with a median filter
-     :align: center 
+   * Here is a snapshot of the image smoothed using *medianBlur*:
+
+     .. image:: images/Smoothing_Tutorial_Result_Median_Filter.jpg
+              :alt: Smoothing with a median filter
+              :height: 200pt
+              :align: center 
