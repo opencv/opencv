@@ -13,7 +13,7 @@ using namespace cv;
 using namespace std;
 
 /// Global Variables
-Mat src; Mat hsv; Mat hue; 
+Mat src; Mat hsv; 
 Mat mask;
 
 int lo = 20; int up = 20;
@@ -32,12 +32,6 @@ int main( int argc, char** argv )
   src = imread( argv[1], 1 );
   /// Transform it to HSV
   cvtColor( src, hsv, CV_BGR2HSV );
-
-  /// Use only the Hue value
-  hue.create( hsv.size(), hsv.depth() );
-
-  int ch[] = { 0, 0 };
-  mixChannels( &hsv, 1, &hue, 1, ch, 1 );  
 
   /// Show the image 
   namedWindow( window_image, CV_WINDOW_AUTOSIZE );
@@ -73,7 +67,7 @@ void pickPoint (int event, int x, int y, int, void* )
   Mat mask2 = Mat::zeros( src.rows + 2, src.cols + 2, CV_8UC1 );
   floodFill( src, mask2, seed, newVal, 0, Scalar( lo, lo, lo ), Scalar( up, up, up), flags ); 
   mask = mask2( Range( 1, mask2.rows - 1 ), Range( 1, mask2.cols - 1 ) );
-  cout<<"rows: "<<mask.rows<<" columns: "<<mask.cols<<endl;
+
   imshow( "Mask", mask );
 
   Hist_and_Backproj( );
