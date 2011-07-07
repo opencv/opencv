@@ -643,16 +643,18 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
 
 string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
 if(CMAKE_HOST_UNIX)
-    set(PYTHON_PLUGIN_INSTALL_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages/opencv)
-    if(CMAKE_HOST_APPLE)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import *; print get_python_lib()"
+                    RESULT_VARIABLE PYTHON_CVPY_PROCESS
+                    OUTPUT_VARIABLE PYTHON_STD_PACKAGES_PATH
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if("${PYTHON_STD_PACKAGES_PATH}" MATCHES "site-packages")
         set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/site-packages CACHE PATH "Where to install the python packages.")
     else() #debian based assumed, install to the dist-packages.
-       set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
+        set(PYTHON_PACKAGES_PATH lib/python${PYTHON_VERSION_MAJOR_MINOR}/dist-packages CACHE PATH "Where to install the python packages.")
     endif()
 endif()
 if(CMAKE_HOST_WIN32)
     get_filename_component(PYTHON_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\${PYTHON_VERSION_MAJOR_MINOR}\\InstallPath]" ABSOLUTE CACHE)
-    set(PYTHON_PLUGIN_INSTALL_PATH "${PYTHON_PATH}/Lib/site-packages/opencv")
     set(PYTHON_PACKAGES_PATH "${PYTHON_PATH}/Lib/site-packages")
 endif()
 
@@ -781,7 +783,6 @@ endif()
 if (WITH_TBB)
     if (UNIX AND NOT APPLE AND NOT ANDROID)
         PKG_CHECK_MODULES(TBB tbb)
-        message(STATUS "TBB detected: ${TBBLIB_FOUND}")
 
         if (TBB_FOUND)
             set(HAVE_TBB 1)
