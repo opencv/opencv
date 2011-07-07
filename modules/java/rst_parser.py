@@ -113,6 +113,7 @@ class RstParser(object):
         else:
             func["method"] = section_name
 
+        capturing_seealso = False
         skip_code_lines = False
         expected_brief = True
         fdecl = DeclarationParser()
@@ -126,25 +127,15 @@ class RstParser(object):
                     self.add_new_fdecl(func, fdecl)
                 continue
 
-            # skip lines if line-skipping mode is activated
-            if skip_code_lines:
-                if not l or l.startswith(" "):
+            # continue capture seealso
+            if capturing_seealso:
+                if l.startswith(" "):
+                    seealso = func.get("seealso",[])
+                    seealso.extend(l.split(","))
+                    func["seealso"] = seealso
                     continue
                 else:
-                    skip_code_lines = False
-
-            ll = l.strip()
-            if ll == "..": #strange construction...
-                continue
-
-            # turn on line-skipping mode for code fragments
-            if ll.endswith("::"):
-                skip_code_lines = True
-                ll = ll[:len(ll)-3]
-
-            if ll.startswith(".. code-block::"):
-                skip_code_lines = True
-                continue
+                    capturing_seealso = False
 
             # continue param parsing
             if pdecl.active:
@@ -155,12 +146,48 @@ class RstParser(object):
                     self.add_new_pdecl(func, pdecl)
                     # do not continue - current line can contain next parameter definition
 
+            ll = l.strip()
+            if ll == "..":
+                expected_brief = False
+                skip_code_lines = False
+                continue
+
+            # skip lines if line-skipping mode is activated
+            if skip_code_lines:
+                if not l or l.startswith(" "):
+                    continue
+                else:
+                    skip_code_lines = False
+
+            if ll.startswith(".. "):
+                expected_brief = False
+            elif ll.endswith("::"):
+                # turn on line-skipping mode for code fragments
+                skip_code_lines = True
+                ll = ll[:len(ll)-2]
+
+            if ll.startswith(".. code-block::") or ll.startswith(".. math::") or ll.startswith(".. image::"):
+                skip_code_lines = True
+                continue
+
             # todo: parse structure members; skip them for now
             if ll.startswith(".. ocv:member::"):
                 skip_code_lines = True
                 continue
 
-            # todo: parse ".. seealso::" sections
+            # parse ".. seealso::" blocks
+            if ll.startswith(".. seealso::"):
+                if ll.endswith(".. seealso::"):
+                    capturing_seealso = True
+                else:
+                    seealso = func.get("seealso",[])
+                    seealso.extend(ll[ll.find("::")+2:].split(","))
+                    func["seealso"] = seealso
+                continue
+
+            # skip ".. index::"
+            if ll.startswith(".. index::"):
+                continue
 
             # parse class & struct definitions
             if ll.startswith(".. ocv:class::"):
@@ -184,25 +211,18 @@ class RstParser(object):
                 fdecl = DeclarationParser(ll)
                 if fdecl.isready():
                     self.add_new_fdecl(func, fdecl)
-                expected_brief = False
                 continue
 
             # parse parameters
             if pdecl.hasDeclaration(l):
                 pdecl = ParamParser(l)
-                expected_brief = False
                 continue
 
             # record brief description
-            if expected_brief and len(ll) == 0:
-                if "brief" in func:
-                    expected_brief = False
-                continue
-            
             if expected_brief:
                 func["brief"] = func.get("brief", "") + "\n" + ll
                 if skip_code_lines:
-                    expected_brief = False #force end brief if code block begins
+                    expected_brief = False # force end brief if code block begins
                 continue
 
             # record other lines as long description
@@ -313,6 +333,8 @@ class RstParser(object):
             print "declarations:"
             for d in func["decls"]:
                print "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
+        if "seealso" in func:
+            print "seealso:  ", func["seealso"]
         if "params" in func:
             print "parameters:"
             for name, comment in func["params"].items():
@@ -380,6 +402,13 @@ class RstParser(object):
                 if cmt:
                     params[name] = cmt
             func["params"] = params
+        if "seealso" in func:
+            seealso = []
+            for see in func["seealso"]:
+                item = self.normalizeText(see.rstrip(".")).strip("\"")
+                if item:
+                    seealso.append(item)
+            func["seealso"] = list(set(seealso))
 
         # special case for old C functions - section name should omit "cv" prefix
         if not func.get("isclass",False) and not func.get("isstruct",False):
@@ -418,12 +447,16 @@ class RstParser(object):
         s = re.sub(r"\n[ ]*([_,])\n", r"\1", s)
         # remove extra line breaks after `
         #s = re.sub(r"`\n", "` ", s)
+        # remove extra line breaks after ".. note::"
+        s = re.sub(r"\.\. note::\n+", ".. note:: ", s)
         # remove extra line breaks before *
-        s = re.sub(r"\n\n\*", "\n\*", s)
+        s = re.sub(r"\n\n\*", "\n*", s)
+        # remove extra line breaks after *
+        s = re.sub(r"\n\*\n+", "\n* ", s)
         # remove extra line breaks before #.
         s = re.sub(r"\n\n#\.", "\n#.", s)
         # remove extra line breaks after #.
-        s = re.sub(r"\n#\.\n", "\n#. ", s)
+        s = re.sub(r"\n#\.\n+", "\n#. ", s)
         # remove extra line breaks before `
         s = re.sub(r"\n[ ]*`", " `", s)
         # remove trailing whitespaces
@@ -435,17 +468,25 @@ class RstParser(object):
         # unescape
         s = re.sub(r"\\(.)", "\\1", s)
         # compress whitespace
-        s = re.sub(r"[ ]+", " ", s)
+        s = re.sub(r" +", " ", s)
+        # compress linebreaks
+        s = re.sub(r"\n\n+", "\n\n", s)
 
         s = s.replace("**", "")
         s = s.replace("``", "\"")
         s = s.replace("`", "\"")
         s = s.replace("\"\"", "\"")
         s = s.replace(":ocv:cfunc:","")
+        s = s.replace(":ref:", "")
         s = s.replace(":math:", "")
         s = s.replace(":ocv:class:", "")
         s = s.replace(":ocv:func:", "")
+        s = s.replace(":c:type:", "")
         s = s.replace("]_", "]")
+        s = s.replace(".. note::", "Note:")
+        s = s.replace(".. ocv:function::", "")
+        s = s.replace(".. ocv:cfunction::", "")
+
         s = s.strip()
         return s
 
