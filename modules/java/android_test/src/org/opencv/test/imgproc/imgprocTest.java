@@ -1,7 +1,8 @@
-package org.opencv.test;
+package org.opencv.test.imgproc;
 
 import org.opencv.Size;
 import org.opencv.imgproc;
+import org.opencv.test.OpenCVTestCase;
 
 
 public class imgprocTest extends OpenCVTestCase {

@@ -10,4 +10,9 @@
     <application android:icon="@drawable/icon" android:label="@string/app_name">
         <uses-library android:name="android.test.runner" />
     </application>
+    
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+    
 </manifest>

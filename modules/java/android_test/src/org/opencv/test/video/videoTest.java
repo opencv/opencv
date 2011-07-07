@@ -1,4 +1,6 @@
-package org.opencv.test;
+package org.opencv.test.video;
+
+import org.opencv.test.OpenCVTestCase;
 
 
 public class videoTest extends OpenCVTestCase {

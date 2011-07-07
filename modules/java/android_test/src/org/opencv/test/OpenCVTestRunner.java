@@ -3,8 +3,8 @@ package org.opencv.test;
 import java.io.FileOutputStream;
 import java.util.Collections;
 import java.util.List;
-
 import junit.framework.TestCase;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;

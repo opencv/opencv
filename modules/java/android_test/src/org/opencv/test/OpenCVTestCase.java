@@ -11,44 +11,44 @@ import org.opencv.highgui;
 
 public class OpenCVTestCase extends TestCase {
        
-    static int matSize = 10;
+	protected static int matSize = 10;
     
-    static Mat dst;
+	protected static Mat dst;
     
     //Naming notation: <channels info>_[depth]_[dimensions]_value
     //examples: gray0   - single channel 8U 2d Mat filled with 0
     //          grayRnd - single channel 8U 2d Mat filled with random numbers
     //          gray0_32f_1d - refactor ;)
 
-    static Mat gray0;
-    static Mat gray1;
-    static Mat gray2;
-    static Mat gray3;
-    static Mat gray9;
-    static Mat gray127;
-    static Mat gray128;
-    static Mat gray255;    
-    static Mat grayRnd;
+	protected static Mat gray0;
+	protected static Mat gray1;
+	protected static Mat gray2;
+	protected static Mat gray3;
+	protected static Mat gray9;
+	protected static Mat gray127;
+	protected static Mat gray128;
+	protected static Mat gray255;    
+	protected static Mat grayRnd;
     
-    static Mat gray256;    
+	protected static Mat gray_16u_256;    
     
-    static Mat gray0_32f;
-    static Mat gray1_32f;
-    static Mat gray3_32f;
-    static Mat gray9_32f;
-    static Mat gray255_32f;        
-    static Mat grayE_32f;
-    static Mat grayRnd_32f;    
+	protected static Mat gray0_32f;
+	protected static Mat gray1_32f;
+	protected static Mat gray3_32f;
+	protected static Mat gray9_32f;
+	protected static Mat gray255_32f;        
+	protected static Mat grayE_32f;
+	protected static Mat grayRnd_32f;    
       
-    static Mat gray0_32f_1d;
+	protected static Mat gray0_32f_1d;
     
-    static Mat gray0_64f;    
-    static Mat gray0_64f_1d;
+	protected static Mat gray0_64f;    
+	protected static Mat gray0_64f_1d;
        
-    static Mat rgba0;
-    static Mat rgba128;
+	protected static Mat rgba0;
+	protected static Mat rgba128;
     
-    static Mat rgbLena;
+	protected static Mat rgbLena;
 
     @Override
     protected void setUp() throws Exception {
@@ -66,7 +66,7 @@ public class OpenCVTestCase extends TestCase {
         gray128 = new Mat(matSize, matSize, CvType.CV_8U); gray128.setTo(new Scalar(128.0));
         gray255 = new Mat(matSize, matSize, CvType.CV_8U); gray255.setTo(new Scalar(255.0));
         
-        gray256 = new Mat(matSize, matSize, CvType.CV_16U); gray255.setTo(new Scalar(256));
+        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U); gray255.setTo(new Scalar(256));
         
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));

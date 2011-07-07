@@ -1,10 +1,13 @@
-package org.opencv.test;
+package org.opencv.test.core;
 
 import org.opencv.CvType;
 import org.opencv.Mat;
 import org.opencv.Point;
 import org.opencv.Scalar;
 import org.opencv.core;
+
+import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 
 public class coreTest extends OpenCVTestCase {
 	
@@ -177,7 +180,7 @@ public class coreTest extends OpenCVTestCase {
 		core.convertScaleAbs(gray0, dst);
 		assertMatEqual(gray0, dst);
 		
-		core.convertScaleAbs(gray256, dst);
+		core.convertScaleAbs(gray_16u_256, dst);
 		assertMatEqual(gray255, dst);
 	}
 
@@ -185,12 +188,12 @@ public class coreTest extends OpenCVTestCase {
 		core.convertScaleAbs(gray0, dst, 2);
 		assertMatEqual(gray0, dst);
 		
-		core.convertScaleAbs(gray256, dst, 1);
+		core.convertScaleAbs(gray_16u_256, dst, 1);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testConvertScaleAbsMatMatDoubleDouble() {
-	    core.convertScaleAbs(gray256, dst, 2, 2);
+	    core.convertScaleAbs(gray_16u_256, dst, 2, 2);
 	    assertMatEqual(gray255, dst);
 	}
 
@@ -783,6 +786,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSolvePolyMatMat() {
+		fail("Not yet implemented");
 //		Mat coeffs = new Mat(4, 1, CvType.CV_32F);
 //		Mat standart = new Mat(3, 1, CvType.CV_32F);
 //		Mat roots = new Mat(3, 1, CvType.CV_32F);
@@ -803,7 +807,6 @@ public class coreTest extends OpenCVTestCase {
 //		core.sort(roots, roots, CV_SORT_EVERY_ROW);
 //		assertTrue(1 == core.countNonZero(coeffs));
 		//assertMatEqual(roots, standart);
-		fail("Not yet implemented");
 	}
 
 	public void testSolvePolyMatMatInt() {
@@ -827,6 +830,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSortIdx() {
+		fail("Not yet implemented");
 //		Mat matrix = new Mat(matSize, matSize, Mat.CvType.CV_8UC1); 
 //		matrix.setTo(0);
 //		Mat submatrix = matrix.submat(0, matrix.rows() / 2, 0, matrix.cols() / 2);

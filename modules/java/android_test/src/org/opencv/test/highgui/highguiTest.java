@@ -1,6 +1,8 @@
-package org.opencv.test;
+package org.opencv.test.highgui;
 
 import org.opencv.highgui;
+import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 
 
 public class highguiTest extends OpenCVTestCase {
