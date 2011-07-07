@@ -60,6 +60,7 @@ class Chess(VideoSynthBase):
                         [0.0,0.0,      1.0]])
 
         self.dist_coef = np.float64([-0.2, 0.1, 0, 0])
+        self.t = 0
 
     def draw_quads(self, img, quads, color = (0, 255, 0)):
         img_quads = cv2.projectPoints(quads.reshape(-1, 3), self.rvec, self.tvec, self.K, self.dist_coef) [0]
@@ -68,7 +69,8 @@ class Chess(VideoSynthBase):
             cv2.fillConvexPoly(img, np.int32(q*4), color, cv2.CV_AA, shift=2)
 
     def render(self, dst):
-        t = clock()
+        t = self.t
+        self.t += 1.0/30.0
         
         sx, sy = self.grid_size
         center = np.array([0.5*sx, 0.5*sy, 0.0])
