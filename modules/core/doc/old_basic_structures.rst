@@ -1655,7 +1655,7 @@ Initializes a random number generator state.
     
 The function initializes a random number generator and returns the state. The pointer to the state can be then passed to the :ocv:cfunc:`RandInt`, :ocv:cfunc:`RandReal` and :ocv:cfunc:`RandArr` functions. In the current implementation a multiply-with-carry generator is used.
 
-.. sealso:: the C++ class :ocv:class:`RNG` replaced ``CvRNG``.
+.. seealso:: the C++ class :ocv:class:`RNG` replaced ``CvRNG``.
 
 
 RandArr
