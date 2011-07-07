@@ -850,6 +850,10 @@ struct HaarDetectObjects_ScaleImage_Invoker
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
         int y1 = range.begin()*stripSize, y2 = min(range.end()*stripSize, sum1.rows - 1 - winSize0.height);
+        
+        if (y2 <= y1 || sum1.cols <= 1 + winSize0.width)
+            return;
+        
         Size ssz(sum1.cols - 1 - winSize0.width, y2 - y1);
         int x, y, ystep = factor > 2 ? 1 : 2;
         
