@@ -56,6 +56,10 @@ type_dict = {
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
+    "String"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+                  "jni_type" : "jstring", "jni_name" : "n_%(n)s",
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+                  "suffix" : "Ljava_lang_String_2"},
 
 }
 
@@ -153,7 +157,9 @@ class JavaWrapperGenerator(object):
         self.jn_code = StringIO()
         self.cpp_code = StringIO()
         self.ported_func_counter = 0
-        self.func_counter = 0
+        self.ported_func_list = []
+        self.skipped_func_list = []
+        self.total_func_counter = 0
 
     def add_class(self, decl):
         classinfo = ClassInfo(decl)
@@ -309,8 +315,19 @@ class JavaWrapperGenerator(object):
 
         self.save(output_path, module+".java", self.java_code)
         self.save(output_path, module+".cpp",  self.cpp_code)
+        # report
+        report = StringIO()
+        report.write("PORTED FUNCs LIST (%i of %i):\n\n" % \
+            (self.ported_func_counter, self.total_func_counter) \
+        )
+        report.write("\n".join(self.ported_func_list))
+        report.write("\n\nSKIPPED FUNCs LIST (%i of %i):\n\n" % \
+            (self.total_func_counter - self.ported_func_counter, self.total_func_counter) \
+        )
+        report.write("".join(self.skipped_func_list))
+        self.save(output_path, module+".txt", report)
 
-        print "Done %i of %i funcs." % (self.ported_func_counter, self.func_counter)
+        print "Done %i of %i funcs." % (self.ported_func_counter, self.total_func_counter)
 
 
     def gen_consts(self):
@@ -324,7 +341,7 @@ class JavaWrapperGenerator(object):
 
 
     def gen_func(self, fi, isoverload, jn_code):
-        self.func_counter += 1
+        self.total_func_counter += 1
 
         # // C++: c_decl
         # e.g:
@@ -341,6 +358,7 @@ class JavaWrapperGenerator(object):
         type_info = type_dict.get(fi.ctype)
         if not (type_info and type_info.get("jn_type")): # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
+            self.skipped_func_list.append(c_decl + "\n" + msg)
             self.java_code.write( indent + msg )
             #self.cpp_code.write( msg )
             print "SKIP:", c_decl, "\n\tdue to RET type", fi.ctype
@@ -348,18 +366,21 @@ class JavaWrapperGenerator(object):
         for a in fi.args:
             if a.ctype not in type_dict:
                 msg = "// Unknown type '%s', skipping the function\n\n" % a.ctype
+                self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
                 print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype
                 return
             if a.ctype != "Mat" and "jn_args" in type_dict[a.ctype] and a.out: # complex out args not yet supported
                 msg = "// Unsupported type '%s&', skipping the function\n\n" % a.ctype
+                self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
                 print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype
                 return
 
         self.ported_func_counter += 1
+        self.ported_func_list.append(c_decl)
 
         # jn & cpp comment
         jn_code.write( "\n%s// C++: %s\n" % (indent, c_decl) )
