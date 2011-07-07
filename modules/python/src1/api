@@ -1342,6 +1342,7 @@ GetOptimalNewCameraMatrix
   CvMat newCameraMatrix
   CvSize newImageSize cvSize(0,0)
   CvRect* validPixROI NULL
+  int centerPrincipalPoint 0
 InitIntrinsicParams2D
   CvMat objectPoints
   CvMat imagePoints

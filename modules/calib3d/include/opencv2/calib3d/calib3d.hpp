@@ -120,7 +120,8 @@ CVAPI(void) cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix,
                                          CvSize image_size, double alpha,
                                          CvMat* new_camera_matrix,
                                          CvSize new_imag_size CV_DEFAULT(cvSize(0,0)),
-                                         CvRect* valid_pixel_ROI CV_DEFAULT(0) );
+                                         CvRect* valid_pixel_ROI CV_DEFAULT(0),
+                                         int center_principal_point CV_DEFAULT(0));
 
 /* Converts rotation vector to rotation matrix or vice versa */
 CVAPI(int) cvRodrigues2( const CvMat* src, CvMat* dst,
@@ -622,7 +623,7 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 //! returns the optimal new camera matrix
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize=Size(),
-                                            CV_OUT Rect* validPixROI=0);
+                                            CV_OUT Rect* validPixROI=0, bool centerPrincipalPoint=false);
 
 //! converts point coordinates from normal pixel coordinates to homogeneous coordinates ((x,y)->(x,y,1))
 CV_EXPORTS_W void convertPointsToHomogeneous( InputArray src, OutputArray dst );
