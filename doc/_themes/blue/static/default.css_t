@@ -262,14 +262,14 @@ pre {
 
 tt {
     color: {{ theme_headtextcolor }};
-    background-color: #ecf0f3;
+    /*background-color: #ecf0f3;*/
     padding: 0 1px 0 1px;
     font-size: 1.2em;
 }
 
 tt.descname {
     color: {{ theme_headtextcolor }};
-    background-color: #ecf0f3;
+    /*background-color: #ecf0f3;*/
     padding: 0 1px 0 1px;
     font-size: 1.4em;
 }
