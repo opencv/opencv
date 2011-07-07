@@ -59,14 +59,12 @@ The normalized central moments
     \texttt{nu} _{ji}= \frac{\texttt{mu}_{ji}}{\texttt{m}_{00}^{(i+j)/2+1}} .
 
 .. note::
-:math:`\texttt{mu}_{00}=\texttt{m}_{00}`,
-:math:`\texttt{nu}_{00}=1` 
-:math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
 
-The moments of a contour are defined in the same way but computed using the Green's formula
-(see
-http://en.wikipedia.org/wiki/Green_theorem
-). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
+    :math:`\texttt{mu}_{00}=\texttt{m}_{00}`,
+    :math:`\texttt{nu}_{00}=1` 
+    :math:`\texttt{nu}_{10}=\texttt{mu}_{10}=\texttt{mu}_{01}=\texttt{mu}_{10}=0` , hence the values are not stored.
+
+The moments of a contour are defined in the same way but computed using the Green's formula (see http://en.wikipedia.org/wiki/Green_theorem). So, due to a limited raster resolution, the moments computed for a contour are slightly different from the moments computed for the same rasterized contour.
 
 .. seealso::
 
@@ -146,9 +144,7 @@ Finds contours in a binary image.
 The function retrieves contours from the binary image using the algorithm
 [Suzuki85]_. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
 
-.. note::
-Source ``image`` is modified by this function.
-
+.. note:: Source ``image`` is modified by this function.
 
 
 drawContours

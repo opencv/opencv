@@ -218,7 +218,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     # Additional target properties
     set_target_properties(${the_test_target} PROPERTIES
         DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-        RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+        RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
         )
 	
 	if(ENABLE_SOLUTION_FOLDERS)

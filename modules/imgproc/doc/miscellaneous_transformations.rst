@@ -497,10 +497,9 @@ Fills a connected component with the given color.
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
     :param mask: (For the second function only) Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller. The function uses and updates the mask, so you take responsibility of initializing the  ``mask``  content. Flood-filling cannot go across non-zero pixels in the mask. For example, an edge detector output can be used as a mask to stop filling at edges. It is possible to use the same mask in multiple calls to the function to make sure the filled area does not overlap.  
-    
-    .. note::
-    Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
-    
+
+        .. note:: Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
+
     :param seed: Starting point.
 
     :param newVal: New value of the repainted domain pixels.
@@ -782,11 +781,7 @@ should be set to 0's. In the function output, each pixel in
 markers is set to a value of the "seed" components or to -1 at
 boundaries between the regions.
 
-.. note:: Every two neighbor connected
-components are not necessarily separated by a watershed boundary (-1's pixels); for
-example, when such tangent components exist in the initial
-marker image. Visual demonstration and usage example of the function
-can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
+.. note:: Every two neighbor connected components are not necessarily separated by a watershed boundary (-1's pixels); for example, when such tangent components exist in the initial marker image. Visual demonstration and usage example of the function can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
 
 .. seealso:: :ocv:func:`findContours`
 

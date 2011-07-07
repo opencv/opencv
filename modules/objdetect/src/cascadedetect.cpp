@@ -846,6 +846,8 @@ bool CascadeClassifier::empty() const
 bool CascadeClassifier::load(const string& filename)
 {
     oldCascade.release();
+    data = Data();
+    featureEvaluator.release();
     
     FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
