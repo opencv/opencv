@@ -266,6 +266,7 @@ VideoCapture::read
 Grabs, decodes and returns the next video frame.
 
 .. ocv:function:: VideoCapture& VideoCapture::operator >> (Mat& image)
+
 .. ocv:function:: bool VideoCapture::read(Mat& image)
 
 .. ocv:pyfunction:: cv2.VideoCapture.read([image]) -> successFlag, image
@@ -288,6 +289,7 @@ Returns the specified ``VideoCapture`` property
 .. ocv:pyfunction:: cv2.VideoCapture.get(propId) -> retval
 
 .. ocv:cfunction:: double cvGetCaptureProperty( CvCapture* capture, int propId )
+
 .. ocv:pyoldfunction:: cv.GetCaptureProperty(capture, propId)->double
 
 
@@ -343,6 +345,7 @@ Sets a property in the ``VideoCapture``.
 .. ocv:pyfunction:: cv2.VideoCapture.set(propId, value) -> retval
 
 .. ocv:cfunction:: int cvSetCaptureProperty( CvCapture* capture, int propId, double value )
+
 .. ocv:pyoldfunction:: cv.SetCaptureProperty(capture, propId, value)->None
 
     :param propId: Property identifier. It can be one of the following:
@@ -402,6 +405,7 @@ VideoWriter::VideoWriter
 VideoWriter constructors
 
 .. ocv:function:: VideoWriter::VideoWriter()
+
 .. ocv:function:: VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
 
 .. ocv:pyfunction:: cv2.VideoWriter([filename, fourcc, fps, frameSize[, isColor]]) -> <VideoWriter object>
@@ -461,6 +465,7 @@ VideoWriter::write
 Writes the next video frame
 
 .. ocv:function:: VideoWriter& VideoWriter::operator << (const Mat& image)
+
 .. ocv:function:: void VideoWriter::write(const Mat& image)
 
 .. ocv:pyfunction:: cv2.VideoWriter.write(image) -> None

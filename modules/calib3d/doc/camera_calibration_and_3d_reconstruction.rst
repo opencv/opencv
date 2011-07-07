@@ -1407,6 +1407,6 @@ The function computes the rectification transformations without knowing intrinsi
 
 .. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
 
-.. [Hartley99] Hartley, R.I., “Theory and Practice of Projective Rectification”. IJCV 35 2, pp 115-127 (1999)
+.. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.

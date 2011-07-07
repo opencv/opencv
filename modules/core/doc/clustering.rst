@@ -58,9 +58,7 @@ partition
 -------------
 Splits an element set into equivalency classes.
 
-.. ocv:function:: template<typename _Tp, class _EqPredicate> int
-
-.. ocv:function:: partition( const vector<_Tp>& vec, vector<int>& labels, _EqPredicate predicate=_EqPredicate())
+.. ocv:function:: template<typename _Tp, class _EqPredicate> int partition( const vector<_Tp>& vec, vector<int>& labels, _EqPredicate predicate=_EqPredicate())
 
     :param vec: Set of elements stored as a vector.
 
@@ -76,4 +74,4 @@ http://en.wikipedia.org/wiki/Disjoint-set_data_structure
 . The function
 returns the number of equivalency classes.
 
-.. [Arthur2007] Arthur and S. Vassilvitskii “k-means++: the advantages of careful seeding”, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007
+.. [Arthur2007] Arthur and S. Vassilvitskii. k-means++: the advantages of careful seeding, Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 2007

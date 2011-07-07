@@ -222,7 +222,7 @@ Determines strong corners on an image.
 
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
-.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners, int* cornerCount, double qualityLevel, double minDistance, const CvArr* mask=NULL, int blockSize=3, int useHarris=0, double k=0.04 )
+.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eigImage, CvArr* tempImage, CvPoint2D32f* corners, int* cornerCount, double qualityLevel, double minDistance, const CvArr* mask=NULL, int blockSize=3, int useHarris=0, double k=0.04 )
 
 .. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
