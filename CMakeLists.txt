@@ -361,7 +361,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
     if(X86 OR X86_64)
         # enable everything, since the available set of instructions is checked at runtime
-        set(USE_FAST_MATH ON CACHE BOOL "Enable -ffast-math")
+        IF ("${CMAKE_GCC_REGEX_VERSION}" VERSION_GREATER 4.6.-1)
+            SET(_USE_FAST_MATH OFF)
+        ELSE()
+            SET(_USE_FAST_MATH ON)
+        ENDIF()
+        set(USE_FAST_MATH ${_USE_FAST_MATH} CACHE BOOL "Enable -ffast-math (not recommended for GCC 4.6.x)")
         set(ENABLE_SSE ON CACHE BOOL "Enable SSE instructions")
         set(ENABLE_SSE2 ON CACHE BOOL "Enable SSE2 instructions")
         set(ENABLE_SSE3 OFF CACHE BOOL "Enable SSE3 instructions")
