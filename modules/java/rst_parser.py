@@ -374,12 +374,13 @@ class RstParser(object):
             return
 
         fname = fname.replace(".", "::")
-        if fname == "cv::cv" + func.get("name", ""):
-            func["name"] = fname[2:]
-            func["method"] = fname[2:]
-        else:
-           print "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
-#           self.print_info(func)
+        if fname.startswith("cv::cv"):
+            if fname[6:] == func.get("name", ""):
+                func["name"] = fname[4:]
+                func["method"] = fname[4:]
+            else:
+                print "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
+                #self.print_info(func)
 
     def normalizeText(self, s):
         if s is None:
