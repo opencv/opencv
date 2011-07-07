@@ -294,10 +294,12 @@ class CppHeaderParser(object):
                 if dfpos >= 0:
                     defval = arg[dfpos+1:].strip()
                     arg = arg[:dfpos].strip()
-                pos = arg.rfind(" ")
+                pos = len(arg)-1
+                while pos >= 0 and (arg[pos] == "_" or arg[pos].isalpha() or arg[pos].isdigit()):
+                    pos -= 1
                 if pos >= 0:
                     aname = arg[pos+1:].strip()
-                    atype = arg[:pos].strip()
+                    atype = arg[:pos+1].strip()
                     if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "string", "Mat"]):
                         atype = (atype + " " + aname).strip()
                         aname = "param"

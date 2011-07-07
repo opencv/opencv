@@ -160,6 +160,8 @@ class RstParser(object):
                 skip_code_lines = True
                 continue
 
+            # todo: parse ".. seealso::" sections
+
             # parse class & struct definitions
             if ll.startswith(".. ocv:class::"):
                 func["class"] = ll[ll.find("::")+2:].strip()
@@ -265,7 +267,7 @@ class RstParser(object):
 
         # don't forget about the last function section in file!!!
         if len(lines) > 1:
-            self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)])
+            self.parse_section_safe(module_name, fname, doc, flineno, lines)
 
     def parse_namespace(self, func, section_name):
         known_namespaces = ["cv", "gpu", "flann"]
@@ -327,7 +329,30 @@ class RstParser(object):
              print "RST parser error: \"%s\" from file: %s (line %s) is already documented in file: %s (line %s)" \
                  % (func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
              return False
-        #todo: validate parameter names
+        return self.validateParams(func)
+
+    def validateParams(self, func):
+        documentedParams = func.get("params",{}).keys()
+        params = []
+       	
+        for decl in func.get("decls", []):
+            if len(decl) > 2:
+                args = decl[2][3] # decl[2] -> [ funcname, return_ctype, [modifiers], [args] ]
+                for arg in args:
+                    # arg -> [ ctype, name, def val, [mod], argno ]
+                    if arg[0] != "...":
+                        params.append(arg[1])
+        params = list(set(params))#unique
+
+        # 1. all params are documented
+        for p in params:
+            if p not in documentedParams:
+                print "RST parser warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+
+        # 2. only real params are documented
+        for p in documentedParams:
+            if p not in params:
+                print "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
         return True
 
     def normalize(self, func):
@@ -444,7 +469,7 @@ if __name__ == "__main__":
     parser = RstParser(hdr_parser.CppHeaderParser())
     
     if module == "all":
-        for m in ["androidcamera", "calib3d", "contrib", "core", "features2d", "flann", "gpu", "haartraining", "highgui", "imgproc", "java", "legacy", "ml", "objdetect", "ocl", "python", "stitching", "traincascade", "ts", "video"]:
+        for m in ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "ocl", "python", "stitching", "traincascade", "ts"]:
             parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
     else:
         parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
