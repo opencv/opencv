@@ -7,7 +7,7 @@ Matrix Reductions
 
 gpu::meanStdDev
 -------------------
-.. cpp:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. ocv:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes a mean value and a standard deviation of matrix elements.
 

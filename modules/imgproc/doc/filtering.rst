@@ -579,7 +579,7 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
 
 .. seealso::
 
-	:ocv:func:`borderInterpolate`
+    :ocv:func:`borderInterpolate`
 
 
 createBoxFilter

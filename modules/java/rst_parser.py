@@ -48,7 +48,7 @@ class ParamParser(object):
         offset = line.find(":param")
         assert offset > 0
         self.prefix = line[:offset]
-        assert self.prefix==" "*len(self.prefix)
+        assert self.prefix==" "*len(self.prefix), ":param definition should be prefixed with spaces"
         line = line[offset + 6:].lstrip()
         name_end = line.find(":")
         assert name_end > 0
@@ -72,25 +72,46 @@ class RstParser(object):
     def __init__(self, cpp_parser):
         self.cpp_parser = cpp_parser
         self.definitions = {}
+        self.sections_parsed = 0
+        self.sections_total = 0
+        self.sections_skipped = 0
 
-    def parse(self, module_path):
+    def parse(self, module_name, module_path=None):
+        if module_path is None:
+            module_path = "../" + module_name
         doclist = glob.glob(os.path.join(module_path,"doc/*.rst"))
         for doc in doclist:
-            self.parse_rst_file(doc)
+            self.parse_rst_file(module_name, doc)
+            
+    def parse_section_safe(self, module_name, section_name, file_name, lineno, lines):
+        try:
+            self.parse_section(module_name, section_name, file_name, lineno, lines)
+        except AssertionError, args:
+            print "RST parser error: assertion in \"%s\"  File: %s (line %s)" % (section_name, file_name, lineno)
+            print "    Details: %s" % args
 
-    def parse_section(self, section_name, file_name, lineno, lines):
+    def parse_section(self, module_name, section_name, file_name, lineno, lines):
+        self.sections_total += 1
+        # skip sections having whitespace in name
+        if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
+            print "SKIPPED: \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+            self.sections_skipped += 1
+            return
+
         func = {}
         func["name"] = section_name
         func["file"] = file_name
         func["line"] = lineno
+        func["module"] = module_name
 
         # parse section name
-        class_separator_idx = func["name"].find("::")
+        section_name = self.parse_namespace(func, section_name)
+        class_separator_idx = section_name.find("::")
         if class_separator_idx > 0:
-            func["class"] = func["name"][:class_separator_idx]
-            func["method"] = func["name"][class_separator_idx+2:]
+            func["class"] = section_name[:class_separator_idx]
+            func["method"] = section_name[class_separator_idx+2:]
         else:
-            func["method"] = func["name"]
+            func["method"] = section_name
 
         skip_code_lines = False
         expected_brief = True
@@ -107,7 +128,7 @@ class RstParser(object):
 
             # skip lines if line-skipping mode is activated
             if skip_code_lines:
-                if not l or l.startswith(" ") or l.startswith("\t"):
+                if not l or l.startswith(" "):
                     continue
                 else:
                     skip_code_lines = False
@@ -132,7 +153,7 @@ class RstParser(object):
                     continue
                 else:
                     self.add_new_pdecl(func, pdecl)
-                    #do not continue - current line can contain next parameter definition
+                    # do not continue - current line can contain next parameter definition
 
             # todo: parse structure members; skip them for now
             if ll.startswith(".. ocv:member::"):
@@ -185,6 +206,9 @@ class RstParser(object):
             # record other lines as long description
             func["long"] = func.get("long", "") + "\n" + ll
         # endfor l in lines
+        
+        if fdecl.balance != 0:
+            print "RST parser error: invalid parentheses balance in \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
 
         # save last parameter if needed
         if pdecl.active:
@@ -194,13 +218,17 @@ class RstParser(object):
         func = self.normalize(func)
         if self.validate(func):
             self.definitions[func["name"]] = func
+            self.sections_parsed += 1
             #self.print_info(func)
         elif func:
             self.print_info(func, True)
+            pass
 
-    def parse_rst_file(self, doc):
+    def parse_rst_file(self, module_name, doc):
         doc = os.path.abspath(doc)
         lineno = 0
+        whitespace_warnings = 0
+        max_whitespace_warnings = 10
       
         lines = []
         flineno = 0
@@ -210,14 +238,23 @@ class RstParser(object):
         df = open(doc, "rt")
         for l in df.readlines():
             lineno += 1
+            # handle tabs
+            if l.find("\t") >= 0:
+                whitespace_warnings += 1
+                if whitespace_warnings <= max_whitespace_warnings:
+                    print "RST parser warning: tab symbol instead of space is used at file %s (line %s)" % (doc, lineno)
+                l = l.replace("\t", "    ")
+                
+            # handle first line
             if prev_line == None:
                 prev_line = l.rstrip()
                 continue
+
             ll = l.rstrip()
             if len(prev_line) > 0 and len(ll) >= len(prev_line) and ll == "-" * len(ll):
-                #new function candidate
+                # new function candidate
                 if len(lines) > 1:
-                    self.parse_section(fname, doc, flineno, lines[:len(lines)-1])
+                    self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)-1])
                 lines = []
                 flineno = lineno-1
                 fname = prev_line.strip()
@@ -226,9 +263,18 @@ class RstParser(object):
             prev_line = ll
         df.close()
 
-        #don't forget about the last function section in file!!!
+        # don't forget about the last function section in file!!!
         if len(lines) > 1:
-            self.parse_section(fname, doc, flineno, lines[:len(lines)])
+            self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)])
+
+    def parse_namespace(self, func, section_name):
+        known_namespaces = ["cv", "gpu", "flann"]
+        l = section_name.strip()
+        for namespace in known_namespaces:
+            if l.startswith(namespace + "::"):
+                func["namespace"] = namespace
+                return l[len(namespace)+2:]
+        return section_name
 
     def add_new_fdecl(self, func, decl):
         decls =  func.get("decls",[])
@@ -242,40 +288,43 @@ class RstParser(object):
     def add_new_pdecl(self, func, decl):
         params =  func.get("params",{})
         if decl.name in params:
-            print "Parser error: parameter \"%s\" for %s is defined multiple times. See %s line %s" \
+            print "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
                  % (decl.name, func["name"], func["file"], func["line"])
         else:
             params[decl.name] = decl.comment
             func["params"] = params
 
     def print_info(self, func, skipped=False):
-        print ""
+        print
         if skipped:
             print "SKIPPED DEFINITION:"
         print "name:      %s" % (func.get("name","~empty~"))
         print "file:      %s (line %s)" % (func.get("file","~empty~"), func.get("line","~empty~"))
         print "is class:  %s" % func.get("isclass",False)
         print "is struct: %s" % func.get("isstruct",False)
+        print "module:    %s" % func.get("module","~unknown~")
+        print "namespace: %s" % func.get("namespace", "~empty~")
         print "class:     %s" % (func.get("class","~empty~"))
         print "method:    %s" % (func.get("method","~empty~"))
         print "brief:     %s" % (func.get("brief","~empty~"))
         if "decls" in func:
             print "declarations:"
             for d in func["decls"]:
-               print "     %7s: %s" % (d[0], re.sub(r"[ \t]+", " ", d[1]))
+               print "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
         if "params" in func:
             print "parameters:"
             for name, comment in func["params"].items():
                 print "%23s:   %s" % (name, comment)
         if not skipped:
             print "long:      %s" % (func.get("long","~empty~"))
+        print
 
     def validate(self, func):
         if func.get("decls",None) is None:
-             if not func.get("isclass",False):
+             if not func.get("isclass",False) and not func.get("isstruct",False):
                  return False
         if func["name"] in self.definitions:
-             print "Parser error: function/class/struct \"%s\" in %s line %s is already documented in %s line %s" \
+             print "RST parser error: \"%s\" from file: %s (line %s) is already documented in file: %s (line %s)" \
                  % (func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
              return False
         #todo: validate parameter names
@@ -306,7 +355,31 @@ class RstParser(object):
                 if cmt:
                     params[name] = cmt
             func["params"] = params
+
+        # special case for old C functions - section name should omit "cv" prefix
+        if not func.get("isclass",False) and not func.get("isstruct",False):
+            self.fixOldCFunctionName(func)
         return func
+
+    def fixOldCFunctionName(self, func):
+        if not "decls" in func: 
+            return
+        fname = None
+        for decl in func["decls"]:
+            if decl[0] != "C" and decl[0] != "Python1":
+                return
+            if decl[0] == "C":
+                fname = decl[2][0]
+        if fname is None:
+            return
+
+        fname = fname.replace(".", "::")
+        if fname == "cv::cv" + func.get("name", ""):
+            func["name"] = fname[2:]
+            func["method"] = fname[2:]
+        else:
+           print "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
+#           self.print_info(func)
 
     def normalizeText(self, s):
         if s is None:
@@ -316,7 +389,7 @@ class RstParser(object):
         # remove tailing ::
         s = re.sub(r"::$", "\n", s)
         # remove extra line breaks before/after _ or ,
-        s = re.sub(r"\n[ \t]*([_,])\n", r"\1", s)
+        s = re.sub(r"\n[ ]*([_,])\n", r"\1", s)
         # remove extra line breaks after `
         #s = re.sub(r"`\n", "` ", s)
         # remove extra line breaks before *
@@ -326,17 +399,17 @@ class RstParser(object):
         # remove extra line breaks after #.
         s = re.sub(r"\n#\.\n", "\n#. ", s)
         # remove extra line breaks before `
-        s = re.sub(r"\n[ \t]*`", " `", s)
+        s = re.sub(r"\n[ ]*`", " `", s)
         # remove trailing whitespaces
-        s = re.sub(r"[ \t]+$", "", s)
+        s = re.sub(r"[ ]+$", "", s)
         # remove whitespace before .
-        s = re.sub(r"[ \t]+\.", "\.", s)
+        s = re.sub(r"[ ]+\.", "\.", s)
         # remove .. for references
         s = re.sub(r"\.\. \[", "[", s)
         # unescape
         s = re.sub(r"\\(.)", "\\1", s)
         # compress whitespace
-        s = re.sub(r"[ \t]+", " ", s)
+        s = re.sub(r"[ ]+", " ", s)
 
         s = s.replace("**", "")
         s = s.replace("``", "\"")
@@ -363,10 +436,43 @@ if __name__ == "__main__":
 
     module = sys.argv[1]
 
-    if not os.path.isdir(os.path.join(rst_parser_dir, "../" + module)):
+    if module != "all" and not os.path.isdir(os.path.join(rst_parser_dir, "../" + module)):
         print "Module \"" + module + "\" could not be found."
         exit(1)
 
     parser = RstParser(hdr_parser.CppHeaderParser())
-    parser.parse(os.path.join(rst_parser_dir, "../" + module))
+    
+    if module == "all":
+        for m in ["androidcamera", "calib3d", "contrib", "core", "features2d", "flann", "gpu", "haartraining", "highgui", "imgproc", "java", "legacy", "ml", "objdetect", "ocl", "python", "stitching", "traincascade", "ts", "video"]:
+            parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
+    else:
+        parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
+
+    # summary
+    print
+    print "RST Parser Summary:"
+    print "  Total sections:   %s" % parser.sections_total
+    print "  Skipped sections: %s" % parser.sections_skipped
+    print "  Parsed  sections: %s" % parser.sections_parsed
+    print "  Invalid sections: %s" % (parser.sections_total - parser.sections_parsed - parser.sections_skipped)
+
+    # statistic by language
+    stat = {}
+    classes = 0
+    structs = 0
+    for name, d in parser.definitions.items():
+       if d.get("isclass", False):
+           classes += 1
+       elif d.get("isstruct", False):
+           structs += 1
+       else:
+           for decl in d.get("decls",[]):
+               stat[decl[0]] = stat.get(decl[0],0) + 1
+
+    print
+    print "  classes documented:           %s" % classes
+    print "  structs documented:           %s" % structs
+    for lang in sorted(stat.items()):
+        print "  %7s functions documented: %s" % lang
+
 

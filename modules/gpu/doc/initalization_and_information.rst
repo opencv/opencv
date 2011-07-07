@@ -166,9 +166,9 @@ Class providing a set of static methods to check what NVIDIA* card architecture 
 
 The following method checks whether the module was built with the support of the given feature:
 
-	.. ocv:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
+    .. ocv:function:: static bool gpu::TargetArchs::builtWith(GpuFeature feature)
 
-		:param feature: Feature to be checked. See :ocv:class:`gpu::GpuFeature`.
+        :param feature: Feature to be checked. See :ocv:class:`gpu::GpuFeature`.
 
 There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
 

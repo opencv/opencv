@@ -2398,7 +2398,7 @@ For some values of ``p`` , such as integer values, 0.5 and -0.5, specialized fas
 RNG
 ---
 
-.. ocv:class: RNG
+.. ocv:class:: RNG
 
 Random number generator. It encapsulates the state (currently, a 64-bit integer) and has methods to return scalar random values and to fill arrays with random values. Currently it supports uniform and Gaussian (normal) distributions. The generator uses Multiply-With-Carry algorithm, introduced by G. Marsaglia (
 http://en.wikipedia.org/wiki/Multiply-with-carry

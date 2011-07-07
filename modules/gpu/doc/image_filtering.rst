@@ -240,7 +240,7 @@ gpu::boxFilter
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
- .. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+ .. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`boxFilter`
 
@@ -365,7 +365,7 @@ gpu::morphologyEx
 
     :param iterations: Number of times erosion and dilation to be applied.
 
-.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`morphologyEx` 
 
@@ -433,7 +433,7 @@ gpu::Laplacian
 
     :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :ocv:func:`getDerivKernels` ).
 
-.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`Laplacian`,:ocv:func:`gpu::filter2D` .
 

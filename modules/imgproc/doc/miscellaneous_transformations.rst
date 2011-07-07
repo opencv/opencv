@@ -24,7 +24,7 @@ Applies an adaptive threshold to an array.
     :param adaptiveMethod: Adaptive thresholding algorithm to use, ``ADAPTIVE_THRESH_MEAN_C``  or  ``ADAPTIVE_THRESH_GAUSSIAN_C`` . See the details below.
 
     :param thresholdType: Thresholding type that must be either  ``THRESH_BINARY``  or  ``THRESH_BINARY_INV`` .
-	
+    
     :param blockSize: Size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on.
 
     :param C: Constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
@@ -497,10 +497,10 @@ Fills a connected component with the given color.
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
     :param mask: (For the second function only) Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller. The function uses and updates the mask, so you take responsibility of initializing the  ``mask``  content. Flood-filling cannot go across non-zero pixels in the mask. For example, an edge detector output can be used as a mask to stop filling at edges. It is possible to use the same mask in multiple calls to the function to make sure the filled area does not overlap.  
-	
-	.. note::
-	Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
-	
+    
+    .. note::
+    Since the mask is larger than the filled image, a pixel  :math:`(x, y)`  in  ``image``  corresponds to the pixel  :math:`(x+1, y+1)`  in the  ``mask`` .
+    
     :param seed: Starting point.
 
     :param newVal: New value of the repainted domain pixels.
@@ -608,9 +608,9 @@ Restores the selected region in an image using the region neighborhood.
 
     :param flags: Inpainting method that could be one of the following:
 
-            * **INPAINT_NS** 	Navier-Stokes based method.
+            * **INPAINT_NS**     Navier-Stokes based method.
 
-            * **INPAINT_TELEA** 	Method by Alexandru Telea  [Telea04]_.
+            * **INPAINT_TELEA**     Method by Alexandru Telea  [Telea04]_.
 
 The function reconstructs the selected image area from the pixel near the area boundary. The function may be used to remove dust and scratches from a scanned photo, or to remove undesirable objects from still images or video. See
 http://en.wikipedia.org/wiki/Inpainting
@@ -821,11 +821,11 @@ Runs the GrabCut algorithm.
     
     :param mode: Operation mode that could be one of the following:
 
-        * **GC_INIT_WITH_RECT** 	The function initializes the state and the mask using the provided rectangle. After that it runs  ``iterCount``  iterations of the algorithm.
+        * **GC_INIT_WITH_RECT**     The function initializes the state and the mask using the provided rectangle. After that it runs  ``iterCount``  iterations of the algorithm.
 
-        * **GC_INIT_WITH_MASK** 	The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined. Then, all the pixels outside of the ROI are automatically initialized with  ``GC_BGD`` .
+        * **GC_INIT_WITH_MASK**     The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined. Then, all the pixels outside of the ROI are automatically initialized with  ``GC_BGD`` .
 
-        * **GC_EVAL** 	The value means that the algorithm should just resume.
+        * **GC_EVAL**     The value means that the algorithm should just resume.
 
 The function implements the `GrabCut image segmentation algorithm <http://en.wikipedia.org/wiki/GrabCut>`_.
 See the sample ``grabcut.cpp`` to learn how to use the function.

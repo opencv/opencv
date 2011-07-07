@@ -480,7 +480,7 @@ Updates the predicted state from the measurement.
 BackgroundSubtractor
 --------------------
 
-.. ocv:class: BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractor
 
 Base class for background/foreground segmentation. ::
 
@@ -522,7 +522,7 @@ Computes a background image.
 BackgroundSubtractorMOG
 -----------------------
 
-.. ocv:class: BackgroundSubtractorMOG : public BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractorMOG : public BackgroundSubtractor
 
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
@@ -567,7 +567,7 @@ BackgroundSubtractorMOG2
 ------------------------
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
-.. ocv:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
     Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 

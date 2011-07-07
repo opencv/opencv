@@ -85,7 +85,7 @@ Adds the per-element product of two input images to the accumulator.
     :param src1: First input image, 1- or 3-channel, 8-bit or 32-bit floating point.
 
     :param src2: Second input image of the same type and the same size as  ``src1`` .
-	
+    
     :param dst: Accumulator with the same number of channels as input images, 32-bit or 64-bit floating-point.
 
     :param mask: Optional operation mask.

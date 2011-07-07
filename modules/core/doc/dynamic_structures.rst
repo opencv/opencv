@@ -176,6 +176,8 @@ The structure ``CvGraphScanner`` is used for depth-first graph traversal. See di
 CvTreeNodeIterator
 ------------------
 
+.. ocv:struct:: CvTreeNodeIterator
+
 The structure ``CvTreeNodeIterator`` is used to traverse trees of sequences.
 
 ClearGraph

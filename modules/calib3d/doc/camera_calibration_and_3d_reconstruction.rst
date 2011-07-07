@@ -180,7 +180,7 @@ The function returns the final re-projection error.
 
 .. note::
 
-    If you use a non-square (=non-NxN) grid and	:ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns bad values (zero distortion coefficients, an image center very far from ``(w/2-0.5,h/2-0.5)``, and/or large differences between :math:`f_x` and :math:`f_y` (ratios of 10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in :ocv:func:`findChessboardCorners` .
+    If you use a non-square (=non-NxN) grid and    :ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns bad values (zero distortion coefficients, an image center very far from ``(w/2-0.5,h/2-0.5)``, and/or large differences between :math:`f_x` and :math:`f_y` (ratios of 10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in :ocv:func:`findChessboardCorners` .
 
 .. seealso::
 

@@ -486,7 +486,7 @@ Applies a perspective transformation to an image.
 
     :param dst: Destination image that has the size  ``dsize``  and the same type as  ``src`` .
     
-	:param M: :math:`3\times 3`  transformation matrix.
+    :param M: :math:`3\times 3`  transformation matrix.
 
     :param dsize: Size of the destination image.
 
