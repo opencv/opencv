@@ -1722,7 +1722,8 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         KeyPointsFilter::removeDuplicated( keypoints );
 
         // Compute descriptors.
-        cvSeqRemoveSlice( featuresSeq, cvSlice(0, featuresSeq->total) );
+        if( featuresSeq->total > 0 )
+            cvSeqRemoveSlice( featuresSeq, cvSlice(0, featuresSeq->total) );
     }
 
     for( size_t i = 0; i < keypoints.size(); i++ )
