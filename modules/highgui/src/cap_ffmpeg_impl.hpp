@@ -739,7 +739,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             int64_t    timestamp  = ic->streams[video_stream]->first_dts;
             AVRational time_base  = ic->streams[video_stream]->time_base;
             AVRational frame_base = ic->streams[video_stream]->r_frame_rate;
-            double     timeScale  = (time_base.den / (double)time_base.num) / (frame_base.num / frame_base.den);
+            double     timeScale  = (time_base.den / (double)time_base.num) / (frame_base.num / (double)frame_base.den);
             switch( property_id )
             {
             case CV_FFMPEG_CAP_PROP_POS_FRAMES:
