@@ -170,7 +170,7 @@ htmlhelp_basename = 'opencv'
 
 # OpenCV docs use some custom LaTeX macros in the formulae. Make sure we include the definitions
 pngmath_latex_preamble = r"""
-\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
+\usepackage{euler}\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
 \newcommand{\matTT}[9]{
 \[
 \left|\begin{array}{ccc}
