@@ -142,7 +142,6 @@ The process is the same as described in case of the local approach. Just add the
 Test it!
 ========
 
-
 Now to try this out download our little test :download:`source code <../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/Test.cpp>` or get it from the sample code folder of the OpenCV sources. Add this to your project and build it. Here's its content:
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/Test.cpp
@@ -154,10 +153,28 @@ You can start a Visual Studio build from two places. Either inside from the *IDE
 
 .. |voila| unicode:: voil U+00E1
 
-This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|: 
+This is important to remember when you code inside the code open and save commands. You're resources will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless you give a full, explicit path as parameter for the I/O functions. In the code above we open :download:`this OpenCV logo<../../../../samples/cpp/tutorial_code/images/opencv-logo.png>`. Before starting up the application make sure you place the image file in your current working directory. Modify the image file name inside the code to try it out on other images too. Run it and |voila|: 
 
 .. image:: images/SuccessVisualStudioWindows.jpg
    :alt: You should have this. 
    :align: center
 
+Command line arguments with Visual Studio
+=========================================
 
+Throughout some of our future tutorials you'll see that the programs main input method will be by giving a runtime argument. To do this you can just start up a commmand windows (:kbd:`cmd + Enter` in the start menu), navigate to your executable file and start it with an argument. So for example in case of my upper project this would look like:
+
+.. code-block:: bash
+   :linenos:
+
+   D: 
+   CD OpenCV\MySolutionName\Release
+   MySolutionName.exe exampleImage.jpg
+
+Here I first changed my drive (if your project isn't on the OS local drive), navigated to my project and start it with an example image argument. While under Linux system it is common to fiddle around with the console window on the Microsoft Windows many people come to use it almost never. Besides, adding the same argument again and again while you are testing your application is, somewhat, a cumbersome task. Luckily, in the Visual Studio there is a menu to automate all this: 
+
+.. image:: images/VisualStudioCommandLineArguments.jpg
+   :alt: Visual Studio Command Line Arguments
+   :align: center
+
+Specify here the name of the inputs and while you start your application from the Visual Studio enviroment you have automatic argument passing. In the next introductionary tutorial you'll see an in-depth explanation of the upper source code: :ref:`Display_Image`.

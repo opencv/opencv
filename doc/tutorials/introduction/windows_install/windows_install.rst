@@ -67,66 +67,67 @@ While the later one may contain a couple of new and experimental algorithms, per
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
+.. |CMake| replace:: CMake
+.. _CMake: http://www.cmake.org/cmake/resources/software.html
+.. |TortoiseSVN| replace:: TortoiseSVN
+.. _TortoiseSVN: http://tortoisesvn.net/downloads.html
+.. |Python_Libraries| replace:: Python libraries
+.. _Python_Libraries: http://www.python.org/getit/
+.. |Numpy| replace:: Numpy
+.. _Numpy: http://numpy.scipy.org/
+.. |IntelTBB| replace:: Intel |copy| Threading Building Blocks (*TBB*)
+.. _IntelTBB: http://threadingbuildingblocks.org/file.php?fid=77
+.. |IntelIIP| replace:: Intel |copy| Integrated Performance Primitives (*IPP*)
+.. _IntelIIP: http://software.intel.com/en-us/articles/intel-ipp/
+.. |qtframework| replace:: Qt framework 
+.. _qtframework: http://qt.nokia.com/downloads
+.. |Eigen| replace:: Eigen
+.. _Eigen: http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
+.. |CUDA_Toolkit| replace:: CUDA Toolkit
+.. _CUDA_Toolkit: http://developer.nvidia.com/cuda-downloads
+.. |OpenEXR| replace:: OpenEXR
+.. _OpenEXR: http://www.openexr.com/downloads.html
+.. |OpenNI_Framework| replace:: OpenNI Framework
+.. _OpenNI_Framework: http://www.openni.org/
+.. |Miktex| replace:: Miktex
+.. _Miktex: http://miktex.org/2.9/setup
+.. |Sphinx| replace:: Sphinx
+.. _Sphinx: http://sphinx.pocoo.org/
+
 .. container:: enumeratevisibleitemswithsquare
 
    + An **I**\ ntegrated **D**\ eveloper **E**\ nviroment (*IDE*) preferably, or just a C\C++ compiler that will actually make the binary files. Here I will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. Nevertheless, you can use any other *IDE* that has a valid C\\C++ compiler. 
       
    + Then |CMake|_ is a neat tool that will make the project files (for your choosen *IDE*) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs. 
-      .. |CMake| replace:: CMake
-      .. _CMake: http://www.cmake.org/cmake/resources/software.html
    
    + A **S**\ ubversion **C**\ ontrol **S**\ ystem (*SVN*) to acquire the OpenCV source files. A good tool for this is |TortoiseSVN|_. Alternatively, you can just download an archived version of the source files from the `Sourceforge OpenCV page <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_.
-      .. |TortoiseSVN| replace:: TortoiseSVN
-      .. _TortoiseSVN: http://tortoisesvn.net/downloads.html
 
 OpenCV may come in multiple flavors. There is a "core" section that will work on its own. Nevertheless, they are a couple of tools, libraries made by other organizations (so called 3rd parties) that offer services of which the OpenCV may take advantage. These will improve in many ways its capabilities. In order to use any of them, you need to download and install them on your system. 
 
 .. container:: enumeratevisibleitemswithsquare
 
    + The |Python_Libraries|_ are required to build the *Python interface* of OpenCV. For now use the version :file:`2.7.{x}`. This is also a must have if you want to build the *OpenCV documentation*.
-      .. |Python_Libraries| replace:: Python libraries
-      .. _Python_Libraries: http://www.python.org/getit/
-      
+
    + |Numpy|_ is a scientific computing package for Python. Required for the *Python interface*. 
-      .. |Numpy| replace:: Numpy
-      .. _Numpy: http://numpy.scipy.org/
-      
+
    + |IntelTBB|_ is used inside OpenCV for parallel code snippets. Using this will make sure that the OpenCV library will take advantage of all the cores you have in your systems CPU. 
-      .. |IntelTBB| replace:: Intel |copy| Threading Building Blocks (*TBB*)
-      .. _IntelTBB: http://threadingbuildingblocks.org/file.php?fid=77
-      
+
    + |IntelIIP|_ may be used to improve the performance of color conversion, Haar training and DFT functions of the OpenCV library. Watch out as this isn't a *free* service. 
-      .. |IntelIIP| replace:: Intel |copy| Integrated Performance Primitives (*IPP*)
-      .. _IntelIIP: http://software.intel.com/en-us/articles/intel-ipp/
-      
+
    + OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one by using the |qtframework|_. For a quick overview of what this has to offer look into the documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of the framework is required. 
-      .. |qtframework| replace:: Qt framework 
-      .. _qtframework: http://qt.nokia.com/downloads
-      
+
    + |Eigen|_ is a C++ template library for linear algebra. 
-      .. |Eigen| replace:: Eigen
-      .. _Eigen: http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
-      
+
    + The latest |CUDA_Toolkit|_ will allow you to use the power lying inside your GPU.  This will drastically improve performance for some of the algorithms, like the HOG descriptor. Getting to work more and more of our algorithms on the GPUs is a constant effort of the OpenCV team. 
-      .. |CUDA_Toolkit| replace:: CUDA Toolkit
-      .. _CUDA_Toolkit: http://developer.nvidia.com/cuda-downloads
-      
+
    + |OpenEXR|_ source files are required for the library to work with this high dynamic range (HDR) image file format. 
-      .. |OpenEXR| replace:: OpenEXR
-      .. _OpenEXR: http://www.openexr.com/downloads.html
-      
+
    + The |OpenNI_Framework|_ contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures and body motion tracking. 
-      .. |OpenNI_Framework| replace:: OpenNI Framework
-      .. _OpenNI_Framework: http://www.openni.org/
-      
+
    + |Miktex|_ is the best `TEX <https://secure.wikimedia.org/wikipedia/en/wiki/TeX>`_ implementation on the Windows OS. It is required to build the *OpenCV documentation*. 
-      .. |Miktex| replace:: Miktex
-      .. _Miktex: http://miktex.org/2.9/setup
-      
+
    + |Sphinx|_ is a python documentation generator and is the tool that will actually create the *OpenCV documentation*. This on its own requires a couple of tools installed, I will cover this in depth at the :ref:`How to Install Sphinx <HereInstallSphinx>` section. 
-      .. |Sphinx| replace:: Sphinx
-      .. _Sphinx: http://sphinx.pocoo.org/
-   
+
 Now I will describe the steps to follow for a full build (using all the above frameworks, tools and libraries). If you do not need the support for some of these you can just freely skip those parts. 
 
 .. _WindowsBuildLibrary:
@@ -221,7 +222,8 @@ Building the library
       
       .. code-block:: bash
       
-         configure.exe -release -no-webkit -no-phonon -no-phonon-backend -no-script -no-scripttools -no-qt3support -no-multimedia -no-ltcg
+         configure.exe -release -no-webkit -no-phonon -no-phonon-backend -no-script -no-scripttools 
+                       -no-qt3support -no-multimedia -no-ltcg
       
       Completing this will take around 10-20 minutes. Then enter the next command that will take a lot longer (can easily take even more than a full hour):
       
