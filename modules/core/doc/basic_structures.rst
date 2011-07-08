@@ -113,7 +113,7 @@ Rect\_
 ------
 .. ocv:class:: Rect_
 
-Template class for 2D rectangles, described by the following parameters::
+Template class for 2D rectangles, described by the following parameters:
 
 * Coordinates of the top-left corner. This is a default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV. Though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner. 
 * Rectangle width and height.
@@ -802,7 +802,7 @@ Provides matrix assignment operators.
 
 .. ocv:function:: Mat& Mat::operator = (const MatExpr_Base& expr)
 
-.. ocv:function:: Mat& operator = (const Scalar& s)
+.. ocv:function:: Mat& Mat::operator = (const Scalar& s)
 
     :param m: Assigned, right-hand-side matrix. Matrix assignment is an O(1) operation. This means that no data is copied but the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ocv:func:`Mat::release` .
 
@@ -855,7 +855,7 @@ The method makes a new header for the specified matrix row and returns it. This 
         A.row(i) = A.row(j) + 0;
 
         // this is a bit longe, but the recommended method.
-        Mat Ai = A.row(i); M.row(j).copyTo(Ai);
+        A.row(j).copyTo(A.row(i));
 
 Mat::col
 ------------

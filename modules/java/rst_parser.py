@@ -129,7 +129,7 @@ class RstParser(object):
 
             # continue capture seealso
             if capturing_seealso:
-                if l.startswith(" "):
+                if not l or l.startswith(" "):
                     seealso = func.get("seealso",[])
                     seealso.extend(l.split(","))
                     func["seealso"] = seealso
@@ -158,14 +158,7 @@ class RstParser(object):
                     continue
                 else:
                     skip_code_lines = False
-
-            if ll.startswith(".. "):
-                expected_brief = False
-            elif ll.endswith("::"):
-                # turn on line-skipping mode for code fragments
-                skip_code_lines = True
-                ll = ll[:len(ll)-2]
-
+                    
             if ll.startswith(".. code-block::") or ll.startswith(".. math::") or ll.startswith(".. image::"):
                 skip_code_lines = True
                 continue
@@ -174,6 +167,13 @@ class RstParser(object):
             if ll.startswith(".. ocv:member::"):
                 skip_code_lines = True
                 continue
+
+            if ll.startswith(".. "):
+                expected_brief = False
+            elif ll.endswith("::"):
+                # turn on line-skipping mode for code fragments
+                skip_code_lines = True
+                ll = ll[:len(ll)-2]
 
             # parse ".. seealso::" blocks
             if ll.startswith(".. seealso::"):
@@ -227,6 +227,8 @@ class RstParser(object):
 
             # record other lines as long description
             func["long"] = func.get("long", "") + "\n" + ll
+            if skip_code_lines:
+                func["long"] = func.get("long", "") + "\n"
         # endfor l in lines
         
         if fdecl.balance != 0:
@@ -406,9 +408,11 @@ class RstParser(object):
             seealso = []
             for see in func["seealso"]:
                 item = self.normalizeText(see.rstrip(".")).strip("\"")
-                if item:
+                if item and (item.find(" ") < 0 or item.find("::operator") > 0):
                     seealso.append(item)
             func["seealso"] = list(set(seealso))
+            if not func["seealso"]:
+                del func["seealso"]
 
         # special case for old C functions - section name should omit "cv" prefix
         if not func.get("isclass",False) and not func.get("isstruct",False):
@@ -444,9 +448,12 @@ class RstParser(object):
         # remove tailing ::
         s = re.sub(r"::$", "\n", s)
         # remove extra line breaks before/after _ or ,
-        s = re.sub(r"\n[ ]*([_,])\n", r"\1", s)
+        s = re.sub(r"\n[ ]*([_,])\n", r"\1 ", s)
         # remove extra line breaks after `
         #s = re.sub(r"`\n", "` ", s)
+        # remove extra space after ( and before )
+        s = re.sub(r"\([\n ]+", "(", s)
+        s = re.sub(r"[\n ]+\)", ")", s)
         # remove extra line breaks after ".. note::"
         s = re.sub(r"\.\. note::\n+", ".. note:: ", s)
         # remove extra line breaks before *
@@ -461,31 +468,51 @@ class RstParser(object):
         s = re.sub(r"\n[ ]*`", " `", s)
         # remove trailing whitespaces
         s = re.sub(r"[ ]+$", "", s)
-        # remove whitespace before .
-        s = re.sub(r"[ ]+\.", "\.", s)
         # remove .. for references
         s = re.sub(r"\.\. \[", "[", s)
         # unescape
         s = re.sub(r"\\(.)", "\\1", s)
+        
+        s = s.replace(":ocv:class:", "")
+        s = s.replace(":ocv:struct:", "")
+        s = s.replace(":ocv:func:", "")
+        s = s.replace(":ocv:cfunc:","")
+        s = s.replace(":c:type:", "")
+        s = s.replace(":c:func:", "")
+        s = s.replace(":ref:", "")
+        s = s.replace(":math:", "")
+        s = s.replace(":func:", "")
+
+        s = s.replace("]_", "]")
+        s = s.replace(".. note::", "Note:")
+        s = s.replace(".. ocv:function::", "")
+        s = s.replace(".. ocv:cfunction::", "")
+
+        # remove ".. identifier:" lines
+        s = re.sub(r"(^|\n)\.\. [a-zA-Z_0-9]+(::[a-zA-Z_0-9]+)?:(\n|$)", "\n ", s)
+        # unwrap urls
+        s = re.sub(r"`([^`<]+ )<(https?://[^>]+)>`_", "\\1(\\2)", s)
+        
+        # remove whitespace before .
+        s = re.sub(r"[ ]+\.", ".", s)
+        # remove tailing whitespace
+        s = re.sub(r" +(\n|$)", "\\1", s)
+        # remove leading whitespace
+        s = re.sub(r"(^|\n) +", "\\1", s)
+        # compress line breaks
+        s = re.sub(r"\n\n+", "\n\n", s)
+        # remove other newlines
+        s = re.sub(r"([^.\n])\n([^*#\n])", "\\1 \\2", s)
         # compress whitespace
         s = re.sub(r" +", " ", s)
-        # compress linebreaks
-        s = re.sub(r"\n\n+", "\n\n", s)
+
+        # remove extra space before .
+        s = re.sub(r"[\n ]+\.", ".", s)
 
         s = s.replace("**", "")
         s = s.replace("``", "\"")
         s = s.replace("`", "\"")
         s = s.replace("\"\"", "\"")
-        s = s.replace(":ocv:cfunc:","")
-        s = s.replace(":ref:", "")
-        s = s.replace(":math:", "")
-        s = s.replace(":ocv:class:", "")
-        s = s.replace(":ocv:func:", "")
-        s = s.replace(":c:type:", "")
-        s = s.replace("]_", "]")
-        s = s.replace(".. note::", "Note:")
-        s = s.replace(".. ocv:function::", "")
-        s = s.replace(".. ocv:cfunction::", "")
 
         s = s.strip()
         return s
@@ -510,7 +537,7 @@ if __name__ == "__main__":
     parser = RstParser(hdr_parser.CppHeaderParser())
     
     if module == "all":
-        for m in ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "ocl", "python", "stitching", "traincascade", "ts"]:
+        for m in ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts"]:
             parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
     else:
         parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
