@@ -427,6 +427,15 @@ class JavaWrapperGenerator(object):
             ) );
 
             # java part:
+
+            #java doc comment
+            f_name = fi.name
+            if fi.classname:
+                f_name = fi.classname + "::" + fi.name
+            self.java_code.write(indent + "//javadoc: " + f_name + "(%s)\n" % \
+                ", ".join([a.name for a in args])
+            )
+
             # public java wrapper method impl (calling native one above)
             # e.g.
             # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
@@ -571,9 +580,44 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
                     for fi in ffi.funcs:
                         self.gen_func(fi, len(ffi.funcs)>1, jn_code)
 
-            self.java_code.write("\n\n" + indent_m + "// native stuff\n")
-            self.java_code.write( indent_m + "//\n" + jn_code.getvalue() )
-            self.java_code.write( "\n\n" + indent + "}\n\n" )
+            # finalize()
+            self.java_code.write(
+"""
+        @Override
+        protected void finalize() throws Throwable {
+            n_delete(nativeObj);
+            super.finalize();
+        }
+
+"""
+            )
+
+            self.java_code.write(indent_m + "// native stuff\n\n")
+            self.java_code.write( jn_code.getvalue() )
+            self.java_code.write(
+"""
+        // native support for java finalize()
+        private static native void n_delete(long nativeObj);
+"""
+            )
+            self.java_code.write("\n" + indent + "}\n\n")
+
+            # native support for java finalize()
+            self.cpp_code.write( \
+"""
+//
+//  native support for java finalize()
+//  static void %(cls)s::n_delete( __int64 self )
+//
+
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_00024%(cls)s_n_1delete
+  (JNIEnv* env, jclass cls, jlong self)
+{
+    delete (%(cls)s*) self;
+}
+
+""" % {"module" : module, "cls" : name}
+            )
 
 
 if __name__ == "__main__":
