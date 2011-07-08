@@ -15,7 +15,7 @@ def detect(img, cascade):
 
 def draw_rects(img, rects, color):
     for x1, y1, x2, y2 in rects:
-        cv2.rectangle(img, (x1, y1), (x2, y2), color)
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
 
 if __name__ == '__main__':
     import sys, getopt
@@ -38,7 +38,7 @@ if __name__ == '__main__':
         gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
         rects = detect(gray, cascade)
-        vis = cv2.cvtColor(gray, cv.CV_GRAY2BGR)
+        vis = img.copy()
         draw_rects(vis, rects, (0, 255, 0))
         for x1, y1, x2, y2 in rects:
             roi = gray[y1:y2, x1:x2]
