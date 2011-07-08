@@ -1,5 +1,6 @@
 package org.opencv;
 
+//javadoc:Scalar_
 public class Scalar {
 	
 	public double v0, v1, v2, v3;

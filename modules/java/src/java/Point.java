@@ -1,5 +1,6 @@
 package org.opencv;
 
+//javadoc:Point_
 public class Point {
 	
 	public double x, y;

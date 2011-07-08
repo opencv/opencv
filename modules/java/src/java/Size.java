@@ -1,5 +1,6 @@
 package org.opencv;
 
+//javadoc:Size_
 public class Size {
 
 	public int width, height;

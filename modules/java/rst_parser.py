@@ -1,5 +1,4 @@
 import os, sys, re, string, glob
-from string import Template
 
 class DeclarationParser(object):
     def __init__(self, line=None):
@@ -445,8 +444,6 @@ class RstParser(object):
             return s
         # normalize line endings
         s = re.sub(r"\r\n", "\n", s)
-        # remove tailing ::
-        s = re.sub(r"::$", "\n", s)
         # remove extra line breaks before/after _ or ,
         s = re.sub(r"\n[ ]*([_,])\n", r"\1 ", s)
         # remove extra line breaks after `
@@ -465,7 +462,7 @@ class RstParser(object):
         # remove extra line breaks after #.
         s = re.sub(r"\n#\.\n+", "\n#. ", s)
         # remove extra line breaks before `
-        s = re.sub(r"\n[ ]*`", " `", s)
+        #s = re.sub(r"\n[ ]*`", " `", s)
         # remove trailing whitespaces
         s = re.sub(r"[ ]+$", "", s)
         # remove .. for references
@@ -485,6 +482,7 @@ class RstParser(object):
 
         s = s.replace("]_", "]")
         s = s.replace(".. note::", "Note:")
+        s = s.replace(".. table::", "")
         s = s.replace(".. ocv:function::", "")
         s = s.replace(".. ocv:cfunction::", "")
 
@@ -492,7 +490,9 @@ class RstParser(object):
         s = re.sub(r"(^|\n)\.\. [a-zA-Z_0-9]+(::[a-zA-Z_0-9]+)?:(\n|$)", "\n ", s)
         # unwrap urls
         s = re.sub(r"`([^`<]+ )<(https?://[^>]+)>`_", "\\1(\\2)", s)
-        
+        # remove tailing ::
+        s = re.sub(r"::$", "\n", s)
+
         # remove whitespace before .
         s = re.sub(r"[ ]+\.", ".", s)
         # remove tailing whitespace
@@ -502,7 +502,7 @@ class RstParser(object):
         # compress line breaks
         s = re.sub(r"\n\n+", "\n\n", s)
         # remove other newlines
-        s = re.sub(r"([^.\n])\n([^*#\n])", "\\1 \\2", s)
+        s = re.sub(r"([^.\n\\=])\n([^*#\n])", "\\1 \\2", s)
         # compress whitespace
         s = re.sub(r" +", " ", s)
 
@@ -518,7 +518,7 @@ class RstParser(object):
         return s
 
 if __name__ == "__main__":
-    if len(sys.argv) < 1:
+    if len(sys.argv) < 2:
         print "Usage:\n", os.path.basename(sys.argv[0]), " <module path>"
         exit(0)
 
@@ -569,4 +569,8 @@ if __name__ == "__main__":
     for lang in sorted(stat.items()):
         print "  %7s functions documented: %s" % lang
 
+#    sys.exit(0)
+ #   for name, d in parser.definitions.items():
+  #      print
+   #     print ToJavadoc(d, d.get("params",{}).keys())
 
