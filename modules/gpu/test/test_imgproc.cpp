@@ -1478,7 +1478,7 @@ TEST_P(MeanShift, Proc)
     EXPECT_MAT_NEAR(spmap_template, spmap, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShift, testing::ValuesIn(devices(cv::gpu::FEATURE_SET_COMPUTE_12)));
+INSTANTIATE_TEST_CASE_P(ImgProc, MeanShift, testing::ValuesIn(devices()));
 
 struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
@@ -1540,7 +1540,7 @@ TEST_P(MeanShiftSegmentation, Regression)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, testing::Combine(
-                        testing::ValuesIn(devices(cv::gpu::FEATURE_SET_COMPUTE_12)), 
+                        testing::ValuesIn(devices()),
                         testing::Values(0, 4, 20, 84, 340, 1364)));
 
 ////////////////////////////////////////////////////////////////////////////////
