@@ -252,8 +252,6 @@ namespace cv { namespace gpu { namespace imgproc
 
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
     {
-        printFuncAttrib(meanshift_kernel);
-
         dim3 grid(1, 1, 1);
         dim3 threads(32, 8, 1);
         grid.x = divUp(src.cols, threads.x);
