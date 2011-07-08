@@ -141,6 +141,9 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
     ok = true;
 
     __END__;
+    
+    if( responses && responses->data.ptr != _responses->data.ptr )
+        cvReleaseMat(&responses);
 
     return ok;
 }
