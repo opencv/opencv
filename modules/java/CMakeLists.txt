@@ -11,6 +11,8 @@ ENDIF()
 
 SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
+SET(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
+SET(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
 
 SET(additional_clean_files "")
 
@@ -64,11 +66,13 @@ FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
 
 add_library(${target} SHARED ${handwrittren_cpp_sources} ${generated_cpp_sources})
 target_link_libraries(${target} ${dependent_libs} ${dependent_extra_libs} ${OPENCV_LINKER_LIBS})
+add_dependencies(${target} "${GEN_JAVA}" "${HDR_PARSER}")
+add_dependencies(${target} ${dependent_extra_libs} ${dependent_libs})
 
 if(ANDROID)
     target_link_libraries(${target} jnigraphics)
 
-    # force strip library before install/strip command
+    # force strip library after build command
     # because samples and tests will make a copy of library before install
     ADD_CUSTOM_COMMAND(
         TARGET ${target}
@@ -76,8 +80,6 @@ if(ANDROID)
         COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${target}.so"
         )
 endif()
-
-#add_dependencies(${the_target} ${dependent_extra_libs} ${dependent_libs})
 
 # Additional target properties
 set_target_properties(${target} PROPERTIES
@@ -127,11 +129,33 @@ IF(ANDROID)
     endforeach()
 ENDIF()
 
+# generate javadoc comments
 FILE(GLOB java_project_files "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
+
+SET(documented_java_files)
+foreach(java_file ${java_project_files} ${generated_java_sources})
+    get_filename_component(java_file_name "${java_file}" NAME_WE)
+    list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
+endforeach()
+
+add_custom_command(
+    TARGET ${api_target} PRE_BUILD
+    COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVADOC}" "${CMAKE_CURRENT_SOURCE_DIR}/src/java" "${CMAKE_CURRENT_BINARY_DIR}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${java_project_files}
+    DEPENDS ${generated_java_sources}
+    DEPENDS "${GEN_JAVA}"
+    DEPENDS "${HDR_PARSER}"
+    DEPENDS "${GEN_JAVADOC}"
+    DEPENDS "${RST_PARSER}"
+)
+
+
 SET(JAVA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/src/org/opencv")
 
-foreach(java_file ${java_project_files} ${generated_java_sources})
+foreach(java_file ${documented_java_files})
     get_filename_component(java_file_name "${java_file}" NAME)
+    string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
     add_custom_command(
         TARGET ${api_target}
         COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}/${java_file_name}"
