@@ -46,50 +46,49 @@
 
 void print_info()
 {    
+    printf("\n");
 #if defined _WIN32
 #   if defined _WIN64
-        puts("OS: Windows 64\n");
+        puts("OS: Windows 64");
 #   else
-        puts("OS: Windows 32\n");
+        puts("OS: Windows 32");
 #   endif
 #elif defined linux
 #   if defined _LP64
-        puts("OS: Linux 64\n");
+        puts("OS: Linux 64");
 #   else
-        puts("OS: Linux 32\n");
+        puts("OS: Linux 32");
 #   endif
 #elif defined __APPLE__
 #   if defined _LP64
-        puts("OS: Apple 64\n");
+        puts("OS: Apple 64");
 #   else
-        puts("OS: Apple 32\n");
+        puts("OS: Apple 32");
 #   endif
 #endif
 
-    printf("CUDA version: %d\n\n", CUDART_VERSION);
-
     int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
 
-
-    printf("Found %d CUDA devices\n\n", deviceCount);
+    printf("CUDA version: %d\n", CUDART_VERSION);    
+    printf("CUDA device count: %d\n\n", deviceCount);
 
     for (int i = 0; i < deviceCount; ++i)
     {
         cv::gpu::DeviceInfo info(i);
         printf("Device %d:\n", i);
-        printf("\tName: %s\n", info.name().c_str());
-        printf("\tCompute capability version: %d.%d\n", info.majorVersion(), info.minorVersion());
-        printf("\tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0));
-        printf("\tFree memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory() / 1024.0) / 1024.0));
+        printf("    Name: %s\n", info.name().c_str());
+        printf("    Compute capability version: %d.%d\n", info.majorVersion(), info.minorVersion());
+        printf("    Total memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0));
+        printf("    Free  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory() / 1024.0) / 1024.0));
         if (info.isCompatible())
-            puts("\tThis device is compatible with current GPU module build\n");
+            puts("    This device is compatible with current GPU module build\n");
         else
-            puts("\tThis device is NOT compatible with current GPU module build\n");
+            puts("    This device is NOT compatible with current GPU module build\n");
     }
     
-    puts("GPU module was compiled for next GPU archs:");
-    printf("\tBIN:%s\n", CUDA_ARCH_BIN);
-    printf("\tPTX:%s\n\n", CUDA_ARCH_PTX);
+    puts("GPU module was compiled for the following GPU archs:");
+    printf("    BIN: %s\n", CUDA_ARCH_BIN);
+    printf("    PTX: %s\n\n", CUDA_ARCH_PTX);
 }
 
 enum OutputLevel

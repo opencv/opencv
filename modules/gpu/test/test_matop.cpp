@@ -337,9 +337,11 @@ TEST_P(SetTo, Masked)
 
     static cv::Scalar s = cv::Scalar(1, 2, 3, 4);
 
-    cv::Mat mat;
+    
     cv::RNG& rng = cvtest::TS::ptr()->get_rng();
-    cv::Mat mask = cvtest::randomMat(rng, mat.size(), CV_8UC1, 0.0, 1.5, false);
+    cv::Mat mask = cvtest::randomMat(rng, mat_gold.size(), CV_8UC1, 0.0, 1.5, false);
+
+    cv::Mat mat;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat dev_mat(mat_gold);
