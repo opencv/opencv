@@ -1069,10 +1069,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     # High level of warnings.
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall")
 
-    if(BUILD_WITH_STATIC_CRT)
-        set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -static-libstdc++")
-    endif()
-
     # The -Wno-long-long is required in 64bit systems when including sytem headers.
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64*)
         set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wno-long-long")
