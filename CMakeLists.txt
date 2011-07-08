@@ -1407,50 +1407,25 @@ CONFIGURE_FILE(
 
 ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-# ----------------------------------------------------------------------------
-#   CPack target
-# ----------------------------------------------------------------------------
-
+#-----------------------------------
+# Source package:
+#-----------------------------------
 set(BUILD_PACKAGE ON CACHE BOOL "Enables 'make package_source' command")
 
 if(BUILD_PACKAGE)
-    configure_file(
-        Package.cmake.in
-        ${CMAKE_BINARY_DIR}/.cpack/Package.cmake
-        @ONLY
-        )
-    include(${CMAKE_BINARY_DIR}/.cpack/Package.cmake)
-
-    set(root_files README)
-    file(GLOB root_src_files *.in *.cmake *.rst CMakeLists.txt)
-
+    set(TARBALL_NAME "${CMAKE_PROJECT_NAME}-${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
     if (NOT WIN32)
-        install(FILES ${root_files}
-                DESTINATION ${OPENCV_DOC_INSTALL_PATH}
-                COMPONENT main)
+        add_custom_target(package_source
+        #TODO: maybe we should not remove dll's
+        COMMAND tar --transform 's,^,${TARBALL_NAME}/,S' -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude-vcs --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     else()
-        install(FILES ${root_files}
-                DESTINATION "."
-                COMPONENT main)
-        install(FILES ${root_src_files}
-                DESTINATION "."
-                COMPONENT src)
-        # Add the "win-install/OpenCVConfig.cmake" file to the "main" install component
-        install(FILES
-            "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake"
-            DESTINATION "."
-            COMPONENT main
-            )
-        install(FILES
-            "include/CMakeLists.txt"
-            DESTINATION "include/"
-            COMPONENT src
-            )
-
-        install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
-        install(DIRECTORY 3rdparty android modules doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
+        add_custom_target(package_source
+        COMMAND zip -9 -r ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.zip . -x '*/.svn/*' '*.vcproj' '*.pyc'
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 endif()
+
 
 #-----------------------------------
 # Solution folders:
