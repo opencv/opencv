@@ -238,6 +238,9 @@ struct BruteForceMatcher : testing::TestWithParam< std::tr1::tuple<cv::gpu::Devi
     }
 };
 
+const int BruteForceMatcher::queryDescCount;
+const int BruteForceMatcher::countFactor;
+
 TEST_P(BruteForceMatcher, Match)
 {
     const char* distStr = dists[distType];
