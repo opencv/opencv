@@ -109,3 +109,9 @@ def make_cmap(name, n=256):
         ch = np.interp(xs, xp, yp)
         channels.append(ch)
     return np.uint8(np.array(channels).T*255)
+
+def nothing(*arg, **kw):
+    pass
+
+def clock():
+    return cv2.getTickCount() / cv2.getTickFrequency()

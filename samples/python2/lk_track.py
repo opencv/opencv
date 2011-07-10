@@ -20,7 +20,7 @@ lk_params = dict( winSize  = (3, 3),
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
                   derivLambda = 0.0 )    
 
-feature_params = dict( maxCorners = 500, 
+feature_params = dict( maxCorners = 1000, 
                        qualityLevel = 0.1,
                        minDistance = 5,
                        blockSize = 5 )
@@ -41,6 +41,8 @@ def main():
     import sys
     try: video_src = sys.argv[1]
     except: video_src = video.presets['chess']
+
+    cv2.namedWindow('img', 0)
 
     track_len = 4
     tracks = []
@@ -63,7 +65,7 @@ def main():
                 tr.append((x, y))
                 if len(tr) > 10:
                     del tr[0]
-                cv2.circle(vis, (x, y), 2, (0, 255, 0), -2)
+                cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
             cv2.polylines(vis, [np.int32(tr) for tr in tracks], False, (0, 255, 0))
             draw_str(vis, (20, 20), ['new', 'old'][old_mode]+' mode')
             draw_str(vis, (20, 40), 'time: %.02f ms' % (dt*1000))
