@@ -3,11 +3,18 @@ import cv2, cv
 import video
 from common import nothing, clock, draw_str
 
-MHI_DURATION = 1.0
-DEFAULT_THRESHOLD = 16
-MAX_TIME_DELTA = 0.5
+MHI_DURATION = 0.5
+DEFAULT_THRESHOLD = 32
+MAX_TIME_DELTA = 0.25
 MIN_TIME_DELTA = 0.05
 
+def draw_motion_comp(vis, (x, y, w, h), angle, color):
+    cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0))
+    r = min(w/2, h/2)
+    cx, cy = x+w/2, y+h/2
+    angle = np.deg2rad(angle)
+    cv2.circle(vis, (cx, cy), r, color, 3)
+    cv2.line(vis, (cx, cy), (int(cx+np.cos(angle)*r), int(cy+np.sin(angle)*r)), color, 3)
 
 if __name__ == '__main__':
     import sys
@@ -31,10 +38,11 @@ if __name__ == '__main__':
         frame_diff = cv2.absdiff(frame, prev_frame)
         gray_diff = cv2.cvtColor(frame_diff, cv.CV_BGR2GRAY)
         thrs = cv2.getTrackbarPos('threshold', 'motempl')
-        ret, motion_mask = cv2.threshold(gray_diff, thrs, 255, cv2.THRESH_BINARY)
+        ret, motion_mask = cv2.threshold(gray_diff, thrs, 1, cv2.THRESH_BINARY)
         timestamp = clock()
         cv2.updateMotionHistory(motion_mask, motion_history, timestamp, MHI_DURATION)
-        mg_mask, mg_orient = cv2.calcMotionGradient( motion_history, MAX_TIME_DELTA, MIN_TIME_DELTA, apertureSize=5 );
+        mg_mask, mg_orient = cv2.calcMotionGradient( motion_history, MAX_TIME_DELTA, MIN_TIME_DELTA, apertureSize=5 )
+        seg_mask, seg_bounds = cv2.segmentMotion(motion_history, timestamp, MAX_TIME_DELTA)
 
         visual_name = visuals[cv2.getTrackbarPos('visual', 'motempl')]
         if visual_name == 'input':
@@ -48,6 +56,22 @@ if __name__ == '__main__':
             hsv[:,:,0] = mg_orient/2
             hsv[:,:,2] = mg_mask*255
             vis = cv2.cvtColor(hsv, cv.CV_HSV2BGR)
+
+        for i, rect in enumerate([(0, 0, w, h)] + list(seg_bounds)):
+            x, y, rw, rh = rect
+            area = rw*rh
+            if area < 64**2:
+                continue
+            silh_roi   = motion_mask   [y:y+rh,x:x+rw]
+            orient_roi = mg_orient     [y:y+rh,x:x+rw]
+            mask_roi   = mg_mask       [y:y+rh,x:x+rw]
+            mhi_roi    = motion_history[y:y+rh,x:x+rw]
+            if cv2.norm(silh_roi, cv2.NORM_L1) < area*0.05:
+                continue
+            angle = cv2.calcGlobalOrientation(orient_roi, mask_roi, mhi_roi, timestamp, MHI_DURATION)
+            color = ((255, 0, 0), (0, 0, 255))[i == 0]
+            draw_motion_comp(vis, rect, angle, color)
+
         draw_str(vis, (20, 20), visual_name)
         cv2.imshow('motempl', vis)
 
