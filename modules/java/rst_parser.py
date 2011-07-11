@@ -1,4 +1,5 @@
 import os, sys, re, string, glob
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -564,6 +565,7 @@ class RstParser(object):
         print "  structs documented:           %s" % structs
         for lang in sorted(stat.items()):
             print "  %7s functions documented: %s" % lang
+        print
 
 def mathReplace2(match):
     m = mathReplace(match)
@@ -670,7 +672,7 @@ if __name__ == "__main__":
     parser = RstParser(hdr_parser.CppHeaderParser())
     
     if module == "all":
-        for m in ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts"]:
+        for m in allmodules:
             parser.parse(m, os.path.join(rst_parser_dir, "../" + m))
     else:
         parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
