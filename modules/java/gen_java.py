@@ -272,6 +272,37 @@ class JavaWrapperGenerator(object):
             IPL_BORDER_TRANSPARENT = 5;
 """ )
 
+        if module == "calib3d":
+            self.java_code.write(\
+"""
+    public static final int
+            CV_LMEDS = 4,
+            CV_RANSAC = 8,
+            CV_FM_LMEDS = CV_LMEDS,
+            CV_FM_RANSAC = CV_RANSAC;
+
+    public static final int
+            CV_FM_7POINT = 1,
+            CV_FM_8POINT = 2;
+
+    public static final int
+            CV_CALIB_USE_INTRINSIC_GUESS = 1,
+            CV_CALIB_FIX_ASPECT_RATIO = 2,
+            CV_CALIB_FIX_PRINCIPAL_POINT = 4,
+            CV_CALIB_ZERO_TANGENT_DIST = 8,
+            CV_CALIB_FIX_FOCAL_LENGTH = 16,
+            CV_CALIB_FIX_K1 = 32,
+            CV_CALIB_FIX_K2 = 64,
+            CV_CALIB_FIX_K3 = 128,
+            CV_CALIB_FIX_K4 = 2048,
+            CV_CALIB_FIX_K5 = 4096,
+            CV_CALIB_FIX_K6 = 8192,
+            CV_CALIB_RATIONAL_MODEL = 16384,
+            CV_CALIB_FIX_INTRINSIC = 256,
+            CV_CALIB_SAME_FOCAL_LENGTH = 512,
+            CV_CALIB_ZERO_DISPARITY = 1024;
+""" )
+
         # java native stuff
         self.jn_code.write("""
     //
