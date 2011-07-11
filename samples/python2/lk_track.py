@@ -42,6 +42,8 @@ def main():
     try: video_src = sys.argv[1]
     except: video_src = video.presets['chess']
 
+    print help_message
+
     track_len = 4
     tracks = []
     cam = video.create_capture(video_src)
