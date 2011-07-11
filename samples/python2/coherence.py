@@ -21,9 +21,9 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
         eigen = eigen.reshape(h, w, 3, 2)  # [[e1, e2], v1, v2]
         x, y = eigen[:,:,1,0], eigen[:,:,1,1]
         
-        gxx = cv2.sobel(gray, cv2.CV_32F, 2, 0, ksize=sigma)
-        gxy = cv2.sobel(gray, cv2.CV_32F, 1, 1, ksize=sigma)
-        gyy = cv2.sobel(gray, cv2.CV_32F, 0, 2, ksize=sigma)
+        gxx = cv2.Sobel(gray, cv2.CV_32F, 2, 0, ksize=sigma)
+        gxy = cv2.Sobel(gray, cv2.CV_32F, 1, 1, ksize=sigma)
+        gyy = cv2.Sobel(gray, cv2.CV_32F, 0, 2, ksize=sigma)
         gvv = x*x*gxx + 2*x*y*gxy + y*y*gyy
         m = gvv < 0
 
