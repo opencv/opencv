@@ -503,11 +503,14 @@ class JavaWrapperGenerator(object):
             # jni_func(..) { return cv_func(..); }
             ret = "return "
             ext = ""
+            default = "return 0"
             if fi.ctype == "void":
                 ret = ""
+                default = ""
             elif fi.ctype == "string":
                 ret = "return env->NewStringUTF"
                 ext = ".c_str()"
+                default = 'return env->NewStringUTF("")'
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new " + self.classes[fi.ctype].jname
 
@@ -537,9 +540,22 @@ class JavaWrapperGenerator(object):
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
   ($args)
 {
-    //LOGD("$module::$fname()");
-    $j2cv
-    $ret( $cvname( $cvargs )$ext );
+    try {
+        //LOGD("$module::$fname()");
+        $j2cv
+        $ret( $cvname( $cvargs )$ext );
+    } catch(cv::Exception e) {
+        //LOGD("$module::$fname() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        $default;
+    } catch (...) {
+        //LOGD("$module::$fname() catched ...");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
+        $default;
+    }
 }
 
 
@@ -553,6 +569,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         cvname = cvname, \
         cvargs = ", ".join([a for a in cvargs]), \
         ext = ext, \
+        default = default
     ) )
 
             # processing args with default values
