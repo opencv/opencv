@@ -624,6 +624,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
             )
 
             self.java_code.write(indent_m + "// native stuff\n\n")
+            self.java_code.write(indent_m + 'static { System.loadLibrary("opencv_java"); }\n')
             self.java_code.write( jn_code.getvalue() )
             self.java_code.write(
 """
