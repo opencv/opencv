@@ -42,8 +42,6 @@ def main():
     try: video_src = sys.argv[1]
     except: video_src = video.presets['chess']
 
-    cv2.namedWindow('img', 0)
-
     track_len = 4
     tracks = []
     cam = video.create_capture(video_src)
@@ -71,7 +69,7 @@ def main():
             draw_str(vis, (20, 40), 'time: %.02f ms' % (dt*1000))
         prev_frame = frame.copy()
 
-        cv2.imshow('img', vis)
+        cv2.imshow('lk_track', vis)
         ch = cv2.waitKey(5)
         if ch == 27:
             break
