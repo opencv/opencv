@@ -23,7 +23,7 @@ def document(infile, outfile, decls):
                 marker = parceJavadocMarker(l)
                 decl = decls.get(marker[0],None)
                 if decl:
-                    for line in makeJavadoc(decl, marker[2]).split("\n"):
+                    for line in makeJavadoc(decl, decls, marker[2]).split("\n"):
                         outf.write(marker[1] + line + "\n")
                 else:
                     print "Error: could not find documentation for %s" % l.lstrip()[len(javadoc_marker):-1]
@@ -50,12 +50,12 @@ def ReformatForJavadoc(s):
             pos_end = min(77, len(term)-1)
             while pos_start < pos_end:
                 if pos_end - pos_start == 77:
-                    while pos_end >= pos_start:
+                    while pos_end >= pos_start+60:
                         if not term[pos_end].isspace():
                             pos_end -= 1
                         else:
                             break
-                    if pos_end < pos_start:
+                    if pos_end < pos_start+60:
                         pos_end = min(pos_start + 77, len(term)-1)
                         while pos_end < len(term):
                             if not term[pos_end].isspace():
@@ -72,6 +72,8 @@ def getJavaName(decl):
     name += decl["module"]
     if "class" in decl:
         name += "." + decl["class"]
+    else:
+        name += "." + decl["module"].capitalize()
     if "method" in decl:
         name += "." + decl["method"]
     return name
@@ -84,7 +86,7 @@ def getDocURL(decl):
     url += "#" + decl["name"].replace("::","-").replace("()","").replace("=","").strip().rstrip("_").replace(" ","-").replace("_","-").lower()
     return url
 
-def makeJavadoc(decl, args = None): 
+def makeJavadoc(decl, decls, args = None):
     doc = ""
     prefix = "/**\n"
 
@@ -130,7 +132,11 @@ def makeJavadoc(decl, args = None):
     # other links
     if "seealso" in decl:
         for see in decl["seealso"]:
-            doc += prefix + " * @see " + see.replace("::",".") + "\n"
+            seedecl = decls.get(see,None)
+            if seedecl:
+                doc += prefix + " * @see " + getJavaName(seedecl) + "\n"
+            else:
+                doc += prefix + " * @see " + see.replace("::",".") + "\n"
     prefix = " *\n"
 
     #doc += prefix + " * File: " + decl["file"] + " (line " + str(decl["line"]) + ")\n"
@@ -155,9 +161,11 @@ if __name__ == "__main__":
     print "Parsing documentation..."
     for m in ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "haartraining", "java", "python", "stitching", "traincascade", "ts"]:
         parser.parse(m, os.path.join(selfpath, "../" + m))
+        
+    parser.printSummary()
 
     for i in range(1, len(sys.argv)):
         folder = os.path.abspath(sys.argv[i])
-        for jfile in glob.glob(os.path.join(folder,"*.java")):
+        for jfile in [f for f in glob.glob(os.path.join(folder,"*.java")) if not f.endswith("-jdoc.java")]:
             outfile = os.path.abspath(os.path.basename(jfile).replace(".java", "-jdoc.java"))
             document(jfile, outfile, parser.definitions)

@@ -218,7 +218,7 @@ Closes video file or capturing device.
 
 .. ocv:pyfunction:: cv2.VideoCapture.release()
 
-.. ocv:cfunction: void cvReleaseCapture(CvCapture** capture)
+.. ocv:cfunction:: void cvReleaseCapture(CvCapture** capture)
 
 The methods are automatically called by subsequent :ocv:func:`VideoCapture::open` and by ``VideoCapture`` destructor.
 
@@ -233,7 +233,7 @@ Grabs the next frame from video file or capturing device.
 
 .. ocv:pyfunction:: cv2.VideoCapture.grab() -> successFlag
 
-.. ocv:cfunction: int cvGrabFrame(CvCapture* capture)
+.. ocv:cfunction:: int cvGrabFrame(CvCapture* capture)
 
 .. ocv:pyoldfunction:: cv.GrabFrame(capture) -> int
 
@@ -252,7 +252,7 @@ Decodes and returns the grabbed video frame.
 
 .. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, channel]]) -> successFlag, image
 
-.. ocv:cfunction: IplImage* cvRetrieveFrame(CvCapture* capture)
+.. ocv:cfunction:: IplImage* cvRetrieveFrame(CvCapture* capture)
 
 .. ocv:pyoldfunction:: cv.RetrieveFrame(capture) -> iplimage
 
@@ -271,7 +271,7 @@ Grabs, decodes and returns the next video frame.
 
 .. ocv:pyfunction:: cv2.VideoCapture.read([image]) -> successFlag, image
 
-.. ocv:cfunction: IplImage* cvQueryFrame(CvCapture* capture)
+.. ocv:cfunction:: IplImage* cvQueryFrame(CvCapture* capture)
 
 .. ocv:pyoldfunction:: cv.QueryFrame(capture) -> iplimage
 
@@ -444,7 +444,7 @@ VideoWriter::open
 -----------------
 Initializes or reinitializes video writer.
 
-.. ocv:function: bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
+.. ocv:function:: bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor=true)
 
 .. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
 
@@ -455,7 +455,7 @@ VideoWriter::isOpened
 ---------------------
 Returns true if video writer has been successfully initialized.
 
-.. ocv:function: bool VideoWriter::isOpened()
+.. ocv:function:: bool VideoWriter::isOpened()
 
 .. ocv:pyfunction:: cv2.VideoWriter.isOpened() -> retval
 

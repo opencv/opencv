@@ -1,4 +1,7 @@
 import os, sys, re, string, glob
+verbose = False
+show_warnings = True
+show_errors = True
 
 class DeclarationParser(object):
     def __init__(self, line=None):
@@ -86,14 +89,16 @@ class RstParser(object):
         try:
             self.parse_section(module_name, section_name, file_name, lineno, lines)
         except AssertionError, args:
-            print "RST parser error: assertion in \"%s\"  File: %s (line %s)" % (section_name, file_name, lineno)
-            print "    Details: %s" % args
+            if show_errors:
+                print >> sys.stderr, "RST parser error: assertion in \"%s\"  File: %s (line %s)" % (section_name, file_name, lineno)
+                print >> sys.stderr, "    Details: %s" % args
 
     def parse_section(self, module_name, section_name, file_name, lineno, lines):
         self.sections_total += 1
         # skip sections having whitespace in name
         if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
-            print "SKIPPED: \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+            if show_errors:
+                print "SKIPPED: \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
             self.sections_skipped += 1
             return
 
@@ -136,15 +141,6 @@ class RstParser(object):
                 else:
                     capturing_seealso = False
 
-            # continue param parsing
-            if pdecl.active:
-                pdecl.append(l)
-                if pdecl.active:
-                    continue
-                else:
-                    self.add_new_pdecl(func, pdecl)
-                    # do not continue - current line can contain next parameter definition
-
             ll = l.strip()
             if ll == "..":
                 expected_brief = False
@@ -158,13 +154,18 @@ class RstParser(object):
                 else:
                     skip_code_lines = False
                     
-            if ll.startswith(".. code-block::") or ll.startswith(".. math::") or ll.startswith(".. image::"):
+            if ll.startswith(".. code-block::") or ll.startswith(".. image::"):
+            #or ll.startswith(".. math::") or ll.startswith(".. image::"):
                 skip_code_lines = True
                 continue
-
+                
             # todo: parse structure members; skip them for now
             if ll.startswith(".. ocv:member::"):
                 skip_code_lines = True
+                continue
+                
+            #ignore references (todo: collect them)
+            if l.startswith(".. ["):
                 continue
 
             if ll.startswith(".. "):
@@ -173,6 +174,15 @@ class RstParser(object):
                 # turn on line-skipping mode for code fragments
                 skip_code_lines = True
                 ll = ll[:len(ll)-2]
+                
+            # continue param parsing (process params after processing .. at the beginning of the line and :: at the end)
+            if pdecl.active:
+                pdecl.append(l)
+                if pdecl.active:
+                    continue
+                else:
+                    self.add_new_pdecl(func, pdecl)
+                    # do not continue - current line can contain next parameter definition
 
             # parse ".. seealso::" blocks
             if ll.startswith(".. seealso::"):
@@ -231,7 +241,9 @@ class RstParser(object):
         # endfor l in lines
         
         if fdecl.balance != 0:
-            print "RST parser error: invalid parentheses balance in \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+            if show_errors:
+                print >> sys.stderr, "RST parser error: invalid parentheses balance in \"%s\" File: %s (line %s)" % (section_name, file_name, lineno)
+            return
 
         # save last parameter if needed
         if pdecl.active:
@@ -242,10 +254,11 @@ class RstParser(object):
         if self.validate(func):
             self.definitions[func["name"]] = func
             self.sections_parsed += 1
-            #self.print_info(func)
+            if verbose:
+                self.print_info(func)
         elif func:
-            self.print_info(func, True)
-            pass
+            if show_errors:
+                self.print_info(func, True, sys.stderr)
 
     def parse_rst_file(self, module_name, doc):
         doc = os.path.abspath(doc)
@@ -264,8 +277,8 @@ class RstParser(object):
             # handle tabs
             if l.find("\t") >= 0:
                 whitespace_warnings += 1
-                if whitespace_warnings <= max_whitespace_warnings:
-                    print "RST parser warning: tab symbol instead of space is used at file %s (line %s)" % (doc, lineno)
+                if whitespace_warnings <= max_whitespace_warnings and show_warnings:
+                    print >> sys.stderr, "RST parser warning: tab symbol instead of space is used at file %s (line %s)" % (doc, lineno)
                 l = l.replace("\t", "    ")
                 
             # handle first line
@@ -311,47 +324,48 @@ class RstParser(object):
     def add_new_pdecl(self, func, decl):
         params =  func.get("params",{})
         if decl.name in params:
-            print "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
-                 % (decl.name, func["name"], func["file"], func["line"])
+            if show_errors:
+                print >> sys.stderr, "RST parser error: redefinition of parameter \"%s\" in \"%s\" File: %s (line %s)" \
+                    % (decl.name, func["name"], func["file"], func["line"])
         else:
             params[decl.name] = decl.comment
             func["params"] = params
 
-    def print_info(self, func, skipped=False):
-        print
+    def print_info(self, func, skipped=False, out = sys.stdout):
+        print >> out
         if skipped:
-            print "SKIPPED DEFINITION:"
-        print "name:      %s" % (func.get("name","~empty~"))
-        print "file:      %s (line %s)" % (func.get("file","~empty~"), func.get("line","~empty~"))
-        print "is class:  %s" % func.get("isclass",False)
-        print "is struct: %s" % func.get("isstruct",False)
-        print "module:    %s" % func.get("module","~unknown~")
-        print "namespace: %s" % func.get("namespace", "~empty~")
-        print "class:     %s" % (func.get("class","~empty~"))
-        print "method:    %s" % (func.get("method","~empty~"))
-        print "brief:     %s" % (func.get("brief","~empty~"))
+            print >> out, "SKIPPED DEFINITION:"
+        print >> out, "name:      %s" % (func.get("name","~empty~"))
+        print >> out, "file:      %s (line %s)" % (func.get("file","~empty~"), func.get("line","~empty~"))
+        print >> out, "is class:  %s" % func.get("isclass",False)
+        print >> out, "is struct: %s" % func.get("isstruct",False)
+        print >> out, "module:    %s" % func.get("module","~unknown~")
+        print >> out, "namespace: %s" % func.get("namespace", "~empty~")
+        print >> out, "class:     %s" % (func.get("class","~empty~"))
+        print >> out, "method:    %s" % (func.get("method","~empty~"))
+        print >> out, "brief:     %s" % (func.get("brief","~empty~"))
         if "decls" in func:
-            print "declarations:"
+            print >> out, "declarations:"
             for d in func["decls"]:
-               print "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
+               print >> out, "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
         if "seealso" in func:
-            print "seealso:  ", func["seealso"]
+            print >> out, "seealso:  ", func["seealso"]
         if "params" in func:
-            print "parameters:"
+            print >> out, "parameters:"
             for name, comment in func["params"].items():
-                print "%23s:   %s" % (name, comment)
-        if not skipped:
-            print "long:      %s" % (func.get("long","~empty~"))
-        print
+                print >> out, "%23s:   %s" % (name, comment)
+        print >> out, "long:      %s" % (func.get("long","~empty~"))
+        print >> out
 
     def validate(self, func):
         if func.get("decls",None) is None:
-             if not func.get("isclass",False) and not func.get("isstruct",False):
-                 return False
+            if not func.get("isclass",False) and not func.get("isstruct",False):
+                return False
         if func["name"] in self.definitions:
-             print "RST parser error: \"%s\" from file: %s (line %s) is already documented in file: %s (line %s)" \
-                 % (func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
-             return False
+            if show_errors:
+                print >> sys.stderr, "RST parser error: \"%s\" from file: %s (line %s) is already documented in file: %s (line %s)" \
+                    % (func["name"], func["file"], func["line"], self.definitions[func["name"]]["file"], self.definitions[func["name"]]["line"])
+            return False
         return self.validateParams(func)
 
     def validateParams(self, func):
@@ -369,13 +383,13 @@ class RstParser(object):
 
         # 1. all params are documented
         for p in params:
-            if p not in documentedParams:
-                print "RST parser warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+            if p not in documentedParams and show_warnings:
+                print >> sys.stderr, "RST parser warning: parameter \"%s\" of \"%s\" is undocumented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
 
         # 2. only real params are documented
         for p in documentedParams:
-            if p not in params:
-                print "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
+            if p not in params and show_warnings:
+                print >> sys.stderr, "RST parser warning: unexisting parameter \"%s\" of \"%s\" is documented. File: %s (line %s)" % (p, func["name"], func["file"], func["line"])
         return True
 
     def normalize(self, func):
@@ -435,40 +449,16 @@ class RstParser(object):
             if fname[6:] == func.get("name", ""):
                 func["name"] = fname[4:]
                 func["method"] = fname[4:]
-            else:
-                print "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
+            elif show_warnings:
+                print >> sys.stderr, "RST parser warning: invalid definition of old C function \"%s\" - section name is \"%s\" instead of \"%s\". File: %s (line %s)" % (fname, func["name"], fname[6:], func["file"], func["line"])
                 #self.print_info(func)
-
+                
     def normalizeText(self, s):
         if s is None:
             return s
-        # normalize line endings
-        s = re.sub(r"\r\n", "\n", s)
-        # remove extra line breaks before/after _ or ,
-        s = re.sub(r"\n[ ]*([_,])\n", r"\1 ", s)
-        # remove extra line breaks after `
-        #s = re.sub(r"`\n", "` ", s)
-        # remove extra space after ( and before )
-        s = re.sub(r"\([\n ]+", "(", s)
-        s = re.sub(r"[\n ]+\)", ")", s)
-        # remove extra line breaks after ".. note::"
-        s = re.sub(r"\.\. note::\n+", ".. note:: ", s)
-        # remove extra line breaks before *
-        s = re.sub(r"\n\n\*", "\n*", s)
-        # remove extra line breaks after *
-        s = re.sub(r"\n\*\n+", "\n* ", s)
-        # remove extra line breaks before #.
-        s = re.sub(r"\n\n#\.", "\n#.", s)
-        # remove extra line breaks after #.
-        s = re.sub(r"\n#\.\n+", "\n#. ", s)
-        # remove extra line breaks before `
-        #s = re.sub(r"\n[ ]*`", " `", s)
-        # remove trailing whitespaces
-        s = re.sub(r"[ ]+$", "", s)
-        # remove .. for references
-        s = re.sub(r"\.\. \[", "[", s)
-        # unescape
-        s = re.sub(r"\\(.)", "\\1", s)
+        s = re.sub(r"\.\. math::[ ]*\n+(.*?)(\n[ ]*\n|$)", mathReplace2, s)
+        s = re.sub(r":math:`([^`]+?)`", mathReplace, s)
+        s = re.sub(r" *:sup:", "^", s)
         
         s = s.replace(":ocv:class:", "")
         s = s.replace(":ocv:struct:", "")
@@ -491,8 +481,36 @@ class RstParser(object):
         # unwrap urls
         s = re.sub(r"`([^`<]+ )<(https?://[^>]+)>`_", "\\1(\\2)", s)
         # remove tailing ::
-        s = re.sub(r"::$", "\n", s)
-
+        s = re.sub(r"::(\n|$)", "\\1", s)
+            
+        # normalize line endings
+        s = re.sub(r"\r\n", "\n", s)
+        # remove extra line breaks before/after _ or ,
+        s = re.sub(r"\n[ ]*([_,])\n", r"\1 ", s)
+        # remove extra line breaks after `
+        #s = re.sub(r"`\n", "` ", s)
+        # remove extra space after ( and before .,)
+        s = re.sub(r"\([\n ]+", "(", s)
+        s = re.sub(r"[\n ]+(\.|,|\))", "\\1", s)
+        # remove extra line breaks after ".. note::"
+        s = re.sub(r"\.\. note::\n+", ".. note:: ", s)
+        # remove extra line breaks before *
+        s = re.sub(r"\n+\*", "\n*", s)
+        # remove extra line breaks after *
+        s = re.sub(r"\n\*\n+", "\n* ", s)
+        # remove extra line breaks before #.
+        s = re.sub(r"\n+#\.", "\n#.", s)
+        # remove extra line breaks after #.
+        s = re.sub(r"\n#\.\n+", "\n#. ", s)
+        # remove extra line breaks before `
+        #s = re.sub(r"\n[ ]*`", " `", s)
+        # remove trailing whitespaces
+        s = re.sub(r"[ ]+$", "", s)
+        # remove .. for references
+        #s = re.sub(r"\.\. \[", "[", s)
+        # unescape
+        s = re.sub(r"\\(.)", "\\1", s)
+        
         # remove whitespace before .
         s = re.sub(r"[ ]+\.", ".", s)
         # remove tailing whitespace
@@ -502,9 +520,12 @@ class RstParser(object):
         # compress line breaks
         s = re.sub(r"\n\n+", "\n\n", s)
         # remove other newlines
-        s = re.sub(r"([^.\n\\=])\n([^*#\n])", "\\1 \\2", s)
+        s = re.sub(r"([^.\n\\=])\n([^*#\n]|\*[^ ])", "\\1 \\2", s)
         # compress whitespace
         s = re.sub(r" +", " ", s)
+
+        # restore math
+        s = re.sub(r" *<BR> *","\n", s)
 
         # remove extra space before .
         s = re.sub(r"[\n ]+\.", ".", s)
@@ -516,11 +537,123 @@ class RstParser(object):
 
         s = s.strip()
         return s
+        
+    def printSummary(self):
+        print
+        print "RST Parser Summary:"
+        print "  Total sections:   %s" % self.sections_total
+        print "  Skipped sections: %s" % self.sections_skipped
+        print "  Parsed  sections: %s" % self.sections_parsed
+        print "  Invalid sections: %s" % (self.sections_total - self.sections_parsed - self.sections_skipped)
+
+        # statistic by language
+        stat = {}
+        classes = 0
+        structs = 0
+        for name, d in self.definitions.items():
+           if d.get("isclass", False):
+               classes += 1
+           elif d.get("isstruct", False):
+               structs += 1
+           else:
+               for decl in d.get("decls",[]):
+                   stat[decl[0]] = stat.get(decl[0],0) + 1
+
+        print
+        print "  classes documented:           %s" % classes
+        print "  structs documented:           %s" % structs
+        for lang in sorted(stat.items()):
+            print "  %7s functions documented: %s" % lang
+
+def mathReplace2(match):
+    m = mathReplace(match)
+    #print "%s   ===>   %s" % (match.group(0), m)
+    return "\n\n"+m+"<BR><BR>"
+
+def hdotsforReplace(match):
+    return '...  '*int(match.group(1))
+
+def matrixReplace(match):
+    m = match.group(2)
+    m = re.sub(r" *& *", "   ", m)
+    return m
+        
+def mathReplace(match):
+    m = match.group(1)
+
+    m = m.replace("\n", "<BR>")
+    m = re.sub(r"\\text(tt|rm)?{(.*?)}", "\\2", m)
+    m = re.sub(r"\\mbox{(.*?)}", "\\1", m)
+    m = re.sub(r"\\mathrm{(.*?)}", "\\1", m)
+    m = re.sub(r"\\vecthree{(.*?)}{(.*?)}{(.*?)}", "[\\1 \\2 \\3]", m)
+    m = re.sub(r"\\bar{(.*?)}", "\\1`", m)
+    m = re.sub(r"\\sqrt\[(\d)*\]{(.*?)}", "sqrt\\1(\\2)", m)
+    m = re.sub(r"\\sqrt{(.*?)}", "sqrt(\\1)", m)
+    m = re.sub(r"\\frac{(.*?)}{(.*?)}", "(\\1)/(\\2)", m)
+    m = re.sub(r"\\fork{(.*?)}{(.*?)}{(.*?)}{(.*?)}", "\\1 \\2; \\3 \\4", m)
+    m = re.sub(r"\\forkthree{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}", "\\1 \\2; \\3 \\4; \\5 \\6", m)
+    m = re.sub(r"\\stackrel{(.*?)}{(.*?)}", "\\1 \\2", m)
+    m = re.sub(r"\\sum _{(.*?)}", "sum{by: \\1}", m)
+
+    m = re.sub(r" +", " ", m)
+    m = re.sub(r"\\begin{(?P<gtype>array|bmatrix)}(?:{[\|lcr\. ]+})? *(.*?)\\end{(?P=gtype)}", matrixReplace, m)
+    m = re.sub(r"\\hdotsfor{(\d+)}", hdotsforReplace, m)
+    m = re.sub(r"\\vecthreethree{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}{(.*?)}", "<BR>|\\1 \\2 \\3|<BR>|\\4 \\5 \\6|<BR>|\\7 \\8 \\9|<BR>", m)
+    
+    m = re.sub(r"\\left[ ]*\\lfloor[ ]*", "[", m)
+    m = re.sub(r"[ ]*\\right[ ]*\\rfloor", "]", m)
+    m = re.sub(r"\\left[ ]*\([ ]*", "(", m)
+    m = re.sub(r"[ ]*\\right[ ]*\)", ")", m)
+    m = re.sub(r"([^\\])\$", "\\1", m)
+
+    m = m.replace("\\times", "x")
+    m = m.replace("\\pm", "+-")
+    m = m.replace("\\cdot", "*")
+    m = m.replace("\\sim", "~")
+    m = m.replace("\\leftarrow", "<-")
+    m = m.replace("\\rightarrow", "->")
+    m = m.replace("\\leftrightarrow", "<->")
+    m = re.sub(r" *\\neg *", " !", m)
+    m = re.sub(r" *\\neq? *", " != ", m)
+    m = re.sub(r" *\\geq? *", " >= ", m)
+    m = re.sub(r" *\\leq? *", " <= ", m)
+    m = re.sub(r" *\\vee *", " V ", m)
+    m = re.sub(r" *\\oplus *", " (+) ", m)
+    m = re.sub(r" *\\mod *", " mod ", m)
+    m = re.sub(r"( *)\\partial *", "\\1d", m)
+
+    m = re.sub(r"( *)\\quad *", "\\1 ", m)
+    m = m.replace("\\,", " ")
+    m = m.replace("\\:", "  ")
+    m = m.replace("\\;", "   ")
+    m = m.replace("\\!", "")
+
+    m = m.replace("\\\\", "<BR>")
+    m = m.replace("\\wedge", "/\\\\")
+    m = re.sub(r"\\(.)", "\\1", m)
+
+    m = re.sub(r"\([ ]+", "(", m)
+    m = re.sub(r"[ ]+(\.|,|\))(<BR>| |$)", "\\1\\2", m)
+    m = re.sub(r" +\|[ ]+([a-zA-Z0-9_(])", " |\\1", m)
+    m = re.sub(r"([a-zA-Z0-9_)}])[ ]+(\(|\|)", "\\1\\2", m)
+
+    m = re.sub(r"{\((-?[a-zA-Z0-9_]+)\)}", "\\1", m)
+    m = re.sub(r"{(-?[a-zA-Z0-9_]+)}", "(\\1)", m)
+    m = re.sub(r"\(([0-9]+)\)", "\\1", m)
+    m = m.replace("{", "(")
+    m = m.replace("}", ")")
+
+    #print "%s   ===>   %s" % (match.group(0), m)
+    return m
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usage:\n", os.path.basename(sys.argv[0]), " <module path>"
         exit(0)
+        
+    if len(sys.argv) >= 3:
+        if sys.argv[2].lower() == "verbose":
+            verbose = True
 
     rst_parser_dir  = os.path.dirname(os.path.abspath(sys.argv[0]))
     hdr_parser_path = os.path.join(rst_parser_dir, "../python/src2")
@@ -543,34 +676,4 @@ if __name__ == "__main__":
         parser.parse(module, os.path.join(rst_parser_dir, "../" + module))
 
     # summary
-    print
-    print "RST Parser Summary:"
-    print "  Total sections:   %s" % parser.sections_total
-    print "  Skipped sections: %s" % parser.sections_skipped
-    print "  Parsed  sections: %s" % parser.sections_parsed
-    print "  Invalid sections: %s" % (parser.sections_total - parser.sections_parsed - parser.sections_skipped)
-
-    # statistic by language
-    stat = {}
-    classes = 0
-    structs = 0
-    for name, d in parser.definitions.items():
-       if d.get("isclass", False):
-           classes += 1
-       elif d.get("isstruct", False):
-           structs += 1
-       else:
-           for decl in d.get("decls",[]):
-               stat[decl[0]] = stat.get(decl[0],0) + 1
-
-    print
-    print "  classes documented:           %s" % classes
-    print "  structs documented:           %s" % structs
-    for lang in sorted(stat.items()):
-        print "  %7s functions documented: %s" % lang
-
-#    sys.exit(0)
- #   for name, d in parser.definitions.items():
-  #      print
-   #     print ToJavadoc(d, d.get("params",{}).keys())
-
+    parser.printSummary()

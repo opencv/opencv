@@ -1537,7 +1537,7 @@ The second case corresponds to a kernel of:
 .. seealso::
 
     :ocv:func:`Scharr`,
-    :ocv:func:`Lapacian`,
+    :ocv:func:`Laplacian`,
     :ocv:func:`sepFilter2D`,
     :ocv:func:`filter2D`,
     :ocv:func:`GaussianBlur`
