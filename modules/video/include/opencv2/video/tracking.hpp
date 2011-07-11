@@ -259,7 +259,7 @@ CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray ma
                                            double duration );
 
 CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
-                                vector<Rect>& boundingRects,
+                                CV_OUT vector<Rect>& boundingRects,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm

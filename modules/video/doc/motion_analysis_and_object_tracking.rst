@@ -322,7 +322,7 @@ Splits a motion history image into a few parts corresponding to separate indepen
 
 .. ocv:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
 
-.. ocv:pyfunction:: cv2.segmentMotion(mhi, boundingRects, timestamp, segThresh[, segmask]) -> segmask
+.. ocv:pyfunction:: cv2.segmentMotion(mhi, timestamp, segThresh[, segmask]) -> segmask, boundingRects
 
 .. ocv:cfunction:: CvSeq* cvSegmentMotion( const CvArr* mhi, CvArr* segMask, CvMemStorage* storage, double timestamp, double segThresh )
 .. ocv:pyoldfunction:: cv.SegmentMotion(mhi, segMask, storage, timestamp, segThresh)-> None
