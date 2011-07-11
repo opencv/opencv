@@ -1,9 +1,6 @@
 package org.opencv.test;
 
 import java.io.FileOutputStream;
-import java.util.Collections;
-import java.util.List;
-import junit.framework.TestCase;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -16,6 +13,8 @@ import android.util.Log;
 /**  
  * This only class is Android specific.
  * The original idea about test order randomization is from marek.defecinski blog.
+ * 
+ * @see <a href="http://opencv.itseez.com">OpenCV</a>
  */  
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {
@@ -33,8 +32,9 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     public void onStart() {
     	ExportLena();
 		
-        List<TestCase> testCases = androidTestRunner.getTestCases();
-        Collections.shuffle(testCases); //shuffle the tests order
+        //List<TestCase> testCases = androidTestRunner.getTestCases();
+        //Collections.shuffle(testCases); //shuffle the tests order
+    	
         super.onStart();
     }
     

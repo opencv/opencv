@@ -66,7 +66,7 @@ public class OpenCVTestCase extends TestCase {
         gray128 = new Mat(matSize, matSize, CvType.CV_8U); gray128.setTo(new Scalar(128.0));
         gray255 = new Mat(matSize, matSize, CvType.CV_8U); gray255.setTo(new Scalar(255.0));
         
-        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U); gray255.setTo(new Scalar(256));
+        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U); gray_16u_256.setTo(new Scalar(256));
         
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
@@ -89,13 +89,42 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4); rgba128.setTo(Scalar.all(128));
         
         rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
-    }
+    }    
 
     public static void assertMatEqual(Mat m1, Mat m2) {
-        assertTrue(CalcPercentageOfDifference(m1, m2) == 0.0);
+    	OpenCVTestRunner.Log(m1.toString());
+    	OpenCVTestRunner.Log(m2.toString());
+    	
+    	if (!m1.type().equals(m2.type()) || 
+    	    m1.cols() != m2.cols() || m1.rows() != m2.rows()) {
+    		throw new UnsupportedOperationException();
+    	}
+    	else if (m1.channels() == 1) {
+    		assertTrue(CalcPercentageOfDifference(m1, m2) == 0.0);
+    	}
+    	else {
+    		for (int coi = 0; coi < m1.channels(); coi++) {
+    			Mat m1c = getCOI(m1, coi);
+    			Mat m2c = getCOI(m2, coi);
+    			assertTrue(CalcPercentageOfDifference(m1c, m2c) == 0.0);
+    		}
+    	}
+    }
+    
+    static private Mat getCOI(Mat m, int coi) {
+    	Mat ch = new Mat(m.rows(), m.cols(), m.depth());
+    	
+    	for (int i = 0; i < m.rows(); i++)
+    		for (int j = 0; j < m.cols(); j++)
+    		{
+    			double pixel[] = m.get(i, j);
+    			ch.put(i, j, pixel[coi]);
+    		}    			
+    	
+    	return ch;
     }
 
-    static public double CalcPercentageOfDifference(Mat m1, Mat m2) {
+    static private double CalcPercentageOfDifference(Mat m1, Mat m2) {
         Mat cmp = new Mat(0, 0, CvType.CV_8U);
         core.compare(m1, m2, cmp, core.CMP_EQ);
         double num = 100.0 * 

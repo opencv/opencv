@@ -120,6 +120,7 @@ public class MatTest extends OpenCVTestCase {
 
 	public void testInv() {
 		fail("Not yet implemented");
+		//FIXME: implement Inv method 
 		//dst = grayE_32f.inv();
 		//assertMatEqual(grayE_32f, dst);
 	}
@@ -152,13 +153,13 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testMatIntIntCvTypeScalar() {
-		Mat gray = new Mat(1, 1, CvType.CV_8UC1, new Scalar(127));
+		Mat gray = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8UC1, new Scalar(127));
 		assertFalse(gray.empty());
 		assertMatEqual(gray, gray127);
 		
-		Mat rgb = new Mat(1, 1, CvType.CV_8UC4, new Scalar(128));
+		Mat rgb = new Mat(rgba128.rows(), rgba128.cols(), CvType.CV_8UC4, new Scalar(128));
 		assertFalse(rgb.empty());
-		//FIXME: assertMatEqual(rgb, rgba128);
+		assertMatEqual(rgb, rgba128);
 	}
 
 	public void testMatIntIntInt() {
@@ -170,11 +171,11 @@ public class MatTest extends OpenCVTestCase {
 	}
 
 	public void testMatIntIntIntScalar() {
-		Mat m1 = new Mat(1, 1, CvType.CV_8U, new Scalar(127));
+		Mat m1 = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8U, new Scalar(127));
 		assertFalse(m1.empty());
 		assertMatEqual(m1, gray127);
 		
-		Mat m2 = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
+		Mat m2 = new Mat(gray0_32f.rows(), gray0_32f.cols(), CvType.CV_32F, new Scalar(0));
 		assertFalse(m2.empty());
 		assertMatEqual(m2, gray0_32f);
 	}

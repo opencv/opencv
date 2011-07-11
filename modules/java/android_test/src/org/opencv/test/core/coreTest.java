@@ -13,6 +13,8 @@ public class coreTest extends OpenCVTestCase {
 	
 	public void test_1() {
 		super.test_1("CORE");
+		
+		//System.gc();
 	}
 
 	public void testAbsdiff() {
@@ -118,7 +120,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testCheckHardwareSupport() {
-		//FIXME: do we need this function?
+		//XXX: core.checkHardwareSupport(feature)
 		boolean hasFeauture = core.checkHardwareSupport(0);
 		assertEquals(false, hasFeauture);
 	}
@@ -436,7 +438,7 @@ public class coreTest extends OpenCVTestCase {
 		core.insertChannel(gray0, rgba128, 1);
 		core.insertChannel(gray0, rgba128, 2);
 		core.insertChannel(gray0, rgba128, 3);
-		//assertMatEqual(rgba0, rgba128);
+		assertMatEqual(rgba0, rgba128);
 	}
 
 	public void testInvertMatMat() {
@@ -769,7 +771,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSetUseOptimized() {
-		//XXX: do we need this function?
+		//XXX: core.setUseOptimized(onoff)
 		fail("Not yet implemented");
 	}
 
@@ -870,6 +872,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSubtractMatMatMatMat() {
+		fail("Not yet implemented");
 		Mat mask = new Mat(matSize, matSize, CvType.CV_8U); 
 		mask.setTo(new Scalar(0));
 		Mat submask = mask.submat(0, mask.rows() / 2, 0, mask.cols() / 2);
@@ -884,11 +887,12 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSubtractMatMatMatMatInt() {
-		core.subtract(gray3, gray1, dst, gray1, gray255_32f.depth());
-		OpenCVTestRunner.Log(" 3: dst.depth() = " + String.valueOf(dst.depth()));
-		OpenCVTestRunner.Log(" 4: core.CV_32F = " + String.valueOf(CvType.CV_32F));
-		//FIXME: assertTrue(CvType.CV_32F == dst.depth());
-		//assertMatEqual(gray2, dst);
+		fail("Not yet implemented");
+//		core.subtract(gray3, gray1, dst, gray1, gray255_32f.depth());
+//		OpenCVTestRunner.Log(" 3: dst.depth() = " + String.valueOf(dst.depth()));
+//		OpenCVTestRunner.Log(" 4: core.CV_32F = " + String.valueOf(CvType.CV_32F));
+//		//FIXME: assertTrue(CvType.CV_32F == dst.depth());
+//		//assertMatEqual(gray2, dst);
 	}
 
 	public void testTransform() {
@@ -905,7 +909,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testUseOptimized() {
-		//XXX: do we need this function?
+		//XXX: core.useOptimized()
 		fail("Not yet implemented");
 	}
 

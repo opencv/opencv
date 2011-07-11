@@ -8,27 +8,27 @@ import org.opencv.test.OpenCVTestRunner;
 public class highguiTest extends OpenCVTestCase {
 
 	public void testDestroyAllWindows() {
-		//XXX: do not export this function
-		fail("Do not export this function");
+		//XXX: highgui.destroyAllWindows()
+		fail("Not yet implemented");
 	}
 	
 	public void testDestroyWindow() {
-		//XXX: do not export this function
-		fail("Do not export this function");
+		//XXX: highgui.destroyWindow(winname)
+		fail("Not yet implemented");
 	}
 
 	public void testGetTrackbarPos() {
-		//XXX: do we need this function?
+		//XXX: highgui.getTrackbarPos(trackbarname, winname)
 		fail("Not yet implemented");
 	}
 
 	public void testGetWindowProperty() {
-		//XXX: do we need this function?
+		//XXX: highgui.getWindowProperty(winname, prop_id)
 		fail("Not yet implemented");
 	}
 
 	public void testImdecode() {
-		//XXX: do we need this function?
+		//XXX: highgui.imdecode(buf, flags)
 		fail("Not yet implemented");
 	}
 	
@@ -49,42 +49,42 @@ public class highguiTest extends OpenCVTestCase {
 	}
 
 	public void testImshow() {
-		//XXX: do we need this function?
+		//XXX: highgui.imshow(winname, mat)
 		fail("Not yet implemented");
 	}
 
 	public void testNamedWindowString() {
-		//XXX: do not export this function
+		//XXX: highgui.namedWindow(winname)
 		fail("Do not export this function");
 	}
 
 	public void testNamedWindowStringInt() {
-		//XXX: do not export this function
+		//XXX: highgui.namedWindow(winname, flags)
 		fail("Do not export this function");
 	}
 
 	public void testSetTrackbarPos() {
-		//XXX: do we need this function?
+		//XXX: highgui.setTrackbarPos(trackbarname, winname, pos)
 		fail("Not yet implemented");
 	}
 
 	public void testSetWindowProperty() {
-		//XXX: do we need this function?
+		//XXX: highgui.setWindowProperty(winname, prop_id, prop_value)
 		fail("Not yet implemented");
 	}
 
 	public void testStartWindowThread() {
-		//XXX: do not export this function
+		//XXX: highgui.startWindowThread()
 		fail("Do not export this function");
 	}
 
 	public void testWaitKey() {
-		//XXX: we need this function if only imshow will be implemented
+		//XXX: highgui.waitKey()
 		fail("Not yet implemented");
 	}
 
 	public void testWaitKeyInt() {
-		//XXX: we need this function if only imshow will be implemented
+		//XXX: highgui.waitKey(delay)
 		fail("Not yet implemented");
 	}
 
