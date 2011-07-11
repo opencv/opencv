@@ -212,11 +212,17 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                            top, left, (int)src.elemSize(), borderType );
     else
     {
-        double buf[4];
-        scalarToRawData(value, buf, src.type());
+        int cn = src.channels(), cn1 = cn;
+        AutoBuffer<double> buf(cn);
+        if( cn > 4 )
+        {
+            CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
+            cn1 = 1;
+        }
+        scalarToRawData(value, buf, CV_MAKETYPE(src.depth(), cn1), cn);
         copyMakeConstBorder_8u( src.data, src.step, src.size(),
                                 dst.data, dst.step, dst.size(),
-                                top, left, (int)src.elemSize(), (uchar*)buf );
+                                top, left, (int)src.elemSize(), (uchar*)(double*)buf );
     }
 }
 

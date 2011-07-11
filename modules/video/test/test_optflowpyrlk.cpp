@@ -58,8 +58,8 @@ void CV_OptFlowPyrLKTest::run( int )
 {
     int code = cvtest::TS::OK;
 
-    const double success_error_level = 0.2;
-    const int bad_points_max = 2;
+    const double success_error_level = 0.3;
+    const int bad_points_max = 8;
 
     /* test parameters */
     double  max_err = 0., sum_err = 0;
@@ -139,7 +139,7 @@ void CV_OptFlowPyrLKTest::run( int )
     status = (char*)cvAlloc(n*sizeof(status[0]));
 
     /* calculate flow */
-    cvCalcOpticalFlowPyrLK( imgI, imgJ, 0, 0, u, v2, n, cvSize( 20, 20 ),
+    cvCalcOpticalFlowPyrLK( imgI, imgJ, 0, 0, u, v2, n, cvSize( 41, 41 ),
                             4, status, 0, cvTermCriteria( CV_TERMCRIT_ITER|
                             CV_TERMCRIT_EPS, 30, 0.01f ), 0 );
 
@@ -163,14 +163,6 @@ void CV_OptFlowPyrLKTest::run( int )
             }
 
             pt_exceed += err > success_error_level;
-            if( pt_exceed > bad_points_max )
-            {
-                ts->printf( cvtest::TS::LOG,
-                    "The number of poorly tracked points is too big (>=%d)\n", pt_exceed );
-                code = cvtest::TS::FAIL_BAD_ACCURACY;
-                goto _exit_;
-            }
-
             sum_err += err;
             pt_cmpd++;
         }
@@ -185,6 +177,14 @@ void CV_OptFlowPyrLKTest::run( int )
                 goto _exit_;
             }
         }
+    }
+    
+    if( pt_exceed > bad_points_max )
+    {
+        ts->printf( cvtest::TS::LOG,
+                   "The number of poorly tracked points is too big (>=%d)\n", pt_exceed );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+        goto _exit_;
     }
 
     if( max_err > 1 )
