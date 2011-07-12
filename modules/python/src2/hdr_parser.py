@@ -253,7 +253,7 @@ class CppHeaderParser(object):
             fnpos = 0
         fname = fname[fnpos:].strip()
         rettype = fdecl[:fnpos].strip()
-        
+
         if rettype.endswith("operator"):
             fname = ("operator " + fname).strip()
             rettype = rettype[:rettype.rfind("operator")].strip()
@@ -265,16 +265,16 @@ class CppHeaderParser(object):
                 else:
                     fname = rettype + fname
                     rettype = ""
-        
+
         apos = fdecl.find("(")
         if fname.endswith("operator"):
             fname += "()"
             apos = fdecl.find("(", apos+1)
-            
+
         fname = "cv." + fname.replace("::", ".")
         decl = [fname, rettype, [], []]
         args0str = fdecl[apos+1:fdecl.rfind(")")].strip()
-        
+
         if args0str != "":
             args0 = args0str.split(",")
 
@@ -287,7 +287,7 @@ class CppHeaderParser(object):
                 if balance_paren == 0 and balance_angle == 0:
                     args.append(narg.strip())
                     narg = ""
-        
+
             for arg in args:
                 dfpos = arg.find("=")
                 defval = ""
@@ -307,7 +307,7 @@ class CppHeaderParser(object):
                     atype = arg
                     aname = "param"
                 decl[3].append([atype, aname, defval, []])
-        
+
         return decl
 
     def parse_func_decl(self, decl_str):
@@ -326,11 +326,11 @@ class CppHeaderParser(object):
             if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
                 ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
                 return []
-        
-        # ignore old API in the documentation check (for now)        
+
+        # ignore old API in the documentation check (for now)
         if "CVAPI(" in decl_str:
-            return [] 
-                
+            return []
+
         top = self.block_stack[-1]
         func_modlist = []
 
@@ -454,13 +454,19 @@ class CppHeaderParser(object):
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
                     if self.wrap_mode:
-                        if arg_type == "InputArray" or arg_type == "InputOutputArray":
+                        if arg_type == "InputArray":
                             arg_type = "Mat"
+                        elif arg_type == "InputOutputArray":
+                            arg_type = "Mat"
+                            modlist.append("/IO")
                         elif arg_type == "OutputArray":
                             arg_type = "Mat"
                             modlist.append("/O")
-                        elif arg_type == "InputArrayOfArrays" or arg_type == "InputOutputArrayOfArrays":
+                        elif arg_type == "InputArrayOfArrays":
                             arg_type = "vector_Mat"
+                        elif arg_type == "InputOutputArrayOfArrays":
+                            arg_type = "vector_Mat"
+                            modlist.append("/IO")
                         elif arg_type == "OutputArrayOfArrays":
                             arg_type = "vector_Mat"
                             modlist.append("/O")

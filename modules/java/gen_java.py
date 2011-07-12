@@ -66,6 +66,10 @@ type_dict = {
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
+    "c_string": { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+                  "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+                  "suffix" : "Ljava_lang_String_2"},
 
 }
 
@@ -98,10 +102,11 @@ class ArgInfo(object):
         self.ctype = arg_tuple[0]
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]
-        self.out = "/O" in arg_tuple[3] or "/IO" in arg_tuple[3]
-
-##    def isbig(self):
-##        return self.ctype == "Mat" or self.ctype == "vector_Mat"
+        self.out = ""
+        if "/O" in arg_tuple[3]:
+            self.out = "O"
+        if "/IO" in arg_tuple[3]:
+            self.out = "IO"
 
 
 class FuncInfo(object):
@@ -407,14 +412,14 @@ class JavaWrapperGenerator(object):
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype
+                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, a.out
                 return
             if a.ctype != "Mat" and "jn_args" in type_dict[a.ctype] and a.out: # complex out args not yet supported
                 msg = "// Unsupported type '%s&', skipping the function\n\n" % a.ctype
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
-                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype
+                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype, a.out
                 return
 
         self.ported_func_counter += 1

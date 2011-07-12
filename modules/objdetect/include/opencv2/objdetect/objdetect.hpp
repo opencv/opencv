@@ -286,8 +286,8 @@ namespace cv
 	
 ///////////////////////////// Object Detection ////////////////////////////
 
-CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels, 
                                 vector<double>& levelWeights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 

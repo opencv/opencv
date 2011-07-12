@@ -2031,7 +2031,7 @@ CV_EXPORTS_W void merge(const vector<Mat>& mv, OutputArray dst);
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
 //! copies each plane of a multi-channel array to a dedicated array
-CV_EXPORTS_W void split(const Mat& m, vector<Mat>& mv);
+CV_EXPORTS_W void split(const Mat& m, CV_OUT vector<Mat>& mv);
     
 //! copies selected channels from the input arrays to the selected channels of the output arrays
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
