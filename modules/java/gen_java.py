@@ -318,11 +318,12 @@ class JavaWrapperGenerator(object):
 //
 
 #include <jni.h>
-/*
+
+#ifdef DEBUG
 #include <android/log.h>
 #define MODULE_LOG_TAG "OpenCV.%s"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-*/
+#endif // DEBUG
 
 """ % module)
         self.cpp_code.write( "\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) \
@@ -503,14 +504,14 @@ class JavaWrapperGenerator(object):
             # jni_func(..) { return cv_func(..); }
             ret = "return "
             ext = ""
-            default = "return 0"
+            default = "return 0;"
             if fi.ctype == "void":
                 ret = ""
                 default = ""
             elif fi.ctype == "string":
                 ret = "return env->NewStringUTF"
                 ext = ".c_str()"
-                default = 'return env->NewStringUTF("")'
+                default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new " + self.classes[fi.ctype].jname
 
@@ -541,20 +542,26 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
   ($args)
 {
     try {
-        //LOGD("$module::$fname()");
+#ifdef DEBUG
+        LOGD("$module::$fname()");
+#endif // DEBUG
         $j2cv
         $ret( $cvname( $cvargs )$ext );
     } catch(cv::Exception e) {
-        //LOGD("$module::$fname() catched cv::Exception: %s", e.what());
+#ifdef DEBUG
+        LOGD("$module::$fname() catched cv::Exception: %s", e.what());
+#endif // DEBUG
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
-        $default;
+        $default
     } catch (...) {
-        //LOGD("$module::$fname() catched ...");
+#ifdef DEBUG
+        LOGD("$module::$fname() catched unknown exception (...)");
+#endif // DEBUG
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
-        $default;
+        $default
     }
 }
 
@@ -564,7 +571,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         module = self.module, \
         fname = fi.jni_name + ["",suffix][isoverload], \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
-        j2cv = "\n    ".join([a for a in j2cvargs]), \
+        j2cv = "\n        ".join([a for a in j2cvargs]), \
         ret = ret, \
         cvname = cvname, \
         cvargs = ", ".join([a for a in cvargs]), \
@@ -601,8 +608,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
             if name == "Mat":
                 continue
             self.java_code.write( "\n\n" + indent + "// C++: class %s" % (ci.cname) + "\n" )
+            self.java_code.write( indent + "//javadoc: " + name + "\n" ) #java doc comment
             self.java_code.write( indent + "public static class %s {\n\n" % (ci.jname) )
-
             # self
             self.java_code.write( indent_m + "protected final long nativeObj;\n" )
             self.java_code.write( indent_m + "protected %s(long addr) { nativeObj = addr; }\n\n" \
@@ -688,6 +695,4 @@ if __name__ == "__main__":
     print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)
-
-
 
