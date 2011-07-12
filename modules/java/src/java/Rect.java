@@ -3,7 +3,7 @@ package org.opencv;
 //javadoc:Rect_
 public class Rect {
 	
-	int x, y, width, height;
+	public int x, y, width, height;
 
 	public Rect(int x, int y, int width, int height) {
 		this.x = x;
@@ -24,7 +24,7 @@ public class Rect {
 	}
 
 	public Rect(Point p, Size s) {
-		this((int)p.x, (int)p.y, s.width, s.height);
+		this((int)p.x, (int)p.y, (int)s.width, (int)s.height);
 	}
 	
 	public Rect clone() {
@@ -73,5 +73,11 @@ public class Rect {
 		if (!(obj instanceof Rect)) return false;
 		Rect it = (Rect) obj;
 		return x == it.x && y == it.y && width == it.width && height == it.height;
+	}
+
+	@Override
+	public String toString() {
+		if (this == null) return "null";
+		return "{" + x + ", " + y + ", " + width + "x" + height+"}";
 	}
 }

@@ -3,9 +3,9 @@ package org.opencv;
 //javadoc:Size_
 public class Size {
 
-	public int width, height;
+	public double width, height;
 
-	public Size(int width, int height) {
+	public Size(double width, double height) {
 		this.width = width;
 		this.height = height;
 	}
@@ -15,8 +15,8 @@ public class Size {
 	}
 	
 	public Size(Point p) {
-		width = (int) p.x;
-		height = (int) p.y;
+		width = (double) p.x;
+		height = (double) p.y;
 	}
 	
 	public double area() {

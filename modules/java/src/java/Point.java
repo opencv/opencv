@@ -45,4 +45,11 @@ public class Point {
 	public boolean inside(Rect r) {
 		return r.contains(this);
 	}
+
+
+	@Override
+	public String toString() {
+		if (this == null) return "null";
+		return "{" + x + ", " + y + "}";
+	}
 }
