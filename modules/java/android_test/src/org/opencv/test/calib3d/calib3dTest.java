@@ -1,9 +1,11 @@
 package org.opencv.test.calib3d;
 
+import org.opencv.Point;
+import org.opencv.Scalar;
 import org.opencv.Size;
 import org.opencv.calib3d;
+import org.opencv.core;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class calib3dTest extends OpenCVTestCase {
 
@@ -88,7 +90,13 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testFilterSpecklesMatDoubleIntDouble() {
-		fail("Not yet implemented");
+		gray_16s_1024.copyTo(dst);
+	    
+		Point center = new Point(gray_16s_1024.rows()/2., gray_16s_1024.cols()/2.);
+		core.circle(dst, center, 1, Scalar.all(4096));
+		assertMatNotEqual(gray_16s_1024, dst);
+	    calib3d.filterSpeckles(dst, 1024.0, 100, 0.);
+	    assertMatEqual(gray_16s_1024, dst);
 	}
 
 	public void testFilterSpecklesMatDoubleIntDoubleMat() {
@@ -102,7 +110,10 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testFindChessboardCornersMatSizeMatInt() {
-		fail("Not yet implemented");//CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK
+		Size patternSize = new Size(9, 6);
+		calib3d.findChessboardCorners(grayChess, patternSize, dst, calib3d.CALIB_CB_ADAPTIVE_THRESH 
+				+ calib3d.CALIB_CB_NORMALIZE_IMAGE + calib3d.CALIB_CB_FAST_CHECK);
+		assertTrue(!dst.empty());
 	}
 
 	public void testFindFundamentalMatMatMat() {

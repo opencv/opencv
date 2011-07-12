@@ -30,7 +30,8 @@ public class OpenCVTestCase extends TestCase {
 	protected static Mat gray255;    
 	protected static Mat grayRnd;
     
-	protected static Mat gray_16u_256;    
+	protected static Mat gray_16u_256;
+	protected static Mat gray_16s_1024;
     
 	protected static Mat gray0_32f;
 	protected static Mat gray1_32f;
@@ -71,6 +72,7 @@ public class OpenCVTestCase extends TestCase {
         gray255 = new Mat(matSize, matSize, CvType.CV_8U); gray255.setTo(new Scalar(255.0));
         
         gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U); gray_16u_256.setTo(new Scalar(256));
+        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S); gray_16s_1024.setTo(new Scalar(1024));
         
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
@@ -115,6 +117,26 @@ public class OpenCVTestCase extends TestCase {
     			Mat m1c = getCOI(m1, coi);
     			Mat m2c = getCOI(m2, coi);
     			assertTrue(CalcPercentageOfDifference(m1c, m2c) == 0.0);
+    		}
+    	}
+    }
+    
+    public static void assertMatNotEqual(Mat m1, Mat m2) { //TODO: copypasta (see above)
+    	//OpenCVTestRunner.Log(m1.toString());
+    	//OpenCVTestRunner.Log(m2.toString());
+    	
+    	if (!m1.type().equals(m2.type()) || 
+    	    m1.cols() != m2.cols() || m1.rows() != m2.rows()) {
+    		throw new UnsupportedOperationException();
+    	}
+    	else if (m1.channels() == 1) {
+    		assertTrue(CalcPercentageOfDifference(m1, m2) != 0.0);
+    	}
+    	else {
+    		for (int coi = 0; coi < m1.channels(); coi++) {
+    			Mat m1c = getCOI(m1, coi);
+    			Mat m2c = getCOI(m2, coi);
+    			assertTrue(CalcPercentageOfDifference(m1c, m2c) != 0.0);
     		}
     	}
     }
