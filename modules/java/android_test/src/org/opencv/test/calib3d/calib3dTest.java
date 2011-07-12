@@ -1,6 +1,9 @@
 package org.opencv.test.calib3d;
 
+import org.opencv.Size;
+import org.opencv.calib3d;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 
 public class calib3dTest extends OpenCVTestCase {
 
@@ -93,11 +96,13 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testFindChessboardCornersMatSizeMat() {
-		fail("Not yet implemented");
+		Size patternSize = new Size(9, 6);
+		calib3d.findChessboardCorners(grayChess, patternSize, dst);
+		assertTrue(!dst.empty());
 	}
 
 	public void testFindChessboardCornersMatSizeMatInt() {
-		fail("Not yet implemented");
+		fail("Not yet implemented");//CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE + CALIB_CB_FAST_CHECK
 	}
 
 	public void testFindFundamentalMatMatMat() {

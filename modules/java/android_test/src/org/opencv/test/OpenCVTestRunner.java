@@ -20,9 +20,10 @@ import android.util.Log;
 public class OpenCVTestRunner extends InstrumentationTestRunner {
 	
     public static String LENA_PATH = "/data/data/org.opencv.test/files/lena.jpg";
-	
-	private AndroidTestRunner androidTestRunner;    
+    public static String CHESS_PATH = "/data/data/org.opencv.test/files/chessboard.jpg";
 	private static String TAG = "opencv_test_java";
+	
+	private AndroidTestRunner androidTestRunner;
 	
 	static public void Log(String message) {
 		Log.e(TAG, message);
@@ -30,7 +31,8 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     	
     @Override  
     public void onStart() {
-    	ExportLena();
+    	ExportResourceImage("lena.jpg", R.drawable.lena);
+    	ExportResourceImage("chessboard.jpg", R.drawable.chessboard);
 		
         //List<TestCase> testCases = androidTestRunner.getTestCases();
         //Collections.shuffle(testCases); //shuffle the tests order
@@ -44,16 +46,16 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
          return androidTestRunner;  
     }
     
-	private void ExportLena() {
+	private void ExportResourceImage(String image, int rId) {
 		try {
-			Bitmap mBitmap = BitmapFactory.decodeResource(this.getContext().getResources(), R.drawable.lena);
-			FileOutputStream fos = this.getContext().openFileOutput("lena.jpg", Context.MODE_WORLD_READABLE);
+			Bitmap mBitmap = BitmapFactory.decodeResource(this.getContext().getResources(), rId);
+			FileOutputStream fos = this.getContext().openFileOutput(image, Context.MODE_WORLD_READABLE);
 			mBitmap.compress(CompressFormat.JPEG, 100, fos);
 			fos.flush();
 			fos.close();
 		}
 		catch (Exception e) {
-		   	Log("Tried to write lena.jpg, but: " + e.toString());
+		   	Log("Tried to write " + image + ", but: " + e.toString());
 		}
 	}
 }

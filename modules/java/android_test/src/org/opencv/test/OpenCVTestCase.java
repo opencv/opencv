@@ -49,6 +49,7 @@ public class OpenCVTestCase extends TestCase {
 	protected static Mat rgba128;
     
 	protected static Mat rgbLena;
+	protected static Mat grayChess;
 	
 	protected static Mat v1;
 	protected static Mat v2;
@@ -92,6 +93,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4); rgba128.setTo(Scalar.all(128));
         
         rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
+        grayChess = highgui.imread(OpenCVTestRunner.CHESS_PATH);
         
 		v1 = new Mat(1, 3, CvType.CV_32F); v1.put(0, 0, 1.0, 3.0, 2.0);
 		v2 = new Mat(1, 3, CvType.CV_32F); v2.put(0, 0, 2.0, 1.0, 3.0);
