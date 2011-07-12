@@ -14,7 +14,7 @@ import org.opencv.Mat;
 import org.opencv.Size;
 import org.opencv.core;
 import org.opencv.imgproc;
-import org.opencv.utils;
+import org.opencv.android;
 
 import java.util.List;
 
@@ -164,7 +164,7 @@ class Sample4View extends SurfaceView implements SurfaceHolder.Callback, Runnabl
             }
             
             Bitmap bmp = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
-            utils.MatToBitmap(mRgba, bmp);
+            android.MatToBitmap(mRgba, bmp);
             
             Canvas canvas = mHolder.lockCanvas();
             canvas.drawBitmap(bmp, (canvas.getWidth()-mFrameWidth)/2, (canvas.getHeight()-mFrameHeight)/2, null);
