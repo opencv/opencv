@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import urllib2
 import sys
-import cv
+import cv2.cv as cv
 
 class Sketcher:
     def __init__(self, windowname, dests):

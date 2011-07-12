@@ -3,7 +3,7 @@
 
 import sys
 from math import sin, cos, sqrt, pi
-import cv
+import cv2.cv as cv
 import urllib2
 
 # toggle between CV_HOUGH_STANDARD and CV_HOUGH_PROBILISTIC

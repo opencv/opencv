@@ -3,7 +3,7 @@ import urllib2
 import sys
 import time
 from math import cos, sin
-import cv
+import cv2.cv as cv
 
 CLOCKS_PER_SEC = 1.0
 MHI_DURATION = 1

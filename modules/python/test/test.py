@@ -12,7 +12,7 @@ import getopt
 import operator
 import functools
 
-import cv
+import cv2.cv as cv
 
 class OpenCVTests(unittest.TestCase):
 

@@ -24,7 +24,7 @@ add_subdirectory(contrib)
 add_subdirectory(ml)
 add_subdirectory(objdetect)
 
-if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT)
+if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT AND PYTHON_USE_NUMPY)
   add_subdirectory(python)
 endif()
 

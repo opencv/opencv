@@ -1,7 +1,7 @@
 #!/usr/bin/python 
 
 import urllib2
-import cv
+import cv2.cv as cv
 from random import randint
 
 def roundxy(pt):

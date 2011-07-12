@@ -1,5 +1,5 @@
 import urllib
-import cv
+import cv2.cv as cv
 import Image
 import unittest
 

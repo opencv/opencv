@@ -1,4 +1,4 @@
-import cv
+import cv2.cv as cv
 import time
 
 cv.NamedWindow("camera", 1)

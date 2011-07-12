@@ -5,7 +5,7 @@ print "OpenCV Python version of lkdemo"
 import sys
 
 # import the necessary things for OpenCV
-import cv
+import cv2.cv as cv
 
 #############################################################################
 # some "constants"

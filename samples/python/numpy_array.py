@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import urllib2
 import sys
-import cv
+import cv2.cv as cv
 import numpy
 
 # SRGB-linear conversions using NumPy - see http://en.wikipedia.org/wiki/SRGB

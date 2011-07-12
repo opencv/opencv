@@ -1,4 +1,4 @@
-import cv
+import cv2.cv as cv
 
 def precornerdetect(image):
     # assume that the image is floating-point 

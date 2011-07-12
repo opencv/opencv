@@ -12,7 +12,7 @@
    Pressing ESC will stop the program.
 """
 import urllib2
-import cv
+import cv2.cv as cv
 from math import cos, sin, sqrt
 import sys
 

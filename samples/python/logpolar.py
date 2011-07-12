@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 import urllib2
-import cv
+import cv2.cv as cv
 
 src=None
 dst=None

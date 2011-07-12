@@ -833,6 +833,8 @@ static int to_ok(PyTypeObject *to)
   return (PyType_Ready(to) == 0);
 }
 
+#include "cv2.cv.hpp"
+
 extern "C"
 #if defined WIN32 || defined _WIN32
 __declspec(dllexport)
@@ -848,16 +850,17 @@ void initcv2()
 #include "pyopencv_generated_type_reg.h"
 #endif
 
-  PyObject* m = Py_InitModule(MODULESTR"", methods);
+  PyObject* m = Py_InitModule(MODULESTR, methods);
   PyObject* d = PyModule_GetDict(m);
 
   PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
+  
+  PyObject* cv_m = init_cv();
 
-  // AFAIK the only floating-point constant
-  PyDict_SetItemString(d, "CV_PI", PyFloat_FromDouble(CV_PI));
+  PyDict_SetItemString(d, "cv", cv_m);  
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 #define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
@@ -941,7 +944,6 @@ void initcv2()
   PUBLISH(CV_VAR_CATEGORICAL);
 
   PUBLISH(CV_AA);
-
 
 #include "pyopencv_generated_const_reg.h"
 }

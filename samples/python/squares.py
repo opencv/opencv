@@ -7,7 +7,7 @@
 
 import urllib2
 from math import sqrt
-import cv
+import cv2.cv as cv
 
 thresh = 50
 img = None

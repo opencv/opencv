@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import cv
+import cv2.cv as cv
 import sys
 import urllib2
 

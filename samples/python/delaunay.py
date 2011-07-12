@@ -6,7 +6,7 @@ delaunay triangulation and voronoi tesselation
 Original Author (C version): ?
 Converted to Python by: Roman Stanchak
 """
-import cv
+import cv2.cv as cv
 import random
 
 def draw_subdiv_point( img, fp, color ):

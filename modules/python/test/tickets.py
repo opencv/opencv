@@ -6,7 +6,7 @@ import sys
 import array
 import os
 
-import cv
+import cv2.cv as cv
 
 def find_sample(s):
     for d in ["../samples/c/", "../doc/pics/"]:

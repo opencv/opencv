@@ -3,7 +3,7 @@
 print "OpenCV Python version of contours"
 
 # import the necessary things for OpenCV
-import cv
+import cv2.cv as cv
 
 # some default constants
 _SIZE = 500

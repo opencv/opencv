@@ -1,16 +1,7 @@
-#include <Python.h>
+#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/legacy/compat.hpp"
 
-#include <assert.h>
-
-#include "opencv/cxcore.h"
-#include "opencv/cv.h"
-#include "opencv/cvaux.h"
-#include "opencv/cvwimage.h"
-#include "opencv/highgui.h"
-
-#define MODULESTR "cv"
-
-static PyObject *opencv_error;
+#define OLD_MODULESTR "cv2.cv"
 
 struct memtrack_t {
   PyObject_HEAD
@@ -165,21 +156,6 @@ static void translate_error_to_exception(void)
         ERRCHK; \
     } while(0)
 #define ERRWRAP(F) ERRWRAPN(F, NULL) // for most functions, exception -> NULL return
-
-/************************************************************************/
-
-static int failmsg(const char *fmt, ...)
-{
-  char str[1000];
-
-  va_list ap;
-  va_start(ap, fmt);
-  vsnprintf(str, sizeof(str), fmt, ap);
-  va_end(ap);
-
-  PyErr_SetString(PyExc_TypeError, str);
-  return 0;
-}
 
 /************************************************************************/
 
@@ -355,7 +331,7 @@ static PyMappingMethods iplimage_as_map = {
 static PyTypeObject iplimage_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".iplimage",                          /*name*/
+  OLD_MODULESTR".iplimage",                          /*name*/
   sizeof(iplimage_t),                        /*basicsize*/
 };
 
@@ -665,7 +641,7 @@ static PyMappingMethods cvmat_as_map = {
 static PyTypeObject cvmat_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvmat",                      /*name*/
+  OLD_MODULESTR".cvmat",                      /*name*/
   sizeof(cvmat_t),                        /*basicsize*/
 };
 
@@ -830,7 +806,7 @@ static PyMappingMethods cvmatnd_as_map = {
 static PyTypeObject cvmatnd_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvmatnd",                          /*name*/
+  OLD_MODULESTR".cvmatnd",                          /*name*/
   sizeof(cvmatnd_t),                        /*basicsize*/
 };
 
@@ -862,7 +838,7 @@ static void cvhistogram_dealloc(PyObject *self)
 static PyTypeObject cvhistogram_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvhistogram",                /*name*/
+  OLD_MODULESTR".cvhistogram",                /*name*/
   sizeof(cvhistogram_t),                  /*basicsize*/
 };
 
@@ -915,7 +891,7 @@ static PyObject *cvlineiterator_next(PyObject *o)
 static PyTypeObject cvlineiterator_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvlineiterator",             /*name*/
+  OLD_MODULESTR".cvlineiterator",             /*name*/
   sizeof(cvlineiterator_t),               /*basicsize*/
 };
 
@@ -958,7 +934,7 @@ static void memtrack_dealloc(PyObject *self)
 static PyTypeObject memtrack_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".memtrack",                          /*name*/
+  OLD_MODULESTR".memtrack",                          /*name*/
   sizeof(memtrack_t),                        /*basicsize*/
 };
 
@@ -1005,7 +981,7 @@ static void cvmemstorage_dealloc(PyObject *self)
 static PyTypeObject cvmemstorage_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvmemstorage",               /*name*/
+  OLD_MODULESTR".cvmemstorage",               /*name*/
   sizeof(cvmemstorage_t),                 /*basicsize*/
 };
 
@@ -1021,7 +997,7 @@ static void cvmemstorage_specials(void)
 static PyTypeObject cvfont_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvfont",                     /*name*/
+  OLD_MODULESTR".cvfont",                     /*name*/
   sizeof(cvfont_t),                       /*basicsize*/
 };
 
@@ -1034,7 +1010,7 @@ static void cvfont_specials(void) { }
 static PyTypeObject cvrng_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvrng",                     /*name*/
+  OLD_MODULESTR".cvrng",                     /*name*/
   sizeof(cvrng_t),                       /*basicsize*/
 };
 
@@ -1049,7 +1025,7 @@ static void cvrng_specials(void)
 static PyTypeObject cvcontourtree_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvcontourtree",                     /*name*/
+  OLD_MODULESTR".cvcontourtree",                     /*name*/
   sizeof(cvcontourtree_t),                       /*basicsize*/
 };
 
@@ -1063,7 +1039,7 @@ static void cvcontourtree_specials(void) { }
 static PyTypeObject cvsubdiv2dedge_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvsubdiv2dedge",                     /*name*/
+  OLD_MODULESTR".cvsubdiv2dedge",                     /*name*/
   sizeof(cvsubdiv2dedge_t),                       /*basicsize*/
 };
 
@@ -1246,7 +1222,7 @@ static PyMappingMethods cvseq_mapping = {
 static PyTypeObject cvseq_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvseq",                          /*name*/
+  OLD_MODULESTR".cvseq",                          /*name*/
   sizeof(cvseq_t),                        /*basicsize*/
 };
 
@@ -1294,7 +1270,7 @@ static void cvset_dealloc(PyObject *self)
 static PyTypeObject cvset_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvset",                          /*name*/
+  OLD_MODULESTR".cvset",                          /*name*/
   sizeof(cvset_t),                        /*basicsize*/
 };
 
@@ -1334,7 +1310,7 @@ static void cvset_specials(void)
 static PyTypeObject cvsubdiv2d_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                          /*size*/
-  MODULESTR".cvsubdiv2d",                     /*name*/
+  OLD_MODULESTR".cvsubdiv2d",                     /*name*/
   sizeof(cvsubdiv2d_t),                       /*basicsize*/
 };
 
@@ -1365,7 +1341,7 @@ static void cvsubdiv2d_specials(void)
 static PyTypeObject cvsubdiv2dpoint_Type = {
   PyObject_HEAD_INIT(&PyType_Type)
   0,                                      /*size*/
-  MODULESTR".cvsubdiv2dpoint",                     /*name*/
+  OLD_MODULESTR".cvsubdiv2dpoint",                     /*name*/
   sizeof(cvsubdiv2dpoint_t),                       /*basicsize*/
 };
 
@@ -3367,75 +3343,6 @@ static PyObject *pycvReshapeMatND(PyObject *self, PyObject *args)
   return shareDataND(o, cva, pn);
 }
 
-static void OnMouse(int event, int x, int y, int flags, void* param)
-{
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
-
-  PyObject *o = (PyObject*)param;
-  PyObject *args = Py_BuildValue("iiiiO", event, x, y, flags, PyTuple_GetItem(o, 1));
-
-  PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-  if (r == NULL)
-    PyErr_Print();
-  else
-    Py_DECREF(r);
-  Py_DECREF(args);
-  PyGILState_Release(gstate);
-}
-
-static PyObject *pycvSetMouseCallback(PyObject *self, PyObject *args, PyObject *kw)
-{
-  const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
-  char* name;
-  PyObject *on_mouse;
-  PyObject *param = NULL;
-
-  if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|O", (char**)keywords, &name, &on_mouse, &param))
-    return NULL;
-  if (!PyCallable_Check(on_mouse)) {
-    PyErr_SetString(PyExc_TypeError, "on_mouse must be callable");
-    return NULL;
-  }
-  if (param == NULL) {
-    param = Py_None;
-  }
-  ERRWRAP(cvSetMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
-  Py_RETURN_NONE;
-}
-
-void OnChange(int pos, void *param)
-{
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
-
-  PyObject *o = (PyObject*)param;
-  PyObject *args = Py_BuildValue("(i)", pos);
-  PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-  if (r == NULL)
-    PyErr_Print();
-  Py_DECREF(args);
-  PyGILState_Release(gstate);
-}
-
-static PyObject *pycvCreateTrackbar(PyObject *self, PyObject *args)
-{
-  PyObject *on_change;
-  char* trackbar_name;
-  char* window_name;
-  int *value = new int;
-  int count;
-
-  if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
-    return NULL;
-  if (!PyCallable_Check(on_change)) {
-    PyErr_SetString(PyExc_TypeError, "on_change must be callable");
-    return NULL;
-  }
-  ERRWRAP(cvCreateTrackbar2(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
-  Py_RETURN_NONE;
-}
-
 static PyObject *pycvFindContours(PyObject *self, PyObject *args, PyObject *kw)
 {
   CvArr* image;
@@ -3964,16 +3871,11 @@ static double cppKMeans(const CvArr* _samples, int cluster_count, CvArr* _labels
 
 #include "generated0.i"
 
-static PyMethodDef methods[] = {
+static PyMethodDef old_methods[] = {
 
 #if PYTHON_USE_NUMPY
     {"fromarray", (PyCFunction)pycvfromarray, METH_KEYWORDS, "fromarray(array) -> cvmatnd"},
 #endif
-
-  //{"CalcOpticalFlowFarneback", (PyCFunction)pycvCalcOpticalFlowFarneback, METH_KEYWORDS, "CalcOpticalFlowFarneback(prev, next, flow, pyr_scale=0.5, levels=3, win_size=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0) -> None"},
-  //{"_HOGComputeDescriptors", (PyCFunction)pycvHOGComputeDescriptors, METH_KEYWORDS, "_HOGComputeDescriptors(image, win_stride=block_stride, locations=None, padding=(0,0), win_size=(64,128), block_size=(16,16), block_stride=(8,8), cell_size=(8,8), nbins=9, gammaCorrection=true) -> list_of_descriptors"},
-  //{"_HOGDetect", (PyCFunction)pycvHOGDetect, METH_KEYWORDS, "_HOGDetect(image, svm_classifier, win_stride=block_stride, locations=None, padding=(0,0), win_size=(64,128), block_size=(16,16), block_stride=(8,8), cell_size=(8,8), nbins=9, gammaCorrection=true) -> list_of_points"},
-  //{"_HOGDetectMultiScale", (PyCFunction)pycvHOGDetectMultiScale, METH_KEYWORDS, "_HOGDetectMultiScale(image, svm_classifier, win_stride=block_stride, scale=1.05, group_threshold=2, padding=(0,0), win_size=(64,128), block_size=(16,16), block_stride=(8,8), cell_size=(8,8), nbins=9, gammaCorrection=true) -> list_of_points"},
 
   {"FindDataMatrix", pyfinddatamatrix, METH_VARARGS},
   {"temp_test", temp_test, METH_VARARGS},
@@ -3986,32 +3888,12 @@ static PyMethodDef methods[] = {
 /************************************************************************/
 /* Module init */
 
-static int to_ok(PyTypeObject *to)
+PyObject* init_cv()
 {
-  to->tp_alloc = PyType_GenericAlloc;
-  to->tp_new = PyType_GenericNew;
-  to->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
-  return (PyType_Ready(to) == 0);
-}
-
-#define MKTYPE(NAME)  NAME##_specials(); if (!to_ok(&NAME##_Type)) return
-
-using namespace cv;
-
-extern "C"
-#if defined WIN32 || defined _WIN32
-__declspec(dllexport)
-#endif
-
-void initcv()
-{
-#if PYTHON_USE_NUMPY
-    import_array();
-#endif
-    
   PyObject *m, *d;
-
   cvSetErrMode(CV_ErrModeParent);
+
+  #define MKTYPE(NAME)  NAME##_specials(); to_ok(&NAME##_Type)
 
   MKTYPE(cvcontourtree);
   MKTYPE(cvfont);
@@ -4031,12 +3913,12 @@ void initcv()
 
 #include "generated4.i"
 
-  m = Py_InitModule(MODULESTR"", methods);
+  #undef MKTYPE
+
+  m = Py_InitModule(OLD_MODULESTR, old_methods);
   d = PyModule_GetDict(m);
 
   PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
-
-  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
 
   // Couple of warnings about strict aliasing here.  Not clear how to fix.
@@ -4127,7 +4009,13 @@ void initcv()
   PUBLISH(GC_INIT_WITH_RECT);
   PUBLISH(GC_INIT_WITH_MASK);
   PUBLISH(GC_EVAL);
-
+  
 #include "generated2.i"
+
+#undef PUBLISH
+#undef PUBLISHU
+#undef PUBLISH2    
+    
+  return m;
 }
 

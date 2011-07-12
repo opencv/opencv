@@ -5,7 +5,7 @@ import random
 
 import numpy
 import transformations
-import cv
+import cv2.cv as cv
 
 def clamp(a, x, b):
     return numpy.maximum(a, numpy.minimum(x, b))
