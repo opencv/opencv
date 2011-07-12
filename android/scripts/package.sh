@@ -23,12 +23,12 @@ rm -rf doc include src .classpath .project AndroidManifest.xml default.propertie
 mv libs/armeabi-v7a libs/armeabi-v7a-neon
 mv share/OpenCV/3rdparty/libs/armeabi-v7a share/OpenCV/3rdparty/libs/armeabi-v7a-neon
 
-# armeabi build
+# armeabi-v7a build
 cd "$PRG_DIR"
 mkdir build
 cd build
 
-cmake -C "$ANDROID_DIR/CMakeCache.android.initial.cmake" -DARM_TARGET="armeabi" -DBUILD_DOCS=OFF -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_ANDROID_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE="$ANDROID_DIR/android.toolchain.cmake" -DCMAKE_INSTALL_PREFIX="$PRG_DIR/opencv" "$ANDROID_DIR/.."  || exit 1
+cmake -C "$ANDROID_DIR/CMakeCache.android.initial.cmake" -DARM_TARGET="armeabi-v7a" -DBUILD_DOCS=OFF -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_ANDROID_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE="$ANDROID_DIR/android.toolchain.cmake" -DCMAKE_INSTALL_PREFIX="$PRG_DIR/opencv" "$ANDROID_DIR/.."  || exit 1
 make -j8 install/strip || exit 1
 
 cd "$PRG_DIR/opencv"
@@ -39,7 +39,7 @@ rm -rf doc include src .classpath .project AndroidManifest.xml default.propertie
 cd "$PRG_DIR/build"
 rm -rf CMakeCache.txt
 
-cmake -C "$ANDROID_DIR/CMakeCache.android.initial.cmake" -DARM_TARGET="armeabi-v7a" -DBUILD_DOCS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_ANDROID_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE="$ANDROID_DIR/android.toolchain.cmake" -DCMAKE_INSTALL_PREFIX="$PRG_DIR/opencv" "$ANDROID_DIR/.."  || exit 1
+cmake -C "$ANDROID_DIR/CMakeCache.android.initial.cmake" -DARM_TARGET="armeabi" -DBUILD_DOCS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_ANDROID_EXAMPLES=ON -DINSTALL_ANDROID_EXAMPLES=ON -DCMAKE_TOOLCHAIN_FILE="$ANDROID_DIR/android.toolchain.cmake" -DCMAKE_INSTALL_PREFIX="$PRG_DIR/opencv" "$ANDROID_DIR/.."  || exit 1
 make -j8 install/strip docs || exit 1
 
 find doc -name "*.pdf" -exec cp {} $PRG_DIR/opencv/doc \;

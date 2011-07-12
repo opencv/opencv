@@ -317,6 +317,9 @@ endif()
 set(BUILD_EXAMPLES OFF CACHE BOOL "Build all examples")
 set(INSTALL_C_EXAMPLES OFF CACHE BOOL "Install C examples")
 set(INSTALL_PYTHON_EXAMPLES OFF CACHE BOOL "Install Python examples")
+if(ANDROID)
+    set(INSTALL_ANDROID_EXAMPLES OFF CACHE BOOL "Install Android examples")
+endif()
 
 # Build tests:
 # ===================================================
@@ -722,6 +725,41 @@ if (BUILD_JAVA_SUPPORT)
                   "/opt/android-sdk-mac_86/tools/"
             )
         if(ANDROID_EXECUTABLE)
+            get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
+
+            #read source.properties
+            file(STRINGS "${ANDROID_SDK_TOOLS_PATH}/source.properties" ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
+            foreach(line ${ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES})
+                string(REPLACE "\\:" ":" line ${line})
+                string(REPLACE "=" ";" line ${line})
+                list(GET line 0 line_name)
+                list(GET line 1 line_value)
+                string(REPLACE "." "_" line_name ${line_name})
+                SET(ANDROID_TOOLS_${line_name} "${line_value}")
+                MARK_AS_ADVANCED(ANDROID_TOOLS_${line_name})
+            endforeach()
+
+            #get installed targets
+            execute_process(COMMAND ${ANDROID_EXECUTABLE} list target -c
+                RESULT_VARIABLE ANDROID_PROCESS
+                OUTPUT_VARIABLE ANDROID_SDK_TARGETS
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+            string(REPLACE "\n" ";" ANDROID_SDK_TARGETS ${ANDROID_SDK_TARGETS})
+            if (NOT ANDROID_SDK_TARGET)
+                foreach(target ${ANDROID_SDK_TARGETS})
+                    string(REGEX MATCH "[0-9]+$" target_level "${target}")
+                    if (target_level GREATER 7)
+                        set(ANDROID_SDK_TARGET "${target}")
+                        break()
+                    endif()
+                endforeach()
+            endif()
+
+            SET(ANDROID_SDK_TARGET ${ANDROID_SDK_TARGET} CACHE STRING "SDK target for Android tests and samples")
+            set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
+            string(REGEX MATCH "[0-9]+$" ANDROID_SDK_TARGET_LEVEL "${ANDROID_SDK_TARGET}")
+
             message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
         endif()
     endif()
@@ -740,8 +778,7 @@ if (BUILD_JAVA_SUPPORT)
         message(STATUS "    Found apache ant ${ANT_VERSION}: ${ANT_EXECUTABLE}")
     endif()
 
-
-    if (ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7))
+    if (ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_SDK_TARGET_LEVEL GREATER 7))
         SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
     else()
         SET(CAN_BUILD_ANDROID_PROJECTS FALSE)
@@ -998,6 +1035,7 @@ libnative_camera_rx.x.x.so for your Android")
             SET(BUILD_ANDROID_CAMERA_WRAPPER ON)
         endif()
     endif()
+    MARK_AS_ADVANCED(ANDROID_SOURCE_TREE)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1511,6 +1549,7 @@ endif()
 if(ANDROID)
     status("    Floating point type:" ${ARM_TARGET})
     status("    Native API level:" android-${ANDROID_API_LEVEL})
+    status("    SDK target:" "${ANDROID_SDK_TARGET}")
 endif()
 
 #YV
@@ -1619,7 +1658,7 @@ else()
 endif()
 
 if(ANDROID)
-    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE}" ELSE NO)
+    status("    android tool:"    ANDROID_EXECUTABLE       THEN "${ANDROID_EXECUTABLE} (${ANDROID_TOOLS_Pkg_Desc})" ELSE NO)
     status("    ant:"             ANT_EXECUTABLE           THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})" ELSE NO)
 endif()
 

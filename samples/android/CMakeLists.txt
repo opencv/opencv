@@ -51,7 +51,7 @@ if (BUILD_ANDROID_EXAMPLES)
             WORKING_DIRECTORY ${sample_dir}
             COMMAND ${CMAKE_COMMAND} -E remove -f "${sample_dir}/default.properties"
             COMMAND ${CMAKE_COMMAND} -E touch "${sample_dir}/default.properties"
-            COMMAND ${ANDROID_EXECUTABLE} update project --name "${sample}" --target android-8 ${opencv_reference} --path .
+            COMMAND ${ANDROID_EXECUTABLE} update project --name "${sample}" --target "${ANDROID_SDK_TARGET}" ${opencv_reference} --path .
             COMMAND ${ANT_EXECUTABLE} debug
             COMMAND ${CMAKE_COMMAND} -E copy "${sample_dir}/bin/${sample}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${sample}.apk"
         )
@@ -83,6 +83,10 @@ if (BUILD_ANDROID_EXAMPLES)
 
             add_dependencies(${sample} ${JNI_LIB_NAME})
         endif()
+
+        if(INSTALL_ANDROID_EXAMPLES)
+            install(FILES "${CMAKE_BINARY_DIR}/bin/${sample}.apk" DESTINATION bin COMPONENT main)
+        endif()
     endmacro()
 
     file(GLOB android_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
@@ -102,7 +106,9 @@ if (BUILD_ANDROID_EXAMPLES)
     ADD_DEPENDENCIES(hello-android ${sample_dependencies})
     TARGET_LINK_LIBRARIES(hello-android ${OPENCV_LINKER_LIBS} ${sample_dependencies})
     set_target_properties(hello-android PROPERTIES OUTPUT_NAME hello-android RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")
-
+    if(INSTALL_ANDROID_EXAMPLES)
+        install(TARGETS hello-android DESTINATION bin COMPONENT main)
+    endif()
 
     set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${additional_clean_files}")
 endif()

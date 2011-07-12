@@ -3,11 +3,6 @@
 # run cmake with:
 # cmake -C 
 ########################
-#Build all examples
-set(BUILD_EXAMPLES OFF CACHE BOOL "" )
-
-#Build a installer with the SDK
-set(BUILD_PACKAGE OFF CACHE BOOL "" )
 
 #Build shared libraries (.dll/.so CACHE BOOL "" ) instead of static ones (.lib/.a CACHE BOOL "" )
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
@@ -77,6 +72,9 @@ set(WITH_V4L OFF CACHE BOOL "" )
 
 #Include Xine support (GPL CACHE BOOL "" )
 set(WITH_XINE OFF CACHE BOOL "" )
+
+#no python available on Android
+set(BUILD_NEW_PYTHON_SUPPORT OFF CACHE INTERNAL "" FORCE)
 
 #Enable SSE instructions
 SET( ENABLE_SSE OFF CACHE INTERNAL "" FORCE )

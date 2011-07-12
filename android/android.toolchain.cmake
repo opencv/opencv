@@ -221,7 +221,7 @@ set( CMAKE_RANLIB       ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-
 
 #setup build targets, mutually exclusive
 set( PossibleArmTargets "armeabi;armeabi-v7a;armeabi-v7a with NEON;armeabi-v7a with VFPV3" )
-set( ARM_TARGET "armeabi-v7a" CACHE STRING "the arm target for android, recommend armeabi-v7a for floating point support and NEON." )
+set( ARM_TARGET "armeabi-v7a" CACHE INTERNAL "the arm target for android, recommend armeabi-v7a for floating point support and NEON." )
 set_property( CACHE ARM_TARGET PROPERTY STRINGS ${PossibleArmTargets} )
 
 #compatibility junk for previous version of toolchain
@@ -232,7 +232,7 @@ endif()
 #set these flags for client use
 if( ARM_TARGET STREQUAL "armeabi" )
  set( ARMEABI true )
- set( ARMEABI_NDK_NAME "armeabi" CACHE STRING "NDK eabi name" FORCE)
+ set( ARMEABI_NDK_NAME "armeabi" )
  set( NEON false )
  set( CMAKE_SYSTEM_PROCESSOR "armv5te" )
 else()
@@ -247,7 +247,7 @@ Supported values are: \"armeabi\", \"armeabi-v7a\", \"armeabi-v7a with NEON\", \
 " )
  endif()
  set( ARMEABI_V7A true )
- set( ARMEABI_NDK_NAME "armeabi-v7a" CACHE STRING "NDK eabi name" FORCE)
+ set( ARMEABI_NDK_NAME "armeabi-v7a" )
  set( CMAKE_SYSTEM_PROCESSOR "armv7-a" )
 endif()
 
@@ -389,3 +389,5 @@ macro(find_host_program)
  set( CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY )
  set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 endmacro()
+
+MARK_AS_ADVANCED(FORCE_ARM NO_UNDEFINED)
