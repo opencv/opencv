@@ -49,6 +49,9 @@ public class OpenCVTestCase extends TestCase {
 	protected static Mat rgba128;
     
 	protected static Mat rgbLena;
+	
+	protected static Mat v1;
+	protected static Mat v2;
 
     @Override
     protected void setUp() throws Exception {
@@ -89,11 +92,14 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4); rgba128.setTo(Scalar.all(128));
         
         rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
+        
+		v1 = new Mat(1, 3, CvType.CV_32F); v1.put(0, 0, 1.0, 3.0, 2.0);
+		v2 = new Mat(1, 3, CvType.CV_32F); v2.put(0, 0, 2.0, 1.0, 3.0);
     }    
 
     public static void assertMatEqual(Mat m1, Mat m2) {
-    	OpenCVTestRunner.Log(m1.toString());
-    	OpenCVTestRunner.Log(m2.toString());
+    	//OpenCVTestRunner.Log(m1.toString());
+    	//OpenCVTestRunner.Log(m2.toString());
     	
     	if (!m1.type().equals(m2.type()) || 
     	    m1.cols() != m2.cols() || m1.rows() != m2.rows()) {

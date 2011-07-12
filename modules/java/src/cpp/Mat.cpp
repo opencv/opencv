@@ -379,15 +379,18 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_Mat_nDot
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCross
-	(JNIEnv* env, jclass cls, jlong self, jlong it)
+	(JNIEnv* env, jclass cls, jlong self, jlong m)
 {
-	return 0; //NYI
+    cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
+    cv::Mat* _m = (cv::Mat*) m; //TODO: check for NULL
+    return (jlong) new cv::Mat(me->cross( *_m ));
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nInv
 	(JNIEnv* env, jclass cls, jlong self)
 {
-	return 0; //NYI
+    cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL    
+	return (jlong) new cv::Mat(me->inv());
 }
 
 JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nCreateMat__
