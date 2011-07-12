@@ -156,7 +156,6 @@ class RstParser(object):
                     skip_code_lines = False
                     
             if ll.startswith(".. code-block::") or ll.startswith(".. image::"):
-            #or ll.startswith(".. math::") or ll.startswith(".. image::"):
                 skip_code_lines = True
                 continue
                 
