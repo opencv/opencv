@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-#  Android CMake toolchain file, for use with the ndk r5
+#  Android CMake toolchain file, for use with the ndk r5,r6
 #  See home page: http://code.google.com/p/android-cmake/
 #
 #  Usage Linux:
@@ -16,13 +16,13 @@
 #     You need native port of make to build your project.
 #     For example this one: http://gnuwin32.sourceforge.net/packages/make.htm
 #
-#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r5c
+#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r6
 #   $ cmake.exe -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=C:\<absolute path to make>\make.exe ..
 #   $ C:\<absolute path to make>\make.exe
 #
 #
 #  Toolchain options (can be set as cmake parameters: -D<option_name>=<value>):
-#    ANDROID_NDK=/opt/android-ndk-r5c - path to NDK root.
+#    ANDROID_NDK=/opt/android-ndk-r6 - path to NDK root.
 #      Can be set as environment variable.
 #
 #    ANDROID_NDK_TOOLCHAIN_ROOT=/opt/android-toolchain - path to standalone toolchain.
@@ -95,6 +95,9 @@
 #     [-] removed SWIG-related stuff from toolchain
 #     [+] added macro find_host_package, find_host_program to search packages/programs on host system
 #     [~] fixed path to STL library
+#   - modified June 2011 Andrey Kamaev andrey.kamaev@itseez.com
+#     [~] default NDK path is updated for version r6
+#     [~] fixed options caching
 # ----------------------------------------------------------------------------
 
 
@@ -104,7 +107,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk-r5c )
+set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk-r6 )
 set( ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH /opt/android-toolchain )
 set( TOOL_OS_SUFFIX "" )
 
