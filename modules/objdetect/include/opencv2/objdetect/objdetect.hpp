@@ -160,9 +160,9 @@ CVAPI(int) cvRunHaarClassifierCascade( const CvHaarClassifierCascade* cascade,
 // (x, y) - coordinate in level l
 typedef struct
 {
-    unsigned int x;
-    unsigned int y;
-    unsigned int l;
+    int x;
+    int y;
+    int l;
 } CvLSVMFilterPosition;
 
 // DataType: STRUCT filterObject
@@ -179,16 +179,12 @@ typedef struct
 //                   used formula H[(j * sizeX + i) * p + k], where
 //                   k - component of feature vector in cell (i, j)
 // END OF FILTER DESCRIPTION
-// xp              - auxillary parameter for internal use
-//                   size of row in feature vectors 
-//                   (yp = (int) (p / xp); p = xp * yp)
 typedef struct{
     CvLSVMFilterPosition V;
     float fineFunction[4];
-    unsigned int sizeX;
-    unsigned int sizeY;
-    unsigned int p;
-    unsigned int xp;
+    int sizeX;
+    int sizeY;
+    int numFeatures;
     float *H;
 } CvLSVMFilterObject;
 

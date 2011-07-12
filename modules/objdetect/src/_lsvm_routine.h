@@ -13,18 +13,18 @@
 // Error status is return value
 //////////////////////////////////////////////////////////////
 int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX, const int sizeY, 
-                      const int p, const int xp);
+                      const int p);
 int freeFilterObject (CvLSVMFilterObject **obj);
 
 int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX, const int sizeY,
-                          const int p, const int xp);
+                          const int p);
 int freeFeatureMapObject (CvLSVMFeatureMap **obj);
 
 #ifdef __cplusplus
 extern "C"
 #endif
 int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj, 
-                              const int lambda, const int countLevel);
+                              const int countLevel);
 
 #ifdef __cplusplus
 extern "C"

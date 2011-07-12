@@ -33,7 +33,7 @@ int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float
 	m1 = map->sizeX;
 	n2 = Fi->sizeY;
 	m2 = Fi->sizeX;
-	p = map->p;
+	p = map->numFeatures;
 
 	diff1 = n1 - n2 + 1;
 	diff2 = m1 - m2 + 1;
@@ -51,7 +51,7 @@ int convolution(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap *map, float
 			{
 				for (j2 = 0; j2 < m2; j2++)
 				{
-					pMap = map->Map + (i1 + i2) * m1 * p + (j1 + j2) * p;//sm2
+					pMap = map->map + (i1 + i2) * m1 * p + (j1 + j2) * p;//sm2
 					pH = Fi->H + (i2 * m2 + j2) * p;//sm2
 					for (k = 0; k < p/4; k++)
 					{
@@ -210,14 +210,14 @@ int getFFTImageFilterObject(const CvLSVMFilterObject *filter,
     mapSize = mapDimX * mapDimY;
     newFilter = (float *)malloc(sizeof(float) * (2 * mapSize));
     rot2PIFilter = (float *)malloc(sizeof(float) * filterSize);
-    res = allocFFTImage(image, filter->p, mapDimX, mapDimY);
+    res = allocFFTImage(image, filter->numFeatures, mapDimX, mapDimY);
     if (res != LATENT_SVM_OK)
     {
         return res;
     }
-    for (i = 0; i < filter->p; i++)
+    for (i = 0; i < filter->numFeatures; i++)
     {        
-        rot2PI(filter->H, filter->sizeX, filter->sizeY, rot2PIFilter, filter->p, i);
+        rot2PI(filter->H, filter->sizeX, filter->sizeY, rot2PIFilter, filter->numFeatures, i);
         addNullableBars(rot2PIFilter, filter->sizeX, filter->sizeY, 
                         newFilter, mapDimX, mapDimY);
         fft2d(newFilter, (*image)->channels[i], mapDimY, mapDimX);
@@ -241,14 +241,14 @@ int getFFTImageFeatureMap(const CvLSVMFeatureMap *map, CvLSVMFftImage **image)
 {
     int i, j, size;
     float *buf;    
-    allocFFTImage(image, map->p, map->sizeX, map->sizeY);
+    allocFFTImage(image, map->numFeatures, map->sizeX, map->sizeY);
     size = map->sizeX * map->sizeY;
     buf = (float *)malloc(sizeof(float) * (2 * size));
-    for (i = 0; i < map->p; i++)
+    for (i = 0; i < map->numFeatures; i++)
     {
         for (j = 0; j < size; j++)
         {
-            buf[2 * j] = map->Map[j * map->p + i];
+            buf[2 * j] = map->map[j * map->numFeatures + i];
             buf[2 * j + 1] = 0.0;
         }
         fft2d(buf, (*image)->channels[i], map->sizeY, map->sizeX);
@@ -282,7 +282,7 @@ int convFFTConv2d(const CvLSVMFftImage *featMapImage, const CvLSVMFftImage *filt
     imagesMultRes = (float *)malloc(sizeof(float) * size);
     fftImagesMulti(featMapImage->channels[0], filterImage->channels[0], 
             featMapImage->dimY, featMapImage->dimX, imagesMultRes);
-    for (i = 1; (i < (int)featMapImage->p) && (i < (int)filterImage->p); i++)
+    for (i = 1; (i < (int)featMapImage->numFeatures) && (i < (int)filterImage->numFeatures); i++)
     {
         fftImagesMulti(featMapImage->channels[i],filterImage->channels[i], 
             featMapImage->dimY, featMapImage->dimX, imagesMult);
@@ -343,7 +343,7 @@ int filterDispositionLevel(const CvLSVMFilterObject *Fi, const CvLSVMFeatureMap 
     m1 = pyramid->sizeX;
     n2 = Fi->sizeY;
     m2 = Fi->sizeX;
-    p = pyramid->p;
+    p = pyramid->numFeatures;
     (*scoreFi) = NULL;
     (*pointsX) = NULL;
     (*pointsY) = NULL;
@@ -429,7 +429,7 @@ int filterDispositionLevelFFT(const CvLSVMFilterObject *Fi, const CvLSVMFftImage
     m1 = featMapImage->dimX;
     n2 = Fi->sizeY;
     m2 = Fi->sizeX;
-    p = featMapImage->p;
+    p = featMapImage->numFeatures;
     (*scoreFi) = NULL;
     (*pointsX) = NULL;
     (*pointsY) = NULL;
@@ -525,8 +525,8 @@ int addNullableBorder(CvLSVMFeatureMap *map, int bx, int by)
     float *new_map;
     sizeX = map->sizeX + 2 * bx;
     sizeY = map->sizeY + 2 * by;
-    new_map = (float *)malloc(sizeof(float) * sizeX * sizeY * map->p);
-    for (i = 0; i < sizeX * sizeY * map->p; i++)
+    new_map = (float *)malloc(sizeof(float) * sizeX * sizeY * map->numFeatures);
+    for (i = 0; i < sizeX * sizeY * map->numFeatures; i++)
     {
         new_map[i] = 0.0;
     }
@@ -534,17 +534,17 @@ int addNullableBorder(CvLSVMFeatureMap *map, int bx, int by)
     {
         for (j = bx; j < map->sizeX + bx; j++)
         {
-            for (k = 0; k < map->p; k++)
+            for (k = 0; k < map->numFeatures; k++)
             {
-                new_map[(i * sizeX + j) * map->p + k] = 
-                    map->Map[((i - by) * map->sizeX + j - bx) * map->p + k];
+                new_map[(i * sizeX + j) * map->numFeatures + k] = 
+                    map->map[((i - by) * map->sizeX + j - bx) * map->numFeatures + k];
             }
         }
     }
     map->sizeX = sizeX;
     map->sizeY = sizeY;
-    free(map->Map);
-    map->Map = new_map;
+    free(map->map);
+    map->map = new_map;
     return LATENT_SVM_OK;
 }
 
@@ -558,19 +558,19 @@ CvLSVMFeatureMap* featureMapBorderPartFilter(CvLSVMFeatureMap *map,
     computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
     sizeX = map->sizeX + 2 * bx;
     sizeY = map->sizeY + 2 * by;
-    allocFeatureMapObject(&new_map, sizeX, sizeY, map->p, map->xp);
-    for (i = 0; i < sizeX * sizeY * map->p; i++)
+    allocFeatureMapObject(&new_map, sizeX, sizeY, map->numFeatures);
+    for (i = 0; i < sizeX * sizeY * map->numFeatures; i++)
     {
-        new_map->Map[i] = 0.0;
+        new_map->map[i] = 0.0f;
     }
     for (i = by; i < map->sizeY + by; i++)
     {
         for (j = bx; j < map->sizeX + bx; j++)
         {
-            for (k = 0; k < map->p; k++)
+            for (k = 0; k < map->numFeatures; k++)
             {
-                new_map->Map[(i * sizeX + j) * map->p + k] = 
-                    map->Map[((i - by) * map->sizeX + j - bx) * map->p + k];
+                new_map->map[(i * sizeX + j) * map->numFeatures + k] = 
+                    map->map[((i - by) * map->sizeX + j - bx) * map->numFeatures + k];
             }
         }
     }
@@ -640,7 +640,7 @@ int maxFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
     dimY = H->pyramid[level]->sizeY;
 
     // Number of features
-    p = H->pyramid[level]->p;
+    p = H->pyramid[level]->numFeatures;
         
     // Getting dimension of root filter
     nF0 = all_F[0]->sizeY;
@@ -888,7 +888,7 @@ int thresholdFunctionalScoreFixedLevel(const CvLSVMFilterObject **all_F, int n,
     dimY = H->pyramid[level]->sizeY;
 
     // Number of features
-    p = H->pyramid[level]->p;
+    p = H->pyramid[level]->numFeatures;
         
     // Getting dimension of root filter
     nF0 = all_F[0]->sizeY;
@@ -1109,7 +1109,7 @@ int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     // Computation the number of levels for seaching object,
     // first lambda-levels are used for computation values
     // of score function for each position of root filter
-    numLevels = H->countLevel - H->lambda;
+    numLevels = H->numLevels - LAMBDA;
     
     // Allocation memory for maximum value of score function for each level
     tmpScore = (float *)malloc(sizeof(float) * numLevels);        
@@ -1135,7 +1135,7 @@ int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     }
 
     // Set current value of the maximum of score function
-    res = maxFunctionalScoreFixedLevel(all_F, n, H, H->lambda, b, 
+    res = maxFunctionalScoreFixedLevel(all_F, n, H, LAMBDA, b, 
             maxXBorder, maxYBorder,
             &(tmpScore[0]), 
             tmpPoints[0], 
@@ -1150,9 +1150,9 @@ int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     file = fopen("maxScore.csv", "w+");
     fprintf(file, "%i;%lf;\n", H->lambda, tmpScore[0]);    
     //*/
-    for (l = H->lambda + 1; l < H->countLevel; l++)
+    for (l = LAMBDA + 1; l < H->numLevels; l++)
     {        
-        k = l - H->lambda;
+        k = l - LAMBDA;
         res = maxFunctionalScoreFixedLevel(all_F, n, H, l, b,
                                            maxXBorder, maxYBorder,
                                            &(tmpScore[k]), 
@@ -1191,7 +1191,7 @@ int maxFunctionalScore(const CvLSVMFilterObject **all_F, int n,
         if ((tmpScore[i] - maxScore) * (tmpScore[i] - maxScore) <= EPS)
         {
             // Computation the number of level
-            level = i + H->lambda; 
+            level = i + LAMBDA; 
 
             // Addition a set of points
             f += tmpKPoints[i];
@@ -1272,7 +1272,7 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     // Computation the number of levels for seaching object,
     // first lambda-levels are used for computation values
     // of score function for each position of root filter
-    numLevels = H->countLevel - H->lambda;
+    numLevels = H->numLevels - LAMBDA;
     
     // Allocation memory for values of score function for each level
     // that exceed threshold
@@ -1305,9 +1305,9 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     fprintf(file, "%i;%lf;\n", H->lambda, tmpScore[0]);    
     //*/
     (*kPoints) = 0;
-    for (l = H->lambda; l < H->countLevel; l++)
+    for (l = LAMBDA; l < H->numLevels; l++)
     {        
-        k = l - H->lambda;
+        k = l - LAMBDA;
         //printf("Score at the level %i\n", l);
         res = thresholdFunctionalScoreFixedLevel(all_F, n, H, l, b, 
             maxXBorder, maxYBorder, scoreThreshold,
@@ -1339,7 +1339,7 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     for (i = 0; i < numLevels; i++)
     {
         // Computation the number of level
-        level = i + H->lambda; 
+        level = i + LAMBDA; 
 
         // Addition a set of points
         f += tmpKPoints[i];
@@ -1411,7 +1411,7 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
         sumPartFiltersDim += all_F[i]->sizeX * all_F[i]->sizeY;
     }
     // Number of levels which are used for computation of score function
-    numLevels = H->countLevel - H->lambda;
+    numLevels = H->numLevels - LAMBDA;
     // Allocation memory for saving number of dot products that will be
     // computed for each level of feature pyramid
     dotProd = (int *)malloc(sizeof(int) * numLevels);
@@ -1421,7 +1421,7 @@ int createSchedule(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all
     dby = 2 * by;
     // Total number of dot products for all levels
     numDotProducts = 0;
-    lambda = H->lambda;
+    lambda = LAMBDA;
     for (i = 0; i < numLevels; i++)
     {
         dotProd[i] = H->pyramid[i + lambda]->sizeX * 

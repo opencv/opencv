@@ -10,13 +10,6 @@
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-static inline int sign(float r)
-{
-    if(r >  0.0001f) return  1;
-    if(r < -0.0001f) return -1;
-    return 0;
-}
-
 /*
 // Getting feature map for the selected subimage
 //
@@ -30,115 +23,132 @@ static inline int sign(float r)
 // RESULT
 // Error status
 */
-int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
+int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
 {
     int sizeX, sizeY;
-    int p, px, strsz;
-    int height, width, channels;
+    int p, px, stringSize;
+    int height, width, numChannels;
     int i, j, kk, c, ii, jj, d;
     float  * datadx, * datady;
-    float tmp, x, y, tx, ty;
+    
+    //номер канала в цикле
+    int   ch; 
+    //переменные вычисления магнитуды
+    float magnitude, x, y, tx, ty;
+    
     IplImage * dx, * dy;
-    int *nearest_x, *nearest_y;
+    int *nearest;
     float *w, a_x, b_x;
 
-    float kernel[3] = {-1.f, 0.f, 1.f}; 
+    // ядро для вычисления градиентов изображение по осям x и y
+    float kernel[3] = {-1.f, 0.f, 1.f};
     CvMat kernel_dx = cvMat(1, 3, CV_32F, kernel);
     CvMat kernel_dy = cvMat(3, 1, CV_32F, kernel);
 
+    // грачение градиента
     float * r;
-    int    * alfa;
+    // новер сектора куда попало значение градиента
+    //     четные иннексы не контрастное изображение
+    //  не четные иннексы    контрастное изображение
+    int   * alfa;
     
-    float boundary_x[CNTPARTION+1];
-    float boundary_y[CNTPARTION+1];
-    float max, tmp_scal;
-    int    maxi;
+    // векторы границ секторов
+    float boundary_x[NUM_SECTOR + 1];
+    float boundary_y[NUM_SECTOR + 1];
+    float max, dotProd;
+    int   maxi;
 
-	height = image->height;
-	width  = image->width ;
+    height = image->height;
+    width  = image->width ;
 
-    channels  = image->nChannels;
+    numChannels = image->nChannels;
 
-	dx    = cvCreateImage(cvSize(image->width , image->height) , IPL_DEPTH_32F , 3);
-    dy    = cvCreateImage(cvSize(image->width , image->height) , IPL_DEPTH_32F , 3);
+    dx    = cvCreateImage(cvSize(image->width, image->height), 
+                          IPL_DEPTH_32F, 3);
+    dy    = cvCreateImage(cvSize(image->width, image->height), 
+                          IPL_DEPTH_32F, 3);
 
     sizeX = width  / k;
     sizeY = height / k;
-    px    = CNTPARTION  + 2 * CNTPARTION; // контрастное и не контрастное изображение
+    px    = 3 * NUM_SECTOR; // контрастное и не контрастное изображение
     p     = px;
-    strsz = sizeX * p;
-    allocFeatureMapObject(map, sizeX, sizeY, p,  px);
+    stringSize = sizeX * p;
+    allocFeatureMapObject(map, sizeX, sizeY, p);
 
-	cvFilter2D(image, dx, &kernel_dx, cvPoint(-1, 0));
-	cvFilter2D(image, dy, &kernel_dy, cvPoint(0, -1));
-	
-    for(i = 0; i <= CNTPARTION; i++)
+    cvFilter2D(image, dx, &kernel_dx, cvPoint(-1, 0));
+    cvFilter2D(image, dy, &kernel_dy, cvPoint(0, -1));
+    
+    float arg_vector;
+    for(i = 0; i <= NUM_SECTOR; i++)
     {
-        boundary_x[i] = cosf((((float)i) * (((float)PI) / (float) (CNTPARTION))));
-        boundary_y[i] = sinf((((float)i) * (((float)PI) / (float) (CNTPARTION))));
-    }/*for(i = 0; i <= CNTPARTION; i++) */
+        arg_vector    = ( (float) i ) * ( (float)(PI) / (float)(NUM_SECTOR) );
+        boundary_x[i] = cosf(arg_vector);
+        boundary_y[i] = sinf(arg_vector);
+    }/*for(i = 0; i <= NUM_SECTOR; i++) */
 
     r    = (float *)malloc( sizeof(float) * (width * height));
     alfa = (int   *)malloc( sizeof(int  ) * (width * height * 2));
 
-    for(j = 1; j < height-1; j++)
+    for(j = 1; j < height - 1; j++)
     {
-        datadx = (float*)(dx->imageData + dx->widthStep *j);
-        datady = (float*)(dy->imageData + dy->widthStep *j);
-        for(i = 1; i < width-1; i++)
+        datadx = (float*)(dx->imageData + dx->widthStep * j);
+        datady = (float*)(dy->imageData + dy->widthStep * j);
+        for(i = 1; i < width - 1; i++)
         {
-			c = 0;
-            x = (datadx[i*channels+c]);
-            y = (datady[i*channels+c]);
+            c = 0;
+            x = (datadx[i * numChannels + c]);
+            y = (datady[i * numChannels + c]);
 
-            r[j * width + i] =sqrtf(x*x + y*y);
-            for(kk = 1; kk < channels; kk++)
+            r[j * width + i] =sqrtf(x * x + y * y);
+            for(ch = 1; ch < numChannels; ch++)
             {
-                tx = (datadx[i*channels+kk]);
-                ty = (datady[i*channels+kk]);
-                tmp =sqrtf(tx*tx + ty*ty);
-                if(tmp > r[j * width + i])
+                tx = (datadx[i * numChannels + ch]);
+                ty = (datady[i * numChannels + ch]);
+                magnitude = sqrtf(tx * tx + ty * ty);
+                if(magnitude > r[j * width + i])
                 {
-                    r[j * width + i] = tmp;
-                    c = kk;
+                    r[j * width + i] = magnitude;
+                    c = ch;
                     x = tx;
                     y = ty;
                 }
-            }/*for(kk = 1; kk < channels; kk++)*/
-
+            }/*for(ch = 1; ch < numChannels; ch++)*/
             
-            
-            max  = boundary_x[0]*x + boundary_y[0]*y;
+            max  = boundary_x[0] * x + boundary_y[0] * y;
             maxi = 0;
-            for (kk = 0; kk < CNTPARTION; kk++) {
-                tmp_scal = boundary_x[kk]*x + boundary_y[kk]*y;
-                if (tmp_scal> max) {
-                    max = tmp_scal;
+            for (kk = 0; kk < NUM_SECTOR; kk++) 
+            {
+                dotProd = boundary_x[kk] * x + boundary_y[kk] * y;
+                if (dotProd > max) 
+                {
+                    max  = dotProd;
                     maxi = kk;
-                }else if (-tmp_scal> max) {
-                    max = -tmp_scal;
-                    maxi = kk + CNTPARTION;
+                }
+                else 
+                {
+                    if (-dotProd > max) 
+                    {
+                        max  = -dotProd;
+                        maxi = kk + NUM_SECTOR;
+                    }
                 }
             }
-            alfa[j * width * 2 + i * 2    ] = maxi % CNTPARTION;
+            alfa[j * width * 2 + i * 2    ] = maxi % NUM_SECTOR;
             alfa[j * width * 2 + i * 2 + 1] = maxi;  
         }/*for(i = 0; i < width; i++)*/
     }/*for(j = 0; j < height; j++)*/
 
     //подсчет весов и смещений
-    nearest_x = (int *)malloc(sizeof(int) * k);
-    nearest_y = (int *)malloc(sizeof(int) * k);
-    w         = (float*)malloc(sizeof(float) * (k * 2));
+    nearest = (int  *)malloc(sizeof(int  ) *  k);
+    w       = (float*)malloc(sizeof(float) * (k * 2));
     
     for(i = 0; i < k / 2; i++)
     {
-        nearest_x[i] = -1;
-        nearest_y[i] = -1;
+        nearest[i] = -1;
     }/*for(i = 0; i < k / 2; i++)*/
     for(i = k / 2; i < k; i++)
     {
-        nearest_x[i] = 1;
-        nearest_y[i] = 1;
+        nearest[i] = 1;
     }/*for(i = k / 2; i < k; i++)*/
 
     for(j = 0; j < k / 2; j++)
@@ -160,44 +170,52 @@ int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
     //интерполяция
     for(i = 0; i < sizeY; i++)
     {
-        for(j = 0; j < sizeX; j++)
+      for(j = 0; j < sizeX; j++)
+      {
+        for(ii = 0; ii < k; ii++)
         {
-            for(ii = 0; ii < k; ii++)
+          for(jj = 0; jj < k; jj++)
+          {
+            if ((i * k + ii > 0) && 
+                (i * k + ii < height - 1) && 
+                (j * k + jj > 0) && 
+                (j * k + jj < width  - 1))
             {
-                for(jj = 0; jj < k; jj++)
-                {
-					if ((i * k + ii > 0) && (i * k + ii < height - 1) && (j * k + jj > 0) && (j * k + jj < width - 1))
-					{
-						d    =  (k*i + ii)* width + (j*k + jj);
-						(*map)->Map[(i                ) * strsz + (j                ) * (*map)->p + alfa[d * 2    ]             ] += 
-							r[d] * w[ii * 2    ] * w[jj * 2    ];
-						(*map)->Map[(i                ) * strsz + (j                ) * (*map)->p + alfa[d * 2 + 1] + CNTPARTION] += 
-							r[d] * w[ii * 2    ] * w[jj * 2    ];
-						if ((i + nearest_y[ii] >= 0) && (i + nearest_y[ii] <= sizeY - 1))
-						{
-							(*map)->Map[(i + nearest_y[ii]) * strsz + (j                ) * (*map)->p + alfa[d * 2    ]             ] += 
-								r[d] * w[ii * 2 + 1] * w[jj * 2    ];
-							(*map)->Map[(i + nearest_y[ii]) * strsz + (j                ) * (*map)->p + alfa[d * 2 + 1] + CNTPARTION] += 
-								r[d] * w[ii * 2 + 1] * w[jj * 2    ];
-						}
-						if ((j + nearest_x[jj] >= 0) && (j + nearest_x[jj] <= sizeX - 1))
-						{
-							(*map)->Map[(i                ) * strsz + (j + nearest_x[jj]) * (*map)->p + alfa[d * 2    ]             ] += 
-								r[d] * w[ii * 2    ] * w[jj * 2 + 1];
-							(*map)->Map[(i                ) * strsz + (j + nearest_x[jj]) * (*map)->p + alfa[d * 2 + 1] + CNTPARTION] += 
-								r[d] * w[ii * 2    ] * w[jj * 2 + 1];
-						}
-						if ((i + nearest_y[ii] >= 0) && (i + nearest_y[ii] <= sizeY - 1) && (j + nearest_x[jj] >= 0) && (j + nearest_x[jj] <= sizeX - 1))
-						{
-							(*map)->Map[(i + nearest_y[ii]) * strsz + (j + nearest_x[jj]) * (*map)->p + alfa[d * 2    ]             ] += 
-								r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
-							(*map)->Map[(i + nearest_y[ii]) * strsz + (j + nearest_x[jj]) * (*map)->p + alfa[d * 2 + 1] + CNTPARTION] += 
-								r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
-						}
-					}
-                }/*for(jj = 0; jj < k; jj++)*/
-            }/*for(ii = 0; ii < k; ii++)*/
-        }/*for(j = 1; j < sizeX - 1; j++)*/
+              d = (k * i + ii) * width + (j * k + jj);
+              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]] += 
+                  r[d] * w[ii * 2] * w[jj * 2];
+              (*map)->map[ i * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                  r[d] * w[ii * 2] * w[jj * 2];
+              if ((i + nearest[ii] >= 0) && 
+                  (i + nearest[ii] <= sizeY - 1))
+              {
+                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                  r[d] * w[ii * 2 + 1] * w[jj * 2 ];
+                (*map)->map[(i + nearest[ii]) * stringSize + j * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                  r[d] * w[ii * 2 + 1] * w[jj * 2 ];
+              }
+              if ((j + nearest[jj] >= 0) && 
+                  (j + nearest[jj] <= sizeX - 1))
+              {
+                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                  r[d] * w[ii * 2] * w[jj * 2 + 1];
+                (*map)->map[i * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                  r[d] * w[ii * 2] * w[jj * 2 + 1];
+              }
+              if ((i + nearest[ii] >= 0) && 
+                  (i + nearest[ii] <= sizeY - 1) && 
+                  (j + nearest[jj] >= 0) && 
+                  (j + nearest[jj] <= sizeX - 1))
+              {
+                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2    ]             ] += 
+                  r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
+                (*map)->map[(i + nearest[ii]) * stringSize + (j + nearest[jj]) * (*map)->numFeatures + alfa[d * 2 + 1] + NUM_SECTOR] += 
+                  r[d] * w[ii * 2 + 1] * w[jj * 2 + 1];
+              }
+            }
+          }/*for(jj = 0; jj < k; jj++)*/
+        }/*for(ii = 0; ii < k; ii++)*/
+      }/*for(j = 1; j < sizeX - 1; j++)*/
     }/*for(i = 1; i < sizeY - 1; i++)*/
     
     cvReleaseImage(&dx);
@@ -205,9 +223,8 @@ int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
 
 
     free(w);
-    free(nearest_x);
-    free(nearest_y);
-
+    free(nearest);
+    
     free(r);
     free(alfa);
 
@@ -218,7 +235,7 @@ int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
 // Feature map Normalization and Truncation 
 //
 // API
-// int normalizationAndTruncationFeatureMaps(featureMap *map, const float alfa);
+// int normalizeAndTruncate(featureMap *map, const float alfa);
 // INPUT
 // map               - feature map
 // alfa              - truncation threshold
@@ -227,114 +244,113 @@ int getFeatureMaps_dp(const IplImage* image,const int k, CvLSVMFeatureMap **map)
 // RESULT
 // Error status
 */
-int normalizationAndTruncationFeatureMaps(CvLSVMFeatureMap *map, const float alfa)
+int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
 {
     int i,j, ii;
     int sizeX, sizeY, p, pos, pp, xp, pos1, pos2;
-    float * part_noma; // norm of C(i, j)
-    float * new_data;
-    float   norm_val;
+    float * partOfNorm; // norm of C(i, j)
+    float * newData;
+    float   valOfNorm;
 
     sizeX     = map->sizeX;
     sizeY     = map->sizeY;
-    part_noma = (float *)malloc (sizeof(float) * (sizeX * sizeY));
+    partOfNorm = (float *)malloc (sizeof(float) * (sizeX * sizeY));
 
-    p = map->xp / 3;
+    p  = NUM_SECTOR;
+    xp = NUM_SECTOR * 3;
+    pp = NUM_SECTOR * 12;
 
     for(i = 0; i < sizeX * sizeY; i++)
     {
-        norm_val = 0.0;
-        pos = i * map->p;
+        valOfNorm = 0.0f;
+        pos = i * map->numFeatures;
         for(j = 0; j < p; j++)
         {
-            norm_val += map->Map[pos + j] * map->Map[pos + j];
+            valOfNorm += map->map[pos + j] * map->map[pos + j];
         }/*for(j = 0; j < p; j++)*/
-        part_noma[i] = norm_val;
+        partOfNorm[i] = valOfNorm;
     }/*for(i = 0; i < sizeX * sizeY; i++)*/
-	
-    xp = map->xp;
-    pp = xp * 4;
+    
     sizeX -= 2;
     sizeY -= 2;
 
-    new_data = (float *)malloc (sizeof(float) * (sizeX * sizeY * pp));
+    newData = (float *)malloc (sizeof(float) * (sizeX * sizeY * pp));
 //normalization
     for(i = 1; i <= sizeY; i++)
     {
         for(j = 1; j <= sizeX; j++)
         {
-            norm_val = sqrtf(
-                part_noma[(i    )*(sizeX + 2) + (j    )] +
-                part_noma[(i    )*(sizeX + 2) + (j + 1)] +
-                part_noma[(i + 1)*(sizeX + 2) + (j    )] +
-                part_noma[(i + 1)*(sizeX + 2) + (j + 1)]);
+            valOfNorm = sqrtf(
+                partOfNorm[(i    )*(sizeX + 2) + (j    )] +
+                partOfNorm[(i    )*(sizeX + 2) + (j + 1)] +
+                partOfNorm[(i + 1)*(sizeX + 2) + (j    )] +
+                partOfNorm[(i + 1)*(sizeX + 2) + (j + 1)]);
             pos1 = (i  ) * (sizeX + 2) * xp + (j  ) * xp;
             pos2 = (i-1) * (sizeX    ) * pp + (j-1) * pp;
             for(ii = 0; ii < p; ii++)
             {
-                new_data[pos2 + ii        ] = map->Map[pos1 + ii    ] / norm_val;
+                newData[pos2 + ii        ] = map->map[pos1 + ii    ] / valOfNorm;
             }/*for(ii = 0; ii < p; ii++)*/
             for(ii = 0; ii < 2 * p; ii++)
             {
-                new_data[pos2 + ii + p * 4] = map->Map[pos1 + ii + p] / norm_val;
+                newData[pos2 + ii + p * 4] = map->map[pos1 + ii + p] / valOfNorm;
             }/*for(ii = 0; ii < 2 * p; ii++)*/
-            norm_val = sqrtf(
-                part_noma[(i    )*(sizeX + 2) + (j    )] +
-                part_noma[(i    )*(sizeX + 2) + (j + 1)] +
-                part_noma[(i - 1)*(sizeX + 2) + (j    )] +
-                part_noma[(i - 1)*(sizeX + 2) + (j + 1)]);
+            valOfNorm = sqrtf(
+                partOfNorm[(i    )*(sizeX + 2) + (j    )] +
+                partOfNorm[(i    )*(sizeX + 2) + (j + 1)] +
+                partOfNorm[(i - 1)*(sizeX + 2) + (j    )] +
+                partOfNorm[(i - 1)*(sizeX + 2) + (j + 1)]);
             for(ii = 0; ii < p; ii++)
             {
-                new_data[pos2 + ii + p    ] = map->Map[pos1 + ii    ] / norm_val;
+                newData[pos2 + ii + p    ] = map->map[pos1 + ii    ] / valOfNorm;
             }/*for(ii = 0; ii < p; ii++)*/
             for(ii = 0; ii < 2 * p; ii++)
             {
-                new_data[pos2 + ii + p * 6] = map->Map[pos1 + ii + p] / norm_val;
+                newData[pos2 + ii + p * 6] = map->map[pos1 + ii + p] / valOfNorm;
             }/*for(ii = 0; ii < 2 * p; ii++)*/
-            norm_val = sqrtf(
-                part_noma[(i    )*(sizeX + 2) + (j    )] +
-                part_noma[(i    )*(sizeX + 2) + (j - 1)] +
-                part_noma[(i + 1)*(sizeX + 2) + (j    )] +
-                part_noma[(i + 1)*(sizeX + 2) + (j - 1)]);
+            valOfNorm = sqrtf(
+                partOfNorm[(i    )*(sizeX + 2) + (j    )] +
+                partOfNorm[(i    )*(sizeX + 2) + (j - 1)] +
+                partOfNorm[(i + 1)*(sizeX + 2) + (j    )] +
+                partOfNorm[(i + 1)*(sizeX + 2) + (j - 1)]);
             for(ii = 0; ii < p; ii++)
             {
-                new_data[pos2 + ii + p * 2] = map->Map[pos1 + ii    ] / norm_val;
+                newData[pos2 + ii + p * 2] = map->map[pos1 + ii    ] / valOfNorm;
             }/*for(ii = 0; ii < p; ii++)*/
             for(ii = 0; ii < 2 * p; ii++)
             {
-                new_data[pos2 + ii + p * 8] = map->Map[pos1 + ii + p] / norm_val;
+                newData[pos2 + ii + p * 8] = map->map[pos1 + ii + p] / valOfNorm;
             }/*for(ii = 0; ii < 2 * p; ii++)*/
-            norm_val = sqrtf(
-                part_noma[(i    )*(sizeX + 2) + (j    )] +
-                part_noma[(i    )*(sizeX + 2) + (j - 1)] +
-                part_noma[(i - 1)*(sizeX + 2) + (j    )] +
-                part_noma[(i - 1)*(sizeX + 2) + (j - 1)]);
+            valOfNorm = sqrtf(
+                partOfNorm[(i    )*(sizeX + 2) + (j    )] +
+                partOfNorm[(i    )*(sizeX + 2) + (j - 1)] +
+                partOfNorm[(i - 1)*(sizeX + 2) + (j    )] +
+                partOfNorm[(i - 1)*(sizeX + 2) + (j - 1)]);
             for(ii = 0; ii < p; ii++)
             {
-                new_data[pos2 + ii + p * 3 ] = map->Map[pos1 + ii    ] / norm_val;
+                newData[pos2 + ii + p * 3 ] = map->map[pos1 + ii    ] / valOfNorm;
             }/*for(ii = 0; ii < p; ii++)*/
             for(ii = 0; ii < 2 * p; ii++)
             {
-                new_data[pos2 + ii + p * 10] = map->Map[pos1 + ii + p] / norm_val;
+                newData[pos2 + ii + p * 10] = map->map[pos1 + ii + p] / valOfNorm;
             }/*for(ii = 0; ii < 2 * p; ii++)*/
         }/*for(j = 1; j <= sizeX; j++)*/
     }/*for(i = 1; i <= sizeY; i++)*/
 //truncation
     for(i = 0; i < sizeX * sizeY * pp; i++)
     {
-        if(new_data [i] > alfa) new_data [i] = alfa;
+        if(newData [i] > alfa) newData [i] = alfa;
     }/*for(i = 0; i < sizeX * sizeY * pp; i++)*/
 //swop data
 
-    map->p  = pp;
-    map->xp = xp;
+    map->numFeatures  = pp;
     map->sizeX = sizeX;
     map->sizeY = sizeY;
 
-    free (map->Map);
-    free (part_noma);
+    free (map->map);
+    free (partOfNorm);
 
-    map->Map = new_data;
+    map->map = newData;
 
     return LATENT_SVM_OK;
 }
@@ -356,21 +372,21 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
 { 
     int i,j, ii, jj, k;
     int sizeX, sizeY, p,  pp, xp, yp, pos1, pos2;
-    float * new_data;
+    float * newData;
     float val;
     float nx, ny;
     
     sizeX = map->sizeX;
     sizeY = map->sizeY;
-    p     = map->p;
-    pp    = map->xp + 4;
+    p     = map->numFeatures;
+    pp    = NUM_SECTOR * 3 + 4;
     yp    = 4;
-    xp    = (map->xp / 3);
+    xp    = NUM_SECTOR;
 
     nx    = 1.0f / sqrtf((float)(xp * 2));
     ny    = 1.0f / sqrtf((float)(yp    ));
 
-    new_data = (float *)malloc (sizeof(float) * (sizeX * sizeY * pp));
+    newData = (float *)malloc (sizeof(float) * (sizeX * sizeY * pp));
 
     for(i = 0; i < sizeY; i++)
     {
@@ -384,9 +400,9 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
                 val = 0;
                 for(ii = 0; ii < yp; ii++)
                 {
-                    val += map->Map[pos1 + yp * xp + ii * xp * 2 + jj];
+                    val += map->map[pos1 + yp * xp + ii * xp * 2 + jj];
                 }/*for(ii = 0; ii < yp; ii++)*/
-                new_data[pos2 + k] = val * ny;
+                newData[pos2 + k] = val * ny;
                 k++;
             }/*for(jj = 0; jj < xp * 2; jj++)*/
             for(jj = 0; jj < xp; jj++)
@@ -394,9 +410,9 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
                 val = 0;
                 for(ii = 0; ii < yp; ii++)
                 {
-                    val += map->Map[pos1 + ii * xp + jj];
+                    val += map->map[pos1 + ii * xp + jj];
                 }/*for(ii = 0; ii < yp; ii++)*/
-                new_data[pos2 + k] = val * ny;
+                newData[pos2 + k] = val * ny;
                 k++;
             }/*for(jj = 0; jj < xp; jj++)*/
             for(ii = 0; ii < yp; ii++)
@@ -404,22 +420,44 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
                 val = 0;
                 for(jj = 0; jj < 2 * xp; jj++)
                 {
-                    val += map->Map[pos1 + yp * xp + ii * xp * 2 + jj];
+                    val += map->map[pos1 + yp * xp + ii * xp * 2 + jj];
                 }/*for(jj = 0; jj < xp; jj++)*/
-                new_data[pos2 + k] = val * nx;
+                newData[pos2 + k] = val * nx;
                 k++;
             } /*for(ii = 0; ii < yp; ii++)*/           
         }/*for(j = 0; j < sizeX; j++)*/
     }/*for(i = 0; i < sizeY; i++)*/
 //swop data
 
-    map->p  = pp;
-    map->xp = pp;
+    map->numFeatures = pp;
 
-    free (map->Map);
+    free (map->map);
 
-    map->Map = new_data;
+    map->map = newData;
 
+    return LATENT_SVM_OK;
+}
+
+
+int getPathOfFeaturePyramid(IplImage * image, 
+                            float step, int numStep, int startIndex,
+                            int sideLength, CvLSVMFeaturePyramid **maps)
+{
+    CvLSVMFeatureMap *map;
+    IplImage *scaleTmp;
+    float scale;
+    int   i, err;
+    
+    for(i = 0; i < numStep; i++)
+    {
+        scale = 1.0f / powf(step, (float)i);
+        scaleTmp = resize_opencv (image, scale);
+        err = getFeatureMaps(scaleTmp, sideLength, &map);
+        err = normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+        err = PCAFeatureMaps(map);
+        (*maps)->pyramid[startIndex + i] = map;
+        cvReleaseImage(&scaleTmp);
+    }/*for(i = 0; i < numStep; i++)*/
     return LATENT_SVM_OK;
 }
 
@@ -434,145 +472,52 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
                       const int W, const int H, featurePyramid **maps);
 // INPUT
 // image             - image
-// lambda            - resize scale
-// k                 - size of cells
-// startX            - X coordinate of the image rectangle to search
-// startY            - Y coordinate of the image rectangle to search
-// W                 - width of the image rectangle to search
-// H                 - height of the image rectangle to search
 // OUTPUT
 // maps              - feature maps for all levels
 // RESULT
 // Error status
 */
-int getFeaturePyramid(IplImage * image,
-                      const int lambda, const int k, 
-                      const int startX, const int startY, 
-                      const int W, const int H, CvLSVMFeaturePyramid **maps)
+int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps)
 {
-    IplImage *img2, *imgTmp, *imgResize;
-    float   step, tmp;
-    int      cntStep;
-    int      maxcall;
-    int i;
-    int err;
-    CvLSVMFeatureMap *map;
+    IplImage *imgResize;
+    float step;
+    int   numStep;
+    int   maxNumCells;
+    int   W, H;
     
-    //geting subimage
-    cvSetImageROI(image, cvRect(startX, startY, W, H));
-    img2 = cvCreateImage(cvGetSize(image), image->depth, image->nChannels);
-    cvCopy(image, img2, NULL);
-    cvResetImageROI(image);
-
-    if(img2->depth != IPL_DEPTH_32F)
+    if(image->depth == IPL_DEPTH_32F)
     {
-        imgResize = cvCreateImage(cvSize(img2->width , img2->height) , IPL_DEPTH_32F , 3);
-        cvConvert(img2, imgResize);
+        imgResize = image;
     }
     else
     {
-        imgResize = img2;
+        imgResize = cvCreateImage(cvSize(image->width , image->height) ,
+                                  IPL_DEPTH_32F , 3);
+        cvConvert(image, imgResize);        
     }
     
-    step = powf(2.0f, 1.0f/ ((float)lambda));
-    maxcall = W/k;
-    if( maxcall > H/k )
+    W = imgResize->width;
+    H = imgResize->height;
+
+    step = powf(2.0f, 1.0f / ((float)LAMBDA));
+    maxNumCells = W / SIDE_LENGTH;
+    if( maxNumCells > H / SIDE_LENGTH )
     {
-        maxcall = H/k;
+        maxNumCells = H / SIDE_LENGTH;
     }
-    cntStep = (int)(logf((float)maxcall/(5.0f))/logf(step)) + 1;
-    //printf("Count step: %f %d\n", step, cntStep);
+    numStep = (int)(logf((float) maxNumCells / (5.0f)) / logf( step )) + 1;
+    
+    allocFeaturePyramidObject(maps, numStep + LAMBDA);
 
-    allocFeaturePyramidObject(maps, lambda, cntStep + lambda);
-
-    for(i = 0; i < lambda; i++)
-    {
-        tmp = 1.0f / powf(step, (float)i);
-        imgTmp = resize_opencv (imgResize, tmp);
-        //imgTmp = resize_article_dp(img2, tmp, 4);
-        err = getFeatureMaps_dp(imgTmp, 4, &map);
-        err = normalizationAndTruncationFeatureMaps(map, 0.2f);
-        err = PCAFeatureMaps(map);
-        (*maps)->pyramid[i] = map;
-        //printf("%d, %d\n", map->sizeY, map->sizeX);
-        cvReleaseImage(&imgTmp);
-    }
-
-    /**********************************one**************/
-    for(i = 0; i <  cntStep; i++)
-    {
-        tmp = 1.0f / powf(step, (float)i);
-        imgTmp = resize_opencv (imgResize, tmp);
-        //imgTmp = resize_article_dp(imgResize, tmp, 8);
-	    err = getFeatureMaps_dp(imgTmp, 8, &map);
-        err = normalizationAndTruncationFeatureMaps(map, 0.2f);
-        err = PCAFeatureMaps(map);
-        (*maps)->pyramid[i + lambda] = map;
-        //printf("%d, %d\n", map->sizeY, map->sizeX);
-		cvReleaseImage(&imgTmp);
-    }/*for(i = 0; i < cntStep; i++)*/
-
-    if(img2->depth != IPL_DEPTH_32F)
+    getPathOfFeaturePyramid(imgResize, step   , LAMBDA, 0, 
+                            SIDE_LENGTH / 2, maps);
+    getPathOfFeaturePyramid(imgResize, step, numStep, LAMBDA, 
+                            SIDE_LENGTH    , maps);
+    
+    if(image->depth != IPL_DEPTH_32F)
     {
         cvReleaseImage(&imgResize);
     }
-
-    cvReleaseImage(&img2);
-    return LATENT_SVM_OK;
-}
-
-/*
-// add zero border to feature map
-//
-// API
-// int addBordersToFeatureMaps(featureMap *map, const int bX, const int bY);
-// INPUT
-// map               - feature map
-// bX                - border size in x
-// bY                - border size in y
-// OUTPUT
-// map               - feature map
-// RESULT
-// Error status
-*/
-int addBordersToFeatureMaps(CvLSVMFeatureMap *map, const int bX, const int bY){
-    int i,j, jj;
-    int sizeX, sizeY, p, pos1, pos2;
-    float * new_data;
-    
-    sizeX = map->sizeX;
-    sizeY = map->sizeY;
-    p     = map->p;
-
-    new_data = (float *)malloc (sizeof(float) * ((sizeX + 2 * bX) * (sizeY + 2 * bY) * p));
-
-    for(i = 0; i < ((sizeX + 2 * bX) * (sizeY + 2 * bY) * p); i++)
-    {
-        new_data[i] = (float)0;
-    }/*for(i = 0; i < ((sizeX + 2 * bX) * (sizeY + 2 * bY) * p); i++)*/
-
-    for(i = 0; i < sizeY; i++)
-    {
-        for(j = 0; j < sizeX; j++)
-        {
-
-            pos1 = ((i     )*sizeX            + (j     )) * p;
-            pos2 = ((i + bY)*(sizeX + 2 * bX) + (j + bX)) * p;
-            
-            for(jj = 0; jj < p; jj++)
-            {
-                new_data[pos2 + jj] = map->Map[pos1 + jj];
-            }/*for(jj = 0; jj < p; jj++)*/
-        }/*for(j = 0; j < sizeX; j++)*/
-    }/*for(i = 0; i < sizeY; i++)*/
-    //swop data
-
-    map->sizeX = sizeX + 2 * bX;
-    map->sizeY = sizeY + 2 * bY;
-    
-    free (map->Map);
-
-    map->Map = new_data;
 
     return LATENT_SVM_OK;
 }
