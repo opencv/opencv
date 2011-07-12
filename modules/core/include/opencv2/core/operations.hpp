@@ -2000,7 +2000,7 @@ static inline bool operator !(const Range& r)
 
 static inline Range operator & (const Range& r1, const Range& r2)
 {
-    Range r(std::max(r1.start, r2.start), std::min(r2.start, r2.end));
+    Range r(std::max(r1.start, r2.start), std::min(r1.end, r2.end));
     r.end = std::max(r.end, r.start);
     return r;
 }
