@@ -725,42 +725,62 @@ if (BUILD_JAVA_SUPPORT)
                   "/opt/android-sdk-mac_86/tools/"
             )
         if(ANDROID_EXECUTABLE)
+            message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
+
             get_filename_component(ANDROID_SDK_TOOLS_PATH "${ANDROID_EXECUTABLE}" PATH)
 
             #read source.properties
-            file(STRINGS "${ANDROID_SDK_TOOLS_PATH}/source.properties" ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
-            foreach(line ${ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES})
-                string(REPLACE "\\:" ":" line ${line})
-                string(REPLACE "=" ";" line ${line})
-                list(GET line 0 line_name)
-                list(GET line 1 line_value)
-                string(REPLACE "." "_" line_name ${line_name})
-                SET(ANDROID_TOOLS_${line_name} "${line_value}")
-                MARK_AS_ADVANCED(ANDROID_TOOLS_${line_name})
-            endforeach()
+            if (EXISTS "${ANDROID_SDK_TOOLS_PATH}/source.properties")
+                file(STRINGS "${ANDROID_SDK_TOOLS_PATH}/source.properties" ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
+                foreach(line ${ANDROID_SDK_TOOLS_SOURCE_PROPERTIES_LINES})
+                    string(REPLACE "\\:" ":" line ${line})
+                    string(REPLACE "=" ";" line ${line})
+                    list(GET line 0 line_name)
+                    list(GET line 1 line_value)
+                    string(REPLACE "." "_" line_name ${line_name})
+                    SET(ANDROID_TOOLS_${line_name} "${line_value}")
+                    MARK_AS_ADVANCED(ANDROID_TOOLS_${line_name})
+                endforeach()
+            else()
+                SET(ANDROID_TOOLS_Pkg_Desc "Android SDK Tools revision is less then 12. Please update your Android SDK.")
+                MARK_AS_ADVANCED(ANDROID_TOOLS_Pkg_Desc)
+            endif()
 
             #get installed targets
             execute_process(COMMAND ${ANDROID_EXECUTABLE} list target -c
                 RESULT_VARIABLE ANDROID_PROCESS
                 OUTPUT_VARIABLE ANDROID_SDK_TARGETS
+                ERROR_VARIABLE ANDROID_PROCESS_ERRORS
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-
             string(REPLACE "\n" ";" ANDROID_SDK_TARGETS ${ANDROID_SDK_TARGETS})
+
+            # detect ANDROID_SDK_TARGET if no target is provided by user
             if (NOT ANDROID_SDK_TARGET)
-                foreach(target ${ANDROID_SDK_TARGETS})
-                    string(REGEX MATCH "[0-9]+$" target_level "${target}")
-                    if (target_level GREATER 7)
-                        set(ANDROID_SDK_TARGET "${target}")
-                        break()
+                if (NOT ANDROID_PROCESS EQUAL 0)
+                    set(ANDROID_SDK_TARGET android-8)
+                    message(STATUS "Could not retrieve list of installed Android targets. Will use default \"${ANDROID_SDK_TARGET}\" target")
+                else()
+                    set(desired_android_target_level ${ANDROID_API_LEVEL})
+                    if (desired_android_target_level LESS 8)
+                        set(desired_android_target_level 8)
                     endif()
-                endforeach()
+                    math(EXPR desired_android_target_level "${desired_android_target_level}-1")
+
+                    foreach(target ${ANDROID_SDK_TARGETS})
+                        string(REGEX MATCH "[0-9]+$" target_level "${target}")
+                        if (target_level GREATER desired_android_target_level)
+                           set(ANDROID_SDK_TARGET "${target}")
+                           break()
+                        endif()
+                    endforeach()
+                endif()
             endif()
 
             SET(ANDROID_SDK_TARGET ${ANDROID_SDK_TARGET} CACHE STRING "SDK target for Android tests and samples")
-            set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
+            if (ANDROID_PROCESS EQUAL 0)
+                set_property( CACHE ANDROID_SDK_TARGET PROPERTY STRINGS ${ANDROID_SDK_TARGETS} )
+            endif()
             string(REGEX MATCH "[0-9]+$" ANDROID_SDK_TARGET_LEVEL "${ANDROID_SDK_TARGET}")
-
-            message(STATUS "    Found android tool: ${ANDROID_EXECUTABLE}")
         endif()
     endif()
 
