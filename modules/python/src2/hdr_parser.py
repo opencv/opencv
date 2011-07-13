@@ -3,6 +3,7 @@ import os, sys, re, string
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
 "../../core/include/opencv2/core/core.hpp",
+"../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml/ml.hpp",
 "../../imgproc/include/opencv2/imgproc/imgproc.hpp",
 "../../calib3d/include/opencv2/calib3d/calib3d.hpp",

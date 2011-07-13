@@ -7,6 +7,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     "${OpenCV_SOURCE_DIR}/modules/core/include"
+    "${OpenCV_SOURCE_DIR}/modules/flann/include"
     "${OpenCV_SOURCE_DIR}/modules/imgproc/include"
     "${OpenCV_SOURCE_DIR}/modules/video/include"
     "${OpenCV_SOURCE_DIR}/modules/highgui/include"
@@ -22,6 +23,7 @@ include_directories(
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(opencv_hdrs "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/core.hpp"
+    "${OpenCV_SOURCE_DIR}/modules/flann/include/opencv2/flann/miniflann.hpp"
     "${OpenCV_SOURCE_DIR}/modules/imgproc/include/opencv2/imgproc/imgproc.hpp"
     "${OpenCV_SOURCE_DIR}/modules/video/include/opencv2/video/background_segm.hpp"
     "${OpenCV_SOURCE_DIR}/modules/video/include/opencv2/video/tracking.hpp"
@@ -61,7 +63,7 @@ add_custom_command(
 
 set(cv2_target "opencv_python")
 add_library(${cv2_target} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i src2/opencv_extra_api.hpp ${cv2_generated_hdrs} src2/cv2.cv.hpp)
-target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
+target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
     
 set_target_properties(${cv2_target} PROPERTIES PREFIX "")
 set_target_properties(${cv2_target} PROPERTIES OUTPUT_NAME "cv2")

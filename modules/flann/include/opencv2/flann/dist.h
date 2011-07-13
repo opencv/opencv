@@ -28,302 +28,775 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef _OPENCV_DIST_H_
-#define _OPENCV_DIST_H_
+#ifndef OPENCV_FLANN_DIST_H_
+#define OPENCV_FLANN_DIST_H_
 
 #include <cmath>
+#include <cstdlib>
+#include <string.h>
+#ifdef _MSC_VER
+typedef unsigned uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+#include <stdint.h>
+#endif
 
-#include "opencv2/flann/general.h"
+#include "defines.h"
+
 
 namespace cvflann
 {
 
-/**
- * Distance function by default set to the custom distance
- * function. This can be set to a specific distance function
- * for further efficiency.
- */
-#define flann_dist custom_dist
-//#define flann_dist euclidean_dist
+template<typename T>
+inline T abs(T x) { return (x<0) ? -x : x; }
+
+template<>
+inline int abs<int>(int x) { return ::abs(x); }
+
+template<>
+inline float abs<float>(float x) { return fabsf(x); }
+
+template<>
+inline double abs<double>(double x) { return fabs(x); }
+
+template<>
+inline long double abs<long double>(long double x) { return fabsl(x); }
 
 
-/**
- *  Compute the squared Euclidean distance between two vectors.
- *
- *	This is highly optimised, with loop unrolling, as it is one
- *	of the most expensive inner loops.
- *
- *	The computation of squared root at the end is omitted for
- *	efficiency.
- */
-template <typename Iterator1, typename Iterator2>
-double euclidean_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+template<typename T>
+struct Accumulator { typedef T Type; };
+template<>
+struct Accumulator<unsigned char>  { typedef float Type; };
+template<>
+struct Accumulator<unsigned short> { typedef float Type; };
+template<>
+struct Accumulator<unsigned int> { typedef float Type; };
+template<>
+struct Accumulator<char>   { typedef float Type; };
+template<>
+struct Accumulator<short>  { typedef float Type; };
+template<>
+struct Accumulator<int> { typedef float Type; };
+
+
+class True
 {
-	double distsq = acc;
-	double diff0, diff1, diff2, diff3;
-	Iterator1 lastgroup = last1 - 3;
+};
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		diff0 = first1[0] - first2[0];
-		diff1 = first1[1] - first2[1];
-		diff2 = first1[2] - first2[2];
-		diff3 = first1[3] - first2[3];
-		distsq += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		diff0 = *first1++ - *first2++;
-		distsq += diff0 * diff0;
-	}
-	return distsq;
-}
-
-CV_EXPORTS double euclidean_dist(const unsigned char* first1, const unsigned char* last1, unsigned char* first2, double acc);
+class False
+{
+};
 
 
 /**
- *  Compute the Manhattan (L_1) distance between two vectors.
+ * Squared Euclidean distance functor.
  *
- *	This is highly optimised, with loop unrolling, as it is one
- *	of the most expensive inner loops.
+ * This is the simpler, unrolled version. This is preferable for
+ * very low dimensionality data (eg 3D points)
  */
-template <typename Iterator1, typename Iterator2>
-double manhattan_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+template<class T>
+struct L2_Simple
 {
-	double distsq = acc;
-	double diff0, diff1, diff2, diff3;
-	Iterator1 lastgroup = last1 - 3;
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		diff0 = fabs(first1[0] - first2[0]);
-		diff1 = fabs(first1[1] - first2[1]);
-		diff2 = fabs(first1[2] - first2[2]);
-		diff3 = fabs(first1[3] - first2[3]);
-		distsq += diff0 + diff1 + diff2  + diff3;
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		diff0 = fabs(*first1++ - *first2++);
-		distsq += diff0;
-	}
-	return distsq;
-}
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff;
+        for(size_t i = 0; i < size; ++i ) {
+            diff = *a++ - *b++;
+            result += diff*diff;
+        }
+        return result;
+    }
+
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return (a-b)*(a-b);
+    }
+};
 
 
-CV_EXPORTS int flann_minkowski_order();
+
 /**
- *  Compute the Minkowski (L_p) distance between two vectors.
- *
- *	This is highly optimised, with loop unrolling, as it is one
- *	of the most expensive inner loops.
- *
- *	The computation of squared root at the end is omitted for
- *	efficiency.
+ * Squared Euclidean distance functor, optimized version
  */
-template <typename Iterator1, typename Iterator2>
-double minkowski_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+template<class T>
+struct L2
 {
-	double distsq = acc;
-	double diff0, diff1, diff2, diff3;
-	Iterator1 lastgroup = last1 - 3;
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
 
-	int p = flann_minkowski_order();
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		diff0 = fabs(first1[0] - first2[0]);
-		diff1 = fabs(first1[1] - first2[1]);
-		diff2 = fabs(first1[2] - first2[2]);
-		diff3 = fabs(first1[3] - first2[3]);
-		distsq += pow(diff0,p) + pow(diff1,p) + pow(diff2,p)  + pow(diff3,p);
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		diff0 = fabs(*first1++ - *first2++);
-		distsq += pow(diff0,p);
-	}
-	return distsq;
-}
+    /**
+     *  Compute the squared Euclidean distance between two vectors.
+     *
+     *	This is highly optimised, with loop unrolling, as it is one
+     *	of the most expensive inner loops.
+     *
+     *	The computation of squared root at the end is omitted for
+     *	efficiency.
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff0, diff1, diff2, diff3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
+
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            diff0 = (ResultType)(a[0] - b[0]);
+            diff1 = (ResultType)(a[1] - b[1]);
+            diff2 = (ResultType)(a[2] - b[2]);
+            diff3 = (ResultType)(a[3] - b[3]);
+            result += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
+            a += 4;
+            b += 4;
+
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
+        while (a < last) {
+            diff0 = (ResultType)(*a++ - *b++);
+            result += diff0 * diff0;
+        }
+        return result;
+    }
+
+    /**
+     *	Partial euclidean distance, using just one dimension. This is used by the
+     *	kd-tree when computing partial distances while traversing the tree.
+     *
+     *	Squared root is omitted for efficiency.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return (a-b)*(a-b);
+    }
+};
 
 
-// L_infinity distance (NOT A VALID KD-TREE DISTANCE - NOT DIMENSIONWISE ADDITIVE)
-template <typename Iterator1, typename Iterator2>
-double max_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+/*
+ * Manhattan distance functor, optimized version
+ */
+template<class T>
+struct L1
 {
-	double dist = acc;
-	Iterator1 lastgroup = last1 - 3;
-	double diff0, diff1, diff2, diff3;
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		diff0 = fabs(first1[0] - first2[0]);
-		diff1 = fabs(first1[1] - first2[1]);
-		diff2 = fabs(first1[2] - first2[2]);
-		diff3 = fabs(first1[3] - first2[3]);
-		if (diff0 > dist) dist = diff0;
-		if (diff1 > dist) dist = diff1;
-		if (diff2 > dist) dist = diff2;
-		if (diff3 > dist) dist = diff3;
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		diff0 = fabs(*first1++ - *first2++);
-		dist = (diff0 > dist) ? diff0 : dist;
-	}
-	return dist;
-}
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    /**
+     *  Compute the Manhattan (L_1) distance between two vectors.
+     *
+     *	This is highly optimised, with loop unrolling, as it is one
+     *	of the most expensive inner loops.
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff0, diff1, diff2, diff3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
+
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            diff0 = (ResultType)abs(a[0] - b[0]);
+            diff1 = (ResultType)abs(a[1] - b[1]);
+            diff2 = (ResultType)abs(a[2] - b[2]);
+            diff3 = (ResultType)abs(a[3] - b[3]);
+            result += diff0 + diff1 + diff2 + diff3;
+            a += 4;
+            b += 4;
+
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
+        while (a < last) {
+            diff0 = (ResultType)abs(*a++ - *b++);
+            result += diff0;
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return abs(a-b);
+    }
+};
 
 
-template <typename Iterator1, typename Iterator2>
-double hist_intersection_kernel(Iterator1 first1, Iterator1 last1, Iterator2 first2)
+
+template<class T>
+struct MinkowskiDistance
 {
-	double kernel = 0;
-	Iterator1 lastgroup = last1 - 3;
-	double min0, min1, min2, min3;
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		min0 = first1[0] < first2[0] ? first1[0] : first2[0];
-		min1 = first1[1] < first2[1] ? first1[1] : first2[1];
-		min2 = first1[2] < first2[2] ? first1[2] : first2[2];
-		min3 = first1[3] < first2[3] ? first1[3] : first2[3];
-		kernel += min0 + min1 + min2 + min3;
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		min0 = first1[0] < first2[0] ? first1[0] : first2[0];
-		kernel += min0;
-		first1++;
-		first2++;
-	}
-	return kernel;
-}
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
 
-template <typename Iterator1, typename Iterator2>
-double hist_intersection_dist_sq(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+    int order;
+
+    MinkowskiDistance(int order_) : order(order_) {}
+
+    /**
+     *  Compute the Minkowsky (L_p) distance between two vectors.
+     *
+     *	This is highly optimised, with loop unrolling, as it is one
+     *	of the most expensive inner loops.
+     *
+     *	The computation of squared root at the end is omitted for
+     *	efficiency.
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff0, diff1, diff2, diff3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
+
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            diff0 = (ResultType)abs(a[0] - b[0]);
+            diff1 = (ResultType)abs(a[1] - b[1]);
+            diff2 = (ResultType)abs(a[2] - b[2]);
+            diff3 = (ResultType)abs(a[3] - b[3]);
+            result += pow(diff0,order) + pow(diff1,order) + pow(diff2,order) + pow(diff3,order);
+            a += 4;
+            b += 4;
+
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
+        while (a < last) {
+            diff0 = (ResultType)abs(*a++ - *b++);
+            result += pow(diff0,order);
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return pow(static_cast<ResultType>(abs(a-b)),order);
+    }
+};
+
+
+
+template<class T>
+struct MaxDistance
 {
-	double dist_sq = acc - 2 * hist_intersection_kernel(first1, last1, first2);
-	while (first1 < last1) {
-		dist_sq += *first1 + *first2;
-		first1++;
-		first2++;
-	}
-	return dist_sq;
-}
+    typedef False is_kdtree_distance;
+    typedef True is_vector_space_distance;
 
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
 
-// Hellinger distance
-template <typename Iterator1, typename Iterator2>
-double hellinger_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
-{
-	double distsq = acc;
-	double diff0, diff1, diff2, diff3;
-	Iterator1 lastgroup = last1 - 3;
+    /**
+     *  Compute the max distance (L_infinity) between two vectors.
+     *
+     *  This distance is not a valid kdtree distance, it's not dimensionwise additive.
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff0, diff1, diff2, diff3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
 
-	/* Process 4 items with each loop for efficiency. */
-	while (first1 < lastgroup) {
-		diff0 = sqrt(first1[0]) - sqrt(first2[0]);
-		diff1 = sqrt(first1[1]) - sqrt(first2[1]);
-		diff2 = sqrt(first1[2]) - sqrt(first2[2]);
-		diff3 = sqrt(first1[3]) - sqrt(first2[3]);
-		distsq += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
-		first1 += 4;
-		first2 += 4;
-	}
-	/* Process last 0-3 pixels.  Not needed for standard vector lengths. */
-	while (first1 < last1) {
-		diff0 = sqrt(*first1++) - sqrt(*first2++);
-		distsq += diff0 * diff0;
-	}
-	return distsq;
-}
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            diff0 = abs(a[0] - b[0]);
+            diff1 = abs(a[1] - b[1]);
+            diff2 = abs(a[2] - b[2]);
+            diff3 = abs(a[3] - b[3]);
+            if (diff0>result) {result = diff0; }
+            if (diff1>result) {result = diff1; }
+            if (diff2>result) {result = diff2; }
+            if (diff3>result) {result = diff3; }
+            a += 4;
+            b += 4;
 
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
+        while (a < last) {
+            diff0 = abs(*a++ - *b++);
+            result = (diff0>result) ? diff0 : result;
+        }
+        return result;
+    }
 
-// chi-dsquare distance
-template <typename Iterator1, typename Iterator2>
-double chi_square_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
-{
-	double dist = acc;
+    /* This distance functor is not dimension-wise additive, which
+     * makes it an invalid kd-tree distance, not implementing the accum_dist method */
 
-	while (first1 < last1) {
-		double sum = *first1 + *first2;
-		if (sum > 0) {
-			double diff = *first1 - *first2;
-			dist += diff * diff / sum;
-		}
-		first1++;
-		first2++;
-	}
-	return dist;
-}
+};
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Kullback–Leibler divergence (NOT SYMMETRIC)
-template <typename Iterator1, typename Iterator2>
-double kl_divergence(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
-{
-	double div = acc;
-
-	while (first1 < last1) {
-		if (*first2 != 0) {
-			double ratio = *first1 / *first2;
-			if (ratio > 0) {
-				div += *first1 * log(ratio);
-			}
-		}
-		first1++;
-		first2++;
-	}
-	return div;
-}
-
-
-
-
-CV_EXPORTS flann_distance_t flann_distance_type();
 /**
- * Custom distance function. The distance computed is dependent on the value
- * of the 'flann_distance_type' global variable.
- *
- * If the last argument 'acc' is passed, the result is accumulated to the value
- * of this argument.
+ * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
+ * bit count of A exclusive XOR'ed with B
  */
-template <typename Iterator1, typename Iterator2>
-double custom_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double acc = 0)
+struct HammingLUT
 {
-	switch (flann_distance_type()) {
-	case FLANN_DIST_EUCLIDEAN:
-		return euclidean_dist(first1, last1, first2, acc);
-	case FLANN_DIST_MANHATTAN:
-		return manhattan_dist(first1, last1, first2, acc);
-	case FLANN_DIST_MINKOWSKI:
-		return minkowski_dist(first1, last1, first2, acc);
-	case FLANN_DIST_MAX:
-		return max_dist(first1, last1, first2, acc);
-	case FLANN_DIST_HIST_INTERSECT:
-		return hist_intersection_dist_sq(first1, last1, first2, acc);
-	case FLANN_DIST_HELLINGER:
-		return hellinger_dist(first1, last1, first2, acc);
-	case FLANN_DIST_CS:
-		return chi_square_dist(first1, last1, first2, acc);
-	case FLANN_DIST_KL:
-		return kl_divergence(first1, last1, first2, acc);
-	default:
-		return euclidean_dist(first1, last1, first2, acc);
-	}
-}
+    typedef False is_kdtree_distance;
+    typedef False is_vector_space_distance;
+
+    typedef unsigned char ElementType;
+    typedef int ResultType;
+
+    /** this will count the bits in a ^ b
+     */
+    ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
+    {
+        ResultType result = 0;
+        for (int i = 0; i < size; i++) {
+            result += byteBitsLookUp(a[i] ^ b[i]);
+        }
+        return result;
+    }
+
+
+    /** \brief given a byte, count the bits using a look up table
+     *  \param b the byte to count bits.  The look up table has an entry for all
+     *  values of b, where that entry is the number of bits.
+     *  \return the number of bits in byte b
+     */
+    static unsigned char byteBitsLookUp(unsigned char b)
+    {
+        static const unsigned char table[256]  = {
+            /* 0 */ 0, /* 1 */ 1, /* 2 */ 1, /* 3 */ 2,
+            /* 4 */ 1, /* 5 */ 2, /* 6 */ 2, /* 7 */ 3,
+            /* 8 */ 1, /* 9 */ 2, /* a */ 2, /* b */ 3,
+            /* c */ 2, /* d */ 3, /* e */ 3, /* f */ 4,
+            /* 10 */ 1, /* 11 */ 2, /* 12 */ 2, /* 13 */ 3,
+            /* 14 */ 2, /* 15 */ 3, /* 16 */ 3, /* 17 */ 4,
+            /* 18 */ 2, /* 19 */ 3, /* 1a */ 3, /* 1b */ 4,
+            /* 1c */ 3, /* 1d */ 4, /* 1e */ 4, /* 1f */ 5,
+            /* 20 */ 1, /* 21 */ 2, /* 22 */ 2, /* 23 */ 3,
+            /* 24 */ 2, /* 25 */ 3, /* 26 */ 3, /* 27 */ 4,
+            /* 28 */ 2, /* 29 */ 3, /* 2a */ 3, /* 2b */ 4,
+            /* 2c */ 3, /* 2d */ 4, /* 2e */ 4, /* 2f */ 5,
+            /* 30 */ 2, /* 31 */ 3, /* 32 */ 3, /* 33 */ 4,
+            /* 34 */ 3, /* 35 */ 4, /* 36 */ 4, /* 37 */ 5,
+            /* 38 */ 3, /* 39 */ 4, /* 3a */ 4, /* 3b */ 5,
+            /* 3c */ 4, /* 3d */ 5, /* 3e */ 5, /* 3f */ 6,
+            /* 40 */ 1, /* 41 */ 2, /* 42 */ 2, /* 43 */ 3,
+            /* 44 */ 2, /* 45 */ 3, /* 46 */ 3, /* 47 */ 4,
+            /* 48 */ 2, /* 49 */ 3, /* 4a */ 3, /* 4b */ 4,
+            /* 4c */ 3, /* 4d */ 4, /* 4e */ 4, /* 4f */ 5,
+            /* 50 */ 2, /* 51 */ 3, /* 52 */ 3, /* 53 */ 4,
+            /* 54 */ 3, /* 55 */ 4, /* 56 */ 4, /* 57 */ 5,
+            /* 58 */ 3, /* 59 */ 4, /* 5a */ 4, /* 5b */ 5,
+            /* 5c */ 4, /* 5d */ 5, /* 5e */ 5, /* 5f */ 6,
+            /* 60 */ 2, /* 61 */ 3, /* 62 */ 3, /* 63 */ 4,
+            /* 64 */ 3, /* 65 */ 4, /* 66 */ 4, /* 67 */ 5,
+            /* 68 */ 3, /* 69 */ 4, /* 6a */ 4, /* 6b */ 5,
+            /* 6c */ 4, /* 6d */ 5, /* 6e */ 5, /* 6f */ 6,
+            /* 70 */ 3, /* 71 */ 4, /* 72 */ 4, /* 73 */ 5,
+            /* 74 */ 4, /* 75 */ 5, /* 76 */ 5, /* 77 */ 6,
+            /* 78 */ 4, /* 79 */ 5, /* 7a */ 5, /* 7b */ 6,
+            /* 7c */ 5, /* 7d */ 6, /* 7e */ 6, /* 7f */ 7,
+            /* 80 */ 1, /* 81 */ 2, /* 82 */ 2, /* 83 */ 3,
+            /* 84 */ 2, /* 85 */ 3, /* 86 */ 3, /* 87 */ 4,
+            /* 88 */ 2, /* 89 */ 3, /* 8a */ 3, /* 8b */ 4,
+            /* 8c */ 3, /* 8d */ 4, /* 8e */ 4, /* 8f */ 5,
+            /* 90 */ 2, /* 91 */ 3, /* 92 */ 3, /* 93 */ 4,
+            /* 94 */ 3, /* 95 */ 4, /* 96 */ 4, /* 97 */ 5,
+            /* 98 */ 3, /* 99 */ 4, /* 9a */ 4, /* 9b */ 5,
+            /* 9c */ 4, /* 9d */ 5, /* 9e */ 5, /* 9f */ 6,
+            /* a0 */ 2, /* a1 */ 3, /* a2 */ 3, /* a3 */ 4,
+            /* a4 */ 3, /* a5 */ 4, /* a6 */ 4, /* a7 */ 5,
+            /* a8 */ 3, /* a9 */ 4, /* aa */ 4, /* ab */ 5,
+            /* ac */ 4, /* ad */ 5, /* ae */ 5, /* af */ 6,
+            /* b0 */ 3, /* b1 */ 4, /* b2 */ 4, /* b3 */ 5,
+            /* b4 */ 4, /* b5 */ 5, /* b6 */ 5, /* b7 */ 6,
+            /* b8 */ 4, /* b9 */ 5, /* ba */ 5, /* bb */ 6,
+            /* bc */ 5, /* bd */ 6, /* be */ 6, /* bf */ 7,
+            /* c0 */ 2, /* c1 */ 3, /* c2 */ 3, /* c3 */ 4,
+            /* c4 */ 3, /* c5 */ 4, /* c6 */ 4, /* c7 */ 5,
+            /* c8 */ 3, /* c9 */ 4, /* ca */ 4, /* cb */ 5,
+            /* cc */ 4, /* cd */ 5, /* ce */ 5, /* cf */ 6,
+            /* d0 */ 3, /* d1 */ 4, /* d2 */ 4, /* d3 */ 5,
+            /* d4 */ 4, /* d5 */ 5, /* d6 */ 5, /* d7 */ 6,
+            /* d8 */ 4, /* d9 */ 5, /* da */ 5, /* db */ 6,
+            /* dc */ 5, /* dd */ 6, /* de */ 6, /* df */ 7,
+            /* e0 */ 3, /* e1 */ 4, /* e2 */ 4, /* e3 */ 5,
+            /* e4 */ 4, /* e5 */ 5, /* e6 */ 5, /* e7 */ 6,
+            /* e8 */ 4, /* e9 */ 5, /* ea */ 5, /* eb */ 6,
+            /* ec */ 5, /* ed */ 6, /* ee */ 6, /* ef */ 7,
+            /* f0 */ 4, /* f1 */ 5, /* f2 */ 5, /* f3 */ 6,
+            /* f4 */ 5, /* f5 */ 6, /* f6 */ 6, /* f7 */ 7,
+            /* f8 */ 5, /* f9 */ 6, /* fa */ 6, /* fb */ 7,
+            /* fc */ 6, /* fd */ 7, /* fe */ 7, /* ff */ 8
+        };
+        return table[b];
+    }
+};
+
+/**
+ * Hamming distance functor (pop count between two binary vectors, i.e. xor them and count the number of bits set)
+ * That code was taken from brief.cpp in OpenCV
+ */
+template<class T>
+struct Hamming
+{
+    typedef False is_kdtree_distance;
+    typedef False is_vector_space_distance;
+
+
+    typedef T ElementType;
+    typedef int ResultType;
+
+    template<typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        ResultType result = 0;
+#if __GNUC__
+#if ANDROID && HAVE_NEON
+        static uint64_t features = android_getCpuFeatures();
+        if ((features& ANDROID_CPU_ARM_FEATURE_NEON)) {
+            for (size_t i = 0; i < size; i += 16) {
+                uint8x16_t A_vec = vld1q_u8 (a + i);
+                uint8x16_t B_vec = vld1q_u8 (b + i);
+                //uint8x16_t veorq_u8 (uint8x16_t, uint8x16_t)
+                uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+
+                uint8x16_t bitsSet += vcntq_u8 (AxorB);
+                //uint16x8_t vpadalq_u8 (uint16x8_t, uint8x16_t)
+                uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+                uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+
+                uint64x2_t bitSet2 = vpaddlq_u32 (bitSet4);
+                result += vgetq_lane_u64 (bitSet2,0);
+                result += vgetq_lane_u64 (bitSet2,1);
+            }
+        }
+        else
+#endif
+        //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
+        typedef unsigned long long pop_t;
+        const size_t modulo = size % sizeof(pop_t);
+        const pop_t* a2 = reinterpret_cast<const pop_t*> (a);
+        const pop_t* b2 = reinterpret_cast<const pop_t*> (b);
+        const pop_t* a2_end = a2 + (size / sizeof(pop_t));
+
+        for (; a2 != a2_end; ++a2, ++b2) result += __builtin_popcountll((*a2) ^ (*b2));
+
+        if (modulo) {
+            //in the case where size is not dividable by sizeof(size_t)
+            //need to mask off the bits at the end
+            pop_t a_final = 0, b_final = 0;
+            memcpy(&a_final, a2, modulo);
+            memcpy(&b_final, b2, modulo);
+            result += __builtin_popcountll(a_final ^ b_final);
+        }
+#else
+        HammingLUT lut;
+        result = lut(reinterpret_cast<const unsigned char*> (a),
+                     reinterpret_cast<const unsigned char*> (b), size * sizeof(pop_t));
+#endif
+        return result;
+    }
+};
+
+template<typename T>
+struct Hamming2
+{
+    typedef False is_kdtree_distance;
+    typedef False is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef int ResultType;
+
+    /** This is popcount_3() from:
+     * http://en.wikipedia.org/wiki/Hamming_weight */
+    unsigned int popcnt32(uint32_t n) const
+    {
+        n -= ((n >> 1) & 0x55555555);
+        n = (n & 0x33333333) + ((n >> 2) & 0x33333333);
+        return (((n + (n >> 4))& 0xF0F0F0F)* 0x1010101) >> 24;
+    }
+
+    unsigned int popcnt64(uint64_t n) const
+    {
+        n -= ((n >> 1) & 0x5555555555555555);
+        n = (n & 0x3333333333333333) + ((n >> 2) & 0x3333333333333333);
+        return (((n + (n >> 4))& 0x0f0f0f0f0f0f0f0f)* 0x0101010101010101) >> 56;
+    }
+
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+#ifdef FLANN_PLATFORM_64_BIT
+        const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
+        const uint64_t* pb = reinterpret_cast<const uint64_t*>(b);
+        ResultType result = 0;
+        size /= (sizeof(uint64_t)/sizeof(unsigned char));
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt64(*pa ^ *pb);
+            ++pa;
+            ++pb;
+        }
+#else
+        const uint32_t* pa = reinterpret_cast<const uint32_t*>(a);
+        const uint32_t* pb = reinterpret_cast<const uint32_t*>(b);
+        ResultType result = 0;
+        size /= (sizeof(uint32_t)/sizeof(unsigned char));
+        for(size_t i = 0; i < size; ++i ) {
+        	result += popcnt32(*pa ^ *pb);
+        	++pa;
+        	++pb;
+        }
+#endif
+        return result;
+    }
+};
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+struct HistIntersectionDistance
+{
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    /**
+     *  Compute the histogram intersection distance
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType min0, min1, min2, min3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
+
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            min0 = (ResultType)(a[0] < b[0] ? a[0] : b[0]);
+            min1 = (ResultType)(a[1] < b[1] ? a[1] : b[1]);
+            min2 = (ResultType)(a[2] < b[2] ? a[2] : b[2]);
+            min3 = (ResultType)(a[3] < b[3] ? a[3] : b[3]);
+            result += min0 + min1 + min2 + min3;
+            a += 4;
+            b += 4;
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
+        while (a < last) {
+            min0 = (ResultType)(*a < *b ? *a : *b);
+            result += min0;
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return a<b ? a : b;
+    }
+};
+
+
+
+template<class T>
+struct HellingerDistance
+{
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    /**
+     *  Compute the histogram intersection distance
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType diff0, diff1, diff2, diff3;
+        Iterator1 last = a + size;
+        Iterator1 lastgroup = last - 3;
+
+        /* Process 4 items with each loop for efficiency. */
+        while (a < lastgroup) {
+            diff0 = sqrt(static_cast<ResultType>(a[0])) - sqrt(static_cast<ResultType>(b[0]));
+            diff1 = sqrt(static_cast<ResultType>(a[1])) - sqrt(static_cast<ResultType>(b[1]));
+            diff2 = sqrt(static_cast<ResultType>(a[2])) - sqrt(static_cast<ResultType>(b[2]));
+            diff3 = sqrt(static_cast<ResultType>(a[3])) - sqrt(static_cast<ResultType>(b[3]));
+            result += diff0 * diff0 + diff1 * diff1 + diff2 * diff2 + diff3 * diff3;
+            a += 4;
+            b += 4;
+        }
+        while (a < last) {
+            diff0 = sqrt(static_cast<ResultType>(*a++)) - sqrt(static_cast<ResultType>(*b++));
+            result += diff0 * diff0;
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        return sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
+    }
+};
+
+
+template<class T>
+struct ChiSquareDistance
+{
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    /**
+     *  Compute the chi-square distance
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType sum, diff;
+        Iterator1 last = a + size;
+
+        while (a < last) {
+            sum = (ResultType)(*a + *b);
+            if (sum>0) {
+                diff = (ResultType)(*a - *b);
+                result += diff*diff/sum;
+            }
+            ++a;
+            ++b;
+
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        ResultType result = ResultType();
+        ResultType sum, diff;
+
+        sum = (ResultType)(a+b);
+        if (sum>0) {
+            diff = (ResultType)(a-b);
+            result = diff*diff/sum;
+        }
+        return result;
+    }
+};
+
+
+template<class T>
+struct KL_Divergence
+{
+    typedef True is_kdtree_distance;
+    typedef True is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    /**
+     *  Compute the Kullback–Leibler divergence
+     */
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        Iterator1 last = a + size;
+
+        while (a < last) {
+            if (* a != 0) {
+                ResultType ratio = (ResultType)(*a / *b);
+                if (ratio>0) {
+                    result += *a * log(ratio);
+                }
+            }
+            ++a;
+            ++b;
+
+            if ((worst_dist>0)&&(result>worst_dist)) {
+                return result;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Partial distance, used by the kd-tree.
+     */
+    template <typename U, typename V>
+    inline ResultType accum_dist(const U& a, const V& b, int) const
+    {
+        ResultType result = ResultType();
+        ResultType ratio = (ResultType)(a / b);
+        if (ratio>0) {
+            result = a * log(ratio);
+        }
+        return result;
+    }
+};
+
+
 
 /*
  * This is a "zero iterator". It basically behaves like a zero filled
@@ -333,28 +806,36 @@ double custom_dist(Iterator1 first1, Iterator1 last1, Iterator2 first2, double a
  * zero-filled array.
  */
 template <typename T>
-struct ZeroIterator {
+struct ZeroIterator
+{
 
-	T operator*() {
-		return 0;
-	}
+    T operator*()
+    {
+        return 0;
+    }
 
-	T operator[](int) {
-		return 0;
-	}
+    T operator[](int)
+    {
+        return 0;
+    }
 
-	ZeroIterator<T>& operator ++(int) {
-		return *this;
-	}
+    const ZeroIterator<T>& operator ++()
+    {
+        return *this;
+    }
 
-	ZeroIterator<T>& operator+=(int) {
-		return *this;
-	}
+    ZeroIterator<T> operator ++(int)
+    {
+        return *this;
+    }
+
+    ZeroIterator<T>& operator+=(int)
+    {
+        return *this;
+    }
 
 };
 
-CV_EXPORTS ZeroIterator<float>& zero();
+}
 
-} // namespace cvflann
-
-#endif //_OPENCV_DIST_H_
+#endif //OPENCV_FLANN_DIST_H_

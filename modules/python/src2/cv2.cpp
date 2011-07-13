@@ -9,6 +9,7 @@
 #include "numpy/ndarrayobject.h"
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/ml/ml.hpp"
@@ -18,6 +19,9 @@
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv_extra_api.hpp"
+
+using cv::flann::IndexParams;
+using cv::flann::SearchParams;
 
 static PyObject* opencv_error = 0;
 
@@ -735,6 +739,46 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
     return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
+static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name="<unknown>")
+{
+    bool ok = false;
+    PyObject* keys = PyMapping_Keys(o);
+    PyObject* values = PyMapping_Values(o);
+    
+    if( keys && values )
+    {
+        int i, n = (int)PyList_GET_SIZE(keys);
+        for( i = 0; i < n; i++ )
+        {
+            PyObject* key = PyList_GET_ITEM(keys, i);
+            PyObject* item = PyList_GET_ITEM(values, i);
+            if( !PyString_Check(key) )
+                break;
+            std::string k = PyString_AsString(key);
+            if( PyString_Check(item) )
+                p.setString(k, PyString_AsString(item));
+            else if( PyInt_Check(item) )
+                p.setInt(k, PyInt_AsLong(item));
+            else if( PyFloat_Check(item) )
+                p.setDouble(k, PyFloat_AsDouble(item));
+            else
+                break;
+        }
+        ok = i == n && !PyErr_Occurred();
+    }
+    
+    Py_XDECREF(keys);
+    Py_XDECREF(values);
+    return ok;
+}
+
+static bool pyopencv_to(PyObject *o, flann_distance_t& dist, const char *name="<unknown>")
+{
+    int d = 0;
+    bool ok = pyopencv_to(o, d, name);
+    dist = (flann_distance_t)d;
+    return ok;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 

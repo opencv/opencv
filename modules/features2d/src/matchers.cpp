@@ -603,7 +603,7 @@ void FlannBasedMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vec
         Mat queryDescriptorsRow = queryDescriptors.row(qIdx);
         Mat indicesRow = indices.row(qIdx);
         Mat distsRow = dists.row(qIdx);
-        flannIndex->radiusSearch( queryDescriptorsRow, indicesRow, distsRow, maxDistance*maxDistance, *searchParams );
+        flannIndex->radiusSearch( queryDescriptorsRow, indicesRow, distsRow, maxDistance*maxDistance, count, *searchParams );
     }
 
     convertToDMatches( mergedDescriptors, indices, dists, matches );

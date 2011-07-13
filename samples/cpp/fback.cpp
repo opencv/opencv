@@ -10,7 +10,7 @@ using namespace std;
 void help()
 {
 	cout <<
-			"\nThis program demonstrates dense, Farnback, optical flow\n"
+			"\nThis program demonstrates dense optical flow algorithm by Gunnar Farneback\n"
 			"Mainly the function: calcOpticalFlowFarneback()\n"
 			"Call:\n"
 			"./fback\n"

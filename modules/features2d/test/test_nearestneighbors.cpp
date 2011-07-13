@@ -405,14 +405,14 @@ int CV_FlannTest::radiusSearch( Mat& points, Mat& neighbors )
         // 1st way
         Mat p( 1, points.cols, CV_32FC1, points.ptr<float>(i) ),
             n( 1, neighbors.cols, CV_32SC1, neighbors.ptr<int>(i) );
-        index->radiusSearch( p, n, dist, radius, SearchParams() );
+        index->radiusSearch( p, n, dist, radius, neighbors.cols, SearchParams() );
 
         // 2nd way
         float* fltPtr = points.ptr<float>(i);
         vector<float> query( fltPtr, fltPtr + points.cols );
         vector<int> indices( neighbors1.cols, 0 );
         vector<float> dists( dist.cols, 0 );
-        index->radiusSearch( query, indices, dists, radius, SearchParams() );
+        index->radiusSearch( query, indices, dists, radius, neighbors.cols, SearchParams() );
         vector<int>::const_iterator it = indices.begin();
         for( j = 0; it != indices.end(); ++it, j++ )
             neighbors1.at<int>(i,j) = *it;
