@@ -93,7 +93,11 @@ if (BUILD_ANDROID_EXAMPLES)
     list(REMOVE_ITEM android_samples hello-android)
     list(SORT android_samples)
     
-    file(COPY ${android_samples} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" PATTERN ".svn" EXCLUDE)
+    file(COPY ${android_samples} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+        PATTERN ".svn" EXCLUDE
+        PATTERN "gen" EXCLUDE
+        PATTERN "bin" EXCLUDE
+        )
 
     foreach(sample ${android_samples})
         if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${sample}/AndroidManifest.xml)

@@ -171,7 +171,11 @@ endforeach()
 
 #android test project
 if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)
-    file(COPY android_test DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" PATTERN ".svn" EXCLUDE)
+    file(COPY android_test DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+        PATTERN ".svn" EXCLUDE
+        PATTERN "gen" EXCLUDE
+        PATTERN "bin" EXCLUDE
+        )
     SET(test_dir "${CMAKE_CURRENT_BINARY_DIR}/android_test")
     
     SET(test_name opencv_test_java)
