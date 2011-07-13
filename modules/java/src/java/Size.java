@@ -3,48 +3,56 @@ package org.opencv;
 //javadoc:Size_
 public class Size {
 
-	public double width, height;
+    public double width, height;
 
-	public Size(double width, double height) {
-		this.width = width;
-		this.height = height;
-	}
-	
-	public Size() {
-		this(0, 0);
-	}
-	
-	public Size(Point p) {
-		width = (double) p.x;
-		height = (double) p.y;
-	}
-	
-	public double area() {
-		return width * height;
-	}
+    public Size(double width, double height) {
+        this.width = width;
+        this.height = height;
+    }
 
-	public Size clone() {
-		return new Size(width, height);
-	}
+    public Size() {
+        this(0, 0);
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		long temp;
-		temp = Double.doubleToLongBits(height);
-		result = prime * result + (int) (temp ^ (temp >>> 32));
-		temp = Double.doubleToLongBits(width);
-		result = prime * result + (int) (temp ^ (temp >>> 32));
-		return result;
-	}
+    public Size(Point p) {
+        width = (double) p.x;
+        height = (double) p.y;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (!(obj instanceof Size)) return false;
-		Size it = (Size) obj;
-		return width == it.width && height == it.height;
-	}
+    public Size(double[] vals) {
+    	this();
+    	if(vals!=null) {
+    		width  = vals.length>0 ? vals[0] : 0;
+    		height = vals.length>1 ? vals[1] : 0;
+    	}
+    }
+
+    public double area() {
+        return width * height;
+    }
+
+    public Size clone() {
+        return new Size(width, height);
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        long temp;
+        temp = Double.doubleToLongBits(height);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(width);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Size)) return false;
+        Size it = (Size) obj;
+        return width == it.width && height == it.height;
+    }
 
 }

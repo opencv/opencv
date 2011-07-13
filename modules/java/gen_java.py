@@ -14,8 +14,8 @@ type_dict = {
     "env"     : { "j_type" : "", "jn_type" : "", "jni_type" : "JNIEnv*"},
     "cls"     : { "j_type" : "", "jn_type" : "", "jni_type" : "jclass"},
     "bool"    : { "j_type" : "boolean", "jn_type" : "boolean", "jni_type" : "jboolean", "suffix" : "Z" },
-    "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "int", "suffix" : "I" },
-    "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "int", "suffix" : "I" },
+    "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
+    "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
@@ -26,37 +26,37 @@ type_dict = {
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
                   "suffix" : "J" },
     "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "cv::Point %(n)s((int)%(n)s_x, (int)%(n)s_y)",
+                  "jni_var" : "Point %(n)s((int)%(n)s_x, (int)%(n)s_y)",
                   "suffix" : "DD"},
     "Point2f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "cv::Point2f %(n)s((float)%(n)s_x, (float)%(n)s_y)",
+                  "jni_var" : "Point2f %(n)s((float)%(n)s_x, (float)%(n)s_y)",
                   "suffix" : "DD"},
     "Point2d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "cv::Point2d %(n)s(%(n)s_x, %(n)s_y)",
+                  "jni_var" : "Point2d %(n)s(%(n)s_x, %(n)s_y)",
                   "suffix" : "DD"},
     "Point3i" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "cv::Point3i %(n)s((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)",
+                  "jni_var" : "Point3i %(n)s((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)",
                   "suffix" : "DDD"},
     "Point3f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "cv::Point3f %(n)s((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)",
+                  "jni_var" : "Point3f %(n)s((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)",
                   "suffix" : "DDD"},
     "Point3d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "cv::Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)",
+                  "jni_var" : "Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)",
                   "suffix" : "DDD"},
     "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
-                  "jni_var" : "cv::Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)",
+                  "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)",
                   "suffix" : "IIII"},
     "Size"    : { "j_type" : "Size",  "jn_args" : (("double", ".width"), ("double", ".height")),
-                  "jni_var" : "cv::Size %(n)s((int)%(n)s_width, (int)%(n)s_height)",
+                  "jni_var" : "Size %(n)s((int)%(n)s_width, (int)%(n)s_height)",
                   "suffix" : "DD"},
     "Size2f"  : { "j_type" : "Size",  "jn_args" : (("double", ".width"), ("double", ".height")),
-                  "jni_var" : "cv::Size2f %(n)s((float)%(n)s_width, (float)%(n)s_height)",
+                  "jni_var" : "Size2f %(n)s((float)%(n)s_width, (float)%(n)s_height)",
                   "suffix" : "DD"},
  "RotatedRect": { "j_type" : "RotatedRect",  "jn_args" : (("double", ".center.x"), ("double", ".center.y"), ("double", ".size.width"), ("double", ".size.height"), ("double", ".angle")),
-                  "jni_var" : "cv::RotatedRect %(n)s(cv::Point2f(%(n)s_center_x, %(n)s_center_y), cv::Size2f(%(n)s_size_width, %(n)s_size_height), %(n)s_angle)",
+                  "jni_var" : "RotatedRect %(n)s(cv::Point2f(%(n)s_center_x, %(n)s_center_y), cv::Size2f(%(n)s_size_width, %(n)s_size_height), %(n)s_angle)",
                   "suffix" : "DDDDD"},
     "Scalar"  : { "j_type" : "Scalar",  "jn_args" : (("double", ".v0"), ("double", ".v1"), ("double", ".v2"), ("double", ".v3")),
-                  "jni_var" : "cv::Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)",
+                  "jni_var" : "Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)",
                   "suffix" : "DDDD"},
     "Range"   : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "cv::Range %(n)s(%(n)s_start, %(n)s_end)",
@@ -189,8 +189,9 @@ class JavaWrapperGenerator(object):
             print "Duplicated class: " + classinfo.name
             sys.exit(-1)
         type_dict[classinfo.name] = \
-            { "j_type" : classinfo.name,  "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)",
+            { "j_type" : classinfo.name,
+              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
 
 
@@ -404,8 +405,7 @@ class JavaWrapperGenerator(object):
         # java comment
         self.java_code.write( "\n%s// C++: %s\n" % (indent, c_decl) )
         # check if we 'know' all the types
-        type_info = type_dict.get(fi.ctype)
-        if not (type_info and type_info.get("jn_type")): # unsupported ret type
+        if fi.ctype not in type_dict: # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             self.java_code.write( indent + msg )
@@ -414,18 +414,18 @@ class JavaWrapperGenerator(object):
             return
         for a in fi.args:
             if a.ctype not in type_dict:
-                msg = "// Unknown type '%s', skipping the function\n\n" % a.ctype
+                msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, a.out
+                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, "/" + (a.out or "I")
                 return
             if a.ctype != "Mat" and "jn_args" in type_dict[a.ctype] and a.out: # complex out args not yet supported
-                msg = "// Unsupported type '%s&', skipping the function\n\n" % a.ctype
+                msg = "// Unsupported OUT type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
-                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype, a.out
+                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype, "/" + (a.out or "I")
                 return
 
         self.ported_func_counter += 1
@@ -470,7 +470,7 @@ class JavaWrapperGenerator(object):
             jn_code.write( Template(\
                 "${indent}private static native $jn_type $jn_name($jn_args);\n").substitute(\
                 indent = indent, \
-                jn_type = type_dict[fi.ctype]["jn_type"], \
+                jn_type = type_dict[fi.ctype].get("jn_type", "double[]"), \
                 jn_name = fi.jn_name, \
                 jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_")) for a in jn_args])
             ) );
@@ -495,8 +495,10 @@ class JavaWrapperGenerator(object):
             elif fi.ctype == "": # c-tor
                 impl_code = "nativeObj = $jn_name($jn_args_call);"
             elif fi.ctype in self.classes: # wrapped class
-                impl_code = " return new %s( $jn_name($jn_args_call) ); " % \
+                impl_code = "return new %s( $jn_name($jn_args_call) );" % \
                     self.classes[fi.ctype].jname
+            elif "jn_type" not in type_dict[fi.ctype]:
+                impl_code = "return new "+type_dict[fi.ctype]["j_type"]+"( $jn_name($jn_args_call) );"
 
             static = "static"
             if fi.classname:
@@ -518,25 +520,35 @@ class JavaWrapperGenerator(object):
             ) )
 
             # cpp part:
-            # jni_func(..) { return cv_func(..); }
-            ret = "return "
-            ext = ""
+            # jni_func(..) { _retval_ = cv_func(..); return _retval_; }
+            ret = "return _retval_;"
             default = "return 0;"
             if fi.ctype == "void":
-                ret = ""
-                default = ""
+                ret = "return;"
+                default = "return;"
+            elif not fi.ctype: # c-tor
+                ret = "return (jlong) _retval_;"
             elif fi.ctype == "string":
-                ret = "return env->NewStringUTF"
-                ext = ".c_str()"
+                ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
-                ret = "return (jlong) new " + self.classes[fi.ctype].jname
+                ret = "return (jlong) new %s(_retval_);" % fi.ctype
+            elif "jni_type" not in type_dict[fi.ctype]: # jdoubleArray
+                ret = "double _tmp_[6]; " + \
+                      "/* "+fi.ctype+"_to_double6(_retval_, _tmp_); */" + \
+                      "jdoubleArray _da_ = env->NewDoubleArray(6); " + \
+                      "env->SetDoubleArrayRegion(_da_, 0, 6, _tmp_); " + \
+                      "return _da_;"
 
             cvname = "cv::" + fi.name
             j2cvargs = []
+            retval = fi.ctype + " _retval_ = "
+            if fi.ctype == "void":
+                retval = ""
             if fi.classname:
                 if not fi.ctype: # c-tor
-                    cvname = "(jlong) new " + fi.classname
+                    retval = fi.classname + "* _retval_ = "
+                    cvname = "new " + fi.classname
                 elif fi.static:
                     cvname = "%s::%s" % (fi.classname, fi.name)
                 else:
@@ -551,7 +563,7 @@ class JavaWrapperGenerator(object):
                 if "jni_var" in type_dict[a.ctype]: # complex type
                     j2cvargs.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
 
-            rtype = type_dict[fi.ctype]["jni_type"]
+            rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
             self.cpp_code.write ( Template( \
 """
 
@@ -563,7 +575,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         LOGD("$module::$fname()");
 #endif // DEBUG
         $j2cv
-        $ret( $cvname( $cvargs )$ext );
+        $retval$cvname( $cvargs );
+        $ret
     } catch(cv::Exception e) {
 #ifdef DEBUG
         LOGD("$module::$fname() catched cv::Exception: %s", e.what());
@@ -592,8 +605,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         ret = ret, \
         cvname = cvname, \
         cvargs = ", ".join([a for a in cvargs]), \
-        ext = ext, \
-        default = default
+        default = default, \
+        retval = retval, \
     ) )
 
             # processing args with default values
