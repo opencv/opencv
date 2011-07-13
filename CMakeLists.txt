@@ -1393,20 +1393,8 @@ if(BUILD_PACKAGE)
             COMPONENT src
             )
 
-        if(CMAKE_INSTALL_DEBUG_LIBRARIES)
-            foreach(m calib3d core contrib features2d ffmpeg flann gpu highgui imgproc legacy ml objdetect video)
-                install(FILES  ${EXECUTABLE_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.dll
-            DESTINATION bin COMPONENT main)
-                install(FILES  ${LIBRARY_OUTPUT_PATH}/Debug/opencv_${m}${OPENCV_DLLVERSION}d.lib
-            DESTINATION lib COMPONENT main)
-            endforeach()
-        endif()
-
         install(DIRECTORY data samples DESTINATION "." COMPONENT main PATTERN ".svn" EXCLUDE)
         install(DIRECTORY 3rdparty android modules doc DESTINATION "." COMPONENT src PATTERN ".svn" EXCLUDE)
-        #install(DIRECTORY doc DESTINATION doc COMPONENT src FILES_MATCHING PATTERN "*.rst" "*.tex")
-        #install(DIRECTORY doc/pics DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
-        #install(DIRECTORY doc/latex2sphinx DESTINATION doc COMPONENT src PATTERN ".svn" EXCLUDE)
 
         # install TBB dlls
         if(WIN32 AND HAVE_TBB)
