@@ -4,7 +4,6 @@ import org.opencv.highgui;
 import org.opencv.highgui.VideoCapture;
 
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 
 public class VideoCaptureTest extends OpenCVTestCase {
@@ -102,7 +101,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 		capture.release();
 		assertTrue(isSucceed);
 		assertFalse(dst.empty());
-		OpenCVTestRunner.Log(dst.toString());
+		//OpenCVTestRunner.Log(dst.toString());
 		assertEquals(1, dst.channels());
 	}
 
