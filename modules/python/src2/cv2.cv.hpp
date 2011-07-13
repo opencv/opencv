@@ -276,7 +276,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
       memcpy(s + y * bpl, i->imageData + y * i->widthStep, bpl);
     }
     PyObject *r = PyString_FromStringAndSize(s, l);
-    delete s;
+    delete[] s;
     return r;
   }
 }
@@ -433,7 +433,7 @@ static PyObject *cvmat_tostring(PyObject *self, PyObject *args)
       memcpy(s + y * bpl, m->data.ptr + y * m->step, bpl);
     }
     PyObject *r = PyString_FromStringAndSize(s, l);
-    delete s;
+    delete[] s;
     return r;
   }
 }
@@ -481,8 +481,8 @@ struct arrayTrack {
 static void arrayTrackDtor(void *p)
 {
   struct arrayTrack *at = (struct arrayTrack *)p;
-  delete at->s.shape;
-  delete at->s.strides;
+  delete[] at->s.shape;
+  delete[] at->s.strides;
   if (at->s.descr)
     Py_DECREF(at->s.descr);
   Py_DECREF(at->o);
@@ -2905,7 +2905,7 @@ public:
   ~ranges() {
     for (Py_ssize_t i = 0; i < len; i++)
       delete rr[i];
-   delete rr;
+    delete[] rr;
   }
 };
 
