@@ -748,7 +748,13 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const vector<Point2f>&
   const Point2f offset(150, 150);
 
   vector<Point2f> dstPoints;
-  for (int i = 0; i < detectedGridSize.height; i++)
+  bool isClockwiseBefore =
+      getDirection(centers[0], centers[detectedGridSize.width - 1], centers[centers.size() - 1]) < 0;
+
+  int iStart = isClockwiseBefore ? 0 : detectedGridSize.height - 1;
+  int iEnd = isClockwiseBefore ? detectedGridSize.height : -1;
+  int iStep = isClockwiseBefore ? 1 : -1;
+  for (int i = iStart; i != iEnd; i += iStep)
   {
     for (int j = 0; j < detectedGridSize.width; j++)
     {
@@ -1453,6 +1459,10 @@ void CirclesGridFinder::getCornerSegments(const vector<vector<size_t> > &points,
     cout << "Corners are counterclockwise" << endl;
 #endif
     std::reverse(segments.begin(), segments.end());
+    std::reverse(cornerIndices.begin(), cornerIndices.end());
+    std::reverse(firstSteps.begin(), firstSteps.end());
+    std::reverse(secondSteps.begin(), secondSteps.end());
+    std::swap(firstSteps, secondSteps);
   }
 }
 
