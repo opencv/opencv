@@ -329,7 +329,23 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'min_max_loc' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#minMaxLoc%s', None),
 	    'mix_channels' : ( 'http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#mixChannels%s', None),
 	    'calc_back_project' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcBackProject%s', None),
-            'compare_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#compareHist%s', None)
+            'compare_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#compareHist%s', None),
+	    'corner_harris' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cornerHarris%s', None),
+	    'good_features_to_track' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-goodfeaturestotrack%s', None),
+	    'corner_min_eigenval' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornermineigenval%s', None), 
+	    'corner_eigenvals_and_vecs' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornereigenvalsandvecs%s', None), 
+	    'corner_sub_pix' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornersubpix%s', None),
+            'find_contours' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-findcontours%s', None), 
+	    'convex_hull' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-convexhull%s', None),
+            'draw_contours' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-drawcontours%s', None),
+            'bounding_rect' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-boundingrect%s', None),
+            'min_enclosing_circle' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-minenclosingcircle%s', None),
+	    'min_area_rect' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-minarearect%s', None),
+            'fit_ellipse' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-fitellipse%s', None),
+            'moments' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-moments%s', None),
+            'contour_area' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-contourarea%s', None),
+            'arc_length' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-arclength%s', None), 	
+	    'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None)
            }
 
 
