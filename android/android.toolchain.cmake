@@ -98,6 +98,7 @@
 #   - modified July 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] fixed options caching
 #     [~] search for all supported NDK versions
+#     [~] allowed spaces in NDK path
 # ----------------------------------------------------------------------------
 
 # this one is important
@@ -319,6 +320,13 @@ endif()
 if( BUILD_WITH_ANDROID_NDK )
  set( CMAKE_CXX_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_CXX_FLAGS}" )
  set( CMAKE_C_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_C_FLAGS}" )
+ if (ANDROID_NDK_SYSROOT MATCHES "[ ]")
+  # workaround for ugly cmake bug - compiler identification replaces all spaces in compiler flags with ; symbol
+  # as result identification fails if ANDROID_NDK_SYSROOT contain spaces
+  include(CMakeForceCompiler)
+  CMAKE_FORCE_C_COMPILER("${CMAKE_C_COMPILER}" GNU)
+  CMAKE_FORCE_CXX_COMPILER("${CMAKE_CXX_COMPILER}" GNU)
+ endif()
 endif()
 
 if( ARMEABI_V7A )
