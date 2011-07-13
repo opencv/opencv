@@ -37,10 +37,17 @@ def draw_match(img1, img2, p1, p2, status = None, H = None):
     red = (0, 0, 255)
     for (x1, y1), (x2, y2), inlier in zip(np.int32(p1), np.int32(p2), status):
         col = [red, green][inlier]
-        if not inlier:
+        if inlier:
             cv2.line(vis, (x1, y1), (x2+w1, y2), col)
-        cv2.circle(vis, (x1, y1), 2, col, -1)
-        cv2.circle(vis, (x2+w1, y2), 2, col, -1)
+            cv2.circle(vis, (x1, y1), 2, col, -1)
+            cv2.circle(vis, (x2+w1, y2), 2, col, -1)
+        else:
+            r = 2
+            thickness = 3
+            cv2.line(vis, (x1-r, y1-r), (x1+r, y1+r), col, thickness)
+            cv2.line(vis, (x1-r, y1+r), (x1+r, y1-r), col, thickness)
+            cv2.line(vis, (x2+w1-r, y2-r), (x2+w1+r, y2+r), col, thickness)
+            cv2.line(vis, (x2+w1-r, y2+r), (x2+w1+r, y2-r), col, thickness)
     return vis
 
 if __name__ == '__main__':

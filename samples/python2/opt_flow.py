@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import cv2, cv
 import video
 
@@ -29,7 +30,7 @@ def draw_hsv(flow):
     ang = np.arctan2(fy, fx) + np.pi
     v = np.sqrt(fx*fx+fy*fy)
     hsv = np.zeros((h, w, 3), np.uint8)
-    hsv[...,0] = np.rad2deg(ang)/2
+    hsv[...,0] = ang*(180/math.pi/2)
     hsv[...,1] = 255
     hsv[...,2] = np.minimum(v*4, 255)
     bgr = cv2.cvtColor(hsv, cv.CV_HSV2BGR)

@@ -5,8 +5,8 @@ from common import Sketcher
 help_message = '''USAGE: inpaint.py [<image>]
 
 Keys:
-  SPACE - update inpaint
-  r     - restore image
+  SPACE - inpaint
+  r     - reset the inpainting mask
   ESC   - exit
 '''
 
