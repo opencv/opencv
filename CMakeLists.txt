@@ -755,32 +755,40 @@ if (BUILD_JAVA_SUPPORT)
             endif()
 
             #get installed targets
-            execute_process(COMMAND ${ANDROID_EXECUTABLE} list target -c
+            execute_process(COMMAND ${ANDROID_EXECUTABLE} list target
                 RESULT_VARIABLE ANDROID_PROCESS
-                OUTPUT_VARIABLE ANDROID_SDK_TARGETS
+                OUTPUT_VARIABLE ANDROID_SDK_TARGETS_FULL
                 ERROR_VARIABLE ANDROID_PROCESS_ERRORS
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-            string(REPLACE "\n" ";" ANDROID_SDK_TARGETS ${ANDROID_SDK_TARGETS})
+            string(REGEX MATCHALL "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" ANDROID_SDK_TARGETS_FULL "${ANDROID_SDK_TARGETS_FULL}")
+
+            SET(ANDROID_SDK_TARGETS)
+            if (ANDROID_PROCESS EQUAL 0)
+                foreach(line ${ANDROID_SDK_TARGETS_FULL})
+                    string(REGEX REPLACE "(^|\n)id: [0-9]+ or \"([^\n]+[0-9+])\"(\n|$)" "\\2" line "${line}")
+                    list(APPEND ANDROID_SDK_TARGETS "${line}")
+                endforeach()
+            endif()
 
             # detect ANDROID_SDK_TARGET if no target is provided by user
             if (NOT ANDROID_SDK_TARGET)
-                if (NOT ANDROID_PROCESS EQUAL 0)
-                    set(ANDROID_SDK_TARGET android-8)
-                    message(STATUS "Could not retrieve list of installed Android targets. Will use default \"${ANDROID_SDK_TARGET}\" target")
-                else()
-                    set(desired_android_target_level ${ANDROID_API_LEVEL})
-                    if (desired_android_target_level LESS 8)
-                        set(desired_android_target_level 8)
-                    endif()
-                    math(EXPR desired_android_target_level "${desired_android_target_level}-1")
+                set(desired_android_target_level ${ANDROID_API_LEVEL})
+                if (desired_android_target_level LESS 8)
+                    set(desired_android_target_level 8)
+                endif()
+                if (ANDROID_PROCESS EQUAL 0)
+                    math(EXPR desired_android_target_level_1 "${desired_android_target_level}-1")
 
                     foreach(target ${ANDROID_SDK_TARGETS})
                         string(REGEX MATCH "[0-9]+$" target_level "${target}")
-                        if (target_level GREATER desired_android_target_level)
+                        if (target_level GREATER desired_android_target_level_1)
                            set(ANDROID_SDK_TARGET "${target}")
                            break()
                         endif()
                     endforeach()
+                else()
+                    set(ANDROID_SDK_TARGET android-${desired_android_target_level})
+                    message(WARNING "Could not retrieve list of installed Android targets. Will try to use \"${ANDROID_SDK_TARGET}\" target")
                 endif()
             endif()
 

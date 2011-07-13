@@ -95,19 +95,18 @@
 #     [-] removed SWIG-related stuff from toolchain
 #     [+] added macro find_host_package, find_host_program to search packages/programs on host system
 #     [~] fixed path to STL library
-#   - modified June 2011 Andrey Kamaev andrey.kamaev@itseez.com
-#     [~] default NDK path is updated for version r6
+#   - modified July 2011 Andrey Kamaev andrey.kamaev@itseez.com
 #     [~] fixed options caching
+#     [~] search for all supported NDK versions
 # ----------------------------------------------------------------------------
-
-
 
 # this one is important
 set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk-r6 )
+set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk )
+set( ANDROID_NDK_SUPPORTED_VERSIONS -r6 -r5c -r5b -r5 "")
 set( ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH /opt/android-toolchain )
 set( TOOL_OS_SUFFIX "" )
 
@@ -130,21 +129,28 @@ macro( __TOOLCHAIN_DETECT_API_LEVEL _path )
  set( ANDROID_API_LEVEL ${ANDROID_LEVEL_FOUND} CACHE STRING "android API level" FORCE )
 endmacro()
 
-#set path for android NDK -- look
 if( NOT DEFINED ANDROID_NDK )
  set( ANDROID_NDK $ENV{ANDROID_NDK} )
 endif()
 
-if( NOT EXISTS ${ANDROID_NDK} )
- if( EXISTS ${ANDROID_NDK_DEFAULT_SEARCH_PATH} )
-  set ( ANDROID_NDK ${ANDROID_NDK_DEFAULT_SEARCH_PATH} )
-  message( STATUS "Using default path for android NDK ${ANDROID_NDK}" )
-  message( STATUS "If you prefer to use a different location, please define the variable: ANDROID_NDK" )
- endif()
+if( NOT DEFINED ANDROID_NDK_TOOLCHAIN_ROOT )
+ set( ANDROID_NDK_TOOLCHAIN_ROOT $ENV{ANDROID_NDK_TOOLCHAIN_ROOT} )
 endif()
 
-if( EXISTS ${ANDROID_NDK} )
- set( ANDROID_NDK ${ANDROID_NDK} CACHE PATH "root of the android ndk" FORCE )
+#set path for android NDK -- look
+if( NOT EXISTS "${ANDROID_NDK}" AND NOT DEFINED ANDROID_NDK_TOOLCHAIN_ROOT )
+ foreach(ndk_version ${ANDROID_NDK_SUPPORTED_VERSIONS})
+  if( EXISTS ${ANDROID_NDK_DEFAULT_SEARCH_PATH}${ndk_version} )
+   set ( ANDROID_NDK ${ANDROID_NDK_DEFAULT_SEARCH_PATH}${ndk_version} )
+   message( STATUS "Using default path for android NDK ${ANDROID_NDK}" )
+   message( STATUS "  If you prefer to use a different location, please define the variable: ANDROID_NDK" )
+   break()
+  endif()
+ endforeach()
+endif()
+
+if( EXISTS "${ANDROID_NDK}" )
+ set( ANDROID_NDK "${ANDROID_NDK}" CACHE PATH "root of the android ndk" FORCE )
  
  if( APPLE )
   set( NDKSYSTEM "darwin-x86" )
@@ -168,7 +174,7 @@ if( EXISTS ${ANDROID_NDK} )
  if( NOT ANDROID_API_LEVEL GREATER 2 )
   set( ANDROID_API_LEVEL 8)
   message( STATUS "Using default android API level android-${ANDROID_API_LEVEL}" )
-  message( STATUS "If you prefer to use a different API level, please define the variable: ANDROID_API_LEVEL" )
+  message( STATUS "  If you prefer to use a different API level, please define the variable: ANDROID_API_LEVEL" )
  endif()
 
  set( ANDROID_NDK_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/${NDKSYSTEM}" )
@@ -180,20 +186,16 @@ if( EXISTS ${ANDROID_NDK} )
  set( BUILD_WITH_ANDROID_NDK True )
 else()
  #try to find toolchain
- if( NOT DEFINED ANDROID_NDK_TOOLCHAIN_ROOT )
-  set( ANDROID_NDK_TOOLCHAIN_ROOT $ENV{ANDROID_NDK_TOOLCHAIN_ROOT} )
- endif()
- 
- if( NOT EXISTS ${ANDROID_NDK_TOOLCHAIN_ROOT} )
-  set( ANDROID_NDK_TOOLCHAIN_ROOT ${ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH} )
+ if( NOT EXISTS "${ANDROID_NDK_TOOLCHAIN_ROOT}" )
+  set( ANDROID_NDK_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH}" )
   message( STATUS "Using default path for toolchain ${ANDROID_NDK_TOOLCHAIN_ROOT}" )
-  message( STATUS "If you prefer to use a different location, please define the variable: ANDROID_NDK_TOOLCHAIN_ROOT" )
+  message( STATUS "  If you prefer to use a different location, please define the variable: ANDROID_NDK_TOOLCHAIN_ROOT" )
  endif()
 
- set( ANDROID_NDK_TOOLCHAIN_ROOT ${ANDROID_NDK_TOOLCHAIN_ROOT} CACHE PATH "root of the Android NDK standalone toolchain" FORCE )
+ set( ANDROID_NDK_TOOLCHAIN_ROOT "${ANDROID_NDK_TOOLCHAIN_ROOT}" CACHE PATH "root of the Android NDK standalone toolchain" FORCE )
  set( ANDROID_NDK_SYSROOT "${ANDROID_NDK_TOOLCHAIN_ROOT}/sysroot" )
 
- if( NOT EXISTS ${ANDROID_NDK_TOOLCHAIN_ROOT} )
+ if( NOT EXISTS "${ANDROID_NDK_TOOLCHAIN_ROOT}" )
   message( FATAL_ERROR "neither ${ANDROID_NDK} nor ${ANDROID_NDK_TOOLCHAIN_ROOT} does not exist!
     You should either set an environment variable:
       export ANDROID_NDK=~/my-android-ndk
@@ -211,16 +213,16 @@ else()
 endif()
 
 # specify the cross compiler
-set( CMAKE_C_COMPILER   ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-gcc${TOOL_OS_SUFFIX}     CACHE PATH "gcc" FORCE )
-set( CMAKE_CXX_COMPILER ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-g++${TOOL_OS_SUFFIX}     CACHE PATH "g++" FORCE )
+set( CMAKE_C_COMPILER   "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-gcc${TOOL_OS_SUFFIX}"     CACHE PATH "gcc" FORCE )
+set( CMAKE_CXX_COMPILER "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-g++${TOOL_OS_SUFFIX}"     CACHE PATH "g++" FORCE )
 #there may be a way to make cmake deduce these TODO deduce the rest of the tools
-set( CMAKE_AR           ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ar${TOOL_OS_SUFFIX}      CACHE PATH "archive" FORCE )
-set( CMAKE_LINKER       ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ld${TOOL_OS_SUFFIX}      CACHE PATH "linker" FORCE )
-set( CMAKE_NM           ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-nm${TOOL_OS_SUFFIX}      CACHE PATH "nm" FORCE )
-set( CMAKE_OBJCOPY      ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-objcopy${TOOL_OS_SUFFIX} CACHE PATH "objcopy" FORCE )
-set( CMAKE_OBJDUMP      ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-objdump${TOOL_OS_SUFFIX} CACHE PATH "objdump" FORCE )
-set( CMAKE_STRIP        ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-strip${TOOL_OS_SUFFIX}   CACHE PATH "strip" FORCE )
-set( CMAKE_RANLIB       ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ranlib${TOOL_OS_SUFFIX}  CACHE PATH "ranlib" FORCE )
+set( CMAKE_AR           "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ar${TOOL_OS_SUFFIX}"      CACHE PATH "archive" FORCE )
+set( CMAKE_LINKER       "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ld${TOOL_OS_SUFFIX}"      CACHE PATH "linker" FORCE )
+set( CMAKE_NM           "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-nm${TOOL_OS_SUFFIX}"      CACHE PATH "nm" FORCE )
+set( CMAKE_OBJCOPY      "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-objcopy${TOOL_OS_SUFFIX}" CACHE PATH "objcopy" FORCE )
+set( CMAKE_OBJDUMP      "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-objdump${TOOL_OS_SUFFIX}" CACHE PATH "objdump" FORCE )
+set( CMAKE_STRIP        "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-strip${TOOL_OS_SUFFIX}"   CACHE PATH "strip" FORCE )
+set( CMAKE_RANLIB       "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin/arm-linux-androideabi-ranlib${TOOL_OS_SUFFIX}"  CACHE PATH "ranlib" FORCE )
 
 #setup build targets, mutually exclusive
 set( PossibleArmTargets "armeabi;armeabi-v7a;armeabi-v7a with NEON;armeabi-v7a with VFPV3" )
@@ -261,18 +263,18 @@ set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_SOURCE_DIR} CACHE PATH "root for library o
 
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS OFF CACHE BOOL "")
 if( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS )
- if( EXISTS ${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt )
-  set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ARMEABI_NDK_NAME} CACHE PATH "Output directory for applications")
+ if( EXISTS "${CMAKE_SOURCE_DIR}/jni/CMakeLists.txt" )
+  set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin/${ARMEABI_NDK_NAME}" CACHE PATH "Output directory for applications")
  else()
-  set( EXECUTABLE_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/bin CACHE PATH "Output directory for applications")
+  set( EXECUTABLE_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/bin" CACHE PATH "Output directory for applications")
  endif()
- set( LIBRARY_OUTPUT_PATH ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME} CACHE PATH "path for android libs")
- set( CMAKE_INSTALL_PREFIX ${ANDROID_NDK_TOOLCHAIN_ROOT}/user CACHE STRING "path for installing" )
+ set( LIBRARY_OUTPUT_PATH "${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ARMEABI_NDK_NAME}" CACHE PATH "path for android libs")
+ set( CMAKE_INSTALL_PREFIX "${ANDROID_NDK_TOOLCHAIN_ROOT}/user" CACHE STRING "path for installing" )
 endif()
 SET( DO_NOT_CHANGE_OUTPUT_PATHS_ON_FIRST_PASS ON CACHE INTERNAL "" FORCE)
 
 # where is the target environment 
-set( CMAKE_FIND_ROOT_PATH ${ANDROID_NDK_TOOLCHAIN_ROOT}/bin ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi ${ANDROID_NDK_SYSROOT} ${CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_PREFIX}/share )
+set( CMAKE_FIND_ROOT_PATH "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin" "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi" "${ANDROID_NDK_SYSROOT}" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_PREFIX}/share" )
 
 if( BUILD_WITH_ANDROID_NDK )
  set( STL_PATH "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++" )
@@ -292,7 +294,7 @@ if( BUILD_WITH_ANDROID_NDK_TOOLCHAIN )
   set( STL_LIBRARIES_PATH "${STL_LIBRARIES_PATH}/thumb" )
  endif()
  #for some reason this is needed? TODO figure out why...
- include_directories( ${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi )
+ include_directories( "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi" )
 endif()
 
 # only search for libraries and includes in the ndk toolchain
@@ -315,8 +317,8 @@ else()
 endif()
 
 if( BUILD_WITH_ANDROID_NDK )
- set( CMAKE_CXX_FLAGS "--sysroot=${ANDROID_NDK_SYSROOT} ${CMAKE_CXX_FLAGS}" )
- set( CMAKE_C_FLAGS "--sysroot=${ANDROID_NDK_SYSROOT} ${CMAKE_C_FLAGS}" )
+ set( CMAKE_CXX_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_CXX_FLAGS}" )
+ set( CMAKE_C_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_C_FLAGS}" )
 endif()
 
 if( ARMEABI_V7A )
@@ -339,7 +341,7 @@ set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "c flags" )
 #-L${LIBCPP_LINK_DIR} -lstdc++ -lsupc++
 #Also, this is *required* to use the following linker flags that routes around
 #a CPU bug in some Cortex-A8 implementations:
-set( LINKER_FLAGS "-Wl,--fix-cortex-a8 -L${STL_LIBRARIES_PATH} -L${CMAKE_INSTALL_PREFIX}/libs/${ARMEABI_NDK_NAME} -lstdc++ -lsupc++ " )
+set( LINKER_FLAGS "-Wl,--fix-cortex-a8 -L\"${STL_LIBRARIES_PATH}\" -L\"${CMAKE_INSTALL_PREFIX}/libs/${ARMEABI_NDK_NAME}\" -lstdc++ -lsupc++ " )
 
 set( NO_UNDEFINED ON CACHE BOOL "Don't all undefined symbols" )
 if( NO_UNDEFINED )
