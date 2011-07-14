@@ -264,6 +264,10 @@ std::string CameraWrapperConnector::getPathLibFolder()
         sprintf(addrBuf, "%p-", dl_info.dli_fbase);
         int addrLength = strlen(addrBuf);
 
+	const char* libName=dl_info.dli_fname;
+	while( ((*libName)=='/') || ((*libName)=='.') )
+		libName++;
+
         char lineBuf[2048];
         FILE* file = fopen("/proc/self/smaps", "rt");
 
@@ -271,11 +275,9 @@ std::string CameraWrapperConnector::getPathLibFolder()
         {
 	    while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
 	    {
-                if(0 == strncmp(lineBuf, addrBuf, addrLength))
-                {
                     //verify that line ends with library name
                     int lineLength = strlen(lineBuf);
-                    int libNameLength = strlen(dl_info.dli_fname);
+                    int libNameLength = strlen(libName);
 
                     //trim end
                     for(int i = lineLength - 1; i >= 0 && isspace(lineBuf[i]); --i)
@@ -284,9 +286,9 @@ std::string CameraWrapperConnector::getPathLibFolder()
                         --lineLength;
                     }
 
-                    if (0 != strncmp(lineBuf + lineLength - libNameLength, dl_info.dli_fname, libNameLength))
+                    if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
                     {
-                        LOGE("Strange error: line \"%s\" does not ends with library name %s", lineBuf, dl_info.dli_fname);
+                        //the line does not contain the library name
                         continue;
                     }
 
@@ -305,7 +307,6 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
                     fclose(file);
                     return pathBegin;
-                }
 	    }
 	    fclose(file);
 	    LOGE("Could not find library path.");
