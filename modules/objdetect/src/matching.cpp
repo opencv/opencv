@@ -2,8 +2,6 @@
 #include "_lsvm_matching.h"
 #include <stdio.h>
 
-#undef HAVE_TBB
-
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
@@ -1577,8 +1575,7 @@ int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     // Computation the number of levels for seaching object,
     // first lambda-levels are used for computation values
     // of score function for each position of root filter
-    numLevels = H->countLevel - H->lambda;
-
+    numLevels = H->numLevels;
     kLevels = (int *)malloc(sizeof(int) * threadsNum);
     procLevels = (int **)malloc(sizeof(int*) * threadsNum);
     computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
@@ -1648,7 +1645,7 @@ int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     for (i = 0; i < numLevels; i++)
     {
         // Computation the number of level
-        level = i + H->lambda; 
+        level = i + LAMBDA;//H->lambda; 
 
         // Addition a set of points
         f += tmpKPoints[i];
