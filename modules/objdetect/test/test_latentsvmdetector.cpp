@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#undef HAVE_TBB
+
 #include <string>
 
 #ifdef HAVE_CVCONFIG_H 

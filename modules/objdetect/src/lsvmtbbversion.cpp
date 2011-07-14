@@ -1,5 +1,7 @@
 #include "precomp.hpp"
 
+#undef HAVE_TBB
+
 #ifdef HAVE_TBB
 #include "_lsvm_tbbversion.h"
 

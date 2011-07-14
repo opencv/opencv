@@ -2,6 +2,8 @@
 #include "_lsvm_matching.h"
 #include <stdio.h>
 
+#undef HAVE_TBB
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif

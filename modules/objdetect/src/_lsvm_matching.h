@@ -11,6 +11,8 @@
 #include "_lsvm_fft.h"
 #include "_lsvm_routine.h"
 
+#undef HAVE_TBB
+
 #ifdef HAVE_TBB
 #include "_lsvm_tbbversion.h"
 #endif
@@ -355,6 +357,8 @@ int thresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
                              float **score, 
                              CvPoint **points, int **levels, int *kPoints,
                              CvPoint ***partsDisplacement);
+
+#undef HAVE_TBB
 
 #ifdef HAVE_TBB
 /*

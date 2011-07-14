@@ -2,6 +2,8 @@
 #include "_latentsvm.h"
 #include "_lsvm_matching.h"
 
+#undef HAVE_TBB
+
 /*
 // Transformation filter displacement from the block space 
 // to the space of pixels at the initial image
