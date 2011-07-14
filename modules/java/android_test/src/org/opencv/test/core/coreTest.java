@@ -13,8 +13,6 @@ public class coreTest extends OpenCVTestCase {
 	
 	public void test_1() {
 		super.test_1("CORE");
-		
-		//System.gc();
 	}
 
 	public void testAbsdiff() {
@@ -39,7 +37,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testAddMatMatMatMatInt() {
 		core.add(gray0, gray1, dst, gray1, CvType.CV_32F);
 		assertTrue(CvType.CV_32F == dst.depth());
-//		FIXME: must work assertMatEqual(gray1_32f, dst);
+		assertMatEqual(gray1_32f, dst);
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMat() {
@@ -48,9 +46,9 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
-		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, gray255_32f.depth());
+		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst);//FIXME: #1224, CvType.CV_32F
 		assertTrue(CvType.CV_32F == dst.depth());
-		//FIXME: must work
+		//TODO: assertMatEqual(gray255_32f, dst);
 	}
 
 	public void testBitwise_andMatMatMat() {
@@ -121,8 +119,8 @@ public class coreTest extends OpenCVTestCase {
 
 	public void testCheckHardwareSupport() {
 		//XXX: core.checkHardwareSupport(feature)
-		boolean hasFeauture = core.checkHardwareSupport(0);
-		assertEquals(false, hasFeauture);
+		//boolean hasFeauture = core.checkHardwareSupport(0);
+		//assertEquals(false, hasFeauture);
 	}
 
 	public void testCircleMatPointIntScalar() {
@@ -588,21 +586,23 @@ public class coreTest extends OpenCVTestCase {
 		core.min(gray0, gray255, dst);
 		assertMatEqual(gray0, dst);		
 	}
+	
 	public void testMinMaxLoc() {
-		double  minVal=1;
-		double maxVal=10;
-		Point minLoc = new Point((int)matSize/4, (int)matSize/2);
-		Point maxLoc = new Point((int)matSize/2, (int)matSize/4);
-		gray3.put((int)minLoc.y, (int)minLoc.x, minVal);
-		gray3.put((int)maxLoc.y, (int)maxLoc.x, maxVal);
-		
-		core.MinMaxLocResult mmres = core.minMaxLoc(gray3);
-		
-		assertTrue(mmres.minVal==minVal 
-				&& mmres.maxVal==maxVal 
-				&& mmres.minLoc.equals(minLoc) 
-				&& mmres.maxLoc.equals(maxLoc));		
+			double  minVal=1;
+			double maxVal=10;
+			Point minLoc = new Point((int)matSize/4, (int)matSize/2);
+			Point maxLoc = new Point((int)matSize/2, (int)matSize/4);
+			gray3.put((int)minLoc.y, (int)minLoc.x, minVal);
+			gray3.put((int)maxLoc.y, (int)maxLoc.x, maxVal);
+			
+			core.MinMaxLocResult mmres = core.minMaxLoc(gray3);
+			
+			assertTrue(mmres.minVal==minVal 
+					&& mmres.maxVal==maxVal 
+					&& mmres.minLoc.equals(minLoc) 
+					&& mmres.maxLoc.equals(maxLoc));		
 	}
+
 
 	public void testMulSpectrumsMatMatMatInt() {
 		//TODO: nice example
@@ -777,8 +777,8 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSetIdentityMat() {
-		core.setIdentity(dst);
-		assertTrue(dst.rows() == core.countNonZero(dst));
+		core.setIdentity(gray0);
+		assertTrue(gray0.rows() == core.countNonZero(gray0));
 	}
 
 	public void testSetIdentityMatScalar() {

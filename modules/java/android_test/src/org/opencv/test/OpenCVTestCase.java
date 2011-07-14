@@ -12,6 +12,7 @@ import org.opencv.highgui;
 public class OpenCVTestCase extends TestCase {
        
 	protected static int matSize = 10;
+	protected static double EPS = 0.001;
     
 	protected static Mat dst;
     
@@ -62,37 +63,37 @@ public class OpenCVTestCase extends TestCase {
         dst = new Mat();
         assertTrue(dst.empty());
 
-        gray0 = new Mat(matSize, matSize, CvType.CV_8U); gray0.setTo(new Scalar(0.0));
-        gray1 = new Mat(matSize, matSize, CvType.CV_8U); gray1.setTo(new Scalar(1.0));
-        gray2 = new Mat(matSize, matSize, CvType.CV_8U); gray2.setTo(new Scalar(2.0));
-        gray3 = new Mat(matSize, matSize, CvType.CV_8U); gray3.setTo(new Scalar(3.0));
-        gray9 = new Mat(matSize, matSize, CvType.CV_8U); gray9.setTo(new Scalar(9.0));
-        gray127 = new Mat(matSize, matSize, CvType.CV_8U); gray127.setTo(new Scalar(127.0));
-        gray128 = new Mat(matSize, matSize, CvType.CV_8U); gray128.setTo(new Scalar(128.0));
-        gray255 = new Mat(matSize, matSize, CvType.CV_8U); gray255.setTo(new Scalar(255.0));
+        gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0.0));
+        gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1.0));
+        gray2 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(2.0));
+        gray3 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(3.0));
+        gray9 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(9.0));
+        gray127 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(127.0));
+        gray128 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128.0));
+        gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255.0));
         
-        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U); gray_16u_256.setTo(new Scalar(256));
-        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S); gray_16s_1024.setTo(new Scalar(1024));
+        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
+        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
         
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
         grayRnd = new Mat(matSize, matSize, CvType.CV_8U); core.randu(grayRnd, low, high);
         
-        gray0_32f = new Mat(matSize, matSize, CvType.CV_32F); gray0_32f.setTo(new Scalar(0.0));
-        gray1_32f = new Mat(matSize, matSize, CvType.CV_32F); gray1_32f.setTo(new Scalar(1.0));
-        gray3_32f = new Mat(matSize, matSize, CvType.CV_32F); gray3_32f.setTo(new Scalar(3.0));
-        gray9_32f = new Mat(matSize, matSize, CvType.CV_32F); gray9_32f.setTo(new Scalar(9.0));
-        gray255_32f = new Mat(matSize, matSize, CvType.CV_32F); gray255_32f.setTo(new Scalar(255.0));
+        gray0_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(0.0));
+        gray1_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1.0));
+        gray3_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(3.0));
+        gray9_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(9.0));
+        gray255_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(255.0));
         grayE_32f = new Mat(matSize, matSize, CvType.CV_32F); grayE_32f = Mat.eye(matSize, matSize, CvType.CV_32FC1);
         grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F); core.randu(grayRnd_32f, low, high);
         
-        gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F); gray0_32f_1d.setTo(new Scalar(0.0));
+        gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
         
-        gray0_64f = new Mat(matSize, matSize, CvType.CV_64F); gray0_64f.setTo(new Scalar(0.0));
-        gray0_64f_1d = new Mat(1, matSize, CvType.CV_64F); gray0_64f_1d.setTo(new Scalar(0.0));
+        gray0_64f = new Mat(matSize, matSize, CvType.CV_64F, new Scalar(0.0));
+        gray0_64f_1d = new Mat(1, matSize, CvType.CV_64F, new Scalar(0.0));
 
-        rgba0 = new Mat(matSize, matSize, CvType.CV_8UC4); rgba0.setTo(Scalar.all(0));
-        rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4); rgba128.setTo(Scalar.all(128));
+        rgba0 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(0));
+        rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
         
         rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
         grayChess = highgui.imread(OpenCVTestRunner.CHESS_PATH);
