@@ -3,6 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="gen"/>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
-	<classpathentry kind="src" path="OpenCVJavaAPI_src"/>
+	<classpathentry kind="src" path="opencv2.3.1_src"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
