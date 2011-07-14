@@ -6,6 +6,10 @@ try:
 except:
     from StringIO import StringIO
 
+const_ignore_list = (
+    "CV_CAP_OPENNI*",
+)
+
 func_ignore_list = (
     "namedWindow",
     "destroyWindow",
@@ -37,49 +41,51 @@ type_dict = {
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
+    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+    "vector_Point": { "j_type" : "java.util.ArrayList<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
                   "suffix" : "J" },
     "Point"   : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "Point %(n)s((int)%(n)s_x, (int)%(n)s_y)",
+                  "jni_var" : "Point %(n)s((int)%(n)s_x, (int)%(n)s_y)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
     "Point2f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "Point2f %(n)s((float)%(n)s_x, (float)%(n)s_y)",
+                  "jni_var" : "Point2f %(n)s((float)%(n)s_x, (float)%(n)s_y)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
     "Point2d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y")),
-                  "jni_var" : "Point2d %(n)s(%(n)s_x, %(n)s_y)",
+                  "jni_var" : "Point2d %(n)s(%(n)s_x, %(n)s_y)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
     "Point3i" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "Point3i %(n)s((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)",
+                  "jni_var" : "Point3i %(n)s((int)%(n)s_x, (int)%(n)s_y, (int)%(n)s_z)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
     "Point3f" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "Point3f %(n)s((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)",
+                  "jni_var" : "Point3f %(n)s((float)%(n)s_x, (float)%(n)s_y, (float)%(n)s_z)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
     "Point3d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
-                  "jni_var" : "Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)",
+                  "jni_var" : "Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
     "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
-                  "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)",
+                  "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "IIII"},
     "Size"    : { "j_type" : "Size",  "jn_args" : (("double", ".width"), ("double", ".height")),
-                  "jni_var" : "Size %(n)s((int)%(n)s_width, (int)%(n)s_height)",
+                  "jni_var" : "Size %(n)s((int)%(n)s_width, (int)%(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
     "Size2f"  : { "j_type" : "Size",  "jn_args" : (("double", ".width"), ("double", ".height")),
-                  "jni_var" : "Size2f %(n)s((float)%(n)s_width, (float)%(n)s_height)",
+                  "jni_var" : "Size2f %(n)s((float)%(n)s_width, (float)%(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "DD"},
  "RotatedRect": { "j_type" : "RotatedRect",  "jn_args" : (("double", ".center.x"), ("double", ".center.y"), ("double", ".size.width"), ("double", ".size.height"), ("double", ".angle")),
                   "jni_var" : "RotatedRect %(n)s(cv::Point2f(%(n)s_center_x, %(n)s_center_y), cv::Size2f(%(n)s_size_width, %(n)s_size_height), %(n)s_angle)",
-                  "suffix" : "DDDDD"},
+                  "jni_type" : "jdoubleArray", "suffix" : "DDDDD"},
     "Scalar"  : { "j_type" : "Scalar",  "jn_args" : (("double", ".v0"), ("double", ".v1"), ("double", ".v2"), ("double", ".v3")),
-                  "jni_var" : "Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)",
+                  "jni_var" : "Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDDD"},
     "Range"   : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
-                  "jni_var" : "cv::Range %(n)s(%(n)s_start, %(n)s_end)",
+                  "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
                   "suffix" : "II"},
     "CvSlice" : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
-                  "jni_var" : "cv::Range %(n)s(%(n)s_start, %(n)s_end)",
+                  "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
                   "suffix" : "II"},
     "string"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
@@ -202,6 +208,8 @@ class JavaWrapperGenerator(object):
 
     def add_class(self, decl):
         classinfo = ClassInfo(decl)
+        if classinfo.name in class_ignore_list:
+            return
         if classinfo.name in self.classes:
             print "Generator error: class %s (%s) is duplicated" % \
                     (classinfo.name, classinfo.cname)
@@ -222,6 +230,9 @@ class JavaWrapperGenerator(object):
         name = decl[0].replace("const ", "").strip()
         name = re.sub(r"^cv\.", "", name)
         cname = name.replace(".", "::")
+        for c in const_ignore_list:
+            if re.match(c, name):
+                return
         # check if it's a class member
         dpos = name.rfind(".")
         if dpos >= 0:
@@ -249,6 +260,8 @@ class JavaWrapperGenerator(object):
 		return None
         func_map = self.funcs
         classname = ffi.funcs[0].classname
+        if classname in class_ignore_list or ffi.jname in func_ignore_list:
+            return
         if classname:
             if classname in self.classes:
                 func_map = self.classes[classname].methods
@@ -512,12 +525,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
 
 
     def gen_func(self, fi, isoverload, jn_code):
-
-        if fi.name in func_ignore_list: # skip irrelevant funcs
-            return
-
         self.total_func_counter += 1
-
         # // C++: c_decl
         # e.g:
         # //  C++: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
@@ -528,7 +536,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
         if fi.classname:
             indent += " " * 4
         # java comment
-        self.java_code.write( "\n%s// C++: %s\n" % (indent, c_decl) )
+        self.java_code.write( "\n"+indent+"//\n"+indent+"// C++: "+c_decl+"\n"+indent+"//\n\n" )
         # check if we 'know' all the types
         if fi.ctype not in type_dict: # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
@@ -544,13 +552,6 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                 self.java_code.write( indent + msg )
                 #self.cpp_code.write( msg )
                 print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, "/" + (a.out or "I")
-                return
-            if a.ctype != "Mat" and "jn_args" in type_dict[a.ctype] and a.out: # complex out args not yet supported
-                msg = "// Unsupported OUT type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
-                self.skipped_func_list.append(c_decl + "\n" + msg)
-                self.java_code.write( indent + msg )
-                #self.cpp_code.write( msg )
-                print "SKIP:", c_decl, "\n\tdue to OUT ARG of type", a.ctype, "/" + (a.out or "I")
                 return
 
         self.ported_func_counter += 1
@@ -572,6 +573,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
             # jni (cpp) function args
             jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
             suffix = "__"
+            j_prologue = []
+            j_epilogue = []
+            c_prologue = []
+            c_epilogue = []
+            if type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
+                c_epilogue.append( "jdoubleArray _da_ = env->NewDoubleArray(6); /* assuming '6' is enough*/  //" +
+                                   fi.ctype + "_to_doubles(_retval_, _da_);" )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -579,19 +587,39 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                 suffix += "J"
             for a in args:
                 suffix += type_dict[a.ctype].get("suffix") or ""
-                fields = type_dict[a.ctype].get("jn_args") or []
-                if fields: # complex type
-                    for f in fields:
-                        jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                        jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_"), "", [], "" ]) )
+
+                if "vector" in a.ctype: # pass as Mat
+                    jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
+                    jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
+                    c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
+                    if "I" in a.out or not a.out:
+                        j_prologue.append( "Mat %s_mat = null;/*%s_to_Mat(%s);*/" % (a.name, a.ctype, a.name) )
+                        c_prologue.append( "// %s_out -> %s" % (a.name, a.name) )
+                    else:
+                        j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
+                    if "O" in a.out:
+                        j_epilogue.append("/*Mat_to_%s(%s_mat, %s);*/" % (a.ctype, a.name, a.name))
+                        c_epilogue.append( "// %s -> %s_out" % (a.name, a.name) )
                 else:
-                    jn_args.append(a)
-                    jni_args.append(a)
-                if a.out:
-                    if "vector" in a.ctype: # -> Mat
-                        pass
-                    else: # -> double[6]
-                        pass
+
+                    fields = type_dict[a.ctype].get("jn_args") or []
+                    if fields: # complex type
+                        for f in fields:
+                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_"), "", [], "" ]) )
+                    else:
+                        jn_args.append(a)
+                        jni_args.append(a)
+
+                    if a.out and a.ctype not in self.classes:
+                        # pass as double[]
+                        jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                        #jn_args.append ( ArgInfo([ "int", "%s_out.length" % a.name, "", [], "" ]) )
+                        jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                        #jni_args.append ( ArgInfo([ "int", "%s_out_length" % a.name, "", [], "" ]) )
+                        j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(type_dict[a.ctype].get("jn_args", [1]))) )
+                        j_epilogue.append("/*%s.set(%s_out);*/" % (a.name, a.name))
+                        c_epilogue.append( "/* %s_to_doubles(%s, %s_out); */" % (a.ctype, a.name, a.name) )
 
             # java part:
             # private java NATIVE method decl
@@ -619,35 +647,51 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
             # e.g.
             # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
             # { n_add( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
-            impl_code = "return $jn_name($jn_args_call);"
+            ret_val = type_dict[fi.ctype]["j_type"] + " retVal = "
+            tail = ""
+            ret = "return retVal;"
             if fi.ctype == "void":
-                impl_code = "$jn_name($jn_args_call);"
+                ret_val = ""
+                ret = "return;"
             elif fi.ctype == "": # c-tor
-                impl_code = "nativeObj = $jn_name($jn_args_call);"
+                ret_val = "nativeObj = "
+                ret = "return;"
             elif fi.ctype in self.classes: # wrapped class
-                impl_code = "return new %s( $jn_name($jn_args_call) );" % \
-                    self.classes[fi.ctype].jname
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + self.classes[fi.ctype].jname + "("
+                tail = ")"
             elif "jn_type" not in type_dict[fi.ctype]:
-                impl_code = "return new "+type_dict[fi.ctype]["j_type"]+"( $jn_name($jn_args_call) );"
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[fi.ctype]["j_type"] + "("
+                tail = ")"
 
             static = "static"
             if fi.classname:
                 static = fi.static
 
             self.java_code.write( Template(\
-                "${indent}public $static $j_type $j_name($j_args)").substitute(\
-                indent = indent, \
-                static=static, \
-                j_type=type_dict[fi.ctype]["j_type"], \
-                j_name=fi.jname, \
-                j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]) \
-            ) )
+"""${indent}public $static $j_type $j_name($j_args)
+$indent{
+$indent    $prologue
+$indent    $ret_val$jn_name($jn_args_call)$tail;
+$indent    $epilogue
+$indent    $ret
+$indent}
 
-            self.java_code.write( Template("\n$indent{ " + impl_code + " }\n").substitute(\
-                indent = indent, \
-                jn_name=fi.jn_name, \
-                jn_args_call=", ".join( [a.name for a in jn_args] )\
-            ) )
+"""
+                ).substitute(\
+                    indent = indent, \
+                    ret = ret, \
+                    ret_val = ret_val, \
+                    tail = tail, \
+                    prologue = "  ".join(j_prologue), \
+                    epilogue = "  ".join(j_epilogue), \
+                    static=static, \
+                    j_type=type_dict[fi.ctype]["j_type"], \
+                    j_name=fi.jname, \
+                    j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]), \
+                    jn_name=fi.jn_name, \
+                    jn_args_call=", ".join( [a.name for a in jn_args] ),\
+                )
+            )
 
             # cpp part:
             # jni_func(..) { _retval_ = cv_func(..); return _retval_; }
@@ -663,15 +707,11 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new %s(_retval_);" % fi.ctype
-            elif "jni_type" not in type_dict[fi.ctype]: # jdoubleArray
-                ret = "double _tmp_[6]; " + \
-                      "/* "+fi.ctype+"_to_double6(_retval_, _tmp_); */" + \
-                      "jdoubleArray _da_ = env->NewDoubleArray(6); " + \
-                      "env->SetDoubleArrayRegion(_da_, 0, 6, _tmp_); " + \
-                      "return _da_;"
+            elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
+                ret = "return _da_;"
 
             cvname = "cv::" + fi.name
-            j2cvargs = []
+            #j2cvargs = []
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
@@ -683,15 +723,15 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                     cvname = "%s::%s" % (fi.classname, fi.name)
                 else:
                     cvname = "me->" + fi.name
-                    j2cvargs.append(\
+                    c_prologue.append(\
                         "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
                             % { "cls" : fi.classname} \
                     )
             cvargs = []
             for a in args:
                 cvargs.append( type_dict[a.ctype].get("jni_name", "%(n)s") % {"n" : a.name})
-                if "jni_var" in type_dict[a.ctype]: # complex type
-                    j2cvargs.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
+                if "vector" not in a.ctype and "jni_var" in type_dict[a.ctype]: # complex type
+                    c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
             self.cpp_code.write ( Template( \
@@ -704,8 +744,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
 #ifdef DEBUG
         LOGD("$module::$fname()");
 #endif // DEBUG
-        $j2cv
+        $prologue
         $retval$cvname( $cvargs );
+        $epilogue
         $ret
     } catch(cv::Exception e) {
 #ifdef DEBUG
@@ -731,7 +772,8 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         module = self.module, \
         fname = fi.jni_name + ["",suffix][isoverload], \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
-        j2cv = "\n        ".join([a for a in j2cvargs]), \
+        prologue = "\n        ".join(c_prologue), \
+        epilogue = "  ".join(c_epilogue), \
         ret = ret, \
         cvname = cvname, \
         cvargs = ", ".join([a for a in cvargs]), \
@@ -765,7 +807,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         classlist = self.classes.items()
         classlist.sort()
         for name, ci in classlist:
-            if name == "Mat" or name in class_ignore_list:
+            if name == "Mat":
                 continue
             self.java_code.write( "\n\n" + indent + "// C++: class %s" % (ci.cname) + "\n" )
             self.java_code.write( indent + "//javadoc: " + name + "\n" ) #java doc comment
