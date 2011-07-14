@@ -78,7 +78,7 @@ type_dict = {
     "Range"   : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "cv::Range %(n)s(%(n)s_start, %(n)s_end)",
                   "suffix" : "II"},
-    "CvSlice"   : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
+    "CvSlice" : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "cv::Range %(n)s(%(n)s_start, %(n)s_end)",
                   "suffix" : "II"},
     "string"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
@@ -93,6 +93,9 @@ type_dict = {
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
+"TermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
+                  "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)",
+                  "suffix" : "IID"},
 
 }
 
@@ -320,7 +323,7 @@ class JavaWrapperGenerator(object):
         if (mask != null) {
                 maskNativeObj=mask.nativeObj;
         }
-        double resarr[] = n_minMaxLoc(src.nativeObj, maskNativeObj);
+        double resarr[] = n_minMaxLocManual(src.nativeObj, maskNativeObj);
         res.minVal=resarr[0];
         res.maxVal=resarr[1];
         res.minLoc.x=resarr[2];
@@ -332,7 +335,7 @@ class JavaWrapperGenerator(object):
     public static MinMaxLocResult minMaxLoc(Mat src) {
         return minMaxLoc(src, null);
     }
-    private static native double[] n_minMaxLoc(long src_nativeObj, long mask_nativeObj);
+    private static native double[] n_minMaxLocManual(long src_nativeObj, long mask_nativeObj);
 
 
 """ )
@@ -420,7 +423,7 @@ class JavaWrapperGenerator(object):
         if module == "core":
             self.cpp_code.write(\
 """
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLoc
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
   (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
 {
     try {
