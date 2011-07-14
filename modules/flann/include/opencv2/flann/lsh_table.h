@@ -210,7 +210,7 @@ public:
             break;
         case kBitsetHash:
             // That means we can check the bitset for the presence of a key
-            if (key_bitset_.test(key)) return &buckets_space_.at(key);
+            if (key_bitset_.test(key)) return &buckets_space_.find(key)->second;
             else return 0;
             break;
         case kHash:
