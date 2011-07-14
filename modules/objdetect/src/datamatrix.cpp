@@ -502,7 +502,7 @@ namespace
     DataMatrixCode operator()(CvDataMatrixCode& cvdm)
     {
       DataMatrixCode dm;
-      std::memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
+      memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
       dm.original = cv::Mat(cvdm.original,true);
       cvReleaseMat(&cvdm.original);
       cv::Mat c(cvdm.corners,true);

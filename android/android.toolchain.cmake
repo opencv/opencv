@@ -318,8 +318,8 @@ else()
 endif()
 
 if( BUILD_WITH_ANDROID_NDK )
- set( CMAKE_CXX_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_CXX_FLAGS}" )
- set( CMAKE_C_FLAGS "--sysroot='${ANDROID_NDK_SYSROOT}' ${CMAKE_C_FLAGS}" )
+ set( CMAKE_CXX_FLAGS "--sysroot=\"${ANDROID_NDK_SYSROOT}\" ${CMAKE_CXX_FLAGS}" )
+ set( CMAKE_C_FLAGS "--sysroot=\"${ANDROID_NDK_SYSROOT}\" ${CMAKE_C_FLAGS}" )
  if (ANDROID_NDK_SYSROOT MATCHES "[ ]")
   # workaround for ugly cmake bug - compiler identification replaces all spaces in compiler flags with ; symbol
   # as result identification fails if ANDROID_NDK_SYSROOT contain spaces
