@@ -6,6 +6,21 @@ try:
 except:
     from StringIO import StringIO
 
+func_ignore_list = (
+    "namedWindow",
+    "destroyWindow",
+    "destroyAllWindows",
+    "startWindowThread",
+    "setWindowProperty",
+    "getWindowProperty",
+    "getTrackbarPos",
+    "setTrackbarPos",
+    "imshow",
+    "waitKey",
+)
+
+
+
 # c_type    : { java/jni correspondence }
 type_dict = {
 # "simple"  : { j_type : "?", jn_type : "?", jni_type : "?", suffix : "?" },
@@ -391,6 +406,10 @@ class JavaWrapperGenerator(object):
 
 
     def gen_func(self, fi, isoverload, jn_code):
+
+        if fi.name in func_ignore_list: # skip irrelevant funcs
+            return
+
         self.total_func_counter += 1
 
         # // C++: c_decl
@@ -462,6 +481,11 @@ class JavaWrapperGenerator(object):
                 else:
                     jn_args.append(a)
                     jni_args.append(a)
+                if a.out:
+                    if "vector" in a.ctype: # -> Mat
+                        pass
+                    else: # -> double[6]
+                        pass
 
             # java part:
             # private java NATIVE method decl
