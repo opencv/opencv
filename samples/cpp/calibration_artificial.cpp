@@ -1,14 +1,16 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <iterator>
-
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <stdio.h>
+
 using namespace cv;
 using namespace std;
+
 void help()
 {
     printf( "\nThis code generates an artificial camera and artificial chessboard images,\n"
