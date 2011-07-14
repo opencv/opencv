@@ -1291,7 +1291,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     uchar *buf, *maskbuf = 0, *buf1 = 0, *buf2 = 0, *wbuf = 0;
     size_t bufesz = (cvtsrc1 ? wsz : 0) + (cvtsrc2 || haveScalar ? wsz : 0) + (cvtdst ? wsz : 0) + (haveMask ? dsz : 0);
 
-    _dst.create(src1.dims, src1.size, src1.type());
+    _dst.create(src1.dims, src1.size, dtype);
     Mat dst = _dst.getMat();
     BinaryFunc func = tab[CV_MAT_DEPTH(wtype)];
 
