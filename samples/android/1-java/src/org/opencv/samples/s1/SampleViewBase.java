@@ -52,15 +52,16 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 			}
 
 	public void surfaceCreated(SurfaceHolder holder) {
+		Log.i("SAMP1", "surfaceCreated");
 	    mCamera = Camera.open();
 	    mCamera.setPreviewCallback(
 	            new PreviewCallback() {
 	                public void onPreviewFrame(byte[] data, Camera camera) {
 	                    synchronized(SampleViewBase.this) {
 	                        mFrame = data;
-	                        Log.i("SAMP1", "before notify");
+	                        //Log.i("SAMP1", "before notify");
 	                        SampleViewBase.this.notify();
-	                        Log.i("SAMP1", "after notify");
+	                        //Log.i("SAMP1", "after notify");
 	                    }
 	                }
 	            }
@@ -69,6 +70,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
+		Log.i("SAMP1", "surfaceDestroyed");
 	    mThreadRun = false;
 	    if(mCamera != null) {
 	        synchronized(this) {
@@ -87,22 +89,26 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 	    Log.i(TAG, "Starting thread");
 	    Bitmap bmp = null;
 	    while(mThreadRun) {
-	    	Log.i("SAMP1", "before synchronized");
+	    	//Log.i("SAMP1", "before synchronized");
 	        synchronized(this) {
-	        	Log.i("SAMP1", "in synchronized");
+	        	//Log.i("SAMP1", "in synchronized");
 	            try {
 	                this.wait();
-	                Log.i("SAMP1", "before processFrame");
+	                //Log.i("SAMP1", "before processFrame");
 	                bmp = processFrame(mFrame);
-	                Log.i("SAMP1", "after processFrame");
+	                //Log.i("SAMP1", "after processFrame");
 	            } catch (InterruptedException e) {
 	                e.printStackTrace();
 	            }
 	        }
 	        
-	        Canvas canvas = mHolder.lockCanvas();
-	        canvas.drawBitmap(bmp, (canvas.getWidth()-mFrameWidth)/2, (canvas.getHeight()-mFrameHeight)/2, null);
-	        mHolder.unlockCanvasAndPost(canvas);
+	        if (bmp != null){
+	        	Canvas canvas = mHolder.lockCanvas();
+	        	if (canvas != null){
+	        		canvas.drawBitmap(bmp, (canvas.getWidth()-mFrameWidth)/2, (canvas.getHeight()-mFrameHeight)/2, null);
+	        		mHolder.unlockCanvasAndPost(canvas);
+	        	}
+	        }
 	    }
 	}
 }

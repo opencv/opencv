@@ -50,7 +50,7 @@ class Sample1View extends SampleViewBase implements SurfaceHolder.Callback {
     @Override
     protected Bitmap processFrame(byte[] data)
     {
-    	Log.e("SAMP1", "processFrame begin");
+    	//Log.e("SAMP1", "processFrame begin");
     	
     	mYuv.put(0, 0, data);
     	
@@ -83,7 +83,7 @@ class Sample1View extends SampleViewBase implements SurfaceHolder.Callback {
         Bitmap bmp = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
         android.MatToBitmap(mRgba, bmp);
         
-        Log.e("SAMP1", "processFrame end");
+        //Log.e("SAMP1", "processFrame end");
         return bmp;
     }
     
