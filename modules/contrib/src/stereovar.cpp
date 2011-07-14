@@ -72,6 +72,7 @@ static Mat diffX(Mat &src)
 	for(y = 0; y < src.rows; y++){
         const float* pSrc = src.ptr<float>(y);
         float* pDst = dst.ptr<float>(y);
+#if CV_SSE2
         for (x = 0; x <= cols - 8; x += 8) {
             __m128 a0 = _mm_loadu_ps(pSrc + x);
             __m128 b0 = _mm_loadu_ps(pSrc + x + 1);
@@ -82,6 +83,7 @@ static Mat diffX(Mat &src)
             _mm_storeu_ps(pDst + x, b0);
             _mm_storeu_ps(pDst + x + 4, b1);
         }
+#endif
         for( ; x < cols; x++) pDst[x] = pSrc[x+1] - pSrc[x];
         pDst[cols] = 0.f;
     }
