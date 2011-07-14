@@ -263,11 +263,11 @@ CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm
-CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_OUT CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
 
 //! updates the object tracking window using meanshift algorithm
-CV_EXPORTS_W int meanShift( InputArray probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W int meanShift( InputArray probImage, CV_OUT CV_IN_OUT Rect& window,
                             TermCriteria criteria );
 
 /*!

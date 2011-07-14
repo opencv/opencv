@@ -417,7 +417,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 }
 
 
-void cv::accumulateWeighted( InputArray _src, CV_IN_OUT InputOutputArray _dst,
+void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();

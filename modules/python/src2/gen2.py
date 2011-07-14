@@ -278,10 +278,12 @@ class ArgInfo(object):
         self.arraycvt = None
         self.inputarg = True
         self.outputarg = False
+        self.returnarg = False
         for m in arg_tuple[3]:
             if m == "/O":
                 self.inputarg = False
                 self.outputarg = True
+                self.returnarg = True
             elif m == "/IO":
                 self.inputarg = True
                 self.outputarg = True
@@ -353,7 +355,7 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
-            if a.outputarg:
+            if a.returnarg:
                 outlist.append((a.name, argno))
             if not a.inputarg:
                 if a.isbig():

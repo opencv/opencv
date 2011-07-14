@@ -2392,7 +2392,7 @@ CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
 
 //! clips the line segment by the rectangle imgRect
-CV_EXPORTS_W bool clipLine(Rect imgRect, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);
+CV_EXPORTS_W bool clipLine(Rect imgRect, CV_OUT CV_IN_OUT Point& pt1, CV_OUT CV_IN_OUT Point& pt2);
 
 /*!
    Line iterator class
