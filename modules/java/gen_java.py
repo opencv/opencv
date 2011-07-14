@@ -19,7 +19,9 @@ func_ignore_list = (
     "waitKey",
 )
 
-
+class_ignore_list = (
+    "VideoWriter",
+)
 
 # c_type    : { java/jni correspondence }
 type_dict = {
@@ -659,7 +661,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
         classlist = self.classes.items()
         classlist.sort()
         for name, ci in classlist:
-            if name == "Mat":
+            if name == "Mat" or name in class_ignore_list:
                 continue
             self.java_code.write( "\n\n" + indent + "// C++: class %s" % (ci.cname) + "\n" )
             self.java_code.write( indent + "//javadoc: " + name + "\n" ) #java doc comment
