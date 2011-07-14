@@ -51,6 +51,8 @@ rm -rf opencv/doc/CMakeLists.txt
 cp "$ANDROID_DIR/README.android" opencv/
 cp "$ANDROID_DIR/../README" opencv/
 
+
+# get opencv version
 CV_VERSION=`grep -o "[0-9]\+\.[0-9]\+\.[0-9]\+" opencv/share/OpenCV/OpenCVConfig-version.cmake`
 mv opencv opencv$CV_VERSION
 
@@ -62,7 +64,7 @@ cd "$PRG_DIR/samples"
 #enable for loops over items with spaces in their name
 IFS="
 "
-for dir in `ls -1 | grep -v hello-android`
+for dir in `ls -1`
 do
   if [ -f "$dir/default.properties" ]
   then
@@ -71,13 +73,17 @@ do
     then
       echo -n > "$dir/default.properties"
       android update project --name "$dir" --target "android-8" --library "../../opencv$CV_VERSION" --path "$dir"
-      echo 'android update project --name "$dir" --target "android-8" --library "../opencv$CV_VERSION" --path "$dir"'
+      #echo 'android update project --name "$dir" --target "android-8" --library "../opencv$CV_VERSION" --path "$dir"'
     fi
+  else
+    rm -rf "$dir"
   fi
 done
 
 echo "OPENCV_MK_PATH:=../../opencv$CV_VERSION/share/OpenCV/OpenCV.mk" > includeOpenCV.mk
 
+
+#clean samples
 cd "$PRG_DIR/samples"
 #remove ignored files/folders
 svn status --no-ignore | grep ^I | cut -c9- | xargs -d \\n rm -rf
@@ -86,6 +92,22 @@ svn status | grep ^\? | cut -c9- | xargs -d \\n rm -rf
 #remove unneded CMakeLists.txt
 rm CMakeLists.txt
 
+
+#generate "gen" folders to eliminate eclipse warnings
+cd "$PRG_DIR/samples"
+for dir in `ls -1`
+do
+  if [ -d "$dir" ]
+  then
+    mkdir "$dir/gen"
+  fi
+done
+
+
+#generate folders "gen" and "res" for opencv (dummy eclipse stiff)
+cd $PRG_DIR
+mkdir "opencv$CV_VERSION/gen"
+mkdir "opencv$CV_VERSION/res"
 
 # pack all files
 cd $PRG_DIR
