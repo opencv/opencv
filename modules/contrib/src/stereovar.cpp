@@ -53,7 +53,7 @@
 
 namespace cv 
 {
-StereoVar::StereoVar() : levels(3), pyrScale(0.5), nIt(3), minDisp(0), maxDisp(16), poly_n(5), poly_sigma(1.2), fi(1000.0f), lambda(0.0f), penalization(PENALIZATION_TICHONOV), cycle(CYCLE_V), flags(USE_SMART_ID) 
+StereoVar::StereoVar() : levels(3), pyrScale(0.5), nIt(5), minDisp(0), maxDisp(16), poly_n(3), poly_sigma(0), fi(25.0f), lambda(0.03f), penalization(PENALIZATION_TICHONOV), cycle(CYCLE_V), flags(USE_SMART_ID | USE_AUTO_PARAMS) 
 {
 }
 
@@ -65,111 +65,172 @@ StereoVar::~StereoVar()
 {
 }
 
-static Mat diffX(Mat &img)
+static Mat diffX(Mat &src)
 {
-	// TODO try pointers or assm
+	register int x, y, cols = src.cols - 1;
+	Mat dst(src.size(), src.type());
+	for(y = 0; y < src.rows; y++){
+        const float* pSrc = src.ptr<float>(y);
+        float* pDst = dst.ptr<float>(y);
+        for (x = 0; x <= cols - 8; x += 8) {
+            __m128 a0 = _mm_loadu_ps(pSrc + x);
+            __m128 b0 = _mm_loadu_ps(pSrc + x + 1);
+            __m128 a1 = _mm_loadu_ps(pSrc + x + 4);
+            __m128 b1 = _mm_loadu_ps(pSrc + x + 5);
+            b0 = _mm_sub_ps(b0, a0);
+            b1 = _mm_sub_ps(b1, a1);
+            _mm_storeu_ps(pDst + x, b0);
+            _mm_storeu_ps(pDst + x + 4, b1);
+        }
+        for( ; x < cols; x++) pDst[x] = pSrc[x+1] - pSrc[x];
+        pDst[cols] = 0.f;
+    }
+    return dst;
+}
+
+static Mat getGradient(Mat &src)
+{
 	register int x, y;
-	Mat dst(img.size(), img.type());
+	Mat dst(src.size(), src.type());
 	dst.setTo(0);
-	for (x = 0; x < img.cols - 1; x++)
-		for (y = 0; y < img.rows; y++)
-			dst.at<float>(y, x) = img.at<float>(y, x + 1) - img.at<float>(y ,x);
+	for (y = 0; y < src.rows - 1; y++) {
+		float *pSrc = src.ptr<float>(y);
+		float *pSrcF = src.ptr<float>(y + 1);
+		float *pDst = dst.ptr<float>(y);
+		for (x = 0; x < src.cols - 1; x++)
+			pDst[x] = fabs(pSrc[x + 1] - pSrc[x]) + fabs(pSrcF[x] - pSrc[x]); 
+	}
 	return dst;
 }
 
-static Mat Gradient(Mat &img)
+static Mat getG_c(Mat &src, float l)
 {
-	Mat sobel, sobelX, sobelY;
-	img.copyTo(sobelX);
-	img.copyTo(sobelY);
-	Sobel(img, sobelX, sobelX.type(), 1, 0, 1);
-	Sobel(img, sobelY, sobelY.type(), 0, 1, 1);
-	sobelX = abs(sobelX);
-	sobelY = abs(sobelY);
-	add(sobelX, sobelY, sobel);
-	sobelX.release();
-	sobelY.release();
-	return sobel;
+	Mat dst(src.size(), src.type());
+	for (register int y = 0; y < src.rows; y++) {
+		float *pSrc = src.ptr<float>(y);
+		float *pDst = dst.ptr<float>(y);
+		for (register int x = 0; x < src.cols; x++)
+			pDst[x] = 0.5f*l / sqrtf(l*l + pSrc[x]*pSrc[x]);
+	}
+	return dst;
 }
 
-static float g_c(Mat z, int x, int y, float l)
+static Mat getG_p(Mat &src, float l)
 {
-	return 0.5f*l / sqrtf(l*l + z.at<float>(y,x)*z.at<float>(y,x));
-}
-
-static float g_p(Mat z, int x, int y, float l)
-{
-	return 0.5f*l*l / (l*l + z.at<float>(y,x)*z.at<float>(y,x)) ;
+	Mat dst(src.size(), src.type());
+	for (register int y = 0; y < src.rows; y++) {
+		float *pSrc = src.ptr<float>(y);
+		float *pDst = dst.ptr<float>(y);
+		for (register int x = 0; x < src.cols; x++)
+			pDst[x] = 0.5f*l*l / (l*l + pSrc[x]*pSrc[x]);
+	}
+	return dst;
 }
 
 void StereoVar::VariationalSolver(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 {
 	register int n, x, y;
 	float gl = 1, gr = 1, gu = 1, gd = 1, gc = 4;
+	Mat g_c, g_p;
 	Mat U; 
-	Mat Sobel;
 	u.copyTo(U);
 
 	int		N = nIt;
 	float	l = lambda;
 	float	Fi = fi;
 
-	double scale = pow(pyrScale, (double) level);
-	if (flags & USE_SMART_ID) {										
+	
+	if (flags & USE_SMART_ID) {
+		double scale = pow(pyrScale, (double) level) * (1 + pyrScale);	
 		N = (int) (N / scale);
-		Fi /= (float) scale;
-		l *= (float) scale;
 	}
+
+	double scale = pow(pyrScale, (double) level);
+	Fi /= (float) scale;
+	l *= (float) scale;
+
+	int width	= u.cols - 1;
+	int height	= u.rows - 1;
 	for (n = 0; n < N; n++) {
-		if (penalization != PENALIZATION_TICHONOV) {if(!Sobel.empty()) Sobel.release(); Sobel = Gradient(U);}
-		for (x = 1; x < u.cols - 1; x++) {
-			for (y = 1 ; y < u.rows - 1; y++) {
+		if (penalization != PENALIZATION_TICHONOV) {
+			Mat gradient = getGradient(U);
+			switch (penalization) {
+				case PENALIZATION_CHARBONNIER:	g_c = getG_c(gradient, l); break;
+				case PENALIZATION_PERONA_MALIK: g_p = getG_p(gradient, l); break;
+			}
+			gradient.release();
+		}
+		for (y = 1 ; y < height; y++) {
+			float *pU	= U.ptr<float>(y);
+			float *pUu	= U.ptr<float>(y + 1);
+			float *pUd	= U.ptr<float>(y - 1);
+			float *pu	= u.ptr<float>(y);
+			float *pI1	= I1.ptr<float>(y);
+			float *pI2	= I2.ptr<float>(y);
+			float *pI2x = I2x.ptr<float>(y);
+			float *pG_c = NULL, *pG_cu = NULL, *pG_cd = NULL;
+			float *pG_p = NULL, *pG_pu = NULL, *pG_pd = NULL;
+			switch (penalization) {
+				case PENALIZATION_CHARBONNIER:	
+					pG_c	= g_c.ptr<float>(y); 
+					pG_cu	= g_c.ptr<float>(y + 1); 
+					pG_cd	= g_c.ptr<float>(y - 1); 
+					break;
+				case PENALIZATION_PERONA_MALIK: 
+					pG_p	= g_p.ptr<float>(y); 
+					pG_pu	= g_p.ptr<float>(y + 1); 
+					pG_pd	= g_p.ptr<float>(y - 1); 
+					break;
+			}
+			for (x = 1; x < width; x++) {
 				switch (penalization) {
 					case PENALIZATION_CHARBONNIER:
-						gc = g_c(Sobel, x, y, l);
-						gl = gc + g_c(Sobel, x - 1, y, l);
-						gr = gc + g_c(Sobel, x + 1, y, l);
-						gu = gc + g_c(Sobel, x, y + 1, l);
-						gd = gc + g_c(Sobel, x, y - 1, l);
-						gc = gl + gr + gu + gd;
+						gc = pG_c[x];
+						gl = gc + pG_c[x - 1];
+						gr = gc + pG_c[x + 1];
+						gu = gc + pG_cu[x];
+						gd = gc + pG_cd[x];
+						gc = gl + gr + gu + gd;						
 						break;
 					case PENALIZATION_PERONA_MALIK:
-						gc = g_p(Sobel, x, y, l);
-						gl = gc + g_p(Sobel, x - 1, y, l);
-						gr = gc + g_p(Sobel, x + 1, y, l);
-						gu = gc + g_p(Sobel, x, y + 1, l);
-						gd = gc + g_p(Sobel, x, y - 1, l);
+						gc = pG_p[x];
+						gl = gc + pG_p[x - 1];
+						gr = gc + pG_p[x + 1];
+						gu = gc + pG_pu[x];
+						gd = gc + pG_pd[x];
 						gc = gl + gr + gu + gd;
 						break;
 				}
 
 				float fi = Fi;
 				if (maxDisp > minDisp) {
-					if (U.at<float>(y,x) > maxDisp * scale) {fi*=1000; U.at<float>(y,x) = static_cast<float>(maxDisp * scale);} 
-					if (U.at<float>(y,x) < minDisp * scale) {fi*=1000; U.at<float>(y,x) = static_cast<float>(minDisp * scale);} 
+					if (pU[x] > maxDisp * scale) {fi *= 1000; pU[x] = static_cast<float>(maxDisp * scale);} 
+					if (pU[x] < minDisp * scale) {fi *= 1000; pU[x] = static_cast<float>(minDisp * scale);} 
 				}
 
-				int A = (int) (U.at<float>(y,x));
-				int neg = 0; if (U.at<float>(y,x) <= 0) neg = -1;
+				int A = static_cast<int>(pU[x]);
+				int neg = 0; if (pU[x] <= 0) neg = -1;
 
-				if (x + A >= u.cols)
-					u.at<float>(y, x) = U.at<float>(y, u.cols - A - 1);
+				if (x + A > width)
+					pu[x] = pU[width - A];
 				else if (x + A + neg < 0)
-					u.at<float>(y, x) = U.at<float>(y, - A + 2);
+					pu[x] = pU[- A + 2];
 				else { 
-					u.at<float>(y, x) = A + (I2x.at<float>(y, x + A + neg) * (I1.at<float>(y, x) - I2.at<float>(y, x + A))
-										  + fi * (gr * U.at<float>(y, x + 1) + gl * U.at<float>(y, x - 1) + gu * U.at<float>(y + 1, x) + gd * U.at<float>(y - 1, x) - gc * A)) 
-										  / (I2x.at<float>(y, x + A + neg) * I2x.at<float>(y, x + A + neg) + gc * fi) ; 
+					pu[x] = A + (pI2x[x + A + neg] * (pI1[x] - pI2[x + A])
+							  + fi * (gr * pU[x + 1] + gl * pU[x - 1] + gu * pUu[x] + gd * pUd[x] - gc * A)) 
+							  / (pI2x[x + A + neg] * pI2x[x + A + neg] + gc * fi) ; 
 				}
-			}//y
+			}// x
+			pu[0] = pu[1];
+			pu[width] = pu[width - 1];
+		}// y
+		for (x = 0; x <= width; x++) {
 			u.at<float>(0, x) = u.at<float>(1, x);
-			u.at<float>(u.rows - 1, x) = u.at<float>(u.rows - 2, x);
-		}//x
-		for (y = 0; y < u.rows; y++) {
-			u.at<float>(y, 0) = u.at<float>(y, 1);
-			u.at<float>(y, u.cols - 1) = u.at<float>(y, u.cols - 2);
+			u.at<float>(height, x) = u.at<float>(height - 1, x);
 		}
 		u.copyTo(U);
+		if (!g_c.empty()) g_c.release();
+		if (!g_p.empty()) g_p.release();
 	}//n
 }
 
@@ -251,15 +312,43 @@ void StereoVar::FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level)
 	u_h.release();
 
 	level--;
+	if ((flags & USE_AUTO_PARAMS) && (level < levels / 3)) { 
+		penalization = PENALIZATION_PERONA_MALIK;
+		fi *= 100;
+		flags -= USE_AUTO_PARAMS;
+		autoParams();
+	}
 	if (flags & USE_MEDIAN_FILTERING) medianBlur(u, u, 3);
 	if (level >= 0) FMG(I1, I2, I2x, u, level);
+}
+
+void StereoVar::autoParams()
+{	
+	int maxD = MAX(labs(maxDisp), labs(minDisp));
+	
+	if (!maxD) pyrScale = 0.85;
+	else if (maxD < 8) pyrScale = 0.5;
+	else if (maxD < 64) pyrScale = 0.5 + static_cast<double>(maxD - 8) * 0.00625;
+	else pyrScale = 0.85;
+	
+	if (maxD) {
+		levels = 0;
+		while ( pow(pyrScale, levels) * maxD > 1.5) levels ++;
+		levels++;
+	}
+
+	switch(penalization) {
+		case PENALIZATION_TICHONOV: cycle = CYCLE_V; break;
+		case PENALIZATION_CHARBONNIER: cycle = CYCLE_O; break;
+		case PENALIZATION_PERONA_MALIK: cycle = CYCLE_O; break;
+	}
 }
 
 void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
 {
 	CV_Assert(left.size() == right.size() && left.type() == right.type());
 	CvSize imgSize = left.size();
-	int MaxD = MAX(std::abs(minDisp), std::abs(maxDisp)); 
+	int MaxD = MAX(labs(minDisp), labs(maxDisp)); 
 	int SignD = 1; if (MIN(minDisp, maxDisp) < 0) SignD = -1;
 	if (minDisp >= maxDisp) {MaxD = 256; SignD = 1;}
 		
@@ -290,6 +379,11 @@ void StereoVar::operator ()( const Mat& left, const Mat& right, Mat& disp )
 		GaussianBlur(rightgray, rightgray, cvSize(poly_n, poly_n), poly_sigma);
 	}
 		
+	if (flags & USE_AUTO_PARAMS) {
+		penalization = PENALIZATION_TICHONOV;
+		autoParams();
+	}
+
 	Mat I1, I2;
 	leftgray.convertTo(I1, CV_32FC1);
 	rightgray.convertTo(I2, CV_32FC1);
