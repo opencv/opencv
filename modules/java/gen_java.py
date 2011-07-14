@@ -96,6 +96,8 @@ type_dict = {
 
 }
 
+setManualFunctions=set(['minMaxLoc'])
+
 class ConstInfo(object):
     def __init__(self, cname, name, val):
 ##        self.name = re.sub(r"^cv\.", "", name).replace(".", "_")
@@ -239,6 +241,9 @@ class JavaWrapperGenerator(object):
 
     def add_func(self, decl):
         ffi = FuncFamilyInfo(decl)
+	if ffi.jname in setManualFunctions :
+		print "Found function, which is ported manually: " + ffi.jname 
+		return None
         func_map = self.funcs
         classname = ffi.funcs[0].classname
         if classname:
@@ -292,6 +297,43 @@ class JavaWrapperGenerator(object):
             CV_32F = 5,
             CV_64F = 6,
             CV_USRTYPE1 = 7;
+
+    //Manual ported functions
+
+    // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray()) 
+    //javadoc: minMaxLoc
+    public static class MinMaxLocResult {
+        public double minVal;
+        public double maxVal;
+        public Point minLoc;
+        public Point maxLoc;
+
+	public MinMaxLocResult() {
+	    minVal=0; maxVal=0;
+	    minLoc=new Point();
+	    maxLoc=new Point();
+	}
+    }
+    public static MinMaxLocResult minMaxLoc(Mat src, Mat mask) {
+        MinMaxLocResult res = new MinMaxLocResult();
+        long maskNativeObj=0;
+        if (mask != null) {
+                maskNativeObj=mask.nativeObj;
+        }
+        double resarr[] = n_minMaxLoc(src.nativeObj, maskNativeObj);
+        res.minVal=resarr[0];
+        res.maxVal=resarr[1];
+        res.minLoc.x=resarr[2];
+        res.minLoc.y=resarr[3];
+        res.maxLoc.x=resarr[4];
+        res.maxLoc.y=resarr[5];
+        return res;
+    }
+    public static MinMaxLocResult minMaxLoc(Mat src) {
+        return minMaxLoc(src, null);
+    }
+    private static native double[] n_minMaxLoc(long src_nativeObj, long mask_nativeObj);
+
 
 """ )
 
@@ -374,6 +416,65 @@ class JavaWrapperGenerator(object):
 
         # step 4: generate code for the classes
         self.gen_classes()
+
+        if module == "core":
+            self.cpp_code.write(\
+"""
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLoc
+  (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
+{
+    try {
+#ifdef DEBUG
+        LOGD("core::n_1minMaxLoc()");
+#endif // DEBUG
+
+        jdoubleArray result;
+        result = env->NewDoubleArray(6);
+        if (result == NULL) {
+            return NULL; /* out of memory error thrown */
+        }
+        
+        Mat& src = *((Mat*)src_nativeObj);
+    
+        double minVal, maxVal;
+        Point minLoc, maxLoc;
+        if (mask_nativeObj != 0) {
+            Mat& mask = *((Mat*)mask_nativeObj);
+            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, mask);
+        } else {
+            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        }
+            
+        jdouble fill[6];
+        fill[0]=minVal;
+        fill[1]=maxVal;
+        fill[2]=minLoc.x;
+        fill[3]=minLoc.y;
+        fill[4]=maxLoc.x;
+        fill[5]=maxLoc.y;
+    
+        env->SetDoubleArrayRegion(result, 0, 6, fill);
+
+	return result;
+
+    } catch(cv::Exception e) {
+#ifdef DEBUG
+        LOGD("core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
+#endif // DEBUG
+        jclass je = env->FindClass("org/opencv/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return NULL;
+    } catch (...) {
+#ifdef DEBUG
+        LOGD("core::n_1minMaxLoc() catched unknown exception (...)");
+#endif // DEBUG
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
+        return NULL;
+    }
+}
+""")
 
         # module tail
         self.java_code.write("\n\n" + self.jn_code.getvalue() + "\n")

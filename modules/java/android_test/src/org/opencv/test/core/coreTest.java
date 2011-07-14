@@ -588,6 +588,21 @@ public class coreTest extends OpenCVTestCase {
 		core.min(gray0, gray255, dst);
 		assertMatEqual(gray0, dst);		
 	}
+	public void testMinMaxLoc() {
+		double  minVal=1;
+		double maxVal=10;
+		Point minLoc = new Point((int)matSize/4, (int)matSize/2);
+		Point maxLoc = new Point((int)matSize/2, (int)matSize/4);
+		gray3.put((int)minLoc.y, (int)minLoc.x, minVal);
+		gray3.put((int)maxLoc.y, (int)maxLoc.x, maxVal);
+		
+		core.MinMaxLocResult mmres = core.minMaxLoc(gray3);
+		
+		assertTrue(mmres.minVal==minVal 
+				&& mmres.maxVal==maxVal 
+				&& mmres.minLoc.equals(minLoc) 
+				&& mmres.maxLoc.equals(maxLoc));		
+	}
 
 	public void testMulSpectrumsMatMatMatInt() {
 		//TODO: nice example
