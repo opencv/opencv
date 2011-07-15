@@ -43,7 +43,7 @@ foreach(module ${OPENCV_JAVA_MODULES})
 endforeach()
 
 set(target opencv_java)
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp")
 
 SET (generated_cpp_sources "")
 SET (generated_java_sources "")
@@ -63,6 +63,7 @@ foreach(module ${OPENCV_EXTRA_JAVA_MODULES})
 endforeach()
 
 FILE(GLOB handwrittren_cpp_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp")
+FILE(GLOB handwrittren_h_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.h*")
 
 add_library(${target} SHARED ${handwrittren_cpp_sources} ${generated_cpp_sources})
 target_link_libraries(${target} ${dependent_libs} ${dependent_extra_libs} ${OPENCV_LINKER_LIBS})
@@ -117,7 +118,7 @@ IF(ANDROID)
         endif()
     endforeach()
 
-    foreach(jni_file ${handwrittren_cpp_sources} ${generated_cpp_sources})
+    foreach(jni_file ${handwrittren_cpp_sources} ${handwrittren_h_sources} ${generated_cpp_sources})
         get_filename_component(jni_file_name "${jni_file}" NAME)
         add_custom_command(
             TARGET ${api_target}
