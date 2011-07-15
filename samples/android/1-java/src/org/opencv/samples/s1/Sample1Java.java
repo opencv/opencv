@@ -8,45 +8,47 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample1Java extends Activity {
-    private static final String TAG = "Sample1Java::Activity";
+    private static final String TAG             = "Sample::Activity";
 
-    public static final int VIEW_MODE_RGBA  = 0;
-    public static final int VIEW_MODE_GRAY  = 1;
-    public static final int VIEW_MODE_CANNY = 2;
-    public static final int VIEW_MODE_SOBEL = 3;
-    public static final int VIEW_MODE_BLUR  = 4;
+    public static final int     VIEW_MODE_RGBA  = 0;
+    public static final int     VIEW_MODE_GRAY  = 1;
+    public static final int     VIEW_MODE_CANNY = 2;
+    public static final int     VIEW_MODE_SOBEL = 3;
+    public static final int     VIEW_MODE_BLUR  = 4;
 
-    private MenuItem mItemPreviewRGBA;
-    private MenuItem mItemPreviewGray;
-    private MenuItem mItemPreviewCanny;
-    private MenuItem mItemPreviewSobel;
-    private MenuItem mItemPreviewBlur;
+    private MenuItem            mItemPreviewRGBA;
+    private MenuItem            mItemPreviewGray;
+    private MenuItem            mItemPreviewCanny;
+    private MenuItem            mItemPreviewSobel;
+    private MenuItem            mItemPreviewBlur;
 
-    public static int viewMode = VIEW_MODE_RGBA;
-    
-    public Sample1Java(){
-    	Log.i(TAG, "Instantiated new " + this.getClass());
+    public static int           viewMode        = VIEW_MODE_RGBA;
+
+    public Sample1Java() {
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-    	Log.i(TAG, "onCreate");
+        Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(new Sample1View(this));
     }
 
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-    	Log.i(TAG, "onCreateOptionsMenu");
-        mItemPreviewRGBA  = menu.add("Preview RGBA");
-        mItemPreviewGray  = menu.add("Preview GRAY");
+        Log.i(TAG, "onCreateOptionsMenu");
+        mItemPreviewRGBA = menu.add("Preview RGBA");
+        mItemPreviewGray = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");
         mItemPreviewSobel = menu.add("Sobel");
-        mItemPreviewBlur  = menu.add("Blur");
+        mItemPreviewBlur = menu.add("Blur");
         return true;
     }
 
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "Menu Item selected " + item);
         if (item == mItemPreviewRGBA)
