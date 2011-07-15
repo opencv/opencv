@@ -1,7 +1,7 @@
 package org.opencv.test.highgui;
 
 import org.opencv.highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.VideoCapture;
 
 import org.opencv.test.OpenCVTestCase;
 

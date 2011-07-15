@@ -88,6 +88,7 @@ func_ignore_list = (
 
 class_ignore_list = (
     "VideoWriter",
+    "VideoCapture",
 )
 
 # c_type    : { java/jni correspondence }

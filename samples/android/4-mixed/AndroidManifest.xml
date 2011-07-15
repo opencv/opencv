@@ -12,7 +12,9 @@
 
     <application android:label="@string/app_name" android:icon="@drawable/icon">
         <activity android:name="Sample4Mixed"
-                  android:label="@string/app_name">
+                  android:label="@string/app_name"
+                  android:screenOrientation="landscape"
+                  android:configChanges="keyboardHidden|orientation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
