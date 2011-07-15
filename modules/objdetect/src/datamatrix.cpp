@@ -455,7 +455,7 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
           }
         }
         if (codes.size() > 0) {
-          printf("searching for more\n");
+          //printf("searching for more\n");
         }
         if (decode(sa, cc)) {
           codes.push_back(cc);
