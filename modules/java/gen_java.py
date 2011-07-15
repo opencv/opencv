@@ -106,7 +106,14 @@ type_dict = {
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
-    "vector_Point": { "j_type" : "java.util.ArrayList<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point": { "j_type" : "java.util.List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Mat" :  { "j_type" : "java.util.List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "java.util.List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_Rect" : { "j_type" : "java.util.List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar" : { "j_type" : "java.util.List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_int" : { "j_type" : "java.util.List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
+    "vector_float" : { "j_type" : "java.util.List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
+    "vector_double" : { "j_type" : "java.util.List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -320,7 +327,7 @@ class JavaWrapperGenerator(object):
     def add_func(self, decl):
         ffi = FuncFamilyInfo(decl)
 	if ffi.jname in setManualFunctions :
-		print "Found function, which is ported manually: " + ffi.jname 
+		print "Found function, which is ported manually: " + ffi.jname
 		return None
         func_map = self.funcs
         classname = ffi.funcs[0].classname
@@ -380,7 +387,7 @@ class JavaWrapperGenerator(object):
 
     //Manual ported functions
 
-    // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray()) 
+    // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
     //javadoc: minMaxLoc
     public static class MinMaxLocResult {
         public double minVal;
@@ -513,9 +520,9 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
         if (result == NULL) {
             return NULL; /* out of memory error thrown */
         }
-        
+
         Mat& src = *((Mat*)src_nativeObj);
-    
+
         double minVal, maxVal;
         Point minLoc, maxLoc;
         if (mask_nativeObj != 0) {
@@ -524,7 +531,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
         } else {
             minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
         }
-            
+
         jdouble fill[6];
         fill[0]=minVal;
         fill[1]=maxVal;
@@ -532,7 +539,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
         fill[3]=minLoc.y;
         fill[4]=maxLoc.x;
         fill[5]=maxLoc.y;
-    
+
         env->SetDoubleArrayRegion(result, 0, 6, fill);
 
 	return result;
@@ -657,16 +664,16 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
                     if "I" in a.out or not a.out:
-                        j_prologue.append( "Mat %s_mat = null;/*%s_to_Mat(%s);*/" % (a.name, a.ctype, a.name) )
+                        j_prologue.append( "Mat %s_mat = utils.%s_to_Mat(%s);" % (a.name, a.ctype, a.name) )
                         c_prologue.append( "// %s_out -> %s" % (a.name, a.name) )
                     else:
                         j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
                     if "O" in a.out:
-                        j_epilogue.append("/*Mat_to_%s(%s_mat, %s);*/" % (a.ctype, a.name, a.name))
+                        j_epilogue.append("utils.Mat_to_%s(%s_mat, %s);" % (a.ctype, a.name, a.name))
                         c_epilogue.append( "// %s -> %s_out" % (a.name, a.name) )
                 else:
 
-                    fields = type_dict[a.ctype].get("jn_args") or []
+                    fields = type_dict[a.ctype].get("jn_args")
                     if fields: # complex type
                         for f in fields:
                             jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
@@ -682,8 +689,17 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                         jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         #jni_args.append ( ArgInfo([ "int", "%s_out_length" % a.name, "", [], "" ]) )
                         j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(type_dict[a.ctype].get("jn_args", [1]))) )
-                        j_epilogue.append("/*%s.set(%s_out);*/" % (a.name, a.name))
-                        c_epilogue.append( "/* %s_to_doubles(%s, %s_out); */" % (a.ctype, a.name, a.name) )
+                        if fields:
+                            j_epilogue.append("%s.set(%s_out);" % (a.name, a.name))
+                            c_epilogue.append( \
+                                "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
+                                { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
+                        else:
+                            j_epilogue.append("/* NYI: %s.set(%s_out); */" % (a.name, a.name))
+                            c_epilogue.append( \
+                                "jdouble tmp_%(n)s[1] = {%(n)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, 1, tmp_%(n)s);" %
+                                { "n" : a.name } )
+
 
             # java part:
             # private java NATIVE method decl
