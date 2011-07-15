@@ -1575,7 +1575,7 @@ int tbbThresholdFunctionalScore(const CvLSVMFilterObject **all_F, int n,
     // Computation the number of levels for seaching object,
     // first lambda-levels are used for computation values
     // of score function for each position of root filter
-    numLevels = H->numLevels;
+    numLevels = H->numLevels - LAMBDA;
     kLevels = (int *)malloc(sizeof(int) * threadsNum);
     procLevels = (int **)malloc(sizeof(int*) * threadsNum);
     computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
