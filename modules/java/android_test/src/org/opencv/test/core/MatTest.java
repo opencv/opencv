@@ -241,7 +241,6 @@ public class MatTest extends OpenCVTestCase {
 
 	public void testType() {
 		assertEquals(CvType.CV_8UC1, gray0.type());
-		//TODO: assertEquals(CvType.CV_8U, gray0.type());
 		assertEquals(CvType.CV_32FC1, gray0_32f.type());
 		assertEquals(CvType.CV_8UC3, rgbLena.type());
 	}

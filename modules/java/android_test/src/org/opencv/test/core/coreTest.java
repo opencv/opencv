@@ -7,7 +7,6 @@ import org.opencv.Scalar;
 import org.opencv.core;
 
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class coreTest extends OpenCVTestCase {
 	
@@ -46,9 +45,9 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
-		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst);//FIXME: #1224, CvType.CV_32F
+		core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, CvType.CV_32F);
 		assertTrue(CvType.CV_32F == dst.depth());
-		//TODO: assertMatEqual(gray255_32f, dst);
+		assertMatEqual(gray255_32f, dst);
 	}
 
 	public void testBitwise_andMatMatMat() {
@@ -95,7 +94,7 @@ public class coreTest extends OpenCVTestCase {
 		Mat covar = new Mat(matSize, matSize, CvType.CV_64FC1);
 		Mat mean = new Mat(1, matSize, CvType.CV_64FC1);
 		
-		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1); //TODO: CV_COVAR_NORMAL instead of magic numbers
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1/*TODO: CV_COVAR_NORMAL*/); 
 		assertMatEqual(gray0_64f, covar);
 		assertMatEqual(gray0_64f_1d, mean);
 	}
@@ -104,7 +103,7 @@ public class coreTest extends OpenCVTestCase {
 		Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
 		Mat mean = new Mat(1, matSize, CvType.CV_32F);
 		
-		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1, CvType.CV_32F); //FIXME: CV_COVAR_NORMAL
+		core.calcCovarMatrix(gray0_32f, covar, mean, 8|1/*TODO: CV_COVAR_NORMAL*/, CvType.CV_32F);
 		assertMatEqual(gray0_32f, covar);
 		assertMatEqual(gray0_32f_1d, mean);
 	}
@@ -115,12 +114,6 @@ public class coreTest extends OpenCVTestCase {
 
 	public void testCartToPolarMatMatMatMatBoolean() {
 		fail("Not yet implemented");
-	}
-
-	public void testCheckHardwareSupport() {
-		//XXX: core.checkHardwareSupport(feature)
-		//boolean hasFeauture = core.checkHardwareSupport(0);
-		//assertEquals(false, hasFeauture);
 	}
 
 	public void testCircleMatPointIntScalar() {
@@ -300,7 +293,6 @@ public class coreTest extends OpenCVTestCase {
 	public void testExp() {
 		Mat destination = new Mat(matSize, matSize, CvType.CV_32F); destination.setTo(new Scalar(0.0));
 		core.exp(gray0_32f, destination);
-		OpenCVTestRunner.Log(destination.dump());
 		assertMatEqual(gray1_32f, destination);		
 	}
 
@@ -381,8 +373,10 @@ public class coreTest extends OpenCVTestCase {
 		int vecsize = core.getOptimalDFTSize(0);
 		assertEquals(1, vecsize);
 		
-		int largeVecSize = core.getOptimalDFTSize(32768);
-		assertTrue(largeVecSize < 0);	//FIXME:fails why??
+		int largeVecSize = core.getOptimalDFTSize(133);
+		assertEquals(135, largeVecSize);
+		largeVecSize = core.getOptimalDFTSize(13);
+		assertEquals(15, largeVecSize);
 	}
 
 	public void testGetTickFrequency() {
@@ -484,19 +478,13 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testLog() {
-		//FIXME: why it fails for the above array!
-//		Mat in = new Mat(1, 4, Mat.CvType.CV_32FC1);
-//		Mat des = new Mat(1, 4, Mat.CvType.CV_32FC1);
-//		in.put(0, 0, 1.0, 2.0, 4.0,3.0);
-//		des.put(0,0, 0.0, 0.3010,0.6021,0.4771);
-//		assertMatEqual(des,dst_gray);
-
-		Mat in = new Mat(1, 1, CvType.CV_32F);
-		Mat des = new Mat(1, 1, CvType.CV_32F);
-		in.put(0, 0, 1);
-		des.put(0,0, 0.0);
+		Mat in = new Mat(1, 4, CvType.CV_32FC1);
+		Mat desired = new Mat(1, 4, CvType.CV_32FC1);
+		in.put(0, 0, 1.0, 10.0, 100.0, 1000.0);
+		desired.put(0, 0, 0, 2.3025851, 4.6051702, 6.9077554);
+		
 		core.log(in, dst);
-		assertMatEqual(des, dst);
+		assertMatEqual(desired, dst);
 	}
 
 	public void testLUTMatMatMat() {
@@ -527,7 +515,7 @@ public class coreTest extends OpenCVTestCase {
         core.magnitude(x, y, dst_gray);
         assertMatEqual(dst,dst_gray);
         */
-		//FIXME: fails for the above case, why?
+		//fails for the above case, why?
 		/*Mat x = new Mat(1, 1, Mat.CvType.CV_32FC1);
 		Mat y = new Mat(1, 1, Mat.CvType.CV_32FC1);
 		Mat dst = new Mat(1, 1, Mat.CvType.CV_32FC1);
@@ -546,7 +534,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testMahalanobis() {	
 		Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
 		Mat mean = new Mat(1, matSize, CvType.CV_32F);		
-		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1, CvType.CV_32F); //TODO: CV_COVAR_NORMAL instead of magic numbers
+		core.calcCovarMatrix(grayRnd_32f, covar, mean, 8|1/*TODO: CV_COVAR_NORMAL*/, CvType.CV_32F);
 		covar.inv();
 		
 		Mat line1 = grayRnd_32f.submat(0, 1, 0, grayRnd_32f.cols());
@@ -605,7 +593,7 @@ public class coreTest extends OpenCVTestCase {
 
 
 	public void testMulSpectrumsMatMatMatInt() {
-		//TODO: nice example
+		//nice example
 		fail("Not yet implemented");
 	}
 
@@ -638,16 +626,16 @@ public class coreTest extends OpenCVTestCase {
 		core.mulTransposed(grayRnd_32f, dst, true, grayRnd_32f);
 		assertMatEqual(gray0_32f, dst);
 
-		Mat grayDelta = new Mat(matSize, matSize, CvType.CV_8U);
-        grayDelta.setTo(new Scalar(0.0001));
+		Mat grayDelta = new Mat(matSize, matSize, CvType.CV_32F);
+        grayDelta.setTo(new Scalar(0.0));
 		core.mulTransposed(grayE_32f, dst, true, grayDelta);
 		assertMatEqual(grayE_32f, dst);
 	}
 
 	public void testMulTransposedMatMatBooleanMatDouble() {
-		Mat grayDelta = new Mat(matSize, matSize, CvType.CV_8U);
-		grayDelta.setTo(new Scalar(0.0001));
-		core.mulTransposed(grayE_32f, dst, true, grayDelta, 1);//FIXME: what scale factor to use?!
+		Mat grayDelta = new Mat(matSize, matSize, CvType.CV_32F);
+		grayDelta.setTo(new Scalar(0.0));
+		core.mulTransposed(grayE_32f, dst, true, grayDelta, 1);
 		assertMatEqual(grayE_32f, dst);
 	}
 
@@ -710,7 +698,7 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testPerspectiveTransform() {
-		//TODO: nice example
+		//nice example
 		fail("Not yet implemented");
 	}
 
@@ -785,11 +773,6 @@ public class coreTest extends OpenCVTestCase {
 		fail("Not yet implemented. Scalar type is not supported");
 	}
 
-	public void testSetUseOptimized() {
-		//XXX: core.setUseOptimized(onoff)
-		fail("Not yet implemented");
-	}
-
 	public void testSolveCubic() {
 		fail("Not yet implemented");
 	}
@@ -831,19 +814,16 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSort() {
-		Mat matrix = new Mat(matSize, matSize, CvType.CV_8U); 
-		matrix.setTo(new Scalar(0.0));
-		Mat submatrix = matrix.submat(0, matrix.rows() / 2, 0, matrix.cols() / 2);
-		submatrix.setTo(new Scalar(1.0));
+		Mat submat = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols() / 2);
+		submat.setTo(new Scalar(1.0));
 		
-		core.sort(matrix, dst, 0); //FIXME: #define CV_SORT_EVERY_ROW 0
+		core.sort(gray0, dst, 0/*TODO: CV_SORT_EVERY_ROW*/);		
+		submat = dst.submat(0, dst.rows() / 2, dst.cols() / 2, dst.cols());
+		assertTrue(submat.total() == core.countNonZero(submat));
 		
-		Mat subdst = dst.submat(0, dst.rows() / 2, dst.cols() / 2, dst.cols());
-		assertTrue(subdst.total() == core.countNonZero(subdst));
-		
-		core.sort(matrix, dst, 1); //FIXME: #define CV_SORT_EVERY_COLUMN 1 
-		Mat subdst1 = dst.submat(dst.rows() / 2, dst.rows(), 0, dst.cols() / 2);
-		assertTrue(subdst1.total() == core.countNonZero(subdst1));
+		core.sort(gray0, dst, 1/*TODO: CV_SORT_EVERY_COLUMN*/); 
+		submat = dst.submat(dst.rows() / 2, dst.rows(), 0, dst.cols() / 2);
+		assertTrue(submat.total() == core.countNonZero(submat));
 	}
 
 	public void testSortIdx() {
@@ -870,15 +850,13 @@ public class coreTest extends OpenCVTestCase {
 		core.sqrt(gray9_32f, dst);
 		assertMatEqual(gray3_32f, dst);
 		
-		//TODO: We can't use assertMatEqual with multi-channel mat
-//		Mat rgba144 = new Mat(matSize, matSize, Mat.CvType.CV_32FC4);
-//		Mat rgba12 = new Mat(matSize, matSize, Mat.CvType.CV_32FC4);
-//		Mat rgba_dst = new Mat(matSize, matSize, Mat.CvType.CV_32FC4);
-//		rgba144.setTo(144, 144, 144, 144);
-//		rgba12.setTo(12, 12, 12, 12);
-//		rgba_dst.setTo(0, 0, 0, 0);
-//		core.sqrt(rgba144, rgba_dst);
-//		//assertMatEqual(rgba12, rgba_dst);
+		Mat rgba144 = new Mat(matSize, matSize, CvType.CV_32FC4);
+		Mat rgba12 = new Mat(matSize, matSize, CvType.CV_32FC4);
+		rgba144.setTo(Scalar.all(144));
+		rgba12.setTo(Scalar.all(12));
+
+		core.sqrt(rgba144, dst);
+		assertMatEqual(rgba12, dst);
 	}
 
 	public void testSubtractMatMatMat() {
@@ -887,27 +865,19 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSubtractMatMatMatMat() {
-		fail("Not yet implemented");
-		Mat mask = new Mat(matSize, matSize, CvType.CV_8U); 
-		mask.setTo(new Scalar(0));
+		Mat mask = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0)); 
 		Mat submask = mask.submat(0, mask.rows() / 2, 0, mask.cols() / 2);
 		submask.setTo(new Scalar(1));
 		
-		//FIXME: looks like a bug
-		OpenCVTestRunner.Log(" submask.total() = " + String.valueOf(submask.total()));
-		OpenCVTestRunner.Log(" 1: core.countNonZero(dst) = " + String.valueOf(core.countNonZero(dst)));		
+		dst = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
 		core.subtract(gray3, gray2, dst, mask);
-		OpenCVTestRunner.Log(" 2: core.countNonZero(dst) = " + String.valueOf(core.countNonZero(dst)));
 		assertTrue(submask.total() == core.countNonZero(dst));
 	}
 
 	public void testSubtractMatMatMatMatInt() {
-		fail("Not yet implemented");
-//		core.subtract(gray3, gray1, dst, gray1, gray255_32f.depth());
-//		OpenCVTestRunner.Log(" 3: dst.depth() = " + String.valueOf(dst.depth()));
-//		OpenCVTestRunner.Log(" 4: core.CV_32F = " + String.valueOf(CvType.CV_32F));
-//		//FIXME: assertTrue(CvType.CV_32F == dst.depth());
-//		//assertMatEqual(gray2, dst);
+		core.subtract(gray3, gray2, dst, gray1, CvType.CV_32F);
+		assertTrue(CvType.CV_32F == dst.depth());
+		assertMatEqual(gray1_32f, dst);
 	}
 
 	public void testTransform() {
@@ -921,11 +891,6 @@ public class coreTest extends OpenCVTestCase {
 		subgray0.setTo(new Scalar(1));
 		core.transpose(gray0, destination);
 		assertTrue(subdst.total() == core.countNonZero(subdst));
-	}
-
-	public void testUseOptimized() {
-		//XXX: core.useOptimized()
-		fail("Not yet implemented");
 	}
 
 	public void testVconcat() {
