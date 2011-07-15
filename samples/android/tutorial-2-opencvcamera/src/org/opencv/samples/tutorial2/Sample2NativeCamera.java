@@ -1,4 +1,4 @@
-package org.opencv.samples.s3;
+package org.opencv.samples.tutorial2;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -7,7 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
 
-public class Sample3NativeCamera extends Activity {
+public class Sample2NativeCamera extends Activity {
     private static final String TAG             = "Sample::Activity";
 
     public static final int     VIEW_MODE_RGBA  = 0;
@@ -24,7 +24,7 @@ public class Sample3NativeCamera extends Activity {
 
     public static int           viewMode        = VIEW_MODE_RGBA;
 
-    public Sample3NativeCamera() {
+    public Sample2NativeCamera() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -34,7 +34,7 @@ public class Sample3NativeCamera extends Activity {
         Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new Sample3View(this));
+        setContentView(new Sample2View(this));
     }
 
     @Override

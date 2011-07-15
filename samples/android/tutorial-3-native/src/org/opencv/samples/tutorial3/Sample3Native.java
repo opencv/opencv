@@ -1,14 +1,14 @@
-package org.opencv.samples.s2;
+package org.opencv.samples.tutorial3;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Window;
 
-public class Sample2Native extends Activity {
+public class Sample3Native extends Activity {
     private static final String TAG = "Sample::Activity";
 
-    public Sample2Native() {
+    public Sample3Native() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -18,6 +18,6 @@ public class Sample2Native extends Activity {
         Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(new Sample2View(this));
+        setContentView(new Sample3View(this));
     }
 }

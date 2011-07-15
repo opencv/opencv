@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 extern "C" {
-JNIEXPORT void JNICALL Java_org_opencv_samples_s2_Sample2View_FindFeatures(JNIEnv* env, jobject thiz, jint width, jint height, jbyteArray yuv, jintArray rgba)
+JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial3_Sample3View_FindFeatures(JNIEnv* env, jobject thiz, jint width, jint height, jbyteArray yuv, jintArray rgba)
 {
     jbyte* _yuv  = env->GetByteArrayElements(yuv, 0);
     jint*  _rgba = env->GetIntArrayElements(rgba, 0);

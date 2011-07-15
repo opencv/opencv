@@ -1,11 +1,11 @@
-package org.opencv.samples.s2;
+package org.opencv.samples.tutorial3;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 
-class Sample2View extends SampleViewBase {
+class Sample3View extends SampleViewBase {
 
-    public Sample2View(Context context) {
+    public Sample3View(Context context) {
         super(context);
     }
 

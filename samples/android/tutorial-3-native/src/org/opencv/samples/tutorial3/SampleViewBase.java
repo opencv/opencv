@@ -1,4 +1,4 @@
-package org.opencv.samples.s2;
+package org.opencv.samples.tutorial3;
 
 import java.util.List;
 
