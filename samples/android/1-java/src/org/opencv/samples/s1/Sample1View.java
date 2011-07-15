@@ -7,10 +7,10 @@ import android.graphics.Bitmap;
 import android.view.SurfaceHolder;
 
 class Sample1View extends SampleViewBase {
-    Mat mYuv;
-    Mat mRgba;
-    Mat mGraySubmat;
-    Mat mIntermediateMat;
+    private Mat mYuv;
+    private Mat mRgba;
+    private Mat mGraySubmat;
+    private Mat mIntermediateMat;
 
     public Sample1View(Context context) {
         super(context);

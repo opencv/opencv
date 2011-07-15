@@ -8,40 +8,45 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample4Mixed extends Activity {
-    private static final String TAG = "Sample4Mixed::Activity";
+    private static final String TAG                = "Sample::Activity";
 
-    public static final int VIEW_MODE_RGBA  = 0;
-    public static final int VIEW_MODE_GRAY  = 1;
-    public static final int VIEW_MODE_CANNY = 2;
-    public static final int VIEW_MODE_SOBEL = 3;
-    public static final int VIEW_MODE_BLUR  = 4;
-    public static final int VIEW_MODE_FEATURES  = 5;
+    public static final int     VIEW_MODE_RGBA     = 0;
+    public static final int     VIEW_MODE_GRAY     = 1;
+    public static final int     VIEW_MODE_CANNY    = 2;
+    public static final int     VIEW_MODE_SOBEL    = 3;
+    public static final int     VIEW_MODE_BLUR     = 4;
+    public static final int     VIEW_MODE_FEATURES = 5;
 
-    private MenuItem mItemPreviewRGBA;
-    private MenuItem mItemPreviewGray;
-    private MenuItem mItemPreviewCanny;
-    private MenuItem mItemPreviewSobel;
-    private MenuItem mItemPreviewBlur;
-    private MenuItem mItemPreviewFeatures;
+    private MenuItem            mItemPreviewRGBA;
+    private MenuItem            mItemPreviewGray;
+    private MenuItem            mItemPreviewCanny;
+    private MenuItem            mItemPreviewSobel;
+    private MenuItem            mItemPreviewBlur;
+    private MenuItem            mItemPreviewFeatures;
 
-    public int viewMode;
+    public static int           viewMode           = VIEW_MODE_RGBA;
+
+    public Sample4Mixed() {
+        Log.i(TAG, "Instantiated new " + this.getClass());
+    }
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.i(TAG, "onCreate");
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(new Sample4View(this));
-        viewMode = VIEW_MODE_RGBA;
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
-        mItemPreviewRGBA  = menu.add("Preview RGBA");
-        mItemPreviewGray  = menu.add("Preview GRAY");
+        Log.i(TAG, "onCreateOptionsMenu");
+        mItemPreviewRGBA = menu.add("Preview RGBA");
+        mItemPreviewGray = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");
         mItemPreviewSobel = menu.add("Sobel");
-        mItemPreviewBlur  = menu.add("Blur");
-        mItemPreviewFeatures  = menu.add("Find features");
+        mItemPreviewBlur = menu.add("Blur");
+        mItemPreviewFeatures = menu.add("Find features");
         return true;
     }
 
