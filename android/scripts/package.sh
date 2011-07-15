@@ -79,7 +79,7 @@ do
   fi
 done
 
-echo "OPENCV_MK_PATH:=../../opencv$CV_VERSION/share/OpenCV/OpenCV.mk" > includeOpenCV.mk
+echo "OPENCV_MK_PATH:=../../$OPENCV_NAME/share/OpenCV/OpenCV.mk" > includeOpenCV.mk
 
 
 #clean samples

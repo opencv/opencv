@@ -40,7 +40,7 @@ if (BUILD_ANDROID_EXAMPLES)
 
         file(RELATIVE_PATH OPENCV_REFERENCE_PATH "${sample_dir}" "${CMAKE_BINARY_DIR}")
 
-        if(NOT ("${sample}" STREQUAL "0-base" OR "${sample}" STREQUAL "2-native"))
+        if(NOT ("${sample}" MATCHES "tutorial-[03].*"))
             SET(opencv_reference --library \"${OPENCV_REFERENCE_PATH}\")
         else()
             SET(opencv_reference)

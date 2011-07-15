@@ -1,4 +1,4 @@
-package org.opencv.samples.s0;
+package org.opencv.samples.tutorial0;
 
 import android.content.Context;
 import android.graphics.Bitmap;

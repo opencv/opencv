@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Sample 1 Java API</name>
+	<name>Tutorial 1 Basic - 1. Add OpenCV</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -32,9 +32,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>opencv2.3.1_src</name>
+			<name>OpenCV-2.3.1_src</name>
 			<type>2</type>
-			<locationURI>_android_opencv2_3_1_d2471b5d/src</locationURI>
+			<locationURI>_android_OpenCV-2_3_1_d2471b5d/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

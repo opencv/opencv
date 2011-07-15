@@ -3,9 +3,9 @@
       package="org.opencv"
       android:versionCode="1"
       android:versionName="1.0">
-    <application android:label="opencv2.3.1">
-        <activity android:name="opencv2.3.1"
-                  android:label="opencv2.3.1">
+    <application android:label="OpenCV-2.3.1">
+        <activity android:name="OpenCV-2.3.1"
+                  android:label="OpenCV-2.3.1">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
