@@ -22,18 +22,23 @@ public class Sample1Java extends Activity {
     private MenuItem mItemPreviewSobel;
     private MenuItem mItemPreviewBlur;
 
-    public int viewMode;
+    public static int viewMode = VIEW_MODE_RGBA;
+    
+    public Sample1Java(){
+    	Log.i(TAG, "Instantiated new " + this.getClass());
+    }
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+    	Log.i(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(new Sample1View(this));
-        viewMode = VIEW_MODE_RGBA;
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
+    	Log.i(TAG, "onCreateOptionsMenu");
         mItemPreviewRGBA  = menu.add("Preview RGBA");
         mItemPreviewGray  = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");

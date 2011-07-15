@@ -12,12 +12,12 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public abstract class SampleViewBase extends SurfaceView implements SurfaceHolder.Callback, Runnable {
-
-	private static final String TAG = "Sample::ViewBase";
+	private static final String TAG = "SampleViewBase";
+	
 	private Camera mCamera;
 	private SurfaceHolder mHolder;
-	protected int mFrameWidth;
-	protected int mFrameHeight;
+	private int mFrameWidth;
+	private int mFrameHeight;
 	private byte[] mFrame;
 	private boolean mThreadRun;
 
@@ -25,43 +25,52 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 		super(context);
         mHolder = getHolder();
         mHolder.addCallback(this);
+        Log.i(TAG, "Instantiated new " + this.getClass());
+	}
+
+	public int getFrameWidth() {
+		return mFrameWidth;
+	}
+
+	public int getFrameHeight() {
+		return mFrameHeight;
 	}
 
 	public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-			    if ( mCamera != null) {
-			        Camera.Parameters params = mCamera.getParameters();
-			        List<Camera.Size> sizes = params.getSupportedPreviewSizes();
-			        mFrameWidth = width;
-			        mFrameHeight = height;
-			        
-			        //selecting optimal camera preview size
-			        {
-			            double minDiff = Double.MAX_VALUE;
-			            for (Camera.Size size : sizes) {
-			                if (Math.abs(size.height - height) < minDiff) {
-			                    mFrameWidth = size.width;
-			                    mFrameHeight = size.height;
-			                    minDiff = Math.abs(size.height - height);
-			                }
-			            }
-			        }
-			        params.setPreviewSize(mFrameWidth, mFrameHeight);
-			        mCamera.setParameters(params);
-			        mCamera.startPreview();
-			    }
+		Log.i(TAG, "surfaceCreated");
+		if ( mCamera != null) {
+			Camera.Parameters params = mCamera.getParameters();
+			List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+			mFrameWidth = width;
+			mFrameHeight = height;
+			
+			//selecting optimal camera preview size
+			{
+				double minDiff = Double.MAX_VALUE;
+				for (Camera.Size size : sizes) {
+					if (Math.abs(size.height - height) < minDiff) {
+						mFrameWidth = size.width;
+						mFrameHeight = size.height;
+						minDiff = Math.abs(size.height - height);
+					}
+				}
 			}
 
+			params.setPreviewSize(getFrameWidth(), getFrameHeight());
+			mCamera.setParameters(params);
+			mCamera.startPreview();
+		}
+	}
+
 	public void surfaceCreated(SurfaceHolder holder) {
-		Log.i("SAMP1", "surfaceCreated");
+		Log.i(TAG, "surfaceCreated");
 	    mCamera = Camera.open();
 	    mCamera.setPreviewCallback(
 	            new PreviewCallback() {
 	                public void onPreviewFrame(byte[] data, Camera camera) {
 	                    synchronized(SampleViewBase.this) {
 	                        mFrame = data;
-	                        //Log.i("SAMP1", "before notify");
 	                        SampleViewBase.this.notify();
-	                        //Log.i("SAMP1", "after notify");
 	                    }
 	                }
 	            }
@@ -70,7 +79,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 	}
 
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		Log.i("SAMP1", "surfaceDestroyed");
+		Log.i(TAG, "surfaceDestroyed");
 	    mThreadRun = false;
 	    if(mCamera != null) {
 	        synchronized(this) {
@@ -86,28 +95,26 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
 	public void run() {
 	    mThreadRun = true;
-	    Log.i(TAG, "Starting thread");
-	    Bitmap bmp = null;
+	    Log.i(TAG, "Starting processing thread");
 	    while(mThreadRun) {
-	    	//Log.i("SAMP1", "before synchronized");
+	    	Bitmap bmp = null;
+	    	
 	        synchronized(this) {
-	        	//Log.i("SAMP1", "in synchronized");
 	            try {
 	                this.wait();
-	                //Log.i("SAMP1", "before processFrame");
 	                bmp = processFrame(mFrame);
-	                //Log.i("SAMP1", "after processFrame");
 	            } catch (InterruptedException e) {
 	                e.printStackTrace();
 	            }
 	        }
 	        
-	        if (bmp != null){
+	        if (bmp != null) {
 	        	Canvas canvas = mHolder.lockCanvas();
 	        	if (canvas != null){
-	        		canvas.drawBitmap(bmp, (canvas.getWidth()-mFrameWidth)/2, (canvas.getHeight()-mFrameHeight)/2, null);
+	        		canvas.drawBitmap(bmp, (canvas.getWidth()-getFrameWidth())/2, (canvas.getHeight()-getFrameHeight())/2, null);
 	        		mHolder.unlockCanvasAndPost(canvas);
 	        	}
+	        	bmp.recycle();
 	        }
 	    }
 	}
