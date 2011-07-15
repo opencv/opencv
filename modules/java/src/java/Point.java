@@ -15,12 +15,19 @@ public class Point {
     }
 
     public Point(double[] vals) {
-    	this();
-    	if(vals!=null) {
-    		x = vals.length>0 ? vals[0] : 0;
-    		y = vals.length>1 ? vals[1] : 0;
-    	}
+        this();
+        set(vals);
     }
+    public void set(double[] vals) {
+        if(vals!=null) {
+            x = vals.length>0 ? vals[0] : 0;
+            y = vals.length>1 ? vals[1] : 0;
+        } else {
+            x = 0;
+            y = 0;
+	}
+    }
+
 
     public Point clone() {
         return new Point(x, y);

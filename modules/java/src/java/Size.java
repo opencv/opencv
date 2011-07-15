@@ -20,11 +20,17 @@ public class Size {
     }
 
     public Size(double[] vals) {
-    	this();
-    	if(vals!=null) {
-    		width  = vals.length>0 ? vals[0] : 0;
-    		height = vals.length>1 ? vals[1] : 0;
-    	}
+        this();
+        set(vals);
+    }
+    public void set(double[] vals) {
+        if(vals!=null) {
+            width  = vals.length>0 ? vals[0] : 0;
+            height = vals.length>1 ? vals[1] : 0;
+        } else {
+            width  = 0;
+            height = 0;
+        }
     }
 
     public double area() {

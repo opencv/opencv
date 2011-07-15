@@ -18,12 +18,19 @@ public class TermCriteria {
     }
 
     public TermCriteria(double[] vals) {
-    	this();
-    	if(vals!=null) {
-    		type      = vals.length>0 ? (int)vals[0]    : 0;
-    		maxCount  = vals.length>1 ? (int)vals[1]    : 0;
-    		epsilon   = vals.length>2 ? (double)vals[2] : 0;
-    	}
+        this();
+        set(vals);
+    }
+    public void set(double[] vals) {
+        if(vals!=null) {
+            type      = vals.length>0 ? (int)vals[0]    : 0;
+            maxCount  = vals.length>1 ? (int)vals[1]    : 0;
+            epsilon   = vals.length>2 ? (double)vals[2] : 0;
+        } else {
+            type      = 0;
+            maxCount  = 0;
+            epsilon   = 0;
+        }
     }
 
     public TermCriteria clone() {

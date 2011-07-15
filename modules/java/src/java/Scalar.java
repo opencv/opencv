@@ -25,12 +25,20 @@ public class Scalar {
     }
 
     public Scalar(double[] vals) {
-    	if(vals!=null) {
-    		v0 = vals.length>0 ? (int)vals[0] : 0;
-    		v1 = vals.length>1 ? (int)vals[1] : 0;
-    		v2 = vals.length>2 ? (int)vals[2] : 0;
-    		v3 = vals.length>3 ? (int)vals[3] : 0;
-    	}
+        set(vals);
+    }
+    public void set(double[] vals) {
+        if(vals!=null) {
+            v0 = vals.length>0 ? (int)vals[0] : 0;
+            v1 = vals.length>1 ? (int)vals[1] : 0;
+            v2 = vals.length>2 ? (int)vals[2] : 0;
+            v3 = vals.length>3 ? (int)vals[3] : 0;
+        } else {
+            v0 = 0;
+            v1 = 0;
+            v2 = 0;
+            v3 = 0;
+        }
     }
 
     public static Scalar all(double v) {

@@ -18,14 +18,23 @@ public class RotatedRect {
     }
 
     public RotatedRect(double[] vals) {
-    	this();
-    	if(vals!=null) {
-    		center.x    = vals.length>0 ? (int)vals[0] : 0;
-    		center.x    = vals.length>1 ? (int)vals[1] : 0;
-    		size.width  = vals.length>2 ? (int)vals[2] : 0;
-    		size.height = vals.length>3 ? (int)vals[3] : 0;
-    		angle       = vals.length>4 ? (int)vals[4] : 0;
-    	}
+        this();
+        set(vals);
+    }
+    public void set(double[] vals) {
+        if(vals!=null) {
+            center.x    = vals.length>0 ? (int)vals[0] : 0;
+            center.x    = vals.length>1 ? (int)vals[1] : 0;
+            size.width  = vals.length>2 ? (int)vals[2] : 0;
+            size.height = vals.length>3 ? (int)vals[3] : 0;
+            angle       = vals.length>4 ? (int)vals[4] : 0;
+        } else {
+            center.x    = 0;
+            center.x    = 0;
+            size.width  = 0;
+            size.height = 0;
+            angle       = 0;
+        }
     }
 
     public void points(Point pt[])
