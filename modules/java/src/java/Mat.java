@@ -27,7 +27,7 @@ public class Mat {
 
     //javadoc:Mat::Mat(rows,cols,type,s)
     public Mat(int rows, int cols, CvType type, Scalar s) {
-        this( nCreateMat(rows, cols, type.toInt(), s.v0, s.v1, s.v2, s.v3) );
+        this( nCreateMat(rows, cols, type.toInt(), s.val[0], s.val[1], s.val[2], s.val[3]) );
     }
 
     //javadoc:Mat::Mat(rows,cols,depth,s)
@@ -280,7 +280,7 @@ public class Mat {
     //javadoc:Mat::setTo(s)
     public void setTo(Scalar s) {
         checkNull();
-        nSetTo(nativeObj, s.v0, s.v1, s.v2, s.v3);
+        nSetTo(nativeObj, s.val[0], s.val[1], s.val[2], s.val[3]);
     }
     
     //javadoc:Mat::copyTo(m)

@@ -149,8 +149,8 @@ type_dict = {
  "RotatedRect": { "j_type" : "RotatedRect",  "jn_args" : (("double", ".center.x"), ("double", ".center.y"), ("double", ".size.width"), ("double", ".size.height"), ("double", ".angle")),
                   "jni_var" : "RotatedRect %(n)s(cv::Point2f(%(n)s_center_x, %(n)s_center_y), cv::Size2f(%(n)s_size_width, %(n)s_size_height), %(n)s_angle)",
                   "jni_type" : "jdoubleArray", "suffix" : "DDDDD"},
-    "Scalar"  : { "j_type" : "Scalar",  "jn_args" : (("double", ".v0"), ("double", ".v1"), ("double", ".v2"), ("double", ".v3")),
-                  "jni_var" : "Scalar %(n)s(%(n)s_v0, %(n)s_v1, %(n)s_v2, %(n)s_v3)", "jni_type" : "jdoubleArray",
+    "Scalar"  : { "j_type" : "Scalar",  "jn_args" : (("double", ".val[0]"), ("double", ".val[1]"), ("double", ".val[2]"), ("double", ".val[3]")),
+                  "jni_var" : "Scalar %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2, %(n)s_val3)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDDD"},
     "Range"   : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
@@ -489,6 +489,7 @@ class JavaWrapperGenerator(object):
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
 #endif // DEBUG
 
+#include "utils.h"
 """ % module)
         self.cpp_code.write( "\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) \
                             for f in srcfiles]) )
@@ -649,8 +650,14 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
             c_prologue = []
             c_epilogue = []
             if type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
-                c_epilogue.append( "jdoubleArray _da_ = env->NewDoubleArray(6); /* assuming '6' is enough*/  //" +
-                                   fi.ctype + "_to_doubles(_retval_, _da_);" )
+                fields = type_dict[fi.ctype].get("jn_args")
+                if fields:
+                    c_epilogue.append( \
+                        "jdoubleArray _da_retval_ = env->NewDoubleArray(6); /* assuming '6' is enough*/  " +
+                        "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);" %
+                        { "cnt" : len(fields), "args" : ", ".join(["_retval_" + f[1] for f in fields]) } )
+                else:
+                    c_epilogue.append( "/* TODO: NYI !!! */" )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -663,21 +670,22 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
+                    c_prologue.append( "Mat& %(n)s_mat = *((Mat*)%(n)s_mat_nativeObj)" % {"n" : a.name} + ";" )
                     if "I" in a.out or not a.out:
-                        j_prologue.append( "Mat %s_mat = utils.%s_to_Mat(%s);" % (a.name, a.ctype, a.name) )
-                        c_prologue.append( "// %s_out -> %s" % (a.name, a.name) )
+                        j_prologue.append( "Mat %(n)s_mat = utils.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
+                        c_prologue.append( "Mat_to_%(t)s( %(n)s_mat, %(n)s );" % {"n" : a.name, "t" : a.ctype} )
                     else:
                         j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
                     if "O" in a.out:
-                        j_epilogue.append("utils.Mat_to_%s(%s_mat, %s);" % (a.ctype, a.name, a.name))
-                        c_epilogue.append( "// %s -> %s_out" % (a.name, a.name) )
+                        j_epilogue.append("utils.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
+                        c_prologue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
 
                     fields = type_dict[a.ctype].get("jn_args")
                     if fields: # complex type
                         for f in fields:
                             jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_"), "", [], "" ]) )
+                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
                     else:
                         jn_args.append(a)
                         jni_args.append(a)
@@ -695,7 +703,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                                 "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
                                 { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
                         else:
-                            j_epilogue.append("/* NYI: %s.set(%s_out); */" % (a.name, a.name))
+                            j_epilogue.append("/* TODO: NYI: %s.set(%s_out); */" % (a.name, a.name))
                             c_epilogue.append( \
                                 "jdouble tmp_%(n)s[1] = {%(n)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, 1, tmp_%(n)s);" %
                                 { "n" : a.name } )
@@ -710,7 +718,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
                 indent = indent, \
                 jn_type = type_dict[fi.ctype].get("jn_type", "double[]"), \
                 jn_name = fi.jn_name, \
-                jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_")) for a in jn_args])
+                jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
             ) );
 
             # java part:
@@ -788,7 +796,7 @@ $indent}
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new %s(_retval_);" % fi.ctype
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
-                ret = "return _da_;"
+                ret = "return _da_retval_;"
 
             cvname = "cv::" + fi.name
             #j2cvargs = []
