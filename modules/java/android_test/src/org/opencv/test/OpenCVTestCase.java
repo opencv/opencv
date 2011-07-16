@@ -103,26 +103,14 @@ public class OpenCVTestCase extends TestCase {
     }    
 
     public static void assertMatEqual(Mat m1, Mat m2) {
-    	//OpenCVTestRunner.Log(m1.toString());
-    	//OpenCVTestRunner.Log(m2.toString());
-    	
-    	if (!m1.type().equals(m2.type()) || 
-    	    m1.cols() != m2.cols() || m1.rows() != m2.rows()) {
-    		throw new UnsupportedOperationException();
-    	}
-    	else if (m1.channels() == 1) {
-    		assertTrue(CalcPercentageOfDifference(m1, m2) == 0.0);
-    	}
-    	else {
-    		for (int coi = 0; coi < m1.channels(); coi++) {
-    			Mat m1c = getCOI(m1, coi);
-    			Mat m2c = getCOI(m2, coi);
-    			assertTrue(CalcPercentageOfDifference(m1c, m2c) == 0.0);
-    		}
-    	}
+    	compareMats(m1, m2, true);
     }
     
-    public static void assertMatNotEqual(Mat m1, Mat m2) { //TODO: copypasta (see above)
+    public static void assertMatNotEqual(Mat m1, Mat m2) {
+    	compareMats(m1, m2, false);
+    }
+    
+    static private void compareMats(Mat m1, Mat m2, boolean isEqualityMeasured) {
     	//OpenCVTestRunner.Log(m1.toString());
     	//OpenCVTestRunner.Log(m2.toString());
     	
@@ -131,13 +119,23 @@ public class OpenCVTestCase extends TestCase {
     		throw new UnsupportedOperationException();
     	}
     	else if (m1.channels() == 1) {
-    		assertTrue(CalcPercentageOfDifference(m1, m2) != 0.0);
+    		if (isEqualityMeasured)	{
+    			assertTrue(CalcPercentageOfDifference(m1, m2) == 0.0);
+    		}
+    		else {
+    			assertTrue(CalcPercentageOfDifference(m1, m2) != 0.0);
+    		}
     	}
     	else {
     		for (int coi = 0; coi < m1.channels(); coi++) {
     			Mat m1c = getCOI(m1, coi);
     			Mat m2c = getCOI(m2, coi);
-    			assertTrue(CalcPercentageOfDifference(m1c, m2c) != 0.0);
+        		if (isEqualityMeasured)	{
+        			assertTrue(CalcPercentageOfDifference(m1c, m2c) == 0.0);
+        		}
+        		else {
+        			assertTrue(CalcPercentageOfDifference(m1c, m2c) != 0.0);
+        		}
     		}
     	}
     }
@@ -158,10 +156,10 @@ public class OpenCVTestCase extends TestCase {
     static private double CalcPercentageOfDifference(Mat m1, Mat m2) {
         Mat cmp = new Mat(0, 0, CvType.CV_8U);
         core.compare(m1, m2, cmp, core.CMP_EQ);
-        double num = 100.0 * 
+        double difference = 100.0 * 
             (1.0 - Double.valueOf(core.countNonZero(cmp)) / Double.valueOf(cmp.rows() * cmp.cols()));
 
-        return num;
+        return difference;
     }
 
     public void test_1(String label) {
