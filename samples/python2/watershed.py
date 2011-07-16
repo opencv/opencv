@@ -52,7 +52,7 @@ class App:
                 print 'auto_update if', ['off', 'on'][self.auto_update]
             if ch in [ord('r'), ord('R')]:
                 self.markers[:] = 0
-                self.markers_vis[:] = self.img.copy()
+                self.markers_vis[:] = self.img
                 self.sketch.show()
 
 

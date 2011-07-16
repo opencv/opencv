@@ -13,9 +13,6 @@ Keys:
   SPACE - reset features
 '''
 
-
-
-
 lk_params = dict( winSize  = (21, 21), 
                   maxLevel = 2, 
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
@@ -35,7 +32,7 @@ def calc_flow_old(img0, img1, p0):
     np.asarray(img1_cv)[:] = img1
     t = clock()
     features, status, error  = cv.CalcOpticalFlowPyrLK(img0_cv, img1_cv, None, None, p0, 
-        lk_params['winSize'], lk_params['maxLevel'], (cv.CV_TERMCRIT_EPS | cv.CV_TERMCRIT_ITER, 10, 0.03), 0, p0)
+        lk_params['winSize'], lk_params['maxLevel'], lk_params['criteria'], 0, p0)
     return np.float32(features), status, error, clock()-t
 
 def main():
@@ -60,7 +57,7 @@ def main():
                 p1,  st, err, dt = calc_flow_old(img0, img1, p0)
             else:
                 t = clock()
-                p1,  st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, **lk_params)
+                p1,  st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
                 dt = clock()-t
             for tr, (x, y) in zip(tracks, p1.reshape(-1, 2)):
                 tr.append((x, y))

@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import cv2
 import cv2.cv as cv
 import video
@@ -31,7 +30,7 @@ def draw_hsv(flow):
     ang = np.arctan2(fy, fx) + np.pi
     v = np.sqrt(fx*fx+fy*fy)
     hsv = np.zeros((h, w, 3), np.uint8)
-    hsv[...,0] = ang*(180/math.pi/2)
+    hsv[...,0] = ang*(180/np.pi/2)
     hsv[...,1] = 255
     hsv[...,2] = np.minimum(v*4, 255)
     bgr = cv2.cvtColor(hsv, cv.CV_HSV2BGR)
@@ -61,7 +60,7 @@ if __name__ == '__main__':
     while True:
         ret, img = cam.read()
         gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
-        flow = cv2.calcOpticalFlowFarneback(prevgray, gray, 0.5, 3, 15, 3, 5, 1.2, 0)
+        flow = cv2.calcOpticalFlowFarneback(prevgray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         prevgray = gray
         
         cv2.imshow('flow', draw_flow(gray, flow))
