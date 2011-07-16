@@ -65,12 +65,23 @@ void vector_Rect_to_Mat(vector<Rect>& v_rect, Mat& mat)
 //vector_Point
 void Mat_to_vector_Point(Mat& mat, vector<Point>& v_point)
 {
+	v_point.clear();
+	
+	if(mat.type()!= CV_32SC2 || mat.rows!=1)
+		return;
+
+	for(int i=0; i<mat.cols; i++)
+		v_point.push_back( Point( mat.at< Vec<int, 2> >(0, i) ) );
+
     return;
 }
 
 
 void vector_Point_to_Mat(vector<Point>& v_point, Mat& mat)
 {
+	mat.create(1, v_point.size(), CV_32SC2);
+	for(int i=0; i<v_point.size(); i++)
+		mat.at< Vec<int, 2> >(0, i) = Vec<int, 2>(v_point[i].x, v_point[i].y);
     return;
 }
 
