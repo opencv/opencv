@@ -176,7 +176,7 @@ type_dict = {
 
 }
 
-setManualFunctions=set(['minMaxLoc'])
+setManualFunctions=set(['minMaxLoc', 'getTextSize'])
 
 class ConstInfo(object):
     def __init__(self, cname, name, val):
@@ -420,7 +420,14 @@ class JavaWrapperGenerator(object):
         return minMaxLoc(src, null);
     }
     private static native double[] n_minMaxLocManual(long src_nativeObj, long mask_nativeObj);
-
+    
+    //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
+    public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
+        assert(baseLine == null || baseLine.length == 1);
+        Size retVal = new Size(n_getTextSize(text, fontFace, fontScale, thickness, baseLine));
+        return retVal;
+    }
+    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);
 
 """ )
 
@@ -558,7 +565,62 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
         LOGD("core::n_1minMaxLoc() catched unknown exception (...)");
 #endif // DEBUG
         jclass je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
+        env->ThrowNew(je, "Unknown exception in JNI code {core::minMaxLoc()}");
+        return NULL;
+    }
+}
+
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
+  (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
+{
+    try {
+#ifdef DEBUG
+        LOGD("core::n_1getTextSize()");
+#endif // DEBUG
+
+        jdoubleArray result;
+        result = env->NewDoubleArray(2);
+        if (result == NULL) {
+            return NULL; /* out of memory error thrown */
+        }
+        
+        const char* utf_text = env->GetStringUTFChars(text, 0);
+        std::string n_text( utf_text ? utf_text : "" );
+        env->ReleaseStringUTFChars(text, utf_text);
+        
+        int _baseLine;
+        int* pbaseLine = 0;
+        
+        if (baseLine != NULL)
+            pbaseLine = &_baseLine;
+            
+        cv::Size rsize = cv::getTextSize(n_text, (int)fontFace, (double)fontScale, (int)thickness, pbaseLine);
+
+        jdouble fill[2];
+        fill[0]=rsize.width;
+        fill[1]=rsize.height;
+
+        env->SetDoubleArrayRegion(result, 0, 2, fill);
+        
+        if (baseLine != NULL)
+            env->SetIntArrayRegion(baseLine, 0, 1, pbaseLine);
+
+        return result;
+
+    } catch(cv::Exception e) {
+#ifdef DEBUG
+        LOGD("core::n_1getTextSize() catched cv::Exception: %s", e.what());
+#endif // DEBUG
+        jclass je = env->FindClass("org/opencv/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return NULL;
+    } catch (...) {
+#ifdef DEBUG
+        LOGD("core::n_1getTextSize() catched unknown exception (...)");
+#endif // DEBUG
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
     }
 }
