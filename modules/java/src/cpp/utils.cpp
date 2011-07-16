@@ -91,7 +91,6 @@ void Mat_to_vector_uchar(cv::Mat& mat, std::vector<uchar>& v_uchar)
 
 void Mat_to_vector_Rect(Mat& mat, vector<Rect>& v_rect)
 {
-	LOGD("Mat_to_vector_Rect start, mat.cols=%d", mat.cols);
 	v_rect.clear();
 
 	if(mat.type()!= CV_32SC4 || mat.rows!=1) {
@@ -103,17 +102,14 @@ void Mat_to_vector_Rect(Mat& mat, vector<Rect>& v_rect)
 		Vec<int, 4> v=mat.at< Vec<int, 4> >(0, i);
 		v_rect.push_back( Rect(v[0], v[1], v[2], v[3]) );
 	}
-	LOGD("Mat_to_vector_Rect end, vec.size=%d", (int)v_rect.size());
 }
 
 void vector_Rect_to_Mat(vector<Rect>& v_rect, Mat& mat)
 {
-	LOGD("vector_Rect_to_Mat start, vec.size=%d", (int)v_rect.size());
 	mat.create(1, v_rect.size(), CV_32SC4);
 	for(size_t i=0; i<v_rect.size(); i++) {
 		mat.at< Vec<int, 4> >(0, i) = Vec<int, 4>(v_rect[i].x, v_rect[i].y, v_rect[i].width, v_rect[i].height);
 	}
-	LOGD("vector_Rect_to_Mat end, mat.cols=%d", mat.cols);
 }
 
 

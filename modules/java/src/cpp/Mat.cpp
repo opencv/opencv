@@ -231,6 +231,7 @@ template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* 
 	if(! m) return 0;
 	if(! buff) return 0;
 
+	count *= sizeof(T);//This change is required, checked TODO: recheck for non-continious case
 	int rest = ((m->rows - row) * m->cols - col) * m->channels() * sizeof(T);
 	if(count>rest) count = rest;
 	int res = count;
@@ -243,7 +244,7 @@ template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* 
 		int num = (m->cols - col - 1) * m->channels() * sizeof(T); // 1st partial row
 		if(count<num) num = count;
 		uchar* data = m->ptr(row++, col);
-		while(count>0){
+		while(count>0){//TODO: recheck this cycle for the case col!=0
 			memcpy(buff, data, num);
 			count -= num;
 			buff += num;
