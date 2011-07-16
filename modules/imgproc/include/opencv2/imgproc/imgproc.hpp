@@ -574,16 +574,16 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         int sdepth=-1 );
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
-CV_EXPORTS_W void accumulate( InputArray src, CV_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
                               InputArray mask=noArray() );
 //! adds squared src image to the accumulator (dst += src*src).
-CV_EXPORTS_W void accumulateSquare( InputArray src, CV_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulateSquare( InputArray src, InputOutputArray dst,
                                     InputArray mask=noArray() );
 //! adds product of the 2 images to the accumulator (dst += src1*src2).
 CV_EXPORTS_W void accumulateProduct( InputArray src1, InputArray src2,
-                                     CV_OUT InputOutputArray dst, InputArray mask=noArray() );
+                                     InputOutputArray dst, InputArray mask=noArray() );
 //! updates the running average (dst = dst*(1-alpha) + src*alpha)
-CV_EXPORTS_W void accumulateWeighted( InputArray src, CV_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask=noArray() );
     
 //! type of the threshold operation

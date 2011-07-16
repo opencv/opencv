@@ -1,5 +1,6 @@
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 import os
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']

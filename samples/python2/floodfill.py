@@ -1,5 +1,6 @@
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 
 help_message = '''USAGE: floodfill.py [<image>]
 

@@ -4,7 +4,8 @@ Inspired by http://www.jonathanmccabe.com/Cyclic_Symmetric_Multi-Scale_Turing_Pa
 '''
 
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 from common import draw_str
 import getopt, sys
 from itertools import count

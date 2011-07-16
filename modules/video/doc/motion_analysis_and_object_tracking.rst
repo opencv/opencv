@@ -34,7 +34,7 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
     :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
     
-    :param derivLambda: Relative weight of the spatial image derivatives impact to the optical flow estimation. If  ``derivLambda=0`` , only the image intensity is used. If  ``derivLambda=1`` , only derivatives are used. Any other values between 0 and 1 mean that both derivatives and the image intensity are used (in the corresponding proportions).
+    :param derivLambda: Not used.
 
     :param flags: Operation flags:
 

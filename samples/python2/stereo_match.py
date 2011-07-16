@@ -5,7 +5,8 @@ Resulting .ply file cam be easily viewed using MeshLab (http://meshlab.sourcefor
 '''
 
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 
 ply_header = '''ply
 format ascii 1.0

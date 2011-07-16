@@ -9,7 +9,7 @@ Adds an image to the accumulator.
 
 .. ocv:function:: void accumulate( InputArray src, InputOutputArray dst, InputArray mask=noArray() )
 
-.. ocv:pyfunction:: cv2.accumulate(src, dst[, mask]) -> dst
+.. ocv:pyfunction:: cv2.accumulate(src, dst[, mask]) -> None
 
 .. ocv:cfunction:: void cvAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
 .. ocv:pyoldfunction:: cv.Acc(src, dst, mask=None)-> None
@@ -44,7 +44,7 @@ Adds the square of a source image to the accumulator.
 
 .. ocv:function:: void accumulateSquare( InputArray src, InputOutputArray dst,  InputArray mask=noArray() )
 
-.. ocv:pyfunction:: cv2.accumulateSquare(src, dst[, mask]) -> dst
+.. ocv:pyfunction:: cv2.accumulateSquare(src, dst[, mask]) -> None
 
 .. ocv:cfunction:: void cvSquareAcc( const CvArr* src, CvArr* dst, const CvArr* mask=NULL )
 .. ocv:pyoldfunction:: cv.SquareAcc(src, dst, mask=None)-> None
@@ -77,7 +77,7 @@ Adds the per-element product of two input images to the accumulator.
 
 .. ocv:function:: void accumulateProduct( InputArray src1, InputArray src2, InputOutputArray dst, InputArray mask=noArray() )
 
-.. ocv:pyfunction:: cv2.accumulateProduct(src1, src2, dst[, mask]) -> dst
+.. ocv:pyfunction:: cv2.accumulateProduct(src1, src2, dst[, mask]) -> None
 
 .. ocv:cfunction:: void cvMultiplyAcc( const CvArr* src1, const CvArr* src2, CvArr* dst, const CvArr* mask=NULL )
 .. ocv:pyoldfunction:: cv.MultiplyAcc(src1, src2, dst, mask=None)-> None
@@ -112,7 +112,7 @@ Updates a running average.
 
 .. ocv:function:: void accumulateWeighted( InputArray src, InputOutputArray dst, double alpha, InputArray mask=noArray() )
 
-.. ocv:pyfunction:: cv2.accumulateWeighted(src, dst, alpha[, mask]) -> dst
+.. ocv:pyfunction:: cv2.accumulateWeighted(src, dst, alpha[, mask]) -> None
 
 .. ocv:cfunction:: void cvRunningAvg( const CvArr* src, CvArr* dst, double alpha, const CvArr* mask=NULL )
 .. ocv:pyoldfunction:: cv.RunningAvg(src, dst, alpha, mask=None)-> None

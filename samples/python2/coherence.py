@@ -7,7 +7,8 @@
 '''
 
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 
 
 def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):

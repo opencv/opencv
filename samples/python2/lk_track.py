@@ -1,5 +1,6 @@
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 import video
 from common import anorm2, draw_str
 from time import clock
@@ -15,7 +16,7 @@ Keys:
 
 
 
-lk_params = dict( winSize  = (3, 3), 
+lk_params = dict( winSize  = (21, 21), 
                   maxLevel = 2, 
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
                   derivLambda = 0.0 )    

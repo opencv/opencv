@@ -1,5 +1,6 @@
 import numpy as np
-import cv2, cv
+import cv2
+import cv2.cv as cv
 
 def detect(img, cascade):
     rects = cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
