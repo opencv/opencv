@@ -452,7 +452,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testHconcat() {
 		Mat e = Mat.eye(3, 3, CvType.CV_8UC1);
 		Mat eConcat = new Mat(1, 9, CvType.CV_8UC1);
-		eConcat.put(0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1);
+		eConcat.put(0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1);
 		
 		core.hconcat(e, dst);		
 		assertMatEqual(eConcat, dst);
