@@ -66,6 +66,8 @@
 
 #define FLANN_ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
+namespace cvflann {
+
 /* Nearest neighbour index algorithms */
 enum flann_algorithm_t
 {
@@ -158,5 +160,7 @@ enum
     FLANN_CHECKS_UNLIMITED = -1,
     FLANN_CHECKS_AUTOTUNED = -2
 };
+
+}
 
 #endif /* OPENCV_FLANN_DEFINES_H_ */

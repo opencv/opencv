@@ -53,6 +53,8 @@ namespace cv
  
 namespace flann
 {
+    using namespace cvflann;
+
 
 struct CV_EXPORTS IndexParams
 {
@@ -88,7 +90,7 @@ struct CV_EXPORTS LinearIndexParams : public IndexParams
 struct CV_EXPORTS CompositeIndexParams : public IndexParams
 {
     CompositeIndexParams(int trees = 4, int branching = 32, int iterations = 11,
-                         flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 );
+                         cvflann::flann_centers_init_t centers_init = cvflann::FLANN_CENTERS_RANDOM, float cb_index = 0.2 );
 };
 
 struct CV_EXPORTS AutotunedIndexParams : public IndexParams
@@ -100,7 +102,7 @@ struct CV_EXPORTS AutotunedIndexParams : public IndexParams
 struct CV_EXPORTS KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,
-                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 );
+                      cvflann::flann_centers_init_t centers_init = cvflann::FLANN_CENTERS_RANDOM, float cb_index = 0.2 );
 };
 
 struct CV_EXPORTS LshIndexParams : public IndexParams
@@ -122,10 +124,10 @@ class CV_EXPORTS_W Index
 {
 public:
     CV_WRAP Index();
-    CV_WRAP Index(InputArray features, const IndexParams& params, flann_distance_t distType=FLANN_DIST_L2);
+    CV_WRAP Index(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
     virtual ~Index();
     
-    CV_WRAP virtual void build(InputArray features, const IndexParams& params, flann_distance_t distType=FLANN_DIST_L2);
+    CV_WRAP virtual void build(InputArray features, const IndexParams& params, cvflann::flann_distance_t distType=cvflann::FLANN_DIST_L2);
     CV_WRAP virtual void knnSearch(InputArray query, OutputArray indices, 
                    OutputArray dists, int knn, const SearchParams& params=SearchParams());
     
@@ -136,12 +138,12 @@ public:
     CV_WRAP virtual void save(const std::string& filename) const;
     CV_WRAP virtual bool load(InputArray features, const std::string& filename);
     CV_WRAP virtual void release();
-    CV_WRAP flann_distance_t getDistance() const;
-    CV_WRAP flann_algorithm_t getAlgorithm() const;
+    CV_WRAP cvflann::flann_distance_t getDistance() const;
+    CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;
     
 protected:
-    flann_distance_t distType;
-    flann_algorithm_t algo;
+    cvflann::flann_distance_t distType;
+    cvflann::flann_algorithm_t algo;
     int featureType;
     void* index;
 };
