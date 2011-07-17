@@ -23,7 +23,7 @@ def find_squares(img):
                 if len(cnt) == 4 and cv2.contourArea(cnt) > 1000 and cv2.isContourConvex(cnt):
                     cnt = cnt.reshape(-1, 2)
                     max_cos = np.max([angle_cos( cnt[i], cnt[(i+1) % 4], cnt[(i+2) % 4] ) for i in xrange(4)])
-                    if max_cos < 0.3:
+                    if max_cos < 0.1:
                         squares.append(cnt)
     return squares
 
