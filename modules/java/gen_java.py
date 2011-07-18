@@ -215,7 +215,12 @@ class ClassInfo(object):
 
 class ArgInfo(object):
     def __init__(self, arg_tuple): # [ ctype, name, def val, [mod], argno ]
-        self.ctype = arg_tuple[0]
+        self.pointer = False
+        ctype = arg_tuple[0]
+        if ctype.endswith("*"):
+            ctype = ctype[:-1]
+            self.pointer = True
+        self.ctype = ctype
         self.name = arg_tuple[1]
         self.defval = arg_tuple[2]
         self.out = ""
@@ -431,7 +436,7 @@ class JavaWrapperGenerator(object):
         return minMaxLoc(src, null);
     }
     private static native double[] n_minMaxLocManual(long src_nativeObj, long mask_nativeObj);
-    
+
     //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
     public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
         assert(baseLine == null || baseLine.length == 1);
@@ -594,17 +599,17 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
         if (result == NULL) {
             return NULL; /* out of memory error thrown */
         }
-        
+
         const char* utf_text = env->GetStringUTFChars(text, 0);
         std::string n_text( utf_text ? utf_text : "" );
         env->ReleaseStringUTFChars(text, utf_text);
-        
+
         int _baseLine;
         int* pbaseLine = 0;
-        
+
         if (baseLine != NULL)
             pbaseLine = &_baseLine;
-            
+
         cv::Size rsize = cv::getTextSize(n_text, (int)fontFace, (double)fontScale, (int)thickness, pbaseLine);
 
         jdouble fill[2];
@@ -612,7 +617,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
         fill[1]=rsize.height;
 
         env->SetDoubleArrayRegion(result, 0, 2, fill);
-        
+
         if (baseLine != NULL)
             env->SetIntArrayRegion(baseLine, 0, 1, pbaseLine);
 
@@ -674,9 +679,20 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
         # // C++: c_decl
         # e.g:
         # //  C++: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
-        c_decl = "%s %s %s(%s)" % \
-            ( fi.static, fi.ctype, fi.cname, \
-              ", ".join(a.ctype + " " + a.name + [""," = "+a.defval][bool(a.defval)] for a in fi.args) )
+        decl_args = []
+        for a in fi.args:
+            s = a.ctype
+            if a.pointer:
+                s += "*"
+            elif a.out:
+                s += "&"
+            s += " " + a.name
+            if a.defval:
+                s += " = "+a.defval
+            decl_args.append(s)
+
+        c_decl = "%s %s %s(%s)" % ( fi.static, fi.ctype, fi.cname, ", ".join(decl_args) )
+
         indent = " " * 4
         if fi.classname:
             indent += " " * 4
@@ -723,14 +739,12 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
             c_prologue = []
             c_epilogue = []
             if type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
-                fields = type_dict[fi.ctype].get("jn_args")
-                if fields:
-                    c_epilogue.append( \
-                        "jdoubleArray _da_retval_ = env->NewDoubleArray(6); /* assuming '6' is enough*/  " +
-                        "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);" %
-                        { "cnt" : len(fields), "args" : ", ".join(["_retval_" + f[1] for f in fields]) } )
-                else:
-                    c_epilogue.append( "/* TODO: NYI !!! */" )
+                fields = type_dict[fi.ctype]["jn_args"]
+                c_epilogue.append( \
+                    ("jdoubleArray _da_retval_ = env->NewDoubleArray(%(cnt)i);  " +
+                     "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; " +
+                     "env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);") %
+                    { "cnt" : len(fields), "args" : ", ".join(["_retval_" + f[1] for f in fields]) } )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -756,27 +770,28 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
 
                     fields = type_dict[a.ctype].get("jn_args")
                     if fields: # complex type
-                        for f in fields:
-                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
-                    else:
-                        jn_args.append(a)
-                        jni_args.append(a)
-
-                    if a.out and a.ctype not in self.classes:
-                        # pass as double[]
-                        jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                        #jn_args.append ( ArgInfo([ "int", "%s_out.length" % a.name, "", [], "" ]) )
-                        jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                        #jni_args.append ( ArgInfo([ "int", "%s_out_length" % a.name, "", [], "" ]) )
-                        j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(type_dict[a.ctype].get("jn_args", [1]))) )
-                        if fields:
+                        if "I" in a.out or not a.out or a.ctype in self.classes: # input arg, pass by primitive fields
+                            for f in fields:
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                                jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
+                        if a.out and a.ctype not in self.classes: # out args, pass as double[]
+                            jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                            jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                            j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
                             j_epilogue.append("%s.set(%s_out);" % (a.name, a.name))
                             c_epilogue.append( \
                                 "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
                                 { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
-                        else:
-                            j_epilogue.append("/* TODO: NYI: %s.set(%s_out); */" % (a.name, a.name))
+
+                    else: # primitive type
+                        if "I" in a.out or not a.out: # input arg, pass by primitive fields
+                            jn_args.append(a)
+                            jni_args.append(a)
+                        if a.out and a.ctype not in self.classes: # out args, pass as double[]
+                            jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                            jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                            j_prologue.append( "double[] %s_out = new double[1];" % a.name )
+                            j_epilogue.append("%s = %s_out[0];" % (a.name, a.name))
                             c_epilogue.append( \
                                 "jdouble tmp_%(n)s[1] = {%(n)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, 1, tmp_%(n)s);" %
                                 { "n" : a.name } )
@@ -872,7 +887,6 @@ $indent}
                 ret = "return _da_retval_;"
 
             cvname = "cv::" + fi.name
-            #j2cvargs = []
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
@@ -890,9 +904,16 @@ $indent}
                     )
             cvargs = []
             for a in args:
-                cvargs.append( type_dict[a.ctype].get("jni_name", "%(n)s") % {"n" : a.name})
-                if "vector" not in a.ctype and "jni_var" in type_dict[a.ctype]: # complex type
-                    c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
+                if a.pointer:
+                    jni_name = "&%(n)s"
+                else:
+                    jni_name = "%(n)s"
+                cvargs.append( type_dict[a.ctype].get("jni_name", jni_name) % {"n" : a.name})
+                if "vector" not in a.ctype :
+                    if ("I" in a.out or not a.out or a.ctype in self.classes) and "jni_var" in type_dict[a.ctype]: # complex type
+                        c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
+                    if a.out and "I" not in a.out and a.ctype not in self.classes:
+                        c_prologue.append("%s %s;" % (a.ctype, a.name))
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
             self.cpp_code.write ( Template( \
