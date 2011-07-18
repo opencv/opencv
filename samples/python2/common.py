@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 import os
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
@@ -74,9 +73,9 @@ class Sketcher:
 
     def on_mouse(self, event, x, y, flags, param):
         pt = (x, y)
-        if event == cv.CV_EVENT_LBUTTONDOWN:
+        if event == cv2.EVENT_LBUTTONDOWN:
             self.prev_pt = pt
-        if self.prev_pt and flags & cv.CV_EVENT_FLAG_LBUTTON:
+        if self.prev_pt and flags & cv2.EVENT_FLAG_LBUTTON:
             for dst, color in zip(self.dests, self.colors_func()):
                 cv2.line(dst, self.prev_pt, pt, color, 5)
             self.dirty = True

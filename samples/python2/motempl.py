@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 import video
 from common import nothing, clock, draw_str
 
@@ -37,7 +36,7 @@ if __name__ == '__main__':
     while True:
         ret, frame = cam.read()
         frame_diff = cv2.absdiff(frame, prev_frame)
-        gray_diff = cv2.cvtColor(frame_diff, cv.CV_BGR2GRAY)
+        gray_diff = cv2.cvtColor(frame_diff, cv2.COLOR_BGR2GRAY)
         thrs = cv2.getTrackbarPos('threshold', 'motempl')
         ret, motion_mask = cv2.threshold(gray_diff, thrs, 1, cv2.THRESH_BINARY)
         timestamp = clock()
@@ -52,11 +51,11 @@ if __name__ == '__main__':
             vis = frame_diff.copy()
         elif visual_name == 'motion_hist':
             vis = np.uint8(np.clip((motion_history-(timestamp-MHI_DURATION)) / MHI_DURATION, 0, 1)*255)
-            vis = cv2.cvtColor(vis, cv.CV_GRAY2BGR)
+            vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR)
         elif visual_name == 'grad_orient':
             hsv[:,:,0] = mg_orient/2
             hsv[:,:,2] = mg_mask*255
-            vis = cv2.cvtColor(hsv, cv.CV_HSV2BGR)
+            vis = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
         for i, rect in enumerate([(0, 0, w, h)] + list(seg_bounds)):
             x, y, rw, rh = rect

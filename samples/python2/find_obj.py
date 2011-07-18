@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 from common import anorm
 
 help_message = '''SURF image match 
@@ -25,7 +24,7 @@ def draw_match(img1, img2, p1, p2, status = None, H = None):
     vis = np.zeros((max(h1, h2), w1+w2), np.uint8)
     vis[:h1, :w1] = img1
     vis[:h2, w1:w1+w2] = img2
-    vis = cv2.cvtColor(vis, cv.CV_GRAY2BGR)
+    vis = cv2.cvtColor(vis, cv2.COLOR_GRAY2BGR)
 
     if H is not None:
         corners = np.float32([[0, 0], [w1, 0], [w1, h1], [0, h1]])

@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 import video
 
 help_message = '''
@@ -18,7 +17,7 @@ def draw_flow(img, flow, step=16):
     fx, fy = flow[y,x].T
     lines = np.vstack([x, y, x+fx, y+fy]).T.reshape(-1, 2, 2)
     lines = np.int32(lines + 0.5)
-    vis = cv2.cvtColor(img, cv.CV_GRAY2BGR)
+    vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cv2.polylines(vis, lines, 0, (0, 255, 0))
     for (x1, y1), (x2, y2) in lines:
         cv2.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
@@ -33,7 +32,7 @@ def draw_hsv(flow):
     hsv[...,0] = ang*(180/np.pi/2)
     hsv[...,1] = 255
     hsv[...,2] = np.minimum(v*4, 255)
-    bgr = cv2.cvtColor(hsv, cv.CV_HSV2BGR)
+    bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
     return bgr
 
 def warp_flow(img, flow):
@@ -52,14 +51,14 @@ if __name__ == '__main__':
 
     cam = video.create_capture(fn)
     ret, prev = cam.read()
-    prevgray = cv2.cvtColor(prev, cv.CV_BGR2GRAY)
+    prevgray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
     show_hsv = False
     show_glitch = False
     cur_glitch = prev.copy()
 
     while True:
         ret, img = cam.read()
-        gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prevgray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         prevgray = gray
         

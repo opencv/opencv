@@ -6,7 +6,6 @@ Resulting .ply file cam be easily viewed using MeshLab (http://meshlab.sourcefor
 
 import numpy as np
 import cv2
-import cv2.cv as cv
 
 ply_header = '''ply
 format ascii 1.0
@@ -61,7 +60,7 @@ if __name__ == '__main__':
                     [0, 0, 0,     -f], # so that y-axis looks up
                     [0, 0, 1,      0]])
     points = cv2.reprojectImageTo3D(disp, Q)
-    colors = cv2.cvtColor(imgL, cv.CV_BGR2RGB)
+    colors = cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB)
     mask = disp > disp.min()
     out_points = points[mask]
     out_colors = colors[mask]

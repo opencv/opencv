@@ -8,8 +8,6 @@
 
 import numpy as np
 import cv2
-import cv2.cv as cv
-
 
 def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     h, w = img.shape[:2]
@@ -17,7 +15,7 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     for i in xrange(iter_n):
         print i,
         
-        gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         eigen = cv2.cornerEigenValsAndVecs(gray, str_sigma, 3)
         eigen = eigen.reshape(h, w, 3, 2)  # [[e1, e2], v1, v2]
         x, y = eigen[:,:,1,0], eigen[:,:,1,1]

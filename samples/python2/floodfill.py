@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 
 help_message = '''USAGE: floodfill.py [<image>]
 
@@ -42,7 +41,7 @@ if __name__ == '__main__':
 
     def onmouse(event, x, y, flags, param):
         global seed_pt
-        if flags & cv.CV_EVENT_FLAG_LBUTTON:
+        if flags & cv2.EVENT_FLAG_LBUTTON:
             seed_pt = x, y
             update()
 

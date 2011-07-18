@@ -51,8 +51,8 @@ def main():
         vis = frame.copy()
         if len(tracks) > 0:
             p0 = np.float32([tr[-1] for tr in tracks]).reshape(-1, 1, 2)
-            img0 = cv2.cvtColor(prev_frame, cv.CV_BGR2GRAY)
-            img1 = cv2.cvtColor(frame, cv.CV_BGR2GRAY)
+            img0 = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+            img1 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             if old_mode:
                 p1,  st, err, dt = calc_flow_old(img0, img1, p0)
             else:
@@ -74,7 +74,7 @@ def main():
         if ch == 27:
             break
         if ch == ord(' ') or len(tracks) == 0:
-            gray = cv2.cvtColor(frame, cv.CV_BGR2GRAY)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             p = cv2.goodFeaturesToTrack(gray, **feature_params)
             p = [] if p is None else p.reshape(-1, 2)
             tracks = []

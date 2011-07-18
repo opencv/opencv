@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 
 def detect(img, cascade):
     rects = cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
@@ -10,7 +9,7 @@ def detect(img, cascade):
     return rects
 
 def detect_turned(img, cascade):
-    img = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.equalizeHist(img)
 
     img_t = cv2.transpose(img)
