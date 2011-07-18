@@ -772,11 +772,11 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
     return ok;
 }
 
-static bool pyopencv_to(PyObject *o, flann_distance_t& dist, const char *name="<unknown>")
+static bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name="<unknown>")
 {
     int d = 0;
     bool ok = pyopencv_to(o, d, name);
-    dist = (flann_distance_t)d;
+    dist = (cvflann::flann_distance_t)d;
     return ok;
 }
 
