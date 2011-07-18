@@ -128,7 +128,7 @@ private:
 
 
 #define FLANN_DISTANCE_CHECK \
-    if ( ::cvflann::flann_distance_type() != FLANN_DIST_L2) { \
+    if ( ::cvflann::flann_distance_type() != cvflann::FLANN_DIST_L2) { \
         printf("[WARNING] You are using cv::flann::Index (or cv::flann::GenericIndex) and have also changed "\
         "the distance using cvflann::set_distance_type. This is no longer working as expected "\
         "(cv::flann::Index always uses L2). You should create the index templated on the distance, "\
@@ -287,11 +287,11 @@ Index_<T>::Index_(const Mat& dataset, const IndexParams& params)
     CV_Assert(dataset.isContinuous());
     ::cvflann::Matrix<ElementType> m_dataset((ElementType*)dataset.ptr<ElementType>(0), dataset.rows, dataset.cols);
     
-    if ( ::cvflann::flann_distance_type() == FLANN_DIST_L2 ) {
+    if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L2 ) {
         nnIndex_L1 = NULL;
         nnIndex_L2 = new ::cvflann::Index< L2<ElementType> >(m_dataset, params);
     }
-    else if ( ::cvflann::flann_distance_type() == FLANN_DIST_L1 ) {
+    else if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L1 ) {
         nnIndex_L1 = new ::cvflann::Index< L1<ElementType> >(m_dataset, params);
         nnIndex_L2 = NULL;        
     }
@@ -398,10 +398,10 @@ FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, c
     printf("[WARNING] cv::flann::hierarchicalClustering<ELEM_TYPE,DIST_TYPE> is deprecated, use "
         "cv::flann::hierarchicalClustering<Distance> instead\n");
         
-    if ( ::cvflann::flann_distance_type() == FLANN_DIST_L2 ) {
+    if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L2 ) {
         return hierarchicalClustering< L2<ELEM_TYPE> >(features, centers, params);
     }
-    else if ( ::cvflann::flann_distance_type() == FLANN_DIST_L1 ) {
+    else if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L1 ) {
         return hierarchicalClustering< L1<ELEM_TYPE> >(features, centers, params);
     }
     else {
