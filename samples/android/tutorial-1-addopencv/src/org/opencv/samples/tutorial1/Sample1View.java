@@ -46,15 +46,6 @@ class Sample1View extends SampleViewBase {
             imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
             imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
             break;
-        case Sample1Java.VIEW_MODE_SOBEL:
-            imgproc.Sobel(mGraySubmat, mIntermediateMat, CvType.CV_8U, 1, 1);
-            core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 8);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
-            break;
-        case Sample1Java.VIEW_MODE_BLUR:
-            imgproc.cvtColor(mYuv, mRgba, imgproc.CV_YUV420i2RGB, 4);
-            imgproc.blur(mRgba, mRgba, new Size(15, 15));
-            break;
         }
 
         Bitmap bmp = Bitmap.createBitmap(getFrameWidth(), getFrameHeight(), Bitmap.Config.ARGB_8888);

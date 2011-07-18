@@ -71,6 +71,12 @@ public class Mat {
         return nIsEmpty(nativeObj); 
     }
 
+    //javadoc:Mat::size()
+    public Size Size() {
+        if(nativeObj == 0) return new Size();
+        return new Size(nSize(nativeObj));
+    }
+
     private void checkNull() {
         if(nativeObj == 0) 
             throw new java.lang.UnsupportedOperationException("Native object address is NULL");
@@ -334,6 +340,7 @@ public class Mat {
     private static native boolean nIsEmpty(long self);
     private static native boolean nIsCont(long self);
     private static native boolean nIsSubmat(long self);
+    private static native double[] nSize(long self);
     private static native long nSubmat(long self, int rowStart, int rowEnd, int colStart, int colEnd);
     private static native long nClone(long self);
     private static native int nPutD(long self, int row, int col, int count, double[] data);

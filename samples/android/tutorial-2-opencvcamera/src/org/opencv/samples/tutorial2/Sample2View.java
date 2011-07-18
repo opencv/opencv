@@ -43,16 +43,6 @@ class Sample2View extends SampleCvViewBase {
             imgproc.Canny(mGray, mIntermediateMat, 80, 100);
             imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
             break;
-        case Sample2NativeCamera.VIEW_MODE_SOBEL:
-            capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
-            imgproc.Sobel(mGray, mIntermediateMat, CvType.CV_8U, 1, 1);
-            core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 8);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
-            break;
-        case Sample2NativeCamera.VIEW_MODE_BLUR:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            imgproc.blur(mRgba, mRgba, new Size(15, 15));
-            break;
         }
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);

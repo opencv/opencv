@@ -47,6 +47,38 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_Mat_nIsEmpty
     return me->empty();
 }
 
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_Mat_nSize
+	(JNIEnv* env, jclass cls, jlong self)
+{
+    try {
+#ifdef DEBUG
+        LOGD("core::Mat::nSize()");
+#endif // DEBUG
+        cv::Mat* me = (cv::Mat*) self; //TODO: check for NULL
+        cv::Size _retval_ = me->size();
+
+        jdoubleArray _da_retval_ = env->NewDoubleArray(2);
+	jdouble _tmp_retval_[4] = {_retval_.width, _retval_.height};
+	env->SetDoubleArrayRegion(_da_retval_, 0, 2, _tmp_retval_);
+        return _da_retval_;
+    } catch(cv::Exception e) {
+#ifdef DEBUG
+        LOGD("core::Mat::nSize() catched cv::Exception: %s", e.what());
+#endif // DEBUG
+        jclass je = env->FindClass("org/opencv/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+#ifdef DEBUG
+        LOGD("core::Mat::nSize() catched unknown exception (...)");
+#endif // DEBUG
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {core::n_1mean__JJ()}");
+        return 0;
+    }
+}
+
 JNIEXPORT jboolean JNICALL Java_org_opencv_Mat_nIsCont
 	(JNIEnv* env, jclass cls, jlong self)
 {

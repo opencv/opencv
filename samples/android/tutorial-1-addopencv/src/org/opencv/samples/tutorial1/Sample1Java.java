@@ -13,14 +13,10 @@ public class Sample1Java extends Activity {
     public static final int     VIEW_MODE_RGBA  = 0;
     public static final int     VIEW_MODE_GRAY  = 1;
     public static final int     VIEW_MODE_CANNY = 2;
-    public static final int     VIEW_MODE_SOBEL = 3;
-    public static final int     VIEW_MODE_BLUR  = 4;
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
     private MenuItem            mItemPreviewCanny;
-    private MenuItem            mItemPreviewSobel;
-    private MenuItem            mItemPreviewBlur;
 
     public static int           viewMode        = VIEW_MODE_RGBA;
 
@@ -43,8 +39,6 @@ public class Sample1Java extends Activity {
         mItemPreviewRGBA = menu.add("Preview RGBA");
         mItemPreviewGray = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");
-        mItemPreviewSobel = menu.add("Sobel");
-        mItemPreviewBlur = menu.add("Blur");
         return true;
     }
 
@@ -57,10 +51,6 @@ public class Sample1Java extends Activity {
             viewMode = VIEW_MODE_GRAY;
         else if (item == mItemPreviewCanny)
             viewMode = VIEW_MODE_CANNY;
-        else if (item == mItemPreviewSobel)
-            viewMode = VIEW_MODE_SOBEL;
-        else if (item == mItemPreviewBlur)
-            viewMode = VIEW_MODE_BLUR;
         return true;
     }
 }
