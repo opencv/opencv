@@ -11,13 +11,13 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
-public abstract class SampleViewBase extends SurfaceView implements SurfaceHolder.Callback, Runnable {
+public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHolder.Callback, Runnable {
     private static final String TAG = "Sample::SurfaceView";
 
     private SurfaceHolder       mHolder;
     private VideoCapture        mCamera;
 
-    public SampleViewBase(Context context) {
+    public SampleCvViewBase(Context context) {
         super(context);
         mHolder = getHolder();
         mHolder.addCallback(this);

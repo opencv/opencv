@@ -9,7 +9,7 @@ import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.View.OnTouchListener;
 
-public class puzzle15View extends SampleViewBase implements OnTouchListener {
+public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
     private Mat     mRgba;
     private Mat     mRgba15;
     private Mat[]   mCells;
@@ -171,7 +171,6 @@ public class puzzle15View extends SampleViewBase implements OnTouchListener {
         }
     }
 
-    @Override
     public boolean onTouch(View v, MotionEvent event) {
         int cols = mRgba.cols();
         int rows = mRgba.rows();

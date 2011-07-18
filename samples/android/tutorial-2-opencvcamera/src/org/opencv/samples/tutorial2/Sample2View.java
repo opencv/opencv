@@ -6,7 +6,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.view.SurfaceHolder;
 
-class Sample2View extends SampleViewBase {
+class Sample2View extends SampleCvViewBase {
     private Mat mRgba;
     private Mat mGray;
     private Mat mIntermediateMat;
