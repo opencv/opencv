@@ -78,7 +78,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nClone
 }
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
-#define PUT_ITEM(T, R, C) for(int ch=0; ch<me->channels() && count>0; ch++,count--) *((T*)me->ptr(R, C)+ch) = cv::saturate_cast<T>(*(src+ch))
+#define PUT_ITEM(T, R, C) { T*dst = (T*)me->ptr(R, C); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
 
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
@@ -104,7 +104,6 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 			case CV_32F: PUT_ITEM(float,  row, c); break;
 			case CV_64F: PUT_ITEM(double, row, c); break;
 		}
-		src++;
 	}
 
 	for(r=row+1; r<me->rows && count>0; r++)
@@ -119,7 +118,6 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 				case CV_32F: PUT_ITEM(float,  r, c); break;
 				case CV_64F: PUT_ITEM(double, r, c); break;
 			}
-			src++;
 		}
 
 	env->ReleasePrimitiveArrayCritical(vals, values, 0);
