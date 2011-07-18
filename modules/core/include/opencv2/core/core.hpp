@@ -216,7 +216,7 @@ CV_EXPORTS int getThreadNum();
   before and after the function call. The granularity of ticks depends on the hardware and OS used. Use
   cv::getTickFrequency() to convert ticks to seconds.
 */
-CV_EXPORTS int64 getTickCount();
+CV_EXPORTS_W int64 getTickCount();
 
 /*!
   Returns the number of ticks per seconds.
@@ -240,7 +240,7 @@ CV_EXPORTS_W double getTickFrequency();
   one can accurately measure the execution time of very small code fragments,
   for which cv::getTickCount() granularity is not enough.
 */
-CV_EXPORTS int64 getCPUTickCount();
+CV_EXPORTS_W int64 getCPUTickCount();
 
 /*!
   Returns SSE etc. support status
@@ -1327,6 +1327,7 @@ typedef InputArray InputArrayOfArrays;
 typedef const _OutputArray& OutputArray;
 typedef OutputArray OutputArrayOfArrays;
 typedef OutputArray InputOutputArray;
+typedef OutputArray InputOutputArrayOfArrays;
 
 CV_EXPORTS OutputArray noArray();
 
@@ -2038,6 +2039,8 @@ CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts
                             const int* fromTo, size_t npairs);
 CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                             const int* fromTo, size_t npairs);
+CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                              const vector<int>& fromTo);
 
 //! extracts a single channel from src (coi is 0-based index)
 CV_EXPORTS_W void extractChannel(InputArray src, OutputArray dst, int coi);
@@ -2162,6 +2165,9 @@ CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues, int lowindex=-1,
 CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues,
                       OutputArray eigenvectors,
                       int lowindex=-1, int highindex=-1);
+CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
+                        OutputArray eigenvalues, OutputArray eigenvectors);
+    
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
                                  int flags, int ctype=CV_64F);
@@ -2246,6 +2252,16 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
+CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
+                             OutputArray eigenvectors, int maxComponents=0);
+    
+CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
+                             InputArray eigenvectors, OutputArray result);
+
+CV_EXPORTS_W void PCABackProject(InputArray data, InputArray mean,
+                                 InputArray eigenvectors, OutputArray result);
+
+
 /*!
     Singular Value Decomposition class
  
@@ -2295,6 +2311,14 @@ public:
     Mat u, w, vt;
 };
 
+//! computes SVD of src
+CV_EXPORTS_W void SVDecomp( InputArray src, CV_OUT OutputArray w,
+    CV_OUT OutputArray u, CV_OUT OutputArray vt, int flags=0 );
+
+//! performs back substitution for the previously computed SVD
+CV_EXPORTS_W void SVBackSubst( InputArray w, InputArray u, InputArray vt,
+                               InputArray rhs, CV_OUT OutputArray dst );
+
 //! computes Mahalanobis distance between two vectors: sqrt((v1-v2)'*icovar*(v1-v2)), where icovar is the inverse covariation matrix
 CV_EXPORTS_W double Mahalanobis(InputArray v1, InputArray v2, InputArray icovar);
 //! a synonym for Mahalanobis
@@ -2342,6 +2366,7 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 
 //! shuffles the input array elements
 CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor=1., RNG* rng=0);
+CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor=1.);
 
 //! draws the line segment (pt1, pt2) in the image
 CV_EXPORTS_W void line(Mat& img, Point pt1, Point pt2, const Scalar& color,
@@ -2376,6 +2401,9 @@ CV_EXPORTS_W void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,
 CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
                                const Scalar& color, int lineType=8,
                                int shift=0);
+CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
+                                 const Scalar& color, int lineType=8,
+                                 int shift=0);
 
 //! fills an area bounded by one or more polygons
 CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
@@ -2383,10 +2411,18 @@ CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
                          const Scalar& color, int lineType=8, int shift=0,
                          Point offset=Point() );
 
+CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
+                           const Scalar& color, int lineType=8, int shift=0,
+                           Point offset=Point() );
+
 //! draws one or more polygonal curves
 CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
+
+CV_EXPORTS_W void polylines(InputOutputArray, InputArrayOfArrays pts,
+                            bool isClosed, const Scalar& color,
+                            int thickness=1, int lineType=8, int shift=0 );
 
 //! clips the line segment by the rectangle Rect(0, 0, imgSize.width, imgSize.height)
 CV_EXPORTS bool clipLine(Size imgSize, CV_IN_OUT Point& pt1, CV_IN_OUT Point& pt2);

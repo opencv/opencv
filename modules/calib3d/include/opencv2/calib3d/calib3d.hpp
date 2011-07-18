@@ -536,6 +536,9 @@ CV_EXPORTS bool findCirclesGrid( InputArray image, Size patternSize,
                                  OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID,
                                  const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector());
 
+CV_EXPORTS_W bool findCirclesGridDefault( InputArray image, Size patternSize,
+                                          OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID );
+
 enum
 {
     CALIB_USE_INTRINSIC_GUESS = CV_CALIB_USE_INTRINSIC_GUESS,

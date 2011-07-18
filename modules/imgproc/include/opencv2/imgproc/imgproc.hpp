@@ -558,6 +558,9 @@ CV_EXPORTS Mat getAffineTransform( const Point2f src[], const Point2f dst[] );
 //! computes 2x3 affine transformation matrix that is inverse to the specified 2x3 affine transformation.
 CV_EXPORTS_W void invertAffineTransform( InputArray M, OutputArray iM );
 
+CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
+
 //! extracts rectangle from the image at sub-pixel location
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType=-1 );
@@ -660,6 +663,13 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           SparseMat& hist, int dims,
                           const int* histSize, const float** ranges,
                           bool uniform=true, bool accumulate=false );
+                          
+CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
+                            const vector<int>& channels,
+                            InputArray mask, OutputArray hist,
+                            const vector<int>& histSize,
+                            const vector<float>& ranges,
+                            bool accumulate=false );
 
 //! computes back projection for the set of images
 CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
@@ -672,6 +682,11 @@ CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
                                  const int* channels, const SparseMat& hist, 
                                  OutputArray backProject, const float** ranges,
                                  double scale=1, bool uniform=true );
+
+CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+                                   InputArray hist, OutputArray dst,
+                                   const vector<float>& ranges,
+                                   double scale );
 
 //! compares two histograms stored in dense arrays
 CV_EXPORTS_W double compareHist( InputArray H1, InputArray H2, int method );
@@ -922,6 +937,7 @@ CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage=false );
 
 //! computes 7 Hu invariants from the moments
 CV_EXPORTS void HuMoments( const Moments& moments, double hu[7] );
+CV_EXPORTS_W void HuMoments( const Moments& m, CV_OUT OutputArray hu );
 
 //! type of the template matching operation
 enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF=4, TM_CCOEFF_NORMED=5 };

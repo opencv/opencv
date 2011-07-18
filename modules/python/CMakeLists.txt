@@ -31,8 +31,7 @@ set(opencv_hdrs "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/core.hpp
     "${OpenCV_SOURCE_DIR}/modules/ml/include/opencv2/ml/ml.hpp"
     "${OpenCV_SOURCE_DIR}/modules/features2d/include/opencv2/features2d/features2d.hpp"
     "${OpenCV_SOURCE_DIR}/modules/calib3d/include/opencv2/calib3d/calib3d.hpp"
-    "${OpenCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp"
-    "${OpenCV_SOURCE_DIR}/modules/python/src2/opencv_extra_api.hpp")
+    "${OpenCV_SOURCE_DIR}/modules/objdetect/include/opencv2/objdetect/objdetect.hpp")
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
@@ -62,7 +61,7 @@ add_custom_command(
      DEPENDS ${opencv_hdrs})
 
 set(cv2_target "opencv_python")
-add_library(${cv2_target} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i src2/opencv_extra_api.hpp ${cv2_generated_hdrs} src2/cv2.cv.hpp)
+add_library(${cv2_target} SHARED src2/cv2.cpp ${CMAKE_CURRENT_BINARY_DIR}/generated0.i ${cv2_generated_hdrs} src2/cv2.cv.hpp)
 target_link_libraries(${cv2_target} ${PYTHON_LIBRARIES} opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_objdetect opencv_legacy opencv_contrib)
     
 set_target_properties(${cv2_target} PROPERTIES PREFIX "")

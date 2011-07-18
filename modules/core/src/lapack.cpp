@@ -1398,10 +1398,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
-namespace cv
-{
-
-static bool eigen( InputArray _src, OutputArray _evals, OutputArray _evects, bool computeEvects, int, int )
+bool cv::eigen( InputArray _src, bool computeEvects, OutputArray _evals, OutputArray _evects )
 {
     Mat src = _src.getMat();
     int type = src.type();
@@ -1431,17 +1428,14 @@ static bool eigen( InputArray _src, OutputArray _evals, OutputArray _evects, boo
     return ok;
 }
 
-}
-    
-bool cv::eigen( InputArray src, OutputArray evals, int lowindex, int highindex )
+bool cv::eigen( InputArray src, OutputArray evals, int, int )
 {
-    return eigen(src, evals, noArray(), false, lowindex, highindex);
+    return eigen(src, false, evals, noArray());
 }
 
-bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects,
-                int lowindex, int highindex )
+bool cv::eigen( InputArray src, OutputArray evals, OutputArray evects, int, int)
 {
-    return eigen(src, evals, evects, true, lowindex, highindex);
+    return eigen(src, true, evals, evects);
 }
 
 namespace cv
@@ -1565,6 +1559,17 @@ void SVD::backSubst( InputArray rhs, OutputArray dst ) const
     backSubst( w, u, vt, rhs, dst );
 }
 
+}
+
+
+void cv::SVDecomp(InputArray src, OutputArray w, OutputArray u, OutputArray vt, int flags)
+{
+    SVD::compute(src, w, u, vt, flags);
+}
+
+void cv::SVBackSubst(InputArray w, InputArray u, InputArray vt, InputArray rhs, OutputArray dst)
+{
+    SVD::backSubst(w, u, vt, rhs, dst);
 }
 
 

@@ -634,6 +634,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     ihist.convertTo(hist, CV_32F);
 }
 
+
 namespace cv
 {
 
@@ -824,7 +825,36 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
               ranges, uniform, accumulate, false );
 }
 
+
+void cv::calcHist( InputArrayOfArrays images, const vector<int>& channels,
+                   InputArray mask, OutputArray hist,
+                   const vector<int>& histSize,
+                   const vector<float>& ranges,
+                   bool accumulate )
+{
+    int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
+    int nimages = (int)images.total();
     
+    CV_Assert(nimages > 0 && dims > 0);
+    CV_Assert(rsz == dims*2 || (rsz == 0 && images.depth(0) == CV_8U));
+    CV_Assert(csz == 0 || csz == dims);
+    float* _ranges[CV_MAX_DIM];
+    if( rsz > 0 )
+    {
+        for( i = 0; i < rsz/2; i++ )
+            _ranges[i] = (float*)&ranges[i*2];
+    }
+    
+    AutoBuffer<Mat> buf(nimages);
+    for( i = 0; i < nimages; i++ )
+        buf[i] = images.getMat(i);
+    
+    calcHist(&buf[0], nimages, csz ? &channels[0] : 0,
+            mask, hist, dims, &histSize[0], rsz ? (const float**)_ranges : 0,
+            true, accumulate);
+}
+
+
 /////////////////////////////////////// B A C K   P R O J E C T ////////////////////////////////////    
     
 namespace cv
@@ -1312,6 +1342,32 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                                           _uniranges, (float)scale, uniform );
     else
         CV_Error(CV_StsUnsupportedFormat, "");
+}
+
+                                     
+void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+                          InputArray hist, OutputArray dst,
+                          const vector<float>& ranges,
+                          double scale )
+{
+    int i, dims = hist.getMat().dims, rsz = (int)ranges.size(), csz = (int)channels.size();
+    int nimages = (int)images.total();
+    CV_Assert(nimages > 0);
+    CV_Assert(rsz == dims*2 || (rsz == 0 && images.depth(0) == CV_8U));
+    CV_Assert(csz == 0 || csz == dims);
+    float* _ranges[CV_MAX_DIM];
+    if( rsz > 0 )
+    {
+        for( i = 0; i < rsz/2; i++ )
+            _ranges[i] = (float*)&ranges[i*2];
+    }
+    
+    AutoBuffer<Mat> buf(nimages);
+    for( i = 0; i < nimages; i++ )
+        buf[i] = images.getMat(i);
+    
+    calcBackProject(&buf[0], nimages, csz ? &channels[0] : 0,
+        hist, dst, rsz ? (const float**)_ranges : 0, scale, true);
 }
 
     

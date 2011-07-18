@@ -503,6 +503,22 @@ void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                 !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
 }
 
+void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                     const vector<int>& fromTo)
+{
+    if(fromTo.empty())
+        return;
+    size_t i, nsrc = src.total(), ndst = dst.total();
+    CV_Assert(fromTo.size()%2 == 0 && nsrc > 0 && ndst > 0);
+    cv::AutoBuffer<Mat> _buf(nsrc + ndst);
+    Mat* buf = _buf;
+    for( i = 0; i < nsrc; i++ )
+        buf[i] = src.getMat(i);
+    for( i = 0; i < ndst; i++ )
+        buf[nsrc + i] = dst.getMat(i);
+    mixChannels(&buf[0], (int)nsrc, &buf[nsrc], (int)ndst, &fromTo[0], (int)(fromTo.size()/2));
+}
+
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
     Mat src = _src.getMat();

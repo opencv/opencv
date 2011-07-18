@@ -199,16 +199,16 @@ static void icvContourMoments( CvSeq* contour, CvMoments* moments )
 template<typename T, typename WT, typename MT>
 static void momentsInTile( const cv::Mat& img, double* moments )
 {
-	cv::Size size = img.size();
+    cv::Size size = img.size();
     int x, y;
     MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
 
     for( y = 0; y < size.height; y++ )
     {
-		const T* ptr = (const T*)(img.data + y*img.step);
-		WT x0 = 0, x1 = 0, x2 = 0;
-		MT x3 = 0;
-		
+        const T* ptr = (const T*)(img.data + y*img.step);
+        WT x0 = 0, x1 = 0, x2 = 0;
+        MT x3 = 0;
+        
         for( x = 0; x < size.width; x++ )
         {
             WT p = ptr[x];
@@ -216,7 +216,7 @@ static void momentsInTile( const cv::Mat& img, double* moments )
 
             x0 += p;
             x1 += xp;
-			xxp = xp * x;
+            xxp = xp * x;
             x2 += xxp;
             x3 += xxp * x;
         }
@@ -244,7 +244,7 @@ static void momentsInTile( const cv::Mat& img, double* moments )
 
 template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* moments )
 {
-	typedef uchar T;
+    typedef uchar T;
     typedef int WT;
     typedef int MT;
     cv::Size size = img.size();
@@ -254,8 +254,8 @@ template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* mome
     
     for( y = 0; y < size.height; y++ )
     {
-		const T* ptr = img.ptr<T>(y);
-		int x0 = 0, x1 = 0, x2 = 0, x3 = 0, x = 0;
+        const T* ptr = img.ptr<T>(y);
+        int x0 = 0, x1 = 0, x2 = 0, x3 = 0, x = 0;
         
         if( useSIMD )
         {
@@ -285,7 +285,7 @@ template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* mome
             _mm_store_si128((__m128i*)buf, qx3);
             x3 = buf[0] + buf[1] + buf[2] + buf[3];
         }
-		
+        
         for( ; x < size.width; x++ )
         {
             WT p = ptr[x];
@@ -293,7 +293,7 @@ template<> void momentsInTile<uchar, int, int>( const cv::Mat& img, double* mome
             
             x0 += p;
             x1 += xp;
-			xxp = xp * x;
+            xxp = xp * x;
             x2 += xxp;
             x3 += xxp * x;
         }
@@ -322,15 +322,15 @@ typedef void (*CvMomentsInTileFunc)(const cv::Mat& img, double* moments);
 
 CV_IMPL void cvMoments( const void* array, CvMoments* moments, int binary )
 {
-	const int TILE_SIZE = 32;
-	int type, depth, cn, coi = 0;
+    const int TILE_SIZE = 32;
+    int type, depth, cn, coi = 0;
     CvMat stub, *mat = (CvMat*)array;
     CvMomentsInTileFunc func = 0;
     CvContour contourHeader;
     CvSeq* contour = 0;
     CvSeqBlock block;
-	double buf[TILE_SIZE*TILE_SIZE];
-	uchar nzbuf[TILE_SIZE*TILE_SIZE];
+    double buf[TILE_SIZE*TILE_SIZE];
+    uchar nzbuf[TILE_SIZE*TILE_SIZE];
 
     if( CV_IS_SEQ( array ))
     {
@@ -375,47 +375,47 @@ CV_IMPL void cvMoments( const void* array, CvMoments* moments, int binary )
     if( size.width <= 0 || size.height <= 0 )
         return;
 
-	if( binary || depth == CV_8U )
-		func = momentsInTile<uchar, int, int>;
-	else if( depth == CV_16U )
-		func = momentsInTile<ushort, int, int64>;
-	else if( depth == CV_16S )
-		func = momentsInTile<short, int, int64>;
-	else if( depth == CV_32F )
-		func = momentsInTile<float, double, double>;
-	else if( depth == CV_64F )
-		func = momentsInTile<double, double, double>;
-	else
-		CV_Error( CV_StsUnsupportedFormat, "" );
-		
-	cv::Mat src0(mat);
+    if( binary || depth == CV_8U )
+        func = momentsInTile<uchar, int, int>;
+    else if( depth == CV_16U )
+        func = momentsInTile<ushort, int, int64>;
+    else if( depth == CV_16S )
+        func = momentsInTile<short, int, int64>;
+    else if( depth == CV_32F )
+        func = momentsInTile<float, double, double>;
+    else if( depth == CV_64F )
+        func = momentsInTile<double, double, double>;
+    else
+        CV_Error( CV_StsUnsupportedFormat, "" );
+        
+    cv::Mat src0(mat);
 
     for( int y = 0; y < size.height; y += TILE_SIZE )
     {
         cv::Size tileSize;
-		tileSize.height = std::min(TILE_SIZE, size.height - y);
+        tileSize.height = std::min(TILE_SIZE, size.height - y);
         
         for( int x = 0; x < size.width; x += TILE_SIZE )
         {
             tileSize.width = std::min(TILE_SIZE, size.width - x);
-			cv::Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
+            cv::Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
 
-			if( coi > 0 )
-			{
-				cv::Mat tmp(tileSize, depth, buf);
-				int pairs[] = {coi-1, 0};
-				cv::mixChannels(&src, 1, &tmp, 1, pairs, 1);
-				src = tmp;
-			}
-			if( binary )
-			{
-				cv::Mat tmp(tileSize, CV_8U, nzbuf);
-				cv::compare( src, 0, tmp, CV_CMP_NE );
+            if( coi > 0 )
+            {
+                cv::Mat tmp(tileSize, depth, buf);
+                int pairs[] = {coi-1, 0};
+                cv::mixChannels(&src, 1, &tmp, 1, pairs, 1);
                 src = tmp;
-			}
-			
-			double mom[10];
-			func( src, mom );
+            }
+            if( binary )
+            {
+                cv::Mat tmp(tileSize, CV_8U, nzbuf);
+                cv::compare( src, 0, tmp, CV_CMP_NE );
+                src = tmp;
+            }
+            
+            double mom[10];
+            func( src, mom );
             
             if(binary)
             {
@@ -423,10 +423,10 @@ CV_IMPL void cvMoments( const void* array, CvMoments* moments, int binary )
                 for( int k = 0; k < 10; k++ )
                     mom[k] *= s;
             }
-			
+            
             double xm = x * mom[0], ym = y * mom[0];
 
-			// accumulate moments computed in each tile 
+            // accumulate moments computed in each tile 
 
             // + m00 ( = m00' )
             moments->m00 += mom[0];
@@ -460,7 +460,7 @@ CV_IMPL void cvMoments( const void* array, CvMoments* moments, int binary )
         }
     }
 
-	icvCompleteMomentState( moments );
+    icvCompleteMomentState( moments );
 }
 
 
@@ -526,7 +526,7 @@ CV_IMPL double cvGetCentralMoment( CvMoments * moments, int x_order, int y_order
         CV_Error( CV_StsOutOfRange, "" );
 
     return order >= 2 ? (&(moments->m00))[4 + order * 3 + y_order] :
-		   order == 0 ? moments->m00 : 0;
+           order == 0 ? moments->m00 : 0;
 }
 
 
@@ -640,5 +640,12 @@ void cv::HuMoments( const Moments& m, double hu[7] )
     hu[6] = q1 * t0 - q0 * t1;
 }
 
+void cv::HuMoments( const Moments& m, OutputArray _hu )
+{
+    _hu.create(7, 1, CV_64F);
+    Mat hu = _hu.getMat();
+    CV_Assert( hu.isContinuous() );
+    HuMoments(m, (double*)hu.data);
+}
 
 /* End of file. */

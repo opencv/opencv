@@ -2884,6 +2884,34 @@ Mat PCA::backProject(InputArray data) const
 
 }
 
+void cv::PCACompute(InputArray data, InputOutputArray mean,
+                    OutputArray eigenvectors, int maxComponents)
+{
+    PCA pca;
+    pca(data, mean, 0, maxComponents);
+    pca.mean.copyTo(mean);
+    pca.eigenvectors.copyTo(eigenvectors);
+}
+    
+void cv::PCAProject(InputArray data, InputArray mean,
+                    InputArray eigenvectors, OutputArray result)
+{
+    PCA pca;
+    pca.mean = mean.getMat();
+    pca.eigenvectors = eigenvectors.getMat();
+    pca.project(data, result);
+}
+
+void cv::PCABackProject(InputArray data, InputArray mean,
+                    InputArray eigenvectors, OutputArray result)
+{
+    PCA pca;
+    pca.mean = mean.getMat();
+    pca.eigenvectors = eigenvectors.getMat();
+    pca.backProject(data, result);
+}
+
+
 /****************************************************************************************\
 *                                    Earlier API                                         *
 \****************************************************************************************/

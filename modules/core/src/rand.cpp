@@ -812,6 +812,11 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     func( dst, rng, iterFactor );
 }
 
+void cv::randShuffle_( InputOutputArray _dst, double iterFactor )
+{
+    randShuffle(_dst, iterFactor);
+}
+
 CV_IMPL void
 cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar param2 )
 {

@@ -18,7 +18,6 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv_extra_api.hpp"
 
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
@@ -354,6 +353,11 @@ static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknow
     else
         value = (float)PyFloat_AsDouble(obj);
     return !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(int64 value)
+{
+    return PyFloat_FromDouble((double)value);
 }
 
 static PyObject* pyopencv_from(const string& value)

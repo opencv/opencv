@@ -2012,6 +2012,63 @@ Size getTextSize( const string& text, int fontFace, double fontScale, int thickn
 
 }
 
+
+void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
+                        const Scalar& color, int lineType, int shift)
+{
+    Mat img = _img.getMat(), points = _points.getMat();
+    CV_Assert(points.checkVector(2, CV_32S) >= 0);
+    fillConvexPoly(img, (const Point*)points.data, points.rows*points.cols*points.channels()/2, color, lineType, shift);
+}
+
+
+void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
+                  const Scalar& color, int lineType, int shift, Point offset)
+{
+    Mat img = _img.getMat();
+    size_t i, ncontours = pts.total();
+    if( ncontours == 0 )
+        return;
+    AutoBuffer<Point*> _ptsptr(ncontours);
+    AutoBuffer<int> _npts(ncontours);
+    Point** ptsptr = _ptsptr;
+    int* npts = _npts;
+    
+    for( i = 0; i < ncontours; i++ )
+    {
+        Mat p = pts.getMat(i);
+        CV_Assert(p.checkVector(2, CV_32S) >= 0);
+        ptsptr[i] = (Point*)p.data;
+        npts[i] = p.rows*p.cols*p.channels()/2;
+    }
+    fillPoly(img, (const Point**)ptsptr, npts, (int)ncontours, color, lineType, shift, offset);
+}
+
+
+void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
+                   bool isClosed, const Scalar& color,
+                   int thickness, int lineType, int shift )
+{
+    Mat img = _img.getMat();
+    size_t i, ncontours = pts.total();
+    if( ncontours == 0 )
+        return;
+    AutoBuffer<Point*> _ptsptr(ncontours);
+    AutoBuffer<int> _npts(ncontours);
+    Point** ptsptr = _ptsptr;
+    int* npts = _npts;
+    
+    for( i = 0; i < ncontours; i++ )
+    {
+        Mat p = pts.getMat(i);
+        CV_Assert(p.checkVector(2, CV_32S) >= 0);
+        ptsptr[i] = (Point*)p.data;
+        npts[i] = p.rows*p.cols*p.channels()/2;
+    }
+    polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
+}
+
+
 static const int CodeDeltas[8][2] =
 { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
 

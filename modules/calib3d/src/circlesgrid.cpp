@@ -1524,3 +1524,10 @@ size_t CirclesGridFinder::getFirstCorner(vector<Point> &largeCornerIndices, vect
 
   return cornerIdx;
 }
+
+bool cv::findCirclesGridDefault( InputArray image, Size patternSize,
+                             OutputArray centers, int flags )
+{
+    return findCirclesGrid(image, patternSize, centers, flags);
+}
+
