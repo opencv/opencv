@@ -35,7 +35,10 @@
 #include "general.h"
 #include "nn_index.h"
 
-#define FLANN_SIGNATURE "FLANN_INDEX"
+#ifdef FLANN_SIGNATURE_
+#undef FLANN_SIGNATURE_
+#endif
+#define FLANN_SIGNATURE_ "FLANN_INDEX"
 
 namespace cvflann
 {
@@ -84,9 +87,9 @@ void save_header(FILE* stream, const NNIndex<Distance>& index)
 {
     IndexHeader header;
     memset(header.signature, 0, sizeof(header.signature));
-    strcpy(header.signature, FLANN_SIGNATURE);
+    strcpy(header.signature, FLANN_SIGNATURE_);
     memset(header.version, 0, sizeof(header.version));
-    strcpy(header.version, FLANN_VERSION);
+    strcpy(header.version, FLANN_VERSION_);
     header.data_type = Datatype<typename Distance::ElementType>::type();
     header.index_type = index.getType();
     header.rows = index.size();
@@ -110,7 +113,7 @@ inline IndexHeader load_header(FILE* stream)
         throw FLANNException("Invalid index file, cannot read");
     }
 
-    if (strcmp(header.signature,FLANN_SIGNATURE)!=0) {
+    if (strcmp(header.signature,FLANN_SIGNATURE_)!=0) {
         throw FLANNException("Invalid index file, wrong signature");
     }
 
