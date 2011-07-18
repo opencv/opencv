@@ -150,12 +150,28 @@ void vector_KeyPoint_to_Mat(vector<KeyPoint>& v_kp, Mat& mat)
 //vector_Mat
 void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat)
 {
-    return;
+	v_mat.clear();
+	if(mat.type() == CV_32SC2 && mat.rows == 1)
+	{
+		for(int i=0; i<mat.cols; i++)
+		{
+			Vec<int, 2> a = mat.at< Vec<int, 2> >(0, i);
+			long long addr = (((long long)a[0])<<32) | a[1];
+			Mat& m = *( (Mat*) addr );
+			v_mat.push_back(m);
+		}
+	}
 }
 
 
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 {
+	int count = v_mat.size();
+	mat.create(1, count, CV_32SC2);
+	for(int i=0; i<count; i++)
+	{
+		long long addr = (long long) &v_mat[i];
+		mat.at< Vec<int, 2> >(0, i) = Vec<int, 2>(addr>>32, addr&0xffffffff);
+	}
     return;
 }
-
