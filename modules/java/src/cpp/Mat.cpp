@@ -79,11 +79,12 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Mat_nClone
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
 #define PUT_ITEM(T, R, C) for(int ch=0; ch<me->channels() && count>0; ch++,count--) *((T*)me->ptr(R, C)+ch) = cv::saturate_cast<T>(*(src+ch))
+
 JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutD
 	(JNIEnv* env, jclass cls, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
 	cv::Mat* me = (cv::Mat*) self;
-	if(! self) return 0;  // no native object behind
+	if(!me || !me->data) return 0;  // no native object behind
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
 	int rest = ((me->rows - row) * me->cols - col) * me->channels();
@@ -135,6 +136,7 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
 	if(! m) return 0;
 	if(! buff) return 0;
 
+	count *= sizeof(T);
 	int rest = ((m->rows - row) * m->cols - col) * m->channels() * sizeof(T);
 	if(count>rest) count = rest;
 	int res = count;
@@ -183,7 +185,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutS
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_16U && me->depth() != CV_16S) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -197,7 +199,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutI
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_32S) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -211,7 +213,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_Mat_nPutF
 {
 	cv::Mat* me = (cv::Mat*) self;
 	if(! self) return 0; // no native object behind
-	if(me->depth() != CV_8U && me->depth() != CV_8S) return 0; // incompatible type
+	if(me->depth() != CV_32F) return 0; // incompatible type
 	if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 	
 	char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -231,7 +233,7 @@ template<typename T> int mat_get(cv::Mat* m, int row, int col, int count, char* 
 	if(! m) return 0;
 	if(! buff) return 0;
 
-	count *= sizeof(T);//This change is required, checked TODO: recheck for non-continious case
+	count *= sizeof(T);
 	int rest = ((m->rows - row) * m->cols - col) * m->channels() * sizeof(T);
 	if(count>rest) count = rest;
 	int res = count;
