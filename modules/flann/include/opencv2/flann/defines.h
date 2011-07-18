@@ -32,6 +32,9 @@
 
 #include "config.h"
 
+#ifdef FLANN_EXPORT
+#undef FLANN_EXPORT
+#endif
 #ifdef WIN32
 /* win32 dll export/import directives */
  #ifdef FLANN_EXPORTS
@@ -47,6 +50,9 @@
 #endif
 
 
+#ifdef FLANN_DEPRECATED
+#undef FLANN_DEPRECATED
+#endif
 #ifdef __GNUC__
 #define FLANN_DEPRECATED __attribute__ ((deprecated))
 #elif defined(_MSC_VER)
@@ -57,6 +63,8 @@
 #endif
 
 
+#undef FLANN_PLATFORM_32_BIT
+#undef FLANN_PLATFORM_64_BIT
 #if __amd64__ || __x86_64__ || _WIN64 || _M_X64
 #define FLANN_PLATFORM_64_BIT
 #else
@@ -64,6 +72,7 @@
 #endif
 
 
+#undef FLANN_ARRAY_LEN
 #define FLANN_ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
 
 namespace cvflann {
