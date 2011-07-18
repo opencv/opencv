@@ -170,7 +170,7 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 	mat.create(1, count, CV_32SC2);
 	for(int i=0; i<count; i++)
 	{
-		long long addr = (long long) &v_mat[i];
+		long long addr = (long long) new Mat(v_mat[i]);
 		mat.at< Vec<int, 2> >(0, i) = Vec<int, 2>(addr>>32, addr&0xffffffff);
 	}
     return;
