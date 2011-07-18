@@ -19,12 +19,12 @@ import android.util.Log;
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {
 	
-    public static String LENA_PATH = "/data/data/org.opencv.test/files/lena.jpg";
+	public static String LENA_PATH = "/data/data/org.opencv.test/files/lena.jpg";
     public static String CHESS_PATH = "/data/data/org.opencv.test/files/chessboard.jpg";
     public static String LBPCASCADE_FRONTALFACE_PATH = "/mnt/sdcard/lbpcascade_frontalface.xml";
-	private static String TAG = "opencv_test_java";
-	
+    
 	private AndroidTestRunner androidTestRunner;
+	private static String TAG = "opencv_test_java";
 	
 	static public void Log(String message) {
 		Log.e(TAG, message);

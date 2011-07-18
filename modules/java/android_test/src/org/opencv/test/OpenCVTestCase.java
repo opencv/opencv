@@ -19,7 +19,9 @@ public class OpenCVTestCase extends TestCase {
     //Naming notation: <channels info>_[depth]_[dimensions]_value
     //examples: gray0   - single channel 8U 2d Mat filled with 0
     //          grayRnd - single channel 8U 2d Mat filled with random numbers
-    //          gray0_32f_1d - refactor ;)
+    //          gray0_32f_1d - TODO: refactor
+	
+	//TODO: create some masks
 
 	protected static Mat gray0;
 	protected static Mat gray1;

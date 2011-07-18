@@ -6,6 +6,34 @@ try:
 except:
     from StringIO import StringIO
 
+class_ignore_list = (
+    #core
+    "FileNode",
+    "FileStorage",
+    #highgui
+    "VideoWriter",
+    "VideoCapture",
+)
+
+func_ignore_list = (
+    #core
+    "checkHardwareSupport",
+    "setUseOptimized",
+    "useOptimized",
+    "vconcat",
+    #highgui
+    "namedWindow",
+    "destroyWindow",
+    "destroyAllWindows",
+    "startWindowThread",
+    "setWindowProperty",
+    "getWindowProperty",
+    "getTrackbarPos",
+    "setTrackbarPos",
+    "imshow",
+    "waitKey",
+)
+
 const_ignore_list = (
     "CV_CAP_OPENNI",
     "CV_CAP_PROP_OPENNI_",
@@ -73,23 +101,6 @@ const_ignore_list = (
     "CV_CAP_PROP_PVAPI_MULTICASTIP",
 )
 
-func_ignore_list = (
-    "namedWindow",
-    "destroyWindow",
-    "destroyAllWindows",
-    "startWindowThread",
-    "setWindowProperty",
-    "getWindowProperty",
-    "getTrackbarPos",
-    "setTrackbarPos",
-    "imshow",
-    "waitKey",
-)
-
-class_ignore_list = (
-    "VideoWriter",
-    "VideoCapture",
-)
 
 # c_type    : { java/jni correspondence }
 type_dict = {
