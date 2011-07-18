@@ -9,7 +9,6 @@ import org.opencv.Rect;
 import org.opencv.Scalar;
 import org.opencv.core;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class coreTest extends OpenCVTestCase {
 	
@@ -311,12 +310,12 @@ public class coreTest extends OpenCVTestCase {
 		Mat out2 = new Mat(1, 4, CvType.CV_32F);
 		
 		src.put(0, 0, 1, 2, 3, 4);
-		out.put(0 , 0, 10, -2, 2, -2);
+		out.put(0, 0, 10, -2, 2, -2);
 		core.dft(src, dst, core.DFT_REAL_OUTPUT);
 		assertMatEqual(out, dst);
 		
 		core.dft(src, dst, core.DFT_INVERSE);
-		out2.put(0 , 0, 9, -9, 1, 3);
+		out2.put(0, 0, 9, -9, 1, 3);
 		assertMatEqual(out2, dst);
 	}
 
@@ -325,7 +324,7 @@ public class coreTest extends OpenCVTestCase {
 		Mat out = new Mat(1, 4, CvType.CV_32F);
 	
 		src.put(0, 0, 1, 2, 3, 4);
-		out.put(0 , 0, 10, -2, 2, -2);
+		out.put(0, 0, 10, -2, 2, -2);
 		core.dft(src, dst, core.DFT_REAL_OUTPUT, 1);
 		assertMatEqual(out, dst);
 	}
@@ -1244,14 +1243,11 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSplit() {
-		fail("Not yet implemented");
-		//FIXME: must work
-		//ArrayList<Mat> cois = new ArrayList<Mat>();
-		//core.split(rgba0, cois);
-//		for(Mat coi : cois) {
-//			OpenCVTestRunner.Log(coi.toString());
-//			//assertMatEqual(gray0, coi);
-//		}
+		ArrayList<Mat> cois = new ArrayList<Mat>();
+		core.split(rgba0, cois);
+		for(Mat coi : cois) {
+			assertMatEqual(gray0, coi);
+		}
 	}
 
 	public void testSqrt() {
@@ -1314,8 +1310,4 @@ public class coreTest extends OpenCVTestCase {
 		assertTrue(subdst.total() == core.countNonZero(subdst));
 	}
 
-	public void testVconcat() {
-		fail("Not yet implemented");
-	}
-	
 }

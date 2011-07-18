@@ -34,6 +34,8 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     public void onStart() {
     	ExportResourceImage("lena.jpg", R.drawable.lena);
     	ExportResourceImage("chessboard.jpg", R.drawable.chessboard);
+    	
+    	//FIXME: implement export of the cascade
 		
         //List<TestCase> testCases = androidTestRunner.getTestCases();
         //Collections.shuffle(testCases); //shuffle the tests order

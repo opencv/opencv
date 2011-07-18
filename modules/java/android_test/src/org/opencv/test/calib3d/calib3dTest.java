@@ -16,10 +16,10 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testComposeRTMatMatMatMatMatMat() {
-		Mat rvec1 = new Mat(3, 1, CvType.CV_32F); rvec1.put(0, 0, 0.5302828, 0.19925919, 0.40105945);
+		Mat rvec1 = new Mat(3, 1, CvType.CV_32F); rvec1.put(0, 0, 0.5302828,  0.19925919, 0.40105945);
 		Mat tvec1 = new Mat(3, 1, CvType.CV_32F); tvec1.put(0, 0, 0.81438506, 0.43713298, 0.2487897);
 		Mat rvec2 = new Mat(3, 1, CvType.CV_32F); rvec2.put(0, 0, 0.77310503, 0.76209372, 0.30779448);
-		Mat tvec2 = new Mat(3, 1, CvType.CV_32F); tvec2.put(0, 0, 0.70243168, 0.4784472, 0.79219002);
+		Mat tvec2 = new Mat(3, 1, CvType.CV_32F); tvec2.put(0, 0, 0.70243168, 0.4784472,  0.79219002);
 			
 		Mat rvec3 = new Mat();
 		Mat tvec3 = new Mat();
@@ -143,10 +143,10 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testFilterSpecklesMatDoubleIntDouble() {
-		gray_16s_1024.copyTo(dst);
-	    
-		Point center = new Point(gray_16s_1024.rows()/2., gray_16s_1024.cols()/2.);
+		gray_16s_1024.copyTo(dst);	    
+		Point center = new Point(gray_16s_1024.rows()/2., gray_16s_1024.cols()/2.);		
 		core.circle(dst, center, 1, Scalar.all(4096));
+		
 		assertMatNotEqual(gray_16s_1024, dst);
 	    calib3d.filterSpeckles(dst, 1024.0, 100, 0.);
 	    assertMatEqual(gray_16s_1024, dst);
@@ -165,7 +165,7 @@ public class calib3dTest extends OpenCVTestCase {
 	public void testFindChessboardCornersMatSizeMatInt() {
 		Size patternSize = new Size(9, 6);
 		calib3d.findChessboardCorners(grayChess, patternSize, dst, 
-				calib3d.CALIB_CB_ADAPTIVE_THRESH + calib3d.CALIB_CB_NORMALIZE_IMAGE + calib3d.CALIB_CB_FAST_CHECK);
+			calib3d.CALIB_CB_ADAPTIVE_THRESH + calib3d.CALIB_CB_NORMALIZE_IMAGE + calib3d.CALIB_CB_FAST_CHECK);
 		assertTrue(!dst.empty());
 	}
 

@@ -65,14 +65,14 @@ public class OpenCVTestCase extends TestCase {
         dst = new Mat();
         assertTrue(dst.empty());
 
-        gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0.0));
-        gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1.0));
-        gray2 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(2.0));
-        gray3 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(3.0));
-        gray9 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(9.0));
-        gray127 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(127.0));
-        gray128 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128.0));
-        gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255.0));
+        gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
+        gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1));
+        gray2 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(2));
+        gray3 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(3));
+        gray9 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(9));
+        gray127 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(127));
+        gray128 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128));
+        gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
         
         gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
         gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
