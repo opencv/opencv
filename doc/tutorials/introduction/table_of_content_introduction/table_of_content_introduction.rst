@@ -97,9 +97,29 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   =========== ======================================================
 
-  .. |WinVSHowT| image:: images/visual-studio-2010-logo.jpg
-                 :height: 90pt
-                 :width:  90pt
+     .. |WinVSHowT| image:: images/visual-studio-2010-logo.jpg
+                      :height: 90pt
+                      :width:  90pt
+
+* **Android**
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+    
+  ================ ======================================================
+  |AndroidBinPack| **Title:** :ref:`Android_Binary_Package`
+
+                   *Compatibility:* > OpenCV 2.3.1
+
+                   *Author:* |Author_AndreyK|
+
+                   You will learn how to setup OpenCV for Android platform!
+
+  ================ ======================================================
+
+     .. |AndroidBinPack| image:: images/android_logo.png
+                           :height: 90pt
+                           :width:  90pt
 
 * **From where to start?**
 
@@ -148,5 +168,6 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
+   ../android_binary_package/android_binary_package
    ../display_image/display_image
    ../load_save_image/load_save_image

@@ -1,6 +1,13 @@
 package org.opencv.samples.tutorial2;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.highgui.Highgui;
+import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -31,17 +38,17 @@ class Sample2View extends SampleCvViewBase {
     protected Bitmap processFrame(VideoCapture capture) {
         switch (Sample2NativeCamera.viewMode) {
         case Sample2NativeCamera.VIEW_MODE_GRAY:
-            capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
-            imgproc.cvtColor(mGray, mRgba, imgproc.COLOR_GRAY2RGBA, 4);
+            capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            Imgproc.cvtColor(mGray, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample2NativeCamera.VIEW_MODE_RGBA:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3/* CV_FONT_HERSHEY_COMPLEX */, 2, new Scalar(255, 0, 0, 255), 3);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            Core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3/* CV_FONT_HERSHEY_COMPLEX */, 2, new Scalar(255, 0, 0, 255), 3);
             break;
         case Sample2NativeCamera.VIEW_MODE_CANNY:
-            capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
-            imgproc.Canny(mGray, mIntermediateMat, 80, 100);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.COLOR_GRAY2BGRA, 4);
+            capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            Imgproc.Canny(mGray, mIntermediateMat, 80, 100);
+            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
         }
 

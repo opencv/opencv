@@ -1,6 +1,9 @@
 package org.opencv.samples.tutorial4;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Mat;
+import org.opencv.core.CvType;
+import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -36,17 +39,17 @@ class Sample4View extends SampleViewBase {
 
         switch (Sample4Mixed.viewMode) {
         case Sample4Mixed.VIEW_MODE_GRAY:
-            imgproc.cvtColor(mGraySubmat, mRgba, imgproc.COLOR_GRAY2RGBA, 4);
+            Imgproc.cvtColor(mGraySubmat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample4Mixed.VIEW_MODE_RGBA:
-            imgproc.cvtColor(mYuv, mRgba, imgproc.COLOR_YUV420i2RGB, 4);
+            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420i2RGB, 4);
             break;
         case Sample4Mixed.VIEW_MODE_CANNY:
-            imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
+            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
         case Sample4Mixed.VIEW_MODE_FEATURES:
-            imgproc.cvtColor(mYuv, mRgba, imgproc.COLOR_YUV420i2RGB, 4);
+            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420i2RGB, 4);
             FindFeatures(mGraySubmat.getNativeObjAddr(), mRgba.getNativeObjAddr());
             break;
         }

@@ -7,7 +7,14 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
+import org.opencv.highgui.VideoCapture;
 import org.opencv.objdetect.CascadeClassifier;
 
 import android.content.Context;
@@ -68,8 +75,8 @@ class FdView extends SampleCvViewBase {
 
     @Override
     protected Bitmap processFrame(VideoCapture capture) {
-        capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-        capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
+        capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+        capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
         if (mCascade != null) {
             int height = mGray.rows();
@@ -79,7 +86,7 @@ class FdView extends SampleCvViewBase {
                     , new Size(faceSize, faceSize));
 
             for (Rect r : faces)
-                core.rectangle(mRgba, r.tl(), r.br(), new Scalar(0, 255, 0, 255), 3);
+                Core.rectangle(mRgba, r.tl(), r.br(), new Scalar(0, 255, 0, 255), 3);
         }
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);

@@ -2,7 +2,7 @@ package org.opencv.samples.fd;
 
 import java.text.DecimalFormat;
 
-import org.opencv.core;
+import org.opencv.core.Core;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -22,8 +22,8 @@ public class FpsMeter {
     public void init() {
         step = 20;
         framesCouner = 0;
-        freq = core.getTickFrequency();
-        prevFrameTime = core.getTickCount();
+        freq = Core.getTickFrequency();
+        prevFrameTime = Core.getTickCount();
         strfps = "";
 
         paint = new Paint();
@@ -34,7 +34,7 @@ public class FpsMeter {
     public void measure() {
         framesCouner++;
         if (framesCouner % step == 0) {
-            long time = core.getTickCount();
+            long time = Core.getTickCount();
             double fps = step * freq / (time - prevFrameTime);
             prevFrameTime = time;
             DecimalFormat twoPlaces = new DecimalFormat("0.00");

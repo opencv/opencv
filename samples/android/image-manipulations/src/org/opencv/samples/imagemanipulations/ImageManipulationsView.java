@@ -1,6 +1,15 @@
 package org.opencv.samples.imagemanipulations;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.CvType;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.highgui.Highgui;
+import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -75,52 +84,52 @@ class ImageManipulationsView extends SampleCvViewBase {
         switch (ImageManipulationsActivity.viewMode) {
 
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
             if (mRgbaInnerWindow == null || mGrayInnerWindow == null)
                 CreateAuxiliaryMats();
 
-            imgproc.Canny(mGrayInnerWindow, mGrayInnerWindow, 80, 90);
-            imgproc.cvtColor(mGrayInnerWindow, mRgbaInnerWindow, imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.Canny(mGrayInnerWindow, mGrayInnerWindow, 80, 90);
+            Imgproc.cvtColor(mGrayInnerWindow, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
             if (mRgbaInnerWindow == null || mGrayInnerWindow == null)
                 CreateAuxiliaryMats();
 
-            imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
-            core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10);
-            imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
+            Core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10);
+            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SEPIA:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            core.transform(mRgba, mRgba, mSepiaKernel);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            Core.transform(mRgba, mRgba, mSepiaKernel);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_BLUR:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             if (mBlurWindow == null)
                 CreateAuxiliaryMats();
-            imgproc.blur(mBlurWindow, mBlurWindow, new Size(15, 15));
+            Imgproc.blur(mBlurWindow, mBlurWindow, new Size(15, 15));
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:
-            capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+            capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             if (mZoomCorner == null || mZoomWindow == null)
                 CreateAuxiliaryMats();
-            imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.size());
+            Imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.size());
 
             Size wsize = mZoomWindow.size();
-            core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
+            Core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
             break;
         }
 
@@ -139,16 +148,16 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         synchronized (this) {
             // Explicitly deallocate Mats
-        	if (mZoomWindow != null)
-        		mZoomWindow.dispose();
-        	if (mZoomCorner != null)
-        		mZoomCorner.dispose();
-        	if (mBlurWindow != null)
-        		mBlurWindow.dispose();
-        	if (mGrayInnerWindow != null)
-        		mGrayInnerWindow.dispose();
-        	if (mRgbaInnerWindow != null)
-        		mRgbaInnerWindow.dispose();
+            if (mZoomWindow != null)
+                mZoomWindow.dispose();
+            if (mZoomCorner != null)
+                mZoomCorner.dispose();
+            if (mBlurWindow != null)
+                mBlurWindow.dispose();
+            if (mGrayInnerWindow != null)
+                mGrayInnerWindow.dispose();
+            if (mRgbaInnerWindow != null)
+                mRgbaInnerWindow.dispose();
             if (mRgba != null)
                 mRgba.dispose();
             if (mGray != null)

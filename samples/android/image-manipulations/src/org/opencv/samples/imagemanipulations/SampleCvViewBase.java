@@ -2,7 +2,9 @@ package org.opencv.samples.imagemanipulations;
 
 import java.util.List;
 
-import org.opencv.*;
+import org.opencv.core.Size;
+import org.opencv.highgui.VideoCapture;
+import org.opencv.highgui.Highgui;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -48,15 +50,15 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
                     }
                 }
 
-                mCamera.set(highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
-                mCamera.set(highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
+                mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
+                mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
             }
         }
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
         Log.i(TAG, "surfaceCreated");
-        mCamera = new VideoCapture(highgui.CV_CAP_ANDROID);
+        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
         if (mCamera.isOpened()) {
             (new Thread(this)).start();
         } else {

@@ -1,6 +1,13 @@
 package org.opencv.samples.puzzle15;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.highgui.Highgui;
+import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -30,7 +37,7 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         mTextWidths = new int[gridArea];
         mTextHeights = new int[gridArea];
         for (int i = 0; i < gridArea; i++) {
-            Size s = core.getTextSize(Integer.toString(i + 1), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, 2, null);
+            Size s = Core.getTextSize(Integer.toString(i + 1), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, 2, null);
             mTextHeights[i] = (int) s.height;
             mTextWidths[i] = (int) s.width;
         }
@@ -106,7 +113,7 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
 
     @Override
     protected Bitmap processFrame(VideoCapture capture) {
-        capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+        capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
         int cols = mRgba.cols();
         int rows = mRgba.rows();
 
@@ -121,7 +128,7 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
             else {
                 mCells[idx].copyTo(mCells15[i]);
                 if (mShowTileNumbers) {
-                    core.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / gridSize - mTextWidths[idx]) / 2,
+                    Core.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / gridSize - mTextWidths[idx]) / 2,
                             (rows / gridSize + mTextHeights[idx]) / 2), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, new Scalar(255, 0, 0, 255), 2);
                 }
             }
@@ -139,8 +146,8 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
 
     private void drawGrid(int cols, int rows) {
         for (int i = 1; i < gridSize; i++) {
-            core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
-            core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
+            Core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
+            Core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
         }
     }
 
