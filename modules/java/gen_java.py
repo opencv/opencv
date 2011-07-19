@@ -99,6 +99,14 @@ const_ignore_list = (
     "CV_CAP_PROP_MAX_DC1394",
     "CV_CAP_GSTREAMER_QUEUE_LENGTH",
     "CV_CAP_PROP_PVAPI_MULTICASTIP",
+    "CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING",
+    "EVENT_.*",
+    "CV_L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV)\d*2L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV).*",
+    "CV_COLORCVT_MAX",
+    "CV_.*Bayer.*",
+    "CV_YUV420i2.+",
+    "CV_TM_.+",
+    "CV_FLOODFILL_.+",
 )
 
 

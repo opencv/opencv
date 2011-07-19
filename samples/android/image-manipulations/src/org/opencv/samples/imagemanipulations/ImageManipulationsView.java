@@ -86,7 +86,7 @@ class ImageManipulationsView extends SampleCvViewBase {
                 CreateAuxiliaryMats();
 
             imgproc.Canny(mGrayInnerWindow, mGrayInnerWindow, 80, 90);
-            imgproc.cvtColor(mGrayInnerWindow, mRgbaInnerWindow, imgproc.CV_GRAY2BGRA, 4);
+            imgproc.cvtColor(mGrayInnerWindow, mRgbaInnerWindow, imgproc.COLOR_GRAY2BGRA, 4);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
@@ -98,7 +98,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
             imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
             core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10);
-            imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, imgproc.CV_GRAY2BGRA, 4);
+            imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, imgproc.COLOR_GRAY2BGRA, 4);
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SEPIA:
@@ -117,9 +117,9 @@ class ImageManipulationsView extends SampleCvViewBase {
             capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             if (mZoomCorner == null || mZoomWindow == null)
                 CreateAuxiliaryMats();
-            imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.Size());
+            imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.size());
 
-            Size wsize = mZoomWindow.Size();
+            Size wsize = mZoomWindow.size();
             core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
             break;
         }

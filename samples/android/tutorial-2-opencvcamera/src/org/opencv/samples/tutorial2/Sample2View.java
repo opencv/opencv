@@ -32,7 +32,7 @@ class Sample2View extends SampleCvViewBase {
         switch (Sample2NativeCamera.viewMode) {
         case Sample2NativeCamera.VIEW_MODE_GRAY:
             capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
-            imgproc.cvtColor(mGray, mRgba, imgproc.CV_GRAY2RGBA, 4);
+            imgproc.cvtColor(mGray, mRgba, imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample2NativeCamera.VIEW_MODE_RGBA:
             capture.retrieve(mRgba, highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
@@ -41,7 +41,7 @@ class Sample2View extends SampleCvViewBase {
         case Sample2NativeCamera.VIEW_MODE_CANNY:
             capture.retrieve(mGray, highgui.CV_CAP_ANDROID_GREY_FRAME);
             imgproc.Canny(mGray, mIntermediateMat, 80, 100);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
+            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.COLOR_GRAY2BGRA, 4);
             break;
         }
 

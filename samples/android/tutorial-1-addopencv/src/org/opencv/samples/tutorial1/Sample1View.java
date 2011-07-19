@@ -36,15 +36,15 @@ class Sample1View extends SampleViewBase {
 
         switch (Sample1Java.viewMode) {
         case Sample1Java.VIEW_MODE_GRAY:
-            imgproc.cvtColor(mGraySubmat, mRgba, imgproc.CV_GRAY2RGBA, 4);
+            imgproc.cvtColor(mGraySubmat, mRgba, imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample1Java.VIEW_MODE_RGBA:
-            imgproc.cvtColor(mYuv, mRgba, imgproc.CV_YUV420i2RGB, 4);
+            imgproc.cvtColor(mYuv, mRgba, imgproc.COLOR_YUV420i2RGB, 4);
             core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3/* CV_FONT_HERSHEY_COMPLEX */, 2, new Scalar(255, 0, 0, 255), 3);
             break;
         case Sample1Java.VIEW_MODE_CANNY:
             imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.CV_GRAY2BGRA, 4);
+            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.COLOR_GRAY2BGRA, 4);
             break;
         }
 
