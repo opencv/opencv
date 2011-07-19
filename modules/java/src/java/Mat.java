@@ -72,7 +72,7 @@ public class Mat {
     }
 
     //javadoc:Mat::size()
-    public Size Size() {
+    public Size size() {
         if(nativeObj == 0) return new Size();
         return new Size(nSize(nativeObj));
     }

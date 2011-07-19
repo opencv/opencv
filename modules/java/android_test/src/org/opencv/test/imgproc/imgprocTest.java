@@ -1,14 +1,21 @@
 package org.opencv.test.imgproc;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.opencv.CvType;
+import org.opencv.Mat;
+import org.opencv.Scalar;
 import org.opencv.Size;
+import org.opencv.core;
 import org.opencv.imgproc;
 import org.opencv.test.OpenCVTestCase;
 
 
 public class imgprocTest extends OpenCVTestCase {
-
+	
 	public void test_1() {
-		super.test_1("IMGPROC");
+		super.test_1("imgproc");
 	}
 	
 	//FIXME: this test crashes
@@ -54,6 +61,10 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testApproxPolyDP() {
+		fail("Not yet implemented");
+	}
+
 	public void testArcLength() {
 		fail("Not yet implemented");
 	}
@@ -88,6 +99,10 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testBoundingRect() {
+		fail("Not yet implemented");
+	}
+
 	public void testBoxFilterMatMatIntSize() {
 		Size sz = new Size(3, 3);
 		imgproc.boxFilter(gray0, dst, 8, sz);
@@ -103,6 +118,76 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testBoxFilterMatMatIntSizePointBooleanInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testCalcBackProject() {
+		ArrayList<Mat> images = new ArrayList<Mat>();
+		List<Integer> channels = new ArrayList<Integer>();
+		List<Integer> histSize = new ArrayList<Integer>();
+		List<Float> ranges = new ArrayList<Float>();		
+		
+		images.add(grayChess);
+		channels.add(0);
+		histSize.add(10);
+		ranges.add(0.0f); ranges.add(256.0f);
+
+		Mat hist = new Mat();
+		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		core.normalize(hist, hist);
+		
+		imgproc.calcBackProject(images, channels, hist, dst, ranges, 255);
+		assertTrue(grayChess.size().equals(dst.size()));
+		assertEquals(grayChess.depth(), dst.depth());
+		assertTrue(0 != core.countNonZero(dst));
+	}
+
+	public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
+		ArrayList<Mat> images = new ArrayList<Mat>();
+		List<Integer> channels = new ArrayList<Integer>();
+		List<Integer> histSize = new ArrayList<Integer>();
+		List<Float> ranges = new ArrayList<Float>();		
+		
+		images.add(gray128);
+		channels.add(0);
+		histSize.add(10);
+		ranges.add(0.0f); ranges.add(256.0f);
+
+		truth = new Mat(10, 1, CvType.CV_32F, Scalar.all(0.0));
+		truth.put(5, 0, 100.0);
+		
+		Mat hist = new Mat();
+		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		assertMatEqual(truth, hist);
+	}
+	
+	public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2d() {
+		ArrayList<Mat> images = new ArrayList<Mat>();
+		List<Integer> channels = new ArrayList<Integer>();
+		List<Integer> histSize = new ArrayList<Integer>();
+		List<Float> ranges = new ArrayList<Float>();	
+		
+		images.add(gray255);
+		images.add(gray128);		
+		
+		channels.add(0);
+		channels.add(1);
+		
+		histSize.add(10);
+		histSize.add(10);
+		
+		ranges.add(0.0f); ranges.add(256.0f);
+		ranges.add(0.0f); ranges.add(256.0f);
+		
+		truth = new Mat(10, 10, CvType.CV_32F, Scalar.all(0.0));
+		truth.put(9, 5, 100.0);
+		
+		Mat hist = new Mat();
+		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		assertMatEqual(truth, hist);
+	}
+
+	public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {
 		fail("Not yet implemented");
 	}
 
@@ -135,6 +220,18 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testConvertMapsMatMatMatMatIntBoolean() {
+		fail("Not yet implemented");
+	}
+	
+	public void testConvexHullMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testConvexHullMatMatBoolean() {
+		fail("Not yet implemented");
+	}
+
+	public void testConvexHullMatMatBooleanBoolean() {
 		fail("Not yet implemented");
 	}
 
@@ -174,6 +271,10 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testCornerSubPix() {
+		fail("Not yet implemented");
+	}
+
 	public void testCvtColorMatMatInt() {
 		fail("Not yet implemented");
 	}
@@ -203,6 +304,30 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testDistanceTransform() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalarInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalarIntInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalarIntIntMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalarIntIntMatInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testDrawContoursMatListOfMatIntScalarIntIntMatIntPoint() {
 		fail("Not yet implemented");
 	}
 
@@ -246,6 +371,42 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testFindContoursMatListOfMatMatIntInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testFindContoursMatListOfMatMatIntIntPoint() {
+		fail("Not yet implemented");
+	}
+
+	public void testFitEllipse() {
+		fail("Not yet implemented");
+	}
+
+	public void testFitLine() {
+		fail("Not yet implemented");
+	}
+
+	public void testFloodFillMatMatPointScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testFloodFillMatMatPointScalarRect() {
+		fail("Not yet implemented");
+	}
+
+	public void testFloodFillMatMatPointScalarRectScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testFloodFillMatMatPointScalarRectScalarScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testFloodFillMatMatPointScalarRectScalarScalarInt() {
+		fail("Not yet implemented");
+	}
+
 	public void testGaussianBlurMatMatSizeDouble() {
 		fail("Not yet implemented");
 	}
@@ -255,6 +416,10 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testGaussianBlurMatMatSizeDoubleDoubleInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetAffineTransform() {
 		fail("Not yet implemented");
 	}
 
@@ -382,6 +547,10 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testHuMoments() {
+		fail("Not yet implemented");
+	}
+
 	public void testInitUndistortRectifyMap() {
 		fail("Not yet implemented");
 	}
@@ -466,6 +635,22 @@ public class imgprocTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testMinAreaRect() {
+		fail("Not yet implemented");
+	}
+
+	public void testMinEnclosingCircle() {
+		fail("Not yet implemented");
+	}
+
+	public void testMomentsMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testMomentsMatBoolean() {
+		fail("Not yet implemented");
+	}
+
 	public void testMorphologyExMatMatIntMat() {
 		fail("Not yet implemented");
 	}
@@ -503,6 +688,18 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testPyrDownMatMatSize() {
+		fail("Not yet implemented");
+	}
+
+	public void testPyrMeanShiftFilteringMatMatDoubleDouble() {
+		fail("Not yet implemented");
+	}
+
+	public void testPyrMeanShiftFilteringMatMatDoubleDoubleInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testPyrMeanShiftFilteringMatMatDoubleDoubleIntTermCriteria() {
 		fail("Not yet implemented");
 	}
 

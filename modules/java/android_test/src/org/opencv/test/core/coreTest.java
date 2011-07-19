@@ -112,16 +112,16 @@ public class coreTest extends OpenCVTestCase {
 
 	public void testCartToPolarMatMatMatMat() {
 		Mat x = new Mat(1, 3, CvType.CV_32F);
-		Mat y = new Mat(1, 3, CvType.CV_32F);
-		Mat magnitude = new Mat(1, 3, CvType.CV_32F);
-		Mat angle = new Mat(1, 3, CvType.CV_32F);
-		Mat dst_angle = new Mat();
-		
+		Mat y = new Mat(1, 3, CvType.CV_32F);		
 		x.put(0, 0, 3.0, 6.0, 5,0);
 		y.put(0, 0, 4.0, 8.0, 12.0);
+		
+		Mat magnitude = new Mat(1, 3, CvType.CV_32F);
+		Mat angle = new Mat(1, 3, CvType.CV_32F);
 		magnitude.put(0, 0, 5.0, 10.0, 13.0); 
 		angle.put(0, 0, 0.92729962, 0.92729962, 1.1759995);
 
+		Mat dst_angle = new Mat();
 		core.cartToPolar(x, y, dst, dst_angle);		
 		assertMatEqual(magnitude, dst);
 		assertMatEqual(angle, dst_angle);		
@@ -130,17 +130,17 @@ public class coreTest extends OpenCVTestCase {
 	public void testCartToPolarMatMatMatMatBoolean() {
 		Mat x = new Mat(1, 3, CvType.CV_32F);
 		Mat y = new Mat(1, 3, CvType.CV_32F);
-		Mat magnitude = new Mat(1, 3, CvType.CV_32F);
-		Mat angle = new Mat(1, 3, CvType.CV_32F);
-		Mat dst_angle = new Mat();
-		
 		x.put(0 ,0, 3.0, 6.0, 5,0);
 		y.put(0 ,0, 4.0, 8.0, 12.0);
+		
+		Mat magnitude = new Mat(1, 3, CvType.CV_32F);
+		Mat angle = new Mat(1, 3, CvType.CV_32F);
+		
 		magnitude.put(0 ,0, 5.0, 10.0, 13.0); 
 		angle.put(0 ,0, 0.92729962, 0.92729962, 1.1759995);
 		
-		core.cartToPolar(x, y, dst, dst_angle,false);
-		
+		Mat dst_angle = new Mat();
+		core.cartToPolar(x, y, dst, dst_angle,false);		
 		assertMatEqual(magnitude, dst);
 		assertMatEqual(angle, dst_angle);	
 	}
@@ -274,13 +274,13 @@ public class coreTest extends OpenCVTestCase {
 		assertMatEqual(gray0_32f_1d, dst);
 		
 		Mat in = new Mat(1, 8, CvType.CV_32F);
-		Mat out = new Mat(1, 8, CvType.CV_32F);
-		
 		in.put(0, 0, 0.203056, 0.980407, 0.35312, -0.106651, 0.0399382, 0.871475, -0.648355, 0.501067);
-		out.put(0, 0, 0.77571625, 0.37270021, 0.18529896, 0.012146413, -0.32499927, -0.99302113, 0.55979407, -0.6251272);
+
+		truth = new Mat(1, 8, CvType.CV_32F);		
+		truth.put(0, 0, 0.77571625, 0.37270021, 0.18529896, 0.012146413, -0.32499927, -0.99302113, 0.55979407, -0.6251272);
 		
 		core.dct(in, dst);
-		assertMatEqual(out, dst);
+		assertMatEqual(truth, dst);
 	}
 
 	public void testDeterminant() {
@@ -298,10 +298,10 @@ public class coreTest extends OpenCVTestCase {
 		Mat src = new Mat(1, 4, CvType.CV_32F);
 		src.put(0, 0, 0, 0, 0, 0);
 		
-		Mat out = new Mat(1, 4, CvType.CV_32F);
-		out.put(0, 0, 0, 0, 0, 0);
+		truth = new Mat(1, 4, CvType.CV_32F);
+		truth.put(0, 0, 0, 0, 0, 0);
 		core.dft(src, dst);
-		assertMatEqual(out, dst);		
+		assertMatEqual(truth, dst);
 	}
 
 	public void testDftMatMatInt() {

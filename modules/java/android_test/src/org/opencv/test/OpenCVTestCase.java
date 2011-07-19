@@ -15,13 +15,17 @@ public class OpenCVTestCase extends TestCase {
 	protected static double EPS = 0.001;
     
 	protected static Mat dst;
+	protected static Mat truth;
     
     //Naming notation: <channels info>_[depth]_[dimensions]_value
     //examples: gray0   - single channel 8U 2d Mat filled with 0
     //          grayRnd - single channel 8U 2d Mat filled with random numbers
-    //          gray0_32f_1d - TODO: refactor
+    //          gray0_32f_1d
 	
-	//TODO: create some masks
+	//TODO: OpenCVTestCase refactorings
+	// - rename matrices
+	// - create some masks
+	// - use truth member everywhere
 
 	protected static Mat gray0;
 	protected static Mat gray1;
@@ -64,6 +68,8 @@ public class OpenCVTestCase extends TestCase {
         
         dst = new Mat();
         assertTrue(dst.empty());
+        truth = new Mat();
+        assertTrue(truth.empty());
 
         gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
         gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1));
