@@ -36,7 +36,7 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 		ArrayList<Rect> faces = new ArrayList<Rect>();
 		
 		Mat greyLena = new Mat();
-		imgproc.cvtColor(rgbLena, greyLena, imgproc.CV_RGB2GRAY);
+		imgproc.cvtColor(rgbLena, greyLena, imgproc.COLOR_RGB2GRAY);
 		
 		//TODO: doesn't detect with 1.1 scale
 		cc.detectMultiScale(greyLena, faces, 1.09, 2, 2 /*TODO: CV_HAAR_SCALE_IMAGE*/, new Size(30, 30));
