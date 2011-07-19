@@ -149,7 +149,7 @@ Code
       namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
       /// Load the source image
-      src = imread( "../images/lena.png", 1 ); 
+      src = imread( "../images/lena.jpg", 1 ); 
 
       if( display_caption( "Original Image" ) != 0 ) { return 0; }
 
@@ -318,7 +318,7 @@ Results
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * The code opens an image (in this case *lena.png*) and display it under the effects of the 4 filters explained. 
+   * The code opens an image (in this case *lena.jpg*) and display it under the effects of the 4 filters explained. 
 
    * Here is a snapshot of the image smoothed using *medianBlur*:
 

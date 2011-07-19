@@ -185,7 +185,7 @@ Result
 
   .. code-block:: bash
 
-     $ ./BasicLinearTransforms lena.png
+     $ ./BasicLinearTransforms lena.jpg
      Basic Linear Transforms
      -------------------------
      * Enter the alpha value [1.0-3.0]: 2.2
@@ -193,7 +193,7 @@ Result
 
 * We get this:
 
-.. image:: images/Basic_Linear_Transform_Tutorial_Result_0.png
+.. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
    :height: 400px
    :alt: Basic Linear Transform - Final Result
    :align: center 

@@ -86,6 +86,10 @@ Learn about how to use the feature points  detectors, descriptors and matching f
                      :height: 90pt
                      :width:  90pt
 
+.. raw:: latex
+
+   \pagebreak
+
 .. toctree::
    :hidden:
 

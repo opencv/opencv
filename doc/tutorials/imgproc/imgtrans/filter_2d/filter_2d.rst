@@ -25,7 +25,7 @@ What is a kernel?
 ------------------
 A kernel is essentially a fixed size array of numerical coefficeints along with an *anchor point* in that array, which is tipically located at the center. 
 
-.. image:: images/filter_2d_tutorial_kernel_theory.png
+.. image:: images/filter_2d_tutorial_kernel_theory.jpg
         :alt: kernel example
         :align: center 
 
@@ -194,6 +194,6 @@ Results
 
 #. After compiling the code above, you  can execute it giving as argument the path of an image. The result should be a window that shows an image blurred by a normalized filter. Each 0.5 seconds the kernel size should change, as can be seen in the series of snapshots below:
 
-   .. image:: images/filter_2d_tutorial_result.png
+   .. image:: images/filter_2d_tutorial_result.jpg
            :alt: kernel example
            :align: center

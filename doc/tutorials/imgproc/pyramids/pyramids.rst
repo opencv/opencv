@@ -41,7 +41,7 @@ Gaussian Pyramid
 
 * Imagine the pyramid as a set of layers in which the higher the layer, the smaller the size. 
 
-  .. image:: images/Pyramids_Tutorial_Pyramid_Theory.png
+  .. image:: images/Pyramids_Tutorial_Pyramid_Theory.jpg
      :alt: Pyramid figure
      :align: center 
 
@@ -103,7 +103,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      printf( " * [ESC] -> Close program \n \n" );
 
      /// Test image - Make sure it s divisible by 2^{n}
-     src = imread( "../images/chicky_512.png" );
+     src = imread( "../images/chicky_512.jpg" );
      if( !src.data )
        { printf(" No data! -- Exiting the program \n");
          return -1; }
@@ -148,7 +148,7 @@ Explanation
      .. code-block:: cpp
 
         /// Test image - Make sure it s divisible by 2^{n}
-        src = imread( "../images/chicky_512.png" );
+        src = imread( "../images/chicky_512.jpg" );
         if( !src.data )
           { printf(" No data! -- Exiting the program \n");
             return -1; }
@@ -235,21 +235,21 @@ Explanation
 Results
 ========
 
-* After compiling the code above we can test it. The program calls an image **chicky_512.png** that comes in the *tutorial_code/image* folder. Notice that this image is :math:`512 \times 512`, hence a downsample won't generate any error (:math:`512 = 2^{9}`). The original image is shown below:
+* After compiling the code above we can test it. The program calls an image **chicky_512.jpg** that comes in the *tutorial_code/image* folder. Notice that this image is :math:`512 \times 512`, hence a downsample won't generate any error (:math:`512 = 2^{9}`). The original image is shown below:
 
-  .. image:: images/Pyramids_Tutorial_Original_Image.png
+  .. image:: images/Pyramids_Tutorial_Original_Image.jpg
      :alt: Pyramids: Original image	
      :align: center 
 
 * First we apply two successive :pyr_down:`pyrDown <>` operations by pressing 'd'. Our output is:
  
-  .. image:: images/Pyramids_Tutorial_PyrDown_Result.png
+  .. image:: images/Pyramids_Tutorial_PyrDown_Result.jpg
      :alt: Pyramids: PyrDown Result
      :align: center 
 
 * Note that we should have lost some resolution due to the fact that we are diminishing the size of the image. This is evident after we apply :pyr_up:`pyrUp <>` twice (by pressing 'u'). Our output is now:
  
-  .. image:: images/Pyramids_Tutorial_PyrUp_Result.png
+  .. image:: images/Pyramids_Tutorial_PyrUp_Result.jpg
      :alt: Pyramids: PyrUp Result
      :align: center 
 

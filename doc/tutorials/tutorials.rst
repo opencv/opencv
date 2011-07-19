@@ -16,7 +16,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |Introduct| image:: images/introduction.png
+   .. |Introduct| image:: images/introduction.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: Introduction Icon
@@ -31,7 +31,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |Core| image:: images/core.png
+   .. |Core| image:: images/core.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: core Icon
@@ -46,7 +46,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |ImgProc| image:: images/imgproc.png
+   .. |ImgProc| image:: images/imgproc.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: imgproc Icon
@@ -61,7 +61,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |HighGui| image:: images/highgui.png
+   .. |HighGui| image:: images/highgui.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: highgui Icon
@@ -76,7 +76,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |Calib3D| image:: images/calib3d.png
+   .. |Calib3D| image:: images/calib3d.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: calib3d Icon
@@ -91,7 +91,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |Featur2D| image:: images/feature2D.png
+   .. |Featur2D| image:: images/feature2D.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: feature2D Icon
@@ -106,7 +106,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |Video| image:: images/video.png
+   .. |Video| image:: images/video.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: video Icon
@@ -121,7 +121,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |ObjDetect| image:: images/objdetect.png
+   .. |ObjDetect| image:: images/objdetect.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: objdetect Icon
@@ -136,7 +136,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |ml| image:: images/ml.png
+   .. |ml| image:: images/ml.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: ml Icon
@@ -151,7 +151,7 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |GPU| image:: images/gpu.png
+   .. |GPU| image:: images/gpu.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: gpu icon
@@ -166,10 +166,14 @@ As always, we would be happy to hear your comments and receive your contribution
   
    =========== =======================================================
   
-   .. |General| image:: images/general.png
+   .. |General| image:: images/general.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: General Icon
+
+.. raw:: latex
+
+   \pagebreak
 
 .. toctree::
    :maxdepth: 2

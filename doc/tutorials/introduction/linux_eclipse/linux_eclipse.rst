@@ -24,28 +24,28 @@ Making a project
 
 #. Go to **File -> New -> C/C++ Project**
 
-   .. image:: images/a0.png
+   .. image:: images/a0.jpg
       :height: 400px 
       :alt: Eclipse Tutorial Screenshot 0
       :align: center
 
 #. Choose a name for your project (i.e. DisplayImage). An **Empty Project** should be okay for this example. 
 
-   .. image:: images/a1.png
+   .. image:: images/a1.jpg
       :height: 400px 
       :alt: Eclipse Tutorial Screenshot 1
       :align: center
 
 #. Leave everything else by default. Press **Finish**. 
 
-   .. image:: images/a2.png
+   .. image:: images/a2.jpg
       :height: 400px 
       :alt: Eclipse Tutorial Screenshot 2
       :align: center
 
 #. Your project (in this case DisplayImage) should appear in the **Project Navigator** (usually at the left side of your window).
 
-   .. image:: images/a3.png
+   .. image:: images/a3.jpg
       :height: 400px 
       :alt: Eclipse Tutorial Screenshot 3
       :align: center
@@ -55,28 +55,28 @@ Making a project
 
    * Right click on **DisplayImage** (in the Navigator). **New -> Folder** . 
 
-     .. image:: images/a4.png
+     .. image:: images/a4.jpg
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 4
         :align: center
 
    * Name your folder **src** and then hit **Finish**
 
-     .. image:: images/a5.png
+     .. image:: images/a5.jpg
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 5
         :align: center
 
    * Right click on your newly created **src** folder. Choose **New source file**:
 
-     .. image:: images/a6.png
+     .. image:: images/a6.jpg
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 6
         :align: center
 
    * Call it **DisplayImage.cpp**. Hit **Finish**
 
-     .. image:: images/a7.png
+     .. image:: images/a7.jpg
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 7
         :align: center
@@ -113,7 +113,7 @@ Making a project
 
     * Go to  **Project-->Properties**
 
-     .. image:: images/a8.png
+     .. image:: images/a8.jpg
         :height: 400px 
         :alt: Eclipse Tutorial Screenshot 8
         :align: center
@@ -122,7 +122,7 @@ Making a project
 
       a. In **GCC C++ Compiler**, go to **Includes**. In **Include paths(-l)** you should include the path of the folder where opencv was installed. In our example, this is ``/usr/local/include/opencv``.
 
-         .. image:: images/a9.png
+         .. image:: images/a9.jpg
             :height: 400px 
             :alt: Eclipse Tutorial Screenshot 9
             :align: center
@@ -163,7 +163,7 @@ Making a project
          opencv_legacy    
          opencv_flann
 
-         .. image:: images/a10.png
+         .. image:: images/a10.jpg
              :height: 400px 
              :alt: Eclipse Tutorial Screenshot 10
              :align: center 
@@ -184,14 +184,14 @@ Making a project
 
     * Your project should be ready to be built. For this, go to **Project->Build all**   
 
-      .. image:: images/a11.png
+      .. image:: images/a11.jpg
          :height: 400px 
          :alt: Eclipse Tutorial Screenshot 11
          :align: center 
 
       In the Console you should get something like 
 
-      .. image:: images/a12.png
+      .. image:: images/a12.jpg
          :height: 200px 
          :alt: Eclipse Tutorial Screenshot 12
          :align: center 
@@ -214,7 +214,7 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 
 #. Go to **Run->Run Configurations** 
 
-   .. image:: images/a13.png
+   .. image:: images/a13.jpg
       :height: 300px 
       :alt: Eclipse Tutorial Screenshot 13
       :align: center 
@@ -223,14 +223,14 @@ Assuming that the image to use as the argument would be located in <DisplayImage
 
 #. Now, in the right side of the window, choose the **Arguments** Tab. Write the path of the image file we want to open (path relative to the workspace/DisplayImage folder). Let's use **HappyLittleFish.jpg**:
 
-   .. image:: images/a14.png
+   .. image:: images/a14.jpg
       :height: 300px 
       :alt: Eclipse Tutorial Screenshot 14
       :align: center 
 
 #. Click on the **Apply** button and then in Run. An OpenCV window should pop up with the fish image (or whatever you used).
 
-   .. image:: images/a15.png
+   .. image:: images/a15.jpg
       :alt: Eclipse Tutorial Screenshot 15
       :align: center 
 

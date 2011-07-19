@@ -12,6 +12,45 @@ Here you will learn the about the basic building blocks of the library. A must r
   .. cssclass:: toctableopencv
 
   =============== ======================================================
+   |MatBasicIma|  **Title:** :ref:`matTheBasicImageContainer`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  You will learn how to store images in the memory and how to print out their content to the console.
+
+  =============== ======================================================
+
+  .. |MatBasicIma| image:: images/matTheBasicImageStructure.jpg
+                   :height: 90pt
+                   :width:  90pt
+
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+   |HowScanImag|  **Title:** :ref:`howToScanImagesOpenCV`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  You'll find out how to scan images (go through each of the image pixels) with OpenCV. Bonus: time measurement with OpenCV.
+
+  =============== ======================================================
+
+  .. |HowScanImag| image:: images/howToScanImages.jpg
+                   :height: 90pt
+                   :width:  90pt
+                   
+
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
    |Beginners_4|  **Title:** :ref:`Adding_Images`
 
                   *Compatibility:* > OpenCV 2.0
@@ -22,7 +61,7 @@ Here you will learn the about the basic building blocks of the library. A must r
 
   =============== ======================================================
 
-  .. |Beginners_4| image:: images/Adding_Images_Tutorial_Result_0.png
+  .. |Beginners_4| image:: images/Adding_Images_Tutorial_Result_0.jpg
                    :height: 90pt
                    :width:  90pt
 
@@ -41,7 +80,7 @@ Here you will learn the about the basic building blocks of the library. A must r
 
   =============== ====================================================
 
-  .. |Bas_Lin_Tran| image:: images/Basic_Linear_Transform_Tutorial_Result_0.png
+  .. |Bas_Lin_Tran| image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
                               :height: 90pt
                               :width:  90pt
 
@@ -62,7 +101,7 @@ Here you will learn the about the basic building blocks of the library. A must r
 
   =============== ======================================================
 
-  .. |Beginners_6| image:: images/Drawing_1_Tutorial_Result_0.png
+  .. |Beginners_6| image:: images/Drawing_1_Tutorial_Result_0.jpg
                    :height: 90pt
                    :width:  90pt
 
@@ -81,14 +120,21 @@ Here you will learn the about the basic building blocks of the library. A must r
 
   =============== ======================================================
 
-  .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.png
+  .. |Beginners_7| image:: images/Drawing_2_Tutorial_Result_7.jpg
                    :height: 90pt
                    :width:  90pt
 
+.. raw:: latex
+
+   \pagebreak
+
 .. toctree::
    :hidden:
-
+   
+   ../mat - the basic image container/mat - the basic image container
+   ../how_to_scan_images/how_to_scan_images
    ../adding_images/adding_images
    ../basic_linear_transform/basic_linear_transform
    ../basic_geometric_drawing/basic_geometric_drawing
    ../random_generator_and_text/random_generator_and_text
+   ../mat-mask-operations/mat-mask-operations.rst

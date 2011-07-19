@@ -116,7 +116,7 @@ Result
 
 * You should get a nice window as the one shown below:
 
-  .. image:: images/Display_Image_Tutorial_Result.png
+  .. image:: images/Display_Image_Tutorial_Result.jpg
      :alt: Display Image Tutorial - Final Result
      :align: center 
 

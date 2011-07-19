@@ -41,7 +41,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   =========== ======================================================
 
-  .. |Usage_1| image:: images/gccegg-65.png
+  .. |Usage_1| image:: images/gccegg-65.jpg
                :height: 90pt
                :width:  90pt
 
@@ -137,7 +137,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   ============= ======================================================
 
-  .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.png
+  .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.jpg
                    :height: 90pt
                    :width:  90pt
 
@@ -155,9 +155,13 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   =============== ======================================================
 
-  .. |Beginners_2| image:: images/Load_Save_Image_Result_1.png
+  .. |Beginners_2| image:: images/Load_Save_Image_Result_1.jpg
                    :height: 90pt
                    :width:  90pt
+
+.. raw:: latex
+
+   \pagebreak
 
 .. We use a custom table of content format and as the table of content only imforms Sphinx about the hierarchy of the files, no need to show it.
 .. toctree::

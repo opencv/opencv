@@ -43,7 +43,7 @@ Opening
 
 * For instance, check out the example below. The image at the left is the original and the image at the right is the result after applying the opening transformation. We can observe that the small spaces in the corners of the letter tend to dissapear.
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Opening.png
+  .. image:: images/Morphology_2_Tutorial_Theory_Opening.jpg
      :height: 150pt
      :alt: Opening
      :align: center  
@@ -59,7 +59,7 @@ Closing
 
 * Useful to remove small holes (dark regions). 
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Closing.png
+  .. image:: images/Morphology_2_Tutorial_Theory_Closing.jpg
      :height: 150pt
      :alt: Closing example
      :align: center  
@@ -76,7 +76,7 @@ Morphological Gradient
 
 * It is useful for finding the outline of an object as can be seen below:
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Gradient.png
+  .. image:: images/Morphology_2_Tutorial_Theory_Gradient.jpg
      :height: 150pt
      :alt: Gradient
      :align: center  
@@ -91,7 +91,7 @@ Top Hat
    
      dst = tophat( src, element ) = src - open( src, element )
 
-  .. image:: images/Morphology_2_Tutorial_Theory_TopHat.png
+  .. image:: images/Morphology_2_Tutorial_Theory_TopHat.jpg
      :height: 150pt
      :alt: Top Hat
      :align: center  
@@ -105,7 +105,7 @@ Black Hat
  
      dst = blackhat( src, element ) = close( src, element ) - src
 
-  .. image:: images/Morphology_2_Tutorial_Theory_BlackHat.png
+  .. image:: images/Morphology_2_Tutorial_Theory_BlackHat.jpg
      :height: 150pt
      :alt: Black Hat
      :align: center    
@@ -279,7 +279,7 @@ Results
 
 * And here are two snapshots of the display window. The first picture shows the output after using the operator **Opening** with a cross kernel. The second picture (right side, shows the result of using a **Blackhat** operator with an ellipse kernel.
  
-  .. image:: images/Morphology_2_Tutorial_Cover.png
+  .. image:: images/Morphology_2_Tutorial_Cover.jpg
      :height: 300pt
      :alt: Morphology 2: Result sample
      :align: center 

@@ -42,7 +42,7 @@ In this section you will learn about the image processing (manipulation) functio
   
   ===================== ==============================================
   
-  .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.png
+  .. |ImageProcessing_2| image:: images/Morphology_1_Tutorial_Cover.jpg
                          :height: 90pt
                          :width:  90pt
      
@@ -61,7 +61,7 @@ In this section you will learn about the image processing (manipulation) functio
   
   ================= ==================================================
   
-  .. |Morphology_2| image:: images/Morphology_2_Tutorial_Cover.png
+  .. |Morphology_2| image:: images/Morphology_2_Tutorial_Cover.jpg
                      :height: 90pt
                      :width:  90pt
   
@@ -81,7 +81,7 @@ In this section you will learn about the image processing (manipulation) functio
   
   ===================== ==============================================
   
-  .. |Pyramids| image:: images/Pyramids_Tutorial_Cover.png
+  .. |Pyramids| image:: images/Pyramids_Tutorial_Cover.jpg
                       :height: 90pt
                       :width:  90pt
   
@@ -101,7 +101,7 @@ In this section you will learn about the image processing (manipulation) functio
   
   ===================== ==============================================
   
-  .. |Threshold| image:: images/Threshold_Tutorial_Cover.png
+  .. |Threshold| image:: images/Threshold_Tutorial_Cover.jpg
                       :height: 90pt
                       :width:  90pt
   
@@ -507,7 +507,9 @@ In this section you will learn about the image processing (manipulation) functio
                 :height: 90pt
                 :width:  90pt
 
+.. raw:: latex
 
+   \pagebreak
 
 .. toctree::
    :hidden:

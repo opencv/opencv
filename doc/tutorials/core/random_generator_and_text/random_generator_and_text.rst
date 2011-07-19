@@ -229,56 +229,56 @@ As you just saw in the Code section, the program will sequentially execute diver
 
 #. First a random set of *NUMBER* lines will appear on screen such as it can be seen in this screenshot:
 
-   .. image:: images/Drawing_2_Tutorial_Result_0.png
+   .. image:: images/Drawing_2_Tutorial_Result_0.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 0
       :align: center 
 
 #. Then, a new set of figures, these time *rectangles* will follow:
 
-   .. image:: images/Drawing_2_Tutorial_Result_1.png
+   .. image:: images/Drawing_2_Tutorial_Result_1.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 1
       :align: center 
 
 #. Now some ellipses will appear, each of them with random position, size, thickness and arc length:
 
-   .. image:: images/Drawing_2_Tutorial_Result_2.png
+   .. image:: images/Drawing_2_Tutorial_Result_2.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 2
       :align: center 
 
 #. Now, *polylines* with 03 segments will appear on screen, again in random configurations.
 
-   .. image:: images/Drawing_2_Tutorial_Result_3.png
+   .. image:: images/Drawing_2_Tutorial_Result_3.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 3
       :align: center 
 
 #. Filled polygons (in this example triangles) will follow:
 
-   .. image:: images/Drawing_2_Tutorial_Result_4.png
+   .. image:: images/Drawing_2_Tutorial_Result_4.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 4
       :align: center 
 
 #. The last geometric figure to appear: circles!
 
-   .. image:: images/Drawing_2_Tutorial_Result_5.png
+   .. image:: images/Drawing_2_Tutorial_Result_5.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 5
       :align: center 
 
 #. Near the end, the text *"Testing Text Rendering"* will appear in a variety of fonts, sizes, colors and positions.
 
-   .. image:: images/Drawing_2_Tutorial_Result_6.png
+   .. image:: images/Drawing_2_Tutorial_Result_6.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 6
       :align: center 
 
 #. And the big end (which by the way expresses a big truth too):
 
-   .. image:: images/Drawing_2_Tutorial_Result_7.png
+   .. image:: images/Drawing_2_Tutorial_Result_7.jpg
       :height: 300px
       :alt: Drawing Tutorial 2 - Final Result 7
       :align: center 

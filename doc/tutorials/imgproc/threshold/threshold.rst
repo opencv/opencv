@@ -28,7 +28,7 @@ What is Thresholding?
 
 * Once we have separated properly the important pixels, we can set them with a determined value to identify them (i.e. we can assign them a value of :math:`0` (black), :math:`255` (white) or any value  that suits your needs).
 
-  .. image:: images/Threshold_Tutorial_Theory_Example.png
+  .. image:: images/Threshold_Tutorial_Theory_Example.jpg
      :alt: Threshold simple example
      :height: 150pt
      :align: center 
@@ -42,7 +42,7 @@ Types of Thresholding
 
 * To illustrate how these thresholding processes work, let's consider that we have a source image with pixels with intensity values :math:`src(x,y)`. The plot below depicts this. The horizontal blue line represents the threshold :math:`thresh` (fixed).
 
-  .. image:: images/Threshold_Tutorial_Theory_Base_Figure.png
+  .. image:: images/Threshold_Tutorial_Theory_Base_Figure.jpg
      :alt: Threshold Binary
      :height: 100pt
      :align: center 
@@ -58,7 +58,7 @@ Threshold Binary
  
 * So, if the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`MaxVal`. Otherwise, the pixels are set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Binary.png
+  .. image:: images/Threshold_Tutorial_Theory_Binary.jpg
      :alt: Threshold Binary
      :height: 100pt
      :align: center 
@@ -75,7 +75,7 @@ Threshold Binary, Inverted
 
 * If the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`0`. Otherwise, it is set to :math:`MaxVal`.
         
-  .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.png
+  .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.jpg
      :alt: Threshold Binary Inverted
      :height: 100pt
      :align: center 
@@ -91,7 +91,7 @@ Truncate
        
 * The maximum intensity value for the pixels is :math:`thresh`, if :math:`src(x,y)` is greater, then its value is *truncated*. See figure below:
  
-  .. image:: images/Threshold_Tutorial_Theory_Truncate.png
+  .. image:: images/Threshold_Tutorial_Theory_Truncate.jpg
      :alt: Threshold Truncate
      :height: 100pt
      :align: center 
@@ -109,7 +109,7 @@ Threshold to Zero
 
 * If :math:`src(x,y)` is lower than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Zero.png
+  .. image:: images/Threshold_Tutorial_Theory_Zero.jpg
      :alt: Threshold Zero
      :height: 100pt
      :align: center 
@@ -126,7 +126,7 @@ Threshold to Zero, Inverted
 
 * If  :math:`src(x,y)` is greater than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.png
+  .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.jpg
      :alt: Threshold Zero Inverted
      :height: 100pt
      :align: center 
@@ -296,7 +296,7 @@ Results
 #. After compiling this program, run it giving a path to an image as argument. For instance, for an input image as:
 
 
-   .. image:: images/Threshold_Tutorial_Original_Image.png
+   .. image:: images/Threshold_Tutorial_Original_Image.jpg
       :alt: Threshold Original Image
       :height: 200pt
       :align: center 
@@ -304,7 +304,7 @@ Results
 #. First, we try to threshold our image with a *binary threhold inverted*. We expect that the pixels brighter than the :math:`thresh` will turn dark, which is what actually happens, as we can see in the snapshot below (notice from the original image, that the doggie's tongue and eyes are particularly bright in comparison with the image, this is reflected in the output image).
 
 
-   .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.png
+   .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.jpg
       :alt: Threshold Result Binary Inverted
       :height: 200pt
       :align: center 
@@ -312,7 +312,7 @@ Results
 
 #. Now we try with the *threshold to zero*. With this, we expect that the darkest pixels (below the threshold) will become completely black, whereas the pixels with value greater than the threshold will keep its original value. This is verified by the following snapshot of the output image:
 
-   .. image:: images/Threshold_Tutorial_Result_Zero.png
+   .. image:: images/Threshold_Tutorial_Result_Zero.jpg
       :alt: Threshold Result Zero
       :height: 200pt
       :align: center 

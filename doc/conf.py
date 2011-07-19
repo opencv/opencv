@@ -168,9 +168,9 @@ html_use_index = True
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'opencv'
 
-# OpenCV docs use some custom LaTeX macros in the formulae. Make sure we include the definitions
+# OpenCV docs use some custom LaTeX macros in the formula. Make sure we include the definitions
 pngmath_latex_preamble = r"""
-\usepackage{euler}\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}
+\usepackage{euler}\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\usepackage[table]{xcolor}
 \newcommand{\matTT}[9]{
 \[
 \left|\begin{array}{ccc}
@@ -235,6 +235,7 @@ preamble ="""
 \usepackage{euler}
 \usepackage[scaled=0.85]{beramono}
 \usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}
+\usepackage[table]{xcolor}
 """
 
 latex_elements = {'preamble': preamble}
@@ -308,44 +309,48 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'threshold': ('http://opencv.willowgarage.com/documentation/cpp/miscellaneous_image_transformations.html#cv-threshold%s', None),
             'filter2d': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-filter2d%s', None),
             'copy_make_border': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_image_filtering.html?#copyMakeBorder%s', None),
-	    'sobel': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-sobel%s', None),
- 	    'scharr': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-scharr%s', None),
+            'sobel': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-sobel%s', None),
+             'scharr': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-scharr%s', None),
             'laplacian': ('http://opencv.willowgarage.com/documentation/cpp/image_filtering.html#cv-laplacian%s', None),
-	    'canny': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#Canny%s', None),
-	    'copy_to': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?#Mat::copyTo%s', None), 	
+            'canny': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#Canny%s', None),
+            'copy_to': ('http://opencv.willowgarage.com/documentation/cpp/core_basic_structures.html?#Mat::copyTo%s', None), 	
             'opencv_group' : ('http://tech.groups.yahoo.com/group/OpenCV/%s', None),
-	    'hough_lines' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghlines%s', None),
-	    'hough_lines_p' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghlinesp%s', None),
-	    'hough_circles' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghcircles%s', None),
-	    'remap' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#remap%s', None),
-	    'warp_affine' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-warpaffine%s' , None),
-	    'get_rotation_matrix_2d' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getrotationmatrix2d%s', None),
+            'hough_lines' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghlines%s', None),
+            'hough_lines_p' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghlinesp%s', None),
+            'hough_circles' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-houghcircles%s', None),
+            'remap' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#remap%s', None),
+            'warp_affine' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-warpaffine%s' , None),
+            'get_rotation_matrix_2d' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getrotationmatrix2d%s', None),
             'get_affine_transform' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_geometric_image_transformations.html?#cv-getaffinetransform%s', None),
             'equalize_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#equalizeHist%s', None),
-	    'split' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#split%s', None),
-	    'calc_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcHist%s', None),
+            'split' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#split%s', None),
+            'calc_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcHist%s', None),
             'normalize' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#normalize%s', None),
-	    'match_template' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_object_detection.html?#matchTemplate%s', None),
-	    'min_max_loc' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#minMaxLoc%s', None),
-	    'mix_channels' : ( 'http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#mixChannels%s', None),
-	    'calc_back_project' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcBackProject%s', None),
+            'match_template' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_object_detection.html?#matchTemplate%s', None),
+            'min_max_loc' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#minMaxLoc%s', None),
+            'mix_channels' : ( 'http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#mixChannels%s', None),
+            'calc_back_project' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#calcBackProject%s', None),
             'compare_hist' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_histograms.html?#compareHist%s', None),
-	    'corner_harris' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cornerHarris%s', None),
-	    'good_features_to_track' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-goodfeaturestotrack%s', None),
-	    'corner_min_eigenval' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornermineigenval%s', None), 
-	    'corner_eigenvals_and_vecs' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornereigenvalsandvecs%s', None), 
-	    'corner_sub_pix' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornersubpix%s', None),
+            'corner_harris' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cornerHarris%s', None),
+            'good_features_to_track' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-goodfeaturestotrack%s', None),
+            'corner_min_eigenval' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornermineigenval%s', None), 
+            'corner_eigenvals_and_vecs' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornereigenvalsandvecs%s', None), 
+            'corner_sub_pix' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_feature_detection.html?#cv-cornersubpix%s', None),
             'find_contours' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-findcontours%s', None), 
-	    'convex_hull' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-convexhull%s', None),
+            'convex_hull' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-convexhull%s', None),
             'draw_contours' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-drawcontours%s', None),
             'bounding_rect' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-boundingrect%s', None),
             'min_enclosing_circle' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-minenclosingcircle%s', None),
-	    'min_area_rect' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-minarearect%s', None),
+            'min_area_rect' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-minarearect%s', None),
             'fit_ellipse' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-fitellipse%s', None),
             'moments' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-moments%s', None),
             'contour_area' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-contourarea%s', None),
-            'arc_length' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-arclength%s', None), 	
-	    'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None)
+            'arc_length' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-arclength%s', None),
+            'basicstructures' : ('http://opencv.itseez.com/modules/core/doc/basic_structures.html#%s', None),
+            'readwriteimagevideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
+            'operationsonarrays' : ('http://opencv.itseez.com/modules/core/doc/operations_on_arrays.html#%s', None),
+            'utilitysystemfunctions':('http://opencv.itseez.com/modules/core/doc/utility_and_system_functions_and_macros.html%s', None),
+            'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None)
            }
 
 

@@ -5,11 +5,6 @@
 
 This section contains valuable tutorials about how to read/save your image/video files and how to use the built-in graphical user interface of the library. 
 
-.. toctree::
-   :hidden:
-   
-   ../trackbar/trackbar
-
 * :ref:`Adding_Trackbars`
 
      =============== ======================================================
@@ -21,6 +16,15 @@ This section contains valuable tutorials about how to read/save your image/video
     
      =============== ======================================================
     
-     .. |Beginners_5| image:: images/Adding_Trackbars_Tutorial_Cover.png
+     .. |Beginners_5| image:: images/Adding_Trackbars_Tutorial_Cover.jpg
                       :height: 100pt
                       :width:  100pt
+
+.. raw:: latex
+
+   \pagebreak
+
+.. toctree::
+   :hidden:
+
+   ../trackbar/trackbar

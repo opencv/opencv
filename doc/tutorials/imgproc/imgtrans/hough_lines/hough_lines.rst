@@ -91,13 +91,19 @@ b. **The Probabilistic Hough Line Transform**
 Code
 ======
 
+.. |TutorialHoughLinesSimpleDownload| replace:: here
+.. _TutorialHoughLinesSimpleDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp
+.. |TutorialHoughLinesFancyDownload| replace:: here
+.. _TutorialHoughLinesFancyDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
+
+
 #. **What does this program do?**
  
    * Loads an image
    * Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*. 
    * Display the original image and the detected line in two windows.
 
-#. The sample code that we will explain can be downloaded from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp>`_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found  `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp>`_
+#. The sample code that we will explain can be downloaded from  |TutorialHoughLinesSimpleDownload|_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found  |TutorialHoughLinesFancyDownload|_.
 
 .. code-block:: cpp 
 
@@ -113,12 +119,12 @@ Code
    {
     cout << "\nThis program demonstrates line finding with the Hough transform.\n"
             "Usage:\n"
-            "./houghlines <image_name>, Default is pic1.png\n" << endl;
+            "./houghlines <image_name>, Default is pic1.jpg\n" << endl;
    }
 
    int main(int argc, char** argv)
    {
-    const char* filename = argc >= 2 ? argv[1] : "pic1.png";
+    const char* filename = argc >= 2 ? argv[1] : "pic1.jpg";
 
     Mat src = imread(filename, 0);
     if(src.empty())
