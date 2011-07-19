@@ -1,12 +1,12 @@
 package org.opencv.test.calib3d;
 
-import org.opencv.CvType;
-import org.opencv.Mat;
-import org.opencv.Point;
-import org.opencv.Scalar;
-import org.opencv.Size;
-import org.opencv.calib3d;
-import org.opencv.core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.test.OpenCVTestCase;
 
 public class calib3dTest extends OpenCVTestCase {
@@ -27,7 +27,7 @@ public class calib3dTest extends OpenCVTestCase {
 		Mat outRvec = new Mat(3, 1, CvType.CV_32F); outRvec.put(0, 0, 1.418641, 0.88665926, 0.56020796);
 		Mat outTvec = new Mat(3, 1, CvType.CV_32F); outTvec.put(0, 0, 1.4560841, 1.0680628, 0.81598103);
 
-		calib3d.composeRT(rvec1, tvec1, rvec2, tvec2, rvec3, tvec3);
+		Calib3d.composeRT(rvec1, tvec1, rvec2, tvec2, rvec3, tvec3);
 		
 		assertMatEqual(outRvec, rvec3);
 		assertMatEqual(outTvec, tvec3);
@@ -145,10 +145,10 @@ public class calib3dTest extends OpenCVTestCase {
 	public void testFilterSpecklesMatDoubleIntDouble() {
 		gray_16s_1024.copyTo(dst);	    
 		Point center = new Point(gray_16s_1024.rows()/2., gray_16s_1024.cols()/2.);		
-		core.circle(dst, center, 1, Scalar.all(4096));
+		Core.circle(dst, center, 1, Scalar.all(4096));
 		
 		assertMatNotEqual(gray_16s_1024, dst);
-	    calib3d.filterSpeckles(dst, 1024.0, 100, 0.);
+	    Calib3d.filterSpeckles(dst, 1024.0, 100, 0.);
 	    assertMatEqual(gray_16s_1024, dst);
 	}
 
@@ -158,14 +158,14 @@ public class calib3dTest extends OpenCVTestCase {
 
 	public void testFindChessboardCornersMatSizeMat() {
 		Size patternSize = new Size(9, 6);
-		calib3d.findChessboardCorners(grayChess, patternSize, dst);
+		Calib3d.findChessboardCorners(grayChess, patternSize, dst);
 		assertTrue(!dst.empty());
 	}
 
 	public void testFindChessboardCornersMatSizeMatInt() {
 		Size patternSize = new Size(9, 6);
-		calib3d.findChessboardCorners(grayChess, patternSize, dst, 
-			calib3d.CALIB_CB_ADAPTIVE_THRESH + calib3d.CALIB_CB_NORMALIZE_IMAGE + calib3d.CALIB_CB_FAST_CHECK);
+		Calib3d.findChessboardCorners(grayChess, patternSize, dst, 
+			Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE + Calib3d.CALIB_CB_FAST_CHECK);
 		assertTrue(!dst.empty());
 	}
 

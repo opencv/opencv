@@ -1,7 +1,7 @@
 package org.opencv.test.highgui;
 
-import org.opencv.highgui;
-import org.opencv.VideoCapture;
+import org.opencv.highgui.Highgui;
+import org.opencv.highgui.VideoCapture;
 
 import org.opencv.test.OpenCVTestCase;
 
@@ -26,8 +26,8 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testGet() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
-		double frameWidth = capture.get(highgui.CV_CAP_PROP_FRAME_WIDTH);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+		double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
 		capture.release();
 		assertTrue(0 != frameWidth);
 	}
@@ -39,7 +39,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 	
 	public void testGrabFromRealCamera() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		isSucceed = capture.grab();
 		capture.release();
 		assertTrue(isSucceed);
@@ -51,7 +51,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 	
 	public void testIsOpenedRealCamera() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		isOpened = capture.isOpened();
 		capture.release();
 		assertTrue(isOpened);
@@ -59,7 +59,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 
 	public void testOpenInt() {
 		capture = new VideoCapture();
-		capture.open(highgui.CV_CAP_ANDROID);
+		capture.open(Highgui.CV_CAP_ANDROID);
 		isOpened = capture.isOpened();
 		capture.release();
 		assertTrue(isOpened);
@@ -70,7 +70,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testRead() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		isSucceed = capture.read(dst);
 		capture.release();
 		assertTrue(isSucceed);
@@ -79,13 +79,13 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testRelease() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		capture.release();
 		assertFalse(capture.isOpened());
 	}
 
 	public void testRetrieveMat() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		capture.grab();
 		isSucceed = capture.retrieve(dst);
 		capture.release();
@@ -95,7 +95,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testRetrieveMatInt() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		capture.grab();
 		isSucceed = capture.retrieve(dst, 1);
 		capture.release();
@@ -106,9 +106,9 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testSet() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
-		capture.set(highgui.CV_CAP_PROP_FRAME_WIDTH, 640.0);
-		double frameWidth = capture.get(highgui.CV_CAP_PROP_FRAME_WIDTH);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640.0);
+		double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
 		capture.read(dst);
 		capture.release();
 		assertEquals(640.0, frameWidth);
@@ -121,7 +121,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 	}
 
 	public void testVideoCaptureInt() {
-		capture = new VideoCapture(highgui.CV_CAP_ANDROID);
+		capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
 		assertTrue(null != capture);
 		isOpened = capture.isOpened();
 		capture.release();

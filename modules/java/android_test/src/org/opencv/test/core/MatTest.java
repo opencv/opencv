@@ -1,8 +1,8 @@
 package org.opencv.test.core;
 
-import org.opencv.CvType;
-import org.opencv.Mat;
-import org.opencv.Scalar;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.test.OpenCVTestCase;
 
 public class MatTest extends OpenCVTestCase {

@@ -3,12 +3,12 @@ package org.opencv.test.imgproc;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opencv.CvType;
-import org.opencv.Mat;
-import org.opencv.Scalar;
-import org.opencv.Size;
-import org.opencv.core;
-import org.opencv.imgproc;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.core.Core;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 
 
@@ -21,7 +21,7 @@ public class imgprocTest extends OpenCVTestCase {
 	//FIXME: this test crashes
 	//public void test_Can_Call_accumulate() {
 	//	 dst = new Mat(gray1.rows(), gray1.cols(), Mat.CvType.CV_32FC1);
-	//	 imgproc.accumulate(gray1, dst);
+	//	 Imgproc.accumulate(gray1, dst);
 	//	 assertMatEqual(gray1, dst);
 	//}
 
@@ -80,10 +80,10 @@ public class imgprocTest extends OpenCVTestCase {
 	public void testBlurMatMatSize() {
 		Size sz = new Size(3, 3);
 
-		imgproc.blur(gray0, dst, sz);
+		Imgproc.blur(gray0, dst, sz);
 		assertMatEqual(gray0, dst);
 
-		imgproc.blur(gray255, dst, sz);
+		Imgproc.blur(gray255, dst, sz);
 		assertMatEqual(gray255, dst);
 	}
 
@@ -105,7 +105,7 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testBoxFilterMatMatIntSize() {
 		Size sz = new Size(3, 3);
-		imgproc.boxFilter(gray0, dst, 8, sz);
+		Imgproc.boxFilter(gray0, dst, 8, sz);
 		assertMatEqual(gray0, dst);
 	}
 
@@ -133,13 +133,13 @@ public class imgprocTest extends OpenCVTestCase {
 		ranges.add(0.0f); ranges.add(256.0f);
 
 		Mat hist = new Mat();
-		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
-		core.normalize(hist, hist);
+		Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		Core.normalize(hist, hist);
 		
-		imgproc.calcBackProject(images, channels, hist, dst, ranges, 255);
+		Imgproc.calcBackProject(images, channels, hist, dst, ranges, 255);
 		assertTrue(grayChess.size().equals(dst.size()));
 		assertEquals(grayChess.depth(), dst.depth());
-		assertTrue(0 != core.countNonZero(dst));
+		assertTrue(0 != Core.countNonZero(dst));
 	}
 
 	public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
@@ -157,7 +157,7 @@ public class imgprocTest extends OpenCVTestCase {
 		truth.put(5, 0, 100.0);
 		
 		Mat hist = new Mat();
-		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
 		assertMatEqual(truth, hist);
 	}
 	
@@ -183,7 +183,7 @@ public class imgprocTest extends OpenCVTestCase {
 		truth.put(9, 5, 100.0);
 		
 		Mat hist = new Mat();
-		imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
+		Imgproc.calcHist(images, channels, new Mat(), hist, histSize, ranges);
 		assertMatEqual(truth, hist);
 	}
 

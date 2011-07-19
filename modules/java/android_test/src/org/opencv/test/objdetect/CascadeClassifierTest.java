@@ -2,10 +2,10 @@ package org.opencv.test.objdetect;
 
 import java.util.ArrayList;
 
-import org.opencv.Mat;
-import org.opencv.Rect;
-import org.opencv.Size;
-import org.opencv.imgproc;
+import org.opencv.core.Mat;
+import org.opencv.core.Rect;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -36,7 +36,7 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 		ArrayList<Rect> faces = new ArrayList<Rect>();
 		
 		Mat greyLena = new Mat();
-		imgproc.cvtColor(rgbLena, greyLena, imgproc.COLOR_RGB2GRAY);
+		Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);
 		
 		//TODO: doesn't detect with 1.1 scale
 		cc.detectMultiScale(greyLena, faces, 1.09, 2, 2 /*TODO: CV_HAAR_SCALE_IMAGE*/, new Size(30, 30));

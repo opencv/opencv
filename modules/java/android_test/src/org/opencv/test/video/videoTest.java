@@ -1,10 +1,10 @@
 package org.opencv.test.video;
 
-import org.opencv.CvType;
-import org.opencv.Mat;
-import org.opencv.Size;
-import org.opencv.core;
-import org.opencv.video;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.core.Core;
+import org.opencv.video.Video;
 import org.opencv.test.OpenCVTestCase;
 
 
@@ -59,8 +59,8 @@ public class videoTest extends OpenCVTestCase {
 		Mat prevPts = new Mat(1, 3, CvType.CV_32FC2);
 		prevPts.put(0, 0, 1.0, 1.0, 5.0, 5.0, 10.0, 10.0);
 		
-		video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
-		assertEquals(3, core.countNonZero(status));		
+		Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
+		assertEquals(3, Core.countNonZero(status));		
 	}
 
 	public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSize() {
@@ -68,8 +68,8 @@ public class videoTest extends OpenCVTestCase {
 		prevPts.put(0, 0, 1.0, 1.0, 5.0, 5.0, 10.0, 10.0);
 		
 		Size sz = new Size(5, 5);
-		video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
-		assertEquals(0, core.countNonZero(status));
+		Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
+		assertEquals(0, Core.countNonZero(status));
 	}
 
 	public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSizeInt() {

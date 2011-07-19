@@ -2,11 +2,11 @@ package org.opencv.test;
 
 import junit.framework.TestCase;
 
-import org.opencv.CvType;
-import org.opencv.Mat;
-import org.opencv.Scalar;
-import org.opencv.core;
-import org.opencv.highgui;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.core.Core;
+import org.opencv.highgui.Highgui;
 
 
 public class OpenCVTestCase extends TestCase {
@@ -85,7 +85,7 @@ public class OpenCVTestCase extends TestCase {
         
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
-        grayRnd = new Mat(matSize, matSize, CvType.CV_8U); core.randu(grayRnd, low, high);
+        grayRnd = new Mat(matSize, matSize, CvType.CV_8U); Core.randu(grayRnd, low, high);
         
         gray0_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(0.0));
         gray1_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1.0));
@@ -93,7 +93,7 @@ public class OpenCVTestCase extends TestCase {
         gray9_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(9.0));
         gray255_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(255.0));
         grayE_32f = new Mat(matSize, matSize, CvType.CV_32F); grayE_32f = Mat.eye(matSize, matSize, CvType.CV_32FC1);
-        grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F); core.randu(grayRnd_32f, low, high);
+        grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F); Core.randu(grayRnd_32f, low, high);
         
         gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
         
@@ -103,8 +103,8 @@ public class OpenCVTestCase extends TestCase {
         rgba0 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(0));
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
         
-        rgbLena = highgui.imread(OpenCVTestRunner.LENA_PATH);
-        grayChess = highgui.imread(OpenCVTestRunner.CHESS_PATH);
+        rgbLena = Highgui.imread(OpenCVTestRunner.LENA_PATH);
+        grayChess = Highgui.imread(OpenCVTestRunner.CHESS_PATH);
         
 		v1 = new Mat(1, 3, CvType.CV_32F); v1.put(0, 0, 1.0, 3.0, 2.0);
 		v2 = new Mat(1, 3, CvType.CV_32F); v2.put(0, 0, 2.0, 1.0, 3.0);
@@ -163,9 +163,9 @@ public class OpenCVTestCase extends TestCase {
 
     static private double CalcPercentageOfDifference(Mat m1, Mat m2) {
         Mat cmp = new Mat(0, 0, CvType.CV_8U);
-        core.compare(m1, m2, cmp, core.CMP_EQ);
+        Core.compare(m1, m2, cmp, Core.CMP_EQ);
         double difference = 100.0 * 
-            (1.0 - Double.valueOf(core.countNonZero(cmp)) / Double.valueOf(cmp.rows() * cmp.cols()));
+            (1.0 - Double.valueOf(Core.countNonZero(cmp)) / Double.valueOf(cmp.rows() * cmp.cols()));
 
         return difference;
     }

@@ -2,8 +2,8 @@ package org.opencv.test.objdetect;
 
 import java.util.ArrayList;
 
-import org.opencv.Rect;
-import org.opencv.objdetect;
+import org.opencv.core.Rect;
+import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
 
 
@@ -17,7 +17,7 @@ public class objdetectTest extends OpenCVTestCase {
 			rects.add(r);
 		
 		int groupThreshold = 1;
-		objdetect.groupRectangles(rects, groupThreshold);
+		Objdetect.groupRectangles(rects, groupThreshold);
 		assertEquals(1, rects.size());
 	}
 
@@ -33,7 +33,7 @@ public class objdetectTest extends OpenCVTestCase {
 		
 		int groupThreshold = 1;
 		double eps = 0.2;
-		objdetect.groupRectangles(rects, groupThreshold, eps);
+		Objdetect.groupRectangles(rects, groupThreshold, eps);
 		assertEquals(2, rects.size());
 	}
 
