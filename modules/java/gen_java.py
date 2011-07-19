@@ -116,6 +116,7 @@ type_dict = {
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
+    "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
     "vector_Point": { "j_type" : "java.util.List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
     "vector_Mat" :  { "j_type" : "java.util.List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
@@ -184,6 +185,10 @@ type_dict = {
 "TermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
                   "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)",
                   "suffix" : "IID"},
+    "Vec3d"   : { "j_type" : "double[]",  "jn_args" : (("double", ".val[0]"), ("double", ".val[1]"), ("double", ".val[2]")),
+                  "jn_type" : "double[]",
+                  "jni_var" : "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)", "jni_type" : "jdoubleArray",
+                  "suffix" : "DDD"},
 
 }
 
@@ -510,7 +515,9 @@ class JavaWrapperGenerator(object):
 #include <android/log.h>
 #define MODULE_LOG_TAG "OpenCV.%s"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#endif // DEBUG
+#else //DEBUG
+#define LOGD(...)
+#endif //DEBUG
 
 #include "utils.h"
 """ % module)
@@ -535,10 +542,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
   (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
 {
     try {
-#ifdef DEBUG
         LOGD("core::n_1minMaxLoc()");
-#endif // DEBUG
-
         jdoubleArray result;
         result = env->NewDoubleArray(6);
         if (result == NULL) {
@@ -569,17 +573,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
 	return result;
 
     } catch(cv::Exception e) {
-#ifdef DEBUG
         LOGD("core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
-#endif // DEBUG
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-#ifdef DEBUG
         LOGD("core::n_1minMaxLoc() catched unknown exception (...)");
-#endif // DEBUG
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::minMaxLoc()}");
         return NULL;
@@ -590,10 +590,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
   (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
 {
     try {
-#ifdef DEBUG
         LOGD("core::n_1getTextSize()");
-#endif // DEBUG
-
         jdoubleArray result;
         result = env->NewDoubleArray(2);
         if (result == NULL) {
@@ -624,17 +621,13 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
         return result;
 
     } catch(cv::Exception e) {
-#ifdef DEBUG
         LOGD("core::n_1getTextSize() catched cv::Exception: %s", e.what());
-#endif // DEBUG
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-#ifdef DEBUG
         LOGD("core::n_1getTextSize() catched unknown exception (...)");
-#endif // DEBUG
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
@@ -768,33 +761,27 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
 
-                    fields = type_dict[a.ctype].get("jn_args")
-                    if fields: # complex type
-                        if "I" in a.out or not a.out or a.ctype in self.classes: # input arg, pass by primitive fields
-                            for f in fields:
-                                jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
-                                jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
-                        if a.out and a.ctype not in self.classes: # out args, pass as double[]
-                            jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                            jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                            j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
-                            j_epilogue.append("%s.set(%s_out);" % (a.name, a.name))
-                            c_epilogue.append( \
-                                "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
-                                { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
-
-                    else: # primitive type
-                        if "I" in a.out or not a.out: # input arg, pass by primitive fields
-                            jn_args.append(a)
-                            jni_args.append(a)
-                        if a.out and a.ctype not in self.classes: # out args, pass as double[]
-                            jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                            jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
-                            j_prologue.append( "double[] %s_out = new double[1];" % a.name )
-                            j_epilogue.append("%s = %s_out[0];" % (a.name, a.name))
-                            c_epilogue.append( \
-                                "jdouble tmp_%(n)s[1] = {%(n)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, 1, tmp_%(n)s);" %
-                                { "n" : a.name } )
+                    fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
+                    if "I" in a.out or not a.out or a.ctype in self.classes: # input arg, pass by primitive fields
+                        for f in fields:
+                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            jni_args.append( ArgInfo([ f[0], a.name + f[1].replace(".","_").replace("[","").replace("]",""), "", [], "" ]) )
+                    if a.out and a.ctype not in self.classes: # out arg, pass as double[]
+                        jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                        jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
+                        j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
+                        set_vals = []
+                        i = 0
+                        for f in fields:
+                            set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
+                            )
+                            i += 1
+                        #j_epilogue.append("%s.set(%s_out);" % (a.name, a.name))
+                        j_epilogue.append("; ".join(set_vals) + "; ")
+                        c_epilogue.append( \
+                            "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
+                            { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
 
 
             # java part:
@@ -923,25 +910,19 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
   ($args)
 {
     try {
-#ifdef DEBUG
         LOGD("$module::$fname()");
-#endif // DEBUG
         $prologue
         $retval$cvname( $cvargs );
         $epilogue
         $ret
     } catch(cv::Exception e) {
-#ifdef DEBUG
         LOGD("$module::$fname() catched cv::Exception: %s", e.what());
-#endif // DEBUG
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         $default
     } catch (...) {
-#ifdef DEBUG
         LOGD("$module::$fname() catched unknown exception (...)");
-#endif // DEBUG
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
         $default

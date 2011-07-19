@@ -1,8 +1,12 @@
 #include "utils.h"
+
+#ifdef DEBUG
 #include <android/log.h>
 #define MODULE_LOG_TAG "OpenCV.utils.cpp"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-
+#else //DEBUG
+#define LOGD(...)
+#endif //DEBUG
 
 using namespace cv;
 
@@ -15,16 +19,21 @@ void Mat_to_vector_int(Mat& mat, vector<int>& v_int)
 	if(mat.type()!= CV_32SC1 || mat.rows!=1)
 		return;
 
+	/*
 	for(int i=0; i<mat.cols; i++)
 		v_int.push_back( mat.at< int >(0, i) );
-
+	*/
+	v_int = (vector<int>) mat;
 }
 
 void vector_int_to_Mat(vector<int>& v_int, Mat& mat)
 {
+	/*
 	mat.create(1, v_int.size(), CV_32SC1);
 	for(size_t i=0; i<v_int.size(); i++)
 		mat.at< int >(0, i) = v_int[i];
+	*/
+	mat = Mat(v_int);
 }
 
 
@@ -37,16 +46,21 @@ void Mat_to_vector_double(Mat& mat, vector<double>& v_double)
 	if(mat.type()!= CV_64FC1 || mat.rows!=1)
 		return;
 
+	/*
 	for(int i=0; i<mat.cols; i++)
 		v_double.push_back( mat.at< double >(0, i) );
-
+	*/
+	v_double = (vector<double>) mat;
 }
 
 void vector_double_to_Mat(vector<double>& v_double, Mat& mat)
 {
+	/*
 	mat.create(1, v_double.size(), CV_64FC1);
 	for(size_t i=0; i<v_double.size(); i++)
 		mat.at< double >(0, i) = v_double[i];
+	*/
+	mat = Mat(v_double);
 }
 
 
@@ -59,31 +73,38 @@ void Mat_to_vector_float(Mat& mat, vector<float>& v_float)
 	if(mat.type()!= CV_32FC1 || mat.rows!=1)
 		return;
 
+	/*
 	for(int i=0; i<mat.cols; i++)
 		v_float.push_back( mat.at< float >(0, i) );
-
+	*/
+	v_float = (vector<float>) mat;
 }
 
 void vector_float_to_Mat(vector<float>& v_float, Mat& mat)
 {
+	/*
 	mat.create(1, v_float.size(), CV_32FC1);
 	for(size_t i=0; i<v_float.size(); i++)
 		mat.at< float >(0, i) = v_float[i];
+	*/
+	mat = Mat(v_float);
 }
 
 
 //vector_uchar
 
-void Mat_to_vector_uchar(cv::Mat& mat, std::vector<uchar>& v_uchar)
+void Mat_to_vector_uchar(Mat& mat, vector<uchar>& v_uchar)
 {
 	v_uchar.clear();
 
 	if(mat.type()!= CV_8UC1 || mat.rows!=1)
 		return;
 
+	/*
 	for(int i=0; i<mat.cols; i++)
 		v_uchar.push_back( mat.at< uchar >(0, i) );
-
+	*/
+	v_uchar = (vector<uchar>) mat;
 }
 
 
