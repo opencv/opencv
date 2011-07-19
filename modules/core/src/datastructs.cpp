@@ -3945,7 +3945,7 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
 
     if( _neighborsIdx.needed() )
     {
-        _neighborsIdx.create(idx.size(), 1, CV_32S, -1, true);
+        _neighborsIdx.create((int)idx.size(), 1, CV_32S, -1, true);
         Mat nidx = _neighborsIdx.getMat();
         Mat(nidx.size(), CV_32S, &idx[0]).copyTo(nidx);
     }

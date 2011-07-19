@@ -2780,7 +2780,8 @@ public:
         size_t remaining = it->remaining, cn = DataType<_Tp>::channels;
         int _fmt = DataType<_Tp>::fmt;
         char fmt[] = { (char)((_fmt>>8)+'1'), (char)_fmt, '\0' };
-        count = std::min(count, remaining/cn);
+		size_t remaining1 = remaining/cn;
+		count = count < remaining1 ? count : remaining1;
         vec.resize(count);
         it->readRaw( string(fmt), (uchar*)&vec[0], count*sizeof(_Tp) );
     }

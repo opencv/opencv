@@ -2150,6 +2150,15 @@ CV_EXPORTS_W double invert(InputArray src, OutputArray dst, int flags=DECOMP_LU)
 //! solves linear system or a least-square problem
 CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
                         OutputArray dst, int flags=DECOMP_LU);
+
+enum
+{
+	SORT_EVERY_ROW=0,
+	SORT_EVERY_COLUMN=1,
+	SORT_ASCENDING=0,
+	SORT_DESCENDING=16
+};
+
 //! sorts independently each matrix row or each matrix column
 CV_EXPORTS_W void sort(InputArray src, OutputArray dst, int flags);
 //! sorts independently each matrix row or each matrix column
@@ -2167,7 +2176,17 @@ CV_EXPORTS bool eigen(InputArray src, OutputArray eigenvalues,
                       int lowindex=-1, int highindex=-1);
 CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
                         OutputArray eigenvalues, OutputArray eigenvectors);
-    
+
+enum
+{
+	COVAR_SCRAMBLED=0,
+	COVAR_NORMAL=1,
+	COVAR_USE_AVG=2,
+	COVAR_SCALE=4,
+	COVAR_ROWS=8,
+	COVAR_COLS=16
+};
+
 //! computes covariation matrix of a set of samples
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
                                  int flags, int ctype=CV_64F);

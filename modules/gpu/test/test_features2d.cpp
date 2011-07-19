@@ -662,12 +662,12 @@ INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher, testing::Combine(
 //    trainGPU.upload(train);
 //}
 //
-//#define GPU_BFM_TEST(test_name) \
-//    struct CV_GpuBFM_ ##test_name ## _Test : CV_GpuBFMTest \
-//    { \
-//        void test(const GpuMat& query, const GpuMat& train, BruteForceMatcher_GPU_base& matcher); \
-//    }; \
-//    TEST(BruteForceMatcher, test_name) { CV_GpuBFM_ ##test_name ## _Test test; test.safe_run(); } \
+//#define GPU_BFM_TEST(test_name) 
+//    struct CV_GpuBFM_ ##test_name ## _Test : CV_GpuBFMTest 
+//    { 
+//        void test(const GpuMat& query, const GpuMat& train, BruteForceMatcher_GPU_base& matcher); 
+//    }; 
+//    TEST(BruteForceMatcher, test_name) { CV_GpuBFM_ ##test_name ## _Test test; test.safe_run(); } 
 //    void CV_GpuBFM_ ##test_name ## _Test::test(const GpuMat& query, const GpuMat& train, BruteForceMatcher_GPU_base& matcher)
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

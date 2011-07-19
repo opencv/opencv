@@ -257,7 +257,7 @@ Mat& Mat::operator = (const Scalar& s)
             
             for( size_t j = 0; j < size; j += blockSize )
             {
-                size_t sz = std::min(blockSize, size - j);
+                size_t sz = MIN(blockSize, size - j);
                 memcpy( ptr + j, scalar, sz );
             }
         }
@@ -316,13 +316,13 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    int i, j, limit = ((size.width + 1)/2)*esz;
+    int i, j, limit = (int)(((size.width + 1)/2)*esz);
     AutoBuffer<int> _tab(size.width*esz);
     int* tab = _tab;
     
     for( i = 0; i < size.width; i++ )
         for( size_t k = 0; k < esz; k++ )
-            tab[i*esz + k] = (size.width - i - 1)*esz + k;
+            tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
 
     for( ; size.height--; src += sstep, dst += dstep )
     {

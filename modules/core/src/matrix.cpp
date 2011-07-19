@@ -928,7 +928,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == MAT )
     {
         const Mat& m = *(const Mat*)obj;
-        size_t i, n = m.size[0];
+        int i, n = (int)m.size[0];
         mv.resize(n);
         
         for( i = 0; i < n; i++ )
@@ -940,7 +940,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == EXPR )
     {
         Mat m = *(const MatExpr*)obj;
-        size_t i, n = m.size[0];
+        int i, n = m.size[0];
         mv.resize(n);
         
         for( i = 0; i < n; i++ )
@@ -980,7 +980,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == STD_VECTOR_VECTOR )
     {
         const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
-        size_t i, n = vv.size();
+        int i, n = (int)vv.size();
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
         
@@ -2795,7 +2795,7 @@ NAryMatIterator& NAryMatIterator::operator ++()
             const Mat& A = *arrays[i];
             if( !A.data )
                 continue;
-            int _idx = idx;
+            int _idx = (int)idx;
             uchar* data = A.data;
             for( int j = iterdepth-1; j >= 0 && _idx > 0; j-- )
             {

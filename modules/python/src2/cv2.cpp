@@ -266,7 +266,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const char *name = "<unknown>")
         for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
             PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
             if (PyFloat_Check(item) || PyInt_Check(item)) {
-                s[i] = PyFloat_AsDouble(item);
+                s[(int)i] = PyFloat_AsDouble(item);
             } else {
                 failmsg("Scalar value for argument '%s' is not numeric", name);
                 return false;

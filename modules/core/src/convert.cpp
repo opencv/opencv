@@ -220,7 +220,7 @@ void cv::split(const Mat& src, Mat* mv)
     SplitFunc func = splitTab[depth];
     CV_Assert( func != 0 );
     
-    int esz = src.elemSize(), esz1 = src.elemSize1();
+    int esz = (int)src.elemSize(), esz1 = (int)src.elemSize1();
     int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
@@ -305,7 +305,7 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
     }
         
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
-    int blocksize0 = (BLOCK_SIZE + esz-1)/esz;
+    int blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
     AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
     const Mat** arrays = (const Mat**)(uchar*)_buf;
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
@@ -451,12 +451,12 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
                 if( i0 < src[j].channels() )
                     break;
             CV_Assert(j < nsrcs && src[j].depth() == depth);
-            tab[i*4] = j; tab[i*4+1] = i0*esz1;
+            tab[i*4] = (int)j; tab[i*4+1] = (int)(i0*esz1);
             sdelta[i] = src[j].channels();
         }
         else
         {
-            tab[i*4] = nsrcs + ndsts; tab[i*4+1] = 0;
+            tab[i*4] = (int)(nsrcs + ndsts); tab[i*4+1] = 0;
             sdelta[i] = 0;
         }
         
@@ -464,11 +464,11 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
             if( i1 < dst[j].channels() )
                 break;
         CV_Assert(i1 >= 0 && j < ndsts && dst[j].depth() == depth);
-        tab[i*4+2] = j + nsrcs; tab[i*4+3] = i1*esz1;
+        tab[i*4+2] = (int)(j + nsrcs); tab[i*4+3] = (int)(i1*esz1);
         ddelta[i] = dst[j].channels();
     }
 
-    NAryMatIterator it(arrays, ptrs, nsrcs + ndsts);
+    NAryMatIterator it(arrays, ptrs, (int)(nsrcs + ndsts));
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = mixchTab[depth];
     
@@ -508,7 +508,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 {
     if(fromTo.empty())
         return;
-    size_t i, nsrc = src.total(), ndst = dst.total();
+    int i, nsrc = (int)src.total(), ndst = (int)dst.total();
     CV_Assert(fromTo.size()%2 == 0 && nsrc > 0 && ndst > 0);
     cv::AutoBuffer<Mat> _buf(nsrc + ndst);
     Mat* buf = _buf;
@@ -516,7 +516,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
         buf[i] = src.getMat(i);
     for( i = 0; i < ndst; i++ )
         buf[nsrc + i] = dst.getMat(i);
-    mixChannels(&buf[0], (int)nsrc, &buf[nsrc], (int)ndst, &fromTo[0], (int)(fromTo.size()/2));
+    mixChannels(&buf[0], nsrc, &buf[nsrc], ndst, &fromTo[0], fromTo.size()/2);
 }
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)

@@ -618,7 +618,7 @@ void RandomizedTree::write(std::ostream &os) const
   os.write((char*)(&classes_), sizeof(classes_));
   os.write((char*)(&depth_), sizeof(depth_));
 
-  os.write((char*)(&nodes_[0]), nodes_.size() * sizeof(nodes_[0]));
+  os.write((char*)(&nodes_[0]), (int)(nodes_.size() * sizeof(nodes_[0])));
   for (int i=0; i<num_leaves_; i++) {
     os.write((char*)posteriors_[i], classes_ * sizeof(*posteriors_[0]));
   }

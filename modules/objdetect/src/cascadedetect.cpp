@@ -173,7 +173,7 @@ public:
 	    densityKernel = densKer;
         weightsV = wV;
         positionsV = posV;
-        positionsCount = posV.size();
+        positionsCount = (int)posV.size();
 	    meanshiftV.resize(positionsCount);
         distanceV.resize(positionsCount);
         modeEps = modeEps;
@@ -316,7 +316,7 @@ protected:
 static void groupRectangles_meanshift(vector<Rect>& rectList, double detectThreshold, vector<double>* foundWeights, 
 									  vector<double>& scales, Size winDetSize)
 {
-    int detectionCount = rectList.size();
+    int detectionCount = (int)rectList.size();
     vector<Point3d> hits(detectionCount), resultHits;
     vector<double> hitWeights(detectionCount), resultWeights;
     Point2d hitCenter;
@@ -1080,7 +1080,7 @@ struct CascadeClassifierInvoker
                 if( rejectLevels )
                 {
                     if( result == 1 )
-                        result =  -1*classifier->data.stages.size();
+                        result =  -(int)classifier->data.stages.size();
                     if( classifier->data.stages.size() + result < 4 )
                     {
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height)); 

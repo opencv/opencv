@@ -2026,7 +2026,7 @@ void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
                   const Scalar& color, int lineType, int shift, Point offset)
 {
     Mat img = _img.getMat();
-    size_t i, ncontours = pts.total();
+    int i, ncontours = (int)pts.total();
     if( ncontours == 0 )
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
@@ -2050,7 +2050,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
                    int thickness, int lineType, int shift )
 {
     Mat img = _img.getMat();
-    size_t i, ncontours = pts.total();
+    int i, ncontours = (int)pts.total();
     if( ncontours == 0 )
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);

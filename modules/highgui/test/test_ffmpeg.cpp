@@ -124,10 +124,10 @@ class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
 				const int img_c = 480;
 				Size frame_s = Size(img_c, img_r);
 
-				for (size_t k = 1; k <= 5; ++k)
+				for (int k = 1; k <= 5; ++k)
 				{
-					for (size_t ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
-					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					for (int ext = 0; ext < 4; ++ext) // 0 - png, 1 - bmp, 2 - pgm, 3 - tiff
+					for (int num_channels = 1; num_channels <= 3; num_channels+=2)
 					{
 						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
 						Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
@@ -151,7 +151,7 @@ class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
 						}
 					}
 
-					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					for (int num_channels = 1; num_channels <= 3; num_channels+=2)
 					{
 						// jpeg
 						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
@@ -178,7 +178,7 @@ class CV_FFmpegWriteSequenceImageTest : public cvtest::BaseTest
 						}
 					}
 
-					for (size_t num_channels = 1; num_channels <= 3; num_channels+=2)
+					for (int num_channels = 1; num_channels <= 3; num_channels+=2)
 					{
 						// tiff
 						ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");

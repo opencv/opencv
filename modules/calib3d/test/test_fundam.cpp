@@ -372,7 +372,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
     {
         count = src.rows;
         sdims = src.channels()*src.cols;
-        sstep1 = src.step/sizeof(double);
+        sstep1 = (int)(src.step/sizeof(double));
         sstep2 = 1;
     }
     else
@@ -387,7 +387,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
         else
         {
             sstep1 = 1;
-            sstep2 = src.step/sizeof(double);
+            sstep2 = (int)(src.step/sizeof(double));
         }
     }
 
@@ -395,7 +395,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
     {
         CV_Assert( count == dst.rows );
         ddims = dst.channels()*dst.cols;
-        dstep1 = dst.step/sizeof(double);
+        dstep1 = (int)(dst.step/sizeof(double));
         dstep2 = 1;
     }
     else
@@ -410,7 +410,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
         else
         {
             dstep1 = 1;
-            dstep2 = dst.step/sizeof(double);
+            dstep2 = (int)(dst.step/sizeof(double));
         }
     }
 

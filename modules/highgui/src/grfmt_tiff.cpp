@@ -185,7 +185,7 @@ bool  TiffDecoder::readData( Mat& img )
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
         const int bitsPerByte = 8;
-        int dst_bpp = img.elemSize1() * bitsPerByte;
+        int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
 
         if(dst_bpp == 8)
         {
@@ -427,7 +427,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
     
     const int bitsPerByte = 8;
     size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
-    int rowsPerStrip = (1 << 13)/fileStep;
+    int rowsPerStrip = (int)((1 << 13)/fileStep);
 
     if( rowsPerStrip < 1 )
         rowsPerStrip = 1;

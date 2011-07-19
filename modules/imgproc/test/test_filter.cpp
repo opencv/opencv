@@ -224,7 +224,7 @@ int CV_MorphologyBaseTest::prepare_test_case( int test_case_idx )
     {
         eldata.resize(aperture_size.width*aperture_size.height);
         uchar* src = test_mat[INPUT][1].data;
-        int srcstep = test_mat[INPUT][1].step;
+        int srcstep = (int)test_mat[INPUT][1].step;
         int i, j, nonzero = 0;
 
         for( i = 0; i < aperture_size.height; i++ )
@@ -901,7 +901,7 @@ static void test_medianFilter( const Mat& src, Mat& dst, int m )
     vector<int> col_buf(m+1);
     vector<median_pair> _buf0(m*m+1), _buf1(m*m+1);
     median_pair *buf0 = &_buf0[0], *buf1 = &_buf1[0];
-    int step = src.step/src.elemSize();
+    int step = (int)(src.step/src.elemSize());
 
     assert( src.rows == dst.rows + m - 1 && src.cols == dst.cols + m - 1 &&
             src.type() == dst.type() && src.type() == CV_8UC1 );
@@ -1663,10 +1663,10 @@ static void test_integral( const Mat& img, Mat* sum, Mat* sqsum, Mat* tilted )
     double* sdata = sum->ptr<double>();
     double* sqdata = sqsum ? sqsum->ptr<double>() : 0;
     double* tdata = tilted ? tilted->ptr<double>() : 0;
-    int step = img.step/sizeof(data[0]);
-    int sstep = sum->step/sizeof(sdata[0]);
-    int sqstep = sqsum ? sqsum->step/sizeof(sqdata[0]) : 0;
-    int tstep = tilted ? tilted->step/sizeof(tdata[0]) : 0;
+    int step = (int)(img.step/sizeof(data[0]));
+    int sstep = (int)(sum->step/sizeof(sdata[0]));
+    int sqstep = sqsum ? (int)(sqsum->step/sizeof(sqdata[0])) : 0;
+    int tstep = tilted ? (int)(tilted->step/sizeof(tdata[0])) : 0;
     Size size = img.size();
 
     memset( sdata, 0, (size.width+1)*sizeof(sdata[0]) );

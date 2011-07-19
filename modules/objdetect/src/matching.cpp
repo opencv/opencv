@@ -202,8 +202,7 @@ int getFFTImageFilterObject(const CvLSVMFilterObject *filter,
                             int mapDimX, int mapDimY,
                             CvLSVMFftImage **image)
 {
-    unsigned int i, mapSize, filterSize;
-    int res;
+    int i, mapSize, filterSize, res;
     float *newFilter, *rot2PIFilter;    
     
     filterSize = filter->sizeX * filter->sizeY;

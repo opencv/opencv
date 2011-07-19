@@ -1954,7 +1954,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
     }
     
     w = &test_mat[TEMP][0];
-    step = w->rows == 1 ? 1 : w->step1();
+    step = w->rows == 1 ? 1 : (int)w->step1();
     for( i = 0; i < min_size; i++ )
     {
         double normval = 0, aii;

@@ -736,7 +736,7 @@ float ChamferMatcher::Matching::getAngle(coordinate_t a, coordinate_t b, int& dx
 void ChamferMatcher::Matching::findContourOrientations(const template_coords_t& coords, template_orientations_t& orientations)
 {
 	const int M = 5;
-	int coords_size = coords.size();
+	int coords_size = (int)coords.size();
 
     std::vector<float> angles(2*M);
         orientations.insert(orientations.begin(), coords_size, float(-3*CV_PI)); // mark as invalid in the beginning
@@ -808,11 +808,12 @@ ChamferMatcher::Template::Template(Mat& edge_image, float scale_) : addr_width(-
 
 	size.width = max.x - min.x;
 	size.height = max.y - min.y;
+	int coords_size = (int)coords.size();
 
-	center.x /= (coords.size()==0?1:coords.size());
-	center.y /= (coords.size()==0?1:coords.size());
+	center.x /= MAX(coords_size, 1);
+	center.y /= MAX(coords_size, 1);
 
-	for (size_t i=0;i<coords.size();++i) {
+	for (int i=0;i<coords_size;++i) {
 		coords[i].first -= center.x;
 		coords[i].second -= center.y;
 	}

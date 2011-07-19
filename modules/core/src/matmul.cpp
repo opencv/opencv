@@ -2713,7 +2713,7 @@ double Mat::dot(InputArray _mat) const
     {
         size_t len = total()*cn;
         if( len == (size_t)(int)len )
-            return func(data, mat.data, len);
+            return func(data, mat.data, (int)len);
     }
 
     const Mat* arrays[] = {this, &mat, 0};

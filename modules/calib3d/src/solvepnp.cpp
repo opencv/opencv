@@ -132,7 +132,7 @@ namespace cv
                      const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
         {
             Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_32FC3), modelImagePoints(1, MIN_POINTS_COUNT, CV_32FC2);
-            for (size_t i = 0, colIndex = 0; i < pointsMask.size(); i++)
+            for (int i = 0, colIndex = 0; i < (int)pointsMask.size(); i++)
             {
                 if (pointsMask[i])
                 {
@@ -239,8 +239,8 @@ namespace cv
             
             void generateVar(vector<char>& mask) const
             {
-                size_t size = mask.size();
-                for (size_t i = 0; i < size; i++)
+                int size = (int)mask.size();
+                for (int i = 0; i < size; i++)
                 {
                     int i1 = generator.uniform(0, size);
                     int i2 = generator.uniform(0, size);
@@ -302,12 +302,11 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     
     if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
     {
-        size_t pointsCount = localInliers.size();
+        int i, pointsCount = (int)localInliers.size();
         Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);
-        int index;
-        for (size_t i = 0; i < localInliers.size(); i++)
+        for (i = 0; i < pointsCount; i++)
         {
-            index = localInliers[i];
+            int index = localInliers[i];
             Mat colInlierImagePoints = inlierImagePoints(Rect(i, 0, 1, 1));
             imagePoints.col(index).copyTo(colInlierImagePoints);
             Mat colInlierObjectPoints = inlierObjectPoints(Rect(i, 0, 1, 1));

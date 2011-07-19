@@ -508,11 +508,11 @@ int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
     componentIndex = kPartFilters[0] + 1;
     for (i = 1; i < kComponents; i++)
     {
-        if (filters[componentIndex]->sizeX > *maxXBorder)
+        if ((unsigned)filters[componentIndex]->sizeX > *maxXBorder)
         {
             *maxXBorder = filters[componentIndex]->sizeX;
         }
-        if (filters[componentIndex]->sizeY > *maxYBorder)
+        if ((unsigned)filters[componentIndex]->sizeY > *maxYBorder)
         {
             *maxYBorder = filters[componentIndex]->sizeY;
         }

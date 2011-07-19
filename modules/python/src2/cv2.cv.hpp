@@ -262,7 +262,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
     bps = 8;
     break;
   default:
-    return (PyObject*)failmsg("Unrecognised depth %d", i->depth);
+    return failmsg("Unrecognised depth %d", i->depth), 0;
   }
   int bpl = i->width * i->nChannels * bps;
   if (PyString_Check(pc->data) && bpl == i->widthStep && pc->offset == 0 && ((bpl * i->height) == what_size(pc->data))) {
@@ -417,7 +417,7 @@ static PyObject *cvmat_tostring(PyObject *self, PyObject *args)
     bps = CV_MAT_CN(m->type) * 8;
     break;
   default:
-    return (PyObject*)failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type));
+    return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), 0;
   }
 
   int bpl = m->cols * bps; // bytes per line
@@ -744,15 +744,14 @@ static PyObject *cvmatnd_tostring(PyObject *self, PyObject *args)
     bps = CV_MAT_CN(m->type) * 8;
     break;
   default:
-    return (PyObject*)failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type));
+    return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), 0;
   }
 
-  int l = bps;
-  for (int d = 0; d < m->dims; d++) {
+  int d, l = bps;
+  for (d = 0; d < m->dims; d++) {
     l *= m->dim[d].size;
   }
   int i[CV_MAX_DIM];
-  int d;
   for (d = 0; d < m->dims; d++) {
     i[d] = 0;
   }
@@ -1120,7 +1119,7 @@ static PyObject* cvseq_seq_getitem(PyObject *o, Py_ssize_t i)
     switch (CV_SEQ_ELTYPE(ps->a)) {
 
     case CV_SEQ_ELTYPE_POINT:
-      pt = CV_GET_SEQ_ELEM(CvPoint, ps->a, i);
+      pt = CV_GET_SEQ_ELEM(CvPoint, ps->a, (int)i);
       return Py_BuildValue("ii", pt->x, pt->y);
 
     case CV_SEQ_ELTYPE_GENERIC:
@@ -1128,14 +1127,14 @@ static PyObject* cvseq_seq_getitem(PyObject *o, Py_ssize_t i)
       case sizeof(CvQuadEdge2D):
         {
           cvsubdiv2dedge_t *r = PyObject_NEW(cvsubdiv2dedge_t, &cvsubdiv2dedge_Type);
-          r->a = (CvSubdiv2DEdge)CV_GET_SEQ_ELEM(CvQuadEdge2D, ps->a, i);
+          r->a = (CvSubdiv2DEdge)CV_GET_SEQ_ELEM(CvQuadEdge2D, ps->a, (int)i);
           r->container = ps->container;
           Py_INCREF(r->container);
           return (PyObject*)r;
         }
       case sizeof(CvConnectedComp):
         {
-          CvConnectedComp *cc = CV_GET_SEQ_ELEM(CvConnectedComp, ps->a, i);
+          CvConnectedComp *cc = CV_GET_SEQ_ELEM(CvConnectedComp, ps->a, (int)i);
           return FROM_CvConnectedComp(*cc);
         }
       default:
@@ -1143,22 +1142,22 @@ static PyObject* cvseq_seq_getitem(PyObject *o, Py_ssize_t i)
         printf("KIND %d\n", CV_SEQ_KIND(ps->a));
         assert(0);
       }
-      return PyInt_FromLong(*CV_GET_SEQ_ELEM(unsigned char, ps->a, i));
+      return PyInt_FromLong(*CV_GET_SEQ_ELEM(unsigned char, ps->a, (int)i));
 
     case CV_SEQ_ELTYPE_PTR:
     case CV_SEQ_ELTYPE_INDEX:
-      return PyInt_FromLong(*CV_GET_SEQ_ELEM(int, ps->a, i));
+      return PyInt_FromLong(*CV_GET_SEQ_ELEM(int, ps->a, (int)i));
 
     case CV_32SC4:
-      pp = CV_GET_SEQ_ELEM(pointpair, ps->a, i);
+      pp = CV_GET_SEQ_ELEM(pointpair, ps->a, (int)i);
       return Py_BuildValue("(ii),(ii)", pp->a.x, pp->a.y, pp->b.x, pp->b.y);
 
     case CV_32FC2:
-      pt2 = CV_GET_SEQ_ELEM(CvPoint2D32f, ps->a, i);
+      pt2 = CV_GET_SEQ_ELEM(CvPoint2D32f, ps->a, (int)i);
       return Py_BuildValue("ff", pt2->x, pt2->y);
 
     case CV_SEQ_ELTYPE_POINT3D:
-      pt3 = CV_GET_SEQ_ELEM(CvPoint3D32f, ps->a, i);
+      pt3 = CV_GET_SEQ_ELEM(CvPoint3D32f, ps->a, (int)i);
       return Py_BuildValue("fff", pt3->x, pt3->y, pt3->z);
 
     default:
@@ -1173,9 +1172,9 @@ static PyObject* cvseq_seq_getitem(PyObject *o, Py_ssize_t i)
 static PyObject* cvseq_map_getitem(PyObject *o, PyObject *item)
 {
   if (PyInt_Check(item)) {
-    long i = PyInt_AS_LONG(item);
+    int i = (int)PyInt_AS_LONG(item);
     if (i < 0)
-      i += cvseq_seq_length(o);
+      i += (int)cvseq_seq_length(o);
     return cvseq_seq_getitem(o, i);
   } else if (PySlice_Check(item)) {
     Py_ssize_t start, stop, step, slicelength, cur, i;
@@ -1703,13 +1702,13 @@ static int convert_to_pts_npts_contours(PyObject *o, pts_npts_contours *dst, con
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->contours = PySequence_Fast_GET_SIZE(fi);
+  dst->contours = (int)PySequence_Fast_GET_SIZE(fi);
   dst->pts = new CvPoint*[dst->contours];
   dst->npts = new int[dst->contours];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     if (!convert_to_CvPointPTR(PySequence_Fast_GET_ITEM(fi, i), &dst->pts[i], name))
       return 0;
-    dst->npts[i] = PySequence_Size(PySequence_Fast_GET_ITEM(fi, i)); // safe because convert_ just succeeded
+    dst->npts[i] = (int)PySequence_Size(PySequence_Fast_GET_ITEM(fi, i)); // safe because convert_ just succeeded
   }
   Py_DECREF(fi);
   return 1;
@@ -1772,13 +1771,13 @@ static int convert_to_cvarrseq(PyObject *o, cvarrseq *dst, const char *name = "n
         return failmsg("All elements of sequence '%s' must be same size", name);
     }
     assert(size != -1);
-    CvMat *mt = cvCreateMat((int)PySequence_Fast_GET_SIZE(fi), 1, CV_32SC(size));
+    CvMat *mt = cvCreateMat((int)PySequence_Fast_GET_SIZE(fi), 1, CV_32SC((int)size));
     dst->freemat = true; // dealloc this mat when done
     for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
       PyObject *e = PySequence_Fast_GET_ITEM(fi, i);
       PyObject *fe = PySequence_Fast(e, name);
       assert(fe != NULL);
-      int *pdst = (int*)cvPtr2D(mt, i, 0);
+      int *pdst = (int*)cvPtr2D(mt, (int)i, 0);
       for (Py_ssize_t j = 0; j < size; j++) {
         PyObject *num = PySequence_Fast_GET_ITEM(fe, j);
         if (!PyNumber_Check(num)) {
@@ -1806,7 +1805,7 @@ static int convert_to_cvarr_count(PyObject *o, cvarr_count *dst, const char *nam
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->cvarr = new CvArr*[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     if (!convert_to_CvArr(PySequence_Fast_GET_ITEM(fi, i), &dst->cvarr[i], name))
@@ -1827,7 +1826,7 @@ static int convert_to_intpair(PyObject *o, intpair *dst, const char *name = "no_
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->pairs = new int[2 * dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1865,7 +1864,7 @@ static int convert_to_floats(PyObject *o, floats *dst, const char *name = "no_na
     PyObject *fi = PySequence_Fast(o, name);
     if (fi == NULL)
       return 0;
-    dst->count = PySequence_Fast_GET_SIZE(fi);
+    dst->count = (int)PySequence_Fast_GET_SIZE(fi);
     dst->f = new float[dst->count];
     for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
       PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1897,7 +1896,7 @@ static int convert_to_CvPoints(PyObject *o, CvPoints *dst, const char *name = "n
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->p = new CvPoint[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1916,7 +1915,7 @@ static int convert_to_CvPoint3D32fs(PyObject *o, CvPoint3D32fs *dst, const char 
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->p = new CvPoint3D32f[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1935,7 +1934,7 @@ static int convert_to_CvPoint2D32fs(PyObject *o, CvPoint2D32fs *dst, const char 
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->p = new CvPoint2D32f[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1954,7 +1953,7 @@ static int convert_to_ints(PyObject *o, ints *dst, const char *name = "no_name")
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->i = new int[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1973,7 +1972,7 @@ static int convert_to_ints0(PyObject *o, ints0 *dst, const char *name = "no_name
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->i = new int[dst->count + 1];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -1997,9 +1996,9 @@ static int convert_to_dim(PyObject *item, int i, dims *dst, CvArr *cva, const ch
   if (PySlice_Check(item)) {
     Py_ssize_t start, stop, step, slicelength;
     PySlice_GetIndicesEx((PySliceObject*)item, cvGetDimSize(cva, i), &start, &stop, &step, &slicelength);
-    dst->i[i] = start;
-    dst->step[i] = step;
-    dst->length[i] = slicelength;
+    dst->i[i] = (int)start;
+    dst->step[i] = (int)step;
+    dst->length[i] = (int)slicelength;
   } else {
     int index = PyInt_AsLong(item);
     if (0 <= index)
@@ -2023,13 +2022,13 @@ static int convert_to_dims(PyObject *o, dims *dst, CvArr *cva, const char *name 
       PyErr_SetString(PyExc_TypeError, "Expected tuple for index");
       return 0;
     }
-    dst->count = PySequence_Fast_GET_SIZE(fi);
+    dst->count = (int)PySequence_Fast_GET_SIZE(fi);
     for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
       if (i >= cvGetDims(cva)) {
         return failmsg("Access specifies %d dimensions, but array only has %d", PySequence_Fast_GET_SIZE(fi), cvGetDims(cva));
       }
       PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
-      if (!convert_to_dim(item, i, dst, cva, name))
+      if (!convert_to_dim(item, (int)i, dst, cva, name))
         return 0;
     }
     Py_DECREF(fi);
@@ -2046,7 +2045,7 @@ static int convert_to_IplImages(PyObject *o, IplImages *dst, const char *name = 
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->ims = new IplImage*[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -2066,7 +2065,7 @@ static int convert_to_CvArrs(PyObject *o, CvArrs *dst, const char *name = "no_na
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  dst->count = PySequence_Fast_GET_SIZE(fi);
+  dst->count = (int)PySequence_Fast_GET_SIZE(fi);
   dst->ims = new CvArr*[dst->count];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -2082,7 +2081,7 @@ static int convert_to_CvArrs(PyObject *o, CvArrs *dst, const char *name = "no_na
   PyObject *fi = PySequence_Fast(o, name);
   if (fi == NULL)
     return 0;
-  Py_ssize_t sz = PySequence_Fast_GET_SIZE(fi);
+  Py_ssize_t sz = (int)PySequence_Fast_GET_SIZE(fi);
   float **r = new float*[sz];
   for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
     PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -2839,20 +2838,20 @@ static PyObject *fromarray(PyObject *o, int allowND)
     cvmat_t *m = PyObject_NEW(cvmat_t, &cvmat_Type);
     if (pai->nd == 2) {
       if (pai->strides[1] != pai->itemsize) {
-        return (PyObject*)failmsg("cv.fromarray array can only accept arrays with contiguous data");
+        return failmsg("cv.fromarray array can only accept arrays with contiguous data"), 0;
       }
-      ERRWRAP(m->a = cvCreateMatHeader(pai->shape[0], pai->shape[1], type));
-      m->a->step = pai->strides[0];
+      ERRWRAP(m->a = cvCreateMatHeader((int)pai->shape[0], (int)pai->shape[1], type));
+      m->a->step = (int)pai->strides[0];
     } else if (pai->nd == 3) {
       if (pai->shape[2] > CV_CN_MAX) {
         Py_DECREF(ao);  
-        return (PyObject*)failmsg("cv.fromarray too many channels, see allowND argument");
+        return failmsg("cv.fromarray too many channels, see allowND argument"), 0;
       }
-      ERRWRAP(m->a = cvCreateMatHeader(pai->shape[0], pai->shape[1], type + ((pai->shape[2] - 1) << CV_CN_SHIFT)));
-      m->a->step = pai->strides[0];
+      ERRWRAP(m->a = cvCreateMatHeader((int)pai->shape[0], (int)pai->shape[1], type + ((int)(pai->shape[2] - 1) << CV_CN_SHIFT)));
+      m->a->step = (int)pai->strides[0];
     } else {
       Py_DECREF(ao);   
-      return (PyObject*)failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument");
+      return failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument"), 0;
     }
     m->a->data.ptr = (uchar*)pai->data;
     //retval = pythonize_foreign_CvMat(m);
@@ -2863,7 +2862,7 @@ static PyObject *fromarray(PyObject *o, int allowND)
     int dims[CV_MAX_DIM];
     int i;
     for (i = 0; i < pai->nd; i++)
-      dims[i] = pai->shape[i];
+      dims[i] = (int)pai->shape[i];
     cvmatnd_t *m = PyObject_NEW(cvmatnd_t, &cvmatnd_Type);
     ERRWRAP(m->a = cvCreateMatNDHeader(pai->nd, dims, type));
     m->a->data.ptr = (uchar*)pai->data;
@@ -2890,7 +2889,7 @@ public:
     PyObject *fi = PySequence_Fast(o, name);
     if (fi == NULL)
       return 0;
-    len = PySequence_Fast_GET_SIZE(fi);
+    len = (int)PySequence_Fast_GET_SIZE(fi);
     rr = new float*[len];
     for (Py_ssize_t i = 0; i < len; i++) {
       PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
@@ -3019,18 +3018,18 @@ static PyObject *cvarr_GetItem(PyObject *o, PyObject *key)
     // negative steps are illegal for OpenCV
     for (int i = 0; i < dd.count; i++) {
       if (dd.step[i] < 0)
-        return (PyObject*)failmsg("Negative step is illegal");
+        return failmsg("Negative step is illegal"), 0;
     }
 
     // zero length illegal for OpenCV
     for (int i = 0; i < dd.count; i++) {
       if (dd.length[i] == 0)
-        return (PyObject*)failmsg("Zero sized dimension is illegal");
+        return failmsg("Zero sized dimension is illegal"), 0;
     }
 
     // column step can only be 0 or 1
     if ((dd.step[dd.count-1] != 0) && (dd.step[dd.count-1] != 1))
-        return (PyObject*)failmsg("Column step is illegal");
+        return failmsg("Column step is illegal"), 0;
 
     if (is_cvmat(o) || is_iplimage(o)) {
       cvmat_t *sub = PyObject_NEW(cvmat_t, &cvmat_Type);
@@ -3477,7 +3476,7 @@ static PyObject *pycvSubdiv2DLocate(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     break;
   default:
-    return (PyObject*)failmsg("Unexpected loc from cvSubdiv2DLocate");
+    return failmsg("Unexpected loc from cvSubdiv2DLocate"), 0;
   }
   return Py_BuildValue("iO", (int)loc, r);
 }
@@ -3694,7 +3693,7 @@ static PyObject *shareData(PyObject *donor, CvArr *pdonor, CvMat *precipient)
     arr_data = ((iplimage_t*)donor)->data;
     ((cvmat_t*)recipient)->offset += ((iplimage_t*)donor)->offset;
   } else {
-    return (PyObject*)failmsg("Argument 'mat' must be either IplImage or CvMat");
+    return failmsg("Argument 'mat' must be either IplImage or CvMat"), 0;
   }
   ((cvmat_t*)recipient)->data = arr_data;
   Py_INCREF(arr_data);

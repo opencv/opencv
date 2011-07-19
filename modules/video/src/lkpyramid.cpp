@@ -1008,7 +1008,7 @@ ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( 8u32f, uchar, float, double, CV_CAST_32F, C
 
 CV_IMPL void
 cvCalcOpticalFlowPyrLK( const void* arrA, const void* arrB,
-                        void* pyrarrA, void* pyrarrB,
+                        void* /*pyrarrA*/, void* /*pyrarrB*/,
                         const CvPoint2D32f * featuresA,
                         CvPoint2D32f * featuresB,
                         int count, CvSize winSize, int level,

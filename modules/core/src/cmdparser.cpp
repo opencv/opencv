@@ -181,7 +181,7 @@ std::string CommandLineParser::getString(const std::string& keys) const
         }
 
         if (is_cur_found)
-            found_index=j;
+            found_index=(int)j;
     }
 
     if (found_index<0)

@@ -170,9 +170,9 @@ static void DCT_1D( const Mat& _src, Mat& _dst, int flags, const Mat& _wave=Mat(
     w = wave.ptr<double>();
     
     if( !_src.isContinuous() )
-        srcstep = _src.step/_src.elemSize();
+        srcstep = (int)(_src.step/_src.elemSize());
     if( !_dst.isContinuous() )
-        dststep = _dst.step/_dst.elemSize();
+        dststep = (int)(_dst.step/_dst.elemSize());
     
     if( _src.type() == CV_32FC1 )
     {
@@ -279,10 +279,10 @@ static void convertFromCCS( const Mat& _src0, const Mat& _src1, Mat& _dst, int f
         int srcstep = cn, dststep = 1;
         
         if( !_dst.isContinuous() )
-            dststep = _dst.step/_dst.elemSize();
+            dststep = (int)(_dst.step/_dst.elemSize());
         
         if( !_src0.isContinuous() )
-            srcstep = _src0.step/_src0.elemSize1();
+            srcstep = (int)(_src0.step/_src0.elemSize1());
         
         if( _dst.depth() == CV_32F )
         {

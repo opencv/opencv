@@ -559,7 +559,8 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
     
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
-    int i, nplanes = it.nplanes, depth = src.depth(), cn = src.channels();
+    size_t i, nplanes = it.nplanes;
+	int depth = src.depth(), cn = src.channels();
     
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -606,7 +607,8 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
-    int i, nplanes = it.nplanes, depth = src.depth(), cn = src.channels();
+    size_t i, nplanes = it.nplanes;
+	int depth = src.depth(), cn = src.channels();
     double lbuf[4], rbuf[4];
     int wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
     scalarToRawData(lb, lbuf, wtype, cn);
@@ -900,7 +902,8 @@ static void exp(const Mat& src, Mat& dst)
     
     NAryMatIterator it(arrays, planes);
     size_t j, total = planes[0].total()*src.channels();
-    int i, nplanes = it.nplanes, depth = src.depth();
+    size_t i, nplanes = it.nplanes;
+	int depth = src.depth();
     
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -928,7 +931,8 @@ static void log(const Mat& src, Mat& dst)
     
     NAryMatIterator it(arrays, planes);
     size_t j, total = planes[0].total()*src.channels();
-    int i, nplanes = it.nplanes, depth = src.depth();
+    size_t i, nplanes = it.nplanes;
+	int depth = src.depth();
     
     for( i = 0; i < nplanes; i++, ++it )
     {
@@ -1017,7 +1021,8 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
     
     NAryMatIterator it(arrays, planes);
     size_t j, total = planes[0].total();
-    int i, nplanes = it.nplanes, depth = mx.depth();
+    size_t i, nplanes = it.nplanes;
+	int depth = mx.depth();
     double scale = angleInDegrees ? 180/CV_PI : 1;
     
     for( i = 0; i < nplanes; i++, ++it )
@@ -1260,8 +1265,8 @@ struct MinMaxLocOp : public BaseElemWiseOp
     void saveOutput(const vector<int>& minidx, const vector<int>& maxidx,
                     double minval, double maxval, Mat& dst)
     {
-        size_t i, ndims = minidx.size();
-        dst.create(1, (int)(ndims*2 + 2), CV_64FC1);
+        int i, ndims = (int)minidx.size();
+        dst.create(1, ndims*2 + 2, CV_64FC1);
         
         for( i = 0; i < ndims; i++ )
         {

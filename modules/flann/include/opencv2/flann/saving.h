@@ -107,9 +107,9 @@ void save_header(FILE* stream, const NNIndex<Distance>& index)
 inline IndexHeader load_header(FILE* stream)
 {
     IndexHeader header;
-    int read_size = fread(&header,sizeof(header),1,stream);
+    size_t read_size = fread(&header,sizeof(header),1,stream);
 
-    if (read_size!=1) {
+    if (read_size!=(size_t)1) {
         throw FLANNException("Invalid index file, cannot read");
     }
 

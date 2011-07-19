@@ -191,6 +191,7 @@ CvMat *Sampler::extract()
   return r;
 }
 
+#if CV_SSE2
 static void apron(CvMat *v)
 {
   int r = v->rows;
@@ -331,11 +332,12 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
     y += yd;
   }
 
-  int l = r.size() * 9 / 10;
+  int l = (int)(r.size() * 9 / 10);
   while (l--)
     r.pop_front();
   return r;
 }
+#endif
 
 deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
 {

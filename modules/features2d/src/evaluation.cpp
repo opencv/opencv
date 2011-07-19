@@ -388,7 +388,8 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
         thresholdedOverlapMask->create( (int)keypoints1.size(), (int)keypoints2t.size(), CV_8UC1 );
         thresholdedOverlapMask->setTo( Scalar::all(0) );
     }
-    size_t minCount = min( keypoints1.size(), keypoints2t.size() );
+	size_t size1 = keypoints1.size(), size2 = keypoints2t.size();
+    size_t minCount = MIN( size1, size2 );
 
     // calculate overlap errors
     vector<SIdx> overlaps;

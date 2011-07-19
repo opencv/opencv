@@ -347,7 +347,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     uchar* sptr0 = src.data;
     int depth = src.depth(), cn = src.channels();
     int elem_size = (int)src.elemSize();
-    int step = src.step / CV_ELEM_SIZE(depth);
+    int step = (int)(src.step / CV_ELEM_SIZE(depth));
     int delta;
 
     if( interpolation != CV_INTER_CUBIC )
@@ -1100,7 +1100,7 @@ void CV_UndistortMapTest::prepare_to_validation( int )
 static void
 test_getQuadrangeSubPix( const Mat& src, Mat& dst, double* a )
 {
-    int sstep = src.step / sizeof(float);
+    int sstep = (int)(src.step / sizeof(float));
     int scols = src.cols, srows = src.rows;
     
     CV_Assert( src.depth() == CV_32F && src.type() == dst.type() );

@@ -590,7 +590,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     }
     
     double scale = nz0 ? 1./nz0 : 0.;
-    for( int k = 0; k < cn; k++ )
+    for( k = 0; k < cn; k++ )
     {
         s[k] *= scale;
         sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));

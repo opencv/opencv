@@ -68,7 +68,9 @@ struct NOP {};
 template<typename T, class Op, class Op8>
 void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op8 op8;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -117,7 +119,9 @@ template<typename T, class Op, class Op16>
 void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op16 op16;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -168,7 +172,9 @@ template<class Op, class Op32>
 void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
                int* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op32 op32;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -223,7 +229,9 @@ template<class Op, class Op32>
 void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                float* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op32 op32;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -276,7 +284,9 @@ template<class Op, class Op64>
 void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step2,
                double* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op64 op64;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -1064,7 +1074,7 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
 
                 func( ptrs[0], 0, ptrs[1], 0, haveMask ? maskbuf : ptrs[2], 0, Size(bsz*c, 1), 0 );
                 if( haveMask )
@@ -1096,7 +1106,7 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
 
                 func( ptrs[0], 0, scbuf, 0, haveMask ? maskbuf : ptrs[1], 0, Size(bsz*c, 1), 0 );
                 if( haveMask )
@@ -1322,7 +1332,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
                 uchar* dptr = ptrs[2];
@@ -1387,7 +1397,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0];
                 const uchar* sptr2 = buf2;
@@ -2181,7 +2191,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 func( ptrs[0], 0, buf, 0, ptrs[1], 0, Size(bsz, 1), &op);
                 ptrs[0] += bsz*esz;
                 ptrs[1] += bsz;
@@ -2387,7 +2397,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = (int)std::min(total - j, blocksize);
+            int bsz = (int)MIN(total - j, blocksize);
             size_t delta = bsz*esz;
             uchar *lptr = lbuf, *uptr = ubuf;
             if( !lbScalar )

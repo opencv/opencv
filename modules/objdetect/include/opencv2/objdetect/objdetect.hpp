@@ -314,7 +314,15 @@ public:
 };
 
 template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
-   
+
+enum
+{
+	CASCADE_DO_CANNY_PRUNING=1,
+	CASCADE_SCALE_IMAGE=2,
+	CASCADE_FIND_BIGGEST_OBJECT=4,
+	CASCADE_DO_ROUGH_SEARCH=8
+};
+
 class CV_EXPORTS_W CascadeClassifier
 {
 public:

@@ -442,11 +442,11 @@ void cv::Mesh3D::clearOctree(){ octree = Octree(); }
 
 float cv::Mesh3D::estimateResolution(float tryRatio)
 {
-    const size_t neighbors = 3;
-    const size_t minReasonable = 10;
+    const int neighbors = 3;
+    const int minReasonable = 10;
 
-    size_t tryNum = static_cast<size_t>(tryRatio * vtx.size());
-    tryNum = min(max(tryNum, minReasonable), vtx.size());
+    int tryNum = static_cast<int>(tryRatio * vtx.size());
+    tryNum = min(max(tryNum, minReasonable), (int)vtx.size());
 
     CvMat desc = cvMat((int)vtx.size(), 3, CV_32F, &vtx[0]);
     CvFeatureTree* tr = cvCreateKDTree(&desc);
@@ -456,7 +456,7 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     vector<Point3f> query;  
 
     RNG& rng = theRNG();          
-    for(size_t i = 0; i < tryNum; ++i)
+    for(int i = 0; i < tryNum; ++i)
         query.push_back(vtx[rng.next() % vtx.size()]);
         
     CvMat cvinds  = cvMat( (int)tryNum, neighbors, CV_32S,  &inds[0] );
@@ -466,7 +466,7 @@ float cv::Mesh3D::estimateResolution(float tryRatio)
     cvReleaseFeatureTree(tr);
 
     const int invalid_dist = -2;    
-    for(size_t i = 0; i < tryNum; ++i)
+    for(int i = 0; i < tryNum; ++i)
         if (inds[i] == -1)
             dist[i] = invalid_dist;
 
@@ -713,8 +713,8 @@ void cv::SpinImageModel::defaultParams()
 
 Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount, size_t yCount) const
 {
-    size_t spinNum = getSpinCount();
-    size_t num = min(spinNum, xCount * yCount);
+    int spinNum = (int)getSpinCount();
+    int num = min(spinNum, (int)(xCount * yCount));
 
     if (num == 0)
         return Mat();
@@ -722,11 +722,11 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
     RNG& rng = theRNG();    
 
     vector<Mat> spins;
-    for(size_t i = 0; i < num; ++i)
+    for(int i = 0; i < num; ++i)
         spins.push_back(getSpinImage( rng.next() % spinNum ).reshape(1, imageWidth));    
     
     if (separateScale)
-        for(size_t i = 0; i < num; ++i)
+        for(int i = 0; i < num; ++i)
         {
             double max;
             Mat spin8u;
@@ -737,14 +737,14 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
     else
     {    
         double totalMax = 0;
-        for(size_t i = 0; i < num; ++i)
+        for(int i = 0; i < num; ++i)
         {
             double m;
             minMaxLoc(spins[i], 0, &m);  
             totalMax = max(m, totalMax);
         }
 
-        for(size_t i = 0; i < num; ++i)
+        for(int i = 0; i < num; ++i)
         {
             Mat spin8u;
             spins[i].convertTo(spin8u, CV_8U, -255.0/totalMax, 255.0);
@@ -757,16 +757,16 @@ Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount,
     Mat result((int)(yCount * sz + (yCount - 1)), (int)(xCount * sz + (xCount - 1)), CV_8UC3);    
     result = colors[(static_cast<int64>(cvGetTickCount()/cvGetTickFrequency())/1000) % colors_mum];
 
-    size_t pos = 0;
-    for(size_t y = 0; y < yCount; ++y)
-        for(size_t x = 0; x < xCount; ++x)        
+    int pos = 0;
+    for(int y = 0; y < (int)yCount; ++y)
+        for(int x = 0; x < (int)xCount; ++x)        
             if (pos < num)
             {
-                int starty = (int)((y + 0) * sz + y);
-                int endy   = (int)((y + 1) * sz + y);
+                int starty = (y + 0) * sz + y;
+                int endy   = (y + 1) * sz + y;
 
-                int startx = (int)((x + 0) * sz + x);
-                int endx   = (int)((x + 1) * sz + x);
+                int startx = (x + 0) * sz + x;
+                int endx   = (x + 1) * sz + x;
 
                 Mat color;
                 cvtColor(spins[pos++], color, CV_GRAY2BGR);

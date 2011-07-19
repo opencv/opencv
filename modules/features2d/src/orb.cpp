@@ -58,7 +58,7 @@ template<typename PatchType, typename SumType>
     SumType * dX_data = reinterpret_cast<SumType*> (dX.data), *dY_data = reinterpret_cast<SumType*> (dY.data);
     SumType * dX_data_end = dX_data + 9 * 7;
     PatchType * patch_data = reinterpret_cast<PatchType*> (patch.data);
-    int two_row_offset = 2 * patch.step1();
+    int two_row_offset = (int)(2 * patch.step1());
     std::vector<int>::const_iterator dX_offset = dX_offsets.begin(), dY_offset = dY_offsets.begin();
     // Compute the differences
     for (; dX_data != dX_data_end; ++dX_data, ++dY_data, ++dX_offset, ++dY_offset)
@@ -127,11 +127,11 @@ HarrisResponse::HarrisResponse(const cv::Mat& image, double k) :
   dX_offsets_.resize(7 * 9);
   dY_offsets_.resize(7 * 9);
   std::vector<int>::iterator dX_offsets = dX_offsets_.begin(), dY_offsets = dY_offsets_.begin();
-  unsigned int image_step = (unsigned int)image.step1();
-  for (size_t y = 0; y <= 6 * image_step; y += image_step)
+  int x, y, image_step = (int)image.step1();
+  for (y = 0; y <= 6 * image_step; y += image_step)
   {
     int dX_offset = y + 2, dY_offset = y + 2 * image_step;
-    for (size_t x = 0; x <= 6; ++x)
+    for (x = 0; x <= 6; ++x)
     {
       *(dX_offsets++) = dX_offset++;
       *(dY_offsets++) = dY_offset++;
@@ -140,10 +140,10 @@ HarrisResponse::HarrisResponse(const cv::Mat& image, double k) :
       *(dY_offsets++) = dY_offset++;
   }
 
-  for (size_t y = 7 * image_step; y <= 8 * image_step; y += image_step)
+  for (y = 7 * image_step; y <= 8 * image_step; y += image_step)
   {
     int dX_offset = y + 2;
-    for (size_t x = 0; x <= 6; ++x)
+    for (x = 0; x <= 6; ++x)
       *(dX_offsets++) = dX_offset++;
   }
 }
@@ -405,16 +405,17 @@ private:
     }
 
     int half_kernel = ORB::kKernelWidth / 2;
-    for (unsigned int i = 0; i < 512; ++i)
+    for (int i = 0; i < 512; ++i)
     {
-      int center = *(pattern_data + 2 * i) + normalized_step_ * (*(pattern_data + 2 * i + 1));
+      int center = (int)(*(pattern_data + 2 * i) + normalized_step_ * (*(pattern_data + 2 * i + 1)));
+      int nstep = (int)normalized_step_;
       // Points in order 01
       //                 32
       // +1 is added for certain coordinates for the integral image
-      *(relative_pattern_data++) = center - half_kernel - half_kernel * normalized_step_;
-      *(relative_pattern_data++) = center + (half_kernel + 1) - half_kernel * normalized_step_;
-      *(relative_pattern_data++) = center + (half_kernel + 1) + (half_kernel + 1) * normalized_step_;
-      *(relative_pattern_data++) = center - half_kernel + (half_kernel + 1) * normalized_step_;
+      *(relative_pattern_data++) = center - half_kernel - half_kernel * nstep;
+      *(relative_pattern_data++) = center + (half_kernel + 1) - half_kernel * nstep;
+      *(relative_pattern_data++) = center + (half_kernel + 1) + (half_kernel + 1) * nstep;
+      *(relative_pattern_data++) = center - half_kernel + (half_kernel + 1) * nstep;
     }
   }
 
@@ -765,8 +766,8 @@ void ORB::computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Ma
   integral(image, integral_image, CV_32S);
   integral_image_steps_.resize(params_.n_levels_, 0);
 
-  unsigned int integral_image_step = integral_image.step1();
-  if (integral_image_steps_[level] == integral_image_step)
+  int integral_image_step = (int)integral_image.step1();
+  if ((int)integral_image_steps_[level] == integral_image_step)
     return;
 
   // If the integral image dimensions have changed, recompute everything
@@ -828,11 +829,11 @@ void ORB::computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image
   OrbPatterns* patterns = patterns_[level];
 
   //create the descriptor mat, keypoints.size() rows, BYTES cols
-  descriptors = cv::Mat::zeros(keypoints.size(), kBytes, CV_8UC1);
+  descriptors = cv::Mat::zeros((int)keypoints.size(), kBytes, CV_8UC1);
 
   for (size_t i = 0; i < keypoints.size(); i++)
     // look up the test pattern
-    patterns->compute(keypoints[i], integral_image, descriptors.ptr(i));
+    patterns->compute(keypoints[i], integral_image, descriptors.ptr((int)i));
 }
 
 }
