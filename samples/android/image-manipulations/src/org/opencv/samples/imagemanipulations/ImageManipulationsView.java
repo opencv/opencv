@@ -139,6 +139,16 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         synchronized (this) {
             // Explicitly deallocate Mats
+        	if (mZoomWindow != null)
+        		mZoomWindow.dispose();
+        	if (mZoomCorner != null)
+        		mZoomCorner.dispose();
+        	if (mBlurWindow != null)
+        		mBlurWindow.dispose();
+        	if (mGrayInnerWindow != null)
+        		mGrayInnerWindow.dispose();
+        	if (mRgbaInnerWindow != null)
+        		mRgbaInnerWindow.dispose();
             if (mRgba != null)
                 mRgba.dispose();
             if (mGray != null)
@@ -149,6 +159,11 @@ class ImageManipulationsView extends SampleCvViewBase {
             mRgba = null;
             mGray = null;
             mIntermediateMat = null;
+            mRgbaInnerWindow = null;
+            mGrayInnerWindow = null;
+            mBlurWindow = null;
+            mZoomCorner = null;
+            mZoomWindow = null;
         }
     }
 }
