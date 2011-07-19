@@ -262,7 +262,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
     bps = 8;
     break;
   default:
-    return failmsg("Unrecognised depth %d", i->depth), 0;
+    return failmsg("Unrecognised depth %d", i->depth), (PyObject*)0;
   }
   int bpl = i->width * i->nChannels * bps;
   if (PyString_Check(pc->data) && bpl == i->widthStep && pc->offset == 0 && ((bpl * i->height) == what_size(pc->data))) {
@@ -417,7 +417,7 @@ static PyObject *cvmat_tostring(PyObject *self, PyObject *args)
     bps = CV_MAT_CN(m->type) * 8;
     break;
   default:
-    return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), 0;
+          return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), (PyObject*)0;
   }
 
   int bpl = m->cols * bps; // bytes per line
@@ -744,7 +744,7 @@ static PyObject *cvmatnd_tostring(PyObject *self, PyObject *args)
     bps = CV_MAT_CN(m->type) * 8;
     break;
   default:
-    return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), 0;
+          return failmsg("Unrecognised depth %d", CV_MAT_DEPTH(m->type)), (PyObject*)0;
   }
 
   int d, l = bps;
@@ -2838,20 +2838,20 @@ static PyObject *fromarray(PyObject *o, int allowND)
     cvmat_t *m = PyObject_NEW(cvmat_t, &cvmat_Type);
     if (pai->nd == 2) {
       if (pai->strides[1] != pai->itemsize) {
-        return failmsg("cv.fromarray array can only accept arrays with contiguous data"), 0;
+        return failmsg("cv.fromarray array can only accept arrays with contiguous data"), (PyObject*)0;
       }
       ERRWRAP(m->a = cvCreateMatHeader((int)pai->shape[0], (int)pai->shape[1], type));
       m->a->step = (int)pai->strides[0];
     } else if (pai->nd == 3) {
       if (pai->shape[2] > CV_CN_MAX) {
         Py_DECREF(ao);  
-        return failmsg("cv.fromarray too many channels, see allowND argument"), 0;
+        return failmsg("cv.fromarray too many channels, see allowND argument"), (PyObject*)0;
       }
       ERRWRAP(m->a = cvCreateMatHeader((int)pai->shape[0], (int)pai->shape[1], type + ((int)(pai->shape[2] - 1) << CV_CN_SHIFT)));
       m->a->step = (int)pai->strides[0];
     } else {
       Py_DECREF(ao);   
-      return failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument"), 0;
+      return failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument"), (PyObject*)0;
     }
     m->a->data.ptr = (uchar*)pai->data;
     //retval = pythonize_foreign_CvMat(m);
@@ -3018,18 +3018,18 @@ static PyObject *cvarr_GetItem(PyObject *o, PyObject *key)
     // negative steps are illegal for OpenCV
     for (int i = 0; i < dd.count; i++) {
       if (dd.step[i] < 0)
-        return failmsg("Negative step is illegal"), 0;
+        return failmsg("Negative step is illegal"), (PyObject*)0;
     }
 
     // zero length illegal for OpenCV
     for (int i = 0; i < dd.count; i++) {
       if (dd.length[i] == 0)
-        return failmsg("Zero sized dimension is illegal"), 0;
+        return failmsg("Zero sized dimension is illegal"), (PyObject*)0;
     }
 
     // column step can only be 0 or 1
     if ((dd.step[dd.count-1] != 0) && (dd.step[dd.count-1] != 1))
-        return failmsg("Column step is illegal"), 0;
+        return failmsg("Column step is illegal"), (PyObject*)0;
 
     if (is_cvmat(o) || is_iplimage(o)) {
       cvmat_t *sub = PyObject_NEW(cvmat_t, &cvmat_Type);
@@ -3476,7 +3476,7 @@ static PyObject *pycvSubdiv2DLocate(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     break;
   default:
-    return failmsg("Unexpected loc from cvSubdiv2DLocate"), 0;
+    return failmsg("Unexpected loc from cvSubdiv2DLocate"), (PyObject*)0;
   }
   return Py_BuildValue("iO", (int)loc, r);
 }
@@ -3693,7 +3693,7 @@ static PyObject *shareData(PyObject *donor, CvArr *pdonor, CvMat *precipient)
     arr_data = ((iplimage_t*)donor)->data;
     ((cvmat_t*)recipient)->offset += ((iplimage_t*)donor)->offset;
   } else {
-    return failmsg("Argument 'mat' must be either IplImage or CvMat"), 0;
+    return failmsg("Argument 'mat' must be either IplImage or CvMat"), (PyObject*)0;
   }
   ((cvmat_t*)recipient)->data = arr_data;
   Py_INCREF(arr_data);
