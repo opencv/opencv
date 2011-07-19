@@ -209,15 +209,21 @@ class ConstInfo(object):
         self.value = val
 
 
+class ClassPropInfo(object):
+    def __init__(self, decl): # [f_ctype, f_name, '', '/RW']
+        self.ctype = decl[0]
+        self.name = decl[1]
+        self.rw = "/RW" in decl[3]
+
 class ClassInfo(object):
     def __init__(self, decl): # [ 'class/struct cname', [bases], [modlist] ]
         name = decl[0]
         name = name[name.find(" ")+1:].strip()
         self.cname = self.name = self.jname = re.sub(r"^cv\.", "", name)
         self.cname =self.cname.replace(".", "::")
-        #self.jname =  re.sub(r"^Cv", "", self.jname)
         self.methods = {}
         self.consts = [] # using a list to save the occurence order
+        self.props= []
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
@@ -351,17 +357,12 @@ public class %s {
               "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
 
-        # set/get for class fileds
-        for f in decl[3]: # [f_ctype, f_name, '', '/RW']
-            # getter
-            getter_name = classinfo.name + ".get" + f[1][0].upper() + f[1][1:]
-            print getter_name
-            #self.add_func( [getter_name, f[0], [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
-            if "/RW" in f[3]:
-                #setter
-                setter_name = classinfo.name + ".set" + f[1][0].upper() + f[1][1:]
-                print setter_name
-                #self.add_func( [ setter_name, "void", [], [ [f[0], f[1], "", [], ""] ] ] )
+        # class props
+        for p in decl[3]:
+            if "vector" not in p[0]:
+                classinfo.props.append( ClassPropInfo(p) )
+            else:
+                print "Skipped proprty: [%s]" % classinfo.name, p
 
         self.add_class_code_stream(classinfo.name)
 
@@ -713,9 +714,18 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
             if a.defval:
                 s += " = "+a.defval
             decl_args.append(s)
-
         c_decl = "%s %s %s(%s)" % ( fi.static, fi.ctype, fi.cname, ", ".join(decl_args) )
 
+        #java doc comment
+        f_name = fi.name
+        if fi.classname:
+            f_name = fi.classname + "::" + fi.name
+        java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in fi.args])
+
+        self.gen_func2(fi, isoverload, c_decl, java_doc, "")
+
+
+    def gen_func2(self, fi, isoverload, c_decl, java_doc, prop_name):
         j_code   = self.java_code[self.Module]["j_code"]
         jn_code  = self.java_code[self.Module]["jn_code"]
         cpp_code = self.cpp_code
@@ -829,12 +839,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
             # java part:
 
             #java doc comment
-            f_name = fi.name
-            if fi.classname:
-                f_name = fi.classname + "::" + fi.name
-            j_code.write("    //javadoc: " + f_name + "(%s)\n" % \
-                ", ".join([a.name for a in args])
-            )
+##            f_name = fi.name
+##            if fi.classname:
+##                f_name = fi.classname + "::" + fi.name
+            j_code.write(" "*4 + java_doc + "\n")
 
             # public java wrapper method impl (calling native one above)
             # e.g.
@@ -902,7 +910,15 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
 
-            cvname = "cv::" + fi.name
+            # hack: replacing func call with property set/get
+            name = fi.name
+            if prop_name:
+                if args:
+                    name = prop_name + " = "
+                else:
+                    name = prop_name + ";//"
+
+            cvname = "cv::" + name
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
@@ -911,9 +927,9 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
                     retval = fi.classname + "* _retval_ = "
                     cvname = "new " + fi.classname
                 elif fi.static:
-                    cvname = "%s::%s" % (fi.classname, fi.name)
+                    cvname = "%s::%s" % (fi.classname, name)
                 else:
-                    cvname = "me->" + fi.name
+                    cvname = "me->" + name
                     c_prologue.append(\
                         "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
                             % { "cls" : fi.classname} \
@@ -1013,16 +1029,28 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
                 if not ffi.isconstructor:
                     for fi in ffi.funcs:
                         self.gen_func(fi, len(ffi.funcs)>1)
+            # props
+            for pi in ci.props:
+                # getter
+                getter_name = name + ".get_" + pi.name
+                #print getter_name
+                fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
+                self.gen_func2(fi, getter_name in ci.methods, "// %s %s" % (pi.ctype, pi.name), "//javadoc: %s::%s" % (name, pi.name), pi.name)
+                if pi.rw:
+                    #setter
+                    setter_name = name + ".set_" + pi.name
+                    #print setter_name
+                    fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
+                    self.gen_func2(fi, getter_name in ci.methods, "// %s %s" % (pi.ctype, pi.name), "//javadoc: %s::%s" % (name, pi.name), pi.name)
 
             # finalize()
             self.java_code[name]["j_code"].write(
 """
-        @Override
-        protected void finalize() throws Throwable {
-            n_delete(nativeObj);
-            super.finalize();
-        }
-
+    @Override
+    protected void finalize() throws Throwable {
+        n_delete(nativeObj);
+        super.finalize();
+    }
 """ )
 
             self.java_code[name]["jn_code"].write(
