@@ -1,4 +1,4 @@
-package org.opencv;
+package org.opencv.core;
 
 public class CvException extends Exception {
 

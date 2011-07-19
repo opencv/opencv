@@ -1,4 +1,4 @@
-package org.opencv;
+package org.opencv.core;
 
 //javadoc:Point_
 public class Point {

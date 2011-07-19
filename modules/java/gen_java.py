@@ -309,6 +309,7 @@ class JavaWrapperGenerator(object):
 //
 package org.opencv.%s;
 %s
+import org.opencv.utils;
 %s
 public class %s {
 

@@ -1,10 +1,10 @@
-package org.opencv;
+package org.opencv.core;
 
 //javadoc:Mat
 public class Mat {
 
 
-    protected Mat(long nativeMat) {
+    public Mat(long nativeMat) {
         /*if(nativeMat == 0) 
             throw new java.lang.UnsupportedOperationException("Native object address is NULL");*/
         this.nativeObj = nativeMat;
@@ -44,7 +44,6 @@ public class Mat {
     @Override
     protected void finalize() throws Throwable {
         nDelete(nativeObj);
-        nativeObj = 0;
         super.finalize();
     }
 
@@ -327,7 +326,7 @@ public class Mat {
     
     // native stuff
     static { System.loadLibrary("opencv_java"); }
-    protected long nativeObj;
+    public final long nativeObj;
     private static native long nCreateMat();
     private static native long nCreateMat(int rows, int cols, int type);
     private static native long nCreateMat(int rows, int cols, int type, double v0, double v1, double v2, double v3);

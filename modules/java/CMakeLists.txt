@@ -16,6 +16,18 @@ SET(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
 
 SET(additional_clean_files "")
 
+macro(capitalize name outputvar)
+    string(SUBSTRING "${name}" 0 1 first_letter)
+    string(SUBSTRING "${name}" 1 -1 tail_letters)
+    string(TOUPPER "${first_letter}" first_letter)
+    SET(${outputvar} "${first_letter}${tail_letters}")
+endmacro()
+
+#cleanup
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove *.java *.cpp *.h *.txt
+                WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+                OUTPUT_QUIET ERROR_QUIET)
+
 foreach(module ${OPENCV_JAVA_MODULES})
     IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist")
         FILE(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/config/${module}.filelist" headers_to_parse)
@@ -31,8 +43,16 @@ foreach(module ${OPENCV_JAVA_MODULES})
         list(SORT module_cppheaders)
     ENDIF()
 
+    # first run =(
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+                  OUTPUT_QUIET ERROR_QUIET)
+
+    FILE(GLOB ${module}_generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}+*.java")
+
+    # second run =(
     add_custom_command(
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.java"
+        OUTPUT ${${module}_generated_java_sources}
         OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
         COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVA}" "${HDR_PARSER}" ${module} ${module_cheaders} ${module_cppheaders}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -52,7 +72,7 @@ SET (dependent_extra_libs "")
 
 foreach(module ${OPENCV_JAVA_MODULES})
     LIST(APPEND generated_cpp_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp")
-    LIST(APPEND generated_java_sources "${CMAKE_CURRENT_BINARY_DIR}/${module}.java")
+    LIST(APPEND generated_java_sources ${${module}_generated_java_sources})
     LIST(APPEND dependent_libs opencv_${module})
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../${module}/include")
 endforeach()
@@ -136,7 +156,9 @@ FILE(GLOB java_project_files "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
 SET(documented_java_files)
 foreach(java_file ${java_project_files} ${generated_java_sources})
     get_filename_component(java_file_name "${java_file}" NAME_WE)
-    list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
+    if (NOT java_file_name MATCHES ".*-jdoc$")
+        list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
+    endif()
 endforeach()
 
 add_custom_command(
@@ -157,6 +179,8 @@ SET(JAVA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/src/org/opencv")
 foreach(java_file ${documented_java_files})
     get_filename_component(java_file_name "${java_file}" NAME)
     string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
+    string(REPLACE "+" "/" java_file_name "${java_file_name}")
+
     add_custom_command(
         TARGET ${api_target}
         COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}/${java_file_name}"

@@ -22,7 +22,7 @@ extern "C" {
 //
 
 
-JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__
   (JNIEnv* env, jclass cls)
 {
     try {
@@ -37,7 +37,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1VideoCapture__() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -57,7 +57,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__
 //
 
 
-JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__I
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__I
   (JNIEnv* env, jclass cls, jint device)
 {
     try {
@@ -72,7 +72,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__I
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1VideoCapture__I() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -93,7 +93,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_VideoCapture_n_1VideoCapture__I
 //
 
 
-JNIEXPORT jdouble JNICALL Java_org_opencv_VideoCapture_n_1get
+JNIEXPORT jdouble JNICALL Java_org_opencv_highgui_VideoCapture_n_1get
   (JNIEnv* env, jclass cls, jlong self, jint propId)
 {
     try {
@@ -108,7 +108,7 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_VideoCapture_n_1get
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1get() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -129,7 +129,7 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_VideoCapture_n_1get
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1grab
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1grab
   (JNIEnv* env, jclass cls, jlong self)
 {
     try {
@@ -144,7 +144,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1grab
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1grab() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -165,7 +165,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1grab
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1isOpened
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1isOpened
   (JNIEnv* env, jclass cls, jlong self)
 {
     try {
@@ -180,7 +180,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1isOpened
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1isOpened() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -200,7 +200,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1isOpened
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1open__JI
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
   (JNIEnv* env, jclass cls, jlong self, jint device)
 {
     try {
@@ -215,7 +215,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1open__JI
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1open__JI() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -236,7 +236,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1open__JI
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1read
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1read
   (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj)
 {
     try {
@@ -252,7 +252,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1read
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1read() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -273,7 +273,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1read
 //
 
 
-JNIEXPORT void JNICALL Java_org_opencv_VideoCapture_n_1release
+JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1release
   (JNIEnv* env, jclass cls, jlong self)
 {
     try {
@@ -288,7 +288,7 @@ JNIEXPORT void JNICALL Java_org_opencv_VideoCapture_n_1release
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1release() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return;
@@ -309,7 +309,7 @@ JNIEXPORT void JNICALL Java_org_opencv_VideoCapture_n_1release
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJI
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJI
   (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj, jint channel)
 {
     try {
@@ -325,7 +325,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJI
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1retrieve__JJI() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -342,7 +342,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJI
 
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJ
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1retrieve__JJ
   (JNIEnv* env, jclass cls, jlong self, jlong image_nativeObj)
 {
     try {
@@ -358,7 +358,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJ
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1retrieve__JJ() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -379,7 +379,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1retrieve__JJ
 //
 
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1set
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1set
   (JNIEnv* env, jclass cls, jlong self, jint propId, jdouble value)
 {
     try {
@@ -394,7 +394,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1set
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1set() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return 0;
@@ -408,7 +408,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_VideoCapture_n_1set
     }
 }
 
-JNIEXPORT jstring JNICALL Java_org_opencv_VideoCapture_n_1getSupportedPreviewSizes
+JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPreviewSizes
   (JNIEnv *env, jclass cls, jlong self)
 {
     try {
@@ -423,7 +423,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_VideoCapture_n_1getSupportedPreviewSiz
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1getSupportedPreviewSizes() catched cv::Exception: %s", e.what());
 #endif // DEBUG
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return env->NewStringUTF("");
@@ -444,7 +444,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_VideoCapture_n_1getSupportedPreviewSiz
 //  static void VideoCapture::n_delete( __int64 self )
 //
 
-JNIEXPORT void JNICALL Java_org_opencv_VideoCapture_n_1delete
+JNIEXPORT void JNICALL Java_org_opencv_highgui_VideoCapture_n_1delete
   (JNIEnv* env, jclass cls, jlong self)
 {
     delete (VideoCapture*) self;

@@ -1,5 +1,6 @@
 package org.opencv;
 
+import org.opencv.core.Mat;
 import android.graphics.Bitmap;
 
 public class android {

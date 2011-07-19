@@ -1,7 +1,10 @@
-package org.opencv;
+package org.opencv.highgui;
 
 import java.util.List;
 import java.util.LinkedList;
+
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
 
 // C++: class VideoCapture
 //javadoc: VideoCapture

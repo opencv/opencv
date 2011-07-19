@@ -1,4 +1,4 @@
-package org.opencv;
+package org.opencv.core;
 
 //javadoc:RotatedRect_
 public class RotatedRect {

@@ -1,6 +1,13 @@
 package org.opencv.samples.tutorial1;
 
-import org.opencv.*;
+import org.opencv.android;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.CvType;
+import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -36,15 +43,15 @@ class Sample1View extends SampleViewBase {
 
         switch (Sample1Java.viewMode) {
         case Sample1Java.VIEW_MODE_GRAY:
-            imgproc.cvtColor(mGraySubmat, mRgba, imgproc.COLOR_GRAY2RGBA, 4);
+            Imgproc.cvtColor(mGraySubmat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample1Java.VIEW_MODE_RGBA:
-            imgproc.cvtColor(mYuv, mRgba, imgproc.COLOR_YUV420i2RGB, 4);
-            core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3/* CV_FONT_HERSHEY_COMPLEX */, 2, new Scalar(255, 0, 0, 255), 3);
+            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420i2RGB, 4);
+            Core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3/* CV_FONT_HERSHEY_COMPLEX */, 2, new Scalar(255, 0, 0, 255), 3);
             break;
         case Sample1Java.VIEW_MODE_CANNY:
-            imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
-            imgproc.cvtColor(mIntermediateMat, mRgba, imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
+            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
         }
 

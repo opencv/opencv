@@ -2,6 +2,11 @@ package org.opencv;
 
 import java.util.List;
 
+import org.opencv.core.Mat;
+import org.opencv.core.CvType;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.features2d.KeyPoint;
 
 public class utils {
 	
@@ -72,7 +77,7 @@ public class utils {
 		}
 	}
 
-	public static void Mat_to_vector_KeyPoint(Mat kp_mat, List<features2d.KeyPoint> kps) {
+	public static void Mat_to_vector_KeyPoint(Mat kp_mat, List<KeyPoint> kps) {
 		// TODO Auto-generated method stub
 	}
 

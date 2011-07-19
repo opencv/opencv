@@ -1,4 +1,4 @@
-package org.opencv;
+package org.opencv.core;
 
 //javadoc:Size_
 public class Size {
