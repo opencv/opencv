@@ -16,11 +16,13 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
 
     private SurfaceHolder       mHolder;
     private VideoCapture        mCamera;
+    private FpsMeter            mFps;
 
     public SampleCvViewBase(Context context) {
         super(context);
         mHolder = getHolder();
         mHolder.addCallback(this);
+        mFps = new FpsMeter();
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -78,6 +80,8 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
 
     public void run() {
         Log.i(TAG, "Starting processing thread");
+        mFps.init();
+
         while (true) {
             Bitmap bmp = null;
 
@@ -91,12 +95,15 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
                 }
 
                 bmp = processFrame(mCamera);
+
+                mFps.measure();
             }
 
             if (bmp != null) {
                 Canvas canvas = mHolder.lockCanvas();
                 if (canvas != null) {
                     canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
+                    mFps.draw(canvas, (canvas.getWidth() - bmp.getWidth()) / 2, 0);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
                 bmp.recycle();
