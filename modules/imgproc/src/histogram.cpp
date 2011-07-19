@@ -1350,11 +1350,13 @@ void cv::calcBackProject( InputArrayOfArrays images, const vector<int>& channels
                           const vector<float>& ranges,
                           double scale )
 {
-    int i, dims = hist.getMat().dims, rsz = (int)ranges.size(), csz = (int)channels.size();
+    Mat H = hist.getMat();
+    bool _1d = H.rows == 1 || H.cols == 1;
+    int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
     CV_Assert(nimages > 0);
-    CV_Assert(rsz == dims*2 || (rsz == 0 && images.depth(0) == CV_8U));
-    CV_Assert(csz == 0 || csz == dims);
+    CV_Assert(rsz == dims*2 || (rsz == 2 && _1d) || (rsz == 0 && images.depth(0) == CV_8U));
+    CV_Assert(csz == 0 || csz == dims || (csz == 1 && _1d));
     float* _ranges[CV_MAX_DIM];
     if( rsz > 0 )
     {
