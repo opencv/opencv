@@ -608,7 +608,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 
     } catch(cv::Exception e) {
         LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
@@ -656,7 +656,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
     } catch(cv::Exception e) {
         LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
@@ -962,7 +962,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         $ret
     } catch(cv::Exception e) {
         LOGD("$module::$fname() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/CvException");
+        jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         $default
