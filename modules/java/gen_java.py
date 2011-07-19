@@ -349,6 +349,19 @@ public class %s {
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
+
+        # set/get for class fileds
+        for f in decl[3]: # [f_ctype, f_name, '', '/RW']
+            # getter
+            getter_name = classinfo.name + ".get" + f[1][0].upper() + f[1][1:]
+            print getter_name
+            #self.add_func( [getter_name, f[0], [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
+            if "/RW" in f[3]:
+                #setter
+                setter_name = classinfo.name + ".set" + f[1][0].upper() + f[1][1:]
+                print setter_name
+                #self.add_func( [ setter_name, "void", [], [ [f[0], f[1], "", [], ""] ] ] )
+
         self.add_class_code_stream(classinfo.name)
 
 
@@ -681,7 +694,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         if consts:
             code_stream.write("""
     public static final int
-            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in self.consts])
+            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts])
             )
 
 
