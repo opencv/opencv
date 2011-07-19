@@ -204,11 +204,8 @@ setManualFunctions=set(['minMaxLoc', 'getTextSize'])
 
 class ConstInfo(object):
     def __init__(self, cname, name, val):
-##        self.name = re.sub(r"^cv\.", "", name).replace(".", "_")
         self.cname = cname
         self.name =  re.sub(r"^Cv", "", name)
-        #self.name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)
-        #self.name = self.name.upper()
         self.value = val
 
 
@@ -261,8 +258,8 @@ class FuncInfo(object):
                 self.jname = m[1:]
         self.jn_name = "n_" + self.jname
         self.jni_name= re.sub(r"_", "_1", self.jn_name)
-        if self.classname:
-            self.jni_name = "00024" + self.classname + "_" + self.jni_name
+##        if self.classname:
+##            self.jni_name = "00024" + self.classname + "_" + self.jni_name
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = decl[1] or ""
         self.args = []
@@ -298,13 +295,42 @@ class JavaWrapperGenerator(object):
         self.funcs = {}
         self.consts = [] # using a list to save the occurence order
         self.module = ""
-        self.java_code = StringIO()
-        self.jn_code = StringIO()
-        self.cpp_code = StringIO()
-        self.ported_func_counter = 0
+        self.Module = ""
+        self.java_code= {} # { class : {j_code, jn_code} }
+        self.cpp_code = None
         self.ported_func_list = []
         self.skipped_func_list = []
-        self.total_func_counter = 0
+
+    def add_class_code_stream(self, class_name):
+        self.java_code[class_name] = { "j_code" : StringIO(), "jn_code" : StringIO(), }
+        self.java_code[class_name]["j_code"].write("""
+//
+// This file is auto-generated. Please don't modify it!
+//
+package org.opencv.%s;
+%s
+%s
+public class %s {
+
+""" % ( self.module,
+        ("import org.opencv.core.*;", "")[self.module == "core"],
+        ("// C++: class "+class_name+"\n//javadoc: "+class_name, "")[class_name == self.Module],
+        class_name ) )
+
+        if class_name != self.Module:
+            self.java_code[class_name]["j_code"].write("""
+    protected final long nativeObj;
+    protected %s(long addr) { nativeObj = addr; }
+""" % class_name )
+
+        self.java_code[class_name]["jn_code"].write("""
+    //
+    // native stuff
+    //
+    static { System.loadLibrary("opencv_java"); }
+""" )
+
+
 
     def add_class(self, decl):
         classinfo = ClassInfo(decl)
@@ -323,6 +349,7 @@ class JavaWrapperGenerator(object):
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
+        self.add_class_code_stream(classinfo.name)
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -374,14 +401,15 @@ class JavaWrapperGenerator(object):
         else:
             func_map[ffi.jname] = ffi
 
-    def save(self, path, name, buf):
-        f = open(path + "/" + name, "wt")
+    def save(self, path, buf):
+        f = open(path, "wt")
         f.write(buf.getvalue())
         f.close()
 
     def gen(self, srcfiles, module, output_path):
         self.clear()
         self.module = module
+        self.Module = module.capitalize()
         parser = hdr_parser.CppHeaderParser()
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
@@ -398,21 +426,15 @@ class JavaWrapperGenerator(object):
                     self.add_func(decl)
                     pass
 
-        # java module header
-        self.java_code.write("package org.opencv;\n\npublic class %s {\n" % module)
+        self.add_class_code_stream(self.Module)
+        self.cpp_code = StringIO()
 
+        # java code
         if module == "core":
-            self.java_code.write(\
+            self.java_code[self.Module]["j_code"].write(\
 """
     private static final int
-            CV_8U  = 0,
-            CV_8S  = 1,
-            CV_16U = 2,
-            CV_16S = 3,
-            CV_32S = 4,
-            CV_32F = 5,
-            CV_64F = 6,
-            CV_USRTYPE1 = 7;
+            CV_8U  = 0, CV_8S  = 1, CV_16U = 2, CV_16S = 3, CV_32S = 4, CV_32F = 5, CV_64F = 6, CV_USRTYPE1 = 7;
 
     //Manual ported functions
 
@@ -461,19 +483,15 @@ class JavaWrapperGenerator(object):
 """ )
 
         if module == "imgproc":
-            self.java_code.write(\
+            self.java_code[self.Module]["j_code"].write(\
 """
-    public static final int
-            IPL_BORDER_CONSTANT = 0,
-            IPL_BORDER_REPLICATE = 1,
-            IPL_BORDER_REFLECT = 2,
-            IPL_BORDER_WRAP = 3,
-            IPL_BORDER_REFLECT_101 = 4,
-            IPL_BORDER_TRANSPARENT = 5;
+    private static final int
+            IPL_BORDER_CONSTANT = 0, IPL_BORDER_REPLICATE = 1, IPL_BORDER_REFLECT = 2,
+            IPL_BORDER_WRAP = 3, IPL_BORDER_REFLECT_101 = 4, IPL_BORDER_TRANSPARENT = 5;
 """ )
 
         if module == "calib3d":
-            self.java_code.write(\
+            self.java_code[self.Module]["j_code"].write(\
 """
     public static final int
             CV_LMEDS = 4,
@@ -503,17 +521,10 @@ class JavaWrapperGenerator(object):
             CV_CALIB_ZERO_DISPARITY = 1024;
 """ )
 
-        # java native stuff
-        self.jn_code.write("""
-    //
-    // native stuff
-    //
-    static { System.loadLibrary("opencv_java");	}
-""")
 
         # cpp module header
-        self.cpp_code.write(\
-"""//
+        self.cpp_code.write("""
+//
 // This file is auto-generated, please don't edit!
 //
 
@@ -535,7 +546,7 @@ class JavaWrapperGenerator(object):
         self.cpp_code.write('\n\nextern "C" {\n\n')
 
         # step 2: generate the code for global constants
-        self.gen_consts()
+        self.gen_consts(self.consts, self.java_code[self.Module]["j_code"])
 
         # step 3: generate the code for all the global functions
         self.gen_funcs()
@@ -546,11 +557,11 @@ class JavaWrapperGenerator(object):
         if module == "core":
             self.cpp_code.write(\
 """
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
   (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
 {
     try {
-        LOGD("core::n_1minMaxLoc()");
+        LOGD("Core::n_1minMaxLoc()");
         jdoubleArray result;
         result = env->NewDoubleArray(6);
         if (result == NULL) {
@@ -581,24 +592,24 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1minMaxLocManual
 	return result;
 
     } catch(cv::Exception e) {
-        LOGD("core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
+        LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-        LOGD("core::n_1minMaxLoc() catched unknown exception (...)");
+        LOGD("Core::n_1minMaxLoc() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::minMaxLoc()}");
         return NULL;
     }
 }
 
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
   (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
 {
     try {
-        LOGD("core::n_1getTextSize()");
+        LOGD("Core::n_1getTextSize()");
         jdoubleArray result;
         result = env->NewDoubleArray(2);
         if (result == NULL) {
@@ -629,57 +640,54 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
         return result;
 
     } catch(cv::Exception e) {
-        LOGD("core::n_1getTextSize() catched cv::Exception: %s", e.what());
+        LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return NULL;
     } catch (...) {
-        LOGD("core::n_1getTextSize() catched unknown exception (...)");
+        LOGD("Core::n_1getTextSize() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
         return NULL;
     }
 }
 """)
+        # saving code streams
+        for cls in self.java_code.keys():
+            self.java_code[cls]["j_code"].write("\n\n%s\n}\n" % self.java_code[cls]["jn_code"].getvalue())
+            self.save("%s/%s+%s.java" % (output_path, module, cls), self.java_code[cls]["j_code"])
 
-        # module tail
-        self.java_code.write("\n\n" + self.jn_code.getvalue() + "\n")
-        self.java_code.write("}\n")
-        self.cpp_code.write('} // extern "C"\n')
+        self.cpp_code.write( '\n} // extern "C"\n' )
+        self.save(output_path+"/"+module+".cpp",  self.cpp_code)
 
-        self.save(output_path, module+".java", self.java_code)
-        self.save(output_path, module+".cpp",  self.cpp_code)
         # report
         report = StringIO()
         report.write("PORTED FUNCs LIST (%i of %i):\n\n" % \
-            (self.ported_func_counter, self.total_func_counter) \
+            (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
         )
         report.write("\n".join(self.ported_func_list))
         report.write("\n\nSKIPPED FUNCs LIST (%i of %i):\n\n" % \
-            (self.total_func_counter - self.ported_func_counter, self.total_func_counter) \
+            (len(self.skipped_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
         )
         report.write("".join(self.skipped_func_list))
-        self.save(output_path, module+".txt", report)
+        self.save(output_path+"/"+module+".txt", report)
 
-        print "Done %i of %i funcs." % (self.ported_func_counter, self.total_func_counter)
+        print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
 
 
-    def gen_consts(self):
-        # generate the code for global constants
-        if self.consts:
-            self.java_code.write("""
+
+    def gen_consts(self, consts, code_stream):
+        if consts:
+            code_stream.write("""
     public static final int
-            """ + """,
-            """.join(["%s = %s" % (c.name, c.value) for c in self.consts]) + \
-            ";\n\n")
+            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in self.consts])
+            )
 
 
-    def gen_func(self, fi, isoverload, jn_code):
-        self.total_func_counter += 1
+    def gen_func(self, fi, isoverload):
         # // C++: c_decl
-        # e.g:
-        # //  C++: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
+        # e.g: //  C++: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
         decl_args = []
         for a in fi.args:
             s = a.ctype
@@ -694,34 +702,35 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
 
         c_decl = "%s %s %s(%s)" % ( fi.static, fi.ctype, fi.cname, ", ".join(decl_args) )
 
-        indent = " " * 4
+        j_code   = self.java_code[self.Module]["j_code"]
+        jn_code  = self.java_code[self.Module]["jn_code"]
+        cpp_code = self.cpp_code
         if fi.classname:
-            indent += " " * 4
+            j_code   = self.java_code[fi.classname]["j_code"]
+            jn_code  = self.java_code[fi.classname]["jn_code"]
+
         # java comment
-        self.java_code.write( "\n"+indent+"//\n"+indent+"// C++: "+c_decl+"\n"+indent+"//\n\n" )
+        j_code.write( "\n    //\n    // C++: %s\n    //\n\n" % c_decl )
         # check if we 'know' all the types
         if fi.ctype not in type_dict: # unsupported ret type
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
-            self.java_code.write( indent + msg )
-            #self.cpp_code.write( msg )
+            j_code.write( " "*4 + msg )
             print "SKIP:", c_decl, "\n\tdue to RET type", fi.ctype
             return
         for a in fi.args:
             if a.ctype not in type_dict:
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
-                self.java_code.write( indent + msg )
-                #self.cpp_code.write( msg )
+                j_code.write( " "*4 + msg )
                 print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, "/" + (a.out or "I")
                 return
 
-        self.ported_func_counter += 1
         self.ported_func_list.append(c_decl)
 
         # jn & cpp comment
-        jn_code.write( "\n%s// C++: %s\n" % (indent, c_decl) )
-        self.cpp_code.write( "\n//\n// %s\n//\n" % c_decl )
+        jn_code.write( "\n    // C++: %s\n" % c_decl )
+        cpp_code.write( "\n//\n// %s\n//\n" % c_decl )
 
         # java args
         args = fi.args[:] # copy
@@ -797,8 +806,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
             # e.g.
             # private static native void n_add(long src1, long src2, long dst, long mask, int dtype);
             jn_code.write( Template(\
-                "${indent}private static native $jn_type $jn_name($jn_args);\n").substitute(\
-                indent = indent, \
+                "    private static native $jn_type $jn_name($jn_args);\n").substitute(\
                 jn_type = type_dict[fi.ctype].get("jn_type", "double[]"), \
                 jn_name = fi.jn_name, \
                 jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
@@ -810,7 +818,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
             f_name = fi.name
             if fi.classname:
                 f_name = fi.classname + "::" + fi.name
-            self.java_code.write(indent + "//javadoc: " + f_name + "(%s)\n" % \
+            j_code.write("    //javadoc: " + f_name + "(%s)\n" % \
                 ", ".join([a.name for a in args])
             )
 
@@ -838,18 +846,17 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_n_1getTextSize
             if fi.classname:
                 static = fi.static
 
-            self.java_code.write( Template(\
-"""${indent}public $static $j_type $j_name($j_args)
-$indent{
-$indent    $prologue
-$indent    $ret_val$jn_name($jn_args_call)$tail;
-$indent    $epilogue
-$indent    $ret
-$indent}
+            j_code.write( Template(\
+"""    public $static $j_type $j_name($j_args)
+    {
+        $prologue
+        $ret_val$jn_name($jn_args_call)$tail;
+        $epilogue
+        $ret
+    }
 
 """
                 ).substitute(\
-                    indent = indent, \
                     ret = ret, \
                     ret_val = ret_val, \
                     tail = tail, \
@@ -911,10 +918,10 @@ $indent}
                         c_prologue.append("%s %s;" % (a.ctype, a.name))
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
-            self.cpp_code.write ( Template( \
+            cpp_code.write ( Template( \
 """
 
-JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
+JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
   ($args)
 {
     try {
@@ -941,6 +948,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
 """ ).substitute( \
         rtype = rtype, \
         module = self.module, \
+        clazz = fi.classname or self.Module, \
         fname = fi.jni_name + ["",suffix][isoverload], \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
@@ -962,54 +970,38 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
 
     def gen_funcs(self):
         # generate the code for all the global functions
-        indent = "\t"
         fflist = self.funcs.items()
         fflist.sort()
         for name, ffi in fflist:
             assert not ffi.funcs[0].classname, "Error: global func is a class member - "+name
             for fi in ffi.funcs:
-                self.gen_func(fi, len(ffi.funcs)>1, self.jn_code)
+                self.gen_func(fi, len(ffi.funcs)>1)
 
 
     def gen_classes(self):
         # generate code for the classes (their methods and consts)
-        indent = " " * 4
-        indent_m = indent + " " * 4
         classlist = self.classes.items()
         classlist.sort()
         for name, ci in classlist:
             if name == "Mat":
                 continue
-            self.java_code.write( "\n\n" + indent + "// C++: class %s" % (ci.cname) + "\n" )
-            self.java_code.write( indent + "//javadoc: " + name + "\n" ) #java doc comment
-            self.java_code.write( indent + "public static class %s {\n\n" % (ci.jname) )
-            # self
-            self.java_code.write( indent_m + "protected final long nativeObj;\n" )
-            self.java_code.write( indent_m + "protected %s(long addr) { nativeObj = addr; }\n\n" \
-                % name );
             # constants
-            if ci.consts:
-                prefix = "\n" + indent_m + "\t"
-                s = indent_m + "public static final int" + prefix +\
-                    ("," + prefix).join(["%s = %s" % (c.name, c.value) for c in ci.consts]) + ";\n\n"
-                self.java_code.write( s )
-            # methods
-            jn_code = StringIO()
+            self.gen_consts(ci.consts, self.java_code[name]["j_code"])
             # c-tors
             fflist = ci.methods.items()
             fflist.sort()
             for n, ffi in fflist:
                 if ffi.isconstructor:
                     for fi in ffi.funcs:
-                        self.gen_func(fi, len(ffi.funcs)>1, jn_code)
-            self.java_code.write( "\n" )
+                        self.gen_func(fi, len(ffi.funcs)>1)
+            # other methods
             for n, ffi in fflist:
                 if not ffi.isconstructor:
                     for fi in ffi.funcs:
-                        self.gen_func(fi, len(ffi.funcs)>1, jn_code)
+                        self.gen_func(fi, len(ffi.funcs)>1)
 
             # finalize()
-            self.java_code.write(
+            self.java_code[name]["j_code"].write(
 """
         @Override
         protected void finalize() throws Throwable {
@@ -1017,19 +1009,13 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
             super.finalize();
         }
 
-"""
-            )
+""" )
 
-            self.java_code.write(indent_m + "// native stuff\n\n")
-            self.java_code.write(indent_m + 'static { System.loadLibrary("opencv_java"); }\n')
-            self.java_code.write( jn_code.getvalue() )
-            self.java_code.write(
+            self.java_code[name]["jn_code"].write(
 """
-        // native support for java finalize()
-        private static native void n_delete(long nativeObj);
-"""
-            )
-            self.java_code.write("\n" + indent + "}\n\n")
+    // native support for java finalize()
+    private static native void n_delete(long nativeObj);
+""" )
 
             # native support for java finalize()
             self.cpp_code.write( \
@@ -1039,7 +1025,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_$fname
 //  static void %(cls)s::n_delete( __int64 self )
 //
 
-JNIEXPORT void JNICALL Java_org_opencv_%(module)s_00024%(cls)s_n_1delete
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_n_1delete
   (JNIEnv* env, jclass cls, jlong self)
 {
     delete (%(cls)s*) self;
