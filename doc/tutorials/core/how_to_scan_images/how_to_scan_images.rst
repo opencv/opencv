@@ -65,7 +65,7 @@ As you could already read in my :ref:`matTheBasicImageContainer` tutorial the si
 
 .. math::
 
-   \newcommand{\tabItG}[1] { \textcolor{black}{#1} \cellcolor{gray}}
+   \newcommand{\tabItG}[1] { \textcolor{black}{#1} \cellcolor[gray]{0.8}}
    \begin{tabular} {ccccc}
    ~ & \multicolumn{1}{c}{Column 0} &   \multicolumn{1}{c}{Column 1} &   \multicolumn{1}{c}{Column ...} & \multicolumn{1}{c}{Column m}\\
    Row 0 & \tabItG{0,0} & \tabItG{0,1} & \tabItG{...}  & \tabItG{0, m} \\

@@ -170,7 +170,7 @@ htmlhelp_basename = 'opencv'
 
 # OpenCV docs use some custom LaTeX macros in the formula. Make sure we include the definitions
 pngmath_latex_preamble = r"""
-\usepackage{euler}\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\usepackage[table]{xcolor}
+\usepackage{euler}\usepackage[usenames,dvipsnames]{color}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\usepackage{colortbl}
 \newcommand{\matTT}[9]{
 \[
 \left|\begin{array}{ccc}
@@ -235,7 +235,7 @@ preamble ="""
 \usepackage{euler}
 \usepackage[scaled=0.85]{beramono}
 \usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}
-\usepackage[table]{xcolor}
+\usepackage{colortbl}
 """
 
 latex_elements = {'preamble': preamble}
