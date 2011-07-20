@@ -245,15 +245,15 @@ Well, running samples from Eclipse is very simple:
 
 * On first run Eclips will ask you how to run your application:
 
-     .. image:: images/eclipse_11_run_as.png
-        :alt: Run sample as Android Application
-        :align: center
+  .. image:: images/eclipse_11_run_as.png
+     :alt: Run sample as Android Application
+     :align: center
 
 * Select the *Android Application* option and click **OK** button. Eclipse will install and run the sample.
   
   Here is sample ``Tutorial 1 Basic - 1. Add OpenCV`` detecting edges using Canny algorithm from OpenCV:
 
-     .. image:: images/emulator_canny.png
-        :height: 600px 
-        :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
-        :align: center
+  .. image:: images/emulator_canny.png
+     :height: 600px 
+     :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
+     :align: center
