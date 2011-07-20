@@ -53,7 +53,6 @@ You need the following tools to be installed:
      This is minimal platform supported by OpenCV Java API. And it is set as default for OpenCV distribution. It is possible to use platform having higher number with OpenCV package but it requires to edit OpenCV project settings.
 
      .. image:: images/android_sdk_and_avd_manager.png
-        :height: 400px 
         :alt: Android SDK and AVD manager
         :align: center
      
@@ -107,7 +106,6 @@ Get the OpenCV package for Android development
    You can unpack it using any popular archiver (for example with |seven_zip|_):
 
    .. image:: images/android_package_7zip.png
-      :height: 314px 
       :alt: Exploring OpenCV package with 7-Zip
       :align: center
 
@@ -133,7 +131,6 @@ Open OpenCV library and samples in Eclipse
    I recommend to start familiarising yourself with OpenCV for Android from new clean workspase. So I have choosen my OpenCV package directory for new workspace:
 
       .. image:: images/eclipse_1_choose_workspace.png
-         :height: 387px 
          :alt: Choosing C:\Work\android-opencv\ as workspace location
          :align: center
 
@@ -144,17 +141,11 @@ Open OpenCV library and samples in Eclipse
    
    * Select **Window > Preferences...** to open the Preferences panel (Mac OS X: **Eclipse > Preferences**):
 
-      .. image:: images/eclipse_2_window_preferences.png
-         :height: 400px 
-         :alt: Select Window > Preferences...
-         :align: center
-   
    * Select **Android** from the left panel.
 
     You may see a dialog asking whether you want to send usage statistics to Google. If so, make your choice and click **Proceed**. You cannot continue with this procedure until you click **Proceed**.
 
       .. image:: images/eclipse_3_preferences_android.png
-         :height: 396px 
          :alt: Select Android from the left panel
          :align: center
 
@@ -179,14 +170,12 @@ Open OpenCV library and samples in Eclipse
    * Right click on the *Package Explorer* window and choose **Import...** option from context menu:
 
       .. image:: images/eclipse_5_import_command.png
-         :height: 400px 
          :alt: Select Import... from context menu
          :align: center
 
    * In the main panel select **General** > **Existing Projects into Workspace** and press **Next** buton:
 
       .. image:: images/eclipse_6_import_existing_projects.png
-         :height: 450px 
          :alt: General > Existing Projects into Workspace
          :align: center
 
@@ -254,6 +243,5 @@ Well, running samples from Eclipse is very simple:
   Here is sample ``Tutorial 1 Basic - 1. Add OpenCV`` detecting edges using Canny algorithm from OpenCV:
 
   .. image:: images/emulator_canny.png
-     :height: 600px 
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center

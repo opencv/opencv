@@ -69,7 +69,6 @@ Gaussian Filter
    * Just to make the picture clearer, remember how a 1D Gaussian kernel look like?
 
      .. image:: images/Smoothing_Tutorial_theory_gaussian_0.jpg
-              :height: 100pt
               :align: center 
 
      Assuming that an image is 1D, you can notice that the pixel located in the middle would have the biggest weight. The weight of its neighbors decreases as the spatial distance between them and the center pixel increases. 
@@ -324,5 +323,4 @@ Results
 
      .. image:: images/Smoothing_Tutorial_Result_Median_Filter.jpg
               :alt: Smoothing with a median filter
-              :height: 200pt
               :align: center 

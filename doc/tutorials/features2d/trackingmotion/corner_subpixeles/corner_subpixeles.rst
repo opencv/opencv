@@ -55,7 +55,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
 
      /// Create Trackbar to set the number of corners
-     createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );  
+     createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo);  
 
      imshow( source_window, src );
 
@@ -101,7 +101,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      cout<<"** Number of corners detected: "<<corners.size()<<endl;
      int r = 4;
      for( int i = 0; i < corners.size(); i++ )
-        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), rng.uniform(0,255)), -1, 8, 0 ); }
+        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), 
+                                                    rng.uniform(0,255)), -1, 8, 0 ); }
 
      /// Show what you got
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
@@ -128,12 +129,10 @@ Result
 ======
 
 .. image:: images/Corner_Subpixeles_Original_Image.jpg
-              :height: 200pt
               :align: center 
   
 Here is the result:
 
 .. image:: images/Corner_Subpixeles_Result.jpg
-              :height: 100pt
               :align: center   
 

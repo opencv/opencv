@@ -41,7 +41,7 @@ Gaussian Pyramid
 
 * Imagine the pyramid as a set of layers in which the higher the layer, the smaller the size. 
 
-  .. image:: images/Pyramids_Tutorial_Pyramid_Theory.jpg
+  .. image:: images/Pyramids_Tutorial_Pyramid_Theory.png
      :alt: Pyramid figure
      :align: center 
 

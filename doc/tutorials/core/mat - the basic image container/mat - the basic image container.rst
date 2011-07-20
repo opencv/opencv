@@ -97,7 +97,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :tab-width: 4
         :lines:  27-28
 
-    .. image:: images/MatBasicContainerOut1.jpg
+    .. image:: images/MatBasicContainerOut1.png
        :alt: Demo image of the matrix output
        :align: center
 
@@ -125,7 +125,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
 
      .. code-block:: cpp
 
-        IplImage* img = cvLoadImage("greatwave.jpg", 1);
+        IplImage* img = cvLoadImage("greatwave.png", 1);
         Mat mtx(img); // convert IplImage* -> Mat
 
    + :basicstructures:`Create() <mat-create>` function:
@@ -135,7 +135,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :tab-width: 4
         :lines:  31-32
 
-    .. image:: images/MatBasicContainerOut2.jpg
+    .. image:: images/MatBasicContainerOut2.png
        :alt: Demo image of the matrix output
        :align: center
 
@@ -148,7 +148,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :tab-width: 4
         :lines:  40-47
 
-    .. image:: images/MatBasicContainerOut3.jpg
+    .. image:: images/MatBasicContainerOut3.png
        :alt: Demo image of the matrix output
        :align: center
 
@@ -159,7 +159,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :tab-width: 4
         :lines:  50-51
 
-    .. image:: images/MatBasicContainerOut6.jpg
+    .. image:: images/MatBasicContainerOut6.png
        :alt: Demo image of the matrix output
        :align: center
 
@@ -170,7 +170,7 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :tab-width: 4
         :lines:  53-54
 
-     .. image:: images/MatBasicContainerOut7.jpg
+     .. image:: images/MatBasicContainerOut7.png
         :alt: Demo image of the matrix output
         :align: center
 
@@ -197,7 +197,7 @@ In the above examples you could see the default formatting option. Nevertheless,
        :tab-width: 4
        :lines: 61
 
-     .. image:: images/MatBasicContainerOut8.jpg
+     .. image:: images/MatBasicContainerOut8.png
         :alt: Default Output
         :align: center
 
@@ -208,7 +208,7 @@ In the above examples you could see the default formatting option. Nevertheless,
        :tab-width: 4
        :lines: 62
 
-     .. image:: images/MatBasicContainerOut16.jpg
+     .. image:: images/MatBasicContainerOut16.png
         :alt: Default Output
         :align: center
 
@@ -219,7 +219,7 @@ In the above examples you could see the default formatting option. Nevertheless,
        :tab-width: 4
        :lines: 64
 
-     .. image:: images/MatBasicContainerOut10.jpg
+     .. image:: images/MatBasicContainerOut10.png
         :alt: Default Output
         :align: center
 
@@ -230,7 +230,7 @@ In the above examples you could see the default formatting option. Nevertheless,
        :tab-width: 4
        :lines: 63
 
-     .. image:: images/MatBasicContainerOut9.jpg
+     .. image:: images/MatBasicContainerOut9.png
         :alt: Default Output
         :align: center
 
@@ -241,7 +241,7 @@ In the above examples you could see the default formatting option. Nevertheless,
        :tab-width: 4
        :lines: 65
 
-     .. image:: images/MatBasicContainerOut11.jpg
+     .. image:: images/MatBasicContainerOut11.png
         :alt: Default Output
         :align: center
 
@@ -259,7 +259,7 @@ OpenCV offers support for print of other common OpenCV data structures too via t
        :tab-width: 4
        :lines: 67-68
 
-     .. image:: images/MatBasicContainerOut12.jpg
+     .. image:: images/MatBasicContainerOut12.png
         :alt: Default Output
         :align: center
 
@@ -271,7 +271,7 @@ OpenCV offers support for print of other common OpenCV data structures too via t
        :tab-width: 4
        :lines: 70-71
 
-     .. image:: images/MatBasicContainerOut13.jpg
+     .. image:: images/MatBasicContainerOut13.png
         :alt: Default Output
         :align: center
 
@@ -282,7 +282,7 @@ OpenCV offers support for print of other common OpenCV data structures too via t
        :tab-width: 4
        :lines: 74-77
 
-     .. image:: images/MatBasicContainerOut14.jpg
+     .. image:: images/MatBasicContainerOut14.png
         :alt: Default Output
         :align: center
 
@@ -293,7 +293,7 @@ OpenCV offers support for print of other common OpenCV data structures too via t
        :tab-width: 4
        :lines: 79-83
 
-     .. image:: images/MatBasicContainerOut15.jpg
+     .. image:: images/MatBasicContainerOut15.png
         :alt: Default Output
         :align: center
 

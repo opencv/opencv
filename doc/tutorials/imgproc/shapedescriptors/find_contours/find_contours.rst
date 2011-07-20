@@ -100,10 +100,8 @@ Result
    ============= =============   
 
    .. |contour_0|  image:: images/Find_Contours_Original_Image.jpg
-                     :height: 300pt
                      :align: middle
 
    .. |contour_1|  image:: images/Find_Contours_Result.jpg
-                     :height: 300pt
                      :align: middle   
 

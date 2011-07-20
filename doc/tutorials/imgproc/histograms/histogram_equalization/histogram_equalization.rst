@@ -29,7 +29,6 @@ What is an Image Histogram?
    * It quantifies the number of pixels for each intensity value considered.
 
 .. image:: images/Histogram_Equalization_Theory_0.jpg
-        :height: 200pt
         :align: center 
 
 
@@ -43,7 +42,6 @@ What is Histogram Equalization?
    * To make it clearer, from the image above, you can see that the pixels seem clustered around the middle of the available range of intensities. What Histogram Equalization does is to *stretch out* this range. Take a look at the figure below: The green circles indicate the *underpopulated* intensities. After applying the equalization, we get an histogram like the figure in the center. The resulting image is shown in the picture at right.
 
 .. image:: images/Histogram_Equalization_Theory_1.jpg
-          :height: 200pt
           :align: center 
 
 How does it work?
@@ -62,7 +60,6 @@ How does it work?
      To use this as a remapping function, we have to normalize :math:`H^{'}(i)` such that the maximum value is 255 ( or the maximum value for the intensity of the image ). From the example above, the cumulative function is:
 
      .. image:: images/Histogram_Equalization_Theory_2.jpg
-              :height: 200pt
               :align: center 
 
    * Finally, we use a simple remapping procedure to obtain the intensity values of the equalized image:
@@ -194,13 +191,11 @@ Results
 #. To appreciate better the results of equalization, let's introduce an image with not much contrast, such as:
 
    .. image:: images/Histogram_Equalization_Original_Image.jpg
-            :height: 200pt
             :align: center 
 
    which, by the way, has this histogram:
 
    .. image:: images/Histogram_Equalization_Original_Histogram.jpg
-            :height: 150pt
             :align: center 
 
    notice that the pixels are clustered around the center of the histogram.
@@ -208,13 +203,11 @@ Results
 #. After applying the equalization with our program, we get this result:
 
    .. image:: images/Histogram_Equalization_Equalized_Image.jpg
-            :height: 200pt
             :align: center 
 
    this image has certainly more contrast. Check out its new histogram like this:
 
    .. image:: images/Histogram_Equalization_Equalized_Histogram.jpg
-            :height: 150pt
             :align: center
 
    Notice how the number of pixels is more distributed through the intensity range.

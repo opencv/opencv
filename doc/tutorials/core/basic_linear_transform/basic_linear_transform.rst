@@ -92,9 +92,10 @@ Code
        { for( int x = 0; x < image.cols; x++ )
             { for( int c = 0; c < 3; c++ )
                  {
-		  new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+         new_image.at<Vec3b>(y,x)[c] = 
+            saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
                 }
-	    }
+       }
        }
 
     /// Create Windows
@@ -145,8 +146,9 @@ Explanation
       for( int y = 0; y < image.rows; y++ )
          { for( int x = 0; x < image.cols; x++ )
               { for( int c = 0; c < 3; c++ )
-                   { new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta ); }
-	      }
+                   { new_image.at<Vec3b>(y,x)[c] = 
+                               saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta ); }
+         }
          }
  
    Notice the following:
@@ -194,6 +196,5 @@ Result
 * We get this:
 
 .. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
-   :height: 400px
    :alt: Basic Linear Transform - Final Result
    :align: center 

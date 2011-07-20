@@ -119,10 +119,8 @@ Result
    ========== ==========   
 
    .. |BRE_0|  image:: images/Bounding_Rotated_Ellipses_Source_Image.jpg
-                    :height: 300pt
                     :align: middle
 
    .. |BRE_1|  image:: images/Bounding_Rotated_Ellipses_Result.jpg
-                    :height: 300pt
                     :align: middle   
 

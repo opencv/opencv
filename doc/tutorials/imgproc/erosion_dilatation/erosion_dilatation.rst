@@ -34,9 +34,8 @@ Morphological Operations
 
 * We will explain dilation and erosion briefly, using the following image as an example:
 
-  .. image:: images/Morphology_1_Tutorial_Theory_Original_Image.jpg
+  .. image:: images/Morphology_1_Tutorial_Theory_Original_Image.png
      :alt: Original image
-     :height: 100px
      :align: center 
 
 Dilation
@@ -48,9 +47,8 @@ Dilation
 
 * As the kernel :math:`B` is scanned over the image, we compute the maximal pixel value overlapped by :math:`B` and replace the image pixel in the anchor point position with that maximal value. As you can deduce, this maximizing operation causes bright regions within an image to "grow" (therefore the name *dilation*). Take as an example the image above. Applying dilation we can get:
 
-  .. image:: images/Morphology_1_Tutorial_Theory_Dilation.jpg
+  .. image:: images/Morphology_1_Tutorial_Theory_Dilation.png
      :alt: Dilation result - Theory example
-     :height: 100px
      :align: center 
 
 The background (bright) dilates around the black regions of the letter.
@@ -64,9 +62,8 @@ Erosion
 
 * Analagously to the example for dilation, we can apply the erosion operator to the original image (shown above). You can see in the result below that the bright areas of the image (the background, apparently), get thinner, whereas the dark zones (the "writing"( gets bigger.
 
-  .. image:: images/Morphology_1_Tutorial_Theory_Erosion.jpg
+  .. image:: images/Morphology_1_Tutorial_Theory_Erosion.png
      :alt: Erosion result - Theory example
-     :height: 100px
      :align: center 
 
 
@@ -268,13 +265,10 @@ Results
 
   .. image:: images/Morphology_1_Tutorial_Original_Image.jpg
      :alt: Original image
-     :height: 200px
      :align: center 
 
   We get the results below. Varying the indices in the Trackbars give different output images, naturally. Try them out! You can even try to add a third Trackbar to control the number of iterations.
 
   .. image:: images/Morphology_1_Tutorial_Cover.jpg
      :alt: Dilation and Erosion application
-     :height: 400px
      :align: center 
- 

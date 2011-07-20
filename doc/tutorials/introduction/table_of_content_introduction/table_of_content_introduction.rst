@@ -23,7 +23,7 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   =========== ======================================================
 
-  .. |Install_1| image:: images/ubuntu_logo.jpeg
+  .. |Install_1| image:: images/ubuntu-logo.jpg
                  :height: 90pt
                  :width:  90pt
 

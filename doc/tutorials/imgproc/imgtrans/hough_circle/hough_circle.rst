@@ -26,7 +26,6 @@ Hough Circle Transform
 
   .. image:: images/Hough_Circle_Tutorial_Theory_0.jpg
           :alt: Result of detecting circles with Hough Transform
-          :height: 200pt
           :align: center 
 
 * For sake of efficiency, OpenCV implements a detection method slightly trickier than the standard Hough Transform: *The Hough gradient method*. For more details, please check the book *Learning OpenCV* or your favorite Computer Vision bibliography

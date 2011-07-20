@@ -30,7 +30,6 @@ What is Thresholding?
 
   .. image:: images/Threshold_Tutorial_Theory_Example.jpg
      :alt: Threshold simple example
-     :height: 150pt
      :align: center 
 
 Types of Thresholding
@@ -42,9 +41,8 @@ Types of Thresholding
 
 * To illustrate how these thresholding processes work, let's consider that we have a source image with pixels with intensity values :math:`src(x,y)`. The plot below depicts this. The horizontal blue line represents the threshold :math:`thresh` (fixed).
 
-  .. image:: images/Threshold_Tutorial_Theory_Base_Figure.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Base_Figure.png
      :alt: Threshold Binary
-     :height: 100pt
      :align: center 
 
 Threshold Binary
@@ -58,9 +56,8 @@ Threshold Binary
  
 * So, if the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`MaxVal`. Otherwise, the pixels are set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Binary.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Binary.png
      :alt: Threshold Binary
-     :height: 100pt
      :align: center 
 
 
@@ -75,9 +72,8 @@ Threshold Binary, Inverted
 
 * If the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`0`. Otherwise, it is set to :math:`MaxVal`.
         
-  .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.png
      :alt: Threshold Binary Inverted
-     :height: 100pt
      :align: center 
 
 Truncate
@@ -91,9 +87,8 @@ Truncate
        
 * The maximum intensity value for the pixels is :math:`thresh`, if :math:`src(x,y)` is greater, then its value is *truncated*. See figure below:
  
-  .. image:: images/Threshold_Tutorial_Theory_Truncate.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Truncate.png
      :alt: Threshold Truncate
-     :height: 100pt
      :align: center 
         
 
@@ -109,9 +104,8 @@ Threshold to Zero
 
 * If :math:`src(x,y)` is lower than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Zero.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Zero.png
      :alt: Threshold Zero
-     :height: 100pt
      :align: center 
 
 
@@ -126,9 +120,8 @@ Threshold to Zero, Inverted
 
 * If  :math:`src(x,y)` is greater than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
-  .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.jpg
+  .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.png
      :alt: Threshold Zero Inverted
-     :height: 100pt
      :align: center 
 
 
@@ -298,7 +291,6 @@ Results
 
    .. image:: images/Threshold_Tutorial_Original_Image.jpg
       :alt: Threshold Original Image
-      :height: 200pt
       :align: center 
 
 #. First, we try to threshold our image with a *binary threhold inverted*. We expect that the pixels brighter than the :math:`thresh` will turn dark, which is what actually happens, as we can see in the snapshot below (notice from the original image, that the doggie's tongue and eyes are particularly bright in comparison with the image, this is reflected in the output image).
@@ -306,7 +298,6 @@ Results
 
    .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.jpg
       :alt: Threshold Result Binary Inverted
-      :height: 200pt
       :align: center 
 
 
@@ -314,7 +305,4 @@ Results
 
    .. image:: images/Threshold_Tutorial_Result_Zero.jpg
       :alt: Threshold Result Zero
-      :height: 200pt
       :align: center 
-
- 

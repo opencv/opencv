@@ -31,7 +31,6 @@ How does it work?
 
    .. image:: images/Hough_Lines_Tutorial_Theory_0.jpg
       :alt: Line variables
-      :height: 200pt
       :align: center 
 
    For Hough Transforms, we will express lines in the *Polar system*. Hence, a line equation can be written as: 
@@ -54,7 +53,6 @@ How does it work?
 
    .. image:: images/Hough_Lines_Tutorial_Theory_1.jpg
       :alt: Polar plot of a the family of lines of a point
-      :height: 200pt
       :align: center 
 
    We consider only points such that :math:`r > 0` and :math:`0< \theta < 2 \pi`. 
@@ -63,7 +61,6 @@ How does it work?
 
    .. image:: images/Hough_Lines_Tutorial_Theory_2.jpg
       :alt: Polar plot of the family of lines for three points
-      :height: 200pt
       :align: center 
 
    The three plots intersect in one single point :math:`(0.925, 9.6)`, these coordinates are the parameters (:math:`\theta, r`) or the line in which :math:`(x_{0}, y_{0})`, :math:`(x_{1}, y_{1})` and :math:`(x_{2}, y_{2})` lay. 

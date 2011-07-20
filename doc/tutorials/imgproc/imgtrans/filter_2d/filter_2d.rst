@@ -25,7 +25,7 @@ What is a kernel?
 ------------------
 A kernel is essentially a fixed size array of numerical coefficeints along with an *anchor point* in that array, which is tipically located at the center. 
 
-.. image:: images/filter_2d_tutorial_kernel_theory.jpg
+.. image:: images/filter_2d_tutorial_kernel_theory.png
         :alt: kernel example
         :align: center 
 

@@ -110,14 +110,12 @@ When you run your program you should get something like this:
 
  .. image:: images/Load_Save_Image_Result_1.jpg
     :alt: Load Save Image Result 1
-    :height: 400px
     :align: center
 
 And if you check in your folder (in my case *images*), you should have a newly .jpg file named *Gray_Image.jpg*:
 
  .. image:: images/Load_Save_Image_Result_2.jpg
     :alt: Load Save Image Result 2
-    :height: 250px
     :align: center
 
 Congratulations, you are done with this tutorial!

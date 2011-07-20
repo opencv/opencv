@@ -37,13 +37,11 @@ How does it work?
      our goal is to detect the highest matching area:
 
      .. image:: images/Template_Matching_Template_Theory_Summary.jpg
-              :height: 200pt
               :align: center      
 
    * To identify the matching area, we have to *compare* the template image against the source image by sliding it:
 
      .. image:: images/Template_Matching_Template_Theory_Sliding.jpg
-              :height: 200pt
               :align: center      
 
    *  By **sliding**, we mean moving the patch one pixel at a time (left to right, up to down). At each location, a metric is calculated so it represents how "good" or "bad" the match at that location is (or how similar the patch is to that particular area of the source image).
@@ -51,7 +49,6 @@ How does it work?
    *  For each location of **T** over **I**, you *store* the metric in the *result matrix* **(R)**. Each location :math:`(x,y)` in **R** contains the match metric:
 
       .. image:: images/Template_Matching_Template_Theory_Result.jpg
-               :height: 200pt
                :align: center      
 
       the image above is the result **R** of sliding the patch with a metric **TM_CCORR_NORMED**. The brightest locations indicate the highest matches. As you can see, the location marked by the red circle is probably the one with the highest value, so that location (the rectangle formed by that point as a corner and width and height equal to the patch image) is considered the match. 
@@ -335,13 +332,11 @@ Results
 #. Testing our program with an input image such as:
 
    .. image:: images/Template_Matching_Original_Image.jpg
-            :height: 200pt
             :align: center
  
    and a template image:
 
    .. image:: images/Template_Matching_Template_Image.jpg
-            :height: 50pt
             :align: center  
 
 #. Generate the following result matrices (first row are the standard methods SQDIFF, CCORR and CCOEFF, second row are the same methods in its normalized version). In the first column, the darkest is the better match, for the other two columns, the brighter a location, the higher the match.
@@ -353,32 +348,25 @@ Results
    ============  ============  ============ 
 
    .. |Result_0| image:: images/Template_Matching_Correl_Result_0.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Result_1| image:: images/Template_Matching_Correl_Result_1.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Result_2| image:: images/Template_Matching_Correl_Result_2.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Result_3| image:: images/Template_Matching_Correl_Result_3.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Result_4| image:: images/Template_Matching_Correl_Result_4.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Result_5| image:: images/Template_Matching_Correl_Result_5.jpg
-                      :height: 150pt
                       :align: middle
 
 #. The right match is shown below (black rectangle around the face of the guy at the right). Notice that CCORR and CCDEFF gave erroneous best matches, however their normalized version did it right, this may be due to the fact that we are only considering the "highest match" and not the other possible high matches.
 
    .. image:: images/Template_Matching_Image_Result.jpg
-            :height: 200pt
             :align: center
 

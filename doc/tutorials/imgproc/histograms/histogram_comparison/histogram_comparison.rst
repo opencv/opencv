@@ -272,15 +272,12 @@ Results
    ============  ============  ============ 
 
    .. |Base_0| image:: images/Histogram_Comparison_Source_0.jpg
-                    :height: 150pt
                     :align: middle
 
    .. |Test_1| image:: images/Histogram_Comparison_Source_1.jpg
-                      :height: 150pt
                       :align: middle
 
    .. |Test_2| image:: images/Histogram_Comparison_Source_2.jpg
-                      :height: 150pt
                       :align: middle
 
    where the first one is the base (to be compared to the others), the other 2 are the test images. We will also compare the first image with respect to itself and with respect of half the base image.

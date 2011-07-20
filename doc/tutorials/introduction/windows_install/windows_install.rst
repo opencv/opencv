@@ -36,7 +36,7 @@ Installation by using the pre-built libraries
 
 #. You can check the installation at the chosen path as you can see below. 
 
-   .. image:: images/OpenCV_Install_Directory.jpg
+   .. image:: images/OpenCV_Install_Directory.png
       :alt: An example of how the installation directory should look in case of success.
       :align: center
 
@@ -143,19 +143,19 @@ Building the library
 
 #. Choose a directory in your file system where you will download the OpenCV libraries. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. During this tutorial I'll suppose you've done so. If you use a different directory just change this front part of the path in my future examples. Then, :menuselection:`Right Click --> SVN Checkout...` in the directory. 
    
-   .. image:: images/TortoiseSVNCheckout.jpg
+   .. image:: images/TortoiseSVNCheckout.png
       :alt: The TortoiseSVN Checkout Menu
       :align: center
    
    A window will appear where you can select from what repository you want to download source files (1) and to which directory (2):
    
-   .. image:: images/TortoiseSVNCheckoutWindow.jpg
+   .. image:: images/TortoiseSVNCheckoutWindow.png
       :alt: The TortoiseSVN Checkout Window
       :align: center
    
    Add here either ones of the versions described above. Then push the OK button and be patient as the repository currently is over 330MB to download. It will take some time until it is finished depending on your Internet connection. 
    
-   .. image:: images/SVNCheckOutProgress.jpg
+   .. image:: images/SVNCheckOutProgress.png
       :alt: The TortoiseSVN Checkout Progress
       :align: center
    
@@ -173,7 +173,7 @@ Building the library
          :alt: The Windows Command Startup
          :align: center
       
-      .. image:: images/Sphinx_Install.jpg
+      .. image:: images/Sphinx_Install.png
          :alt: How to start the command window
          :align: center
       
@@ -187,13 +187,13 @@ Building the library
 
    #) Download the |Miktex|_ and install it. Again just follow the wizard. At the fourth step make sure you select for the *"Install missing packages on-the-fly"* the *Yes* option, as you can see on the image below. Again this will take quite some time so be patient. 
       
-      .. image:: images/MiktexInstall.jpg
+      .. image:: images/MiktexInstall.png
          :alt: The Miktex Install Screen
          :align: center
 
    #) For the |IntelTBB|_ download the source files and extract it inside a directory on your system. For example let there be :file:`D:/OpenCV/dep`. For installing the |IntelIIP|_ the story is the same. For exctracting the archives I recommend using the `7-Zip <http://www.7-zip.org/>`_ application. 
       
-      .. image:: images/IntelTBB.jpg
+      .. image:: images/IntelTBB.png
          :alt: The Miktex Install Screen
          :align: center
    
@@ -207,7 +207,7 @@ Building the library
    
    #) In case of the |qtframework|_ you need to build yourself the binary files (unless you use the Microsoft Visual Studio 2008 with 32 bit compiler). To do this go to the `Qt Downloads <http://qt.nokia.com/downloads>`_ page. Download the source files (not the installers!!!):
       
-      .. image:: images/qtDownloadThisPackage.jpg
+      .. image:: images/qtDownloadThisPackage.png
          :alt: Download this Qt Package
          :align: center
     
@@ -309,13 +309,13 @@ Building the library
    
    For the documentation you need to explicitly issue the build commands on the *doc* project for the PDF files and  on the *doc_html* for the HTML ones. Each of these will call *Sphinx* to do all the hard work. You can find the generated documentation inside the :file:`Build/Doc/_html` for the HTML pages and within the :file:`Build/Doc` the PDF manuals. 
   
-   .. image:: images/WindowsBuildDoc.jpg
+   .. image:: images/WindowsBuildDoc.png
       :alt: The Documentation Projects
       :align: center
    
    To collect the header and the binary files, that you will use during your own projects, into a separate directory (simillary to how the pre-built binaries ship) you need to explicitely build the *Install* project. 
    
-   .. image:: images/WindowsBuildInstall.jpg
+   .. image:: images/WindowsBuildInstall.png
       :alt: The Install Project
       :align: center
    
@@ -325,14 +325,14 @@ Building the library
    
       To create an installer you need to install `NSIS <http://nsis.sourceforge.net/Download>`_. Then just build the *Package* project to build the installer into the :file:`Build/_CPack_Packages/{win32}/NSIS` folder. You can then use this to distribute OpenCV with your build settings on other systems.
       
-      .. image:: images/WindowsOpenCVInstaller.jpg
+      .. image:: images/WindowsOpenCVInstaller.png
          :alt: The Installer directory
          :align: center
    
    To test your build just go into the :file:`Build/bin/Debug` or :file:`Build/bin/Release` directory and start a couple of applications like the *contours.exe*. If they run, you are done. Otherwise, something definitely went awfully wrong. In this case you should contact us via our :opencv_group:`user group <>`. 
    If everything is okay the *contours.exe* output should resemble the following image (if built with Qt support): 
    
-   .. image:: images/WindowsQtContoursOutput.jpg
+   .. image:: images/WindowsQtContoursOutput.png
       :alt: A good output result
       :align: center
    
@@ -359,11 +359,11 @@ If you built static libraries then you are done. Otherwise, you need to add the 
 
    %OPENCV_DIR%\bin
 
-.. image:: images/PathEditorOpenCVInsertNew.jpg
+.. image:: images/PathEditorOpenCVInsertNew.png
    :alt: Right click to insert new path manually. 
    :align: center
    
-.. image:: images/PathEditorOpenCVSetPath.jpg
+.. image:: images/PathEditorOpenCVSetPath.png
    :alt: Add the entry. 
    :align: center
 

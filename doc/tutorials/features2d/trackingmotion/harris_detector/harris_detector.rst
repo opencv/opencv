@@ -104,13 +104,11 @@ Result
 The original image:
 
 .. image:: images/Harris_Detector_Original_Image.jpg
-              :height: 200pt
               :align: center   
 
 The detected corners are surrounded by a small black circle
 
 .. image:: images/Harris_Detector_Result.jpg
-              :height: 200pt
               :align: center   
 
 

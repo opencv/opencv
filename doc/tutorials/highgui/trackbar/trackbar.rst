@@ -7,7 +7,7 @@ Adding a Trackbar to our applications!
 
 * Well, it is time to use some fancy GUI tools. OpenCV provides some GUI utilities (*highgui.h*) for you. An example of this is a **Trackbar** 
 
-  .. image:: images/Adding_Trackbars_Tutorial_Trackbar.jpg
+  .. image:: images/Adding_Trackbars_Tutorial_Trackbar.png
      :alt: Trackbar example
      :align: center 
 
@@ -153,7 +153,6 @@ Result
 
   .. image:: images/Adding_Trackbars_Tutorial_Result_1.jpg
      :alt: Adding Trackbars - Lena
-     :height: 500px
      :align: center 
 
 

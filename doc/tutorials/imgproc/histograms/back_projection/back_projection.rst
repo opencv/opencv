@@ -47,11 +47,9 @@ How does it work?
      ======  ======   
 
      .. |T0| image:: images/Back_Projection_Theory0.jpg
-                   :height: 200pt
                    :align: middle
 
      .. |T1| image:: images/Back_Projection_Theory1.jpg
-                   :height: 200pt
                    :align: middle
 
 
@@ -62,11 +60,9 @@ How does it work?
      ======  ======   
 
      .. |T2| image:: images/Back_Projection_Theory2.jpg
-                   :height: 200pt
                    :align: middle
 
      .. |T3| image:: images/Back_Projection_Theory3.jpg
-                   :height: 200pt
                    :align: middle
 
 
@@ -81,7 +77,6 @@ How does it work?
      d. Applying the steps above, we get the following BackProjection image for our Test Image:
 
         .. image:: images/Back_Projection_Theory4.jpg
-                 :height: 200pt
                  :align: center
 
      e. In terms of statistics, the values stored in *BackProjection* represent the *probability* that a pixel in *Test Image* belongs to a skin area, based on the *model histogram* that we use. For instance in our Test image, the brighter areas are more probable to be skin area (as they actually are), whereas the darker areas have less probability (notice that these "dark" areas belong to surfaces that have some shadow on it, which in turns affects the detection).
@@ -301,13 +296,10 @@ Results
    ======  ======  ====== 
 
    .. |R0| image:: images/Back_Projection1_Source_Image.jpg
-                 :height: 200pt
                  :align: middle
 
    .. |R1| image:: images/Back_Projection1_Histogram.jpg
-                 :height: 200pt
                  :align: middle
 
    .. |R2| image:: images/Back_Projection1_BackProj.jpg
-                 :height: 200pt
                  :align: middle

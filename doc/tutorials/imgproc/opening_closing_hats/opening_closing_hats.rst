@@ -43,8 +43,7 @@ Opening
 
 * For instance, check out the example below. The image at the left is the original and the image at the right is the result after applying the opening transformation. We can observe that the small spaces in the corners of the letter tend to dissapear.
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Opening.jpg
-     :height: 150pt
+  .. image:: images/Morphology_2_Tutorial_Theory_Opening.png
      :alt: Opening
      :align: center  
 
@@ -59,8 +58,7 @@ Closing
 
 * Useful to remove small holes (dark regions). 
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Closing.jpg
-     :height: 150pt
+  .. image:: images/Morphology_2_Tutorial_Theory_Closing.png
      :alt: Closing example
      :align: center  
 
@@ -76,8 +74,7 @@ Morphological Gradient
 
 * It is useful for finding the outline of an object as can be seen below:
 
-  .. image:: images/Morphology_2_Tutorial_Theory_Gradient.jpg
-     :height: 150pt
+  .. image:: images/Morphology_2_Tutorial_Theory_Gradient.png
      :alt: Gradient
      :align: center  
 
@@ -91,8 +88,7 @@ Top Hat
    
      dst = tophat( src, element ) = src - open( src, element )
 
-  .. image:: images/Morphology_2_Tutorial_Theory_TopHat.jpg
-     :height: 150pt
+  .. image:: images/Morphology_2_Tutorial_Theory_TopHat.png
      :alt: Top Hat
      :align: center  
 
@@ -105,8 +101,7 @@ Black Hat
  
      dst = blackhat( src, element ) = close( src, element ) - src
 
-  .. image:: images/Morphology_2_Tutorial_Theory_BlackHat.jpg
-     :height: 150pt
+  .. image:: images/Morphology_2_Tutorial_Theory_BlackHat.png
      :alt: Black Hat
      :align: center    
 
@@ -270,17 +265,15 @@ Explanation
 Results
 ========
 
-* After compiling the code above we can execute it giving an image path as an argument. For this tutorial we use as input the image: **baboon.jpg**:
+* After compiling the code above we can execute it giving an image path as an argument. For this tutorial we use as input the image: **baboon.png**:
 
   .. image:: images/Morphology_2_Tutorial_Original_Image.jpg
-     :height: 200pt
      :alt: Morphology 2: Original image
      :align: center 
 
 * And here are two snapshots of the display window. The first picture shows the output after using the operator **Opening** with a cross kernel. The second picture (right side, shows the result of using a **Blackhat** operator with an ellipse kernel.
  
   .. image:: images/Morphology_2_Tutorial_Cover.jpg
-     :height: 300pt
      :alt: Morphology 2: Result sample
      :align: center 
 

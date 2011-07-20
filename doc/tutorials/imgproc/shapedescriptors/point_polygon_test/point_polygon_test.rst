@@ -109,11 +109,9 @@ Result
     |PPT_0|   |PPT_1|   
    ========== ==========   
 
-   .. |PPT_0|  image:: images/Point_Polygon_Test_Source_Image.jpg
-                    :height: 300pt
+   .. |PPT_0|  image:: images/Point_Polygon_Test_Source_Image.png
                     :align: middle
 
    .. |PPT_1|  image:: images/Point_Polygon_Test_Result.jpg
-                    :height: 300pt
                     :align: middle   
 

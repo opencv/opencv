@@ -102,7 +102,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
      cout<<"** Number of corners detected: "<<corners.size()<<endl;
      int r = 4;
      for( int i = 0; i < corners.size(); i++ )
-        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), rng.uniform(0,255)), -1, 8, 0 ); }
+        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), 
+                 rng.uniform(0,255)), -1, 8, 0 ); }
 
      /// Show what you got
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
@@ -116,7 +117,6 @@ Result
 ======
 
 .. image:: images/Shi_Tomasi_Detector_Result.jpg
-              :height: 200pt
               :align: center   
 
 

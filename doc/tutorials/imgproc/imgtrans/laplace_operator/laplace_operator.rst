@@ -19,14 +19,12 @@ Theory
 
    .. image:: images/Laplace_Operator_Tutorial_Theory_Previous.jpg
            :alt: Previous theory
-           :height: 200pt
            :align: center
 
 #. And...what happens if we take the second derivative?
 
    .. image:: images/Laplace_Operator_Tutorial_Theory_ddIntensity.jpg
            :alt: Second derivative
-           :height: 200pt
            :align: center
 
    You can observe that the second derivative is zero! So, we can also use this criterion to attempt to detect edges in an image. However, note that zeros will not only appear in edges (they can actually appear in other meaningless locations); this can be solved by applying filtering where needed.

@@ -109,10 +109,8 @@ Result
    ========== ==========   
 
    .. |Hull_0|  image:: images/Hull_Original_Image.jpg
-                     :height: 300pt
                      :align: middle
 
    .. |Hull_1|  image:: images/Hull_Result.jpg
-                     :height: 300pt
                      :align: middle   
 

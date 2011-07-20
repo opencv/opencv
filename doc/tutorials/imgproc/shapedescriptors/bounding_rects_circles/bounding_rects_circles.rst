@@ -117,10 +117,8 @@ Result
    ========== ==========   
 
    .. |BRC_0|  image:: images/Bounding_Rects_Circles_Source_Image.jpg
-                    :height: 300pt
                     :align: middle
 
    .. |BRC_1|  image:: images/Bounding_Rects_Circles_Result.jpg
-                    :height: 300pt
                     :align: middle   
 

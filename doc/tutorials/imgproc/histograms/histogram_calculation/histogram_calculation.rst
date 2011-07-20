@@ -34,7 +34,6 @@ What are histograms?
 
 
      .. image:: images/Histogram_Calculation_Theory_Hist0.jpg
-              :height: 300pt
               :align: center   
 
    * What happens if we want to *count* this data in an organized way? Since we know that the *range* of information value for this case is 256 values, we can segment our range in subparts (called **bins**) like:
@@ -49,7 +48,6 @@ What are histograms?
  
 
      .. image:: images/Histogram_Calculation_Theory_Hist1.jpg
-              :height: 150pt
               :align: center 
 
    * This was just a simple example of how an histogram works and why it is useful. An histogram can keep count not only of color intensities, but of whatever image features that we want to measure (i.e. gradients, directions, etc). 
@@ -324,12 +322,10 @@ Result
 #. Using as input argument an image like the shown below:
 
      .. image:: images/Histogram_Calculation_Original_Image.jpg
-              :height: 150pt
               :align: center   
 
 #. Produces the following histogram:
 
      .. image:: images/Histogram_Calculation_Result.jpg
-              :height: 200pt
               :align: center   
 

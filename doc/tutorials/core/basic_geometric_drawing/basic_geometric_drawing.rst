@@ -260,6 +260,6 @@ Result
 
 Compiling and running your program should give you a result like this:
 
-.. image:: images/Drawing_1_Tutorial_Result_0.jpg
+.. image:: images/Drawing_1_Tutorial_Result_0.png
    :alt: Drawing Tutorial 1 - Final Result
    :align: center 
