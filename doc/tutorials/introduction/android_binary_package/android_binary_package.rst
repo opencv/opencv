@@ -46,7 +46,7 @@ You need the following tools to be installed:
 
    * *Android SDK Tools, revision12* or newer
 
-   Older revisions should also work but they are not recommended.
+     Older revisions should also work but they are not recommended.
 
    * *SDK Platform Android 2.2, API 8, revision 2* (also known as  *android-8*)
 
