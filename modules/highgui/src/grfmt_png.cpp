@@ -56,6 +56,7 @@
 #else
 #include <png.h>
 #endif
+#include <zlib.h>
 #include "grfmt_png.hpp"
 
 namespace cv
