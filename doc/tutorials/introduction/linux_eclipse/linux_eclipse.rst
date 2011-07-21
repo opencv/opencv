@@ -4,7 +4,7 @@ Using OpenCV with Eclipse (plugin CDT)
 ****************************************
 
 .. note::
-   For me at least, this works, is simple and quick. Suggestions are welcome
+   Two ways, one by forming a project directly, and another by CMake
 
 Prerequisites
 ===============
@@ -196,3 +196,63 @@ Assuming that the image to use as the argument would be located in <DisplayImage
       :align: center 
 
 #. Congratulations! You are ready to have fun with OpenCV using Eclipse.
+
+==================================================
+V2: Using CMake+OpenCV with Eclipse (plugin CDT)
+==================================================
+
+(See the `getting started <http://opencv.willowgarage.com/wiki/Getting_started>` section of the OpenCV Wiki)
+
+Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
+
+.. code-block:: bash
+   #include <cv.h>
+   #include <highgui.h>
+   int main ( int argc, char **argv )
+   {
+     cvNamedWindow( "My Window", 1 );
+     IplImage *img = cvCreateImage( cvSize( 640, 480 ), IPL_DEPTH_8U, 1 );
+     CvFont font;
+     double hScale = 1.0;
+     double vScale = 1.0;
+     int lineWidth = 1;
+     cvInitFont( &font, CV_FONT_HERSHEY_SIMPLEX | CV_FONT_ITALIC,
+                 hScale, vScale, 0, lineWidth );
+     cvPutText( img, "Hello World!", cvPoint( 200, 400 ), &font,
+                cvScalar( 255, 255, 0 ) );
+     cvShowImage( "My Window", img );
+     cvWaitKey();
+     return 0;
+   }
+
+1. Create a build directory, say, under *foo*: ``mkdir /build``.  Then ``cd build``.
+
+#. Put a *CmakeLists.txt* file in build:
+
+.. cod-block:: bash
+
+   PROJECT( helloworld_proj )
+   FIND_PACKAGE( OpenCV REQUIRED )
+   ADD_EXECUTABLE( helloworld helloworld.cxx )
+   TARGET_LINK_LIBRARIES( helloworld ${OpenCV_LIBS} )
+
+#. Run: ``cmake-gui ..`` and make sure you fill in where opencv was built. 
+
+#. Then click ``configure`` and then ``generate``. If it's OK, **quit cmake-gui**
+
+#. Run ``make -j4``   *(the ``-j4`` is optional, it just tells the compiler to build in 4 threads)*. Make sure it builds.
+
+#. Start ``eclipse``. Put the workspace in some directory but **not** in ``foo`` or ``foo\\build``
+
+#. Right click in the ``Project Explorer`` section. Select ``Import``  And then open the ``C/C++`` filter. Choose *Existing Code as a Makefile Project``
+
+#. Name your project, say *helloworld*. Browse to the Existing Code location ``foo\\build`` (where you ran your cmake-gui from). Select *Linux GCC* in the *"Toolchain for Indexer Settings"* and press *Finish*.
+
+#. Right click in the ``Project Explorer`` section. Select ``Properties``. Under ``C/C++ Build``, set the *build directory:* from something like ``${workspace_loc:/helloworld}`` to ``${workspace_loc:/helloworld}/build`` since that's where you are building to.
+
+ a. You can also optionally modify the ``Build command:`` from ``make`` to something like ``make VERBOSE=1 -j4`` which tells the compiler to produce detailed symbol files for debugging and also to compile in 4 parallel threads.
+
+#. Done!
+
+
+
