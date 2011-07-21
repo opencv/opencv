@@ -280,7 +280,7 @@ set( CMAKE_FIND_ROOT_PATH "${ANDROID_NDK_TOOLCHAIN_ROOT}/bin" "${ANDROID_NDK_TOO
 if( BUILD_WITH_ANDROID_NDK )
  set( STL_PATH "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++" )
  set( STL_LIBRARIES_PATH "${STL_PATH}/libs/${ARMEABI_NDK_NAME}" )
- include_directories( "${STL_PATH}/include" "${STL_LIBRARIES_PATH}/include" )
+ include_directories(SYSTEM "${STL_PATH}/include" "${STL_LIBRARIES_PATH}/include" )
 # if ( NOT ARMEABI AND NOT FORCE_ARM )
 #  set( STL_LIBRARIES_PATH "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/lib/${CMAKE_SYSTEM_PROCESSOR}/thumb" )
 # endif()
@@ -295,7 +295,7 @@ if( BUILD_WITH_ANDROID_NDK_TOOLCHAIN )
   set( STL_LIBRARIES_PATH "${STL_LIBRARIES_PATH}/thumb" )
  endif()
  #for some reason this is needed? TODO figure out why...
- include_directories( "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi" )
+ include_directories(SYSTEM "${ANDROID_NDK_TOOLCHAIN_ROOT}/arm-linux-androideabi/include/c++/4.4.3/arm-linux-androideabi" )
 endif()
 
 # only search for libraries and includes in the ndk toolchain
