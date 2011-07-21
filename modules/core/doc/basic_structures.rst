@@ -1497,7 +1497,7 @@ Mat::elemSize1
 ------------------
 Returns the size of each matrix element channel in bytes.
 
-.. ocv:function:: size_t Mat::elemSize() const
+.. ocv:function:: size_t Mat::elemSize1() const
 
 The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is ``CV_16SC3`` , the method returns ``sizeof(short)`` or 2.
 
