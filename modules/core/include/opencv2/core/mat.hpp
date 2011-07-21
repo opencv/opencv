@@ -675,7 +675,12 @@ template<typename _Tp, int m, int n> inline Mat::operator Matx<_Tp, m, n>() cons
 
 template<typename _Tp> inline void Mat::push_back(const _Tp& elem)
 {
-    CV_Assert(DataType<_Tp>::type == type() && cols == 1
+    if( !data )
+	{
+		*this = Mat(1, 1, DataType<_Tp>::type, (void*)&elem).clone();
+		return;
+	}
+	CV_Assert(DataType<_Tp>::type == type() && cols == 1
               /* && dims == 2 (cols == 1 implies dims == 2) */);
     uchar* tmp = dataend + step[0];
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )

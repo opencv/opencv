@@ -585,6 +585,11 @@ void Mat::push_back(const Mat& elems)
         push_back(tmp);
         return;
     }
+	if( !data )
+	{
+		*this = elems.clone();
+		return;
+	}
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
