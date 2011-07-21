@@ -1,5 +1,6 @@
 package org.opencv.samples.tutorial0;
 
+import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
@@ -58,6 +59,11 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
             params.setPreviewSize(getFrameWidth(), getFrameHeight());
             mCamera.setParameters(params);
+            try {
+				mCamera.setPreviewDisplay(null);
+			} catch (IOException e) {
+				Log.e(TAG, "mCamera.setPreviewDisplay fails: " + e);
+			}
             mCamera.startPreview();
         }
     }
