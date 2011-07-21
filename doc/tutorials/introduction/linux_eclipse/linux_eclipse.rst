@@ -205,7 +205,8 @@ V2: Using CMake+OpenCV with Eclipse (plugin CDT)
 
 Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
-.. code-block:: bash
+.. code-block:: cpp
+
    #include <cv.h>
    #include <highgui.h>
    int main ( int argc, char **argv )
@@ -229,7 +230,7 @@ Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
 #. Put a *CmakeLists.txt* file in build:
 
-.. cod-block:: bash
+.. code-block:: bash
 
    PROJECT( helloworld_proj )
    FIND_PACKAGE( OpenCV REQUIRED )
