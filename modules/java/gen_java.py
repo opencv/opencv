@@ -8,30 +8,9 @@ except:
 
 class_ignore_list = (
     #core
-    "FileNode",
-    "FileStorage",
+    "FileNode", "FileStorage",
     #highgui
-    "VideoWriter",
-    "VideoCapture",
-)
-
-func_ignore_list = (
-    #core
-    "checkHardwareSupport",
-    "setUseOptimized",
-    "useOptimized",
-    "vconcat",
-    #highgui
-    "namedWindow",
-    "destroyWindow",
-    "destroyAllWindows",
-    "startWindowThread",
-    "setWindowProperty",
-    "getWindowProperty",
-    "getTrackbarPos",
-    "setTrackbarPos",
-    "imshow",
-    "waitKey",
+    "VideoWriter", "VideoCapture",
 )
 
 const_ignore_list = (
@@ -109,6 +88,64 @@ const_ignore_list = (
     "CV_FLOODFILL_.+",
 )
 
+# { Module : { public : [[name, val],...], private : [[]...] } }
+missing_consts = \
+{
+    'Core' :
+    {
+        'private' :
+        (
+            ('CV_8U',  0 ), ('CV_8S',  1 ),
+            ('CV_16U', 2 ), ('CV_16S', 3 ),
+            ('CV_32S', 4 ),
+            ('CV_32F', 5 ), ('CV_64F', 6 ),
+            ('CV_USRTYPE1', 7 ),
+        ) # private
+    }, # Core
+
+    "Imgproc":
+    {
+        'private' :
+        (
+            ('IPL_BORDER_CONSTANT',    0 ),
+            ('IPL_BORDER_REPLICATE',   1 ),
+            ('IPL_BORDER_REFLECT',     2 ),
+            ('IPL_BORDER_WRAP',        3 ),
+            ('IPL_BORDER_REFLECT_101', 4 ),
+            ('IPL_BORDER_TRANSPARENT', 5 ),
+        ) # private
+    }, # Imgproc
+
+    "Calib3d":
+    {
+        'public' :
+        (
+            ('CV_LMEDS',  4),
+            ('CV_RANSAC', 8),
+            ('CV_FM_LMEDS', 'CV_LMEDS'),
+            ('CV_FM_RANSAC','CV_RANSAC'),
+            ('CV_FM_7POINT', 1),
+            ('CV_FM_8POINT', 2),
+            ('CV_CALIB_USE_INTRINSIC_GUESS', 1),
+            ('CV_CALIB_FIX_ASPECT_RATIO',    2),
+            ('CV_CALIB_FIX_PRINCIPAL_POINT', 4),
+            ('CV_CALIB_ZERO_TANGENT_DIST',   8),
+            ('CV_CALIB_FIX_FOCAL_LENGTH',   16),
+            ('CV_CALIB_FIX_K1',             32),
+            ('CV_CALIB_FIX_K2',             64),
+            ('CV_CALIB_FIX_K3',            128),
+            ('CV_CALIB_FIX_K4',           2048),
+            ('CV_CALIB_FIX_K5',           4096),
+            ('CV_CALIB_FIX_K6',           8192),
+            ('CV_CALIB_RATIONAL_MODEL',  16384),
+            ('CV_CALIB_FIX_INTRINSIC',     256),
+            ('CV_CALIB_SAME_FOCAL_LENGTH', 512),
+            ('CV_CALIB_ZERO_DISPARITY',   1024),
+        ) # public
+    }, # Calib3d
+
+}
+
 
 # c_type    : { java/jni correspondence }
 type_dict = {
@@ -126,6 +163,9 @@ type_dict = {
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+
+# "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
+
     "vector_Point": { "j_type" : "java.util.List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
     "vector_Mat" :  { "j_type" : "java.util.List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
     "vector_KeyPoint" : { "j_type" : "java.util.List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
@@ -134,7 +174,7 @@ type_dict = {
     "vector_int" : { "j_type" : "java.util.List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
     "vector_float" : { "j_type" : "java.util.List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
     "vector_double" : { "j_type" : "java.util.List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
-# "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
+
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
@@ -200,12 +240,204 @@ type_dict = {
 
 }
 
-setManualFunctions=set(['minMaxLoc', 'getTextSize'])
+# { Module : { func : {j_code, jn_code, cpp_code} } }
+ManualFuncs = {
+    'Core' :
+    {
+        'minMaxLoc' : {
+            'j_code'   : """
+    // manual port
+    public static class MinMaxLocResult {
+        public double minVal;
+        public double maxVal;
+        public Point minLoc;
+        public Point maxLoc;
+
+    	public MinMaxLocResult() {
+    	    minVal=0; maxVal=0;
+    	    minLoc=new Point();
+    	    maxLoc=new Point();
+    	}
+    }
+
+    // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
+
+    //javadoc: minMaxLoc(src, mask)
+    public static MinMaxLocResult minMaxLoc(Mat src, Mat mask) {
+        MinMaxLocResult res = new MinMaxLocResult();
+        long maskNativeObj=0;
+        if (mask != null) {
+            maskNativeObj=mask.nativeObj;
+        }
+        double resarr[] = n_minMaxLocManual(src.nativeObj, maskNativeObj);
+        res.minVal=resarr[0];
+        res.maxVal=resarr[1];
+        res.minLoc.x=resarr[2];
+        res.minLoc.y=resarr[3];
+        res.maxLoc.x=resarr[4];
+        res.maxLoc.y=resarr[5];
+        return res;
+    }
+
+    //javadoc: minMaxLoc(src)
+    public static MinMaxLocResult minMaxLoc(Mat src) {
+        return minMaxLoc(src, null);
+    }
+
+""",
+            'jn_code'  :
+"""    private static native double[] n_minMaxLocManual(long src_nativeObj, long mask_nativeObj);\n""",
+            'cpp_code' :
+"""
+// C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
+
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
+  (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
+{
+    try {
+        LOGD("Core::n_1minMaxLoc()");
+        jdoubleArray result;
+        result = env->NewDoubleArray(6);
+        if (result == NULL) {
+            return NULL; /* out of memory error thrown */
+        }
+
+        Mat& src = *((Mat*)src_nativeObj);
+
+        double minVal, maxVal;
+        Point minLoc, maxLoc;
+        if (mask_nativeObj != 0) {
+            Mat& mask = *((Mat*)mask_nativeObj);
+            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, mask);
+        } else {
+            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        }
+
+        jdouble fill[6];
+        fill[0]=minVal;
+        fill[1]=maxVal;
+        fill[2]=minLoc.x;
+        fill[3]=minLoc.y;
+        fill[4]=maxLoc.x;
+        fill[5]=maxLoc.y;
+
+        env->SetDoubleArrayRegion(result, 0, 6, fill);
+
+	return result;
+
+    } catch(cv::Exception e) {
+        LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return NULL;
+    } catch (...) {
+        LOGD("Core::n_1minMaxLoc() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {core::minMaxLoc()}");
+        return NULL;
+    }
+}
+
+""",
+        }, # minMaxLoc
+
+        'getTextSize' :
+        {
+            'j_code'   :
+"""
+    // C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+    //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
+    public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
+        if(baseLine != null && baseLine.length != 1)
+            throw new java.lang.IllegalArgumentException("'baseLine' must be 'int[1]' or 'null'.");
+        Size retVal = new Size(n_getTextSize(text, fontFace, fontScale, thickness, baseLine));
+        return retVal;
+    }
+""",
+            'jn_code'  :
+"""    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
+            'cpp_code' :
+"""
+// C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
+  (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
+{
+    try {
+        LOGD("Core::n_1getTextSize()");
+        jdoubleArray result;
+        result = env->NewDoubleArray(2);
+        if (result == NULL) {
+            return NULL; /* out of memory error thrown */
+        }
+
+        const char* utf_text = env->GetStringUTFChars(text, 0);
+        std::string n_text( utf_text ? utf_text : "" );
+        env->ReleaseStringUTFChars(text, utf_text);
+
+        int _baseLine;
+        int* pbaseLine = 0;
+
+        if (baseLine != NULL)
+            pbaseLine = &_baseLine;
+
+        cv::Size rsize = cv::getTextSize(n_text, (int)fontFace, (double)fontScale, (int)thickness, pbaseLine);
+
+        jdouble fill[2];
+        fill[0]=rsize.width;
+        fill[1]=rsize.height;
+
+        env->SetDoubleArrayRegion(result, 0, 2, fill);
+
+        if (baseLine != NULL)
+            env->SetIntArrayRegion(baseLine, 0, 1, pbaseLine);
+
+        return result;
+
+    } catch(cv::Exception e) {
+        LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return NULL;
+    } catch (...) {
+        LOGD("Core::n_1getTextSize() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
+        return NULL;
+    }
+}
+
+""",
+        }, # getTextSize
+
+        "checkHardwareSupport" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "setUseOptimized"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "useOptimized"         : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "vconcat"              : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+
+    }, # Core
+
+    'Highgui' :
+    {
+        "namedWindow"       : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "destroyWindow"     : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "destroyAllWindows" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "startWindowThread" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "setWindowProperty" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "getWindowProperty" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "getTrackbarPos"    : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "setTrackbarPos"    : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "imshow"            : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+        "waitKey"           : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
+    }, # Highgui
+}
 
 class ConstInfo(object):
     def __init__(self, cname, name, val):
         self.cname = cname
-        self.name =  re.sub(r"^Cv", "", name)
+        self.name = re.sub(r"^Cv", "", name)
         self.value = val
 
 
@@ -223,6 +455,8 @@ class ClassInfo(object):
         self.cname =self.cname.replace(".", "::")
         self.methods = {}
         self.consts = [] # using a list to save the occurence order
+        self.private_consts = []
+        self.imports = set()
         self.props= []
         for m in decl[2]:
             if m.startswith("="):
@@ -264,8 +498,6 @@ class FuncInfo(object):
                 self.jname = m[1:]
         self.jn_name = "n_" + self.jname
         self.jni_name= re.sub(r"_", "_1", self.jn_name)
-##        if self.classname:
-##            self.jni_name = "00024" + self.classname + "_" + self.jni_name
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = decl[1] or ""
         self.args = []
@@ -298,8 +530,6 @@ class JavaWrapperGenerator(object):
 
     def clear(self):
         self.classes = { "Mat" : ClassInfo([ 'class Mat', [], [] ]) }
-        self.funcs = {}
-        self.consts = [] # using a list to save the occurence order
         self.module = ""
         self.Module = ""
         self.java_code= {} # { class : {j_code, jn_code} }
@@ -357,6 +587,15 @@ public class %s {
               "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
               "suffix" : "J" }
 
+        # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
+        if classinfo.name in missing_consts:
+            if 'private' in missing_consts[classinfo.name]:
+                for (name, val) in missing_consts[classinfo.name]['private']:
+                    classinfo.private_consts.append( ConstInfo(name, name, val) )
+            if 'public' in missing_consts[classinfo.name]:
+                for (name, val) in missing_consts[classinfo.name]['public']:
+                    classinfo.consts.append( ConstInfo(name, name, val) )
+
         # class props
         for p in decl[3]:
             if "vector" not in p[0]:
@@ -368,24 +607,24 @@ public class %s {
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
-        consts = self.consts
         name = decl[0].replace("const ", "").strip()
         name = re.sub(r"^cv\.", "", name)
         cname = name.replace(".", "::")
         for c in const_ignore_list:
             if re.match(c, name):
                 return
-        # check if it's a class member
+        # class member?
         dpos = name.rfind(".")
         if dpos >= 0:
             classname = name[:dpos]
             name = name[dpos+1:]
-            if classname in self.classes:
-                consts = self.classes[classname].consts
-            else:
-                # this class isn't wrapped
-                # skipping this const
-                return
+        else:
+            classname = self.Module
+        if classname not in self.classes:
+            # this class isn't wrapped
+            # skipping this const
+            return
+        consts = self.classes[classname].consts
         constinfo = ConstInfo(cname, name, decl[1])
         # checking duplication
         for c in consts:
@@ -397,20 +636,16 @@ public class %s {
 
     def add_func(self, decl):
         ffi = FuncFamilyInfo(decl)
-	if ffi.jname in setManualFunctions :
-		print "Found function, which is ported manually: " + ffi.jname
-		return None
-        func_map = self.funcs
-        classname = ffi.funcs[0].classname
-        if classname in class_ignore_list or ffi.jname in func_ignore_list:
+        classname = ffi.funcs[0].classname or self.Module
+        if classname in class_ignore_list:
             return
-        if classname:
-            if classname in self.classes:
-                func_map = self.classes[classname].methods
-            else:
-                print "Generator error: the class %s for method %s is missing" % \
-                        (classname, ffi.jname)
-                sys.exit(-1)
+        if classname in ManualFuncs and ffi.jname in ManualFuncs[classname]:
+            return
+        if classname not in self.classes:
+            print "Generator error: the class %s for method %s is missing" % \
+                    (classname, ffi.jname)
+            sys.exit(-1)
+        func_map = self.classes[classname].methods
         if ffi.jname in func_map:
             func_map[ffi.jname].add_func(ffi.funcs[0])
         else:
@@ -427,117 +662,21 @@ public class %s {
         self.Module = module.capitalize()
         parser = hdr_parser.CppHeaderParser()
 
-        # step 1: scan the headers and build more descriptive maps of classes, consts, functions
+        self.add_class( ['class ' + self.Module, [], [], []] ) # [ 'class/struct cname', [bases], [modlist] [props] ]
+
+        # scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
             decls = parser.parse(hdr)
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
                     self.add_class(decl)
-                    pass
                 elif name.startswith("const"):
                     self.add_const(decl)
                 else: # function
                     self.add_func(decl)
-                    pass
 
-        self.add_class_code_stream(self.Module)
         self.cpp_code = StringIO()
-
-        # java code
-        if module == "core":
-            self.java_code[self.Module]["j_code"].write(\
-"""
-    private static final int
-            CV_8U  = 0, CV_8S  = 1, CV_16U = 2, CV_16S = 3, CV_32S = 4, CV_32F = 5, CV_64F = 6, CV_USRTYPE1 = 7;
-
-    //Manual ported functions
-
-    // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
-    //javadoc: minMaxLoc
-    public static class MinMaxLocResult {
-        public double minVal;
-        public double maxVal;
-        public Point minLoc;
-        public Point maxLoc;
-
-	public MinMaxLocResult() {
-	    minVal=0; maxVal=0;
-	    minLoc=new Point();
-	    maxLoc=new Point();
-	}
-    }
-    public static MinMaxLocResult minMaxLoc(Mat src, Mat mask) {
-        MinMaxLocResult res = new MinMaxLocResult();
-        long maskNativeObj=0;
-        if (mask != null) {
-                maskNativeObj=mask.nativeObj;
-        }
-        double resarr[] = n_minMaxLocManual(src.nativeObj, maskNativeObj);
-        res.minVal=resarr[0];
-        res.maxVal=resarr[1];
-        res.minLoc.x=resarr[2];
-        res.minLoc.y=resarr[3];
-        res.maxLoc.x=resarr[4];
-        res.maxLoc.y=resarr[5];
-        return res;
-    }
-    public static MinMaxLocResult minMaxLoc(Mat src) {
-        return minMaxLoc(src, null);
-    }
-    private static native double[] n_minMaxLocManual(long src_nativeObj, long mask_nativeObj);
-
-    //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
-    public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
-        assert(baseLine == null || baseLine.length == 1);
-        Size retVal = new Size(n_getTextSize(text, fontFace, fontScale, thickness, baseLine));
-        return retVal;
-    }
-    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);
-
-""" )
-
-        if module == "imgproc":
-            self.java_code[self.Module]["j_code"].write(\
-"""
-    private static final int
-            IPL_BORDER_CONSTANT = 0, IPL_BORDER_REPLICATE = 1, IPL_BORDER_REFLECT = 2,
-            IPL_BORDER_WRAP = 3, IPL_BORDER_REFLECT_101 = 4, IPL_BORDER_TRANSPARENT = 5;
-""" )
-
-        if module == "calib3d":
-            self.java_code[self.Module]["j_code"].write(\
-"""
-    public static final int
-            CV_LMEDS = 4,
-            CV_RANSAC = 8,
-            CV_FM_LMEDS = CV_LMEDS,
-            CV_FM_RANSAC = CV_RANSAC;
-
-    public static final int
-            CV_FM_7POINT = 1,
-            CV_FM_8POINT = 2;
-
-    public static final int
-            CV_CALIB_USE_INTRINSIC_GUESS = 1,
-            CV_CALIB_FIX_ASPECT_RATIO = 2,
-            CV_CALIB_FIX_PRINCIPAL_POINT = 4,
-            CV_CALIB_ZERO_TANGENT_DIST = 8,
-            CV_CALIB_FIX_FOCAL_LENGTH = 16,
-            CV_CALIB_FIX_K1 = 32,
-            CV_CALIB_FIX_K2 = 64,
-            CV_CALIB_FIX_K3 = 128,
-            CV_CALIB_FIX_K4 = 2048,
-            CV_CALIB_FIX_K5 = 4096,
-            CV_CALIB_FIX_K6 = 8192,
-            CV_CALIB_RATIONAL_MODEL = 16384,
-            CV_CALIB_FIX_INTRINSIC = 256,
-            CV_CALIB_SAME_FOCAL_LENGTH = 512,
-            CV_CALIB_ZERO_DISPARITY = 1024;
-""" )
-
-
-        # cpp module header
         self.cpp_code.write("""
 //
 // This file is auto-generated, please don't edit!
@@ -545,129 +684,30 @@ public class %s {
 
 #include <jni.h>
 
+#include "utils.h"
+
 #ifdef DEBUG
 #include <android/log.h>
-#define MODULE_LOG_TAG "OpenCV.%s"
+#define MODULE_LOG_TAG "OpenCV.%(m)s"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
 #else //DEBUG
 #define LOGD(...)
 #endif //DEBUG
 
-#include "utils.h"
-""" % module)
-        self.cpp_code.write( "\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) \
-                            for f in srcfiles]) )
-        self.cpp_code.write('\nusing namespace cv;\n')
-        self.cpp_code.write('\n\nextern "C" {\n\n')
+#include "opencv2/%(m)s/%(m)s.hpp"
 
-        # step 2: generate the code for global constants
-        self.gen_consts(self.consts, self.java_code[self.Module]["j_code"])
+using namespace cv;
 
-        # step 3: generate the code for all the global functions
-        self.gen_funcs()
+extern "C" {
 
-        # step 4: generate code for the classes
-        self.gen_classes()
+""" % {'m' : module} )
 
-        if module == "core":
-            self.cpp_code.write(\
-"""
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
-  (JNIEnv* env, jclass cls, jlong src_nativeObj, jlong mask_nativeObj)
-{
-    try {
-        LOGD("Core::n_1minMaxLoc()");
-        jdoubleArray result;
-        result = env->NewDoubleArray(6);
-        if (result == NULL) {
-            return NULL; /* out of memory error thrown */
-        }
+        #"\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) for f in srcfiles])
 
-        Mat& src = *((Mat*)src_nativeObj);
+        # generate code for the classes
+        for name in self.classes.keys():
+            self.gen_class(name)
 
-        double minVal, maxVal;
-        Point minLoc, maxLoc;
-        if (mask_nativeObj != 0) {
-            Mat& mask = *((Mat*)mask_nativeObj);
-            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, mask);
-        } else {
-            minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
-        }
-
-        jdouble fill[6];
-        fill[0]=minVal;
-        fill[1]=maxVal;
-        fill[2]=minLoc.x;
-        fill[3]=minLoc.y;
-        fill[4]=maxLoc.x;
-        fill[5]=maxLoc.y;
-
-        env->SetDoubleArrayRegion(result, 0, 6, fill);
-
-	return result;
-
-    } catch(cv::Exception e) {
-        LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/core/CvException");
-        if(!je) je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, e.what());
-        return NULL;
-    } catch (...) {
-        LOGD("Core::n_1minMaxLoc() catched unknown exception (...)");
-        jclass je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, "Unknown exception in JNI code {core::minMaxLoc()}");
-        return NULL;
-    }
-}
-
-JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
-  (JNIEnv* env, jclass cls, jstring text, jint fontFace, jdouble fontScale, jint thickness, jintArray baseLine)
-{
-    try {
-        LOGD("Core::n_1getTextSize()");
-        jdoubleArray result;
-        result = env->NewDoubleArray(2);
-        if (result == NULL) {
-            return NULL; /* out of memory error thrown */
-        }
-
-        const char* utf_text = env->GetStringUTFChars(text, 0);
-        std::string n_text( utf_text ? utf_text : "" );
-        env->ReleaseStringUTFChars(text, utf_text);
-
-        int _baseLine;
-        int* pbaseLine = 0;
-
-        if (baseLine != NULL)
-            pbaseLine = &_baseLine;
-
-        cv::Size rsize = cv::getTextSize(n_text, (int)fontFace, (double)fontScale, (int)thickness, pbaseLine);
-
-        jdouble fill[2];
-        fill[0]=rsize.width;
-        fill[1]=rsize.height;
-
-        env->SetDoubleArrayRegion(result, 0, 2, fill);
-
-        if (baseLine != NULL)
-            env->SetIntArrayRegion(baseLine, 0, 1, pbaseLine);
-
-        return result;
-
-    } catch(cv::Exception e) {
-        LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/core/CvException");
-        if(!je) je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, e.what());
-        return NULL;
-    } catch (...) {
-        LOGD("Core::n_1getTextSize() catched unknown exception (...)");
-        jclass je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, "Unknown exception in JNI code {core::getTextSize()}");
-        return NULL;
-    }
-}
-""")
         # saving code streams
         for cls in self.java_code.keys():
             self.java_code[cls]["j_code"].write("\n\n%s\n}\n" % self.java_code[cls]["jn_code"].getvalue())
@@ -692,46 +732,33 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
 
 
-    def gen_consts(self, consts, code_stream):
-        if consts:
-            code_stream.write("""
-    public static final int
-            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts])
-            )
-
 
     def gen_func(self, fi, isoverload):
-        # // C++: c_decl
-        # e.g: //  C++: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
-        decl_args = []
-        for a in fi.args:
-            s = a.ctype
-            if a.pointer:
-                s += "*"
-            elif a.out:
-                s += "&"
-            s += " " + a.name
-            if a.defval:
-                s += " = "+a.defval
-            decl_args.append(s)
-        c_decl = "%s %s %s(%s)" % ( fi.static, fi.ctype, fi.cname, ", ".join(decl_args) )
-
-        #java doc comment
-        f_name = fi.name
-        if fi.classname:
-            f_name = fi.classname + "::" + fi.name
-        java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in fi.args])
-
-        self.gen_func2(fi, isoverload, c_decl, java_doc, "")
+        self.gen_func2(fi, isoverload, "")
 
 
-    def gen_func2(self, fi, isoverload, c_decl, java_doc, prop_name):
-        j_code   = self.java_code[self.Module]["j_code"]
-        jn_code  = self.java_code[self.Module]["jn_code"]
+    def gen_func2(self, fi, isoverload, prop_name):
+        j_code   = self.java_code[fi.classname or self.Module]["j_code"]
+        jn_code  = self.java_code[fi.classname or self.Module]["jn_code"]
         cpp_code = self.cpp_code
-        if fi.classname:
-            j_code   = self.java_code[fi.classname]["j_code"]
-            jn_code  = self.java_code[fi.classname]["jn_code"]
+
+        # c_decl
+        # e.g: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
+        if prop_name:
+            c_decl = "%s %s::%s" % (fi.ctype, fi.classname, prop_name)
+        else:
+            decl_args = []
+            for a in fi.args:
+                s = a.ctype
+                if a.pointer:
+                    s += "*"
+                elif a.out:
+                    s += "&"
+                s += " " + a.name
+                if a.defval:
+                    s += " = "+a.defval
+                decl_args.append(s)
+            c_decl = "%s %s %s(%s)" % ( fi.static, fi.ctype, fi.cname, ", ".join(decl_args) )
 
         # java comment
         j_code.write( "\n    //\n    // C++: %s\n    //\n\n" % c_decl )
@@ -772,7 +799,11 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
             j_epilogue = []
             c_prologue = []
             c_epilogue = []
+            if fi.ctype == 'Mat':
+                self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Mat")
             if type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
+                if "Vec" not in fi.ctype:
+                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[fi.ctype]["j_type"])
                 fields = type_dict[fi.ctype]["jn_args"]
                 c_epilogue.append( \
                     ("jdoubleArray _da_retval_ = env->NewDoubleArray(%(cnt)i);  " +
@@ -788,6 +819,9 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
                 suffix += type_dict[a.ctype].get("suffix") or ""
 
                 if "vector" in a.ctype: # pass as Mat
+                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Mat")
+                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Utils")
+                    self.classes[fi.classname or self.Module].imports.add("java.util.List")
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
@@ -801,7 +835,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
                         j_epilogue.append("utils.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
-
+                    if "jn_args" in type_dict[a.ctype] and "Vec" not in a.ctype:
+                        self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[a.ctype]['j_type'])
+                    if 'String' in type_dict[a.ctype]['j_type']:
+                        self.classes[fi.classname or self.Module].imports.add("java.lang.String")
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or a.ctype in self.classes: # input arg, pass by primitive fields
                         for f in fields:
@@ -818,7 +855,6 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
                                 {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
                             )
                             i += 1
-                        #j_epilogue.append("%s.set(%s_out);" % (a.name, a.name))
                         j_epilogue.append("; ".join(set_vals) + "; ")
                         c_epilogue.append( \
                             "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
@@ -839,9 +875,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
             # java part:
 
             #java doc comment
-##            f_name = fi.name
-##            if fi.classname:
-##                f_name = fi.classname + "::" + fi.name
+            f_name = fi.name
+            if fi.classname:
+                f_name = fi.classname + "::" + fi.name
+            java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args])
             j_code.write(" "*4 + java_doc + "\n")
 
             # public java wrapper method impl (calling native one above)
@@ -998,51 +1035,56 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
 
 
-    def gen_funcs(self):
-        # generate the code for all the global functions
-        fflist = self.funcs.items()
+    def gen_class(self, name):
+        # generate code for the class
+        if name == "Mat":
+            return
+        ci = self.classes[name]
+        # constants
+        if ci.private_consts:
+            self.java_code[name]['j_code'].write("""
+    private static final int
+            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in ci.private_consts])
+            )
+        if ci.consts:
+            self.java_code[name]['j_code'].write("""
+    public static final int
+            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in ci.consts])
+            )
+        # c-tors
+        fflist = ci.methods.items()
         fflist.sort()
-        for name, ffi in fflist:
-            assert not ffi.funcs[0].classname, "Error: global func is a class member - "+name
-            for fi in ffi.funcs:
-                self.gen_func(fi, len(ffi.funcs)>1)
+        for n, ffi in fflist:
+            if ffi.isconstructor:
+                for fi in ffi.funcs:
+                    self.gen_func(fi, len(ffi.funcs)>1)
+        # other methods
+        for n, ffi in fflist:
+            if not ffi.isconstructor:
+                for fi in ffi.funcs:
+                    self.gen_func(fi, len(ffi.funcs)>1)
+        # props
+        for pi in ci.props:
+            # getter
+            getter_name = name + ".get_" + pi.name
+            #print getter_name
+            fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
+            self.gen_func2(fi, getter_name in ci.methods, pi.name)
+            if pi.rw:
+                #setter
+                setter_name = name + ".set_" + pi.name
+                #print setter_name
+                fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
+                self.gen_func2(fi, getter_name in ci.methods, pi.name)
 
+        # manual ports
+        if name in ManualFuncs:
+            for func in ManualFuncs[name].keys():
+                self.java_code[name]["j_code"].write ( ManualFuncs[name][func]["j_code"] )
+                self.java_code[name]["jn_code"].write( ManualFuncs[name][func]["jn_code"] )
+                self.cpp_code.write( ManualFuncs[name][func]["cpp_code"] )
 
-    def gen_classes(self):
-        # generate code for the classes (their methods and consts)
-        classlist = self.classes.items()
-        classlist.sort()
-        for name, ci in classlist:
-            if name == "Mat":
-                continue
-            # constants
-            self.gen_consts(ci.consts, self.java_code[name]["j_code"])
-            # c-tors
-            fflist = ci.methods.items()
-            fflist.sort()
-            for n, ffi in fflist:
-                if ffi.isconstructor:
-                    for fi in ffi.funcs:
-                        self.gen_func(fi, len(ffi.funcs)>1)
-            # other methods
-            for n, ffi in fflist:
-                if not ffi.isconstructor:
-                    for fi in ffi.funcs:
-                        self.gen_func(fi, len(ffi.funcs)>1)
-            # props
-            for pi in ci.props:
-                # getter
-                getter_name = name + ".get_" + pi.name
-                #print getter_name
-                fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
-                self.gen_func2(fi, getter_name in ci.methods, "// %s %s" % (pi.ctype, pi.name), "//javadoc: %s::%s" % (name, pi.name), pi.name)
-                if pi.rw:
-                    #setter
-                    setter_name = name + ".set_" + pi.name
-                    #print setter_name
-                    fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
-                    self.gen_func2(fi, getter_name in ci.methods, "// %s %s" % (pi.ctype, pi.name), "//javadoc: %s::%s" % (name, pi.name), pi.name)
-
+        if name != self.Module:
             # finalize()
             self.java_code[name]["j_code"].write(
 """
@@ -1075,6 +1117,9 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_n_1delete
 
 """ % {"module" : module, "cls" : name}
             )
+
+        self.java_code[name]["jn_code"].write( "\n// imports %i\n//" % len(ci.imports))
+        self.java_code[name]["jn_code"].write( "\n//".join(sorted(ci.imports)))
 
 
 if __name__ == "__main__":
