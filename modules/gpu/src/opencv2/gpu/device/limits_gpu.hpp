@@ -87,6 +87,20 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = (char)-1 == -1;
     };
 
+     template<> struct numeric_limits_gpu<signed char>
+    {
+        typedef char type;
+        __device__ __forceinline__ static type min() { return CHAR_MIN; };
+        __device__ __forceinline__ static type max() { return CHAR_MAX; };
+        __device__ __forceinline__ static type epsilon();
+        __device__ __forceinline__ static type round_error();
+        __device__ __forceinline__ static type denorm_min();
+        __device__ __forceinline__ static type infinity();
+        __device__ __forceinline__ static type quiet_NaN();
+        __device__ __forceinline__ static type signaling_NaN();
+        static const bool is_signed = (signed char)-1 == -1;
+    };
+
     template<> struct numeric_limits_gpu<unsigned char>
     {
         typedef unsigned char type;

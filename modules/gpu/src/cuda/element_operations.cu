@@ -42,6 +42,7 @@
 
 #include "opencv2/gpu/device/vecmath.hpp"
 #include "opencv2/gpu/device/transform.hpp"
+#include "opencv2/gpu/device/limits_gpu.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "internal_shared.hpp"
 
@@ -669,4 +670,63 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template void subtractCaller<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // pow
+    
+    template<typename T, bool Signed = device::numeric_limits_gpu<T>::is_signed>
+    struct PowOp
+    {    
+        float power;
+        PowOp(float power_) : power(power_) {}
+    
+        template<typename T>
+        __device__ __forceinline__ T operator()(const T& e) const
+        {      
+            return saturate_cast<T>(__powf((float)e, power));
+        }      
+    };
+
+    template<typename T>
+    struct PowOp<T, true>
+    {
+        float power;
+        PowOp(float power_) : power(power_) {}
+
+        __device__ __forceinline__ float operator()(const T& e)
+        {
+              T res = saturate_cast<T>(__powf((float)e, power));            
+            
+            if ( (e < 0) && (1 & (int)power) )
+                    res *= -1;            
+            return res;         
+        }
+    };
+
+    template<>
+    struct PowOp<float>
+    {
+        float power;
+        PowOp(float power_) : power(power_) {}
+
+        __device__ __forceinline__ float operator()(const float& e)
+        {
+            return __powf(fabs(e), power);
+        }
+    };
+
+    template<typename T>
+    void pow_caller(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream)
+    {
+        transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, PowOp<T>(power), stream);
+    }   
+
+    template void pow_caller<uchar>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<schar>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<short>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<ushort>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<int>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<uint>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+    template void pow_caller<float>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
 }}}

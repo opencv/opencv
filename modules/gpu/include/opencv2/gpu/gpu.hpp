@@ -532,6 +532,12 @@ namespace cv
         //! computes exponent of each matrix element (b = e**a)
         //! supports only CV_32FC1 type
         CV_EXPORTS void exp(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
+        
+        //! computes power of each matrix element:
+        //    (dst(i,j) = pow(     src(i,j) , power), if src.type() is integer
+        //    (dst(i,j) = pow(fabs(src(i,j)), power), otherwise
+        //! supports all, except depth == CV_64F
+        CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream = Stream::Null());
 
         //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
         //! supports only CV_32FC1 type

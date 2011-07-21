@@ -68,9 +68,13 @@ void print_info()
 #endif
 
     int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
+    int driver;
+    cudaDriverGetVersion(&driver);
 
-    printf("CUDA version: %d\n", CUDART_VERSION);    
+    printf("CUDA Driver  version: %d\n", driver);        
+    printf("CUDA Runtime version: %d\n", CUDART_VERSION);    
     printf("CUDA device count: %d\n\n", deviceCount);
+    
 
     for (int i = 0; i < deviceCount; ++i)
     {

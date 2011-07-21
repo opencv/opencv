@@ -752,6 +752,74 @@ TEST_P(Exp, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, testing::ValuesIn(devices()));
 
+
+
+////////////////////////////////////////////////////////////////////////////////
+// pow
+
+struct Pow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    double power;
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {        
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());        
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        //size = cv::Size(2, 2);
+
+        mat = cvtest::randomMat(rng, size, type, 0.0, 100.0, false);        
+
+        if (mat.depth() == CV_32F)
+            power = rng.uniform(1.2f, 3.f);
+        else
+        {
+            int ipower = rng.uniform(2, 8);
+            power = (float)ipower;
+        }
+        cv::pow(mat, power, dst_gold);
+    }
+};
+
+TEST_P(Pow, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    PRINT_PARAM(power);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::pow(cv::gpu::GpuMat(mat), power, gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    /*std::cout  << mat << std::endl << std::endl;
+    std::cout  << dst << std::endl << std::endl;
+    std::cout  << dst_gold << std::endl;*/
+    EXPECT_MAT_NEAR(dst_gold, dst, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32F, CV_32FC3)));
+
 ////////////////////////////////////////////////////////////////////////////////
 // log
 

@@ -68,6 +68,8 @@ void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(
 void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
 
+void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&)  { throw_nogpu(); }
+
 #else
 
 ////////////////////////////////////////////////////////////////////////
@@ -766,6 +768,38 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
     }
 
     return thresh;
+}
+
+////////////////////////////////////////////////////////////////////////
+// pow
+
+namespace cv
+{
+    namespace gpu
+    {
+        namespace mathfunc
+        {
+            template<typename T>
+            void pow_caller(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+        }
+    }
+}
+
+void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
+{    
+    CV_Assert( src.depth() != CV_64F );
+    dst.create(src.size(), src.type());
+
+    typedef void (*caller_t)(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+
+    static const caller_t callers[] = 
+    {
+        mathfunc::pow_caller<unsigned char>,  mathfunc::pow_caller<signed char>, 
+        mathfunc::pow_caller<unsigned short>, mathfunc::pow_caller<short>, 
+        mathfunc::pow_caller<int>, mathfunc::pow_caller<float>
+    };
+
+    callers[src.depth()](src.reshape(1), (float)power, dst.reshape(1), StreamAccessor::getStream(stream));    
 }
 
 #endif
