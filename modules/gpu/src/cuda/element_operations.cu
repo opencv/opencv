@@ -680,11 +680,10 @@ namespace cv { namespace gpu { namespace mathfunc
     {    
         float power;
         PowOp(float power_) : power(power_) {}
-    
-        template<typename T>
+            
         __device__ __forceinline__ T operator()(const T& e) const
         {      
-            return saturate_cast<T>(__powf((float)e, power));
+            return saturate_cast<U>(__powf((float)e, power));
         }      
     };
 
