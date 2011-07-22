@@ -86,6 +86,25 @@ Learn about how to use the feature points  detectors, descriptors and matching f
                      :height: 90pt
                      :width:  90pt
 
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |DetectPlanar|       **Title:** :ref:`detectionOfPlanarObjects`
+
+                        *Compatibility:* > OpenCV 2.0
+
+                        *Author:* |Author_VictorE|
+
+                        You will use *features2d* and *calib3d* modules for detecting known planar objects in scenes. 
+
+  ===================== ==============================================
+
+  .. |DetectPlanar| image:: images/detection_of_planar_objects.png
+                     :height: 90pt
+                     :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -97,3 +116,4 @@ Learn about how to use the feature points  detectors, descriptors and matching f
    ../trackingmotion/good_features_to_track/good_features_to_track.rst
    ../trackingmotion/generic_corner_detector/generic_corner_detector
    ../trackingmotion/corner_subpixeles/corner_subpixeles
+   ../detection_of_planar_objects/detection_of_planar_objects

@@ -207,6 +207,7 @@ Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
 .. code-block:: cpp
 
+
    #include <cv.h>
    #include <highgui.h>
    int main ( int argc, char **argv )
@@ -243,9 +244,9 @@ Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
 
 #. Run ``make -j4``   *(the ``-j4`` is optional, it just tells the compiler to build in 4 threads)*. Make sure it builds.
 
-#. Start ``eclipse``. Put the workspace in some directory but **not** in ``foo`` or ``foo\\build``
+#. Start ``eclipse`` . Put the workspace in some directory but **not** in ``foo`` or ``foo\\build``
 
-#. Right click in the ``Project Explorer`` section. Select ``Import``  And then open the ``C/C++`` filter. Choose *Existing Code as a Makefile Project``
+#. Right click in the ``Project Explorer`` section. Select ``Import``  And then open the ``C/C++`` filter. Choose *Existing Code* as a Makefile Project``
 
 #. Name your project, say *helloworld*. Browse to the Existing Code location ``foo\\build`` (where you ran your cmake-gui from). Select *Linux GCC* in the *"Toolchain for Indexer Settings"* and press *Finish*.
 

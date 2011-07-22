@@ -60,7 +60,7 @@ If you are building your own libraries you can take either the source files from
 
    .. container:: enumeratevisibleitemswithsquare
 
-      + stable and tested build - https://code.ros.org/svn/opencv/branches/
+      + stable and tested build - https://code.ros.org/svn/opencv/branches/2.3 (this will change with every new realease)
       + development build - https://code.ros.org/svn/opencv/trunk/
 
 While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain many-many bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need to most up to date version of it. 
@@ -285,11 +285,11 @@ Building the library
    
    .. container:: enumeratevisibleitemswithsquare
        
-      + *BUILD_DOCS* -> Build the documentation of OpenCV (there will be a separate project for building the HTML and the PDF files). 
+      + *BUILD_DOCS* -> It creates two projects for building the documentation of OpenCV (there will be a separate project for building the HTML and the PDF files). Note that these aren't built together with the solution. You need to make an explicit build project command on these to do so.
       + *BUILD_EXAMPLES* -> OpenCV comes with many example applications from which you may learn most of the libraries capabilities. This will also come handy to easily try out if OpenCV is fully functional on your computer. 
-      + *BUILD_JAVA_SUPPORT* -> This is a fresh addition to OpenCV, which slowly start to support the java language. 
+      + *BUILD_JAVA_SUPPORT* -> At the moment this has no real meaning on the Windows platform. Ignore it.
       + *BUILD_NEW_PYTHON_SUPPORT* -> Self-explanatory. Create the binaries to use OpenCV from the Python language. 
-      + *BUILD_PACKAGE* -> Build a project that will build an OpenCV installer. With this you can easily install your OpenCV flavor on other systems. 
+      + *BUILD_PACKAGE* -> Prior to version 2.3 with this you could build a project that will build an OpenCV installer. With this you can easily install your OpenCV flavor on other systems.  For the latest source files of OpenCV it generates a new project that simply creates zip archive with OpenCV sources. 
       + *BUILD_SHARED_LIBS* -> With this you can control to build DLL files (when turned on) or static library files (\*.lib) otherwise. 
       + *BUILD_TESTS* -> Each module of OpenCV has a test project assigned to it. Building these test projects is also a good way to try out, that the modules work just as expected on your system too. 
    

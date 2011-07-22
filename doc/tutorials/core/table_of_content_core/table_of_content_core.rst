@@ -124,6 +124,25 @@ Here you will learn the about the basic building blocks of the library. A must r
                    :height: 90pt
                    :width:  90pt
 
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+   |DiscFourTr|   **Title:** * :ref:`discretFourierTransform`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  You will see how and why use the Discrete Fourier transformation with OpenCV.
+
+  =============== ======================================================
+
+  .. |DiscFourTr| image:: images/discrete_fourier_transform.png
+                   :height: 90pt
+                   :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -137,4 +156,5 @@ Here you will learn the about the basic building blocks of the library. A must r
    ../basic_linear_transform/basic_linear_transform
    ../basic_geometric_drawing/basic_geometric_drawing
    ../random_generator_and_text/random_generator_and_text
-   ../mat-mask-operations/mat-mask-operations.rst
+   ../mat-mask-operations/mat-mask-operations
+   ../discrete_fourier_transform/discrete_fourier_transform
