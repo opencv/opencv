@@ -14,16 +14,6 @@ SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 SET(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
 SET(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
 
-#SET_SOURCE_FILES_PROPERTIES("${GEN_JAVA}" PROPERTIES GENERATED TRUE)
-#SET_SOURCE_FILES_PROPERTIES("${HDR_PARSER}" PROPERTIES GENERATED TRUE)
-#SET_SOURCE_FILES_PROPERTIES("${GEN_JAVADOC}" PROPERTIES GENERATED TRUE)
-#SET_SOURCE_FILES_PROPERTIES("${RST_PARSER}" PROPERTIES GENERATED TRUE)
-
-#add_custom_command(
-#    OUTPUT "${GEN_JAVA}"
-#    COMMAND ${CMAKE_COMMAND} -E echo "!!!!!!"
-#)
-
 SET(additional_clean_files "")
 
 macro(cleanup)
@@ -222,6 +212,7 @@ if(ANDROID)
         add_custom_command(
             OUTPUT "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
             COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
+            COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
             DEPENDS "${jni_file}"
             COMMENT "Generating jni/${jni_file_name}"
         )
@@ -232,90 +223,6 @@ endif()
 
 # apply dependencies
 SET_SOURCE_FILES_PROPERTIES("${dependency_file}" PROPERTIES OBJECT_DEPENDS "${opencv_java_dependency_files}")
-
-
-#set(api_target opencv_java_api)
-#add_custom_target(${api_target} ALL DEPENDS ${target})
-
-IF(OFF)
-    # create Android library project in build folder
-    add_custom_command(
-        TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res"
-        COMMENT "Creating res directory"
-        )
-
-    FILE(GLOB android_lib_project_files "${CMAKE_CURRENT_SOURCE_DIR}/android/*")
-    foreach(lib_file ${android_lib_project_files})
-        if(NOT IS_DIRECTORY ${lib_file})
-            get_filename_component(lib_file_name "${lib_file}" NAME)
-            add_custom_command(
-                TARGET ${api_target}
-                COMMAND ${CMAKE_COMMAND} -E copy "${lib_file}" "${CMAKE_BINARY_DIR}"
-                DEPENDS "${lib_file}"
-                COMMENT "Generating ${lib_file_name}"
-                )
-            install(FILES "${CMAKE_BINARY_DIR}/${lib_file_name}" DESTINATION . COMPONENT main)
-            LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/${lib_file_name}")
-        endif()
-    endforeach()
-
-    foreach(jni_file ${handwrittren_cpp_sources} ${handwrittren_h_sources} ${generated_cpp_sources})
-        get_filename_component(jni_file_name "${jni_file}" NAME)
-        add_custom_command(
-            TARGET ${api_target}
-            COMMAND ${CMAKE_COMMAND} -E copy "${jni_file}" "${CMAKE_BINARY_DIR}/jni/${jni_file_name}"
-            DEPENDS "${jni_file}"
-            COMMENT "Generating jni/${jni_file_name}"
-            )
-        LIST(APPEND additional_clean_files "${CMAKE_BINARY_DIR}/jni/${jni_file_name}")
-    endforeach()
-ENDIF()
-
-# generate javadoc comments
-#FILE(GLOB java_project_files "${CMAKE_CURRENT_SOURCE_DIR}/src/java/*.java")
-
-#SET(documented_java_files)
-#foreach(java_file ${java_project_files} ${generated_java_sources})
-#    get_filename_component(java_file_name "${java_file}" NAME_WE)
-#    if (NOT java_file_name MATCHES ".*-jdoc$")
-#        list(APPEND documented_java_files "${CMAKE_CURRENT_BINARY_DIR}/${java_file_name}-jdoc.java")
-#    endif()
-#endforeach()
-
-#add_custom_command(
-#    TARGET ${api_target} PRE_BUILD
-#    COMMAND ${PYTHON_EXECUTABLE} "${GEN_JAVADOC}" "${CMAKE_CURRENT_SOURCE_DIR}/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#    DEPENDS ${java_project_files}
-#    DEPENDS ${generated_java_sources}
-#    DEPENDS "${GEN_JAVA}"
-#    DEPENDS "${HDR_PARSER}"
-#    DEPENDS "${GEN_JAVADOC}"
-#    DEPENDS "${RST_PARSER}"
-#)
-
-
-#SET(JAVA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/src/org/opencv")
-
-#foreach(java_file ${documented_java_files})
-#    get_filename_component(java_file_name "${java_file}" NAME)
-#    string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
-#    string(REPLACE "+" "/" java_file_name "${java_file_name}")
-#
-#    add_custom_command(
-#        TARGET ${api_target}
-#        COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}/${java_file_name}"
-#        DEPENDS "${java_file}"
-#        DEPENDS "${JAVA_OUTPUT_DIR}"
-#        COMMENT "Generating src/org/opencv/${java_file_name}"
-#        )
-#    LIST(APPEND additional_clean_files "${JAVA_OUTPUT_DIR}/${java_file_name}")
-#    if(ANDROID)
-#        get_filename_component(install_dir "${java_file_name}" PATH)
-#        install(FILES "${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION src/org/opencv/${install_dir} COMPONENT main)
-#    endif()
-#endforeach()
 
 #android test project
 if(ANDROID AND BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS)

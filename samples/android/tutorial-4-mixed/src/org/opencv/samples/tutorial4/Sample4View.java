@@ -1,6 +1,6 @@
 package org.opencv.samples.tutorial4;
 
-import org.opencv.android;
+import org.opencv.Android;
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
 import org.opencv.imgproc.Imgproc;
@@ -56,7 +56,7 @@ class Sample4View extends SampleViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(getFrameWidth(), getFrameHeight(), Bitmap.Config.ARGB_8888);
 
-        if (android.MatToBitmap(mRgba, bmp))
+        if (Android.MatToBitmap(mRgba, bmp))
             return bmp;
 
         bmp.recycle();

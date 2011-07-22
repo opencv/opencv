@@ -1,6 +1,6 @@
 package org.opencv.samples.tutorial2;
 
-import org.opencv.android;
+import org.opencv.Android;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -54,7 +54,7 @@ class Sample2View extends SampleCvViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
-        if (android.MatToBitmap(mRgba, bmp))
+        if (Android.MatToBitmap(mRgba, bmp))
             return bmp;
 
         bmp.recycle();

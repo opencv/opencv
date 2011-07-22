@@ -1,6 +1,6 @@
 package org.opencv.samples.puzzle15;
 
-import org.opencv.android;
+import org.opencv.Android;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -137,7 +137,7 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         drawGrid(cols, rows);
 
         Bitmap bmp = Bitmap.createBitmap(cols, rows, Bitmap.Config.ARGB_8888);
-        if (android.MatToBitmap(mRgba15, bmp))
+        if (Android.MatToBitmap(mRgba15, bmp))
             return bmp;
 
         bmp.recycle();

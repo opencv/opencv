@@ -33,7 +33,7 @@ if (BUILD_ANDROID_EXAMPLES)
         SET(sample_dir "${CMAKE_CURRENT_BINARY_DIR}/${sample}")
         
         add_custom_target(${sample} ALL)
-        add_dependencies(${sample} opencv_java opencv_java_api)
+        add_dependencies(${sample} opencv_java)
 
         set_target_properties(${sample} PROPERTIES
             PROJECT_LABEL "(ANDROID EXAMPLE) ${sample}")
