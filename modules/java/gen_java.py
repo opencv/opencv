@@ -86,6 +86,16 @@ const_ignore_list = (
     "CV_YUV420i2.+",
     "CV_TM_.+",
     "CV_FLOODFILL_.+",
+    "CV_ADAPTIVE_THRESH_.+",
+)
+
+const_private_list = (
+    "CV_MOP_.+",
+    "CV_INTER_.+",
+    "CV_THRESH_.+",
+    "CV_INPAINT_.+",
+    "CV_RETR_.+",
+    "CV_CHAIN_APPROX_.+",
 )
 
 # { Module : { public : [[name, val],...], private : [[]...] } }
@@ -118,7 +128,7 @@ missing_consts = \
 
     "Calib3d":
     {
-        'public' :
+        'private' :
         (
             ('CV_LMEDS',  4),
             ('CV_RANSAC', 8),
@@ -435,10 +445,11 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 }
 
 class ConstInfo(object):
-    def __init__(self, cname, name, val):
+    def __init__(self, cname, name, val, addedManually=False):
         self.cname = cname
         self.name = re.sub(r"^Cv", "", name)
         self.value = val
+        self.addedManually = addedManually
 
 
 class ClassPropInfo(object):
@@ -591,17 +602,17 @@ public class %s {
         if classinfo.name in missing_consts:
             if 'private' in missing_consts[classinfo.name]:
                 for (name, val) in missing_consts[classinfo.name]['private']:
-                    classinfo.private_consts.append( ConstInfo(name, name, val) )
+                    classinfo.private_consts.append( ConstInfo(name, name, val, True) )
             if 'public' in missing_consts[classinfo.name]:
                 for (name, val) in missing_consts[classinfo.name]['public']:
-                    classinfo.consts.append( ConstInfo(name, name, val) )
+                    classinfo.consts.append( ConstInfo(name, name, val, True) )
 
         # class props
         for p in decl[3]:
             if "vector" not in p[0]:
                 classinfo.props.append( ClassPropInfo(p) )
             else:
-                print "Skipped proprty: [%s]" % classinfo.name, p
+                print "Skipped property: [%s]" % classinfo.name, p
 
         self.add_class_code_stream(classinfo.name)
 
@@ -624,14 +635,24 @@ public class %s {
             # this class isn't wrapped
             # skipping this const
             return
+        
         consts = self.classes[classname].consts
+        for c in const_private_list:
+            if re.match(c, name):
+                consts = self.classes[classname].private_consts
+                break
+        
         constinfo = ConstInfo(cname, name, decl[1])
         # checking duplication
-        for c in consts:
-            if c.name == constinfo.name:
-                print "Generator error: constant %s (%s) is duplicated" \
-                        % (constinfo.name, constinfo.cname)
-                sys.exit(-1)
+        for list in self.classes[classname].consts, self.classes[classname].private_consts:
+            for c in list:
+                if c.name == constinfo.name:
+                    if c.addedManually:
+                        return
+                    print "Generator error: constant %s (%s) is duplicated" \
+                            % (constinfo.name, constinfo.cname)
+                    sys.exit(-1)
+
         consts.append(constinfo)
 
     def add_func(self, decl):
