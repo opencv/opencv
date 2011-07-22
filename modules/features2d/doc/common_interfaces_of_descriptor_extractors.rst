@@ -55,23 +55,15 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
 .. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
 
-    :param image: Image.
-
-    :param keypoints: Keypoints. Keypoints for which a descriptor cannot be computed are removed. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates keypoint with several dominant orientations (for each orientation).
-
-    :param descriptors: Descriptors. Row ``i`` is the descriptor for keypoint ``i``.
-
 .. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
+
+    :param image: Image.
 
     :param images: Image set.
 
-    :param keypoints: Input keypoints collection. ``keypoints[i]`` are keypoints
-                          detected in ``images[i]`` . Keypoints for which a descriptor
-                          cannot be computed are removed.
+    :param keypoints: Input collection of keypoints. Keypoints for which a descriptor cannot be computed are removed. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates keypoint with several dominant orientations (for each orientation).
 
-    :param descriptors: Descriptor collection. ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`` set.
-
-
+    :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
 
 DescriptorExtractor::read
 -----------------------------

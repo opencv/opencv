@@ -852,7 +852,7 @@ Computes partial derivatives of the matrix product for each multiplied matrix.
 
     :param dABdA: First output derivative matrix  ``d(A*B)/dA``  of size  :math:`\texttt{A.rows*B.cols} \times {A.rows*A.cols}` .
     
-    :param dABdA: Second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
+    :param dABdB: Second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
 
 The function computes partial derivatives of the elements of the matrix product
 :math:`A*B` with regard to the elements of each of the two input matrices. The function is used to compute the Jacobian matrices in

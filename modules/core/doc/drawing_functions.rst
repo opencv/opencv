@@ -68,7 +68,7 @@ Clips the line against the image rectangle.
 
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
 
-    :param imgSize: Image rectangle.?? why do you list the same para twice??
+    :param imgRect: Image rectangle.
 
     :param pt1: First line point.
 
