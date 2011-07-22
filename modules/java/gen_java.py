@@ -177,14 +177,14 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point": { "j_type" : "java.util.List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
-    "vector_Mat" :  { "j_type" : "java.util.List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "java.util.List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_Rect" : { "j_type" : "java.util.List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar" : { "j_type" : "java.util.List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_int" : { "j_type" : "java.util.List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float" : { "j_type" : "java.util.List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
-    "vector_double" : { "j_type" : "java.util.List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
+    "vector_Point": { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Mat" :  { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_Rect" : { "j_type" : "List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar" : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_int" : { "j_type" : "List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
+    "vector_float" : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
+    "vector_double" : { "j_type" : "List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -229,15 +229,15 @@ type_dict = {
     "CvSlice" : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
                   "suffix" : "II"},
-    "string"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+    "string"  : { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
-    "String"  : { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+    "String"  : { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
-    "c_string": { "j_type" : "java.lang.String",  "jn_type" : "java.lang.String",
+    "c_string": { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
@@ -739,9 +739,9 @@ extern "C" {
 
         # saving code streams
         for cls in self.java_code.keys():
-##            imports = "\n".join([ "import %s;" % c for c in \
-##                sorted(self.classes[cls].imports) if not c.startswith('org.opencv.'+self.module) ])
-            imports = "import org.opencv.core.*;\nimport org.opencv.Converters;\n"
+            imports = "\n".join([ "import %s;" % c for c in \
+                sorted(self.classes[cls].imports) if not c.startswith('org.opencv.'+self.module) ])
+            ##imports = "import org.opencv.core.*;\nimport org.opencv.Converters;\n"
             self.java_code[cls]["j_code"].write("\n\n%s\n}\n" % self.java_code[cls]["jn_code"].getvalue())
             java_code = self.java_code[cls]["j_code"].getvalue()
             java_code = Template(java_code).substitute(imports = imports)
@@ -764,6 +764,22 @@ extern "C" {
 
         print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
 
+
+
+    def get_imports(self, scope_classname, ctype):
+        imports = self.classes[scope_classname or self.Module].imports
+        if ctype.startswith('vector'):
+            imports.add("java.util.List")
+            imports.add("org.opencv.core.Mat")
+            imports.add("org.opencv.Converters")
+            ctype = ctype.replace('vector_', '')
+        j_type = ''
+        if ctype in type_dict:
+            j_type = type_dict[ctype]['j_type']
+        if j_type in ( "CvType", "Mat", "Point", "Point3", "Range", "Rect", "RotatedRect", "Scalar", "Size", "TermCriteria" ):
+            imports.add("org.opencv.core." + j_type)
+        if j_type == 'String':
+            imports.add("java.lang.String")
 
 
 
@@ -829,11 +845,7 @@ extern "C" {
             j_epilogue = []
             c_prologue = []
             c_epilogue = []
-            if fi.ctype == 'Mat':
-                self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Mat")
             if type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
-                if "Vec" not in fi.ctype:
-                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[fi.ctype]["j_type"])
                 fields = type_dict[fi.ctype]["jn_args"]
                 c_epilogue.append( \
                     ("jdoubleArray _da_retval_ = env->NewDoubleArray(%(cnt)i);  " +
@@ -845,16 +857,12 @@ extern "C" {
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
                 jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
                 suffix += "J"
+            self.get_imports(fi.classname, fi.ctype)
             for a in args:
+                self.get_imports(fi.classname, a.ctype)
                 suffix += type_dict[a.ctype].get("suffix") or ""
 
                 if "vector" in a.ctype: # pass as Mat
-                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Mat")
-                    self.classes[fi.classname or self.Module].imports.add("org.opencv.Converters")
-                    self.classes[fi.classname or self.Module].imports.add("java.util.List")
-                    t = a.ctype.replace("vector_", "")
-                    if "Vec" not in t and t in type_dict and "jn_args" in type_dict[t] and type_dict[t]["jni_type"] == "jdoubleArray":
-                        self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[t]['j_type'])
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
@@ -868,12 +876,6 @@ extern "C" {
                         j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
-                    if a.ctype == 'Mat' or \
-                        ( "Vec" not in a.ctype and "jn_args" in type_dict[a.ctype] and \
-                          type_dict[a.ctype].get("jni_type") == "jdoubleArray" ):
-                        self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[a.ctype]['j_type'])
-                    if 'String' in type_dict[a.ctype]['j_type']:
-                        self.classes[fi.classname or self.Module].imports.add("java.lang.String")
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or a.ctype in self.classes: # input arg, pass by primitive fields
                         for f in fields:
