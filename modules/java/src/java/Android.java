@@ -3,7 +3,7 @@ package org.opencv;
 import org.opencv.core.Mat;
 import android.graphics.Bitmap;
 
-public class android {
+public class Android {
 
 	public static Mat BitmapToMat(Bitmap b) {
 		return new Mat( nBitmapToMat(b) );

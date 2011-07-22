@@ -8,13 +8,13 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.features2d.KeyPoint;
 
-public class utils {
+public class Converters {
 	
 	public static Mat vector_Point_to_Mat(List<Point> pts) {
 		Mat res;
 		int count = (pts!=null) ? pts.size() : 0;
 		if(count>0){
-			res = new Mat(1, count, CvType.CV_32SC2); //Point can be saved into double[2]
+			res = new Mat(1, count, CvType.CV_32SC2);
 			int[] buff = new int[count*2];
 			for(int i=0; i<count; i++) {
 				Point p = pts.get(i);

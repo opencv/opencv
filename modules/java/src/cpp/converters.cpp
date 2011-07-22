@@ -1,8 +1,8 @@
-#include "utils.h"
+#include "converters.h"
 
 #ifdef DEBUG
 #include <android/log.h>
-#define MODULE_LOG_TAG "OpenCV.utils.cpp"
+#define MODULE_LOG_TAG "OpenCV.converters"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
 #else //DEBUG
 #define LOGD(...)

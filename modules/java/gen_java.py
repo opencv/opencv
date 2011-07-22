@@ -250,7 +250,7 @@ type_dict = {
 
 }
 
-# { Module : { func : {j_code, jn_code, cpp_code} } }
+# { class : { func : {j_code, jn_code, cpp_code} } }
 ManualFuncs = {
     'Core' :
     {
@@ -550,26 +550,35 @@ class JavaWrapperGenerator(object):
 
     def add_class_code_stream(self, class_name):
         self.java_code[class_name] = { "j_code" : StringIO(), "jn_code" : StringIO(), }
-        self.java_code[class_name]["j_code"].write("""
+        if class_name != self.Module:
+            self.java_code[class_name]["j_code"].write("""
 //
 // This file is auto-generated. Please don't modify it!
 //
-package org.opencv.%s;
-%s
-import org.opencv.utils;
-%s
-public class %s {
+package org.opencv.%(m)s;
 
-""" % ( self.module,
-        ("import org.opencv.core.*;", "")[self.module == "core"],
-        ("// C++: class "+class_name+"\n//javadoc: "+class_name, "")[class_name == self.Module],
-        class_name ) )
+$imports
 
-        if class_name != self.Module:
-            self.java_code[class_name]["j_code"].write("""
+// C++: class %(c)s
+//javadoc: %(c)s
+public class %(c)s {
+
     protected final long nativeObj;
-    protected %s(long addr) { nativeObj = addr; }
-""" % class_name )
+    protected %(c)s(long addr) { nativeObj = addr; }
+
+""" % { 'm' : self.module, 'c' : class_name } )
+
+        else: # class_name == self.Module
+            self.java_code[class_name]["j_code"].write("""
+//
+// This file is auto-generated. Please don't modify it!
+//
+package org.opencv.%(m)s;
+
+$imports
+
+public class %(c)s {
+""" % { 'm' : self.module, 'c' : class_name } )
 
         self.java_code[class_name]["jn_code"].write("""
     //
@@ -635,13 +644,13 @@ public class %s {
             # this class isn't wrapped
             # skipping this const
             return
-        
+
         consts = self.classes[classname].consts
         for c in const_private_list:
             if re.match(c, name):
                 consts = self.classes[classname].private_consts
                 break
-        
+
         constinfo = ConstInfo(cname, name, decl[1])
         # checking duplication
         for list in self.classes[classname].consts, self.classes[classname].private_consts:
@@ -674,7 +683,7 @@ public class %s {
 
     def save(self, path, buf):
         f = open(path, "wt")
-        f.write(buf.getvalue())
+        f.write(buf)
         f.close()
 
     def gen(self, srcfiles, module, output_path):
@@ -705,7 +714,7 @@ public class %s {
 
 #include <jni.h>
 
-#include "utils.h"
+#include "converters.h"
 
 #ifdef DEBUG
 #include <android/log.h>
@@ -723,19 +732,22 @@ extern "C" {
 
 """ % {'m' : module} )
 
-        #"\n".join(['#include "opencv2/%s/%s"' % (module, os.path.basename(f)) for f in srcfiles])
-
         # generate code for the classes
         for name in self.classes.keys():
             self.gen_class(name)
 
         # saving code streams
         for cls in self.java_code.keys():
+##            imports = "\n".join([ "import %s;" % c for c in \
+##                sorted(self.classes[cls].imports) if not c.startswith('org.opencv.'+self.module) ])
+            imports = "import org.opencv.core.*;\nimport org.opencv.Converters;\n"
             self.java_code[cls]["j_code"].write("\n\n%s\n}\n" % self.java_code[cls]["jn_code"].getvalue())
-            self.save("%s/%s+%s.java" % (output_path, module, cls), self.java_code[cls]["j_code"])
+            java_code = self.java_code[cls]["j_code"].getvalue()
+            java_code = Template(java_code).substitute(imports = imports)
+            self.save("%s/%s+%s.java" % (output_path, module, cls), java_code)
 
         self.cpp_code.write( '\n} // extern "C"\n' )
-        self.save(output_path+"/"+module+".cpp",  self.cpp_code)
+        self.save(output_path+"/"+module+".cpp",  self.cpp_code.getvalue())
 
         # report
         report = StringIO()
@@ -747,18 +759,14 @@ extern "C" {
             (len(self.skipped_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
         )
         report.write("".join(self.skipped_func_list))
-        self.save(output_path+"/"+module+".txt", report)
+        self.save(output_path+"/"+module+".txt", report.getvalue())
 
         print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
 
 
 
 
-    def gen_func(self, fi, isoverload):
-        self.gen_func2(fi, isoverload, "")
-
-
-    def gen_func2(self, fi, isoverload, prop_name):
+    def gen_func(self, fi, isoverload, prop_name=''):
         j_code   = self.java_code[fi.classname or self.Module]["j_code"]
         jn_code  = self.java_code[fi.classname or self.Module]["jn_code"]
         cpp_code = self.cpp_code
@@ -841,22 +849,27 @@ extern "C" {
 
                 if "vector" in a.ctype: # pass as Mat
                     self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Mat")
-                    self.classes[fi.classname or self.Module].imports.add("org.opencv.core.Utils")
+                    self.classes[fi.classname or self.Module].imports.add("org.opencv.Converters")
                     self.classes[fi.classname or self.Module].imports.add("java.util.List")
+                    t = a.ctype.replace("vector_", "")
+                    if "Vec" not in t and t in type_dict and "jn_args" in type_dict[t] and type_dict[t]["jni_type"] == "jdoubleArray":
+                        self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[t]['j_type'])
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
                     c_prologue.append( "Mat& %(n)s_mat = *((Mat*)%(n)s_mat_nativeObj)" % {"n" : a.name} + ";" )
                     if "I" in a.out or not a.out:
-                        j_prologue.append( "Mat %(n)s_mat = utils.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
+                        j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
                         c_prologue.append( "Mat_to_%(t)s( %(n)s_mat, %(n)s );" % {"n" : a.name, "t" : a.ctype} )
                     else:
                         j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
                     if "O" in a.out:
-                        j_epilogue.append("utils.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
+                        j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
-                    if "jn_args" in type_dict[a.ctype] and "Vec" not in a.ctype:
+                    if a.ctype == 'Mat' or \
+                        ( "Vec" not in a.ctype and "jn_args" in type_dict[a.ctype] and \
+                          type_dict[a.ctype].get("jni_type") == "jdoubleArray" ):
                         self.classes[fi.classname or self.Module].imports.add("org.opencv.core." + type_dict[a.ctype]['j_type'])
                     if 'String' in type_dict[a.ctype]['j_type']:
                         self.classes[fi.classname or self.Module].imports.add("java.lang.String")
@@ -1090,13 +1103,13 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             getter_name = name + ".get_" + pi.name
             #print getter_name
             fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
-            self.gen_func2(fi, getter_name in ci.methods, pi.name)
+            self.gen_func(fi, getter_name in ci.methods, pi.name)
             if pi.rw:
                 #setter
                 setter_name = name + ".set_" + pi.name
                 #print setter_name
                 fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
-                self.gen_func2(fi, getter_name in ci.methods, pi.name)
+                self.gen_func(fi, getter_name in ci.methods, pi.name)
 
         # manual ports
         if name in ManualFuncs:
@@ -1138,9 +1151,6 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_n_1delete
 
 """ % {"module" : module, "cls" : name}
             )
-
-        self.java_code[name]["jn_code"].write( "\n// imports %i\n//" % len(ci.imports))
-        self.java_code[name]["jn_code"].write( "\n//".join(sorted(ci.imports)))
 
 
 if __name__ == "__main__":
