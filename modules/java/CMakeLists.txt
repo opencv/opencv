@@ -136,7 +136,6 @@ foreach(java_file ${documented_java_files})
         OUTPUT "${JAVA_OUTPUT_DIR}/${java_file_name}"
         COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${JAVA_OUTPUT_DIR}/${java_file_name}"
         DEPENDS "${java_file}"
-        DEPENDS "${JAVA_OUTPUT_DIR}"
         COMMENT "Generating src/org/opencv/${java_file_name}"
         )
     list(APPEND java_files "${JAVA_OUTPUT_DIR}/${java_file_name}")
@@ -203,6 +202,10 @@ if(ANDROID)
                 )
             SET_SOURCE_FILES_PROPERTIES("${CMAKE_BINARY_DIR}/${file_rel}" PROPERTIES HEADER_FILE_ONLY TRUE)
             list(APPEND opencv_java_dependency_files "${CMAKE_BINARY_DIR}/${file_rel}")
+
+            if(NOT file_rel MATCHES "jni/.+")
+                install(FILES "${CMAKE_BINARY_DIR}/${file_rel}" DESTINATION . COMPONENT main)
+            endif()
         endif()
     endforeach()
 
