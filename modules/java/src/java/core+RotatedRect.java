@@ -8,7 +8,9 @@ public class RotatedRect {
     public double angle;
 
     public RotatedRect() {
-        this.angle=0;
+        this.center = new Point();
+        this.size = new Size();
+        this.angle = 0;
     }
 
     public RotatedRect(Point c, Size s, double a) {
@@ -21,6 +23,7 @@ public class RotatedRect {
         this();
         set(vals);
     }
+    
     public void set(double[] vals) {
         if(vals!=null) {
             center.x    = vals.length>0 ? (int)vals[0] : 0;
@@ -73,11 +76,9 @@ public class RotatedRect {
         return r;
     }
 
-
     public RotatedRect clone() {
         return new RotatedRect(center, size, angle);
     }
-
 
     @Override
     public int hashCode() {

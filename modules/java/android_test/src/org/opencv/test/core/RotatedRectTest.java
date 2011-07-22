@@ -8,9 +8,9 @@ import org.opencv.test.OpenCVTestCase;
 
 public class RotatedRectTest extends OpenCVTestCase {
 	
+	private double angle;
 	private Point center;
 	private Size size;
-	private double angle;
 	
     @Override
     protected void setUp() throws Exception {
@@ -131,12 +131,25 @@ public class RotatedRectTest extends OpenCVTestCase {
 
 	public void testRotatedRect() {
 		RotatedRect rr = new RotatedRect();
+		
 		assertTrue(rr != null);
+		assertTrue(rr.center != null);
+		assertTrue(rr.size != null);
+		assertTrue(rr.angle == 0.0);
 	}
 
+	public void testRotatedRectDoubleArray() {
+		fail("Not yet implemented");
+		//public RotatedRect(double[] vals)		
+	}
+	
 	public void testRotatedRectPointSizeDouble() {
 		RotatedRect rr = new RotatedRect(center, size, 40);
+		
 		assertTrue(rr != null);
+		assertTrue(rr.center != null);
+		assertTrue(rr.size != null);
+		assertTrue(rr.angle == 40.0);
 	}
 
 }
