@@ -32,7 +32,7 @@ public class Converters {
 		if(pts == null)
 			throw new java.lang.IllegalArgumentException();
 		int cols = m.cols();
-		if(!CvType.CV_32SC2.equals(m.type()) ||  m.rows()!=1 )
+		if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
 			throw new java.lang.IllegalArgumentException();
 		
 		pts.clear();
@@ -65,7 +65,7 @@ public class Converters {
 		if(mats == null)
 			throw new java.lang.IllegalArgumentException();
 		int cols = m.cols();
-		if(!CvType.CV_32SC2.equals(m.type()) ||  m.rows()!=1 )
+		if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
 			throw new java.lang.IllegalArgumentException();
 		
 		mats.clear();
@@ -102,7 +102,7 @@ public class Converters {
 		if(fs == null)
 			throw new java.lang.IllegalArgumentException();
 		int cols = m.cols();
-		if(!CvType.CV_32FC1.equals(m.type()) ||  m.rows()!=1 )
+		if(CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
 			throw new java.lang.IllegalArgumentException();
 		
 		fs.clear();
@@ -151,7 +151,7 @@ public class Converters {
 		if(is == null)
 			throw new java.lang.IllegalArgumentException();
 		int cols = m.cols();
-		if(!CvType.CV_32SC1.equals(m.type()) ||  m.rows()!=1 )
+		if(CvType.CV_32SC1 != m.type() ||  m.rows()!=1 )
 			throw new java.lang.IllegalArgumentException();
 		
 		is.clear();
@@ -186,7 +186,7 @@ public class Converters {
 		if(rs == null)
 			throw new java.lang.IllegalArgumentException();
 		int cols = m.cols();
-		if(!CvType.CV_32SC4.equals(m.type()) ||  m.rows()!=1 )
+		if(CvType.CV_32SC4 != m.type() ||  m.rows()!=1 )
 			throw new java.lang.IllegalArgumentException();
 		
 		rs.clear();

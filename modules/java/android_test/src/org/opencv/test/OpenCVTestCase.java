@@ -122,7 +122,7 @@ public class OpenCVTestCase extends TestCase {
     	//OpenCVTestRunner.Log(m1.toString());
     	//OpenCVTestRunner.Log(m2.toString());
     	
-    	if (!m1.type().equals(m2.type()) || 
+    	if (m1.type() != m2.type() || 
     	    m1.cols() != m2.cols() || m1.rows() != m2.rows()) {
     		throw new UnsupportedOperationException();
     	}

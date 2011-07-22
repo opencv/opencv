@@ -70,13 +70,13 @@ class Sample4View extends SampleViewBase {
         synchronized (this) {
             // Explicitly deallocate Mats
             if (mYuv != null)
-                mYuv.dispose();
+                mYuv.release();
             if (mRgba != null)
-                mRgba.dispose();
+                mRgba.release();
             if (mGraySubmat != null)
-                mGraySubmat.dispose();
+                mGraySubmat.release();
             if (mIntermediateMat != null)
-                mIntermediateMat.dispose();
+                mIntermediateMat.release();
 
             mYuv = null;
             mRgba = null;

@@ -16,27 +16,17 @@ public class Mat {
     }
 
     //javadoc:Mat::Mat(rows,cols,type)
-    public Mat(int rows, int cols, CvType type) {
-        this( nCreateMat(rows, cols, type.toInt()) );
-    }
-
-    //javadoc:Mat::Mat(rows,cols,depth)
-    public Mat(int rows, int cols, int depth) {
-        this( rows, cols, new CvType(depth, 1) );
+    public Mat(int rows, int cols, int type) {
+        this( nCreateMat(rows, cols, type) );
     }
 
     //javadoc:Mat::Mat(rows,cols,type,s)
-    public Mat(int rows, int cols, CvType type, Scalar s) {
-        this( nCreateMat(rows, cols, type.toInt(), s.val[0], s.val[1], s.val[2], s.val[3]) );
+    public Mat(int rows, int cols, int type, Scalar s) {
+        this( nCreateMat(rows, cols, type, s.val[0], s.val[1], s.val[2], s.val[3]) );
     }
 
-    //javadoc:Mat::Mat(rows,cols,depth,s)
-    public Mat(int rows, int cols, int depth, Scalar s) {
-        this( rows, cols, new CvType(depth, 1), s );
-    }
-
-    //javadoc:Mat::dispose()
-    public void dispose() {
+    //javadoc:Mat::release()
+    public void release() {
         nRelease(nativeObj);
     }
     
@@ -52,7 +42,7 @@ public class Mat {
     public String toString() {
         if(nativeObj == 0) return  "Mat [ nativeObj=NULL ]";
         return  "Mat [ " +
-                rows() + "*" + cols() + "*" + type() + 
+                rows() + "*" + cols() + "*" + CvType.typeToString(type()) +
                 ", isCont=" + isContinuous() + ", isSubmat=" + isSubmatrix() +
                 ", nativeObj=0x" + Long.toHexString(nativeObj) + 
                 ", dataAddr=0x" + Long.toHexString(dataAddr()) +  
@@ -82,19 +72,19 @@ public class Mat {
     }
 
     //javadoc:Mat::type()
-    public CvType type() {
+    public int type() {
         checkNull();
-        return new CvType( nType(nativeObj) );
+        return nType(nativeObj);
     }
 
     //javadoc:Mat::depth()
-    public int depth() { return type().depth(); }
+    public int depth() { return CvType.depth(type()); }
 
     //javadoc:Mat::channels()
-    public int channels() { return type().channels(); }
+    public int channels() { return CvType.channels(type()); }
 
     //javadoc:Mat::elemSize()
-    public int elemSize() { return type().CV_ELEM_SIZE(); }
+    public int elemSize() { return CvType.ELEM_SIZE(type()); }
 
     //javadoc:Mat::rows()
     public int rows() {
@@ -177,8 +167,8 @@ public class Mat {
     public int put(int row, int col, float[] data) {
         checkNull();
         if(data != null) {
-            CvType t = type(); 
-            if(t.depth() == CvType.CV_32F) {
+            int t = type();
+            if(CvType.depth(t) == CvType.CV_32F) {
                 return nPutF(nativeObj, row, col, data.length, data);
             }
             throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -189,8 +179,8 @@ public class Mat {
     public int put(int row, int col, int[] data) {
         checkNull();
         if(data != null) {
-            CvType t = type(); 
-            if(t.depth() == CvType.CV_32S) {
+            int t = type();
+            if(CvType.depth(t) == CvType.CV_32S) {
                 return nPutI(nativeObj, row, col, data.length, data);
             }
             throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -201,8 +191,8 @@ public class Mat {
     public int put(int row, int col, short[] data) {
         checkNull();
         if(data != null) {
-            CvType t = type(); 
-            if(t.depth() == CvType.CV_16U || t.depth() == CvType.CV_16S) {
+            int t = type();
+            if(CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
                 return nPutS(nativeObj, row, col, data.length, data);
             }
             throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -213,8 +203,8 @@ public class Mat {
     public int put(int row, int col, byte[] data) {
         checkNull();
         if(data != null) {
-            CvType t = type(); 
-            if(t.depth() == CvType.CV_8U || t.depth() == CvType.CV_8S) {
+            int t = type();
+            if(CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
                 return nPutB(nativeObj, row, col, data.length, data);
             }
             throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -224,8 +214,8 @@ public class Mat {
     //javadoc:Mat::get(row,col,data)
     public int get(int row, int col, byte[] data) {
         checkNull();
-        CvType t = type(); 
-        if(t.depth() == CvType.CV_8U || t.depth() == CvType.CV_8S) {
+        int t = type();
+        if(CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
             return nGetB(nativeObj, row, col, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -234,8 +224,8 @@ public class Mat {
     //javadoc:Mat::get(row,col,data)
     public int get(int row, int col, short[] data) {
         checkNull();
-        CvType t = type(); 
-        if(t.depth() == CvType.CV_16U || t.depth() == CvType.CV_16S) {
+        int t = type();
+        if(CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
             return nGetS(nativeObj, row, col, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -244,8 +234,8 @@ public class Mat {
     //javadoc:Mat::get(row,col,data)
     public int get(int row, int col, int[] data) {
         checkNull();
-        CvType t = type(); 
-        if(t.depth() == CvType.CV_32S) {
+        int t = type();
+        if(CvType.depth(t) == CvType.CV_32S) {
             return nGetI(nativeObj, row, col, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -254,8 +244,8 @@ public class Mat {
     //javadoc:Mat::get(row,col,data)
     public int get(int row, int col, float[] data) {
         checkNull();
-        CvType t = type(); 
-        if(t.depth() == CvType.CV_32F) {
+        int t = type();
+        if(CvType.depth(t) == CvType.CV_32F) {
             return nGetF(nativeObj, row, col, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -264,8 +254,8 @@ public class Mat {
     //javadoc:Mat::get(row,col,data)
     public int get(int row, int col, double[] data) {
         checkNull();
-        CvType t = type(); 
-        if(t.depth() == CvType.CV_64F) {
+        int t = type();
+        if(CvType.depth(t) == CvType.CV_64F) {
             return nGetD(nativeObj, row, col, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
@@ -320,8 +310,8 @@ public class Mat {
     }
     
     //javadoc:Mat::eye(rows,cols,type)
-    static public Mat eye(int rows, int cols, CvType type) {
-        return new Mat( nEye(rows, cols, type.toInt()) );
+    static public Mat eye(int rows, int cols, int type) {
+        return new Mat( nEye(rows, cols, type) );
     }
     
     // native stuff

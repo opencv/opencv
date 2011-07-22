@@ -149,21 +149,21 @@ class ImageManipulationsView extends SampleCvViewBase {
         synchronized (this) {
             // Explicitly deallocate Mats
             if (mZoomWindow != null)
-                mZoomWindow.dispose();
+                mZoomWindow.release();
             if (mZoomCorner != null)
-                mZoomCorner.dispose();
+                mZoomCorner.release();
             if (mBlurWindow != null)
-                mBlurWindow.dispose();
+                mBlurWindow.release();
             if (mGrayInnerWindow != null)
-                mGrayInnerWindow.dispose();
+                mGrayInnerWindow.release();
             if (mRgbaInnerWindow != null)
-                mRgbaInnerWindow.dispose();
+                mRgbaInnerWindow.release();
             if (mRgba != null)
-                mRgba.dispose();
+                mRgba.release();
             if (mGray != null)
-                mGray.dispose();
+                mGray.release();
             if (mIntermediateMat != null)
-                mIntermediateMat.dispose();
+                mIntermediateMat.release();
 
             mRgba = null;
             mGray = null;

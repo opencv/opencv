@@ -68,11 +68,11 @@ class Sample2View extends SampleCvViewBase {
         synchronized (this) {
             // Explicitly deallocate Mats
             if (mRgba != null)
-                mRgba.dispose();
+                mRgba.release();
             if (mGray != null)
-                mGray.dispose();
+                mGray.release();
             if (mIntermediateMat != null)
-                mIntermediateMat.dispose();
+                mIntermediateMat.release();
 
             mRgba = null;
             mGray = null;

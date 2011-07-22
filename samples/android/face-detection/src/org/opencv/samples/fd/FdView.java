@@ -105,9 +105,9 @@ class FdView extends SampleCvViewBase {
         synchronized (this) {
             // Explicitly deallocate Mats
             if (mRgba != null)
-                mRgba.dispose();
+                mRgba.release();
             if (mGray != null)
-                mGray.dispose();
+                mGray.release();
 
             mRgba = null;
             mGray = null;

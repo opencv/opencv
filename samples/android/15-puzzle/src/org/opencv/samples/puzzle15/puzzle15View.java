@@ -159,16 +159,16 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
             // Explicitly deallocate Mats
             if (mCells != null) {
                 for (Mat m : mCells)
-                    m.dispose();
+                    m.release();
             }
             if (mCells15 != null) {
                 for (Mat m : mCells15)
-                    m.dispose();
+                    m.release();
             }
             if (mRgba != null)
-                mRgba.dispose();
+                mRgba.release();
             if (mRgba15 != null)
-                mRgba15.dispose();
+                mRgba15.release();
 
             mRgba = null;
             mRgba15 = null;
