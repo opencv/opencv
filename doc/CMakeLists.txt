@@ -29,6 +29,7 @@ add_custom_target(docs
                     ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv_user.tex

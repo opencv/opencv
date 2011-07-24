@@ -236,6 +236,7 @@ preamble ="""
 \usepackage[scaled=0.85]{beramono}
 \usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}
 \usepackage{colortbl}
+\usepackage{enumitem}
 """
 
 latex_elements = {'preamble': preamble}

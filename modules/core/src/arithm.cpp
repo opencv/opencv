@@ -2093,8 +2093,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
-        CV_Assert(src1.channels() == 1);
-        _dst.create(src1.size(), CV_8UC1);
+        int cn = src1.channels();
+        _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
         cmpTab[src1.depth()](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
@@ -2120,15 +2120,15 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         haveScalar = true;
     }
 
+    
     int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
-    if( cn != 1 )
-        CV_Error( CV_StsUnsupportedFormat, "compare() can only process single-channel arrays" );
 
+    _dst.create(src1.dims, src1.size, CV_8UC(cn));
+    src1 = src1.reshape(1); src2 = src2.reshape(1);
+    Mat dst = _dst.getMat().reshape(1);
+    
     size_t esz = src1.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
-
-    _dst.create(src1.dims, src1.size, CV_8U);
-    Mat dst = _dst.getMat();
     BinaryFunc func = cmpTab[depth1];
 
     if( !haveScalar )

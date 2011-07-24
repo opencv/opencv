@@ -654,49 +654,85 @@ Matrix Expressions
 ------------------
 
 This is a list of implemented matrix operations that can be combined in arbitrary complex expressions
-(here
-*A*,*B*
-stand for matrices ( ``Mat`` ),
-*s*
-for a scalar ( ``Scalar`` ),
-:math:`\alpha` for a real-valued scalar ( ``double`` )):
+(here ``A``, ``B`` stand for matrices ( ``Mat`` ), ``s`` for a scalar ( ``Scalar`` ),
+``alpha`` for a real-valued scalar ( ``double`` )):
 
 *
     Addition, subtraction, negation:
-    :math:`A \pm B,\;A \pm s,\;s \pm A,\;-A` *
-    scaling:
-    :math:`A*\alpha`,    :math:`A*\alpha` *
-    per-element multiplication and division:
-    :math:`A.mul(B), A/B, \alpha/A` *
-    matrix multiplication:
-    :math:`A*B` *
-    transposition:
-    :math:`A.t() \sim A^t` *
-    matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
+    ``A+B, A-B, A+s, A-s, s+A, s-A, -A``
+    
+*   
+    Scaling:
+    ``A*alpha``
+    
+*
+    Per-element multiplication and division:
+    ``A.mul(B), A/B, alpha/A``
+    
+*
+    Matrix multiplication:
+    ``A*B``
+    
+*
+    Transposition:
+    ``A.t()`` (means ``A``\ :sup:`T`)
+    
+*
+    Matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
 
-    :math:`A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B`
+    ``A.inv([method])`` (~ ``A``\ :sup:`-1`) ``,   A.inv([method])*B`` (~ ``X: AX=B``)
     
 *
     Comparison:
-    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
+    ``A cmpop B, A cmpop alpha, alpha cmpop A``, where ``cmpop`` is one of ``:  >, >=, ==, !=, <=, <``. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
 
 *
-    Bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
-    element-wise minimum and maximum:
-    :math:`min(A, B), min(A, \alpha), max(A, B), max(A, \alpha)` *
-    element-wise absolute value:
-    :math:`abs(A)` *
-    cross-product, dot-product:
-    :math:`A.cross(B), A.dot(B)` *
-    any function of matrix or matrices and scalars that returns a matrix or a scalar, such as ``norm``, ``mean``, ``sum``, ``countNonZero``, ``trace``, ``determinant``, ``repeat``, and others.
+    Bitwise logical operations: ``A logicop B, A logicop s, s logicop A, ~A``, where ``logicop`` is one of ``:  &, |, ^``.
+    
+*
+    Element-wise minimum and maximum:
+    ``min(A, B), min(A, alpha), max(A, B), max(A, alpha)``
+    
+*
+    Element-wise absolute value:
+    ``abs(A)``
+    
+*
+    Cross-product, dot-product:
+    ``A.cross(B)``
+    ``A.dot(B)``
+    
+*
+    Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as ``norm``, ``mean``, ``sum``, ``countNonZero``, ``trace``, ``determinant``, ``repeat``, and others.
 
 *
-    Matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ocv:class:`Mat`     description).
+    Matrix initializers ( ``Mat::eye(), Mat::zeros(), Mat::ones()`` ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ocv:class:`Mat` description).
 
 *
     ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
 .. note:: Comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
+
+Here are examples of matrix expressions:
+
+::
+
+    // compute pseudo-inverse of A, equivalent to A.inv(DECOMP_SVD)
+    SVD svd(A);
+    Mat pinvA = svd.vt.t()*Mat::diag(1./svd.w)*svd.u.t();
+    
+    // compute the new vector of parameters in the Levenberg-Marquardt algorithm
+    x -= (A.t()*A + lambda*Mat::eye(A.cols,A.cols,A.type())).inv(DECOMP_CHOLESKY)*(A.t()*err);
+    
+    // sharpen image using "unsharp mask" algorithm
+    Mat blurred; double sigma = 1, threshold = 5, amount = 1;
+    GaussianBlur(img, blurred, Size(), sigma, sigma);
+    Mat lowConstrastMask = abs(img - blurred) < threshold;
+    Mat sharpened = img*(1+amount) + blurred*(-amount);
+    img.copyTo(sharpened, lowContrastMask);
+    
+..
+
 
 Below is the formal description of the ``Mat`` methods.
 
@@ -1488,7 +1524,7 @@ Mat::elemSize
 -----------------
 Returns  the matrix element size in bytes.
 
-.. ocv:function:: size_t Mat::elemSize(void) const
+.. ocv:function:: size_t Mat::elemSize() const
 
 The method returns the matrix element size in bytes. For example, if the matrix type is ``CV_16SC3`` , the method returns ``3*sizeof(short)`` or 6.
 

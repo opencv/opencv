@@ -207,9 +207,11 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         return;
     }
     
-    CV_Assert( mask.type() == CV_8U );
+    int cn = channels(), mcn = mask.channels();
+    CV_Assert( mask.depth() == CV_8U && (mcn == 1 || mcn == cn) );
+    bool colorMask = mcn > 1;
     
-    size_t esz = elemSize();
+    size_t esz = colorMask ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
     
     uchar* data0 = _dst.getMat().data;
@@ -221,7 +223,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     
     if( dims <= 2 )
     {
-        Size sz = getContinuousSize(*this, dst, mask);
+        Size sz = getContinuousSize(*this, dst, mask, mcn);
         copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
     }
@@ -229,7 +231,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     const Mat* arrays[] = { this, &dst, &mask, 0 };
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
-    Size sz((int)it.size, 1);
+    Size sz((int)(it.size*mcn), 1);
     
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         copymask(ptrs[0], 0, ptrs[2], 0, ptrs[1], 0, sz, &esz);

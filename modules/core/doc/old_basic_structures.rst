@@ -544,13 +544,13 @@ Converts one array to another with optional linear transformation.
 .. ocv:pyoldfunction:: cv.ConvertScale(src, dst, scale=1.0, shift=0.0)-> None
 .. ocv:pyoldfunction:: cv.Convert(src, dst)-> None
 
-::
+    ::
     
-    #define cvCvtScale cvConvertScale
-    #define cvScale  cvConvertScale
-    #define cvConvert(src, dst )  cvConvertScale((src), (dst), 1, 0 )
+        #define cvCvtScale cvConvertScale
+        #define cvScale  cvConvertScale
+        #define cvConvert(src, dst )  cvConvertScale((src), (dst), 1, 0 )
 
-..
+    ..
     
     :param src: Source array 
     

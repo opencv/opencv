@@ -746,8 +746,8 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
 static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name="<unknown>")
 {
     bool ok = false;
-    PyObject* keys = PyMapping_Keys(o);
-    PyObject* values = PyMapping_Values(o);
+    PyObject* keys = PyObject_CallMethod(o,(char*)"keys",0);
+    PyObject* values = PyObject_CallMethod(o,(char*)"values",0);
     
     if( keys && values )
     {
