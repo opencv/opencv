@@ -263,21 +263,11 @@ if (BUILD_SHARED_LIBS)
 	if(MSVC)
 		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
 	else()
-		add_definitions(-DCVAPI_EXPORTS) 		
+		add_definitions(-DCVAPI_EXPORTS)
 	endif()
 endif()
 
-if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
-    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-        if(${CMAKE_GENERATOR} MATCHES "Visual*")
-            set(${the_target}_pch "src/precomp.cpp")
-        endif()            
-        add_native_precompiled_header(${the_target} ${pch_header})
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-        add_precompiled_header(${the_target} ${pch_header})
-    endif()
-endif()
+add_opencv_precompiled_headers(${the_target})
 
 # For dynamic link numbering convenions
 if(NOT ANDROID)
@@ -288,7 +278,7 @@ if(NOT ANDROID)
         )
 endif()
 
-set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )	
+set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
@@ -398,27 +388,17 @@ if(BUILD_TESTS)
 
   add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
-  if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-      set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
-      if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-          if(${CMAKE_GENERATOR} MATCHES "Visual*")
-              set(${the_target}_pch "test/test_precomp.cpp")
-          endif()            
-          add_native_precompiled_header(${the_target} ${pch_header})
-      elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-          add_precompiled_header(${the_target} ${pch_header})
-      endif()
-  endif()
+  add_opencv_precompiled_headers(${the_target})
 
   # Additional target properties
   set_target_properties(${the_target} PROPERTIES
       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
       RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
       )
-	
+
   if(ENABLE_SOLUTION_FOLDERS)
-	  set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-  endif()	
+    set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+  endif()
 
   add_dependencies(${the_target} ${test_deps})
 

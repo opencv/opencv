@@ -1,3 +1,24 @@
+#opencv precompiled headers macro (can add pch to modules and tests)
+#this macro must be called after any "add_definitions" commands, otherwise precompiled headers will not work
+macro(add_opencv_precompiled_headers the_target)
+    if(the_target MATCHES opencv_test_)
+        SET(pch_name "test/test_precomp")
+    else()
+        SET(pch_name "src/precomp")
+    endif()
+    set(pch_header "${CMAKE_CURRENT_SOURCE_DIR}/${pch_name}.hpp")
+    if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
+        if(CMAKE_GENERATOR MATCHES Visual)
+            set(${the_target}_pch "${CMAKE_CURRENT_SOURCE_DIR}/${pch_name}.cpp")
+            add_native_precompiled_header(${the_target} ${pch_header})
+        elseif(CMAKE_GENERATOR MATCHES Xcode)
+            add_native_precompiled_header(${the_target} ${pch_header})
+        elseif(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_GENERATOR MATCHES Makefiles)
+            add_precompiled_header(${the_target} ${pch_header})
+        endif()
+    endif()
+endmacro()
+
 # this is template for a OpenCV module 
 macro(define_opencv_module name)
     
@@ -8,20 +29,19 @@ macro(define_opencv_module name)
                         "${CMAKE_CURRENT_BINARY_DIR}")
     
     foreach(d ${ARGN})
-        if(${d} MATCHES "opencv_")
-            if(${d} MATCHES "opencv_lapack")
-            else()
-                string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-                include_directories("${d_dir}/include")
-            endif()
+        if(d MATCHES "opencv_")
+            string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+            include_directories("${d_dir}/include")
         endif()
     endforeach()
 
     file(GLOB lib_srcs "src/*.cpp")
     file(GLOB lib_int_hdrs "src/*.h*")
+
     if(COMMAND get_module_external_sources)
        get_module_external_sources(${name})
     endif()
+
     source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 
     file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
@@ -66,17 +86,7 @@ macro(define_opencv_module name)
         INSTALL_NAME_DIR lib
         )
 
-    if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-        set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
-        if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-            if(${CMAKE_GENERATOR} MATCHES "Visual*")
-                set(${the_target}_pch "src/precomp.cpp")
-            endif()            
-            add_native_precompiled_header(${the_target} ${pch_header})
-        elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-            add_precompiled_header(${the_target} ${pch_header})
-        endif()
-    endif()
+    add_opencv_precompiled_headers(${the_target})
 
     # Add the required libraries for linking:
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
@@ -111,12 +121,9 @@ macro(define_opencv_module name)
 
         set(test_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_${the_target}_DEPS})
         foreach(d ${test_deps})
-            if(${d} MATCHES "opencv_")
-                if(${d} MATCHES "opencv_lapack")
-                else()
-                    string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-                    include_directories("${d_dir}/include")
-                endif()
+            if(d MATCHES "opencv_")
+                string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+                include_directories("${d_dir}/include")
             endif()
         endforeach()
 
@@ -130,24 +137,14 @@ macro(define_opencv_module name)
 
         add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
-        if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-            set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
-            if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-                if(${CMAKE_GENERATOR} MATCHES "Visual*")
-                    set(${the_target}_pch "test/test_precomp.cpp")
-                endif()            
-                add_native_precompiled_header(${the_target} ${pch_header})
-            elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-                add_precompiled_header(${the_target} ${pch_header})
-            endif()
-        endif()
+        add_opencv_precompiled_headers(${the_target})
 
         # Additional target properties
         set_target_properties(${the_target} PROPERTIES
             DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
             RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
             )
-            
+
         if(ENABLE_SOLUTION_FOLDERS)
             set_target_properties(${the_target} PROPERTIES FOLDER "tests")
         endif() 
@@ -165,5 +162,5 @@ macro(define_opencv_module name)
         #    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
         #endif()
     endif()    
-        
+
 endmacro()
