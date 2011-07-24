@@ -1,7 +1,7 @@
 #opencv precompiled headers macro (can add pch to modules and tests)
 #this macro must be called after any "add_definitions" commands, otherwise precompiled headers will not work
 macro(add_opencv_precompiled_headers the_target)
-    if(the_target MATCHES opencv_test_)
+    if("${the_target}" MATCHES "opencv_test_.*")
         SET(pch_name "test/test_precomp")
     else()
         SET(pch_name "src/precomp")
