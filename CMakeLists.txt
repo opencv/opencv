@@ -339,6 +339,9 @@ endif()
 
 include(OpenCVPCHSupport.cmake REQUIRED)
 include(OpenCVModule.cmake REQUIRED)
+if(ANDROID)
+    include(OpenCVAndroidProject.cmake REQUIRED)
+endif()
 
 if(PCHSupport_FOUND)
     SET(USE_PRECOMPILED_HEADERS ON CACHE BOOL "Use precompiled headers")
