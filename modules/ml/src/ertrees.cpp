@@ -954,7 +954,7 @@ CvDTreeSplit* CvForestERTree::find_split_ord_class( CvDTreeNode* node, int vi, f
                 int r = responses[si];
                 float val = values[si];
                 int m = missing[si];
-                double p = priors[si];
+                double p = priors[r];
                 if (m) continue;
                 if ( val < split_val )
                 {
