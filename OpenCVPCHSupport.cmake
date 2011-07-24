@@ -68,15 +68,27 @@ ENDMACRO(_PCH_GET_COMPILE_FLAGS)
 MACRO(_PCH_WRITE_PCHDEP_CXX _targetName _include_file _dephelp)
 
     SET(${_dephelp} ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch_dephelp.cxx)
-    ADD_CUSTOM_COMMAND(
-      OUTPUT "${${_dephelp}}"
-      COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
-      COMMAND ${CMAKE_COMMAND} -E echo "int testfunction()"                >> "${${_dephelp}}"
-      COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    return 0;"                     >> "${${_dephelp}}"
-      COMMAND ${CMAKE_COMMAND} -E echo "}"                                 >> "${${_dephelp}}"
-      DEPENDS "${_include_file}"
-      )
+    IF(CMAKE_HOST_WIN32)
+        ADD_CUSTOM_COMMAND(
+          OUTPUT "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction()"                  >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "    return 0;"                     >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "}"                                 >> "${${_dephelp}}"
+          DEPENDS "${_include_file}"
+          )
+    else()
+        ADD_CUSTOM_COMMAND(
+          OUTPUT "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"${_include_file}\\\"" >  "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "int testfunction\\(\\)"            >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "{"                                 >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "    return 0;"                     >> "${${_dephelp}}"
+          COMMAND ${CMAKE_COMMAND} -E echo "}"                                 >> "${${_dephelp}}"
+          DEPENDS "${_include_file}"
+          )
+    endif()
 
 ENDMACRO(_PCH_WRITE_PCHDEP_CXX )
 
