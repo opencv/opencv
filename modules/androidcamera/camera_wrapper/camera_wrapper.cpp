@@ -197,6 +197,7 @@ public:
     static void applyProperties(CameraHandler** ppcameraHandler);
 
     std::string cameraPropertySupportedPreviewSizesString;
+    std::string cameraPropertyPreviewFormatString;
 };
 
 
@@ -229,35 +230,74 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     {
         LOGI("initCameraConnect: Setting paramers from previous camera handler");
         camera->setParameters(prevCameraParameters->flatten());
+        handler->params.unflatten(prevCameraParameters->flatten());
+    }
+    else
+    {
+        android::String8 params_str = camera->getParameters();
+        LOGI("initCameraConnect: [%s]", params_str.string());
+
+        handler->params.unflatten(params_str);
+
+        LOGD("Supported Cameras: %s", handler->params.get("camera-indexes"));
+        LOGD("Supported Picture Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
+        LOGD("Supported Picture Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
+        LOGD("Supported Preview Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
+        LOGD("Supported Preview Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
+        LOGD("Supported Preview Frame Rates: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
+        LOGD("Supported Thumbnail Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
+        LOGD("Supported Whitebalance Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
+        LOGD("Supported Effects: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_EFFECTS));
+        LOGD("Supported Scene Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
+        LOGD("Supported Focus Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
+        LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
+        LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
+
+
+        //check if yuv420sp format available. Set this format as preview format.
+        const char* available_formats = handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS);
+        if (available_formats != 0)
+        {
+            const char* format_to_set = 0;
+            const char* pos = available_formats;
+            const char* ptr = pos;
+            while(true)
+            {
+                while(*ptr != 0 && *ptr != ',') ++ptr;
+                if (ptr != pos)
+                {
+                    if (0 == strncmp(pos, "yuv420sp", ptr - pos))
+                    {
+                        format_to_set = "yuv420sp";
+                        break;
+                    }
+                    if (0 == strncmp(pos, "yuv420i", ptr - pos))
+                        format_to_set = "yuv420i";
+                }
+                if (*ptr == 0)
+                    break;
+                pos = ++ptr;
+            }
+
+            if (0 != format_to_set)
+            {
+                handler->params.setPreviewFormat(format_to_set);
+
+                status_t resParams = handler->camera->setParameters(handler->params.flatten());
+
+                if (resParams != 0)
+                    LOGE("initCameraConnect: failed to set preview format to %s", format_to_set);
+                else
+                    LOGD("initCameraConnect: preview format is set to %s", format_to_set);
+            }
+        }
     }
 
-    android::String8 params_str = camera->getParameters();
-    LOGI("initCameraConnect: [%s]", params_str.string());
-
-    handler->params.unflatten(params_str);
-
-    LOGD("Supported Cameras: %s", handler->params.get("camera-indexes"));
-    LOGD("Supported Picture Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
-    LOGD("Supported Picture Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
-    LOGD("Supported Preview Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
-    LOGD("Supported Preview Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
-    LOGD("Supported Preview Frame Rates: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
-    LOGD("Supported Thumbnail Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
-    LOGD("Supported Whitebalance Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
-    LOGD("Supported Effects: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_EFFECTS));
-    LOGD("Supported Scene Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
-    LOGD("Supported Focus Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
-    LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
-    LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
-
-
-    //TODO: check if yuv420i format available. Set this format as preview format.
-
+#ifdef ANDROID_r2_2_2
     status_t pdstatus = camera->setPreviewDisplay(sp<ISurface>(0 /*new DummySurface*/));
     if (pdstatus != 0)
-    {
         LOGE("initCameraConnect: failed setPreviewDisplay(0) call; camera migth not work correcttly on some devices");
-    }
+#endif
 
     ////ATTENTION: switching between two versions: with and without copying memory inside Android OS
     //// see the method  CameraService::Client::copyFrameAndPostCopiedFrame and where it is used
@@ -316,6 +356,8 @@ void CameraHandler::closeCameraConnect()
 
 double CameraHandler::getProperty(int propIdx)
 {
+    LOGD("CameraHandler::getProperty(%d)", propIdx);
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
@@ -332,12 +374,32 @@ double CameraHandler::getProperty(int propIdx)
     }
     case ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING:
     {
-            cameraPropertySupportedPreviewSizesString = params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
-	    double res;
-	    memset(&res, 0, sizeof(res));
-	    (*( (void**)&res ))= (void*)( cameraPropertySupportedPreviewSizesString.c_str() );
-	    
-	    return res;
+        cameraPropertySupportedPreviewSizesString = params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
+        union {const char* str;double res;} u;
+        memset(&u.res, 0, sizeof(u.res));
+        u.str = cameraPropertySupportedPreviewSizesString.c_str();
+        return u.res;
+    }
+
+    case ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING:
+    {
+        const char* fmt = params.get(CameraParameters::KEY_PREVIEW_FORMAT);
+        if (fmt == CameraParameters::PIXEL_FORMAT_YUV422SP)
+            fmt = "yuv422sp";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_YUV420SP)
+            fmt = "yuv420sp";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_YUV422I)
+            fmt = "yuv422i";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_RGB565)
+            fmt = "rgb565";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_JPEG)
+            fmt = "jpeg";
+        cameraPropertyPreviewFormatString = fmt;
+
+        union {const char* str;double res;} u;
+        memset(&u.res, 0, sizeof(u.res));
+        u.str = cameraPropertySupportedPreviewSizesString.c_str();
+        return u.res;
     }
 
     };
@@ -346,6 +408,8 @@ double CameraHandler::getProperty(int propIdx)
 
 void CameraHandler::setProperty(int propIdx, double value)
 {
+    LOGD("CameraHandler::setProperty(%d, %f)", propIdx, value);
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
@@ -370,6 +434,20 @@ void CameraHandler::setProperty(int propIdx, double value)
 void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 {
     LOGD("CameraHandler::applyProperties()");
+
+    if (ppcameraHandler == 0)
+    {
+        LOGE("applyProperties: Passed NULL ppcameraHandler");
+        return;
+    }
+
+    if (*ppcameraHandler == 0)
+    {
+        LOGE("applyProperties: Passed null *ppcameraHandler");
+        return;
+    }
+
+    LOGD("CameraHandler::applyProperties()");
     CameraHandler* previousCameraHandler=*ppcameraHandler;
     CameraParameters curCameraParameters(previousCameraHandler->params.flatten());
 
@@ -386,12 +464,12 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, &curCameraParameters);
     LOGD("CameraHandler::applyProperties(): after initCameraConnect, handler=0x%x", (int)handler);
     if (handler == NULL) {
-	    LOGE("ERROR in applyProperties --- cannot reinit camera");
-	    handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
-	    LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
-	    if (handler == NULL) {
-		    LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
-	    }
+        LOGE("ERROR in applyProperties --- cannot reinit camera");
+        handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
+        LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
+        if (handler == NULL) {
+            LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
+        }
     }
     (*ppcameraHandler)=handler;
 }
@@ -423,7 +501,7 @@ void setCameraPropertyC(void* camera, int propIdx, double value)
 
 void applyCameraPropertiesC(void** camera)
 {
-	CameraHandler::applyProperties((CameraHandler**)camera);
+    CameraHandler::applyProperties((CameraHandler**)camera);
 }
 
 }
