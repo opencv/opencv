@@ -132,5 +132,9 @@ macro(add_android_project _target _path)
             DEPENDS "${build_path}/bin/${_target}-debug.apk"
             DEPENDS "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
             )
+
+        if("${ARGN}" STREQUAL "INSTALL" AND INSTALL_ANDROID_EXAMPLES)
+            install(FILES "${CMAKE_BINARY_DIR}/bin/${_target}.apk" DESTINATION "bin" COMPONENT main)
+        endif()
     endif()
 endmacro()

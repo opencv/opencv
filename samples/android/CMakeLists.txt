@@ -31,7 +31,7 @@ if (BUILD_ANDROID_EXAMPLES)
     
     foreach(sample ${android_samples})
         if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${sample}/AndroidManifest.xml")
-            add_android_project("${sample}" "${CMAKE_CURRENT_SOURCE_DIR}/${sample}")
+            add_android_project("${sample}" "${CMAKE_CURRENT_SOURCE_DIR}/${sample}" INSTALL)
         endif()
     endforeach()
 
