@@ -28,7 +28,7 @@ int main(int argc, char ** argv)
     
     Mat padded;                            //expand input image to optimal size
     int m = getOptimalDFTSize( I.rows );
-    int n = getOptimalDFTSize( I.cols ); // on the border keep the values
+    int n = getOptimalDFTSize( I.cols ); // on the border add zero values
     copyMakeBorder(I, padded, 0, m - I.rows, 0, n - I.cols, BORDER_CONSTANT, Scalar::all(0));
 
     Mat planes[] = {Mat_<float>(padded), Mat::zeros(padded.size(), CV_32F)};
