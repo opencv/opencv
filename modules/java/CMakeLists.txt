@@ -213,8 +213,8 @@ if(ANDROID)
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/res"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/gen"
         DEPENDS ${lib_proj_files}
-        DEPENDS ${api_target}
         )
+    add_dependencies(${lib_target} ${api_target})
     add_dependencies(${target} ${lib_target})
 
 endif(ANDROID)
