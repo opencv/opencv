@@ -348,10 +348,12 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'contour_area' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-contourarea%s', None),
             'arc_length' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-arclength%s', None),
             'basicstructures' : ('http://opencv.itseez.com/modules/core/doc/basic_structures.html#%s', None),
+            'oldbasicstructures' : ('http://opencv.itseez.com/modules/core/doc/old_basic_structures.html#%s', None),
             'readwriteimagevideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
             'operationsonarrays' : ('http://opencv.itseez.com/modules/core/doc/operations_on_arrays.html#%s', None),
             'utilitysystemfunctions':('http://opencv.itseez.com/modules/core/doc/utility_and_system_functions_and_macros.html#%s', None),
             'imgprocfilter':('http://opencv.itseez.com/modules/imgproc/doc/filtering.html#%s', None),
+            'svms':('http://opencv.itseez.com/modules/ml/doc/support_vector_machines.html#%s', None),
             'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None)
            }
 
