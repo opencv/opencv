@@ -59,7 +59,7 @@ macro(add_android_project _target _path)
                 OUTPUT "${build_path}/build.xml"
                 OUTPUT "${build_path}/local.properties"
                 OUTPUT "${build_path}/proguard.cfg"
-                COMMAND ${CMAKE_COMMAND} -E echo "#do not edit; this file is generated automatically" > "default.properties"
+                COMMAND ${CMAKE_COMMAND} -E echo "" > "default.properties"
                 COMMAND ${ANDROID_EXECUTABLE} update project --name "${_target}" --target "${ANDROID_SDK_TARGET}" --library "${OPENCV_REFERENCE_PATH}" --path .
                 WORKING_DIRECTORY ${build_path}
                 DEPENDS ${${_target}_project_files}
@@ -73,7 +73,7 @@ macro(add_android_project _target _path)
                 OUTPUT "${build_path}/build.xml"
                 OUTPUT "${build_path}/local.properties"
                 OUTPUT "${build_path}/proguard.cfg"
-                COMMAND ${CMAKE_COMMAND} -E echo "#do not edit; this file is generated automatically" > "default.properties"
+                COMMAND ${CMAKE_COMMAND} -E echo "" > "default.properties"
                 COMMAND ${ANDROID_EXECUTABLE} update project --name "${_target}" --target "${ANDROID_SDK_TARGET}" --path .
                 WORKING_DIRECTORY ${build_path}
                 DEPENDS ${${_target}_project_files}
