@@ -161,16 +161,31 @@ public class coreTest extends OpenCVTestCase {
 		Scalar color = new Scalar(128);
 		
 		assertTrue(0 == Core.countNonZero(gray0));
-		Core.circle(gray0, center, radius, color, -1);
+		Core.circle(gray0, center, radius, color, -1 /*filled circle*/);
 		assertTrue(0 != Core.countNonZero(gray0));
 	}
 
 	public void testCircleMatPointIntScalarIntInt() {
-		fail("Not yet implemented");
+		Point center = new Point(gray0.cols() / 2, gray0.rows()/2);
+		int radius = Math.min(gray0.cols()/4, gray0.rows()/4);
+		Scalar color = new Scalar(128);
+		
+		assertTrue(0 == Core.countNonZero(gray0));
+		Core.circle(gray0, center, radius, color, 2, 4/*4-connected line*/);
+		assertTrue(0 != Core.countNonZero(gray0));
 	}
 
 	public void testCircleMatPointIntScalarIntIntInt() {
-		fail("Not yet implemented");
+		Point center = new Point(gray0.cols() / 2, gray0.rows()/2);
+		Point center2 = new Point(gray0.cols(), gray0.rows());
+		int radius = Math.min(gray0.cols()/4, gray0.rows()/4);
+		Scalar color128 = new Scalar(128);
+		Scalar color0 = new Scalar(0);
+		
+		assertTrue(0 == Core.countNonZero(gray0));
+		Core.circle(gray0, center2, radius*2, color128, 2, 4, 1/*Number of fractional bits*/);
+		Core.circle(gray0, center, radius, color0, 2, 4, 0);
+		assertTrue(0 == Core.countNonZero(gray0));
 	}
 
 	public void testClipLine() {

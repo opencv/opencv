@@ -60,8 +60,12 @@ public class MatTest extends OpenCVTestCase {
 		assertEquals(CvType.CV_32F, gray0_32f.depth());
 	}
 
-	public void testDispose() {
-		fail("Not yet implemented");
+	public void testRelease() {
+		assertTrue( gray0.empty() == false );
+		assertTrue( gray0.rows() > 0 );
+		gray0.release();
+		assertTrue( gray0.empty() == true );
+		assertTrue( gray0.rows() == 0 );
 	}
 
 	public void testDot() {
