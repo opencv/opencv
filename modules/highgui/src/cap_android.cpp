@@ -86,8 +86,18 @@ protected:
     //raw from camera
     int m_width;
     int m_height;
-    unsigned char *m_frameYUV420i;
-    unsigned char *m_frameYUV420inext;
+    unsigned char *m_frameYUV420;
+    unsigned char *m_frameYUV420next;
+
+    enum YUVformat
+    {
+        noformat = 0,
+        yuv420sp,
+        yuv420i,
+        yuvUnknown
+    };
+
+    YUVformat m_frameFormat;
 
     void setFrame(const void* buffer, int bufferSize);
 
@@ -117,9 +127,9 @@ private:
     volatile bool m_waitingNextFrame;
     volatile bool m_shouldAutoGrab;
 
-    void prepareCacheForYUV420i(int width, int height);
-    static bool convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
-    static bool convertYUV420i2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha);
+    void prepareCacheForYUV(int width, int height);
+    bool convertYUV2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat);
+    bool convertYUV2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha);
 
     friend class HighguiAndroidCameraActivity;
 };
@@ -179,8 +189,8 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_height              = 0;
     m_activity            = 0;
     m_isOpened            = false;
-    m_frameYUV420i        = 0;
-    m_frameYUV420inext    = 0;
+    m_frameYUV420        = 0;
+    m_frameYUV420next    = 0;
     m_hasGray             = false;
     m_hasColor            = false;
     m_dataState           = CVCAPTURE_ANDROID_STATE_NO_FRAME;
@@ -188,6 +198,7 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_shouldAutoGrab      = false;
     m_framesGrabbed       = 0;
     m_CameraParamsChanged = false;
+    m_frameFormat         = noformat;
 
     //try connect to camera
     m_activity = new HighguiAndroidCameraActivity(this);
@@ -223,10 +234,10 @@ CvCapture_Android::~CvCapture_Android()
 
 	pthread_mutex_lock(&m_nextFrameMutex);
 
-	unsigned char *tmp1=m_frameYUV420i;
-	unsigned char *tmp2=m_frameYUV420inext;
-        m_frameYUV420i = 0;
-        m_frameYUV420inext = 0;
+        unsigned char *tmp1=m_frameYUV420;
+        unsigned char *tmp2=m_frameYUV420next;
+        m_frameYUV420 = 0;
+        m_frameYUV420next = 0;
         delete tmp1;
         delete tmp2;
 
@@ -255,6 +266,8 @@ double CvCapture_Android::getProperty( int propIdx )
 
     case CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING:
 	return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING);
+    case CV_CAP_PROP_PREVIEW_FORMAT:
+        return (double)m_activity->getProperty(ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING);
     default:
         CV_Error( CV_StsOutOfRange, "Failed attempt to GET unsupported camera property." );
         break;
@@ -318,9 +331,9 @@ bool CvCapture_Android::grabFrame()
     if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
             //LOGD("CvCapture_Android::grabFrame: get new frame");
 	    //swap current and new frames
-	    unsigned char* tmp = m_frameYUV420i;
-	    m_frameYUV420i = m_frameYUV420inext;
-	    m_frameYUV420inext = tmp;
+            unsigned char* tmp = m_frameYUV420;
+            m_frameYUV420 = m_frameYUV420next;
+            m_frameYUV420next = tmp;
 
 	    //discard cached frames
 	    m_hasGray = false;
@@ -348,27 +361,39 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
 {
     IplImage* image = NULL;
 
-    unsigned char *current_frameYUV420i=m_frameYUV420i;
+    unsigned char *current_frameYUV420=m_frameYUV420;
     //Attention! all the operations in this function below should occupy less time than the period between two frames from camera
-    if (NULL != current_frameYUV420i)
+    if (NULL != current_frameYUV420)
     {
+        if (m_frameFormat == noformat)
+        {
+            union {double prop; const char* name;} u;
+            u.prop = getProperty(CV_CAP_PROP_PREVIEW_FORMAT);
+            if (0 == strcmp(u.name, "yuv420sp"))
+                m_frameFormat = yuv420sp;
+            else if (0 == strcmp(u.name, "yuv420i"))
+                m_frameFormat = yuv420i;
+            else
+                m_frameFormat = yuvUnknown;
+        }
+
         switch(outputType)
         {
         case CV_CAP_ANDROID_GREY_FRAME:
             if (!m_hasGray)
-                if (!(m_hasGray = convertYUV420i2Grey(m_width, m_height, current_frameYUV420i, m_frameGray.mat)))
+                if (!(m_hasGray = convertYUV2Grey(m_width, m_height, current_frameYUV420, m_frameGray.mat)))
                     return NULL;
             image = m_frameGray.getIplImagePtr();
             break;
         case CV_CAP_ANDROID_COLOR_FRAME_BGR: case CV_CAP_ANDROID_COLOR_FRAME_RGB:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2BGR(m_width, m_height, current_frameYUV420i, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGB, false)))
+                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGB, false)))
                     return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
         case CV_CAP_ANDROID_COLOR_FRAME_BGRA: case CV_CAP_ANDROID_COLOR_FRAME_RGBA:
             if (!m_hasColor)
-                if (!(m_hasColor = convertYUV420i2BGR(m_width, m_height, current_frameYUV420i, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGBA, true)))
+                if (!(m_hasColor = convertYUV2BGR(m_width, m_height, current_frameYUV420, m_frameColor.mat, outputType == CV_CAP_ANDROID_COLOR_FRAME_RGBA, true)))
                     return NULL;
             image = m_frameColor.getIplImagePtr();
             break;
@@ -391,22 +416,22 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
 
     if ( expectedSize != bufferSize)
     {
-        LOGE("ERROR reading YUV420i buffer: width=%d, height=%d, size=%d, receivedSize=%d", width, height, expectedSize, bufferSize);
+        LOGE("ERROR reading YUV buffer: width=%d, height=%d, size=%d, receivedSize=%d", width, height, expectedSize, bufferSize);
         return;
     }
 
     //allocate memory if needed
-    prepareCacheForYUV420i(width, height);
+    prepareCacheForYUV(width, height);
 
     //copy data
-    memcpy(m_frameYUV420inext, buffer, bufferSize);
+    memcpy(m_frameYUV420next, buffer, bufferSize);
     //LOGD("CvCapture_Android::setFrame -- memcpy is done");
 
 #if 0 //moved this part of code into grabFrame
     //swap current and new frames
-    unsigned char* tmp = m_frameYUV420i;
-    m_frameYUV420i = m_frameYUV420inext;
-    m_frameYUV420inext = tmp;
+    unsigned char* tmp = m_frameYUV420;
+    m_frameYUV420 = m_frameYUV420next;
+    m_frameYUV420next = tmp;
 
     //discard cached frames
     m_hasGray = false;
@@ -418,30 +443,31 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
 }
 
 //Attention: this method should be called inside pthread_mutex_lock(m_nextFrameMutex) only
-void CvCapture_Android::prepareCacheForYUV420i(int width, int height)
+void CvCapture_Android::prepareCacheForYUV(int width, int height)
 {
     if (width != m_width || height != m_height)
     {
-	LOGD("CvCapture_Android::prepareCacheForYUV420i: Changing size of buffers: from width=%d height=%d to width=%d height=%d", m_width, m_height, width, height);
+        LOGD("CvCapture_Android::prepareCacheForYUV: Changing size of buffers: from width=%d height=%d to width=%d height=%d", m_width, m_height, width, height);
         m_width = width;
         m_height = height;
-        unsigned char *tmp = m_frameYUV420inext;
-        m_frameYUV420inext = new unsigned char [width * height * 3 / 2];
+        unsigned char *tmp = m_frameYUV420next;
+        m_frameYUV420next = new unsigned char [width * height * 3 / 2];
 	if (tmp != NULL) {
 		delete[] tmp;
 	}
 
-        tmp = m_frameYUV420i;
-        m_frameYUV420i = new unsigned char [width * height * 3 / 2];
+        tmp = m_frameYUV420;
+        m_frameYUV420 = new unsigned char [width * height * 3 / 2];
 	if (tmp != NULL) {
 		delete[] tmp;
 	}
     }
 }
 
-bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat)
+bool CvCapture_Android::convertYUV2Grey(int width, int height, const unsigned char* yuv, cv::Mat& resmat)
 {
     if (yuv == 0) return false;
+    if (m_frameFormat != yuv420sp && m_frameFormat != yuv420i) return false;
 #define ALWAYS_COPY_GRAY 0
 #if ALWAYS_COPY_GRAY
     resmat.create(height, width, CV_8UC1);
@@ -453,14 +479,19 @@ bool CvCapture_Android::convertYUV420i2Grey(int width, int height, const unsigne
     return !resmat.empty();
 }
 
-bool CvCapture_Android::convertYUV420i2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha)
+bool CvCapture_Android::convertYUV2BGR(int width, int height, const unsigned char* yuv, cv::Mat& resmat, bool inRGBorder, bool withAlpha)
 {
     if (yuv == 0) return false;
+    if (m_frameFormat != yuv420sp && m_frameFormat != yuv420i) return false;
+
     CV_Assert(width % 2 == 0 && height % 2 == 0);
 
     cv::Mat src(height*3/2, width, CV_8UC1, (void*)yuv);
 
-    cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420i2RGB : CV_YUV420i2BGR, withAlpha ? 4 : 3);
+    if (m_frameFormat == yuv420sp)
+        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420sp2RGB : CV_YUV420sp2BGR, withAlpha ? 4 : 3);
+    else if (m_frameFormat == yuv420i)
+        cv::cvtColor(src, resmat, inRGBorder ? CV_YUV420i2RGB : CV_YUV420i2BGR, withAlpha ? 4 : 3);
 
     return !resmat.empty();
 }

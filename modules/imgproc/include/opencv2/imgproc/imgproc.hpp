@@ -902,6 +902,8 @@ enum
     
     COLOR_YUV420i2RGB  = 90,
     COLOR_YUV420i2BGR  = 91,
+    COLOR_YUV420sp2RGB = 92,
+    COLOR_YUV420sp2BGR = 93,
     
     COLOR_COLORCVT_MAX  =100
 };

@@ -42,14 +42,14 @@ class Sample4View extends SampleViewBase {
             Imgproc.cvtColor(mGraySubmat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case Sample4Mixed.VIEW_MODE_RGBA:
-            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420i2RGB, 4);
+            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420sp2RGB, 4);
             break;
         case Sample4Mixed.VIEW_MODE_CANNY:
             Imgproc.Canny(mGraySubmat, mIntermediateMat, 80, 100);
             Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
             break;
         case Sample4Mixed.VIEW_MODE_FEATURES:
-            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420i2RGB, 4);
+            Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420sp2RGB, 4);
             FindFeatures(mGraySubmat.getNativeObjAddr(), mRgba.getNativeObjAddr());
             break;
         }

@@ -398,7 +398,7 @@ double CameraHandler::getProperty(int propIdx)
 
         union {const char* str;double res;} u;
         memset(&u.res, 0, sizeof(u.res));
-        u.str = cameraPropertySupportedPreviewSizesString.c_str();
+        u.str = cameraPropertyPreviewFormatString.c_str();
         return u.res;
     }
 

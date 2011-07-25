@@ -133,7 +133,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::getProperty(void* camera, int 
         LOGE("CameraWrapperConnector::getProperty error: wrong pointer to camera object");
         return CameraActivity::ERROR_WRONG_POINTER_CAMERA_WRAPPER;
     }
-
+    LOGE("calling (*pGetPropertyC)(%p, %d)", camera, propIdx);
     *value = (*pGetPropertyC)(camera, propIdx);
     return CameraActivity::NO_ERROR;
 }
@@ -259,10 +259,6 @@ std::string CameraWrapperConnector::getPathLibFolder()
     {
         LOGD("Library name: %s", dl_info.dli_fname);
         LOGD("Library base address: %p", dl_info.dli_fbase);
-
-        char addrBuf[18];
-        sprintf(addrBuf, "%p-", dl_info.dli_fbase);
-        int addrLength = strlen(addrBuf);
 
 	const char* libName=dl_info.dli_fname;
 	while( ((*libName)=='/') || ((*libName)=='.') )
