@@ -17,6 +17,7 @@ SET(GEN_JAVA "${CMAKE_CURRENT_SOURCE_DIR}/gen_java.py")
 SET(HDR_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/../python/src2/hdr_parser.py")
 SET(GEN_JAVADOC "${CMAKE_CURRENT_SOURCE_DIR}/gen_javadoc.py")
 SET(RST_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/rst_parser.py")
+SET(CHECK_TEST_COVERAGE "${CMAKE_CURRENT_SOURCE_DIR}/check-tests.py")
 
 # setup raw java and cpp files generation (without javadoc and at temporary location)
 foreach(module ${OPENCV_JAVA_MODULES})
@@ -222,4 +223,9 @@ endif(ANDROID)
 #android test project
 if(BUILD_TESTS)
     add_android_project(opencv_test_java "${CMAKE_CURRENT_SOURCE_DIR}/android_test")
+
+    add_custom_command(
+        TARGET opencv_test_java_android_project POST_BUILD
+        COMMAND ${PYTHON_EXECUTABLE} ${CHECK_TEST_COVERAGE} "${CMAKE_CURRENT_SOURCE_DIR}/android_test/src" "${CMAKE_BINARY_DIR}/src" > "${CMAKE_CURRENT_BINARY_DIR}/tests_coverage.log"
+        )
 endif()

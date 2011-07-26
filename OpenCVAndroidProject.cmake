@@ -125,6 +125,7 @@ macro(add_android_project _target _path)
             COMMAND ${CMAKE_COMMAND} -E copy "${build_path}/bin/${_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
             WORKING_DIRECTORY ${build_path}
             DEPENDS ${${_target}_project_files}
+            DEPENDS "${LIBRARY_OUTPUT_PATH}/libopencv_java.so"
             COMMENT "Generating bin/${_target}.apk"
         )
 
