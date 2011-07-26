@@ -145,6 +145,26 @@ public class coreTest extends OpenCVTestCase {
 		assertMatEqual(angle, dst_angle);	
 	}
 
+	public void testCheckRangeMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testCheckRangeMatBoolean() {
+		fail("Not yet implemented");
+	}
+
+	public void testCheckRangeMatBooleanPoint() {
+		fail("Not yet implemented");
+	}
+
+	public void testCheckRangeMatBooleanPointDouble() {
+		fail("Not yet implemented");
+	}
+
+	public void testCheckRangeMatBooleanPointDoubleDouble() {
+		fail("Not yet implemented");
+	}
+
 	public void testCircleMatPointIntScalar() {
 		Point center = new Point(gray0.cols() / 2, gray0.rows()/2);
 		int radius = Math.min(gray0.cols()/4, gray0.rows()/4);
@@ -213,6 +233,7 @@ public class coreTest extends OpenCVTestCase {
 		assertEquals(pt2Clipped, pt2);
 	}
 
+	
 	public void testCompare() {
         Core.compare(gray0, gray0, dst, Core.CMP_EQ);
         assertMatEqual(dst, gray255);
@@ -369,6 +390,10 @@ public class coreTest extends OpenCVTestCase {
 		assertMatEqual(gray3, dst);
 	}
 
+	public void testEigen() {
+		fail("Not yet implemented");
+	}
+
 	public void testEllipse2Poly() {
 		fail("Not yet implemented");
 	}
@@ -388,7 +413,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testEllipseMatPointSizeDoubleDoubleDoubleScalarIntIntInt() {
 		fail("Not yet implemented");
 	}
-	
+
 	public void testEllipseMatRotatedRectScalar() {
 		fail("Not yet implemented");
 	}
@@ -419,6 +444,34 @@ public class coreTest extends OpenCVTestCase {
 		
 		float res2 = Core.fastAtan2(80, 20);
 		assertEquals(75.96, res2, delta);		
+	}
+
+	public void testFillConvexPolyMatMatScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillConvexPolyMatMatScalarInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillConvexPolyMatMatScalarIntInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillPolyMatListOfMatScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillPolyMatListOfMatScalarInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillPolyMatListOfMatScalarIntInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testFillPolyMatListOfMatScalarIntIntPoint() {
+		fail("Not yet implemented");
 	}
 
 	public void testFlip() {
@@ -489,6 +542,10 @@ public class coreTest extends OpenCVTestCase {
 		assertMatEqual(desired, dst);
 	}
 
+	public void testGetCPUTickCount() {
+		fail("Not yet implemented");
+	}
+
 	public void testGetOptimalDFTSize() {
 		int vecsize = Core.getOptimalDFTSize(0);
 		assertEquals(1, vecsize);
@@ -500,6 +557,10 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testGetTextSize() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetTickCount() {
 		fail("Not yet implemented");
 	}
 
@@ -528,7 +589,7 @@ public class coreTest extends OpenCVTestCase {
 		Core.idct(in, dst);
 		assertMatEqual(truth, dst);
 	}
-
+	
 	public void testIdctMatMatInt() {		
 		Mat in = new Mat(1, 8, CvType.CV_32F);
 		in.put(0, 0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0);
@@ -619,11 +680,11 @@ public class coreTest extends OpenCVTestCase {
 		double det = Core.determinant(src);
 		assertTrue(det > 0.0);
 	}
-	
+
 	public void testKmeansMatIntMatTermCriteriaIntInt() {
 		fail("Not yet implemented");
 	}
-	
+
 	public void testKmeansMatIntMatTermCriteriaIntIntMat() {
 		fail("Not yet implemented");
 	}
@@ -655,7 +716,6 @@ public class coreTest extends OpenCVTestCase {
 	public void testLineMatPointPointScalarIntInt() {
 		fail("Not yet implemented");
 	}
-	
 
 	public void testLineMatPointPointScalarIntIntInt() {
 		fail("Not yet implemented");
@@ -747,7 +807,7 @@ public class coreTest extends OpenCVTestCase {
 	public void testMeanMatMat() {
 		fail("Not yet implemented");
 	}
-
+	
 	public void testMeanStdDevMatMatMat() {
 		Mat mean = new Mat();
 		Mat stddev = new Mat();
@@ -756,7 +816,7 @@ public class coreTest extends OpenCVTestCase {
 		assertEquals(0, Core.countNonZero(mean));
 		assertEquals(0, Core.countNonZero(stddev));
 	}
-
+	
 	public void testMeanStdDevMatMatMatMat() {
 		Mat mean = new Mat();
 		Mat stddev = new Mat();
@@ -806,12 +866,17 @@ public class coreTest extends OpenCVTestCase {
 		assertTrue(mmres.minLoc.equals(minLoc)); 
 		assertTrue(mmres.maxLoc.equals(maxLoc));		
 	}
+	
 
 	public void testMinMaxLocMat() {
 		fail("Not yet implemented");
 	}
 
 	public void testMinMaxLocMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testMixChannels() {
 		fail("Not yet implemented");
 	}
 
@@ -968,6 +1033,22 @@ public class coreTest extends OpenCVTestCase {
 		assertEquals(0.0, n);
 	}
 
+	public void testPCABackProject() {
+		fail("Not yet implemented");
+	}
+
+	public void testPCAComputeMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testPCAComputeMatMatMatInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testPCAProject() {
+		fail("Not yet implemented");
+	}
+
 	public void testPerspectiveTransform() {
 		//nice example
 		fail("Not yet implemented");
@@ -1026,6 +1107,22 @@ public class coreTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testPolylinesMatListOfMatBooleanScalar() {
+		fail("Not yet implemented");
+	}
+
+	public void testPolylinesMatListOfMatBooleanScalarInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testPolylinesMatListOfMatBooleanScalarIntInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testPolylinesMatListOfMatBooleanScalarIntIntInt() {
+		fail("Not yet implemented");
+	}
+
 	public void testPow() {
 		Core.pow(gray3, 2.0, dst);
 		assertMatEqual(gray9, dst);
@@ -1056,6 +1153,14 @@ public class coreTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));	
 	}
 
+	public void testRandShuffleMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testRandShuffleMatDouble() {
+		fail("Not yet implemented");
+	}
+
 	public void testRandu() {
         Mat low  = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
         Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
@@ -1074,7 +1179,7 @@ public class coreTest extends OpenCVTestCase {
 		Core.rectangle(gray0, center, origin, color);
 		assertTrue(0 != Core.countNonZero(gray0));
 	}
-	
+
 	public void testRectangleMatPointPointScalarInt() {
 		 Point center = new Point(gray0.cols(), gray0.rows());
 		 Point origin = new Point(0,0);
@@ -1104,7 +1209,7 @@ public class coreTest extends OpenCVTestCase {
 		 Core.rectangle(gray0, center, origin, color, 2, 4, 2);
 		 assertTrue(0 != Core.countNonZero(gray0));
 	}
-
+	
 	public void testReduceMatMatIntInt() {
 		Mat src = new Mat(2, 2, CvType.CV_32F);
 		Mat out = new Mat(1, 2, CvType.CV_32F);
@@ -1295,6 +1400,18 @@ public class coreTest extends OpenCVTestCase {
 	}
 
 	public void testSumElems() {
+		fail("Not yet implemented");
+	}
+
+	public void testSVBackSubst() {
+		fail("Not yet implemented");
+	}
+
+	public void testSVDecompMatMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testSVDecompMatMatMatMatInt() {
 		fail("Not yet implemented");
 	}
 

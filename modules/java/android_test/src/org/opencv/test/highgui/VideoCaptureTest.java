@@ -57,16 +57,12 @@ public class VideoCaptureTest extends OpenCVTestCase {
 		assertTrue(isOpened);
 	}
 
-	public void testOpenInt() {
+	public void testOpen() {
 		capture = new VideoCapture();
 		capture.open(Highgui.CV_CAP_ANDROID);
 		isOpened = capture.isOpened();
 		capture.release();
 		assertTrue(isOpened);
-	}
-
-	public void testOpenString() {
-		fail("Not yet implemented");
 	}
 
 	public void testRead() {

@@ -104,7 +104,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
         
         rgbLena = Highgui.imread(OpenCVTestRunner.LENA_PATH);
-        grayChess = Highgui.imread(OpenCVTestRunner.CHESS_PATH);
+        grayChess = Highgui.imread(OpenCVTestRunner.CHESS_PATH, 0);
         
 		v1 = new Mat(1, 3, CvType.CV_32F); v1.put(0, 0, 1.0, 3.0, 2.0);
 		v2 = new Mat(1, 3, CvType.CV_32F); v2.put(0, 0, 2.0, 1.0, 3.0);
