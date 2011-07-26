@@ -15,6 +15,18 @@ public class calib3dTest extends OpenCVTestCase {
 		super.test_1("calib3d");
 	}
 
+	public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMatInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testCalibrationMatrixValues() {
+		fail("Not yet implemented");
+	}
+
 	public void testComposeRTMatMatMatMatMatMat() {
 		Mat rvec1 = new Mat(3, 1, CvType.CV_32F); rvec1.put(0, 0, 0.5302828,  0.19925919, 0.40105945);
 		Mat tvec1 = new Mat(3, 1, CvType.CV_32F); tvec1.put(0, 0, 0.81438506, 0.43713298, 0.2487897);
@@ -169,6 +181,14 @@ public class calib3dTest extends OpenCVTestCase {
 		assertTrue(!dst.empty());
 	}
 
+	public void testFindCirclesGridDefaultMatSizeMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testFindCirclesGridDefaultMatSizeMatInt() {
+		fail("Not yet implemented");
+	}
+
 	public void testFindFundamentalMatMatMat() {
 		fail("Not yet implemented");
 	}
@@ -205,6 +225,34 @@ public class calib3dTest extends OpenCVTestCase {
 		fail("Not yet implemented");
 	}
 
+	public void testGetOptimalNewCameraMatrixMatMatSizeDouble() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSize() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSizeRect() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSizeRectBoolean() {
+		fail("Not yet implemented");
+	}
+
+	public void testGetValidDisparityROI() {
+		fail("Not yet implemented");
+	}
+
+	public void testInitCameraMatrix2DListOfMatListOfMatSize() {
+		fail("Not yet implemented");
+	}
+
+	public void testInitCameraMatrix2DListOfMatListOfMatSizeDouble() {
+		fail("Not yet implemented");
+	}
+
 	public void testMatMulDeriv() {
 		fail("Not yet implemented");
 	}
@@ -218,6 +266,10 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testProjectPointsMatMatMatMatMatMatMatDouble() {
+		fail("Not yet implemented");
+	}
+
+	public void testRectify3Collinear() {
 		fail("Not yet implemented");
 	}
 
@@ -238,6 +290,22 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testRodriguesMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testRQDecomp3x3MatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testRQDecomp3x3MatMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testRQDecomp3x3MatMatMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testRQDecomp3x3MatMatMatMatMatMat() {
 		fail("Not yet implemented");
 	}
 
@@ -270,6 +338,18 @@ public class calib3dTest extends OpenCVTestCase {
 	}
 
 	public void testSolvePnPRansacMatMatMatMatMatMatBooleanIntFloatIntMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMat() {
+		fail("Not yet implemented");
+	}
+
+	public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMatTermCriteria() {
+		fail("Not yet implemented");
+	}
+
+	public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMatTermCriteriaInt() {
 		fail("Not yet implemented");
 	}
 
