@@ -28,7 +28,7 @@ class JavadocGenerator(object):
     def document(self, infile, outfile):
         inf = open(infile, "rt")
         outf = open(outfile, "wt")
-        module = os.path.splitext(os.path.basename(infile))[0]
+        module = os.path.splitext(os.path.basename(infile))[0].split("+")[0]
         if module not in allmodules:
             module = "unknown"
         try:
