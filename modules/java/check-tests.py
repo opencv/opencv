@@ -1,5 +1,16 @@
 import sys, os, re
 
+classes_ignore_list = (
+    'OpenCV(Test)?Case',
+    'OpenCV(Test)?Runner',
+    'CvException',
+)
+
+funcs_ignore_list = (
+    '\w+--HashCode',
+    'Mat--MatLong',
+)
+
 class JavaParser:
     def __init__(self):
         self.clear()
@@ -52,6 +63,9 @@ class JavaParser:
     def parse_file(self, fname):
         clsname = os.path.basename(fname).replace("Test", "").replace(".java", "")
         clsname = clsname[0].upper() + clsname[1:]
+        for cls in classes_ignore_list:
+            if re.match(cls, clsname):
+                return
         f = open(fname, "rt")
         for line in f:
             m1 = self.r1.match(line)
@@ -77,6 +91,13 @@ class JavaParser:
             args_str = re.sub(r"List<(\w+)>", "ListOf\g<1>", args_str)
             args = [a.split()[0] for a in args_str.split(",") if a]
             func_ex = func + "".join([a[0].upper() + a[1:] for a in args])
+            skip = False
+            for fi in funcs_ignore_list:
+                if re.match(fi, func_ex):
+                    skip = True
+                    break
+            if skip:
+                continue
             if func in d:
                 d[func].append(func_ex)
             else:
