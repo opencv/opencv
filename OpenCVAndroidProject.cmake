@@ -63,7 +63,8 @@ macro(add_android_project _target _path)
                 COMMAND ${ANDROID_EXECUTABLE} update project --name "${_target}" --target "${ANDROID_SDK_TARGET}" --library "${OPENCV_REFERENCE_PATH}" --path .
                 WORKING_DIRECTORY ${build_path}
                 DEPENDS ${${_target}_project_files}
-                DEPENDS opencv_java_android_library
+                DEPENDS "${CMAKE_BINARY_DIR}/default.properties"
+                DEPENDS "${CMAKE_BINARY_DIR}/AndroidManifest.xml"
                 COMMENT "Updating android project - ${_target}"
                 )
         else()
@@ -124,7 +125,6 @@ macro(add_android_project _target _path)
             COMMAND ${CMAKE_COMMAND} -E copy "${build_path}/bin/${_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
             WORKING_DIRECTORY ${build_path}
             DEPENDS ${${_target}_project_files}
-            DEPENDS ${JNI_LIB_NAME} opencv_java
             COMMENT "Generating bin/${_target}.apk"
         )
 
@@ -132,6 +132,8 @@ macro(add_android_project _target _path)
             DEPENDS "${build_path}/bin/${_target}-debug.apk"
             DEPENDS "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
             )
+
+        add_dependencies(${_target}_android_project opencv_java ${JNI_LIB_NAME})
 
         if("${ARGN}" STREQUAL "INSTALL" AND INSTALL_ANDROID_EXAMPLES)
             install(FILES "${CMAKE_BINARY_DIR}/bin/${_target}.apk" DESTINATION "bin" COMPONENT main)
