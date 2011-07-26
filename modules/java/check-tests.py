@@ -7,8 +7,11 @@ class JavaParser:
     def clear(self):
         self.mdict = {}
         self.tdict = {}
+        self.empty_stubs_cnt = 0
         self.r1 = re.compile("\s*public\s+(?:static\s+)?(\w+)\(([^)]*)\)") # c-tor
         self.r2 = re.compile("\s*public\s+(?:static\s+)?\w+\s+(\w+)\(([^)]*)\)")
+        self.r3 = re.compile('\s*fail\("Not yet implemented"\);') # empty test stub
+
 
     def dict2set(self, d):
         s = set()
@@ -19,6 +22,15 @@ class JavaParser:
                 s |= set(d[f])
         return s
 
+
+    def get_tests_count(self):
+        return len(self.tdict)
+
+    def get_empty_stubs_count(self):
+        return self.empty_stubs_cnt
+
+    def get_funcs_count(self):
+        return len(self.dict2set(self.mdict)), len(self.mdict)
 
     def get_not_tested(self):
         mset = self.dict2set(self.mdict)
@@ -44,6 +56,7 @@ class JavaParser:
         for line in f:
             m1 = self.r1.match(line)
             m2 = self.r2.match(line)
+            m3 = self.r3.match(line)
             func = ''
             args_str = ''
             if m1:
@@ -52,6 +65,9 @@ class JavaParser:
             elif m2:
                 func = m2.group(1)
                 args_str = m2.group(2)
+            elif m3:
+                self.empty_stubs_cnt += 1
+                continue
             else:
                 continue
             d = (self.mdict, self.tdict)["test" in func]
@@ -73,13 +89,16 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print "Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<Classes/Tests dir1/file1> [<Classes/Tests dir2/file2> ...]\n", "Not tested methods are logged to stdout."
+            "<Classes/Tests dir1/file1> [<Classes/Tests dir2/file2> ...]\n", "Not tested methods are loggedto stdout."
         exit(0)
     parser = JavaParser()
     for x in sys.argv[1:]:
         parser.parse(x)
     funcs = parser.get_not_tested()
     if funcs:
-        print "UNTESTED methods (%i):\n\t" % len(funcs), "\n\t".join(sorted(funcs))
-    print "Done."
+        print "NOT TESTED methods:\n\t", "\n\t".join(sorted(funcs))
+    print "Total methods found: %i (%i)" % parser.get_funcs_count()
+    print "Not tested methods found:", len(funcs)
+    print "Total tests found:", parser.get_tests_count()
+    print "Empty test stubs found:", parser.get_empty_stubs_count()
 
