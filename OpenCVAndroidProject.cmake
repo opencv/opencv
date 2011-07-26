@@ -121,7 +121,7 @@ macro(add_android_project _target _path)
         add_custom_command(
             OUTPUT "${build_path}/bin/${_target}-debug.apk"
             OUTPUT "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
-            COMMAND ${ANT_EXECUTABLE} debug
+            COMMAND ${ANT_EXECUTABLE} -q -noinput -k debug
             COMMAND ${CMAKE_COMMAND} -E copy "${build_path}/bin/${_target}-debug.apk" "${CMAKE_BINARY_DIR}/bin/${_target}.apk"
             WORKING_DIRECTORY ${build_path}
             DEPENDS ${${_target}_project_files}
