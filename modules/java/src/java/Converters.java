@@ -5,6 +5,7 @@ import java.util.List;
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.features2d.KeyPoint;
 
