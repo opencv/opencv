@@ -1150,7 +1150,7 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
     CvMat _ccost = cost, _cflow;
     if( _flow.needed() )
     {
-        _flow.create((int)signature1.total(), (int)signature2.total(), CV_32F);
+        _flow.create(signature1.rows, signature2.rows, CV_32F);
         flow = _flow.getMat();
         _cflow = flow;
     }
