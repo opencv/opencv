@@ -13,30 +13,35 @@ import org.opencv.core.Size;
 import org.opencv.core.Core;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class imgprocTest extends OpenCVTestCase {
 
 	private Mat gray_64f_2;
 	private Mat dst64F;
+	private Mat mask;
 	private int imgprocSz;
+	Point anchorPoint;
+	Size size;
 
-	@Override
+ @Override
 	protected void setUp() throws Exception {
 		super.setUp();
 		
 		imgprocSz = 2;
 
 		gray_64f_2 = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(2));
-		dst64F = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
+		dst64F = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(0));
+		mask = new Mat (imgprocSz, imgprocSz, CvType.CV_8U, new Scalar(1));
+		anchorPoint = new Point(2, 2);
+		size = new Size(3, 3);
 	}
-
+ 
 	public void test_1() {
 		super.test_1("imgproc");
 	}
 
 	public void testAccumulateMatMat() {
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(2));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(2));
 		Imgproc.accumulate(gray_64f_2, dst64F);
 		assertMatEqual(truth, dst64F);
 		
@@ -44,44 +49,40 @@ public class imgprocTest extends OpenCVTestCase {
 		Imgproc.accumulate(gray1_32f, dst);
 		assertMatEqual(gray1_32f, dst);
 	}
-
+	
 	public void testAccumulateMatMatMat() {
-		Mat mask = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(2));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(2));
+		
 		Imgproc.accumulate(gray_64f_2, dst64F, mask); //TODO: use better mask
 		assertMatEqual(truth, dst64F);
 	}
 
 	public void testAccumulateProductMatMatMat() {
-		Mat src1 = new Mat(2, 2, CvType.CV_64F);
-		src1.put(0, 0, 1, 1);
-		src1.put(1, 0, 1, 1);
-		
-		Mat src2 = new Mat(2, 2, CvType.CV_64F);
+		Mat src1 = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(1));
+	
+		Mat src2 = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
 		src2.put(0, 0, 2, 1);
 		src2.put(1, 0, 1, 2);
 	
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(2));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(2));
 		truth.put(0, 0, 2, 1);
 		truth.put(1, 0, 1, 2);
 		
-		Mat dstImage = new Mat(2, 2, CvType.CV_64F, new Scalar(0));
+		Mat dstImage = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(0));
 		Imgproc.accumulateProduct(src1, src2, dstImage);
 		assertMatEqual(truth, dstImage);
 	}
 
 	public void testAccumulateProductMatMatMatMat() {
-		Mat src1 = new Mat(2, 2, CvType.CV_64F);
+		Mat src1 = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
 		src1.put(0, 0, 1, 1);
 		src1.put(1, 0, 0, 1);
 		
-		Mat src2 = new Mat(2, 2, CvType.CV_64F);
+		Mat src2 = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
 		src2.put(0, 0, 2, 1);
 		src2.put(1, 0, 1, 2);
 		
-		Mat mask = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
-
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(2));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(0));
 		truth.put(0, 0, 2, 1);
 		truth.put(1, 0, 0, 2);
 
@@ -90,29 +91,28 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testAccumulateSquareMatMat() {
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(4));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(4));
+		
 		Imgproc.accumulateSquare(gray_64f_2, dst64F);
 		assertMatEqual(truth, dst64F);
 	}
 
 	public void testAccumulateSquareMatMatMat() {
-		Mat mask = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(4));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(4));
 
 		Imgproc.accumulateSquare(gray_64f_2, dst64F, mask);
 		assertMatEqual(truth, dst64F);
 	}
 
 	public void testAccumulateWeightedMatMatDouble() {
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(4));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(4));
+		
 		Imgproc.accumulateWeighted(gray_64f_2, dst64F, 2.0);
 		assertMatEqual(truth, dst64F);
 	}
 
 	public void testAccumulateWeightedMatMatDoubleMat() {
-		Mat mask = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
-
-		truth = new Mat(2, 2, CvType.CV_64F, new Scalar(8));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_64F, new Scalar(8));
 		Imgproc.accumulateWeighted(gray_64f_2, dst64F, 4.0, mask);
 		assertMatEqual(truth, dst64F);
 	}
@@ -153,34 +153,25 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testBlurMatMatSize() {
-		Size sz = new Size(3, 3);
-
-		Imgproc.blur(gray0, dst, sz);
+		Imgproc.blur(gray0, dst, size);
 		assertMatEqual(gray0, dst);
 
-		Imgproc.blur(gray255, dst, sz);
+		Imgproc.blur(gray255, dst, size);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testBlurMatMatSizePoint() {
-		Size sz = new Size(3, 3);
-		Point anchor = new Point(2, 2);
-
-		Imgproc.blur(gray0, dst, sz, anchor);
+		Imgproc.blur(gray0, dst, size, anchorPoint);
 		assertMatEqual(gray0, dst);
 	}
 
 	public void testBlurMatMatSizePointInt() {
-		Size sz = new Size(3, 3);
-		Point anchor = new Point(2, 2);
-
-		Imgproc.blur(gray0, dst, sz, anchor, Imgproc.BORDER_REFLECT);
+		Imgproc.blur(gray0, dst, size, anchorPoint, Imgproc.BORDER_REFLECT);
 		assertMatEqual(gray0, dst);
 	}
 
 	public void testBorderInterpolate() {
 		float val1 = Imgproc.borderInterpolate(100, 150, Imgproc.BORDER_REFLECT_101);
-		Imgproc.borderInterpolate(-5, 10, Imgproc.BORDER_WRAP);
 		assertEquals(100.0f, val1);
 
 		float val2 = Imgproc.borderInterpolate(-5, 10, Imgproc.BORDER_WRAP);
@@ -200,33 +191,23 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testBoxFilterMatMatIntSize() {
-		Size sz = new Size(3, 3);
-		Imgproc.boxFilter(gray0, dst, 8, sz);
+		Size size = new Size(3, 3);
+		Imgproc.boxFilter(gray0, dst, 8, size);
 		assertMatEqual(gray0, dst);
 	}
 
 	public void testBoxFilterMatMatIntSizePoint() {
-		Size sz = new Size(3, 3);
-		Point anchor = new Point(2, 2);
-
-		Imgproc.boxFilter(gray0, dst, 8, sz, anchor);
+		Imgproc.boxFilter(gray0, dst, 8, size, anchorPoint);
 		assertMatEqual(gray0, dst);
 	}
 
 	public void testBoxFilterMatMatIntSizePointBoolean() {
-		Size sz = new Size(3, 3);
-		Point anchor = new Point(2, 2);
-
-		Imgproc.boxFilter(gray255, dst, 8, sz, anchor, false);
-		OpenCVTestRunner.Log(dst.dump());
+		Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testBoxFilterMatMatIntSizePointBooleanInt() {
-		Size sz = new Size(3, 3);
-		Point anchor = new Point(2, 2);
-
-		Imgproc.boxFilter(gray255, dst, 8, sz, anchor, false, Imgproc.BORDER_REFLECT);
+		Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false, Imgproc.BORDER_REFLECT);
 		assertMatEqual(gray255, dst);
 	}
 
@@ -326,7 +307,7 @@ public class imgprocTest extends OpenCVTestCase {
 		Imgproc.Canny(gray255, dst, 5.0, 10.0);
 		assertMatEqual(gray0, dst);
 	}
-
+	
 	public void testCannyMatMatDoubleDoubleInt() {
 		Imgproc.Canny(gray255, dst, 5.0, 10.0, 5);
 		assertMatEqual(gray0, dst);
@@ -389,6 +370,7 @@ public class imgprocTest extends OpenCVTestCase {
 		Imgproc.convexHull(points, dst);
 		assertMatEqual(expHull, dst);
 	}
+        
 
 	public void testConvexHullMatMatBoolean() {
 		Mat points = new Mat(1, 6, CvType.CV_32FC2);
@@ -413,10 +395,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCopyMakeBorderMatMatIntIntIntIntInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 1); //TODO: use setTo
-		src.put(1, 0, 1, 1);
-		
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(1));
 		truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
 		int border = 2;
 		
@@ -425,9 +404,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCopyMakeBorderMatMatIntIntIntIntIntScalar() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 1); //TODO: use setTo
-		src.put(1, 0, 1, 1);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(1.0));
 		
 		truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
 		Scalar value = new Scalar(0);
@@ -438,7 +415,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCornerEigenValsAndVecsMatMatIntInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32FC1);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1);
 		src.put(0, 0, 1, 2);
 		src.put(1, 0, 4, 2);
 		
@@ -446,9 +423,8 @@ public class imgprocTest extends OpenCVTestCase {
 		int ksize = 5;
 
 		//TODO: eigen vals and vectors returned = 0 for most src matrices
-		truth = new Mat(2, 2, CvType.CV_32FC(6), new Scalar(0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC(6), new Scalar(0));
 		Imgproc.cornerEigenValsAndVecs(src, dst, blockSize, ksize);
-		OpenCVTestRunner.Log(dst.dump());
 		assertMatEqual(truth, dst);
 	}
 
@@ -461,7 +437,6 @@ public class imgprocTest extends OpenCVTestCase {
 		truth = new Mat(4, 4, CvType.CV_32FC(6), new Scalar(0));
 
 		Imgproc.cornerEigenValsAndVecs(src, dst, blockSize, ksize, Imgproc.BORDER_REFLECT);
-		OpenCVTestRunner.Log(dst.dump());
 		assertMatEqual(truth, dst);
 	}
 
@@ -484,13 +459,13 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCornerMinEigenValMatMatInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32FC1);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1);
 		src.put(0, 0, 1, 2);
 		src.put(1, 0, 2, 1);
 
 		int blockSize = 5;
 		
-		truth = new Mat(2, 2, CvType.CV_32FC1, new Scalar(0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1, new Scalar(0));
 		Imgproc.cornerMinEigenVal(src, dst, blockSize);
 		assertMatEqual(truth, dst);
 
@@ -500,10 +475,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCornerMinEigenValMatMatIntInt() {
-		Mat src = new Mat(3, 3, CvType.CV_32FC1);
-		src.put(0, 0, 1, 0, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1, 0);
-		src.put(2, 0, 0, 0, 1);
+		Mat src = Mat.eye(3, 3, CvType.CV_32FC1);
 
 		truth = new Mat(3, 3, CvType.CV_32FC1, new Scalar(0));
 		int blockSize = 3;
@@ -518,10 +490,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testCornerMinEigenValMatMatIntIntInt() {
-		Mat src = new Mat(3, 3, CvType.CV_32FC1);
-		src.put(0, 0, 1, 0, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1, 0);
-		src.put(2, 0, 0, 0, 1);
+		Mat src = Mat.eye(3, 3, CvType.CV_32FC1);
 
 		truth = new Mat(3, 3, CvType.CV_32FC1, new Scalar(0));
 		int blockSize = 3;
@@ -560,34 +529,30 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testDilateMatMatMatPoint() {
 		Mat kernel = new Mat();
-		Point anchor = new Point(2, 2);
 
-		Imgproc.dilate(gray255, dst, kernel, anchor);
+		Imgproc.dilate(gray255, dst, kernel, anchorPoint);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testDilateMatMatMatPointInt() {
 		Mat kernel = new Mat();
-		Point anchor = new Point(2, 2);
 
-		Imgproc.dilate(gray255, dst, kernel, anchor, 10);
+		Imgproc.dilate(gray255, dst, kernel, anchorPoint, 10);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testDilateMatMatMatPointIntInt() {
 		Mat kernel = new Mat();
-		Point anchor = new Point(2, 2);
 
-		Imgproc.dilate(gray255, dst, kernel, anchor, 10, Imgproc.BORDER_REFLECT);
+		Imgproc.dilate(gray255, dst, kernel, anchorPoint, 10, Imgproc.BORDER_REFLECT);
 		assertMatEqual(gray255, dst);
 	}
 
 	public void testDilateMatMatMatPointIntIntScalar() {
 		Mat kernel = new Mat();
-		Point anchor = new Point(2, 2);
 		Scalar value = new Scalar(0);
 
-		Imgproc.dilate(gray255, dst, kernel, anchor, 10, Imgproc.BORDER_REFLECT, value);
+		Imgproc.dilate(gray255, dst, kernel, anchorPoint, 10, Imgproc.BORDER_REFLECT, value);
 		assertMatEqual(gray255, dst);
 	}
 
@@ -646,10 +611,9 @@ public class imgprocTest extends OpenCVTestCase {
 		src.put(2, 0, 3, 4, 6);
 		
 		truth = new Mat(3, 3, CvType.CV_8U, new Scalar(0.0));
-		Point point = new Point(2, 2);
 		Mat kernel = new Mat();
 
-		Imgproc.erode(src, dst, kernel, point);
+		Imgproc.erode(src, dst, kernel, anchorPoint);
 		assertMatEqual(truth, dst);
 	}
 
@@ -661,9 +625,8 @@ public class imgprocTest extends OpenCVTestCase {
 		
 		truth = new Mat(3, 3, CvType.CV_8U, new Scalar(8.0));
 		Mat kernel = new Mat();
-		Point point = new Point(2, 2);
 
-		Imgproc.erode(src, dst, kernel, point, 10);
+		Imgproc.erode(src, dst, kernel, anchorPoint, 10);
 		assertMatEqual(truth, dst);
 	}
 
@@ -675,9 +638,8 @@ public class imgprocTest extends OpenCVTestCase {
 		
 		truth = new Mat(3, 3, CvType.CV_8U, new Scalar(8.0));
 		Mat kernel = new Mat();
-		Point point = new Point(2, 2);
-
-		Imgproc.erode(src, dst, kernel, point, 10, Imgproc.BORDER_REFLECT);
+	
+		Imgproc.erode(src, dst, kernel, anchorPoint, 10, Imgproc.BORDER_REFLECT);
 		assertMatEqual(truth, dst);
 	}
 
@@ -689,41 +651,39 @@ public class imgprocTest extends OpenCVTestCase {
 		
 		truth = new Mat(3, 3, CvType.CV_8U, new Scalar(8.0));
 		Mat kernel = new Mat();
-		Point point = new Point(2, 2);
 		Scalar sc = new Scalar(3, 3);
 
-		Imgproc.erode(src, dst, kernel, point, 10, Imgproc.BORDER_REFLECT, sc);
+		Imgproc.erode(src, dst, kernel, anchorPoint, 10, Imgproc.BORDER_REFLECT, sc);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testFilter2DMatMatIntMat() {
-		Mat kernel = new Mat(2, 2, CvType.CV_32F);
+		Mat src = Mat.eye(4, 4, CvType.CV_32F);
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(1.0));
+		
+		truth = Mat.eye(4, 4, CvType.CV_32F);
+		truth.put(0, 0, 2, 2, 1, 0);
+		truth.put(1, 0, 2, 2, 1, 0);
+		truth.put(2, 0, 1, 1, 2, 1);
+		truth.put(3, 0, 0, 0, 1, 2);
 
-		Imgproc.filter2D(gray128, dst, -1, kernel);
-		assertMatEqual(gray0, dst);
+		Imgproc.filter2D(src, dst, -1, kernel);
+		assertMatEqual(truth, dst);
 	}
 
 	public void testFilter2DMatMatIntMatPoint() {
-		Mat kernel = new Mat(2, 2, CvType.CV_32F);
-		Point anchor = new Point(0, 0);
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(1.0));
+		Point point = new Point(0, 0);
 
-		Imgproc.filter2D(gray128, dst, -1, kernel, anchor);
-		assertMatEqual(gray0, dst);
-	}
-
-	public void testFilter2DMatMatIntMatPointDouble() {
-		Mat kernel = new Mat(2, 2, CvType.CV_32F);
-		Point anchor = new Point(0, 0);
-
-		Imgproc.filter2D(gray0, dst, -1, kernel, anchor, 2.0);
-		assertMatEqual(gray2, dst);
+		Imgproc.filter2D(gray128, dst, -1, kernel, point);
+		assertMatEqual(gray255, dst);
 	}
 
 	public void testFilter2DMatMatIntMatPointDoubleInt() {
-		Mat kernel = new Mat(2, 2, CvType.CV_32F);
-		Point anchor = new Point(0, 0);
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(0.0));
+		Point point = new Point(0, 0);
 
-		Imgproc.filter2D(gray128, dst, -1, kernel, anchor, 2.0, Imgproc.BORDER_CONSTANT);
+		Imgproc.filter2D(gray128, dst, -1, kernel, point, 2.0, Imgproc.BORDER_CONSTANT);
 		assertMatEqual(gray2, dst);
 	}
 
@@ -736,8 +696,8 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testFitEllipse() {
-		Mat points = new Mat(1, 6, CvType.CV_32FC2); //TODO: use the list of Point
-		points.put(0, 0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0);
+		Mat points = new Mat(1, 5, CvType.CV_32FC2); //TODO: use the list of Points
+		points.put(0, 0, 0.0, 0.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0);
 		
 		RotatedRect rrect = new RotatedRect();
 		rrect = Imgproc.fitEllipse(points);
@@ -779,26 +739,21 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testGaussianBlurMatMatSizeDouble() {
-		Size sz = new Size(3, 3);
-		Imgproc.GaussianBlur(gray0, dst, sz, 1.0);
+		Imgproc.GaussianBlur(gray0, dst, size, 1.0);
 		assertMatEqual(gray0, dst);
 
-		Imgproc.GaussianBlur(gray2, dst, sz, 1.0);
+		Imgproc.GaussianBlur(gray2, dst, size, 1.0);
 		assertMatEqual(gray2, dst);
 
 	}
 
 	public void testGaussianBlurMatMatSizeDoubleDouble() {
-		Size sz = new Size(3, 3);
-
-		Imgproc.GaussianBlur(gray2, dst, sz, 0.0, 0.0);
+		Imgproc.GaussianBlur(gray2, dst, size, 0.0, 0.0);
 		assertMatEqual(gray2, dst);
 	}
 
 	public void testGaussianBlurMatMatSizeDoubleDoubleInt() {
-		Size sz = new Size(3, 3);
-
-		Imgproc.GaussianBlur(gray2, dst, sz, 1.0, 3.0, Imgproc.BORDER_REFLECT);
+		Imgproc.GaussianBlur(gray2, dst, size, 1.0, 3.0, Imgproc.BORDER_REFLECT);
 		assertMatEqual(gray2, dst);
 	}
 
@@ -816,7 +771,6 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testGetDefaultNewCameraMatrixMatSize() {
 		truth = new Mat();
-		Size size = new Size(3, 3);
 
 		truth = Imgproc.getDefaultNewCameraMatrix(gray0, size);
 		assertTrue(0 == Core.countNonZero(truth));
@@ -825,16 +779,15 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
 		truth = new Mat();
-		Size size = new Size(3, 3);
-
+		
 		truth = Imgproc.getDefaultNewCameraMatrix(gray0, size, true);
 		assertTrue(0 != Core.countNonZero(truth));
 		assertFalse(truth.empty());
 	}
 
 	public void testGetDerivKernelsMatMatIntIntInt() {
-		Mat kx = new Mat(2, 2, CvType.CV_32F);
-		Mat ky = new Mat(2, 2, CvType.CV_32F);
+		Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		Mat expKx = new Mat(3, 1, CvType.CV_32F);
 		Mat expKy = new Mat(3, 1, CvType.CV_32F);
 
@@ -853,8 +806,8 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testGetDerivKernelsMatMatIntIntIntBoolean() {
-		Mat kx = new Mat(2, 2, CvType.CV_32F);
-		Mat ky = new Mat(2, 2, CvType.CV_32F);
+		Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		Mat expKx = new Mat(3, 1, CvType.CV_32F);
 		Mat expKy = new Mat(3, 1, CvType.CV_32F);
 
@@ -873,8 +826,8 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testGetDerivKernelsMatMatIntIntIntBooleanInt() {
-		Mat kx = new Mat(2, 2, CvType.CV_32F);
-		Mat ky = new Mat(2, 2, CvType.CV_32F);
+		Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		Mat expKx = new Mat(3, 1, CvType.CV_32F);
 		Mat expKy = new Mat(3, 1, CvType.CV_32F);
 
@@ -909,10 +862,10 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testGetRectSubPixMatSizePointMat() {
 		truth = new Mat(3, 3, CvType.CV_8U, new Scalar(255));
-		Size patchSize = new Size(3, 3);
+		Size size = new Size(3, 3);
 		Point center = new Point(gray255.cols() / 2, gray255.rows() / 2);
 
-		Imgproc.getRectSubPix(gray255, patchSize, center, dst);
+		Imgproc.getRectSubPix(gray255, size, center, dst);
 		assertMatEqual(truth, dst);
 	}
 
@@ -937,23 +890,19 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testGetStructuringElementIntSize() {
 		truth = new Mat(3, 3, CvType.CV_8UC1, new Scalar(1.0));
-		Size ksize = new Size(3, 3);
 
-		dst = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, ksize);
+		dst = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, size);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testGetStructuringElementIntSizePoint() {
 		truth = new Mat(3, 3, CvType.CV_8UC1);
-		Size ksize = new Size(3, 3);
-		Point point = new Point(2, 2);
 
 		truth.put(0, 0, 0, 0, 1);
 		truth.put(1, 0, 0, 0, 1);
 		truth.put(2, 0, 1, 1, 1);
 
-		dst = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, ksize, point);
-		OpenCVTestRunner.Log(dst.dump());
+		dst = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, size, anchorPoint);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1054,7 +1003,6 @@ public class imgprocTest extends OpenCVTestCase {
 		Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(3.0));
 		
 		Mat distCoeffs = new Mat();
-		Size size = new Size(3, 3);
 		Mat map1 = new Mat();
 		Mat map2 = new Mat();
 		
@@ -1141,9 +1089,9 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testIntegral3MatMatMatMat() {
 		Mat src = new Mat(1, 1, CvType.CV_32F, new Scalar(1.0));
-		Mat expSum = new Mat(2, 2, CvType.CV_64F);
-		Mat expSqsum = new Mat(2, 2, CvType.CV_64F);
-		Mat expTilted = new Mat(2, 2, CvType.CV_64F);
+		Mat expSum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
+		Mat expSqsum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
+		Mat expTilted = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
 		Mat sum = new Mat();
 		Mat sqsum = new Mat();
 		Mat tilted = new Mat();
@@ -1166,9 +1114,9 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testIntegral3MatMatMatMatInt() {
 		Mat src = new Mat(1, 1, CvType.CV_32F, new Scalar(1.0));
-		Mat expSum = new Mat(2, 2, CvType.CV_64F);
-		Mat expSqsum = new Mat(2, 2, CvType.CV_64F);
-		Mat expTilted = new Mat(2, 2, CvType.CV_64F);
+		Mat expSum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
+		Mat expSqsum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
+		Mat expTilted = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
 		Mat sum = new Mat();
 		Mat sqsum = new Mat();
 		Mat tilted = new Mat();
@@ -1189,7 +1137,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testIntegralMatMat() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		truth = new Mat(3, 3, CvType.CV_64F);
 
 		truth.put(0, 0, 0, 0, 0);
@@ -1202,7 +1150,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testIntegralMatMatInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		truth = new Mat(3, 3, CvType.CV_64F);
 
 		truth.put(0, 0, 0, 0, 0);
@@ -1214,10 +1162,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testInvertAffineTransform() {
-		Mat src = new Mat(2, 3, CvType.CV_64F);
-		src.put(0, 0, 1, 1, 1); //TODO: use setTo
-		src.put(1, 0, 1, 1, 1);
-		
+		Mat src = new Mat(2, 3, CvType.CV_64F, new Scalar(1));
 		truth = new Mat(2, 3, CvType.CV_64F, new Scalar(0));
 
 		Imgproc.invertAffineTransform(src, dst);
@@ -1248,11 +1193,9 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testLaplacianMatMatIntIntDouble() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
-		
-		truth = new Mat(2, 2, CvType.CV_32F);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
+
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 
 		truth.put(0, 0, -8, 8);
 		truth.put(1, 0, 8, -8);
@@ -1262,24 +1205,22 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testLaplacianMatMatIntIntDoubleDouble() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		truth = new Mat(2, 2, CvType.CV_32F);
-		double delta = 0.0;
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
+		
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		
+		truth.put(0, 0, -7.9990001, 8.0009995);
+		truth.put(1, 0, 8.0009995, -7.9990001);  
 
-		truth.put(0, 0, -8, 8);
-		truth.put(1, 0, 8, -8);
-
-		Imgproc.Laplacian(src, dst, CvType.CV_32F, 1, 2.0, delta);
+		Imgproc.Laplacian(src, dst, CvType.CV_32F, 1, 2.0, EPS);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testLaplacianMatMatIntIntDoubleDoubleInt() {
 		Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(2.0));
-		truth = new Mat(3, 3, CvType.CV_32F, new Scalar(0.0));
-		double delta = 0.0;
-		Imgproc.Laplacian(src, dst, CvType.CV_32F, 1, 2.0, delta, Imgproc.BORDER_REFLECT);
+		truth = new Mat(3, 3, CvType.CV_32F, new Scalar(0.00099945068));
+
+		Imgproc.Laplacian(src, dst, CvType.CV_32F, 1, 2.0, EPS, Imgproc.BORDER_REFLECT);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1289,15 +1230,16 @@ public class imgprocTest extends OpenCVTestCase {
 
 		contour1.put(0, 0, 1.0, 1.0, 5.0, 1.0, 4.0, 3.0, 6.0, 2.0);
 		contour1.put(0, 0, 1.0, 1.0, 6.0, 1.0, 4.0, 1.0, 2.0, 5.0);
-
-		double comparer = Imgproc.matchShapes(contour1, contour2, Imgproc.CV_CONTOURS_MATCH_I1, 0.0);
-		double expComparer = 3.277376429165456;
+         
+	    //TODO: returns random comparers
+		double comparer = Imgproc.matchShapes(contour1, contour2, Imgproc.CV_CONTOURS_MATCH_I1, 1.0);
+		double expComparer = 2.98;
 		assertEquals(expComparer, comparer);
 	}
 
 	public void testMatchTemplate() {
-		Mat image = new Mat(2, 2, CvType.CV_8U);
-		Mat templ = new Mat(2, 2, CvType.CV_8U);
+		Mat image = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
+		Mat templ = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
 
 		image.put(0, 0, 1, 2, 3, 4);
 		templ.put(0, 0, 5, 6, 7, 8);
@@ -1324,7 +1266,6 @@ public class imgprocTest extends OpenCVTestCase {
 		points.put(0, 0, 1.0, 1.0, 5.0, 1.0, 4.0, 3.0, 6.0, 2.0);
 		
 		RotatedRect rrect = Imgproc.minAreaRect(points);
-		OpenCVTestRunner.Log(rrect.toString());
 		// TODO - how to test rotated rectangle
 		fail("Not yet implemented");
 	}
@@ -1357,67 +1298,56 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testMorphologyExMatMatIntMatPoint() {
-		Mat src = new Mat(2, 2, CvType.CV_8U);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_8U);
 		
-		Mat kernel = new Mat(2, 2, CvType.CV_8U, new Scalar(0));
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_8U, new Scalar(0));
 		Point point = new Point(0, 0);
 		
-		truth = new Mat(2, 2, CvType.CV_8U);		
-		truth.put(0, 0, 1, 0); //TODO: use Mat.eye
-		truth.put(1, 0, 0, 1);
+		truth = Mat.eye(imgprocSz, imgprocSz, CvType.CV_8U);		
 
 		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_OPEN, kernel, point);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testMorphologyExMatMatIntMatPointInt() {
-		Mat src = new Mat(2, 2, CvType.CV_8U);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src =  Mat.eye(imgprocSz, imgprocSz, CvType.CV_8U);
 		
-		Mat kernel = new Mat(2, 2, CvType.CV_8U, new Scalar(0));
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_8U, new Scalar(0));
 		Point point = new Point(0, 0);
 		
-		truth = new Mat(2, 2, CvType.CV_8U);
-		truth.put(0, 0, 1, 0); //TODO: use Mat.eye
-		truth.put(1, 0, 0, 1);
-
 		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_CLOSE, kernel, point, 10);
+		truth = Mat.eye(imgprocSz, imgprocSz, CvType.CV_8U);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testMorphologyExMatMatIntMatPointIntInt() {
-		Mat src = new Mat(2, 2, CvType.CV_8U);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
 		src.put(0, 0, 2, 1);
 		src.put(1, 0, 2, 1);
 		
-		Mat kernel = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_8U, new Scalar(1));
 		Point point = new Point(1, 1);
 		
-		truth = new Mat(2, 2, CvType.CV_8U);
+		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_TOPHAT, kernel, point, 10, Imgproc.BORDER_REFLECT);		
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
 		truth.put(0, 0, 1, 0);
 		truth.put(1, 0, 1, 0);
-
-		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_TOPHAT, kernel, point, 10, Imgproc.BORDER_REFLECT);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testMorphologyExMatMatIntMatPointIntIntScalar() {
-		Mat src = new Mat(2, 2, CvType.CV_8U);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
 		src.put(0, 0, 2, 1);
 		src.put(1, 0, 2, 1);
 		
-		Mat kernel = new Mat(2, 2, CvType.CV_8U, new Scalar(1));
+		Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_8U, new Scalar(1));
 		Point point = new Point(1, 1);
 		Scalar sc = new Scalar(3, 3);
 		
-		truth = new Mat(2, 2, CvType.CV_8U);
+		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_TOPHAT, kernel, point, 10, Imgproc.BORDER_REFLECT, sc);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
 		truth.put(0, 0, 1, 0);
 		truth.put(1, 0, 1, 0);
-
-		Imgproc.morphologyEx(src, dst, Imgproc.MORPH_TOPHAT, kernel, point, 10, Imgproc.BORDER_REFLECT, sc);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1457,23 +1387,21 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testPyrDownMatMat() {
 		Mat src = new Mat(4, 4, CvType.CV_32F);
-		truth = new Mat(2, 2, CvType.CV_32F);
 
 		src.put(0, 0, 2, 1, 4, 2);
 		src.put(1, 0, 3, 2, 6, 8);
 		src.put(2, 0, 4, 6, 8, 10);
 		src.put(3, 0, 12, 32, 6, 18);
 
+		Imgproc.pyrDown(src, dst);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		truth.put(0, 0, 2.78125, 4.609375);
 		truth.put(1, 0, 8.546875, 8.8515625);
-
-		Imgproc.pyrDown(src, dst);
 		assertMatEqual(truth, dst);
 	}
-
 	public void testPyrDownMatMatSize() {
 		Mat src = new Mat(4, 4, CvType.CV_32F);
-		truth = new Mat(2, 2, CvType.CV_32F);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		Size dstSize = new Size(2, 2);
 
 		src.put(0, 0, 2, 1, 4, 2);
@@ -1489,8 +1417,9 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testPyrMeanShiftFilteringMatMatDoubleDouble() {
-		Mat src = new Mat(8, 8, CvType.CV_8UC3, new Scalar(1.0));
+		Mat src = new Mat(matSize, matSize, CvType.CV_8UC3, new Scalar(0.0));
 		Imgproc.pyrMeanShiftFiltering(src, dst, 2.0, 4.0);
+		//TODO : size of destination matrix not understandable
 		fail("Not yet implemented");
 	}
 
@@ -1503,7 +1432,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testPyrUpMatMat() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		src.put(0, 0, 2, 1);
 		src.put(1, 0, 3, 2);
 		
@@ -1518,7 +1447,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testPyrUpMatMatSize() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		src.put(0, 0, 2, 1);
 		src.put(1, 0, 3, 2);
 		
@@ -1534,7 +1463,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testRemapMatMatMatMatInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		Mat map1 = new Mat(1, 3, CvType.CV_32FC1);
 		Mat map2 = new Mat(1, 3, CvType.CV_32FC1);
 
@@ -1548,7 +1477,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testRemapMatMatMatMatIntInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		Mat map1 = new Mat(1, 3, CvType.CV_32FC1);
 		Mat map2 = new Mat(1, 3, CvType.CV_32FC1);
 
@@ -1562,7 +1491,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testRemapMatMatMatMatIntIntScalar() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		Mat map1 = new Mat(1, 3, CvType.CV_32FC1);
 		Mat map2 = new Mat(1, 3, CvType.CV_32FC1);
 
@@ -1578,7 +1507,7 @@ public class imgprocTest extends OpenCVTestCase {
 	}
 
 	public void testResizeMatMatSize() {
-		Mat src = new Mat(2, 2, CvType.CV_8UC1, new Scalar(1.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(1.0));
 		truth = new Mat(1, 1, CvType.CV_8UC1, new Scalar(1.0));
 		Size dsize = new Size(1, 1);
 
@@ -1588,7 +1517,7 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testResizeMatMatSizeDouble() {
 		Size dsize = new Size(2, 2);
-		truth = new Mat(2, 2, CvType.CV_8UC1, new Scalar(255));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(255));
 
 		Imgproc.resize(gray255, dst, dsize, 0.5);
 		assertMatEqual(truth, dst);
@@ -1596,7 +1525,7 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testResizeMatMatSizeDoubleDouble() {
 		Size dsize = new Size(2, 2);
-		truth = new Mat(2, 2, CvType.CV_8UC1, new Scalar(255));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(255));
 
 		Imgproc.resize(gray255, dst, dsize, 0.0, 0.0);
 		assertMatEqual(truth, dst);
@@ -1604,47 +1533,38 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testResizeMatMatSizeDoubleDoubleInt() {
 		Size dsize = new Size(2, 2);
-		truth = new Mat(2, 2, CvType.CV_8UC1, new Scalar(255));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(255));
 
 		Imgproc.resize(gray255, dst, dsize, 1.5, 1.5, Imgproc.INTER_AREA);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testScharrMatMatIntIntInt() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(0));
 		Imgproc.Scharr(src, dst, CvType.CV_32F, 1, 0);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testScharrMatMatIntIntIntDouble() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(0));
 		Imgproc.Scharr(src, dst, CvType.CV_32F, 0, 1, 1.5);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testScharrMatMatIntIntIntDoubleDouble() {
-		Mat src = new Mat(2, 2, CvType.CV_32F);
-		src.put(0, 0, 1, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1);
+		Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(0.001));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(0.001));
 		Imgproc.Scharr(src, dst, CvType.CV_32F, 1, 0, 1.5, 0.001);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testScharrMatMatIntIntIntDoubleDoubleInt() {
-		Mat src = new Mat(3, 3, CvType.CV_32F);
-		src.put(0, 0, 1, 0, 0); //TODO: use Mat.eye
-		src.put(1, 0, 0, 1, 0);
-		src.put(2, 0, 0, 0, 1);
+		Mat src = Mat.eye(3, 3, CvType.CV_32F);
 
 		truth = new Mat(3, 3, CvType.CV_32F);
 		truth.put(0, 0, -15, -19.5, -4.5);
@@ -1652,65 +1572,58 @@ public class imgprocTest extends OpenCVTestCase {
 		truth.put(2, 0, 4.5, 19.5, 15);
 
 		Imgproc.Scharr(src, dst, CvType.CV_32F, 1, 0, 1.5, 0.0, Imgproc.BORDER_REFLECT);
-        fail("Not yet implemented");
+		assertMatEqual(truth, dst);
 	}
 
 	public void testSepFilter2DMatMatIntMatMat() {
-		Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2.0));
 		Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
 		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(420));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(420));
 
 		kernelX.put(0, 0, 4.0, 3.0, 7.0);
 		kernelY.put(0, 0, 9.0, 4.0, 2.0);
 
 		Imgproc.sepFilter2D(src, dst, CvType.CV_32F, kernelX, kernelY);
-		OpenCVTestRunner.Log(dst.dump());
 		assertMatEqual(truth, dst);
 	}
 
 	public void testSepFilter2DMatMatIntMatMatPoint() {
-		Mat src = new Mat(2, 2, CvType.CV_32FC1, new Scalar(2.0));
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1, new Scalar(2.0));
 		Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
 		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(36.0));
-		Point point = new Point(2, 2);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(36.0));
 
 		kernelX.put(0, 0, 2.0, 2.0, 2.0);
 		kernelY.put(0, 0, 1.0, 1.0, 1.0);
 
-		Imgproc.sepFilter2D(src, dst, CvType.CV_32F, kernelX, kernelY, point);
+		Imgproc.sepFilter2D(src, dst, CvType.CV_32F, kernelX, kernelY, anchorPoint);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testSepFilter2DMatMatIntMatMatPointDouble() {
-		Mat src = new Mat(2, 2, CvType.CV_32FC1, new Scalar(2.0));
-		Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
-		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
+		Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1, new Scalar(2.0));
 		
-		Point point = new Point(2, 2);
-		double delta = 0.001;
-
+		Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
 		kernelX.put(0, 0, 2.0, 2.0, 2.0);
+		
+		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
 		kernelY.put(0, 0, 1.0, 1.0, 1.0);
 
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(36.001));
-		Imgproc.sepFilter2D(src, dst, CvType.CV_32F, kernelX, kernelY, point, delta);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(36.001));
+		Imgproc.sepFilter2D(src, dst, CvType.CV_32F, kernelX, kernelY, anchorPoint, EPS);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testSepFilter2DMatMatIntMatMatPointDoubleInt() {
 		Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
-		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
-		
-		Point point = new Point(2, 2);
-		double delta = 0.001;
-
 		kernelX.put(0, 0, 2.0, 2.0, 2.0);
+		
+		Mat kernelY = new Mat(1, 3, CvType.CV_32FC1);
 		kernelY.put(0, 0, 1.0, 1.0, 1.0);
-
+		
 		truth = new Mat(10, 10, CvType.CV_32F, new Scalar(0.001));
-		Imgproc.sepFilter2D(gray0, dst, CvType.CV_32F, kernelX, kernelY, point,	delta, Imgproc.BORDER_REFLECT);
+		Imgproc.sepFilter2D(gray0, dst, CvType.CV_32F, kernelX, kernelY, anchorPoint, EPS, Imgproc.BORDER_REFLECT);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1783,6 +1696,7 @@ public class imgprocTest extends OpenCVTestCase {
 
 		distCoeffs.put(0, 0, 1.0, 3.0, 2.0, 4.0);
 		
+		truth = new Mat(3, 3, CvType.CV_32F);
 		truth.put(0, 0, 0, 0, 0);
 		truth.put(1, 0, 0, 0, 0);
 		truth.put(2, 0, 0, 3, 0);		
@@ -1795,29 +1709,30 @@ public class imgprocTest extends OpenCVTestCase {
 		Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3.0));
 		
 		Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
-		Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F);
+		Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1.0));
 		Mat distCoeffs = new Mat(1, 4, CvType.CV_32F);
 
-		cameraMatrix.put(0, 0, 1, 0, 2);
+		cameraMatrix.put(0, 0, 1, 0, 1);
 		cameraMatrix.put(1, 0, 0, 1, 2);
 		cameraMatrix.put(2, 0, 0, 0, 1);
 
-		distCoeffs.put(0, 0, 1.0, 4.0, 0.0, 5.0);
+		distCoeffs.put(0, 0, 2.0, 1.0, 4.0, 5.0);
 
-		truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3.0));
+		truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));		
+		
 		Imgproc.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
 		assertMatEqual(truth, dst);
 	}
 
 	public void testWarpAffineMatMatMatSize() {
-		Mat src = new Mat(3, 3, CvType.CV_32F);
-		Size dsize = new Size(3, 3);
+		Mat src = new Mat(3, 3, CvType.CV_32F);;
 		Mat M = new Mat(2, 3, CvType.CV_32F);
 
 		src.put(0, 0, 2, 0, 1);
 		src.put(1, 0, 6, 4, 3);
 		src.put(2, 0, 1, 0, 2);
-
+		
+        truth = new Mat(3, 3, CvType.CV_32F);
 		truth.put(0, 0, 0, 0, 0);
 		truth.put(1, 0, 0, 2, 0);
 		truth.put(2, 0, 0, 6, 4);
@@ -1825,8 +1740,8 @@ public class imgprocTest extends OpenCVTestCase {
 		M.put(0, 0, 1, 0, 1);
 		M.put(1, 0, 0, 1, 1);
 
-		truth = new Mat(3, 3, CvType.CV_32F);
-		Imgproc.warpAffine(src, dst, M, dsize);
+		
+		Imgproc.warpAffine(src, dst, M, size);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1839,15 +1754,14 @@ public class imgprocTest extends OpenCVTestCase {
 		src.put(1, 0, 6, 4, 3);
 		src.put(2, 0, 0, 2, 2);
 
+        truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		truth.put(0, 0, 6, 4);
 		truth.put(1, 0, 6, 4);
 
 		M.put(0, 0, 1, 0, 0);
 		M.put(1, 0, 0, 0, 1);
 
-		truth = new Mat(2, 2, CvType.CV_32F);
 		Imgproc.warpAffine(src, dst, M, dsize, Imgproc.WARP_INVERSE_MAP);
-		OpenCVTestRunner.Log(dst.dump());
 		assertMatEqual(truth, dst);
 	}
 
@@ -1855,17 +1769,14 @@ public class imgprocTest extends OpenCVTestCase {
 		Mat src = new Mat(3, 3, CvType.CV_32F);
 		
 		Size dsize = new Size(2, 2);
-		Mat M = new Mat(2, 3, CvType.CV_32F);
+		Mat M = Mat.eye(2, 3, CvType.CV_32F);
 
 		src.put(0, 0, 2, 4, 1);
 		src.put(1, 0, 6, 4, 3);
 		src.put(2, 0, 0, 2, 2);
-
-		M.put(0, 0, 1, 0, 0);
-		M.put(1, 0, 0, 0, 1);
 		
-		truth = new Mat(2, 2, CvType.CV_32F);
-		truth.put(0, 0, 6, 4);
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		truth.put(0, 0, 2, 4);
 		truth.put(1, 0, 6, 4);
 
 		Imgproc.warpAffine(src, dst, M, dsize, Imgproc.WARP_INVERSE_MAP, Imgproc.BORDER_TRANSPARENT);
@@ -1874,19 +1785,18 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testWarpAffineMatMatMatSizeIntIntScalar() {
 		Mat src = new Mat(3, 3, CvType.CV_32F);
-		
 		Size dsize = new Size(2, 2);
-		Mat M = new Mat(2, 3, CvType.CV_32F);
 		Scalar sc = new Scalar(1.0);
 
 		src.put(0, 0, 2, 4, 1);
 		src.put(1, 0, 6, 4, 3);
 		src.put(2, 0, 0, 2, 2);
-
-		M.put(0, 0, 1, 0, 0);
-		M.put(1, 0, 0, 0, 1);
 		
-		truth = new Mat(2, 2, CvType.CV_32F);
+		Mat M = new Mat(2, 3, CvType.CV_32F);
+		M.put(0, 0, 1, 0, 0);
+		M.put(1, 0, 0, 0, 1);	
+		
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
 		truth.put(0, 0, 6, 4);
 		truth.put(1, 0, 6, 4);
 
@@ -1896,7 +1806,6 @@ public class imgprocTest extends OpenCVTestCase {
 
 	public void testWarpPerspectiveMatMatMatSize() {
 		Mat src = new Mat(3, 3, CvType.CV_32F);
-		Size dsize = new Size(3, 3);
 		Mat M = new Mat(3, 3, CvType.CV_32F);
 
 		src.put(0, 0, 2, 4, 1);
@@ -1912,7 +1821,7 @@ public class imgprocTest extends OpenCVTestCase {
 		truth.put(1, 0, 0, 2, 4);
 		truth.put(2, 0, 0, 0, 4);
 		
-		Imgproc.warpPerspective(src, dst, M, dsize);
+		Imgproc.warpPerspective(src, dst, M, size);
 		assertMatEqual(truth, dst);
 	}
 
@@ -1926,10 +1835,15 @@ public class imgprocTest extends OpenCVTestCase {
 		Mat M = new Mat(3, 3, CvType.CV_32F);
 		M.put(0, 0, 1, 0, 0);
 		M.put(1, 0, 0, 0, 1);
+		M.put(2, 0, 0, 0, 1);
 
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		truth.put(0, 0, 6, 4);
+		truth.put(1, 0, 6, 4);
+		
 		Imgproc.warpPerspective(src, dst, M, dsize, Imgproc.WARP_INVERSE_MAP);
 		assertMatEqual(truth, dst);
+	
 	}
 
 	public void testWarpPerspectiveMatMatMatSizeIntInt() {
@@ -1942,14 +1856,14 @@ public class imgprocTest extends OpenCVTestCase {
 		Mat M = new Mat(3, 3, CvType.CV_32F);
 		M.put(0, 0, 1, 0, 0);
 		M.put(1, 0, 0, 0, 1);
-
-		truth = new Mat(2, 2, CvType.CV_32F);
-		truth.put(0, 0, 6, 2);
-		truth.put(1, 0, 2, 2);
+		M.put(2, 0, 0, 0, 1);
+		
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		truth.put(0, 0, 6, 4);
+		truth.put(1, 0, 6, 4);
 
 		Imgproc.warpPerspective(src, dst, M, dsize, Imgproc.WARP_INVERSE_MAP, Imgproc.BORDER_REFLECT);
-		OpenCVTestRunner.Log(dst.dump());
-		assertMatEqual(truth, dst);
+        assertMatEqual(truth, dst);
 	}
 
 	public void testWarpPerspectiveMatMatMatSizeIntIntScalar() {
@@ -1959,23 +1873,29 @@ public class imgprocTest extends OpenCVTestCase {
 		src.put(2, 0, 0, 2, 2);
 		
 		Size dsize = new Size(2, 2);
-		Mat M = new Mat(3, 3, CvType.CV_32F);
+		Mat M = Mat.eye(3, 3, CvType.CV_32F);
 		Scalar sc = new Scalar(1.0);
 
-		M.put(0, 0, 1, 0, 0);
-		M.put(1, 0, 0, 0, 1);
-
-		truth = new Mat(2, 2, CvType.CV_32F, new Scalar(2.0));
+		truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
+		truth.put(0, 0, 2, 4);
+		truth.put(1, 0, 6, 4);
+		
 		Imgproc.warpPerspective(src, dst, M, dsize, Imgproc.WARP_INVERSE_MAP, Imgproc.BORDER_REFLECT, sc);
-		assertMatEqual(truth, dst);
+        assertMatEqual(truth, dst);
 	}
 
 	public void testWatershed() {
-		Mat image = new Mat(matSize, matSize, CvType.CV_8UC(3), new Scalar(1.0));
-		Mat markers = new Mat(matSize, matSize, CvType.CV_32SC1, new Scalar(1.0));
+		Mat image = Mat.eye(4, 4, CvType.CV_8UC(3));
+		Mat markers = new Mat(4, 4, CvType.CV_32SC1, new Scalar(0));
+	
+		truth = new Mat(4, 4, CvType.CV_32SC1);
+		truth.put(0, 0, -1, -1, -1, -1);
+		truth.put(1, 0,-1, 0, 0, -1);
+		truth.put(2, 0, -1, 0, 0, -1);
+		truth.put(3, 0, -1, -1, -1, -1);
 		
 		Imgproc.watershed(image, markers);
-		fail("Not yet implemented");
+                assertMatEqual(truth, markers);
 	}
 
 }

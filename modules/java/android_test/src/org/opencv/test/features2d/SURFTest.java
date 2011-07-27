@@ -1,12 +1,11 @@
 package org.opencv.test.features2d;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.opencv.core.Mat;
-import org.opencv.features2d.SURF;
 import org.opencv.features2d.KeyPoint;
+import org.opencv.features2d.SURF;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
