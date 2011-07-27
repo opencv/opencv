@@ -10,7 +10,6 @@ import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
 import java.util.List;

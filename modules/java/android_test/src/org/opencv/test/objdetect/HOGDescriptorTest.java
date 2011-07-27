@@ -192,7 +192,7 @@ public class HOGDescriptorTest extends OpenCVTestCase {
     public void testHOGDescriptor() {
         HOGDescriptor hog = new HOGDescriptor();
 
-        assertTrue(null != hog);
+        assertNotNull(hog);
         assertEquals(HOGDescriptor.DEFAULT_NLEVELS, hog.get_nlevels());
     }
 
