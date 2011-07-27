@@ -110,7 +110,7 @@ Here you will learn the about the basic building blocks of the library. A must r
   .. cssclass:: toctableopencv
 
   =============== ======================================================
-   |Beginners_7|  **Title:** * :ref:`Drawing_2`
+   |Beginners_7|  **Title:** :ref:`Drawing_2`
 
                   *Compatibility:* > OpenCV 2.0
 
@@ -129,7 +129,7 @@ Here you will learn the about the basic building blocks of the library. A must r
   .. cssclass:: toctableopencv
 
   =============== ======================================================
-   |DiscFourTr|   **Title:** * :ref:`discretFourierTransform`
+   |DiscFourTr|   **Title:** :ref:`discretFourierTransform`
 
                   *Compatibility:* > OpenCV 2.0
 
@@ -140,6 +140,25 @@ Here you will learn the about the basic building blocks of the library. A must r
   =============== ======================================================
 
   .. |DiscFourTr| image:: images/discrete_fourier_transform.png
+                   :height: 90pt
+                   :width:  90pt
+
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+  |FileIOXMLYAML| **Title:** :ref:`fileInputOutputXMLYAML`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  You will see how to use the :xmlymlpers:`FileStorage <filestorage>` data structure of OpenCV to write and read data to XML or YAML file format.
+
+  =============== ======================================================
+
+  .. |FileIOXMLYAML| image:: images/file_input_output_with_xml_yml.png
                    :height: 90pt
                    :width:  90pt
 
@@ -158,3 +177,4 @@ Here you will learn the about the basic building blocks of the library. A must r
    ../random_generator_and_text/random_generator_and_text
    ../mat-mask-operations/mat-mask-operations
    ../discrete_fourier_transform/discrete_fourier_transform
+   ../file_input_output_with_xml_yml/file_input_output_with_xml_yml
