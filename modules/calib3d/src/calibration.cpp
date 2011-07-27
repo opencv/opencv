@@ -3409,16 +3409,28 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs, &c_rvecM,
                                           &c_tvecM, flags );
-    _rvecs.create((int)nimages, 1, CV_64FC3);
-    _tvecs.create((int)nimages, 1, CV_64FC3);
+    
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+    
+    if( rvecs_needed )
+        _rvecs.create((int)nimages, 1, CV_64FC3);
+    if( tvecs_needed )
+        _tvecs.create((int)nimages, 1, CV_64FC3);
 
     for( i = 0; i < (int)nimages; i++ )
     {
-        _rvecs.create(3, 1, CV_64F, i, true);
-        _tvecs.create(3, 1, CV_64F, i, true);
-        Mat rv = _rvecs.getMat(i), tv = _tvecs.getMat(i);
-        memcpy(rv.data, rvecM.ptr<double>(i), 3*sizeof(double));
-        memcpy(tv.data, tvecM.ptr<double>(i), 3*sizeof(double));
+        if( rvecs_needed )
+        {
+            _rvecs.create(3, 1, CV_64F, i, true);
+            Mat rv = _rvecs.getMat(i);
+            memcpy(rv.data, rvecM.ptr<double>(i), 3*sizeof(double));
+        }
+        if( tvecs_needed )
+        {
+            _tvecs.create(3, 1, CV_64F, i, true);
+            Mat tv = _tvecs.getMat(i);
+            memcpy(tv.data, tvecM.ptr<double>(i), 3*sizeof(double));
+        }
     }
     cameraMatrix.copyTo(_cameraMatrix);
     distCoeffs.copyTo(_distCoeffs);
