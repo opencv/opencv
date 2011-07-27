@@ -1138,25 +1138,41 @@ static BinaryFunc minTab[] =
 
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = and8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		and8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = or8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		or8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = xor8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		xor8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = not8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		not8u;
     binary_op(a, a, c, mask, &f, true);
 }
 
@@ -1437,6 +1453,20 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 }
 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+static BinaryFunc addTab[] =
+{
+    (BinaryFunc)tegra::add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
+    (BinaryFunc)add32s, (BinaryFunc)add32f, (BinaryFunc)add64f, 0
+};
+
+static BinaryFunc subTab[] =
+{
+    (BinaryFunc)tegra::sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
+    (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
+};
+
+#else
 static BinaryFunc addTab[] =
 {
     (BinaryFunc)add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
@@ -1448,6 +1478,7 @@ static BinaryFunc subTab[] =
     (BinaryFunc)sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
     (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
 };
+#endif
 
 static BinaryFunc absdiffTab[] =
 {
