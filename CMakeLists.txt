@@ -1627,7 +1627,7 @@ status("    JPEG:"      NOT WITH_JPEG OR JPEG_FOUND        THEN ${JPEG_FOUND}   
 status("    PNG:"       NOT WITH_PNG OR PNG_FOUND          THEN ${PNG_FOUND}    ELSE build)
 status("    TIFF:"      NOT WITH_TIFF OR TIFF_FOUND        THEN ${TIFF_FOUND}   ELSE build)
 status("    JPEG 2000:" NOT WITH_JASPER OR JASPER_FOUND    THEN ${JASPER_FOUND} ELSE build)
-status("    OpenEXR:"   WITH_OPENEXR OR OPENEXR_FOUND      THEN YES             ELSE NO)
+status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN YES             ELSE NO)
 
 status("    OpenNI:"    NOT HAVE_OPENNI OR HAVE_OPENNI_PRIME_SENSOR_MODULE
                             THEN NO
