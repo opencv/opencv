@@ -1,15 +1,14 @@
 package org.opencv.test.calib3d;
 
-import android.util.Log;
-
 import org.opencv.Converters;
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.calib3d.Calib3d;
-import org.opencv.core.Core;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -216,7 +215,7 @@ public class calib3dTest extends OpenCVTestCase {
         org.opencv.highgui.Highgui.imwrite("/mnt/sdcard/test3.png", img);
 
         assertTrue(Calib3d.findCirclesGridDefault(img, new Size(5, 5), centers));
-        
+
         assertEquals(25, centers.rows());
         assertEquals(1, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
@@ -245,14 +244,29 @@ public class calib3dTest extends OpenCVTestCase {
 
         assertTrue(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers,
                 Calib3d.CALIB_CB_CLUSTERING | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
-        
+
         assertEquals(15, centers.rows());
         assertEquals(1, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
     public void testFindFundamentalMatMatMat() {
-        fail("Not yet implemented");
+        List<Point> pts1 = new ArrayList<Point>();
+        List<Point> pts2 = new ArrayList<Point>();
+
+        int minFundamentalMatPoints = 9; //FIXME: probably should be 8 (see ticket #1262)
+        for (int i = 0; i < minFundamentalMatPoints; i++) {
+            double x = Math.random() * 100 - 50;
+            double y = Math.random() * 100 - 50;
+            pts1.add(new Point(x, y));
+            pts2.add(new Point(x, y));
+        }
+        
+        Mat fm = Calib3d.findFundamentalMat(Converters.vector_Point2f_to_Mat(pts1), Converters.vector_Point2f_to_Mat(pts2));
+        
+        truth = new Mat(3,3,CvType.CV_64F);
+        truth.put(0, 0, 0, -0.5, -0.5, 0.5, 0, 0, 0.5, 0, 0);
+        assertMatEqual(truth, fm, EPS);
     }
 
     public void testFindFundamentalMatMatMatInt() {
@@ -272,22 +286,24 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testFindHomographyMatMat() {
-        
+
         List<Point> originalPoints = new ArrayList<Point>();
         List<Point> transformedPoints = new ArrayList<Point>();
-        
-        for (int i = 0; i < 20; i++){
+
+        for (int i = 0; i < 20; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;
-            originalPoints.add(new Point(x,y));
-            transformedPoints.add(new Point(y,x));
+            originalPoints.add(new Point(x, y));
+            transformedPoints.add(new Point(y, x));
         }
-        
-        Mat hmg = Calib3d.findHomography(Converters.vector_Point2f_to_Mat(originalPoints), Converters.vector_Point2f_to_Mat(transformedPoints));
-        
-        truth = new Mat(3,3, CvType.CV_64F);
-        truth.put(0, 0, 0,1,0,1,0,0,0,0,1);
-        
+
+        Mat hmg = Calib3d.findHomography(
+                Converters.vector_Point2f_to_Mat(originalPoints),
+                Converters.vector_Point2f_to_Mat(transformedPoints));
+
+        truth = new Mat(3, 3, CvType.CV_64F);
+        truth.put(0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1);
+
         assertMatEqual(truth, hmg, EPS);
     }
 
@@ -364,20 +380,20 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testRodriguesMatMat() {
-        Mat r = new Mat(3,1,CvType.CV_32F);
-        Mat R = new Mat(3,3,CvType.CV_32F);
-        
+        Mat r = new Mat(3, 1, CvType.CV_32F);
+        Mat R = new Mat(3, 3, CvType.CV_32F);
+
         r.put(0, 0, Math.PI, 0, 0);
-        
+
         Calib3d.Rodrigues(r, R);
-        
-        truth = new Mat(3,3,CvType.CV_32F);
-        truth.put(0, 0, 1, 0 ,0, 0, -1, 0, 0, 0, -1);
+
+        truth = new Mat(3, 3, CvType.CV_32F);
+        truth.put(0, 0, 1, 0, 0, 0, -1, 0, 0, 0, -1);
         assertMatEqual(truth, R, EPS);
-        
+
         Mat r2 = new Mat();
         Calib3d.Rodrigues(R, r2);
-        
+
         assertMatEqual(r, r2, EPS);
     }
 
@@ -402,7 +418,37 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testSolvePnPMatMatMatMatMatMat() {
-        fail("Not yet implemented");
+        Mat intrinsics = Mat.eye(3, 3, CvType.CV_32F);
+        intrinsics.put(0, 0, 400);
+        intrinsics.put(1, 1, 400);
+        intrinsics.put(0, 2, 640 / 2);
+        intrinsics.put(1, 2, 480 / 2);
+
+        List<Point3> points3d = new ArrayList<Point3>();
+        List<Point> points2d = new ArrayList<Point>();
+        int minPnpPointsNum = 4;
+
+        for (int i = 0; i < minPnpPointsNum; i++) {
+            double x = Math.random() * 100 - 50;
+            double y = Math.random() * 100 - 50;
+            points2d.add(new Point(x, y));
+            points3d.add(new Point3(0, y, x));
+        }
+
+        Mat rvec = new Mat();
+        Mat tvec = new Mat();
+        Calib3d.solvePnP(Converters.vector_Point3f_to_Mat(points3d),
+                Converters.vector_Point2f_to_Mat(points2d), intrinsics,
+                new Mat(), rvec, tvec);
+
+        Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
+        truth_rvec.put(0, 0, 0, Math.PI / 2, 0);
+
+        Mat truth_tvec = new Mat(3, 1, CvType.CV_64F);
+        truth_tvec.put(0, 0, -320, -240, 400);
+
+        assertMatEqual(truth_rvec, rvec, EPS);
+        assertMatEqual(truth_tvec, tvec, EPS);
     }
 
     public void testSolvePnPMatMatMatMatMatMatBoolean() {

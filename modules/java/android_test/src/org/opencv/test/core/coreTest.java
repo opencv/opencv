@@ -1093,8 +1093,7 @@ public class coreTest extends OpenCVTestCase {
         Core.randu(src, low, high);
         
         //FIXME: use Mat.diag
-        Mat transformMatrix = new Mat(3, 3, CvType.CV_32F);
-        transformMatrix.put(0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1);
+        Mat transformMatrix = Mat.eye(3, 3, CvType.CV_32F);
         
         Core.perspectiveTransform(src, dst, transformMatrix);
         
@@ -1108,13 +1107,7 @@ public class coreTest extends OpenCVTestCase {
         Mat high = new Mat(1, 1, CvType.CV_32F, new Scalar(256));
         Core.randu(src, low, high);
         
-        //FIXME: use Mat.diag
-        Mat transformMatrix = new Mat(4, 4, CvType.CV_32F);
-        transformMatrix.put(0, 0, 
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
+        Mat transformMatrix = Mat.eye(4, 4, CvType.CV_32F);
         
         Core.perspectiveTransform(src, dst, transformMatrix);
         

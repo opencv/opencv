@@ -46,6 +46,25 @@ public class Converters {
         return res;
     }
 
+    public static Mat vector_Point3f_to_Mat(List<Point3> pts) {
+        Mat res;
+        int count = (pts!=null) ? pts.size() : 0;
+        if(count>0){
+            res = new Mat(1, count, CvType.CV_32FC3);
+            float[] buff = new float[count*3];
+            for(int i=0; i<count; i++) {
+                Point3 p = pts.get(i);
+                buff[i*3]   = (float)p.x;
+                buff[i*3+1] = (float)p.y;
+                buff[i*3+2] = (float)p.z;
+            }
+            res.put(0, 0, buff);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
     public static void Mat_to_vector_Point(Mat m, List<Point> pts) {
         if(pts == null)
             throw new java.lang.IllegalArgumentException();
