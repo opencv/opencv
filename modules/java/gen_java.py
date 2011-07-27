@@ -11,6 +11,8 @@ class_ignore_list = (
     "FileNode", "FileStorage",
     #highgui
     "VideoWriter", "VideoCapture",
+    #feature2d
+    "KeyPoint",
 )
 
 const_ignore_list = (
@@ -207,6 +209,11 @@ type_dict = {
     "Point3d" : { "j_type" : "Point", "jn_args" : (("double", ".x"), ("double", ".y"), ("double", ".z")),
                   "jni_var" : "Point3d %(n)s(%(n)s_x, %(n)s_y, %(n)s_z)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
+    "KeyPoint": { "j_type" : "KeyPoint", "jn_args" : (("float", ".x"), ("float", ".y"), ("float", ".size"),
+                    ("float", ".angle"), ("float", ".response"), ("int", ".octave"), ("int", ".class_id")),
+                  "jni_var" : "KeyPoint %(n)s(%(n)s_x, %(n)s_y, %(n)s_size, %(n)s_angle, %(n)s_response, %(n)s_octave, %(n)s_class_id)",
+                  "jni_type" : "jdoubleArray",
+                  "suffix" : "FFFFFII"},
     "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
                   "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "IIII"},
@@ -859,7 +866,10 @@ extern "C" {
             self.get_imports(fi.classname, fi.ctype)
             for a in args:
                 self.get_imports(fi.classname, a.ctype)
-                suffix += type_dict[a.ctype].get("suffix") or ""
+                if a.pointer:
+                    suffix += "_3D"
+                else:
+                    suffix += type_dict[a.ctype].get("suffix") or ""
 
                 if "vector" in a.ctype: # pass as Mat
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
