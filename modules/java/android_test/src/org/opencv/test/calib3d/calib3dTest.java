@@ -341,7 +341,21 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testRodriguesMatMat() {
-        fail("Not yet implemented");
+        Mat r = new Mat(3,1,CvType.CV_32F);
+        Mat R = new Mat(3,3,CvType.CV_32F);
+        
+        r.put(0, 0, Math.PI, 0, 0);
+        
+        Calib3d.Rodrigues(r, R);
+        
+        truth = new Mat(3,3,CvType.CV_32F);
+        truth.put(0, 0, 1, 0 ,0, 0, -1, 0, 0, 0, -1);
+        assertMatEqual(truth, R, EPS);
+        
+        Mat r2 = new Mat();
+        Calib3d.Rodrigues(R, r2);
+        
+        assertMatEqual(r, r2, EPS);
     }
 
     public void testRodriguesMatMatMat() {

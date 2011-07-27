@@ -2,8 +2,6 @@ package org.opencv.test.core;
 
 import java.util.ArrayList;
 
-import org.hamcrest.core.IsInstanceOf;
-import org.junit.internal.runners.statements.ExpectException;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;

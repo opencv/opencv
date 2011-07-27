@@ -4,6 +4,7 @@ import junit.framework.TestCase;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Core;
 import org.opencv.highgui.Highgui;
@@ -123,6 +124,14 @@ public class OpenCVTestCase extends TestCase {
     public static void assertMatNotEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, false);
     }
+    
+    public static void assertMatEqual(Mat expected, Mat actual, double eps){
+        compareMats(expected, actual, eps, true);
+    }
+    
+    public static void assertMatNotEqual(Mat expected, Mat actual, double eps){
+        compareMats(expected, actual, eps, false);
+    }
 
     static private void compareMats(Mat m1, Mat m2, boolean isEqualityMeasured) {
         // OpenCVTestRunner.Log(m1.toString());
@@ -148,6 +157,22 @@ public class OpenCVTestCase extends TestCase {
                 }
             }
         }
+    }
+    
+    static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
+        if (expected.type() != actual.type() || expected.cols() != actual.cols()
+                || expected.rows() != actual.rows()) {
+            throw new UnsupportedOperationException();
+        }
+        Mat diff = new Mat();
+        Core.absdiff(expected, actual, diff);
+        OpenCVTestRunner.Log(diff + "     \n    " + diff.dump());
+        if(isEqualityMeasured)
+            assertTrue("Max difference between expected and actiual values is bigger than " + eps,
+                    Core.checkRange(diff, true, new Point(), 0.0, eps));
+        else
+            assertFalse("Max difference between expected and actiual values is less than " + eps,
+                    Core.checkRange(diff, true, new Point(), 0.0, eps));
     }
 
     static private Mat getCOI(Mat m, int coi) {
