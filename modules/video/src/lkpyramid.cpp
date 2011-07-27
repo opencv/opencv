@@ -134,7 +134,7 @@ struct LKTrackerInvoker
                       const Point2f* _prevPts, Point2f* _nextPts,
                       uchar* _status, float* _err,
                       Size _winSize, TermCriteria _criteria,
-                      int _level, int _maxLevel, int _flags )
+                      int _level, int _maxLevel, int _flags, float _minEigThreshold )
     {
         prevImg = &_prevImg;
         prevDeriv = &_prevDeriv;
@@ -148,6 +148,7 @@ struct LKTrackerInvoker
         level = _level;
         maxLevel = _maxLevel;
         flags = _flags;
+        minEigThreshold = _minEigThreshold;
     }
     
     void operator()(const BlockedRange& range) const
@@ -308,11 +309,12 @@ struct LKTrackerInvoker
             
             float D = A11*A22 - A12*A12;
             float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
-                                                  4.f*A12*A12))/(2*winSize.width*winSize.height);
-            if( err )
+                            4.f*A12*A12))/(2*winSize.width*winSize.height);
+            
+            if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
                 err[ptidx] = (float)minEig;
             
-            if( D < FLT_EPSILON )
+            if( minEig < minEigThreshold || D < FLT_EPSILON )
             {
                 if( level == 0 && status )
                     status[ptidx] = false;
@@ -431,6 +433,46 @@ struct LKTrackerInvoker
                 }
                 prevDelta = delta;
             }
+            
+            if( status[ptidx] && err && level == 0 && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) == 0 )
+            {
+                Point2f nextPt = nextPts[ptidx];
+                Point inextPt;
+                
+                inextPt.x = cvFloor(nextPt.x);
+                inextPt.y = cvFloor(nextPt.y);
+                
+                if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
+                    inextPt.y < -winSize.height || inextPt.y >= J.rows )
+                {
+                    if( status )
+                        status[ptidx] = false;
+                    continue;
+                }
+                
+                float a = nextPt.x - inextPt.x;
+                float b = nextPt.y - inextPt.y;
+                iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
+                iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
+                iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
+                iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
+                float errval = 0.f;
+                
+                for( y = 0; y < winSize.height; y++ )
+                {
+                    const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*step + inextPt.x*cn;
+                    const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                    
+                    for( x = 0; x < winSize.width*cn; x++ )
+                    {
+                        int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
+                                              Jptr[x+step]*iw10 + Jptr[x+step+cn]*iw11,
+                                              W_BITS1-5) - Iptr[x];
+                        errval += std::abs((float)diff);
+                    }
+                }
+                err[ptidx] = errval * 1.f/(32*winSize.width*cn*winSize.height);
+            }
         }
     }
     
@@ -446,6 +488,7 @@ struct LKTrackerInvoker
     int level;
     int maxLevel;
     int flags;
+    float minEigThreshold;
 };
     
 }
@@ -456,7 +499,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            Size winSize, int maxLevel,
                            TermCriteria criteria,
                            double derivLambda,
-                           int flags )
+                           int flags, double minEigThreshold )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, derivLambda, flags))
@@ -570,7 +613,8 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level], derivI,
                                                                 nextPyr[level], prevPts, nextPts,
                                                                 status, err,
-                                                                winSize, criteria, level, maxLevel, flags));
+                                                                winSize, criteria, level, maxLevel,
+                                                                flags, (float)minEigThreshold));
     }
 }
 
