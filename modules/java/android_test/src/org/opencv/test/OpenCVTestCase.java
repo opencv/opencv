@@ -166,7 +166,6 @@ public class OpenCVTestCase extends TestCase {
         }
         Mat diff = new Mat();
         Core.absdiff(expected, actual, diff);
-        OpenCVTestRunner.Log(diff + "     \n    " + diff.dump());
         if(isEqualityMeasured)
             assertTrue("Max difference between expected and actiual values is bigger than " + eps,
                     Core.checkRange(diff, true, new Point(), 0.0, eps));

@@ -156,7 +156,7 @@ public class coreTest extends OpenCVTestCase {
         Mat outOfRange = new Mat(2, 2, CvType.CV_64F);
         outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY,
                 Double.POSITIVE_INFINITY, 0);
-        
+
         assertTrue(Core.checkRange(grayRnd_32f));
         assertTrue(Core.checkRange(new Mat()));
         assertFalse(Core.checkRange(outOfRange));
@@ -168,7 +168,7 @@ public class coreTest extends OpenCVTestCase {
                 Double.POSITIVE_INFINITY, 0);
 
         assertFalse(Core.checkRange(outOfRange, true));
-        
+
         try {
             Core.checkRange(outOfRange, false);
             fail("Core.checkRange should throw the CvException");
@@ -1086,8 +1086,39 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testPerspectiveTransform() {
-        // nice example
-        fail("Not yet implemented");
+        Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
+        
+        Mat low = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
+        Mat high = new Mat(1, 1, CvType.CV_32F, new Scalar(256));
+        Core.randu(src, low, high);
+        
+        //FIXME: use Mat.diag
+        Mat transformMatrix = new Mat(3, 3, CvType.CV_32F);
+        transformMatrix.put(0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1);
+        
+        Core.perspectiveTransform(src, dst, transformMatrix);
+        
+        assertMatEqual(src, dst, EPS);
+    }
+    
+    public void testPerspectiveTransform3D() {
+        Mat src = new Mat(matSize, matSize, CvType.CV_32FC3);
+        
+        Mat low = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
+        Mat high = new Mat(1, 1, CvType.CV_32F, new Scalar(256));
+        Core.randu(src, low, high);
+        
+        //FIXME: use Mat.diag
+        Mat transformMatrix = new Mat(4, 4, CvType.CV_32F);
+        transformMatrix.put(0, 0, 
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+        
+        Core.perspectiveTransform(src, dst, transformMatrix);
+        
+        assertMatEqual(src, dst, EPS);
     }
 
     public void testPhaseMatMatMat() {
