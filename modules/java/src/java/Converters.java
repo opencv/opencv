@@ -9,7 +9,7 @@ import org.opencv.core.Rect;
 import org.opencv.features2d.KeyPoint;
 
 public class Converters {
-    
+
     public static Mat vector_Point_to_Mat(List<Point> pts) {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
@@ -52,7 +52,7 @@ public class Converters {
         int cols = m.cols();
         if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException();
-        
+
         pts.clear();
         int[] buff = new int[2*cols];
         m.get(0, 0, buff);
@@ -85,7 +85,7 @@ public class Converters {
         int cols = m.cols();
         if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException();
-        
+
         mats.clear();
         int[] buff = new int[cols*2];
         m.get(0, 0, buff);
@@ -93,10 +93,6 @@ public class Converters {
             long addr = (((long)buff[i*2])<<32) | ((long)buff[i*2+1]);
             mats.add( new Mat(addr) );
         }
-    }
-
-    public static void Mat_to_vector_KeyPoint(Mat kp_mat, List<KeyPoint> kps) {
-        // TODO Auto-generated method stub
     }
 
     public static Mat vector_float_to_Mat(List<Float> fs) {
@@ -122,7 +118,7 @@ public class Converters {
         int cols = m.cols();
         if(CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException();
-        
+
         fs.clear();
         float[] buff = new float[cols];
         m.get(0, 0, buff);
@@ -171,7 +167,7 @@ public class Converters {
         int cols = m.cols();
         if(CvType.CV_32SC1 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException();
-        
+
         is.clear();
         int[] buff = new int[cols];
         m.get(0, 0, buff);
@@ -184,7 +180,7 @@ public class Converters {
         Mat res;
         int count = (rs!=null) ? rs.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32SC4); //Point can be saved into double[2]
+            res = new Mat(1, count, CvType.CV_32SC4);
             int[] buff = new int[4*count];
             for(int i=0; i<count; i++) {
                 Rect r = rs.get(i);
@@ -206,7 +202,7 @@ public class Converters {
         int cols = m.cols();
         if(CvType.CV_32SC4 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException();
-        
+
         rs.clear();
         int[] buff = new int[4*cols];
         m.get(0, 0, buff);
@@ -214,6 +210,47 @@ public class Converters {
             rs.add( new Rect(buff[4*i], buff[4*i+1], buff[4*i+2], buff[4*i+3]) );
         }
     }
+
+
+    public static Mat vector_KeyPoint_to_Mat(List<KeyPoint> kps) {
+        Mat res;
+        int count = (kps!=null) ? kps.size() : 0;
+        if(count>0){
+            res = new Mat(1, count, CvType.CV_64FC(7));
+            double[] buff = new double[count * 7];
+            for(int i=0; i<count; i++) {
+                KeyPoint kp = kps.get(i);
+                buff[7*i  ]   = kp.pt.x;
+                buff[7*i+1]   = kp.pt.y;
+                buff[7*i+2]   = kp.size;
+                buff[7*i+3]   = kp.angle;
+                buff[7*i+4]   = kp.response;
+                buff[7*i+5]   = kp.octave;
+                buff[7*i+6]   = kp.class_id;
+            }
+            res.put(0, 0, buff);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    public static void Mat_to_vector_KeyPoint(Mat m, List<KeyPoint> kps) {
+        if(kps == null)
+            throw new java.lang.IllegalArgumentException();
+        int cols = m.cols();
+        if(CvType.CV_64FC(7) != m.type() ||  m.rows()!=1 )
+            throw new java.lang.IllegalArgumentException();
+
+        kps.clear();
+        double[] buff = new double[7*cols];
+        m.get(0, 0, buff);
+        for(int i=0; i<cols; i++) {
+            kps.add( new KeyPoint( (float)buff[4*i], (float)buff[4*i+1], (float)buff[4*i+2], (float)buff[4*i+3],
+            		               (float)buff[4*i+4], (int)buff[4*i+5], (int)buff[4*i+6] ) );
+        }
+    }
+
 
     public static Mat vector_double_to_Mat(List<Double> ds) {
         Mat res;

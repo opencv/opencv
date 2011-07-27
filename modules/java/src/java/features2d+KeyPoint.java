@@ -5,18 +5,18 @@ import org.opencv.core.Point;
 //javadoc: KeyPoint
 public class KeyPoint {
 	
-	//javadoc: KeyPoint::pt
-    Point pt;
-	//javadoc: KeyPoint::size
-    float size;
-	//javadoc: KeyPoint::angle
-    float angle;
-	//javadoc: KeyPoint::response
-    float response;
-	//javadoc: KeyPoint::octave
-    int octave;
-	//javadoc: KeyPoint::class_id
-    int class_id; 
+    //javadoc: KeyPoint::pt
+    public Point pt;
+    //javadoc: KeyPoint::size
+    public float size;
+    //javadoc: KeyPoint::angle
+    public float angle;
+    //javadoc: KeyPoint::response
+    public float response;
+    //javadoc: KeyPoint::octave
+    public int octave;
+    //javadoc: KeyPoint::class_id
+    public int class_id; 
 
     //javadoc: KeyPoint::KeyPoint(x, y, _size, _angle, _response, _octave, _class_id)
     public KeyPoint(float x, float y, float _size, float _angle, float _response, int _octave, int _class_id)

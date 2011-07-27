@@ -11,7 +11,7 @@ class_ignore_list = (
     "FileNode", "FileStorage",
     #highgui
     "VideoWriter", "VideoCapture",
-    #feature2d
+    #features2d
     "KeyPoint",
 )
 

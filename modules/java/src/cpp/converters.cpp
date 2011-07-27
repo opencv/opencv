@@ -114,17 +114,27 @@ void vector_Point_to_Mat(vector<Point>& v_point, Mat& mat)
 //vector_KeyPoint
 void Mat_to_vector_KeyPoint(Mat& mat, vector<KeyPoint>& v_kp)
 {
-	v_kp.clear();
-	//CHECK_MAT(mat.type()!= ??? || mat.rows!=1);
-	v_kp = (vector<KeyPoint>) mat;
+    v_kp.clear();
+    CHECK_MAT(mat.type()!= CV_64FC(7) || mat.rows!=1);
+	for(int i=0; i<mat.cols; i++)
+	{
+		Vec<double, 7> v = mat.at< Vec<double, 7> >(0, i);
+		KeyPoint kp((float)v[0], (float)v[1], (float)v[2], (float)v[3], (float)v[4], (int)v[5], (int)v[6]);
+		v_kp.push_back(kp);
+	}
     return;
 }
 
 
 void vector_KeyPoint_to_Mat(vector<KeyPoint>& v_kp, Mat& mat)
 {
-	mat = Mat(v_kp);
-    return;
+	int count = v_kp.size();
+	mat.create(1, count, CV_64FC(7));
+	for(int i=0; i<count; i++)
+	{
+		KeyPoint kp = v_kp[i];
+		mat.at< Vec<double, 7> >(0, i) = Vec<double, 7>(kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response, kp.octave, kp.class_id);
+	}
 }
 
 
@@ -154,5 +164,4 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 		long long addr = (long long) new Mat(v_mat[i]);
 		mat.at< Vec<int, 2> >(0, i) = Vec<int, 2>(addr>>32, addr&0xffffffff);
 	}
-    return;
 }
