@@ -58,6 +58,8 @@ Another issue is how do we measure time? Well OpenCV offers two simple functions
    t = ((double)getTickCount() - t)/getTickFrequency(); 
    cout << "Times passed in seconds: " << t << endl;
 
+.. _How_Image_Stored_Memory: 
+
 How the image matrix is stored in the memory?
 =============================================
 
@@ -175,5 +177,5 @@ Finally, you may watch a sample run of the program on the `video posted <https:/
 .. raw:: html
 
   <div align="center">
-  <iframe title="Install OpenCV by using its source files - Part 1" width="560" height="349" src="http://www.youtube.com/embed/fB3AN5fjgwc?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+  <iframe title="How to scan images in OpenCV?" width="560" height="349" src="http://www.youtube.com/embed/fB3AN5fjgwc?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>

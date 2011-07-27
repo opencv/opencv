@@ -8,13 +8,15 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Access pixel values 
+.. container:: enumeratevisibleitemswithsquare
 
-* Initialize a matrix with zeros
+   + Access pixel values 
 
-* Learn what :saturate_cast:`saturate_cast <>` does and why it is useful
+   + Initialize a matrix with zeros
 
-* Get some cool info about pixel transformations
+   + Learn what :saturate_cast:`saturate_cast <>` does and why it is useful
+
+   + Get some cool info about pixel transformations
 
 Cool Theory
 =================

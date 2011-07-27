@@ -216,7 +216,7 @@ Code
 Explanation
 =============
 
-#. Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is already known by now.
+#. Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is already known by now. 
 
 #. **Normalized Block Filter:**
 

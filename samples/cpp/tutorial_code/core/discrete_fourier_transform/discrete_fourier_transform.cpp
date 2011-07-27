@@ -18,7 +18,7 @@ void help(char* progName)
 
 int main(int argc, char ** argv)
 {
-    help(argv[0]);
+	help(argv[0]);
 
     const char* filename = argc >=2 ? argv[1] : "lena.jpg";
 

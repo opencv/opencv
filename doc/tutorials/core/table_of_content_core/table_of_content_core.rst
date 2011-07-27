@@ -51,6 +51,25 @@ Here you will learn the about the basic building blocks of the library. A must r
   .. cssclass:: toctableopencv
 
   =============== ======================================================
+   |HowFilterIm|  **Title:** :ref:`maskOperationsFilter`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  You'll find out how to scan images with neighbor access and use the :filtering:`filter2D <filter2d>` function to apply kernel filters on images.
+
+  =============== ======================================================
+
+  .. |HowFilterIm| image:: images/matMaskFilter2DOp.png
+                   :height: 90pt
+                   :width:  90pt
+
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
    |Beginners_4|  **Title:** :ref:`Adding_Images`
 
                   *Compatibility:* > OpenCV 2.0
@@ -171,10 +190,10 @@ Here you will learn the about the basic building blocks of the library. A must r
    
    ../mat - the basic image container/mat - the basic image container
    ../how_to_scan_images/how_to_scan_images
+   ../mat-mask-operations/mat-mask-operations
    ../adding_images/adding_images
    ../basic_linear_transform/basic_linear_transform
    ../basic_geometric_drawing/basic_geometric_drawing
    ../random_generator_and_text/random_generator_and_text
-   ../mat-mask-operations/mat-mask-operations
    ../discrete_fourier_transform/discrete_fourier_transform
    ../file_input_output_with_xml_yml/file_input_output_with_xml_yml
