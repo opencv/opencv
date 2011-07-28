@@ -736,9 +736,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                    InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
-    int depth = src.depth();
+    int depth = src.depth(), cn = src.channels();
     
-    CV_Assert( src.channels() == 1 && (mask.empty() || mask.type() == CV_8U) );
+    CV_Assert( (cn == 1 && (mask.empty() || mask.type() == CV_8U)) ||
+               (cn >= 1 && mask.empty() && !minIdx && !maxIdx) );
     MinMaxIdxFunc func = minmaxTab[depth];
     CV_Assert( func != 0 );
     
@@ -752,7 +753,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     double dminval = DBL_MAX, dmaxval = -DBL_MAX;
     size_t startidx = 1;
     int *minval = &iminval, *maxval = &imaxval;
-    int planeSize = (int)it.size;
+    int planeSize = (int)it.size*cn;
     
     if( depth == CV_32F )
         minval = (int*)&fminval, maxval = (int*)&fmaxval;
