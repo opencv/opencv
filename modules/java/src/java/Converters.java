@@ -15,7 +15,7 @@ public class Converters {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32SC2);
+            res = new Mat(count, 1, CvType.CV_32SC2);
             int[] buff = new int[count*2];
             for(int i=0; i<count; i++) {
                 Point p = pts.get(i);
@@ -33,7 +33,7 @@ public class Converters {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32FC2);
+            res = new Mat(count, 1, CvType.CV_32FC2);
             float[] buff = new float[count*2];
             for(int i=0; i<count; i++) {
                 Point p = pts.get(i);
@@ -51,7 +51,7 @@ public class Converters {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32FC3);
+            res = new Mat(count, 1, CvType.CV_32FC3);
             float[] buff = new float[count*3];
             for(int i=0; i<count; i++) {
                 Point3 p = pts.get(i);
@@ -68,15 +68,16 @@ public class Converters {
 
     public static void Mat_to_vector_Point(Mat m, List<Point> pts) {
         if(pts == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("pts == null");
+        int count = m.rows();
+        if( CvType.CV_32SC2 != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m );
 
         pts.clear();
-        int[] buff = new int[2*cols];
+        int[] buff = new int[2*count];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             pts.add( new Point(buff[i*2], buff[i*2+1]) );
         }
     }
@@ -85,7 +86,7 @@ public class Converters {
         Mat res;
         int count = (mats!=null) ? mats.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32SC2);
+            res = new Mat(count, 1, CvType.CV_32SC2);
             int[] buff = new int[count*2];
             for(int i=0; i<count; i++) {
                 long addr = mats.get(i).nativeObj;
@@ -101,15 +102,16 @@ public class Converters {
 
     public static void Mat_to_vector_Mat(Mat m, List<Mat> mats) {
         if(mats == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_32SC2 != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("mats == null");
+        int count = m.rows();
+        if( CvType.CV_32SC2 != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m);
 
         mats.clear();
-        int[] buff = new int[cols*2];
+        int[] buff = new int[count*2];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             long addr = (((long)buff[i*2])<<32) | ((long)buff[i*2+1]);
             mats.add( new Mat(addr) );
         }
@@ -119,7 +121,7 @@ public class Converters {
         Mat res;
         int count = (fs!=null) ? fs.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32FC1); //Point can be saved into double[2]
+            res = new Mat(count, 1, CvType.CV_32FC1);
             float[] buff = new float[count];
             for(int i=0; i<count; i++) {
                 float f = fs.get(i);
@@ -134,15 +136,16 @@ public class Converters {
 
     public static void Mat_to_vector_float(Mat m, List<Float> fs) {
         if(fs == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("fs == null");
+        int count = m.rows();
+        if( CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_32FC1 != m.type() ||  m.rows()!=1\n" + m);
 
         fs.clear();
-        float[] buff = new float[cols];
+        float[] buff = new float[count];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             fs.add( new Float(buff[i]) );
         }
     }
@@ -151,7 +154,7 @@ public class Converters {
         Mat res;
         int count = (bs!=null) ? bs.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_8UC1); //Point can be saved into double[2]
+            res = new Mat(count, 1, CvType.CV_8UC1);
             byte[] buff = new byte[count];
             for(int i=0; i<count; i++) {
                 byte b = bs.get(i);
@@ -168,7 +171,7 @@ public class Converters {
         Mat res;
         int count = (is!=null) ? is.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32SC1); //Point can be saved into double[2]
+            res = new Mat(count, 1, CvType.CV_32SC1);
             int[] buff = new int[count];
             for(int i=0; i<count; i++) {
                 int v = is.get(i);
@@ -183,15 +186,16 @@ public class Converters {
 
     public static void Mat_to_vector_int(Mat m, List<Integer> is) {
         if(is == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_32SC1 != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("is == null");
+        int count = m.rows();
+        if( CvType.CV_32SC1 != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_32SC1 != m.type() ||  m.cols()!=1\n" + m);
 
         is.clear();
-        int[] buff = new int[cols];
+        int[] buff = new int[count];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             is.add( new Integer(buff[i]) );
         }
     }
@@ -200,7 +204,7 @@ public class Converters {
         Mat res;
         int count = (rs!=null) ? rs.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_32SC4);
+            res = new Mat(count, 1, CvType.CV_32SC4);
             int[] buff = new int[4*count];
             for(int i=0; i<count; i++) {
                 Rect r = rs.get(i);
@@ -218,15 +222,16 @@ public class Converters {
 
     public static void Mat_to_vector_Rect(Mat m, List<Rect> rs) {
         if(rs == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_32SC4 != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("rs == null");
+        int count = m.rows();
+        if(CvType.CV_32SC4 != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_32SC4 != m.type() ||  m.rows()!=1\n" + m);
 
         rs.clear();
-        int[] buff = new int[4*cols];
+        int[] buff = new int[4*count];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             rs.add( new Rect(buff[4*i], buff[4*i+1], buff[4*i+2], buff[4*i+3]) );
         }
     }
@@ -236,7 +241,7 @@ public class Converters {
         Mat res;
         int count = (kps!=null) ? kps.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_64FC(7));
+            res = new Mat(count, 1, CvType.CV_64FC(7));
             double[] buff = new double[count * 7];
             for(int i=0; i<count; i++) {
                 KeyPoint kp = kps.get(i);
@@ -257,17 +262,18 @@ public class Converters {
 
     public static void Mat_to_vector_KeyPoint(Mat m, List<KeyPoint> kps) {
         if(kps == null)
-            throw new java.lang.IllegalArgumentException();
-        int cols = m.cols();
-        if(CvType.CV_64FC(7) != m.type() ||  m.rows()!=1 )
-            throw new java.lang.IllegalArgumentException();
+            throw new java.lang.IllegalArgumentException("kps == null");
+        int count = m.rows();
+        if( CvType.CV_64FC(7) != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+            		"CvType.CV_64FC(7) != m.type() ||  m.cols()!=1\n" + m);
 
         kps.clear();
-        double[] buff = new double[7*cols];
+        double[] buff = new double[7*count];
         m.get(0, 0, buff);
-        for(int i=0; i<cols; i++) {
+        for(int i=0; i<count; i++) {
             kps.add( new KeyPoint( (float)buff[4*i], (float)buff[4*i+1], (float)buff[4*i+2], (float)buff[4*i+3],
-            		               (float)buff[4*i+4], (int)buff[4*i+5], (int)buff[4*i+6] ) );
+                                   (float)buff[4*i+4], (int)buff[4*i+5], (int)buff[4*i+6] ) );
         }
     }
 
@@ -276,7 +282,7 @@ public class Converters {
         Mat res;
         int count = (ds!=null) ? ds.size() : 0;
         if(count>0){
-            res = new Mat(1, count, CvType.CV_64FC1); //Point can be saved into double[2]
+            res = new Mat(count, 1, CvType.CV_64FC1);
             double[] buff = new double[count];
             for(int i=0; i<count; i++) {
                 double v = ds.get(i);
