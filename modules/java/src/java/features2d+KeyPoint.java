@@ -58,4 +58,12 @@ public class KeyPoint {
     {
     	this(x, y, _size, -1, 0, 0, -1);
     }
+
+	@Override
+	public String toString() {
+		return "KeyPoint [pt=" + pt + ", size=" + size + ", angle=" + angle
+				+ ", response=" + response + ", octave=" + octave
+				+ ", class_id=" + class_id + "]";
+	}
+
 }
