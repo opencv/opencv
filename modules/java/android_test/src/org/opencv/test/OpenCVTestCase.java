@@ -115,6 +115,44 @@ public class OpenCVTestCase extends TestCase {
         v1.put(0, 0, 1.0, 3.0, 2.0);
         v2 = new Mat(1, 3, CvType.CV_32F);
         v2.put(0, 0, 2.0, 1.0, 3.0);
+        
+        low.release();
+        high.release();
+    }
+    
+    @Override
+    protected void tearDown() throws Exception {
+        
+        gray0.release();
+        gray1.release();
+        gray2.release();
+        gray3.release();
+        gray9.release();
+        gray127.release();
+        gray128.release();
+        gray255.release();
+        gray_16u_256.release();
+        gray_16s_1024.release();
+        grayRnd.release();
+        gray0_32f.release();
+        gray1_32f.release();
+        gray3_32f.release();
+        gray9_32f.release();
+        gray255_32f.release();
+        grayE_32f.release();
+        grayE_32f.release();
+        grayRnd_32f.release();
+        gray0_32f_1d.release();
+        gray0_64f.release();
+        gray0_64f_1d.release();
+        rgba0.release();
+        rgba128.release();
+        rgbLena.release();
+        grayChess.release();
+        v1.release();
+        v2.release();
+        
+        super.tearDown();
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {
@@ -133,30 +171,31 @@ public class OpenCVTestCase extends TestCase {
         compareMats(expected, actual, eps, false);
     }
 
-    static private void compareMats(Mat m1, Mat m2, boolean isEqualityMeasured) {
-        // OpenCVTestRunner.Log(m1.toString());
-        // OpenCVTestRunner.Log(m2.toString());
-
-        if (m1.type() != m2.type() || m1.cols() != m2.cols()
-                || m1.rows() != m2.rows()) {
+    static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
+        if (expected.type() != actual.type() || expected.cols() != actual.cols()
+                || expected.rows() != actual.rows()) {
             throw new UnsupportedOperationException();
-        } else if (m1.channels() == 1) {
-            if (isEqualityMeasured) {
-                assertTrue(CalcPercentageOfDifference(m1, m2) == 0.0);
-            } else {
-                assertTrue(CalcPercentageOfDifference(m1, m2) != 0.0);
-            }
-        } else {
-            for (int coi = 0; coi < m1.channels(); coi++) {
-                Mat m1c = getCOI(m1, coi);
-                Mat m2c = getCOI(m2, coi);
-                if (isEqualityMeasured) {
-                    assertTrue(CalcPercentageOfDifference(m1c, m2c) == 0.0);
-                } else {
-                    assertTrue(CalcPercentageOfDifference(m1c, m2c) != 0.0);
-                }
-            }
         }
+        
+        if (expected.depth() == CvType.CV_32F || expected.depth() == CvType.CV_64F){
+            if (isEqualityMeasured)
+                throw new UnsupportedOperationException("Floating-point Mats must not be checked for exact match. Use assertMatEqual(Mat expected, Mat actual, double eps) instead.");
+            else
+                throw new UnsupportedOperationException("Floating-point Mats must not be checked for exact match. Use assertMatNotEqual(Mat expected, Mat actual, double eps) instead.");
+        }
+        
+        Mat diff = new Mat();
+        Core.absdiff(expected, actual, diff);
+        Mat reshaped = diff.reshape(1);
+        int mistakes = Core.countNonZero(reshaped);
+        
+        reshaped.release();
+        diff.release();
+        
+        if(isEqualityMeasured)
+            assertTrue("Mats are different in " + mistakes + " points", 0 == mistakes);
+        else
+            assertFalse("Mats are equal", 0 == mistakes);
     }
     
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
@@ -167,32 +206,11 @@ public class OpenCVTestCase extends TestCase {
         Mat diff = new Mat();
         Core.absdiff(expected, actual, diff);
         if(isEqualityMeasured)
-            assertTrue("Max difference between expected and actiual values is bigger than " + eps,
+            assertTrue("Max difference between expected and actiual Mats is bigger than " + eps,
                     Core.checkRange(diff, true, new Point(), 0.0, eps));
         else
-            assertFalse("Max difference between expected and actiual values is less than " + eps,
+            assertFalse("Max difference between expected and actiual Mats is less than " + eps,
                     Core.checkRange(diff, true, new Point(), 0.0, eps));
-    }
-
-    static private Mat getCOI(Mat m, int coi) {
-        Mat ch = new Mat(m.rows(), m.cols(), m.depth());
-
-        for (int i = 0; i < m.rows(); i++)
-            for (int j = 0; j < m.cols(); j++) {
-                double pixel[] = m.get(i, j);
-                ch.put(i, j, pixel[coi]);
-            }
-
-        return ch;
-    }
-
-    static private double CalcPercentageOfDifference(Mat m1, Mat m2) {
-        Mat cmp = new Mat(0, 0, CvType.CV_8U);
-        Core.compare(m1, m2, cmp, Core.CMP_EQ);
-        double difference = 100.0 * (1.0 - Double.valueOf(Core
-                .countNonZero(cmp)) / Double.valueOf(cmp.rows() * cmp.cols()));
-
-        return difference;
     }
 
     public void test_1(String label) {

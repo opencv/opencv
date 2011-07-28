@@ -1,64 +1,78 @@
 package org.opencv.test;
 
-import java.io.FileOutputStream;
-
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
-import android.graphics.BitmapFactory;
 import android.test.AndroidTestRunner;
 import android.test.InstrumentationTestRunner;
 import android.util.Log;
 
-/**  
- * This only class is Android specific.
- * The original idea about test order randomization is from marek.defecinski blog.
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+/**
+ * This only class is Android specific. The original idea about test order
+ * randomization is from marek.defecinski blog.
  * 
  * @see <a href="http://opencv.itseez.com">OpenCV</a>
- */  
+ */
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {
-	
-	public static String LENA_PATH = "/data/data/org.opencv.test/files/lena.jpg";
-    public static String CHESS_PATH = "/data/data/org.opencv.test/files/chessboard.jpg";
-    public static String LBPCASCADE_FRONTALFACE_PATH = "/mnt/sdcard/lbpcascade_frontalface.xml";
+
+    public static String LENA_PATH;
+    public static String CHESS_PATH;
+    public static String LBPCASCADE_FRONTALFACE_PATH;
+
+    private AndroidTestRunner androidTestRunner;
+    private static String TAG = "opencv_test_java";
+
+    static public void Log(String message) {
+        Log.e(TAG, message);
+    }
     
-	private AndroidTestRunner androidTestRunner;
-	private static String TAG = "opencv_test_java";
-	
-	static public void Log(String message) {
-		Log.e(TAG, message);
-	}
-    	
-    @Override  
+    @Override
     public void onStart() {
-    	ExportResourceImage("lena.jpg", R.drawable.lena);
-    	ExportResourceImage("chessboard.jpg", R.drawable.chessboard);
-    	
-    	//FIXME: implement export of the cascade
-		
-        //List<TestCase> testCases = androidTestRunner.getTestCases();
-        //Collections.shuffle(testCases); //shuffle the tests order
-    	
+        LENA_PATH = ExportResource(R.drawable.lena);
+        CHESS_PATH = ExportResource(R.drawable.chessboard);
+        LBPCASCADE_FRONTALFACE_PATH = ExportResource(R.raw.lbpcascade_frontalface);
+
+        // List<TestCase> testCases = androidTestRunner.getTestCases();
+        // Collections.shuffle(testCases); //shuffle the tests order
+
         super.onStart();
     }
-    
-    @Override  
-    protected AndroidTestRunner getAndroidTestRunner() {  
-         androidTestRunner = super.getAndroidTestRunner();  
-         return androidTestRunner;  
+
+    @Override
+    protected AndroidTestRunner getAndroidTestRunner() {
+        androidTestRunner = super.getAndroidTestRunner();
+        return androidTestRunner;
     }
-    
-	private void ExportResourceImage(String image, int rId) {
-		try {
-			Bitmap mBitmap = BitmapFactory.decodeResource(this.getContext().getResources(), rId);
-			FileOutputStream fos = this.getContext().openFileOutput(image, Context.MODE_WORLD_READABLE);
-			mBitmap.compress(CompressFormat.JPEG, 100, fos);
-			fos.flush();
-			fos.close();
-		}
-		catch (Exception e) {
-		   	Log("Tried to write " + image + ", but: " + e.toString());
-		}
-	}
+
+    private String ExportResource(int resourceId) {
+        String fullname = getContext().getResources().getString(resourceId);
+        String resName = fullname.substring(fullname.lastIndexOf("/") + 1);
+        try {
+            InputStream is = getContext().getResources().openRawResource(
+                    resourceId);
+            File resDir = getContext().getDir("testdata", Context.MODE_PRIVATE);
+            File resFile = new File(resDir, resName);
+
+            FileOutputStream os = new FileOutputStream(resFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            is.close();
+            os.close();
+
+            return resFile.getAbsolutePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log("Failed to export resource " + resName + ". Exception thrown: "
+                    + e);
+        }
+        return null;
+    }
 }

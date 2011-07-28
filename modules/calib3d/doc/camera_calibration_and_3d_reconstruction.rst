@@ -915,7 +915,7 @@ Reprojects a disparity image to 3D space.
 .. ocv:cfunction:: void cvReprojectImageTo3D( const CvArr* disparity, CvArr* _3dImage, const CvMat* Q, int handleMissingValues=0)
 .. ocv:pyoldfunction:: cv.ReprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues=0) -> None
 
-    :param disparity: Input single-channel 16-bit signed or 32-bit floating-point disparity image.
+    :param disparity: Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit floating-point disparity image.
 
     :param _3dImage: Output 3-channel floating-point image of the same size as  ``disparity`` . Each element of  ``_3dImage(x,y)``  contains 3D coordinates of the point  ``(x,y)``  computed from the disparity map.
 

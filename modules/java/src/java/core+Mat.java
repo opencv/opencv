@@ -275,6 +275,16 @@ public class Mat {
     public Mat inv() {
         return new Mat( nInv(nativeObj) );
     }
+
+    //javadoc:Mat::reshape(cn)
+    public Mat reshape(int cn) {
+        return new Mat( nReshape(nativeObj, cn, 0) );
+    }
+   
+    //javadoc:Mat::reshape(cn, rows)
+    public Mat reshape(int cn, int rows) {
+        return new Mat( nReshape(nativeObj, cn, rows) );
+    }
     
     //javadoc:Mat::getNativeObjAddr()
     public long getNativeObjAddr() {
@@ -315,6 +325,7 @@ public class Mat {
     private static native double nDot(long self, long mat);
     private static native long nCross(long self, long mat);
     private static native long nInv(long self);
+    private static native long nReshape(long self, int cn, int rows);
     private static native long nEye(int rows, int cols, int type);
     private static native String nDump(long self);
 

@@ -52,8 +52,8 @@ public class calib3dTest extends OpenCVTestCase {
 
         Calib3d.composeRT(rvec1, tvec1, rvec2, tvec2, rvec3, tvec3);
 
-        assertMatEqual(outRvec, rvec3);
-        assertMatEqual(outTvec, tvec3);
+        assertMatEqual(outRvec, rvec3, EPS);
+        assertMatEqual(outTvec, tvec3, EPS);
     }
 
     public void testComposeRTMatMatMatMatMatMatMat() {
@@ -367,15 +367,122 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testReprojectImageTo3DMatMatMat() {
-        fail("Not yet implemented");
+        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
+        transformMatrix.put(0, 0,
+                0, 1, 0, 0,
+                1, 0, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+        
+        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
+        
+        float[] disp = new float[matSize * matSize];
+        for (int i = 0; i < matSize; i++)
+            for(int j = 0; j < matSize; j++)
+                disp[i * matSize + j] = i - j;
+        disparity.put(0, 0, disp);
+        
+        Mat _3dPoints = new Mat();
+        
+        Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix);
+        
+        assertEquals(CvType.CV_32FC3, _3dPoints.type());
+        assertEquals(matSize, _3dPoints.rows());
+        assertEquals(matSize, _3dPoints.cols());
+        
+        truth = new Mat(matSize,matSize,CvType.CV_32FC3);
+        
+        float[] _truth = new float[matSize * matSize * 3];
+        for (int i = 0; i < matSize; i++)
+            for(int j = 0; j < matSize; j++)
+            {
+                _truth[(i * matSize + j) * 3 + 0] = i;
+                _truth[(i * matSize + j) * 3 + 1] = j;
+                _truth[(i * matSize + j) * 3 + 2] = i-j;
+            }
+        truth.put(0, 0, _truth);
+        
+        assertMatEqual(truth, _3dPoints, EPS);
     }
 
     public void testReprojectImageTo3DMatMatMatBoolean() {
-        fail("Not yet implemented");
+        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
+        transformMatrix.put(0, 0,
+                0, 1, 0, 0,
+                1, 0, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+        
+        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
+        
+        float[] disp = new float[matSize * matSize];
+        for (int i = 0; i < matSize; i++)
+            for(int j = 0; j < matSize; j++)
+                disp[i * matSize + j] = i - j;
+        disp[0] = -Float.MAX_VALUE;
+        disparity.put(0, 0, disp);
+        
+        Mat _3dPoints = new Mat();
+        
+        Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix, true);
+        
+        assertEquals(CvType.CV_32FC3, _3dPoints.type());
+        assertEquals(matSize, _3dPoints.rows());
+        assertEquals(matSize, _3dPoints.cols());
+        
+        truth = new Mat(matSize,matSize,CvType.CV_32FC3);
+        
+        float[] _truth = new float[matSize * matSize * 3];
+        for (int i = 0; i < matSize; i++)
+            for(int j = 0; j < matSize; j++)
+            {
+                _truth[(i * matSize + j) * 3 + 0] = i;
+                _truth[(i * matSize + j) * 3 + 1] = j;
+                _truth[(i * matSize + j) * 3 + 2] = i-j;
+            }
+        _truth[2] = 10000;
+        truth.put(0, 0, _truth);
+        
+        assertMatEqual(truth, _3dPoints, EPS);
     }
 
     public void testReprojectImageTo3DMatMatMatBooleanInt() {
-        fail("Not yet implemented");
+        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
+        transformMatrix.put(0, 0,
+                0, 1, 0, 0,
+                1, 0, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1);
+        
+        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
+        
+        float[] disp = new float[matSize * matSize];
+        for (int i = 0; i < matSize; i++)
+            for(int j = 0; j < matSize; j++)
+                disp[i * matSize + j] = i - j;
+        disparity.put(0, 0, disp);
+        
+        Mat _3dPoints = new Mat();
+        
+        Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix, false, CvType.CV_16S);
+        
+        assertEquals(CvType.CV_16SC3, _3dPoints.type());
+        assertEquals(matSize, _3dPoints.rows());
+        assertEquals(matSize, _3dPoints.cols());
+        
+        truth = new Mat(matSize,matSize,CvType.CV_16SC3);
+        
+        short[] _truth = new short[matSize * matSize * 3];
+        for (short i = 0; i < matSize; i++)
+            for(short j = 0; j < matSize; j++)
+            {
+                _truth[(i * matSize + j) * 3 + 0] = i;
+                _truth[(i * matSize + j) * 3 + 1] = j;
+                _truth[(i * matSize + j) * 3 + 2] = (short) (i-j);
+            }
+        truth.put(0, 0, _truth);
+        
+        assertMatEqual(truth, _3dPoints, EPS);
     }
 
     public void testRodriguesMatMat() {
