@@ -800,6 +800,19 @@ public class imgprocTest extends OpenCVTestCase {
         
         assertMatEqual(mask.submat(1, matSize+1, 1, matSize+1), img);
     }
+    
+    public void testFloodFillMatMatPointScalar_WithoutMask() {
+        Mat img = gray0;
+        
+        Core.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(2));
+        
+        //TODO: ideally we should pass null instead of "new Mat()"
+        int retval = Imgproc.floodFill(img, new Mat(), new Point(matSize / 2, matSize / 2), new Scalar(1));
+        
+        Core.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(0));
+        
+        assertEquals(Core.countNonZero(img), retval);
+    }
 
     public void testFloodFillMatMatPointScalarRect() {
         fail("Not yet implemented");

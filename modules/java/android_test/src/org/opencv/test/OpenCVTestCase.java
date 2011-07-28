@@ -7,6 +7,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Core;
+import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
@@ -169,6 +170,15 @@ public class OpenCVTestCase extends TestCase {
     
     public static void assertMatNotEqual(Mat expected, Mat actual, double eps){
         compareMats(expected, actual, eps, false);
+    }
+    
+    public static void assertKeyPointEqual(KeyPoint expected, KeyPoint actual, double eps){
+        assertTrue(Math.hypot(expected.pt.x - actual.pt.x, expected.pt.y - actual.pt.y) < eps);
+        assertTrue(Math.abs(expected.size - actual.size) < eps);
+        assertTrue(Math.abs(expected.angle - actual.angle) < eps);
+        assertTrue(Math.abs(expected.response - actual.response) < eps);
+        assertEquals(expected.octave, actual.octave);
+        assertEquals(expected.class_id, actual.class_id);
     }
 
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
