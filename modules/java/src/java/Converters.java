@@ -138,9 +138,9 @@ public class Converters {
         if(fs == null)
             throw new java.lang.IllegalArgumentException("fs == null");
         int count = m.rows();
-        if( CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
+        if( CvType.CV_32FC1 != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-                    "CvType.CV_32FC1 != m.type() ||  m.rows()!=1\n" + m);
+                    "CvType.CV_32FC1 != m.type() ||  m.cols()!=1\n" + m);
 
         fs.clear();
         float[] buff = new float[count];
