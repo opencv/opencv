@@ -588,7 +588,15 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testDrawContoursMatListOfMatIntScalar() {
-        fail("Not yet implemented");
+        List<Mat> contours = new ArrayList<Mat>(5);
+        Mat hierarchy = dst;
+        Core.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
+        Imgproc.findContours(gray0, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+    	assertTrue(1 == contours.size());
+        
+    	assertFalse(0 == Core.countNonZero(gray0));
+    	Imgproc.drawContours(gray0, contours, -1, new Scalar(0));
+    	assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testDrawContoursMatListOfMatIntScalarInt() {

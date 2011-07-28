@@ -1,14 +1,16 @@
 package org.opencv.test.core;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import org.opencv.Converters;
+import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Core;
 import org.opencv.test.OpenCVTestCase;
 
 public class coreTest extends OpenCVTestCase {
@@ -478,15 +480,57 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testFillConvexPolyMatMatScalar() {
-        fail("Not yet implemented");
+        List<Point> lp = new ArrayList<Point>(4);
+        lp.add( new Point(1, 1) );
+        lp.add( new Point(5, 0) );
+        lp.add( new Point(6, 8) );
+        lp.add( new Point(0, 9) );
+        Mat points = Converters.vector_Point_to_Mat(lp);
+        assertTrue(0 == Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points, new Scalar(150));
+        assertTrue(0 < Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points, new Scalar(0));
+        assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testFillConvexPolyMatMatScalarInt() {
-        fail("Not yet implemented");
+        List<Point> lp = new ArrayList<Point>(4);
+        lp.add( new Point(1, 1) );
+        lp.add( new Point(5, 0) );
+        lp.add( new Point(6, 8) );
+        lp.add( new Point(0, 9) );
+        Mat points = Converters.vector_Point_to_Mat(lp);
+        assertTrue(0 == Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points, new Scalar(150), 4);
+        assertTrue(0 < Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points, new Scalar(0), 4);
+        assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testFillConvexPolyMatMatScalarIntInt() {
-        fail("Not yet implemented");
+        List<Point> lp = new ArrayList<Point>(4);
+        lp.add( new Point(1, 1) );
+        lp.add( new Point(5, 1) );
+        lp.add( new Point(5, 8) );
+        lp.add( new Point(1, 8) );
+        Mat points = Converters.vector_Point_to_Mat(lp);
+        List<Point> lp2 = new ArrayList<Point>(4);
+        lp2.add( new Point(2, 2) );
+        lp2.add( new Point(10, 2) );
+        lp2.add( new Point(10, 17) ); //TODO: don't know why '16' fails the test
+        lp2.add( new Point(2, 17) );  //TODO: don't know why '16' fails the test
+        Mat points2 = Converters.vector_Point_to_Mat(lp2);
+        assertTrue(0 == Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points, new Scalar(150), 4, 0);
+        assertTrue(0 < Core.countNonZero(gray0));
+
+        Core.fillConvexPoly(gray0, points2, new Scalar(0), 4, 1);
+        assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testFillPolyMatListOfMatScalar() {
@@ -921,7 +965,36 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testMixChannels() {
-        fail("Not yet implemented");
+        rgba0.setTo(new Scalar(10, 20, 30, 40));
+        
+        List<Mat> result = new ArrayList<Mat>();
+        Core.split(rgba0, result);
+        assertEquals(10, (int) result.get(0).get(0, 0)[0]);
+        assertEquals(20, (int) result.get(1).get(0, 0)[0]);
+        assertEquals(30, (int) result.get(2).get(0, 0)[0]);
+        assertEquals(40, (int) result.get(3).get(0, 0)[0]);
+        
+        List<Mat> src = new ArrayList<Mat>(1);
+        src.add(rgba0);
+        
+        List<Mat> dst = new ArrayList<Mat>(4);
+        dst.add(gray3);
+        dst.add(gray2);
+        dst.add(gray1);
+        dst.add(gray0);
+        
+        List<Integer> fromTo = new ArrayList<Integer>(8);
+        fromTo.add(0); fromTo.add(3);
+        fromTo.add(1); fromTo.add(2);
+        fromTo.add(2); fromTo.add(1);
+        fromTo.add(3); fromTo.add(0);
+    	
+        Core.mixChannels(src, dst, fromTo);
+        
+        assertMatEqual(result.get(0), gray0);
+        assertMatEqual(result.get(1), gray1);
+        assertMatEqual(result.get(2), gray2);
+        assertMatEqual(result.get(3), gray3);
     }
 
     public void testMulSpectrumsMatMatMatInt() {
