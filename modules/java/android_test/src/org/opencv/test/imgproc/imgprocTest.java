@@ -3,6 +3,7 @@ package org.opencv.test.imgproc;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -10,10 +11,8 @@ import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.core.Core;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class imgprocTest extends OpenCVTestCase {
 
@@ -715,11 +714,39 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testFindContoursMatListOfMatMatIntInt() {
-        fail("Not yet implemented");
+        Mat img = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
+        List<Mat> contours = new ArrayList<Mat>(5);
+        Mat hierarchy = dst;
+        
+        Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        // no contours on empty image
+        assertEquals(contours.size(), 0);
+        assertEquals(contours.size(), hierarchy.total());
+
+        Core.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, 16 /*CV_AA*/);
+        Core.rectangle(img, new Point(30, 35), new Point(40, 45), new Scalar(200));
+        
+        Imgproc.findContours(img, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        // two contours of two rectangles
+        assertEquals(contours.size(), 2);
+        assertEquals(contours.size(), hierarchy.total());
     }
 
     public void testFindContoursMatListOfMatMatIntIntPoint() {
-        fail("Not yet implemented");
+        Mat img  = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
+        Mat img2 = img.submat(5, 50, 3, 50); 
+        List<Mat> contours  = new ArrayList<Mat>();
+        List<Mat> contours2 = new ArrayList<Mat>();
+        Mat hierarchy = dst;
+
+        Core.rectangle(img, new Point(10, 20), new Point(20, 30), new Scalar(100), 3, 16 /*CV_AA*/);
+        Core.rectangle(img, new Point(30, 35), new Point(40, 45), new Scalar(200));
+        
+        Imgproc.findContours(img,  contours,  hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(img2, contours2, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE, new Point(3, 5));
+
+        assertEquals(contours.size(), contours2.size());
+        assertMatEqual(contours.get(0), contours2.get(0));
     }
 
     public void testFitEllipse() {
