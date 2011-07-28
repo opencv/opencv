@@ -666,8 +666,16 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testInRange() {
-        Core.inRange(gray0, gray0, gray1, dst);
-        assertMatEqual(gray255, dst);
+    	gray0.put(1, 1, 100, 150, 200);
+    	Mat lo = new Mat(1, 1, CvType.CV_8UC1, new Scalar(120));
+    	Mat hi = new Mat(1, 1, CvType.CV_8UC1, new Scalar(160));
+        Core.inRange(gray0, lo, hi, dst);
+        byte vals[] = new byte[3];
+        dst.get(1, 1, vals);
+        assertEquals(0,  vals[0]);
+        assertEquals(-1, vals[1]);
+        assertEquals(0,  vals[2]);
+        assertEquals(1, Core.countNonZero(dst));
     }
 
     public void testInsertChannel() {

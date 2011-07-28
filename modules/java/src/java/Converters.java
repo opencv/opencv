@@ -72,7 +72,7 @@ public class Converters {
         int count = m.rows();
         if( CvType.CV_32SC2 != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m );
+                    "CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m );
 
         pts.clear();
         int[] buff = new int[2*count];
@@ -106,7 +106,7 @@ public class Converters {
         int count = m.rows();
         if( CvType.CV_32SC2 != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m);
+                    "CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m);
 
         mats.clear();
         int[] buff = new int[count*2];
@@ -140,7 +140,7 @@ public class Converters {
         int count = m.rows();
         if( CvType.CV_32FC1 != m.type() ||  m.rows()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_32FC1 != m.type() ||  m.rows()!=1\n" + m);
+                    "CvType.CV_32FC1 != m.type() ||  m.rows()!=1\n" + m);
 
         fs.clear();
         float[] buff = new float[count];
@@ -190,7 +190,7 @@ public class Converters {
         int count = m.rows();
         if( CvType.CV_32SC1 != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_32SC1 != m.type() ||  m.cols()!=1\n" + m);
+                    "CvType.CV_32SC1 != m.type() ||  m.cols()!=1\n" + m);
 
         is.clear();
         int[] buff = new int[count];
@@ -226,7 +226,7 @@ public class Converters {
         int count = m.rows();
         if(CvType.CV_32SC4 != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_32SC4 != m.type() ||  m.rows()!=1\n" + m);
+                    "CvType.CV_32SC4 != m.type() ||  m.rows()!=1\n" + m);
 
         rs.clear();
         int[] buff = new int[4*count];
@@ -266,14 +266,14 @@ public class Converters {
         int count = m.rows();
         if( CvType.CV_64FC(7) != m.type() ||  m.cols()!=1 )
             throw new java.lang.IllegalArgumentException(
-            		"CvType.CV_64FC(7) != m.type() ||  m.cols()!=1\n" + m);
+                    "CvType.CV_64FC(7) != m.type() ||  m.cols()!=1\n" + m);
 
         kps.clear();
         double[] buff = new double[7*count];
         m.get(0, 0, buff);
         for(int i=0; i<count; i++) {
-            kps.add( new KeyPoint( (float)buff[4*i], (float)buff[4*i+1], (float)buff[4*i+2], (float)buff[4*i+3],
-                                   (float)buff[4*i+4], (int)buff[4*i+5], (int)buff[4*i+6] ) );
+            kps.add( new KeyPoint( (float)buff[7*i], (float)buff[7*i+1], (float)buff[7*i+2], (float)buff[7*i+3],
+                                   (float)buff[7*i+4], (int)buff[7*i+5], (int)buff[7*i+6] ) );
         }
     }
 
