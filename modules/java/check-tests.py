@@ -20,7 +20,7 @@ class JavaParser:
         self.tdict = {}
         self.empty_stubs_cnt = 0
         self.r1 = re.compile("\s*public\s+(?:static\s+)?(\w+)\(([^)]*)\)") # c-tor
-        self.r2 = re.compile("\s*public\s+(?:static\s+)?\w+\s+(\w+)\(([^)]*)\)")
+        self.r2 = re.compile("\s*(?:(?:public|static|final)\s+){1,3}\S+\s+(\w+)\(([^)]*)\)")
         self.r3 = re.compile('\s*fail\("Not yet implemented"\);') # empty test stub
 
 
@@ -77,12 +77,16 @@ class JavaParser:
                 func = m1.group(1)
                 args_str = m1.group(2)
             elif m2:
+                if "public" not in line:
+                    continue
                 func = m2.group(1)
                 args_str = m2.group(2)
             elif m3:
                 self.empty_stubs_cnt += 1
                 continue
             else:
+                #if "public" in line:
+                    #print "UNRECOGNIZED: " + line
                 continue
             d = (self.mdict, self.tdict)["test" in func]
             func = re.sub(r"^test", "", func)
