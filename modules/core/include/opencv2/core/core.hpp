@@ -2439,7 +2439,7 @@ CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 
-CV_EXPORTS_W void polylines(InputOutputArray, InputArrayOfArrays pts,
+CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness=1, int lineType=8, int shift=0 );
 
