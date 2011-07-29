@@ -1,5 +1,6 @@
 package org.opencv.test.features2d;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -13,7 +14,6 @@ import org.opencv.core.Scalar;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.features2d.SURF;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class SURFTest extends OpenCVTestCase {
 
@@ -71,22 +71,27 @@ public class SURFTest extends OpenCVTestCase {
         assertEquals(128, surf.descriptorSize());
     }
 
+    public void testDetectMatMatListOfKeyPoint_noPointsDetected() {
+        SURF surf = new SURF(8000);
+        List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
+        Mat gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        
+        surf.detect(gray0, new Mat(), keypoints);
+        
+        assertEquals(0, keypoints.size());
+    }
+
     public void testDetectMatMatListOfKeyPoint() {
         SURF surf = new SURF(8000);
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
-
-        Mat gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        surf.detect(gray0, new Mat(), keypoints);
-        assertEquals(0, keypoints.size());
-
         Mat cross = getCross();
+        
         surf.detect(cross, new Mat(), keypoints);
+        
         assertEquals(truth.length, keypoints.size());
-
         order(keypoints);
-
         for (int i = 0; i < truth.length; i++)
-            assertKeyPointEqual(truth[i], (KeyPoint) keypoints.get(i), EPS);
+            assertKeyPointEqual(truth[i], keypoints.get(i), EPS);
 
         // for(KeyPoint kp : keypoints)
         // OpenCVTestRunner.Log(kp.toString());
@@ -96,117 +101,37 @@ public class SURFTest extends OpenCVTestCase {
         SURF surf = new SURF(8000);
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
         List<Float> descriptors = new LinkedList<Float>();
-
         Mat cross = getCross();
+        
         surf.detect(cross, new Mat(), keypoints, descriptors);
+        
         assertEquals(truth.length, keypoints.size());
         assertEquals(truth.length * surf.descriptorSize(), descriptors.size());
-
         order(keypoints);
-
         for (int i = 0; i < truth.length; i++)
             assertKeyPointEqual(truth[i], (KeyPoint) keypoints.get(i), EPS);
-
-        float[] _truth = new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.09548335f, 0.01814415f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.101962745f, 0.009914574f,
-                0.57075155f, 0.047922116f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.0029440068f, -0.011540107f, 0.01814415f,
-                0.09548335f, 0.08538555f, -0.054076977f, 0.34105155f,
-                0.47911066f, 0.02339545f, -0.11012388f, 0.08819653f,
-                0.50863767f, 0.003179069f, -0.019882837f, 0.008947697f,
-                0.054817006f, -0.0033560959f, -0.0011770058f, 0.0033560959f,
-                0.0011770058f, 0.019882834f, 0.0031790687f, 0.054817006f,
-                0.008947698f, 0.0f, 0.0f, 0.0f, 0.0f, -0.0011770058f,
-                0.0033560959f, 0.0011770058f, 0.0033560959f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.011540107f, 0.0029440077f, 0.09548335f, 0.01814415f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.101962745f, 0.009914574f, 0.57075155f,
-                0.047922116f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.0029440068f, -0.011540107f, 0.01814415f, 0.09548335f,
-                0.08538555f, -0.054076977f, 0.34105155f, 0.47911066f,
-                0.02339545f, -0.11012388f, 0.08819653f, 0.50863767f,
-                0.003179069f, -0.019882837f, 0.008947697f, 0.054817006f,
-                -0.0033560959f, -0.0011770058f, 0.0033560959f, 0.0011770058f,
-                0.019882834f, 0.0031790687f, 0.054817006f, 0.008947698f, 0.0f,
-                0.0f, 0.0f, 0.0f, -0.0011770058f, 0.0033560959f, 0.0011770058f,
-                0.0033560959f, 0.0f, 0.0f, 0.0f, 0.0f, 0.011540107f,
-                0.0029440077f, 0.09548335f, 0.01814415f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.101962745f, 0.009914574f, 0.57075155f, 0.047922116f, 0.0f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0029440068f,
-                -0.011540107f, 0.01814415f, 0.09548335f, 0.08538555f,
-                -0.054076977f, 0.34105155f, 0.47911066f, 0.02339545f,
-                -0.11012388f, 0.08819653f, 0.50863767f, 0.003179069f,
-                -0.019882837f, 0.008947697f, 0.054817006f, -0.0033560959f,
-                -0.0011770058f, 0.0033560959f, 0.0011770058f, 0.019882834f,
-                0.0031790687f, 0.054817006f, 0.008947698f, 0.0f, 0.0f, 0.0f,
-                0.0f, -0.0011770058f, 0.0033560959f, 0.0011770058f,
-                0.0033560959f, 0.0f, 0.0f, 0.0f, 0.0f, 0.011540107f,
-                0.0029440077f, 0.09548335f, 0.01814415f, 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                0.101962745f, 0.009914574f, 0.57075155f, 0.047922116f, 0.0f,
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0029440068f,
-                -0.011540107f, 0.01814415f, 0.09548335f, 0.08538555f,
-                -0.054076977f, 0.34105155f, 0.47911066f, 0.02339545f,
-                -0.11012388f, 0.08819653f, 0.50863767f, 0.003179069f,
-                -0.019882837f, 0.008947697f, 0.054817006f, -0.0033560959f,
-                -0.0011770058f, 0.0033560959f, 0.0011770058f, 0.019882834f,
-                0.0031790687f, 0.054817006f, 0.008947698f, 0.0f, 0.0f, 0.0f,
-                0.0f, -0.0011770058f, 0.0033560959f, 0.0011770058f,
-                0.0033560959f };
-        
-        for (int i = 0; i < descriptors.size(); i++)
-            assertTrue(Math.abs(_truth[i] - (float)descriptors.get(i)) < EPS);
-
-        for (KeyPoint kp : keypoints)
-            OpenCVTestRunner.Log(kp.toString());
-
-        OpenCVTestRunner.Log("desc - " + descriptors.size());
-
-        String q = "";
-        for (Float d : descriptors) {
-            if (Math.abs(d) < EPS)
-                d = 0f;
-            q += ", " + d + "f";
-        }
-        q = q.substring(2);
-
-        OpenCVTestRunner.Log("[" + q + "]");
     }
 
     public void testDetectMatMatListOfKeyPointListOfFloatBoolean() {
-        fail("Not yet implemented");
         SURF surf = new SURF(8000);
-        List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
+        List<KeyPoint> original_keypoints = Arrays.asList(truth);
+        List<KeyPoint> keypoints = new LinkedList<KeyPoint>(original_keypoints);
         List<Float> descriptors = new LinkedList<Float>();
-        
-        keypoints.add(truth[0]);
-        //keypoints.add(truth[1]);
-        //keypoints.add(truth[2]);
-        //keypoints.add(truth[3]);
-        //assertEquals(1, keypoints.size());
+        Mat gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
 
-        Mat cross = getCross();
-        surf.detect(cross, new Mat(), keypoints, descriptors, true);
-        assertEquals(1, keypoints.size());
-        assertEquals(surf.descriptorSize(), descriptors.size());
-        
-        
-        for (KeyPoint kp : keypoints)
-            OpenCVTestRunner.Log(kp.toString());
+        surf.detect(gray255, new Mat(), keypoints, descriptors, true);
 
-        OpenCVTestRunner.Log("desc - " + descriptors.size());
+        // unmodified keypoints
+        assertEquals(original_keypoints.size(), keypoints.size());
+        for (int i = 0; i < keypoints.size(); i++)
+            assertKeyPointEqual(original_keypoints.get(i), keypoints.get(i),
+                    EPS);
 
-        String q = "";
-        for (Float d : descriptors) {
-            if (Math.abs(d) < EPS)
-                d = 0f;
-            q += ", " + d + "f";
-        }
-        q = q.substring(2);
-
-        OpenCVTestRunner.Log("[" + q + "]");
+        // zero descriptors
+        assertEquals(surf.descriptorSize() * original_keypoints.size(),
+                descriptors.size());
+        for (float d : descriptors)
+            assertTrue(Math.abs(d) < EPS);
     }
 
     public void testSURF() {
