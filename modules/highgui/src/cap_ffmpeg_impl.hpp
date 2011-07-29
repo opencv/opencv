@@ -135,7 +135,7 @@ extern "C" {
 #define PIX_FMT_RGBA32 PIX_FMT_RGB32
 #endif
 
-
+#define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 char * FOURCC2str( int fourcc )
 {
@@ -365,6 +365,7 @@ struct CvCapture_FFMPEG
    and so the filename is needed to reopen the file on backward seeking.
 */
     char              * filename;
+	int                 count_threads;
 };
 
 
@@ -379,6 +380,7 @@ void CvCapture_FFMPEG::init()
     memset( &frame, 0, sizeof(frame) );
     filename = 0;
     packet.data = NULL;
+	count_threads = 1;
 #if defined(HAVE_FFMPEG_SWSCALE)
     img_convert_ctx = 0;
 #endif
@@ -489,8 +491,14 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         AVCodecContext *enc = &ic->streams[i]->codec;
 #endif
 
-        if( CODEC_TYPE_VIDEO == enc->codec_type && video_stream < 0) {
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+		avcodec_thread_init(enc, count_threads);
+
+		//#ifndef AVMEDIA_TYPE_VIDEO
+		//	#define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
+		//#endif
+		
+        if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0) {
+		    AVCodec *codec = avcodec_find_decoder(enc->codec_id);
             if (!codec ||
             avcodec_open(enc, codec) < 0)
             goto exit_func;
@@ -576,14 +584,18 @@ bool CvCapture_FFMPEG::grabFrame()
 		        continue;
     		}
 
-#if LIBAVFORMAT_BUILD > 4628
-        avcodec_decode_video(video_st->codec,
-                             picture, &got_picture,
-                             packet.data, packet.size);
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+			avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet); 
 #else
-        avcodec_decode_video(&video_st->codec,
-                             picture, &got_picture,
-                             packet.data, packet.size);
+	#if LIBAVFORMAT_BUILD > 4628
+			avcodec_decode_video(video_st->codec,
+								 picture, &got_picture,
+								 packet.data, packet.size);
+	#else
+			avcodec_decode_video(&video_st->codec,
+								 picture, &got_picture,
+								 packet.data, packet.size);
+	#endif
 #endif
 
         if (got_picture) {
@@ -702,11 +714,13 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         return (double)video_st->codec.codec_tag;
 #endif
     break;
+	case CV_FFMPEG_CAP_PROP_THREADS: 
+		return count_threads;
+	break;
     }
+	
     return 0;
 }
-
-
 
 // this is a VERY slow fallback function, ONLY used if ffmpeg's av_seek_frame delivers no correct result!
 bool CvCapture_FFMPEG::slowSeek( int framenumber )
@@ -787,6 +801,12 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             picture_pts=(int64_t)value;
         }
         break;
+		
+	case CV_FFMPEG_CAP_PROP_THREADS:
+	{
+		count_threads = (int)value;
+	} 
+	break;
 
     default:
         return false;
@@ -824,6 +844,38 @@ struct CvVideoWriter_FFMPEG
 
 static const char * icvFFMPEGErrStr(int err)
 {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+    switch(err) {
+ 		case AVERROR_BSF_NOT_FOUND:
+ 			return "Bitstream filter not found";
+ 		case AVERROR_DECODER_NOT_FOUND:
+ 			return "Decoder not found";
+ 		case AVERROR_DEMUXER_NOT_FOUND:
+ 			return "Demuxer not found";
+ 		case AVERROR_ENCODER_NOT_FOUND:
+ 			return "Encoder not found";
+ 		case AVERROR_EOF:
+ 			return "End of file";
+ 		case AVERROR_EXIT:
+ 			return "Immediate exit was requested; the called function should not be restarted";
+ 		case AVERROR_FILTER_NOT_FOUND:
+ 			return "Filter not found";
+ 		case AVERROR_INVALIDDATA:
+ 			return "Invalid data found when processing input";
+ 		case AVERROR_MUXER_NOT_FOUND:
+ 			return "Muxer not found";
+ 		case AVERROR_OPTION_NOT_FOUND:
+ 			return "Option not found";
+ 		case AVERROR_PATCHWELCOME:
+ 			return "Not yet implemented in FFmpeg, patches welcome";
+ 		case AVERROR_PROTOCOL_NOT_FOUND:
+ 			return "Protocol not found";
+ 		case AVERROR_STREAM_NOT_FOUND:
+ 			return "Stream not found";
+ 		default:
+ 			break;
+ 	}
+#else
     switch(err) {
     case AVERROR_NUMEXPECTED:
 		return "Incorrect filename syntax";
@@ -838,7 +890,9 @@ static const char * icvFFMPEGErrStr(int err)
     default:
 		break;
     }
-  	return "Unspecified error";
+#endif
+
+ 	return "Unspecified error";
 }
 
 /* function internal to FFMPEG (libavformat/riff.c) to lookup codec id by fourcc tag*/
@@ -918,7 +972,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 #endif
 
 #if LIBAVFORMAT_BUILD > 4621
-	c->codec_id = av_guess_codec(oc->oformat, NULL, oc->filename, NULL, CODEC_TYPE_VIDEO);
+	c->codec_id = av_guess_codec(oc->oformat, NULL, oc->filename, NULL, AVMEDIA_TYPE_VIDEO);
 #else
 	c->codec_id = oc->oformat->video_codec;
 #endif
@@ -930,7 +984,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     //if(codec_tag) c->codec_tag=codec_tag;
 	codec = avcodec_find_encoder(c->codec_id);
 
-	c->codec_type = CODEC_TYPE_VIDEO;
+	c->codec_type = AVMEDIA_TYPE_VIDEO;
 
 	/* put sample parameters */
 	c->bit_rate = bitrate;
@@ -1015,7 +1069,11 @@ int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, uint8_
         AVPacket pkt;
         av_init_packet(&pkt);
 
-        pkt.flags |= PKT_FLAG_KEY;
+		#ifndef PKT_FLAG_KEY
+			#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
+		#endif
+		
+        pkt.flags |= PKT_FLAG_KEY; 
         pkt.stream_index= video_st->index;
         pkt.data= (uint8_t *)picture;
         pkt.size= sizeof(AVPicture);
@@ -1237,7 +1295,13 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 	av_register_all ();
 
 	/* auto detect the output format from the name and fourcc code. */
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+	fmt = av_guess_format(NULL, filename, NULL);
+#else
 	fmt = guess_format(NULL, filename, NULL);
+#endif
+	
 	if (!fmt)
         return false;
 
@@ -1260,7 +1324,11 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
 
     // alloc memory for context
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 4, 0)
+	oc = avformat_alloc_context();
+#else
 	oc = av_alloc_format_context();
+#endif
 	assert (oc);
 
 	/* set file name */
