@@ -451,6 +451,15 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
     }, # Highgui
 }
 
+# { class : { func : {arg_name : ctype} } }
+func_arg_fix = {
+    '' : {
+        'randu'    : { 'low'     : 'Scalar', 'high'   : 'Scalar', },
+        'randn'    : { 'mean'    : 'Scalar', 'stddev' : 'Scalar', },
+        'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
+    }, # '', i.e. empty class
+} # func_arg_fix
+
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
         self.cname = cname
@@ -522,8 +531,11 @@ class FuncInfo(object):
         #self.jni_suffix = "__"
         #if self.classname and self.ctype and not self.static: # non-static class methods except c-tors
         #    self.jni_suffix += "J" # artifical 'self'
+        arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:
-            ai = ArgInfo(a)
+            arg = a[:]
+            arg[0] = arg_fix_map.get(arg[1], arg[0])
+            ai = ArgInfo(arg)
             self.args.append(ai)
         #    self.jni_suffix += ctype2j.get(ai.ctype, ["","","",""])[3]
 

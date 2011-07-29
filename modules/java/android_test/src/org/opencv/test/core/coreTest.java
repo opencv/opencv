@@ -711,9 +711,7 @@ public class coreTest extends OpenCVTestCase {
 
     public void testInRange() {
     	gray0.put(1, 1, 100, 150, 200);
-    	Mat lo = new Mat(1, 1, CvType.CV_8UC1, new Scalar(120));
-    	Mat hi = new Mat(1, 1, CvType.CV_8UC1, new Scalar(160));
-        Core.inRange(gray0, lo, hi, dst);
+        Core.inRange(gray0, new Scalar(120), new Scalar(160), dst);
         byte vals[] = new byte[3];
         dst.get(1, 1, vals);
         assertEquals(0,  vals[0]);
@@ -1169,9 +1167,7 @@ public class coreTest extends OpenCVTestCase {
     public void testPerspectiveTransform() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
         
-        Mat low = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
-        Mat high = new Mat(1, 1, CvType.CV_32F, new Scalar(256));
-        Core.randu(src, low, high);
+        Core.randu(src, new Scalar(0), new Scalar(256));
         
         //FIXME: use Mat.diag
         Mat transformMatrix = Mat.eye(3, 3, CvType.CV_32F);
@@ -1184,9 +1180,7 @@ public class coreTest extends OpenCVTestCase {
     public void testPerspectiveTransform3D() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC3);
         
-        Mat low = new Mat(1, 1, CvType.CV_32F, new Scalar(0));
-        Mat high = new Mat(1, 1, CvType.CV_32F, new Scalar(256));
-        Core.randu(src, low, high);
+        Core.randu(src, new Scalar(0), new Scalar(256));
         
         Mat transformMatrix = Mat.eye(4, 4, CvType.CV_32F);
         
@@ -1286,11 +1280,8 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testRandn() {
-        Mat low = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
-        Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
-
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.randn(gray0, low, high);
+        Core.randn(gray0, new Scalar(0), new Scalar(256));
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -1303,11 +1294,8 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testRandu() {
-        Mat low = new Mat(1, 1, CvType.CV_16UC1, new Scalar(0));
-        Mat high = new Mat(1, 1, CvType.CV_16UC1, new Scalar(256));
-
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.randu(gray0, low, high);
+        Core.randu(gray0, new Scalar(0), new Scalar(256));
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
