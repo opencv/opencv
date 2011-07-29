@@ -1243,15 +1243,55 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testPolylinesMatListOfMatBooleanScalar() {
-        fail("Not yet implemented");
+        Mat img = gray0;
+        List<Point> pts = new ArrayList<Point>();
+        pts.add(new Point(1, 1));
+        pts.add(new Point(7, 1));
+        pts.add(new Point(7, 6));
+        pts.add(new Point(1, 6));
+        List<Mat> mats = new ArrayList<Mat>();
+        mats.add( Converters.vector_Point_to_Mat(pts) );
+        
+        assertEquals(0, Core.countNonZero(img));
+        Core.polylines(img, mats, true, new Scalar(100));
+        assertEquals(22, Core.countNonZero(img));
+        Core.polylines(img, mats, false, new Scalar(0));
+        assertEquals(4, Core.countNonZero(img));
     }
 
     public void testPolylinesMatListOfMatBooleanScalarInt() {
-        fail("Not yet implemented");
+        Mat img = gray0;
+        List<Point> pts = new ArrayList<Point>();
+        pts.add(new Point(1, 1));
+        pts.add(new Point(7, 1));
+        pts.add(new Point(7, 6));
+        pts.add(new Point(1, 6));
+        List<Mat> mats = new ArrayList<Mat>();
+        mats.add( Converters.vector_Point_to_Mat(pts) );
+        
+        assertEquals(0, Core.countNonZero(img));
+        Core.polylines(img, mats, true, new Scalar(100), 2);
+        assertEquals(62, Core.countNonZero(img));
     }
 
     public void testPolylinesMatListOfMatBooleanScalarIntInt() {
-        fail("Not yet implemented");
+        Mat img = gray0;
+        List<Point> pts  = new ArrayList<Point>();
+        List<Point> pts2 = new ArrayList<Point>();
+        pts.add(new Point(1, 1));  pts2.add(new Point(2, 2));
+        pts.add(new Point(7, 1));  pts2.add(new Point(14, 2));
+        pts.add(new Point(7, 6));  pts2.add(new Point(14, 12));
+        pts.add(new Point(1, 6));  pts2.add(new Point(2, 12));
+        List<Mat> mats  = new ArrayList<Mat>();
+        List<Mat> mats2 = new ArrayList<Mat>();
+        mats.add( Converters.vector_Point_to_Mat(pts) );
+        mats2.add( Converters.vector_Point_to_Mat(pts2) );
+        
+        assertTrue(0 == Core.countNonZero(img));
+        Core.polylines(img, mats,  true, new Scalar(100), 2, 8, 0);
+        assertFalse(0 == Core.countNonZero(img));
+        Core.polylines(img, mats2, true, new Scalar(0),   2, 8, 1);
+        assertTrue(0 == Core.countNonZero(img));
     }
 
     public void testPolylinesMatListOfMatBooleanScalarIntIntInt() {

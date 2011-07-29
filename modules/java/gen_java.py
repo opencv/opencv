@@ -457,6 +457,7 @@ func_arg_fix = {
         'randu'    : { 'low'     : 'Scalar', 'high'   : 'Scalar', },
         'randn'    : { 'mean'    : 'Scalar', 'stddev' : 'Scalar', },
         'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
+        'goodFeaturesToTrack' : { 'corners' : 'vector_Point' },
     }, # '', i.e. empty class
 } # func_arg_fix
 

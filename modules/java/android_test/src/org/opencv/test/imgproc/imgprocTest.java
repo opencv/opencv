@@ -14,6 +14,7 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 
+
 public class imgprocTest extends OpenCVTestCase {
 
     private Mat gray_64f_2;
@@ -1000,29 +1001,58 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testGoodFeaturesToTrackMatMatIntDoubleDouble() {
-        Mat src = new Mat(matSize, matSize, CvType.CV_32FC1, new Scalar(2.0));
-        Mat corners = new Mat(1, 4, CvType.CV_32FC2);
-        corners.put(0, 0, 1.0, 1.0, 6.0, 1.0, 6.0, 1.0, 6.0, 6.0);
+    	Mat src = gray0;
+    	Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+    	List<Point> lp = new ArrayList<Point>();
 
-        Imgproc.goodFeaturesToTrack(src, dst, 100, 0.01, 5.0);
-        // TODO : How do we test this?
-        fail("Not yet implemented");
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3);
+        
+        assertEquals(4, lp.size());
     }
 
     public void testGoodFeaturesToTrackMatMatIntDoubleDoubleMat() {
-        fail("Not yet implemented");
+    	Mat src = gray128;
+    	Point tl = new Point(2, 2);
+    	Point br = new Point(8, 8);
+    	Scalar color = new Scalar(100);
+    	Core.rectangle(src, tl, br, color, -1);
+    	Mat mask = gray0;
+    	Core.circle(mask, tl, 3, color, -1);
+    	List<Point> lp = new ArrayList<Point>();
+
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, mask);
+        
+        assertEquals(1, lp.size());
     }
 
     public void testGoodFeaturesToTrackMatMatIntDoubleDoubleMatInt() {
-        fail("Not yet implemented");
+    	Mat src = gray0;
+    	Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+    	List<Point> lp = new ArrayList<Point>();
+
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4);
+        
+        assertEquals(4, lp.size());
     }
 
     public void testGoodFeaturesToTrackMatMatIntDoubleDoubleMatIntBoolean() {
-        fail("Not yet implemented");
+    	Mat src = gray0;
+    	Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+    	List<Point> lp = new ArrayList<Point>();
+
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true);
+        
+        assertEquals(4, lp.size());
     }
 
     public void testGoodFeaturesToTrackMatMatIntDoubleDoubleMatIntBooleanDouble() {
-        fail("Not yet implemented");
+    	Mat src = gray0;
+    	Core.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+    	List<Point> lp = new ArrayList<Point>();
+
+        Imgproc.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, true, 0);
+        
+        assertEquals(4, lp.size());
     }
 
     public void testGrabCutMatMatRectMatMatInt() {
