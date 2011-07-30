@@ -493,7 +493,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
         avcodec_thread_init(enc, count_threads);
 
-        #ifndef AVMEDIA_TYPE_VIDEO
+        #if AVMEDIA_TYPE_VIDEO
             #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
         #endif
 		
