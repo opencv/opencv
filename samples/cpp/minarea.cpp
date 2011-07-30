@@ -1,26 +1,28 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+
 #include <iostream>
+
 using namespace cv;
 using namespace std;
 
 void help()
 {
 	cout << "This program demonstrates finding the minimum enclosing box or circle of a set\n"
-		"of points using functions: minAreaRect() minEnclosingCircle().\n"
-		"Random points are generated and then enclosed.\n"
-		"Call:\n"
-		"./minarea\n"
-   		"Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+            "of points using functions: minAreaRect() minEnclosingCircle().\n"
+            "Random points are generated and then enclosed.\n"
+            "Call:\n"
+            "./minarea\n"
+            "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
 }
-
-
 
 int main( int /*argc*/, char** /*argv*/ )
 {
-    Mat img(500, 500, CV_8UC3);
-    RNG& rng = theRNG();
     help();
+
+    Mat img(500, 500, CV_8UC3);
+    RNG& rng = theRNG();    
+
     for(;;)
     {
         int i, count = rng.uniform(1, 101);
@@ -35,6 +37,7 @@ int main( int /*argc*/, char** /*argv*/ )
         }
         
         RotatedRect box = minAreaRect(Mat(points));
+
         Point2f center, vtx[4];
         float radius = 0;
         minEnclosingCircle(Mat(points), center, radius);
@@ -55,6 +58,6 @@ int main( int /*argc*/, char** /*argv*/ )
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }
+
     return 0;
 }
-
