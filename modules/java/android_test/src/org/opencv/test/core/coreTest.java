@@ -99,10 +99,8 @@ public class coreTest extends OpenCVTestCase {
         Mat covar = new Mat(matSize, matSize, CvType.CV_64FC1);
         Mat mean = new Mat(1, matSize, CvType.CV_64FC1);
 
-        Core.calcCovarMatrix(gray0_32f, covar, mean, 8 | 1/*
-                                                           * TODO:
-                                                           * CV_COVAR_NORMAL
-                                                           */);
+        Core.calcCovarMatrix(gray0_32f, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL);
+        
         assertMatEqual(gray0_64f, covar, EPS);
         assertMatEqual(gray0_64f_1d, mean, EPS);
     }
@@ -111,10 +109,7 @@ public class coreTest extends OpenCVTestCase {
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
         Mat mean = new Mat(1, matSize, CvType.CV_32F);
 
-        Core.calcCovarMatrix(gray0_32f, covar, mean, 8 | 1/*
-                                                           * TODO:
-                                                           * CV_COVAR_NORMAL
-                                                           */, CvType.CV_32F);
+        Core.calcCovarMatrix(gray0_32f, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
         assertMatEqual(gray0_32f, covar, EPS);
         assertMatEqual(gray0_32f_1d, mean, EPS);
     }
@@ -744,11 +739,8 @@ public class coreTest extends OpenCVTestCase {
         Core.invert(src, dst);
         assertMatEqual(truth, dst, EPS);
 
-        // TODO: needs epsilon comparison
-        // Mat m = grayRnd_32f.clone();
-        // Mat inv = m.inv();
-        // Core.gemm(m, inv, 1.0, new Mat(), 0.0, dst);
-        // assertMatEqual(grayE_32f, dst);
+        Core.gemm(grayRnd_32f, grayRnd_32f.inv(), 1.0, new Mat(), 0.0, dst);
+        assertMatEqual(grayE_32f, dst, EPS);
     }
 
     public void testInvertMatMatInt() {
@@ -852,10 +844,7 @@ public class coreTest extends OpenCVTestCase {
     public void testMahalanobis() {
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
         Mat mean = new Mat(1, matSize, CvType.CV_32F);
-        Core.calcCovarMatrix(grayRnd_32f, covar, mean, 8 | 1/*
-                                                             * TODO:
-                                                             * CV_COVAR_NORMAL
-                                                             */, CvType.CV_32F);
+        Core.calcCovarMatrix(grayRnd_32f, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
         covar.inv();
 
         Mat line1 = grayRnd_32f.submat(0, 1, 0, grayRnd_32f.cols());
@@ -1222,18 +1211,12 @@ public class coreTest extends OpenCVTestCase {
         Mat xCoordinate = new Mat();
         Mat yCoordinate = new Mat();
 
-        // x.put(0, 0, 3.0, 6.0, 5,0);
-        // y.put(0, 0, 4.0, 8.0, 12.0);
-        // magnitude.put(0, 0, 5.0, 10.0, 13.0);
-        // angle.put(0, 0, 0.92729962, 0.92729962, 1.1759995);
-
         magnitude.put(0, 0, 5.0, 10.0, 13.0);
         angle.put(0, 0, 0.92729962, 0.92729962, 1.1759995);
 
         x.put(0, 0, 3.0, 6.0, 5, 0);
         y.put(0, 0, 4.0, 8.0, 12.0);
 
-        // TODO: needs epsilon comparison
         Core.polarToCart(magnitude, angle, xCoordinate, yCoordinate);
         assertMatEqual(x, xCoordinate, EPS);
     }
@@ -1504,11 +1487,11 @@ public class coreTest extends OpenCVTestCase {
         Mat submat = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols() / 2);
         submat.setTo(new Scalar(1.0));
 
-        Core.sort(gray0, dst, 0/* TODO: CV_SORT_EVERY_ROW */);
+        Core.sort(gray0, dst, Core.SORT_EVERY_ROW);
         submat = dst.submat(0, dst.rows() / 2, dst.cols() / 2, dst.cols());
         assertTrue(submat.total() == Core.countNonZero(submat));
 
-        Core.sort(gray0, dst, 1/* TODO: CV_SORT_EVERY_COLUMN */);
+        Core.sort(gray0, dst, Core.SORT_EVERY_COLUMN);
         submat = dst.submat(dst.rows() / 2, dst.rows(), 0, dst.cols() / 2);
         assertTrue(submat.total() == Core.countNonZero(submat));
     }
@@ -1522,7 +1505,7 @@ public class coreTest extends OpenCVTestCase {
         truth.put(1, 0, 0, 2, 1);
         truth.put(2, 0, 0, 1, 2);
 
-        Core.sortIdx(a, b, 0 + 0/* TODO: CV_SORT_EVERY_ROW + CV_SORT_ASCENDING */);
+        Core.sortIdx(a, b, Core.SORT_EVERY_ROW + Core.SORT_ASCENDING);
         assertMatEqual(truth, b);
     }
 

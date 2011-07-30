@@ -1,5 +1,7 @@
 package org.opencv.test;
 
+import java.util.List;
+
 import junit.framework.TestCase;
 
 import org.opencv.core.CvType;
@@ -14,9 +16,12 @@ public class OpenCVTestCase extends TestCase {
 
     protected static int matSize = 10;
     protected static double EPS = 0.001;
+    protected static double weakEPS = 0.5;
 
     protected static Mat dst;
     protected static Mat truth;
+    
+    protected static Scalar colorBlack;
 
     // Naming notation: <channels info>_[depth]_[dimensions]_value
     // examples: gray0 - single channel 8U 2d Mat filled with 0
@@ -62,7 +67,7 @@ public class OpenCVTestCase extends TestCase {
 
     protected static Mat v1;
     protected static Mat v2;
-
+    
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -71,6 +76,8 @@ public class OpenCVTestCase extends TestCase {
         assertTrue(dst.empty());
         truth = new Mat();
         assertTrue(truth.empty());
+        
+        colorBlack = new Scalar(0);
 
         gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
         gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1));
@@ -82,8 +89,7 @@ public class OpenCVTestCase extends TestCase {
         gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
 
         gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
-        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(
-                1024));
+        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
 
         grayRnd = new Mat(matSize, matSize, CvType.CV_8U);
         Core.randu(grayRnd, new Scalar(0), new Scalar(256));
@@ -150,7 +156,17 @@ public class OpenCVTestCase extends TestCase {
         
         super.tearDown();
     }
-
+    
+    public static void assertListEqual(List<Float> list1, List<Float> list2, double epsilon)
+    {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+    	
+    	for (int i = 0; i < list1.size(); i++)
+    		assertTrue(Math.abs(list1.get(i) - list2.get(i)) <= epsilon);
+    }
+    
     public static void assertMatEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, true);
     }
@@ -174,6 +190,11 @@ public class OpenCVTestCase extends TestCase {
         assertTrue(Math.abs(expected.response - actual.response) < eps);
         assertEquals(expected.octave, actual.octave);
         assertEquals(expected.class_id, actual.class_id);
+    }
+    
+    public static void assertPointEquals(Point expected, Point actual, double eps){
+        assertEquals(expected.x, actual.x, eps);
+        assertEquals(expected.y, actual.y, eps);
     }
 
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {

@@ -1,19 +1,16 @@
 package org.opencv.test.features2d;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.features2d.StarDetector;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
-
-import java.util.LinkedList;
-import java.util.List;
 
 public class StarDetectorTest extends OpenCVTestCase {
 
