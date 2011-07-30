@@ -495,6 +495,10 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
         #if AVMEDIA_TYPE_VIDEO
             #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
+        #else
+	    #ifndef AVMEDIA_TYPE_VIDEO
+                #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
+	    #endif
         #endif
 		
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0) {
