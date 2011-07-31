@@ -85,7 +85,7 @@ const_ignore_list = (
     "CV_L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV)\d*2L?(BGRA?|RGBA?|GRAY|XYZ|YCrCb|Luv|Lab|HLS|YUV|HSV).*",
     "CV_COLORCVT_MAX",
     "CV_.*Bayer.*",
-    "CV_YUV420i2.+",
+    "CV_YUV420(i|sp)2.+",
     "CV_TM_.+",
     "CV_FLOODFILL_.+",
     "CV_ADAPTIVE_THRESH_.+",
@@ -616,11 +616,11 @@ public class %(c)s {
         if classinfo.name in self.classes:
             print "Generator error: class %s (%s) is duplicated" % \
                     (classinfo.name, classinfo.cname)
-            sys.exit(-1)
+            return
         self.classes[classinfo.name] = classinfo
         if classinfo.name in type_dict:
             print "Duplicated class: " + classinfo.name
-            sys.exit(-1)
+            return
         type_dict[classinfo.name] = \
             { "j_type" : classinfo.name,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
