@@ -493,16 +493,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
         avcodec_thread_init(enc, count_threads);
 
-        #if AVMEDIA_TYPE_VIDEO
+        #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 4, 0)
             #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
-        #else
-	    #ifndef AVMEDIA_TYPE_VIDEO
-                #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
-	    #endif
         #endif
-		
+        
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0) {
-		    AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
             if (!codec ||
             avcodec_open(enc, codec) < 0)
             goto exit_func;
