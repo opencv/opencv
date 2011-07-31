@@ -1814,24 +1814,26 @@ mixChannels
 -----------
 Copies specified channels from input arrays to the specified channels of output arrays.
 
-.. ocv:function:: void mixChannels(const Mat* srcv, int nsrc, Mat* dstv, int ndst, const int* fromTo, size_t npairs)
+.. ocv:function:: void mixChannels(const Mat* src, int nsrc, Mat* dst, int ndst, const int* fromTo, size_t npairs)
 
-.. ocv:function:: void mixChannels(const vector<Mat>& srcv, vector<Mat>& dstv, const int* fromTo, int npairs)
+.. ocv:function:: void mixChannels(const vector<Mat>& src, vector<Mat>& dst, const int* fromTo, int npairs)
 
 .. ocv:pyfunction:: cv2.mixChannels(src, dst, fromTo) -> None
 
 .. ocv:cfunction:: void cvMixChannels(const CvArr** src, int srcCount, CvArr** dst, int dstCount, const int* fromTo, int pairCount)
 .. ocv:pyoldfunction:: cv.MixChannels(src, dst, fromTo) -> None
 
-    :param srcv: Input array or vector of matrices. All the matrices must have the same size and the same depth.
+    :param src: Input array or vector of matrices. All the matrices must have the same size and the same depth.
 
-    :param nsrc: Number of elements in  ``srcv`` .
+    :param nsrc: Number of matrices in  ``src`` .
     
-    :param dstv: Output array or vector of matrices. All the matrices  *must be allocated* . Their size and depth must be the same as in  ``srcv[0]`` .
+    :param dst: Output array or vector of matrices. All the matrices  *must be allocated* . Their size and depth must be the same as in  ``src[0]`` .
         
-    :param ndst: Number of elements in  ``dstv`` .
+    :param ndst: Number of matrices in  ``dst`` .
     
-    :param fromTo: Array of index pairs specifying which channels are copied and where. ``fromTo[k*2]``  is a 0-based index of the input channel in  ``srcv`` . ``fromTo[k*2+1]``  is an index of the output channel in  ``dstv`` . The continuous channel numbering is used: the first input image channels are indexed from  ``0``  to  ``srcv[0].channels()-1`` , the second input image channels are indexed from  ``srcv[0].channels()``  to ``srcv[0].channels() + srcv[1].channels()-1``,  and so on. The same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero ``npairs`` .
+    :param fromTo: Array of index pairs specifying which channels are copied and where. ``fromTo[k*2]``  is a 0-based index of the input channel in  ``src`` . ``fromTo[k*2+1]``  is an index of the output channel in  ``dst`` . The continuous channel numbering is used: the first input image channels are indexed from  ``0``  to  ``src[0].channels()-1`` , the second input image channels are indexed from  ``src[0].channels()``  to ``src[0].channels() + src[1].channels()-1``,  and so on. The same scheme is used for the output image channels. As a special case, when  ``fromTo[k*2]``  is negative, the corresponding output channel is filled with zero .
+    
+    :param npairs: Number of index pairs in ``fromTo``.
     
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
     
