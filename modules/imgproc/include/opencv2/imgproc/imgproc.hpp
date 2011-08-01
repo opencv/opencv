@@ -997,7 +997,7 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented=false );
 CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 //! computes the minimal enclosing circle for a set of points
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
-                                      Point2f& center, float& radius );    
+                                      CV_OUT Point2f& center, CV_OUT float& radius );    
 //! matches two contours using one of the available algorithms
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
