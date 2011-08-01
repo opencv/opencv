@@ -71,6 +71,8 @@ void cv::gpu::histEven(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_n
 void cv::gpu::histEven(const GpuMat&, GpuMat*, int*, int*, int*, Stream&) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_nogpu(); }
+void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::calcHist(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
 void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool) { throw_nogpu(); }
@@ -1035,6 +1037,33 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     };
 
     hist_callers[src.depth()](src, hist, levels, StreamAccessor::getStream(stream));
+}
+
+namespace cv { namespace gpu { namespace histograms
+{
+    void histogram256_gpu(DevMem2D src, int* hist, unsigned int* buf, cudaStream_t stream);
+
+    const int PARTIAL_HISTOGRAM256_COUNT = 240;
+    const int HISTOGRAM256_BIN_COUNT     = 256;
+}}}
+
+void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
+{
+    GpuMat buf;
+    calcHist(src, hist, buf, stream);
+}
+
+void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream)
+{
+    using namespace cv::gpu::histograms;
+
+    CV_Assert(src.type() == CV_8UC1);
+
+    hist.create(1, 256, CV_32SC1);
+
+    ensureSizeIsEnough(1, PARTIAL_HISTOGRAM256_COUNT * HISTOGRAM256_BIN_COUNT, CV_32SC1, buf);
+
+    histogram256_gpu(src, hist.ptr<int>(), buf.ptr<unsigned int>(), StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

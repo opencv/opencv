@@ -875,7 +875,7 @@ TEST(pyrDown)
     {
         SUBTEST << "size " << size;
 
-        Mat src; gen(src, 1000, 1000, CV_16SC3, 0, 256);
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
         Mat dst(Size(src.cols / 2, src.rows / 2), src.type());
 
         CPU_ON;
@@ -899,7 +899,7 @@ TEST(pyrUp)
     {
         SUBTEST << "size " << size;
 
-        Mat src; gen(src, 1000, 1000, CV_16SC3, 0, 256);
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
         Mat dst(Size(src.cols * 2, src.rows * 2), src.type());
 
         CPU_ON;

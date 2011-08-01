@@ -1087,6 +1087,11 @@ namespace cv
         //! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
         //! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
+        
+        //! Calculates histogram for 8u one channel image
+        //! Output hist will have one row, 256 cols and CV32SC1 type.
+        CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
+        CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 

@@ -967,7 +967,7 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // histograms
 
-struct Histograms : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     static cv::Mat hsv;
 
@@ -1014,9 +1014,9 @@ struct Histograms : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-cv::Mat Histograms::hsv;
+cv::Mat HistEven::hsv;
 
-TEST_P(Histograms, Accuracy)
+TEST_P(HistEven, Accuracy)
 {
     ASSERT_TRUE(!hsv.empty());
 
@@ -1038,7 +1038,61 @@ TEST_P(Histograms, Accuracy)
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Histograms, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, HistEven, testing::ValuesIn(devices()));
+
+struct CalcHist : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Size size;
+    cv::Mat src;
+    cv::Mat hist_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        src = cvtest::randomMat(rng, size, CV_8UC1, 0, 255, false);
+
+        hist_gold.create(1, 256, CV_32SC1);
+        hist_gold.setTo(cv::Scalar::all(0));
+
+        int* hist = hist_gold.ptr<int>();
+        for (int y = 0; y < src.rows; ++y)
+        {
+            const uchar* src_row = src.ptr(y);
+
+            for (int x = 0; x < src.cols; ++x)
+                ++hist[src_row[x]];
+        }
+    }
+};
+
+TEST_P(CalcHist, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat hist;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuHist;
+
+        cv::gpu::calcHist(cv::gpu::GpuMat(src), gpuHist);
+
+        gpuHist.download(hist);
+    );
+
+    EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, CalcHist, testing::ValuesIn(devices()));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerHarris
