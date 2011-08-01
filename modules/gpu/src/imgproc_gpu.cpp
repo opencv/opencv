@@ -79,10 +79,14 @@ void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int) { throw_nogpu(); }
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&) { throw_nogpu(); }
-void cv::gpu::downsample(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::upsample(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::pyrDown(const GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::pyrUp(const GpuMat&, GpuMat&) { throw_nogpu(); }
+void cv::gpu::downsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::upsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::pyrDown(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::PyrDownBuf::create(Size, int) { throw_nogpu(); }
+void cv::gpu::pyrDown(const GpuMat&, GpuMat&, PyrDownBuf&, Stream&) { throw_nogpu(); }
+void cv::gpu::pyrUp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::PyrUpBuf::create(Size, int) { throw_nogpu(); }
+void cv::gpu::pyrUp(const GpuMat&, GpuMat&, PyrUpBuf&, Stream&) { throw_nogpu(); }
 
 
 
@@ -1413,15 +1417,15 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int cn>
-    void downsampleCaller(const DevMem2D src, DevMem2D dst);
+    void downsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
 }}}
 
 
-void cv::gpu::downsample(const GpuMat& src, GpuMat& dst)
+void cv::gpu::downsample(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
     CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
 
-    typedef void (*Caller)(const DevMem2D, DevMem2D);
+    typedef void (*Caller)(const DevMem2D, DevMem2D, cudaStream_t stream);
     static const Caller callers[6][4] =
         {{imgproc::downsampleCaller<uchar,1>, imgproc::downsampleCaller<uchar,2>,
           imgproc::downsampleCaller<uchar,3>, imgproc::downsampleCaller<uchar,4>},
@@ -1437,7 +1441,7 @@ void cv::gpu::downsample(const GpuMat& src, GpuMat& dst)
         CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
 
     dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
-    caller(src, dst.reshape(1));
+    caller(src, dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 
@@ -1447,15 +1451,15 @@ void cv::gpu::downsample(const GpuMat& src, GpuMat& dst)
 namespace cv { namespace gpu { namespace imgproc
 {
     template <typename T, int cn>
-    void upsampleCaller(const DevMem2D src, DevMem2D dst);
+    void upsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
 }}}
 
 
-void cv::gpu::upsample(const GpuMat& src, GpuMat& dst)
+void cv::gpu::upsample(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
     CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
 
-    typedef void (*Caller)(const DevMem2D, DevMem2D);
+    typedef void (*Caller)(const DevMem2D, DevMem2D, cudaStream_t stream);
     static const Caller callers[6][5] =
         {{imgproc::upsampleCaller<uchar,1>, imgproc::upsampleCaller<uchar,2>,
           imgproc::upsampleCaller<uchar,3>, imgproc::upsampleCaller<uchar,4>},
@@ -1471,31 +1475,73 @@ void cv::gpu::upsample(const GpuMat& src, GpuMat& dst)
         CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
 
     dst.create(src.rows*2, src.cols*2, src.type());
-    caller(src, dst.reshape(1));
+    caller(src, dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst)
+void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    Mat ker = getGaussianKernel(5, 0, std::max(CV_32F, src.depth()));
-    GpuMat buf;
-    sepFilter2D(src, buf, src.depth(), ker, ker);
-    downsample(buf, dst);
+    PyrDownBuf buf;
+    pyrDown(src, dst, buf, stream);
+}
+
+cv::Mat cv::gpu::PyrDownBuf::ker;
+
+void cv::gpu::PyrDownBuf::create(Size image_size, int image_type_)
+{
+    if (ker.empty() || image_type_ != image_type)
+        ker = getGaussianKernel(5, 0, std::max(CV_32F, CV_MAT_DEPTH(image_type_)));
+
+    ensureSizeIsEnough(image_size.height, image_size.width, image_type_, buf);
+
+    if (filter.empty() || image_type_ != image_type)
+    {
+        image_type = image_type_;
+        filter = createSeparableLinearFilter_GPU(image_type, image_type, ker, ker);
+    }
+}
+
+void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, PyrDownBuf& buf, Stream& stream)
+{
+    buf.create(src.size(), src.type());
+    buf.filter->apply(src, buf.buf, Rect(0, 0, src.cols, src.rows), stream);
+    downsample(buf.buf, dst, stream);
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
-void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst)
+void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    GpuMat buf;
-    upsample(src, buf);
-    Mat ker = getGaussianKernel(5, 0, std::max(CV_32F, src.depth())) * 2;
-    sepFilter2D(buf, dst, buf.depth(), ker, ker);
+    PyrUpBuf buf;
+    pyrUp(src, dst, buf, stream);
+}
+
+cv::Mat cv::gpu::PyrUpBuf::ker;
+
+void cv::gpu::PyrUpBuf::create(Size image_size, int image_type_)
+{
+    if (ker.empty() || image_type_ != image_type)
+        ker = getGaussianKernel(5, 0, std::max(CV_32F, CV_MAT_DEPTH(image_type_))) * 2;
+
+    ensureSizeIsEnough(image_size.height * 2, image_size.width * 2, image_type_, buf);
+
+    if (filter.empty() || image_type_ != image_type)
+    {
+        image_type = image_type_;
+        filter = createSeparableLinearFilter_GPU(image_type, image_type, ker, ker);
+    }
+}
+
+void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, PyrUpBuf& buf, Stream& stream)
+{
+    buf.create(src.size(), src.type());
+    upsample(src, buf.buf, stream);
+    buf.filter->apply(buf.buf, dst, Rect(0, 0, buf.buf.cols, buf.buf.rows), stream);
 }
 
 #endif /* !defined (HAVE_CUDA) */

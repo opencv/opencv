@@ -866,3 +866,51 @@ TEST(GaussianBlur)
         GPU_OFF;
     }
 }
+
+TEST(pyrDown)
+{
+    gpu::PyrDownBuf buf;
+
+    for (int size = 4000; size >= 1000; size -= 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, 1000, 1000, CV_16SC3, 0, 256);
+        Mat dst(Size(src.cols / 2, src.rows / 2), src.type());
+
+        CPU_ON;
+        pyrDown(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(Size(src.cols / 2, src.rows / 2), src.type());
+
+        GPU_ON;
+        gpu::pyrDown(d_src, d_dst, buf);
+        GPU_OFF;
+    }
+}
+
+TEST(pyrUp)
+{
+    gpu::PyrUpBuf buf;
+
+    for (int size = 4000; size >= 1000; size -= 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, 1000, 1000, CV_16SC3, 0, 256);
+        Mat dst(Size(src.cols * 2, src.rows * 2), src.type());
+
+        CPU_ON;
+        pyrUp(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(Size(src.cols * 2, src.rows * 2), src.type());
+
+        GPU_ON;
+        gpu::pyrUp(d_src, d_dst, buf);
+        GPU_OFF;
+    }
+}
