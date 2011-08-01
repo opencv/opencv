@@ -10,11 +10,11 @@ class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector : public FeatureDetecto
 {
 public:
 #if 0
-    void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-    void detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
-    virtual void read( const FileNode& );
-    virtual void write( FileStorage& ) const;
-    virtual bool empty() const;
+    CV_WRAP void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    CV_WRAP void detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
+    CV_WRAP virtual void read( const FileNode& );
+    CV_WRAP virtual void write( FileStorage& ) const;
+    CV_WRAP virtual bool empty() const;
 #endif
 
 	//supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
@@ -58,7 +58,7 @@ public:
 
     CV_WRAP_AS(clone) javaDescriptorMatcher* jclone( bool emptyTrainData=false ) const
 	{
-	    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::clone(emptyTrainData);
+	    Ptr<DescriptorMatcher> matcher = this->clone(emptyTrainData);
 		matcher.addref();
 		return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
 	}
