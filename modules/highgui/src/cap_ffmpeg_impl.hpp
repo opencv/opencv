@@ -446,6 +446,9 @@ bool CvCapture_FFMPEG::reopen()
 #else
     AVCodecContext *enc = &ic->streams[video_stream]->codec;
 #endif
+
+    avcodec_thread_init(enc, count_threads);
+
     AVCodec *codec = avcodec_find_decoder(enc->codec_id);
     avcodec_open(enc, codec);
     video_st = ic->streams[video_stream];
@@ -714,7 +717,7 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         return (double)video_st->codec.codec_tag;
 #endif
     break;
-	case CV_FFMPEG_CAP_PROP_THREADS: 
+    case CV_CAP_PROP_THREADS:
 		return count_threads;
 	break;
     }
@@ -802,7 +805,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         }
         break;
 		
-	case CV_FFMPEG_CAP_PROP_THREADS:
+    case CV_CAP_PROP_THREADS:
 	{
 		count_threads = (int)value;
 	} 
