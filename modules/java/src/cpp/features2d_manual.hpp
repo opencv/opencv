@@ -33,7 +33,7 @@ public:
 #if 0
     CV_WRAP virtual bool isMaskSupported() const;
 	CV_WRAP virtual void add( const vector<Mat>& descriptors );
-	//CV_WRAP const vector<Mat>& getTrainDescriptors() const;
+	CV_WRAP const vector<Mat>& getTrainDescriptors() const;
 	CV_WRAP virtual void clear();
 	CV_WRAP virtual bool empty() const;
 	CV_WRAP virtual void train();

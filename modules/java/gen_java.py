@@ -454,8 +454,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 # { class : { func : {arg_name : ctype} } }
 func_arg_fix = {
     '' : {
-        'randu'    : { 'low'     : 'Scalar', 'high'   : 'Scalar', },
-        'randn'    : { 'mean'    : 'Scalar', 'stddev' : 'Scalar', },
+        'randu'    : { 'low'     : 'double', 'high'   : 'double', },
+        'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
         'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
         'goodFeaturesToTrack' : { 'corners' : 'vector_Point' },
     }, # '', i.e. empty class
@@ -486,6 +486,7 @@ class ClassInfo(object):
         self.private_consts = []
         self.imports = set()
         self.props= []
+        self.jname = self.name
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
@@ -569,6 +570,7 @@ class JavaWrapperGenerator(object):
         self.skipped_func_list = []
 
     def add_class_code_stream(self, class_name):
+        jname = self.classes[class_name].jname
         self.java_code[class_name] = { "j_code" : StringIO(), "jn_code" : StringIO(), }
         if class_name != self.Module:
             self.java_code[class_name]["j_code"].write("""
@@ -581,12 +583,12 @@ $imports
 
 // C++: class %(c)s
 //javadoc: %(c)s
-public class %(c)s {
+public class %(jc)s {
 
     protected final long nativeObj;
-    protected %(c)s(long addr) { nativeObj = addr; }
+    protected %(jc)s(long addr) { nativeObj = addr; }
 
-""" % { 'm' : self.module, 'c' : class_name } )
+""" % { 'm' : self.module, 'c' : class_name, 'jc' : jname } )
 
         else: # class_name == self.Module
             self.java_code[class_name]["j_code"].write("""
@@ -597,8 +599,8 @@ package org.opencv.%(m)s;
 
 $imports
 
-public class %(c)s {
-""" % { 'm' : self.module, 'c' : class_name } )
+public class %(jc)s {
+""" % { 'm' : self.module, 'jc' : jname } )
 
         self.java_code[class_name]["jn_code"].write("""
     //
@@ -613,37 +615,43 @@ public class %(c)s {
         classinfo = ClassInfo(decl)
         if classinfo.name in class_ignore_list:
             return
-        if classinfo.name in self.classes:
+        name = classinfo.name
+        if name in self.classes:
             print "Generator error: class %s (%s) is duplicated" % \
-                    (classinfo.name, classinfo.cname)
+                    (name, classinfo.cname)
             return
-        self.classes[classinfo.name] = classinfo
-        if classinfo.name in type_dict:
-            print "Duplicated class: " + classinfo.name
+        self.classes[name] = classinfo
+        if name in type_dict:
+            print "Duplicated class: " + name
             return
-        type_dict[classinfo.name] = \
-            { "j_type" : classinfo.name,
+        type_dict[name] = \
+            { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*("+classinfo.name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : "(*("+name+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "suffix" : "J" }
+        type_dict[name+'*'] = \
+            { "j_type" : classinfo.jname,
+              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jni_name" : "("+name+"*)%(n)s_nativeObj", "jni_type" : "jlong",
               "suffix" : "J" }
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
-        if classinfo.name in missing_consts:
-            if 'private' in missing_consts[classinfo.name]:
-                for (name, val) in missing_consts[classinfo.name]['private']:
-                    classinfo.private_consts.append( ConstInfo(name, name, val, True) )
-            if 'public' in missing_consts[classinfo.name]:
-                for (name, val) in missing_consts[classinfo.name]['public']:
-                    classinfo.consts.append( ConstInfo(name, name, val, True) )
+        if name in missing_consts:
+            if 'private' in missing_consts[name]:
+                for (n, val) in missing_consts[name]['private']:
+                    classinfo.private_consts.append( ConstInfo(n, n, val, True) )
+            if 'public' in missing_consts[name]:
+                for (n, val) in missing_consts[name]['public']:
+                    classinfo.consts.append( ConstInfo(n, n, val, True) )
 
         # class props
         for p in decl[3]:
             if "vector" not in p[0]:
                 classinfo.props.append( ClassPropInfo(p) )
             else:
-                print "Skipped property: [%s]" % classinfo.name, p
+                print "Skipped property: [%s]" % name, p
 
-        self.add_class_code_stream(classinfo.name)
+        self.add_class_code_stream(name)
 
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -754,17 +762,16 @@ extern "C" {
 
         # generate code for the classes
         for name in self.classes.keys():
+            if name == "Mat":
+                continue
             self.gen_class(name)
-
-        # saving code streams
-        for cls in self.java_code.keys():
+            # saving code streams
             imports = "\n".join([ "import %s;" % c for c in \
-                sorted(self.classes[cls].imports) if not c.startswith('org.opencv.'+self.module) ])
-            ##imports = "import org.opencv.core.*;\nimport org.opencv.Converters;\n"
-            self.java_code[cls]["j_code"].write("\n\n%s\n}\n" % self.java_code[cls]["jn_code"].getvalue())
-            java_code = self.java_code[cls]["j_code"].getvalue()
+                sorted(self.classes[name].imports) if not c.startswith('org.opencv.'+self.module) ])
+            self.java_code[name]["j_code"].write("\n\n%s\n}\n" % self.java_code[name]["jn_code"].getvalue())
+            java_code = self.java_code[name]["j_code"].getvalue()
             java_code = Template(java_code).substitute(imports = imports)
-            self.save("%s/%s+%s.java" % (output_path, module, cls), java_code)
+            self.save("%s/%s+%s.java" % (output_path, module, self.classes[name].jname), java_code)
 
         self.cpp_code.write( '\n} // extern "C"\n' )
         self.save(output_path+"/"+module+".cpp",  self.cpp_code.getvalue())
@@ -944,20 +951,30 @@ extern "C" {
             # e.g.
             # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
             # { n_add( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
-            ret_val = type_dict[fi.ctype]["j_type"] + " retVal = "
+            ret_type = fi.ctype
+            if fi.ctype.endswith('*'):
+                ret_type = ret_type[:-1]
+            ret_val = type_dict[ret_type]["j_type"] + " retVal = "
             tail = ""
             ret = "return retVal;"
-            if fi.ctype == "void":
+            if ret_type.startswith('vector'):
+                ret_val = "Mat retValMat = new Mat("
+                tail = ")"
+                j_type = type_dict[ret_type]["j_type"]
+                j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
+                self.classes[fi.classname or self.Module].imports.add('java.util.ArrayList')
+                j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
+            elif ret_type == "void":
                 ret_val = ""
                 ret = "return;"
-            elif fi.ctype == "": # c-tor
+            elif ret_type == "": # c-tor
                 ret_val = "nativeObj = "
                 ret = "return;"
-            elif fi.ctype in self.classes: # wrapped class
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + self.classes[fi.ctype].jname + "("
+            elif ret_type in self.classes: # wrapped class
+                ret_val = type_dict[ret_type]["j_type"] + " retVal = new " + self.classes[ret_type].jname + "("
                 tail = ")"
-            elif "jn_type" not in type_dict[fi.ctype]:
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[fi.ctype]["j_type"] + "("
+            elif "jn_type" not in type_dict[ret_type]:
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
                 tail = ")"
 
             static = "static"
@@ -998,11 +1015,15 @@ extern "C" {
                 default = "return;"
             elif not fi.ctype: # c-tor
                 ret = "return (jlong) _retval_;"
+            elif fi.ctype.startswith('vector'): # c-tor
+                ret = "return (jlong) _retval_;"
             elif fi.ctype == "string":
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
                 ret = "return (jlong) new %s(_retval_);" % fi.ctype
+            elif ret_type in self.classes: # pointer to wrapped class:
+                ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
 
@@ -1018,6 +1039,10 @@ extern "C" {
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
+            elif fi.ctype.startswith('vector'):
+                retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
+                c_epilogue.append("Mat* _retval_ = new Mat();")
+                c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
             if fi.classname:
                 if not fi.ctype: # c-tor
                     retval = fi.classname + "* _retval_ = "
@@ -1096,8 +1121,6 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
     def gen_class(self, name):
         # generate code for the class
-        if name == "Mat":
-            return
         ci = self.classes[name]
         # constants
         if ci.private_consts:
@@ -1116,6 +1139,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         for n, ffi in fflist:
             if ffi.isconstructor:
                 for fi in ffi.funcs:
+                    fi.jname = ci.jname
+                    fi.jn_name = "n_" + fi.jname
+                    fi.jni_name= re.sub("_", "_1", fi.jn_name)
                     self.gen_func(fi, len(ffi.funcs)>1)
         # other methods
         for n, ffi in fflist:
