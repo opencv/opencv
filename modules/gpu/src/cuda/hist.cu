@@ -190,4 +190,34 @@ namespace cv { namespace gpu { namespace histograms
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
+
+    __global__ void equalizeHist(DevMem2D src, PtrStep dst, const int* lut)
+    {
+        __shared__ int s_lut[256];
+
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        s_lut[tid] = lut[tid];
+        __syncthreads();
+
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < src.cols && y < src.rows)
+        {
+            dst.ptr(y)[x] = __float2int_rn(255.0f * s_lut[src.ptr(y)[x]] / (src.cols * src.rows));
+        }
+    }
+
+    void equalizeHist_gpu(DevMem2D src, DevMem2D dst, const int* lut, cudaStream_t stream)
+    {
+        dim3 block(16, 16);
+        dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+
+        equalizeHist<<<grid, block, 0, stream>>>(src, dst, lut);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }}}

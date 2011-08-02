@@ -73,6 +73,9 @@ void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, Stream&) { throw_
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_nogpu(); }
 void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::calcHist(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
 void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_nogpu(); }
 void cv::gpu::mulSpectrums(const GpuMat&, const GpuMat&, GpuMat&, int, bool) { throw_nogpu(); }
@@ -1064,6 +1067,57 @@ void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& str
     ensureSizeIsEnough(1, PARTIAL_HISTOGRAM256_COUNT * HISTOGRAM256_BIN_COUNT, CV_32SC1, buf);
 
     histogram256_gpu(src, hist.ptr<int>(), buf.ptr<unsigned int>(), StreamAccessor::getStream(stream));
+}
+
+void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream)
+{
+    GpuMat hist;
+    GpuMat buf;
+    equalizeHist(src, dst, hist, buf, stream);
+}
+
+void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream)
+{
+    GpuMat buf;
+    equalizeHist(src, dst, hist, buf, stream);
+}
+
+namespace cv { namespace gpu { namespace histograms
+{
+    void equalizeHist_gpu(DevMem2D src, DevMem2D dst, const int* lut, cudaStream_t stream);
+}}}
+
+void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& s)
+{
+    using namespace cv::gpu::histograms;
+
+    CV_Assert(src.type() == CV_8UC1);
+
+    dst.create(src.size(), src.type());
+
+    int intBufSize;
+    nppSafeCall( nppsIntegralGetBufferSize_32s(256, &intBufSize) );
+
+    int bufSize = std::max(256 * 240 * sizeof(int), intBufSize + 256 * sizeof(int));
+
+    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
+
+    GpuMat histBuf(1, 256 * 240, CV_32SC1, buf.ptr());
+    GpuMat intBuf(1, intBufSize, CV_8UC1, buf.ptr());
+    GpuMat lut(1, 256, CV_32S, buf.ptr() + intBufSize);
+
+    calcHist(src, hist, histBuf, s);
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    NppStreamHandler h(stream);
+
+    nppSafeCall( nppsIntegral_32s(hist.ptr<Npp32s>(), lut.ptr<Npp32s>(), 256, intBuf.ptr<Npp8u>()) );
+    
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+
+    equalizeHist_gpu(src, dst, lut.ptr<int>(), stream);
 }
 
 ////////////////////////////////////////////////////////////////////////

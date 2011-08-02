@@ -1094,6 +1094,50 @@ TEST_P(CalcHist, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CalcHist, testing::ValuesIn(devices()));
 
+struct EqualizeHist : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    cv::Size size;
+    cv::Mat src;
+    cv::Mat dst_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        src = cvtest::randomMat(rng, size, CV_8UC1, 0, 255, false);
+
+        cv::equalizeHist(src, dst_gold);
+    }
+};
+
+TEST_P(EqualizeHist, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuDst;
+
+        cv::gpu::equalizeHist(cv::gpu::GpuMat(src), gpuDst);
+
+        gpuDst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, testing::ValuesIn(devices()));
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerHarris
 

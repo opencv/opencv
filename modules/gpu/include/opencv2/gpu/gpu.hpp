@@ -1092,6 +1092,11 @@ namespace cv
         //! Output hist will have one row, 256 cols and CV32SC1 type.
         CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
         CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
+        
+        //! normalizes the grayscale image brightness and contrast by normalizing its histogram
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
