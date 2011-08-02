@@ -63,7 +63,7 @@ public:
 
     int width() const { return m_width; };
     int height() const { return m_height; };
-    int type() const { return m_type; };
+    virtual int type() const { return m_type; };
 
     virtual bool setSource( const string& filename );
     virtual bool setSource( const Mat& buf );

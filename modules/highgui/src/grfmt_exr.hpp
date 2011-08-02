@@ -66,6 +66,7 @@ public:
     ExrDecoder();
     ~ExrDecoder();
 
+    int   type() const;
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
