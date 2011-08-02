@@ -263,6 +263,9 @@ CV_EXPORTS_W int64 getCPUTickCount();
 */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
 
+//! returns the number of CPUs (including hyper-threading)
+CV_EXPORTS_W int getNumberOfCPUs();
+    
 /*!
   Allocates memory buffer
   
