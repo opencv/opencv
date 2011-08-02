@@ -913,9 +913,9 @@ Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::rowRange(const Range& r) const
 
-    :param startrow: A 0-based start index of the row span.
+    :param startrow: An inclusive 0-based start index of the row span.
 
-    :param endrow: A 0-based ending index of the row span.
+    :param endrow: An exclusive 0-based ending index of the row span.
 
     :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
 
@@ -931,9 +931,9 @@ Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::colRange(const Range& r) const
 
-    :param startcol: A 0-based start index of the column span.
+    :param startcol: An inclusive 0-based start index of the column span.
 
-    :param endcol: A 0-based ending index of the column span.
+    :param endcol: An exclusive 0-based ending index of the column span.
 
     :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
 
