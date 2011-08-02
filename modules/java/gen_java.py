@@ -14,6 +14,7 @@ class_ignore_list = (
     #features2d
     "KeyPoint",
     "MSER",
+    "StarDetector",
 )
 
 const_ignore_list = (
