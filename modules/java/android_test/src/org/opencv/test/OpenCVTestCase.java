@@ -92,7 +92,7 @@ public class OpenCVTestCase extends TestCase {
         gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
 
         grayRnd = new Mat(matSize, matSize, CvType.CV_8U);
-        Core.randu(grayRnd, new Scalar(0), new Scalar(256));
+        Core.randu(grayRnd, 0, 256);
 
         gray0_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(0.0));
         gray1_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1.0));
@@ -103,7 +103,7 @@ public class OpenCVTestCase extends TestCase {
         grayE_32f = new Mat(matSize, matSize, CvType.CV_32F);
         grayE_32f = Mat.eye(matSize, matSize, CvType.CV_32FC1);
         grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F);
-        Core.randu(grayRnd_32f, new Scalar(0), new Scalar(256));
+        Core.randu(grayRnd_32f, 0, 256);
 
         gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
 

@@ -1156,7 +1156,7 @@ public class coreTest extends OpenCVTestCase {
     public void testPerspectiveTransform() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
         
-        Core.randu(src, new Scalar(0), new Scalar(256));
+        Core.randu(src, 0, 256);
         
         //FIXME: use Mat.diag
         Mat transformMatrix = Mat.eye(3, 3, CvType.CV_32F);
@@ -1169,7 +1169,7 @@ public class coreTest extends OpenCVTestCase {
     public void testPerspectiveTransform3D() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC3);
         
-        Core.randu(src, new Scalar(0), new Scalar(256));
+        Core.randu(src, 0, 256);
         
         Mat transformMatrix = Mat.eye(4, 4, CvType.CV_32F);
         
@@ -1304,7 +1304,7 @@ public class coreTest extends OpenCVTestCase {
 
     public void testRandn() {
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.randn(gray0, new Scalar(0), new Scalar(256));
+        Core.randn(gray0, 0, 256);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -1318,7 +1318,7 @@ public class coreTest extends OpenCVTestCase {
 
     public void testRandu() {
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.randu(gray0, new Scalar(0), new Scalar(256));
+        Core.randu(gray0, 0, 256);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
