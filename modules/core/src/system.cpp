@@ -89,7 +89,11 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h> 
+#if defined ANDROID
+#include <sys/sysconf.h>
+#else
 #include <sys/sysctl.h>
+#endif
 #endif
 
 namespace cv
