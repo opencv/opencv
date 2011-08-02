@@ -829,7 +829,7 @@ if (BUILD_JAVA_SUPPORT)
 endif()
 
 if(CAN_BUILD_ANDROID_PROJECTS)
-    option(BUILD_ANDROID_EXAMPLES "Build examples for Android platform" TRUE)
+    SET(BUILD_ANDROID_EXAMPLES TRUE CACHE BOOL "Build examples for Android platform")
 endif()
 
 #YV

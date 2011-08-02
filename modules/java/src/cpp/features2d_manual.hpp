@@ -10,8 +10,8 @@ class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector : public FeatureDetecto
 {
 public:
 #if 0
-    CV_WRAP void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-    CV_WRAP void detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
+    CV_WRAP void detect( const Mat& image, CV_OUT vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    CV_WRAP void detect( const vector<Mat>& images, CV_OUT vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
     CV_WRAP virtual bool empty() const;
 #endif
 
@@ -145,18 +145,18 @@ public:
     CV_WRAP virtual bool empty() const;
     CV_WRAP virtual void train();
     CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+                CV_OUT vector<DMatch>& matches, const Mat& mask=Mat() ) const;
     CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                   vector<vector<DMatch> >& matches, int k,
+                   CV_OUT vector<vector<DMatch> >& matches, int k,
                    const Mat& mask=Mat(), bool compactResult=false ) const;
     CV_WRAP void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                      vector<vector<DMatch> >& matches, float maxDistance,
+                      CV_OUT vector<vector<DMatch> >& matches, float maxDistance,
                       const Mat& mask=Mat(), bool compactResult=false ) const;
-    CV_WRAP void match( const Mat& queryDescriptors, vector<DMatch>& matches,
+    CV_WRAP void match( const Mat& queryDescriptors, CV_OUT vector<DMatch>& matches,
                 const vector<Mat>& masks=vector<Mat>() );
-    CV_WRAP void knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int k,
+    CV_WRAP void knnMatch( const Mat& queryDescriptors, CV_OUT vector<vector<DMatch> >& matches, int k,
            const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
-    CV_WRAP void radiusMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+    CV_WRAP void radiusMatch( const Mat& queryDescriptors, CV_OUT vector<vector<DMatch> >& matches, float maxDistance,
                    const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
 #endif
 
@@ -229,7 +229,7 @@ class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public Descri
 public:
 #if 0
     CV_WRAP void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const;
+    CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, CV_OUT vector<Mat>& descriptors ) const;
     CV_WRAP virtual int descriptorSize() const = 0;
     CV_WRAP virtual int descriptorType() const = 0;
 

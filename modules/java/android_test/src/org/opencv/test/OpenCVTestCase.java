@@ -1,17 +1,24 @@
 package org.opencv.test;
 
-import java.util.List;
-
-import junit.framework.TestCase;
-
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Core;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.util.List;
+
+import junit.framework.TestCase;
 
 public class OpenCVTestCase extends TestCase {
 
@@ -156,7 +163,7 @@ public class OpenCVTestCase extends TestCase {
 
         super.tearDown();
     }
-    
+
     public static void assertListIntegerEquals(List<Integer> list1, List<Integer> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -296,4 +303,46 @@ public class OpenCVTestCase extends TestCase {
         OpenCVTestRunner.Log("================================================");
         OpenCVTestRunner.Log("=============== " + label);
     }
+
+    protected static String readFile(String path) {
+        FileInputStream stream = null;
+        try {
+            stream = new FileInputStream(new File(path));
+            FileChannel fc = stream.getChannel();
+            MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0,
+                    fc.size());
+            return Charset.defaultCharset().decode(bb).toString();
+        } catch (IOException e) {
+            OpenCVTestRunner.Log("Failed to read file \"" + path
+                    + "\". Exception is thrown: " + e);
+            return null;
+        } finally {
+            if (stream != null)
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    OpenCVTestRunner.Log("Exception is thrown: " + e);
+                }
+        }
+    }
+
+    protected static void writeFile(String path, String content) {
+        FileOutputStream stream = null;
+        try {
+            stream = new FileOutputStream(new File(path));
+            FileChannel fc = stream.getChannel();
+            fc.write(Charset.defaultCharset().encode(content));
+        } catch (IOException e) {
+            OpenCVTestRunner.Log("Failed to write file \"" + path
+                    + "\". Exception is thrown: " + e);
+        } finally {
+            if (stream != null)
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    OpenCVTestRunner.Log("Exception is thrown: " + e);
+                }
+        }
+    }
+
 }

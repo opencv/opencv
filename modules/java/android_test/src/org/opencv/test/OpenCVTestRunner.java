@@ -7,6 +7,9 @@ import android.util.Log;
 
 import org.opencv.Android;
 
+import java.io.File;
+import java.io.IOException;
+
 /**
  * This only class is Android specific. The original idea about test order
  * randomization is from marek.defecinski blog.
@@ -23,6 +26,22 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     private AndroidTestRunner androidTestRunner;
     private static String TAG = "opencv_test_java";
+    
+    public static String getTempFileName(String extension)
+    {
+        File cache = context.getCacheDir();
+        if (!extension.startsWith("."))
+            extension = "." + extension;
+        try {
+            File tmp = File.createTempFile("OpenCV", extension, cache);
+            String path = tmp.getAbsolutePath();
+            tmp.delete();
+            return path;
+        } catch (IOException e) {
+            Log("Failed to get temp file name. Exception is thrown: " + e);
+        }
+        return null;
+    }
 
     static public void Log(String message) {
         Log.e(TAG, message);
