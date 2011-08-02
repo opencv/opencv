@@ -179,18 +179,20 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point": { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point"  : { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
     "vector_Point2f": { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
     "vector_Point2d": { "j_type" : "List<Point>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
     "vector_Point3i": { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
     "vector_Point3f": { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
     "vector_Point3d": { "j_type" : "List<Point3>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
-    "vector_Mat" :  { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_Rect" : { "j_type" : "List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar" : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_int" : { "j_type" : "List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float" : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
+    "vector_Mat"    : { "j_type" : "List<Mat>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint":{ "j_type" : "List<KeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_DMatch" : { "j_type" : "List<DMatch>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
+    "vector_Rect"   : { "j_type" : "List<Rect>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar"  : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"   : { "j_type" : "List<Byte>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"    : { "j_type" : "List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"  : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
     "vector_double" : { "j_type" : "List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
@@ -220,6 +222,11 @@ type_dict = {
                   "jni_var" : "KeyPoint %(n)s(%(n)s_x, %(n)s_y, %(n)s_size, %(n)s_angle, %(n)s_response, %(n)s_octave, %(n)s_class_id)",
                   "jni_type" : "jdoubleArray",
                   "suffix" : "FFFFFII"},
+    "DMatch" :  { "j_type" : "DMatch", "jn_args" : ( ('int', 'queryIdx'), ('int', 'trainIdx'),
+                    ('int', 'imgIdx'), ('float', 'distance'), ),
+                  "jni_var" : "DMatch %(n)s(%(n)s_queryIdx, %(n)s_trainIdx, %(n)s_imgIdx, %(n)s_distance)",
+                  "jni_type" : "jdoubleArray",
+                  "suffix" : "IIIF"},
     "Rect"    : { "j_type" : "Rect",  "jn_args" : (("int", ".x"), ("int", ".y"), ("int", ".width"), ("int", ".height")),
                   "jni_var" : "Rect %(n)s(%(n)s_x, %(n)s_y, %(n)s_width, %(n)s_height)", "jni_type" : "jdoubleArray",
                   "suffix" : "IIII"},
@@ -493,6 +500,7 @@ class ClassInfo(object):
         self.cname = self.name = self.jname = re.sub(r"^cv\.", "", name)
         self.cname =self.cname.replace(".", "::")
         self.methods = {}
+        self.methods_suffixes = {}
         self.consts = [] # using a list to save the occurence order
         self.private_consts = []
         self.imports = set()
@@ -536,7 +544,7 @@ class FuncInfo(object):
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
-        self.jn_name = "n_" + self.jname
+        self.jn_name = self.jname #"n_" + self.jname
         self.jni_name= re.sub(r"_", "_1", self.jn_name)
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = decl[1] or ""
@@ -820,7 +828,7 @@ extern "C" {
 
 
 
-    def gen_func(self, fi, isoverload, prop_name=''):
+    def gen_func(self, fi, prop_name=''):
         j_code   = self.java_code[fi.classname or self.Module]["j_code"]
         jn_code  = self.java_code[fi.classname or self.Module]["jn_code"]
         cpp_code = self.cpp_code
@@ -868,16 +876,17 @@ extern "C" {
 
         # java args
         args = fi.args[:] # copy
-        if args and args[-1].defval:
-            isoverload = True
-
+##        if args and args[-1].defval:
+##            isoverload = True
+        suffix_counter = int( self.classes[fi.classname or self.Module].methods_suffixes.get(fi.jname, -1) )
         while True:
-
+            suffix_counter = suffix_counter + 1
+            self.classes[fi.classname or self.Module].methods_suffixes[fi.jname] = suffix_counter
              # java native method args
             jn_args = []
             # jni (cpp) function args
             jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
-            suffix = "__"
+##            suffix = "__"
             j_prologue = []
             j_epilogue = []
             c_prologue = []
@@ -893,14 +902,14 @@ extern "C" {
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
                 jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
-                suffix += "J"
+##                suffix += "J"
             self.get_imports(fi.classname, fi.ctype)
             for a in args:
                 self.get_imports(fi.classname, a.ctype)
-                if a.pointer:
-                    suffix += "_3D"
-                else:
-                    suffix += type_dict[a.ctype].get("suffix") or ""
+##                if a.pointer:
+##                    suffix += "_3D"
+##                else:
+##                    suffix += type_dict[a.ctype].get("suffix") or ""
 
                 if "vector" in a.ctype: # pass as Mat
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
@@ -945,7 +954,7 @@ extern "C" {
             jn_code.write( Template(\
                 "    private static native $jn_type $jn_name($jn_args);\n").substitute(\
                 jn_type = type_dict[fi.ctype].get("jn_type", "double[]"), \
-                jn_name = fi.jn_name, \
+                jn_name = fi.jn_name + '_' + `suffix_counter`, \
                 jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
             ) );
 
@@ -1012,7 +1021,7 @@ extern "C" {
                     j_type=type_dict[fi.ctype]["j_type"], \
                     j_name=fi.jname, \
                     j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]), \
-                    jn_name=fi.jn_name, \
+                    jn_name=fi.jn_name + '_' + `suffix_counter`, \
                     jn_args_call=", ".join( [a.name for a in jn_args] ),\
                 )
             )
@@ -1114,7 +1123,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         rtype = rtype, \
         module = self.module, \
         clazz = clazz, \
-        fname = fi.jni_name + ["",suffix][isoverload], \
+        fname = fi.jni_name + '_1' + `suffix_counter`, \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
         epilogue = "  ".join(c_epilogue), \
@@ -1154,27 +1163,27 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             if ffi.isconstructor:
                 for fi in ffi.funcs:
                     fi.jname = ci.jname
-                    fi.jn_name = "n_" + fi.jname
+                    fi.jn_name = fi.jname #"n_" + fi.jname
                     fi.jni_name= re.sub("_", "_1", fi.jn_name)
-                    self.gen_func(fi, len(ffi.funcs)>1)
+                    self.gen_func(fi)
         # other methods
         for n, ffi in fflist:
             if not ffi.isconstructor:
                 for fi in ffi.funcs:
-                    self.gen_func(fi, len(ffi.funcs)>1)
+                    self.gen_func(fi)
         # props
         for pi in ci.props:
             # getter
             getter_name = name + ".get_" + pi.name
             #print getter_name
             fi = FuncInfo( [getter_name, pi.ctype, [], []] ) # [ funcname, return_ctype, [modifiers], [args] ]
-            self.gen_func(fi, getter_name in ci.methods, pi.name)
+            self.gen_func(fi, pi.name)
             if pi.rw:
                 #setter
                 setter_name = name + ".set_" + pi.name
                 #print setter_name
                 fi = FuncInfo( [ setter_name, "void", [], [ [pi.ctype, pi.name, "", [], ""] ] ] )
-                self.gen_func(fi, getter_name in ci.methods, pi.name)
+                self.gen_func(fi, pi.name)
 
         # manual ports
         if name in ManualFuncs:

@@ -67,6 +67,13 @@ void Mat_to_vector_uchar(Mat& mat, vector<uchar>& v_uchar)
 	v_uchar = (vector<uchar>) mat;
 }
 
+void Mat_to_vector_char(Mat& mat, vector<char>& v_char)
+{
+	v_char.clear();
+	CHECK_MAT(mat.type()==CV_8SC1 && mat.cols==1);
+	v_char = (vector<char>) mat;
+}
+
 
 //vector_Rect
 
@@ -218,5 +225,31 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 	{
 		long long addr = (long long) new Mat(v_mat[i]);
 		mat.at< Vec<int, 2> >(i, 0) = Vec<int, 2>(addr>>32, addr&0xffffffff);
+	}
+}
+
+//vector_DMatch
+void Mat_to_vector_DMatch(Mat& mat, vector<DMatch>& v_dm)
+{
+    v_dm.clear();
+    CHECK_MAT(mat.type()==CV_64FC4 && mat.cols==1);
+	for(int i=0; i<mat.rows; i++)
+	{
+		Vec<double, 4> v = mat.at< Vec<double, 4> >(i, 0);
+		DMatch dm((int)v[0], (int)v[1], (int)v[2], (float)v[3]);
+		v_dm.push_back(dm);
+	}
+    return;
+}
+
+
+void vector_DMatch_to_Mat(vector<DMatch>& v_dm, Mat& mat)
+{
+	int count = v_dm.size();
+	mat.create(count, 1, CV_64FC4);
+	for(int i=0; i<count; i++)
+	{
+		DMatch dm = v_dm[i];
+		mat.at< Vec<double, 4> >(i, 0) = Vec<double, 4>(dm.queryIdx, dm.trainIdx, dm.imgIdx, dm.distance);
 	}
 }
