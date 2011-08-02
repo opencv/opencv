@@ -8,7 +8,7 @@ except:
 
 class_ignore_list = (
     #core
-    "FileNode", "FileStorage",
+    "FileNode", "FileStorage", "KDTree",
     #highgui
     "VideoWriter", "VideoCapture",
     #features2d
@@ -1069,6 +1069,9 @@ extern "C" {
                         c_prologue.append("%s %s;" % (a.ctype, a.name))
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
+            clazz = self.Module
+            if fi.classname:
+                clazz = self.classes[fi.classname].jname
             cpp_code.write ( Template( \
 """
 
@@ -1099,7 +1102,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """ ).substitute( \
         rtype = rtype, \
         module = self.module, \
-        clazz = fi.classname or self.Module, \
+        clazz = clazz, \
         fname = fi.jni_name + ["",suffix][isoverload], \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
