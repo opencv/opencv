@@ -552,12 +552,14 @@ struct Hamming2
         return (((n + (n >> 4))& 0xF0F0F0F)* 0x1010101) >> 24;
     }
 
+#ifdef FLANN_PLATFORM_64_BIT
     unsigned int popcnt64(uint64_t n) const
     {
         n -= ((n >> 1) & 0x5555555555555555);
         n = (n & 0x3333333333333333) + ((n >> 2) & 0x3333333333333333);
         return (((n + (n >> 4))& 0x0f0f0f0f0f0f0f0f)* 0x0101010101010101) >> 56;
     }
+#endif
 
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
