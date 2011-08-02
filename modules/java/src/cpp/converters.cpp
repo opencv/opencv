@@ -10,7 +10,7 @@
 
 using namespace cv;
 
-#define CHECK_MAT(cond) if(cond){ LOGD(#cond); return; }
+#define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
 
 
 // vector_int
@@ -18,7 +18,7 @@ using namespace cv;
 void Mat_to_vector_int(Mat& mat, vector<int>& v_int)
 {
 	v_int.clear();
-	CHECK_MAT(mat.type()!= CV_32SC1 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_32SC1 && mat.cols==1);
 	v_int = (vector<int>) mat;
 }
 
@@ -33,7 +33,7 @@ void vector_int_to_Mat(vector<int>& v_int, Mat& mat)
 void Mat_to_vector_double(Mat& mat, vector<double>& v_double)
 {
 	v_double.clear();
-	CHECK_MAT(mat.type()!= CV_64FC1 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_64FC1 && mat.cols==1);
 	v_double = (vector<double>) mat;
 }
 
@@ -48,7 +48,7 @@ void vector_double_to_Mat(vector<double>& v_double, Mat& mat)
 void Mat_to_vector_float(Mat& mat, vector<float>& v_float)
 {
 	v_float.clear();
-	CHECK_MAT(mat.type()!= CV_32FC1 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_32FC1 && mat.cols==1);
 	v_float = (vector<float>) mat;
 }
 
@@ -63,7 +63,7 @@ void vector_float_to_Mat(vector<float>& v_float, Mat& mat)
 void Mat_to_vector_uchar(Mat& mat, vector<uchar>& v_uchar)
 {
 	v_uchar.clear();
-	CHECK_MAT(mat.type()!= CV_8UC1 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_8UC1 && mat.cols==1);
 	v_uchar = (vector<uchar>) mat;
 }
 
@@ -73,7 +73,7 @@ void Mat_to_vector_uchar(Mat& mat, vector<uchar>& v_uchar)
 void Mat_to_vector_Rect(Mat& mat, vector<Rect>& v_rect)
 {
 	v_rect.clear();
-	CHECK_MAT(mat.type()!= CV_32SC4 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_32SC4 && mat.cols==1);
 	v_rect = (vector<Rect>) mat;
 }
 
@@ -87,12 +87,78 @@ void vector_Rect_to_Mat(vector<Rect>& v_rect, Mat& mat)
 void Mat_to_vector_Point(Mat& mat, vector<Point>& v_point)
 {
 	v_point.clear();
-	CHECK_MAT(mat.type()!= CV_32SC2 || mat.cols!=1);
+	CHECK_MAT(mat.type()==CV_32SC2 && mat.cols==1);
 	v_point = (vector<Point>) mat;
+}
+
+//vector_Point2f
+void Mat_to_vector_Point2f(Mat& mat, vector<Point2f>& v_point)
+{
+	v_point.clear();
+	CHECK_MAT(mat.type()==CV_32FC2 && mat.cols==1);
+	v_point = (vector<Point2f>) mat;
+}
+
+//vector_Point2d
+void Mat_to_vector_Point2d(Mat& mat, vector<Point2d>& v_point)
+{
+	v_point.clear();
+	CHECK_MAT(mat.type()==CV_64FC2 && mat.cols==1);
+	v_point = (vector<Point2d>) mat;
+}
+
+
+//vector_Point3i
+void Mat_to_vector_Point3i(Mat& mat, vector<Point3i>& v_point)
+{
+	v_point.clear();
+	CHECK_MAT(mat.type()==CV_32SC3 && mat.cols==1);
+	v_point = (vector<Point3i>) mat;
+}
+
+//vector_Point3f
+void Mat_to_vector_Point3f(Mat& mat, vector<Point3f>& v_point)
+{
+	v_point.clear();
+	CHECK_MAT(mat.type()==CV_32FC3 && mat.cols==1);
+	v_point = (vector<Point3f>) mat;
+}
+
+//vector_Point3d
+void Mat_to_vector_Point3d(Mat& mat, vector<Point3d>& v_point)
+{
+	v_point.clear();
+	CHECK_MAT(mat.type()==CV_64FC3 && mat.cols==1);
+	v_point = (vector<Point3d>) mat;
 }
 
 
 void vector_Point_to_Mat(vector<Point>& v_point, Mat& mat)
+{
+	mat = Mat(v_point);
+}
+
+void vector_Point2f_to_Mat(vector<Point2f>& v_point, Mat& mat)
+{
+	mat = Mat(v_point);
+}
+
+void vector_Point2d_to_Mat(vector<Point2d>& v_point, Mat& mat)
+{
+	mat = Mat(v_point);
+}
+
+void vector_Point3i_to_Mat(vector<Point3i>& v_point, Mat& mat)
+{
+	mat = Mat(v_point);
+}
+
+void vector_Point3f_to_Mat(vector<Point3f>& v_point, Mat& mat)
+{
+	mat = Mat(v_point);
+}
+
+void vector_Point3d_to_Mat(vector<Point3d>& v_point, Mat& mat)
 {
 	mat = Mat(v_point);
 }
@@ -102,7 +168,7 @@ void vector_Point_to_Mat(vector<Point>& v_point, Mat& mat)
 void Mat_to_vector_KeyPoint(Mat& mat, vector<KeyPoint>& v_kp)
 {
     v_kp.clear();
-    CHECK_MAT(mat.type()!= CV_64FC(7) || mat.cols!=1);
+    CHECK_MAT(mat.type()==CV_64FC(7) && mat.cols==1);
 	for(int i=0; i<mat.rows; i++)
 	{
 		Vec<double, 7> v = mat.at< Vec<double, 7> >(i, 0);
@@ -138,6 +204,8 @@ void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat)
 			Mat& m = *( (Mat*) addr );
 			v_mat.push_back(m);
 		}
+	} else {
+		LOGD("Mat_to_vector_Mat() FAILED: mat.type() == CV_32SC2 && mat.cols == 1");
 	}
 }
 

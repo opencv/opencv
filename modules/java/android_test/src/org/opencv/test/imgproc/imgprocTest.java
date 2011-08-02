@@ -554,9 +554,7 @@ public class imgprocTest extends OpenCVTestCase {
 		 Size zeroZone = new Size(-1, -1);		 
 		 TermCriteria criteria = new TermCriteria(2/*TODO: CV_TERMCRIT_EPS*/, 0, 0.01);
 		 
-		 Mat cornersMat = Converters.vector_Point2f_to_Mat(corners);
-		 Imgproc.cornerSubPix(img, cornersMat, winSize, zeroZone, criteria);
-		 Converters.Mat_to_vector_Point(cornersMat, corners);
+		 Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
 		 assertPointEquals(truthPosition, corners.get(0), weakEPS);
     }
 

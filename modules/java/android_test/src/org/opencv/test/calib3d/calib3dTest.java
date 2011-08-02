@@ -261,7 +261,7 @@ public class calib3dTest extends OpenCVTestCase {
             pts2.add(new Point(x, y));
         }
         
-        Mat fm = Calib3d.findFundamentalMat(Converters.vector_Point2f_to_Mat(pts1), Converters.vector_Point2f_to_Mat(pts2));
+        Mat fm = Calib3d.findFundamentalMat(pts1, pts2);
         
         truth = new Mat(3,3,CvType.CV_64F);
         truth.put(0, 0, 0, -0.5, -0.5, 0.5, 0, 0, 0.5, 0, 0);
@@ -296,9 +296,7 @@ public class calib3dTest extends OpenCVTestCase {
             transformedPoints.add(new Point(y, x));
         }
 
-        Mat hmg = Calib3d.findHomography(
-                Converters.vector_Point2f_to_Mat(originalPoints),
-                Converters.vector_Point2f_to_Mat(transformedPoints));
+        Mat hmg = Calib3d.findHomography(originalPoints, transformedPoints);
 
         truth = new Mat(3, 3, CvType.CV_64F);
         truth.put(0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1);
@@ -543,9 +541,7 @@ public class calib3dTest extends OpenCVTestCase {
 
         Mat rvec = new Mat();
         Mat tvec = new Mat();
-        Calib3d.solvePnP(Converters.vector_Point3f_to_Mat(points3d),
-                Converters.vector_Point2f_to_Mat(points2d), intrinsics,
-                new Mat(), rvec, tvec);
+        Calib3d.solvePnP(points3d, points2d, intrinsics, new Mat(), rvec, tvec);
 
         Mat truth_rvec = new Mat(3, 1, CvType.CV_64F);
         truth_rvec.put(0, 0, 0, Math.PI / 2, 0);

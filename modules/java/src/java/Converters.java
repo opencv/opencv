@@ -12,74 +12,220 @@ import org.opencv.features2d.KeyPoint;
 public class Converters {
 
     public static Mat vector_Point_to_Mat(List<Point> pts) {
-        Mat res;
-        int count = (pts!=null) ? pts.size() : 0;
-        if(count>0){
-            res = new Mat(count, 1, CvType.CV_32SC2);
-            int[] buff = new int[count*2];
-            for(int i=0; i<count; i++) {
-                Point p = pts.get(i);
-                buff[i*2]   = (int)p.x;
-                buff[i*2+1] = (int)p.y;
-            }
-            res.put(0, 0, buff);
-        } else {
-            res = new Mat();
-        }
-        return res;
+        return vector_Point_to_Mat(pts, CvType.CV_32S);
     }
 
     public static Mat vector_Point2f_to_Mat(List<Point> pts) {
+        return vector_Point_to_Mat(pts, CvType.CV_32F);
+    }
+
+    public static Mat vector_Point2d_to_Mat(List<Point> pts) {
+        return vector_Point_to_Mat(pts, CvType.CV_64F);
+    }
+
+    public static Mat vector_Point_to_Mat(List<Point> pts, int typeDepth) {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
         if(count>0){
-            res = new Mat(count, 1, CvType.CV_32FC2);
-            float[] buff = new float[count*2];
-            for(int i=0; i<count; i++) {
-                Point p = pts.get(i);
-                buff[i*2]   = (float)p.x;
-                buff[i*2+1] = (float)p.y;
+            switch (typeDepth) {
+                case CvType.CV_32S:
+                {
+                    res = new Mat(count, 1, CvType.CV_32SC2);
+                    int[] buff = new int[count*2];
+                    for(int i=0; i<count; i++) {
+                        Point p = pts.get(i);
+                        buff[i*2]   = (int)p.x;
+                        buff[i*2+1] = (int)p.y;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                case CvType.CV_32F:
+                {
+                    res = new Mat(count, 1, CvType.CV_32FC2);
+                    float[] buff = new float[count*2];
+                    for(int i=0; i<count; i++) {
+                        Point p = pts.get(i);
+                        buff[i*2]   = (float)p.x;
+                        buff[i*2+1] = (float)p.y;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                case CvType.CV_64F:
+                {
+                    res = new Mat(count, 1, CvType.CV_64FC2);
+                    double[] buff = new double[count*2];
+                    for(int i=0; i<count; i++) {
+                        Point p = pts.get(i);
+                        buff[i*2]   = p.x;
+                        buff[i*2+1] = p.y;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                default:
+                    throw new IllegalArgumentException("'typeDepth' can be CV_32S, CV_32F or CV_64F");
             }
-            res.put(0, 0, buff);
         } else {
             res = new Mat();
         }
         return res;
+    }
+
+
+    public static Mat vector_Point3i_to_Mat(List<Point3> pts) {
+        return vector_Point3_to_Mat(pts, CvType.CV_32S);
     }
 
     public static Mat vector_Point3f_to_Mat(List<Point3> pts) {
+        return vector_Point3_to_Mat(pts, CvType.CV_32F);
+    }
+
+    public static Mat vector_Point3d_to_Mat(List<Point3> pts) {
+        return vector_Point3_to_Mat(pts, CvType.CV_64F);
+    }
+
+    public static Mat vector_Point3_to_Mat(List<Point3> pts, int typeDepth) {
         Mat res;
         int count = (pts!=null) ? pts.size() : 0;
         if(count>0){
-            res = new Mat(count, 1, CvType.CV_32FC3);
-            float[] buff = new float[count*3];
-            for(int i=0; i<count; i++) {
-                Point3 p = pts.get(i);
-                buff[i*3]   = (float)p.x;
-                buff[i*3+1] = (float)p.y;
-                buff[i*3+2] = (float)p.z;
+            switch (typeDepth){
+                case CvType.CV_32S:
+                {
+                    res = new Mat(count, 1, CvType.CV_32SC3);
+                    int[] buff = new int[count*3];
+                    for(int i=0; i<count; i++) {
+                        Point3 p = pts.get(i);
+                        buff[i*3]   = (int)p.x;
+                        buff[i*3+1] = (int)p.y;
+                        buff[i*3+2] = (int)p.z;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                case CvType.CV_32F:
+                {
+                    res = new Mat(count, 1, CvType.CV_64FC3);
+                    float[] buff = new float[count*3];
+                    for(int i=0; i<count; i++) {
+                        Point3 p = pts.get(i);
+                        buff[i*3]   = (float)p.x;
+                        buff[i*3+1] = (float)p.y;
+                        buff[i*3+2] = (float)p.z;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                case CvType.CV_64F:
+                {
+                    res = new Mat(count, 1, CvType.CV_64FC3);
+                    double[] buff = new double[count*3];
+                    for(int i=0; i<count; i++) {
+                        Point3 p = pts.get(i);
+                        buff[i*3]   = p.x;
+                        buff[i*3+1] = p.y;
+                        buff[i*3+2] = p.z;
+                    }
+                    res.put(0, 0, buff);
+                }
+                break;
+
+                default:
+                    throw new IllegalArgumentException("'typeDepth' can be CV_32S, CV_32F or CV_64F");
             }
-            res.put(0, 0, buff);
         } else {
             res = new Mat();
         }
         return res;
     }
 
+    public static void Mat_to_vector_Point2f(Mat m, List<Point> pts) {
+    	Mat_to_vector_Point(m, pts);
+    }
+
+    public static void Mat_to_vector_Point2d(Mat m, List<Point> pts) {
+    	Mat_to_vector_Point(m, pts);
+    }
     public static void Mat_to_vector_Point(Mat m, List<Point> pts) {
         if(pts == null)
-            throw new java.lang.IllegalArgumentException("pts == null");
+            throw new java.lang.IllegalArgumentException("Output List can't be null");
         int count = m.rows();
-        if( CvType.CV_32SC2 != m.type() ||  m.cols()!=1 )
-            throw new java.lang.IllegalArgumentException(
-                    "CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m );
+        int type = m.type();
+        if(m.cols() != 1)
+            throw new java.lang.IllegalArgumentException( "Input Mat should have one column\n" + m );
 
         pts.clear();
-        int[] buff = new int[2*count];
-        m.get(0, 0, buff);
-        for(int i=0; i<count; i++) {
-            pts.add( new Point(buff[i*2], buff[i*2+1]) );
-        }
+		if(type == CvType.CV_32SC2) {
+            int[] buff = new int[2*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point(buff[i*2], buff[i*2+1]) );
+            }
+		} else if(type == CvType.CV_32FC2){
+            float[] buff = new float[2*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point(buff[i*2], buff[i*2+1]) );
+            }
+		} else if(type == CvType.CV_64FC2){
+            double[] buff = new double[2*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point(buff[i*2], buff[i*2+1]) );
+            }
+		} else {
+			throw new java.lang.IllegalArgumentException(
+                    "Input Mat should be of CV_32SC2, CV_32FC2 or CV_64FC2 type\n" + m );
+		}
+    }
+
+    public static void Mat_to_vector_Point3i(Mat m, List<Point3> pts) {
+    	Mat_to_vector_Point3(m, pts);
+    }
+    public static void Mat_to_vector_Point3f(Mat m, List<Point3> pts) {
+    	Mat_to_vector_Point3(m, pts);
+    }
+
+    public static void Mat_to_vector_Point3d(Mat m, List<Point3> pts) {
+    	Mat_to_vector_Point3(m, pts);
+    }
+    public static void Mat_to_vector_Point3(Mat m, List<Point3> pts) {
+        if(pts == null)
+            throw new java.lang.IllegalArgumentException("Output List can't be null");
+        int count = m.rows();
+        int type = m.type();
+        if(m.cols() != 1)
+            throw new java.lang.IllegalArgumentException( "Input Mat should have one column\n" + m );
+
+        pts.clear();
+		if(type == CvType.CV_32SC3) {
+            int[] buff = new int[3*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point3(buff[i*3], buff[i*3+1], buff[i*3+2]) );
+            }
+		} else if(type == CvType.CV_32FC3){
+            float[] buff = new float[3*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point3(buff[i*3], buff[i*3+1], buff[i*3+2]) );
+            }
+		} else if(type == CvType.CV_64FC3){
+            double[] buff = new double[3*count];
+            m.get(0, 0, buff);
+            for(int i=0; i<count; i++) {
+                pts.add( new Point3(buff[i*3], buff[i*3+1], buff[i*3+2]) );
+            }
+		} else {
+			throw new java.lang.IllegalArgumentException(
+                    "Input Mat should be of CV_32SC3, CV_32FC3 or CV_64FC3 type\n" + m );
+		}
     }
 
     public static Mat vector_Mat_to_Mat(List<Mat> mats) {
