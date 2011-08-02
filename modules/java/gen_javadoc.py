@@ -22,8 +22,14 @@ class JavadocGenerator(object):
         assert args_start * args_end > 0
         if args_start >= 0:
             assert args_start < args_end
-            return (line[:args_start].strip(), offset,  filter(None, list(arg.strip() for arg in line[args_start+1:args_end].split(","))))
-        return (line, offset, [])
+            name = line[:args_start].strip()
+            if name.startswith("java"):
+                name = name[4:]
+            return (name, offset,  filter(None, list(arg.strip() for arg in line[args_start+1:args_end].split(","))))
+        name = line.strip()
+        if name.startswith("java"):
+            name = name[4:]
+        return (name, offset, [])
 
     def document(self, infile, outfile):
         inf = open(infile, "rt")

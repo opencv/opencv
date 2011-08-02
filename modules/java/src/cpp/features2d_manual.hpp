@@ -12,19 +12,31 @@ public:
 #if 0
     CV_WRAP void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     CV_WRAP void detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const;
-    CV_WRAP virtual void read( const FileNode& );
-    CV_WRAP virtual void write( FileStorage& ) const;
     CV_WRAP virtual bool empty() const;
 #endif
 
-	//supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
-	//not supported: SimpleBlob, Dense
-	CV_WRAP_AS(create) static javaFeatureDetector* jcreate( const string& detectorType )
-	{
-	    Ptr<FeatureDetector> detector = FeatureDetector::create(detectorType);
-		detector.addref();
-		return (javaFeatureDetector*)((FeatureDetector*) detector);
-	}
+    //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
+    //not supported: SimpleBlob, Dense
+    CV_WRAP_AS(create) static javaFeatureDetector* jcreate( const string& detectorType )
+    {
+        Ptr<FeatureDetector> detector = FeatureDetector::create(detectorType);
+        detector.addref();
+        return (javaFeatureDetector*)((FeatureDetector*) detector);
+    }
+
+    CV_WRAP void write( const string& fileName ) const
+    {
+        FileStorage fs(fileName, FileStorage::WRITE);
+        ((FeatureDetector*)this)->write(fs);
+        fs.release();
+    }
+
+    CV_WRAP void read( const string& fileName )
+    {
+        FileStorage fs(fileName, FileStorage::READ);
+        ((FeatureDetector*)this)->read(fs.root());
+        fs.release();
+    }
 };
 
 class CV_EXPORTS_AS(DescriptorMatcher) javaDescriptorMatcher : public DescriptorMatcher
@@ -32,14 +44,14 @@ class CV_EXPORTS_AS(DescriptorMatcher) javaDescriptorMatcher : public Descriptor
 public:
 #if 0
     CV_WRAP virtual bool isMaskSupported() const;
-	CV_WRAP virtual void add( const vector<Mat>& descriptors );
-	CV_WRAP const vector<Mat>& getTrainDescriptors() const;
-	CV_WRAP virtual void clear();
-	CV_WRAP virtual bool empty() const;
-	CV_WRAP virtual void train();
-	CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    CV_WRAP virtual void add( const vector<Mat>& descriptors );
+    CV_WRAP const vector<Mat>& getTrainDescriptors() const;
+    CV_WRAP virtual void clear();
+    CV_WRAP virtual bool empty() const;
+    CV_WRAP virtual void train();
+    CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
                 vector<DMatch>& matches, const Mat& mask=Mat() ) const;
-	CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
                    vector<vector<DMatch> >& matches, int k,
                    const Mat& mask=Mat(), bool compactResult=false ) const;
     CV_WRAP void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
@@ -51,25 +63,36 @@ public:
            const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
     CV_WRAP void radiusMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                    const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
-    CV_WRAP virtual void read( const FileNode& );
-    // Writes matcher object to a file storage
-    CV_WRAP virtual void write( FileStorage& ) const;
 #endif
 
     CV_WRAP_AS(clone) javaDescriptorMatcher* jclone( bool emptyTrainData=false ) const
-	{
-	    Ptr<DescriptorMatcher> matcher = this->clone(emptyTrainData);
-		matcher.addref();
-		return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
-	}
-	
-	//supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
-	CV_WRAP_AS(create) static javaDescriptorMatcher* jcreate( const string& descriptorMatcherType )
-	{
-	    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(descriptorMatcherType);
-		matcher.addref();
-		return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
-	}
+    {
+        Ptr<DescriptorMatcher> matcher = this->clone(emptyTrainData);
+        matcher.addref();
+        return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
+    }
+    
+    //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
+    CV_WRAP_AS(create) static javaDescriptorMatcher* jcreate( const string& descriptorMatcherType )
+    {
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(descriptorMatcherType);
+        matcher.addref();
+        return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
+    }
+
+    CV_WRAP void write( const string& fileName ) const
+    {
+        FileStorage fs(fileName, FileStorage::WRITE);
+        ((DescriptorMatcher*)this)->write(fs);
+        fs.release();
+    }
+
+    CV_WRAP void read( const string& fileName )
+    {
+        FileStorage fs(fileName, FileStorage::READ);
+        ((DescriptorMatcher*)this)->read(fs.root());
+        fs.release();
+    }
 };
 
 class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public DescriptorExtractor
@@ -78,8 +101,6 @@ public:
 #if 0
     CV_WRAP void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const;
-    CV_WRAP virtual void read( const FileNode& );
-    CV_WRAP virtual void write( FileStorage& ) const;
     CV_WRAP virtual int descriptorSize() const = 0;
     CV_WRAP virtual int descriptorType() const = 0;
 
@@ -87,13 +108,27 @@ public:
 #endif
 
     //supported SIFT, SURF, ORB, BRIEF, Opponent(XXXX)
-	//not supported: Calonder
-	CV_WRAP_AS(create) static javaDescriptorExtractor* jcreate( const string& descriptorExtractorType )
-	{
-	    Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(descriptorExtractorType);
-		extractor.addref();
-		return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
-	}
+    //not supported: Calonder
+    CV_WRAP_AS(create) static javaDescriptorExtractor* jcreate( const string& descriptorExtractorType )
+    {
+        Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(descriptorExtractorType);
+        extractor.addref();
+        return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
+    }
+
+    CV_WRAP void write( const string& fileName ) const
+    {
+        FileStorage fs(fileName, FileStorage::WRITE);
+        ((DescriptorExtractor*)this)->write(fs);
+        fs.release();
+    }
+
+    CV_WRAP void read( const string& fileName )
+    {
+        FileStorage fs(fileName, FileStorage::READ);
+        ((DescriptorExtractor*)this)->read(fs.root());
+        fs.release();
+    }
 };
 
 #if 0
@@ -122,7 +157,7 @@ CV_EXPORTS_W void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoint
                              const vector<vector<DMatch> >& matches1to2, Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=0);
-							 
+                             
 #endif
 
 } //cv
