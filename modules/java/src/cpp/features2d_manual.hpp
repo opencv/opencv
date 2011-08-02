@@ -15,11 +15,106 @@ public:
     CV_WRAP virtual bool empty() const;
 #endif
 
+    enum
+    {
+        FAST          = 1,
+        STAR          = 2,
+        SIFT          = 3,
+        SURF          = 4,
+        ORB           = 5,
+        MSER          = 6,
+        GFTT          = 7,
+        HARRIS        = 8,
+
+
+        GRIDRETECTOR = 1000,
+
+        GRID_FAST      = GRIDRETECTOR + FAST,
+        GRID_STAR      = GRIDRETECTOR + STAR,
+        GRID_SIFT      = GRIDRETECTOR + SIFT,
+        GRID_SURF      = GRIDRETECTOR + SURF,
+        GRID_ORB       = GRIDRETECTOR + ORB,
+        GRID_MSER      = GRIDRETECTOR + MSER,
+        GRID_GFTT      = GRIDRETECTOR + GFTT,
+        GRID_HARRIS    = GRIDRETECTOR + HARRIS,
+
+
+        PYRAMIDDETECTOR = 2000,
+
+        PYRAMID_FAST   = PYRAMIDDETECTOR + FAST,
+        PYRAMID_STAR   = PYRAMIDDETECTOR + STAR,
+        PYRAMID_SIFT   = PYRAMIDDETECTOR + SIFT,
+        PYRAMID_SURF   = PYRAMIDDETECTOR + SURF,
+        PYRAMID_ORB    = PYRAMIDDETECTOR + ORB,
+        PYRAMID_MSER   = PYRAMIDDETECTOR + MSER,
+        PYRAMID_GFTT   = PYRAMIDDETECTOR + GFTT,
+        PYRAMID_HARRIS = PYRAMIDDETECTOR + HARRIS,
+
+        DYNAMICDETECTOR = 3000,
+
+        DYNAMIC_FAST   = DYNAMICDETECTOR + FAST,
+        DYNAMIC_STAR   = DYNAMICDETECTOR + STAR,
+        DYNAMIC_SIFT   = DYNAMICDETECTOR + SIFT,
+        DYNAMIC_SURF   = DYNAMICDETECTOR + SURF,
+        DYNAMIC_ORB    = DYNAMICDETECTOR + ORB,
+        DYNAMIC_MSER   = DYNAMICDETECTOR + MSER,
+        DYNAMIC_GFTT   = DYNAMICDETECTOR + GFTT,
+        DYNAMIC_HARRIS = DYNAMICDETECTOR + HARRIS
+    };
+
     //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
     //not supported: SimpleBlob, Dense
-    CV_WRAP_AS(create) static javaFeatureDetector* jcreate( const string& detectorType )
+    CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
-        Ptr<FeatureDetector> detector = FeatureDetector::create(detectorType);
+        string name;
+        if (detectorType > DYNAMICDETECTOR)
+        {
+            name = "Dynamic";
+            detectorType -= DYNAMICDETECTOR;
+        }
+        if (detectorType > PYRAMIDDETECTOR)
+        {
+            name = "Pyramid";
+            detectorType -= PYRAMIDDETECTOR;
+        }
+        if (detectorType > GRIDRETECTOR)
+        {
+            name = "Grid";
+            detectorType -= GRIDRETECTOR;
+        }
+
+        switch(detectorType)
+        {
+        case FAST:
+            name += "FAST";
+            break;
+        case STAR:
+            name += "STAR";
+            break;
+        case SIFT:
+            name += "SIFT";
+            break;
+        case SURF:
+            name += "SURF";
+            break;
+        case ORB:
+            name += "ORB";
+            break;
+        case MSER:
+            name += "MSER";
+            break;
+        case GFTT:
+            name += "GFTT";
+            break;
+        case HARRIS:
+            name += "HARRIS";
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Specified feature detector type is not supported." );
+            break;
+        }
+
+        Ptr<FeatureDetector> detector = FeatureDetector::create(name);
         detector.addref();
         return (javaFeatureDetector*)((FeatureDetector*) detector);
     }
@@ -65,6 +160,15 @@ public:
                    const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
 #endif
 
+    enum
+    {
+        FLANNBASED            = 1,
+        BRUTEFORCE            = 2,
+        BRUTEFORCE_L1         = 3,
+        BRUTEFORCE_HAMMING    = 4,
+        BRUTEFORCE_HAMMINGLUT = 5
+    };
+
     CV_WRAP_AS(clone) javaDescriptorMatcher* jclone( bool emptyTrainData=false ) const
     {
         Ptr<DescriptorMatcher> matcher = this->clone(emptyTrainData);
@@ -73,9 +177,34 @@ public:
     }
     
     //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
-    CV_WRAP_AS(create) static javaDescriptorMatcher* jcreate( const string& descriptorMatcherType )
+    CV_WRAP static javaDescriptorMatcher* create( int matcherType )
     {
-        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(descriptorMatcherType);
+        string name;
+
+        switch(matcherType)
+        {
+        case FLANNBASED:
+            name = "FlannBased";
+            break;
+        case BRUTEFORCE:
+            name = "BruteForce";
+            break;
+        case BRUTEFORCE_L1:
+            name = "BruteForce-L1";
+            break;
+        case BRUTEFORCE_HAMMING:
+            name = "BruteForce-Hamming";
+            break;
+        case BRUTEFORCE_HAMMINGLUT:
+            name = "BruteForce-HammingLUT";
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Specified descriptor matcher type is not supported." );
+            break;
+
+        }
+
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(name);
         matcher.addref();
         return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
     }
@@ -107,11 +236,54 @@ public:
     CV_WRAP virtual bool empty() const;
 #endif
 
+    enum
+    {
+        SIFT  = 1,
+        SURF  = 2,
+        ORB   = 3,
+        BRIEF = 4,
+
+
+        OPPONENTEXTRACTOR = 1000,
+
+        OPPENENT_SIFT  = OPPONENTEXTRACTOR + SIFT,
+        OPPENENT_SURF  = OPPONENTEXTRACTOR + SURF,
+        OPPENENT_ORB   = OPPONENTEXTRACTOR + ORB,
+        OPPENENT_BRIEF = OPPONENTEXTRACTOR + BRIEF
+    };
+
     //supported SIFT, SURF, ORB, BRIEF, Opponent(XXXX)
     //not supported: Calonder
-    CV_WRAP_AS(create) static javaDescriptorExtractor* jcreate( const string& descriptorExtractorType )
+    CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
-        Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(descriptorExtractorType);
+        string name;
+
+        if (extractorType > OPPONENTEXTRACTOR)
+        {
+            name = "Opponent";
+            extractorType -= OPPONENTEXTRACTOR;
+        }
+
+        switch(extractorType)
+        {
+        case SIFT:
+            name += "SIFT";
+            break;
+        case SURF:
+            name += "SURF";
+            break;
+        case ORB:
+            name += "ORB";
+            break;
+        case BRIEF:
+            name += "BRIEF";
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Specified descriptor extractor type is not supported." );
+            break;
+        }
+
+        Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(name);
         extractor.addref();
         return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
     }
