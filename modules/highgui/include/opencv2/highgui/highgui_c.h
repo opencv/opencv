@@ -372,9 +372,7 @@ enum
     
     // Properties of cameras available through GStreamer interface
     CV_CAP_GSTREAMER_QUEUE_LENGTH   = 200, // default is 1
-    CV_CAP_PROP_PVAPI_MULTICASTIP   = 300, // ip for anable multicast master mode. 0 for disable multicast
-    
-    CV_CAP_PROP_THREADS = 400 
+    CV_CAP_PROP_PVAPI_MULTICASTIP   = 300  // ip for anable multicast master mode. 0 for disable multicast
 };
 
 enum

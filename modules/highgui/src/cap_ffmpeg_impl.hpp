@@ -137,6 +137,52 @@ extern "C" {
 
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
+#if defined WIN32 || defined _WIN32
+    #include <windows.h>
+#elif defined __linux__ || defined __APPLE__
+    #include <unistd.h>
+    #include <stdio.h>
+    #include <sys/types.h> 
+    #include <sys/sysctl.h>
+#endif
+
+int get_number_of_cpus(void)
+{
+#if defined WIN32 || defined _WIN32
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo( &sysinfo );
+    
+    return (int)sysinfo.dwNumberOfProcessors;
+#elif defined __linux__
+    return (int)sysconf( _SC_NPROCESSORS_ONLN );
+#elif defined __APPLE__
+    int numCPU=0;
+    int mib[4];
+    size_t len = sizeof(numCPU); 
+    
+    /* set the mib for hw.ncpu */
+    mib[0] = CTL_HW;
+    mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
+    
+    /* get the number of CPUs from the system */
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+    
+    if( numCPU < 1 ) 
+    {
+        mib[1] = HW_NCPU;
+        sysctl( mib, 2, &numCPU, &len, NULL, 0 );
+        
+        if( numCPU < 1 )
+            numCPU = 1;
+    }
+
+    return (int)numCPU;
+#else
+    return 1;
+#endif
+}
+
+
 char * FOURCC2str( int fourcc )
 {
     char * mystr=(char*)malloc(5);
@@ -365,7 +411,6 @@ struct CvCapture_FFMPEG
    and so the filename is needed to reopen the file on backward seeking.
 */
     char              * filename;
-	int                 count_threads;
 };
 
 
@@ -380,7 +425,6 @@ void CvCapture_FFMPEG::init()
     memset( &frame, 0, sizeof(frame) );
     filename = 0;
     packet.data = NULL;
-	count_threads = 1;
 #if defined(HAVE_FFMPEG_SWSCALE)
     img_convert_ctx = 0;
 #endif
@@ -447,7 +491,7 @@ bool CvCapture_FFMPEG::reopen()
     AVCodecContext *enc = &ic->streams[video_stream]->codec;
 #endif
 
-    avcodec_thread_init(enc, count_threads);
+    avcodec_thread_init(enc, get_number_of_cpus());
 
     AVCodec *codec = avcodec_find_decoder(enc->codec_id);
     avcodec_open(enc, codec);
@@ -494,7 +538,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         AVCodecContext *enc = &ic->streams[i]->codec;
 #endif
 
-        avcodec_thread_init(enc, count_threads);
+        avcodec_thread_init(enc, get_number_of_cpus());
 
         #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(53, 4, 0)
             #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
@@ -717,9 +761,6 @@ double CvCapture_FFMPEG::getProperty( int property_id )
         return (double)video_st->codec.codec_tag;
 #endif
     break;
-    case CV_CAP_PROP_THREADS:
-		return count_threads;
-	break;
     }
 	
     return 0;
@@ -804,13 +845,6 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
             picture_pts=(int64_t)value;
         }
         break;
-		
-    case CV_CAP_PROP_THREADS:
-	{
-		count_threads = (int)value;
-	} 
-	break;
-
     default:
         return false;
     }
