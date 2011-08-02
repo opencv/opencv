@@ -111,7 +111,7 @@ public class Converters {
 
                 case CvType.CV_32F:
                 {
-                    res = new Mat(count, 1, CvType.CV_64FC3);
+                    res = new Mat(count, 1, CvType.CV_32FC3);
                     float[] buff = new float[count*3];
                     for(int i=0; i<count; i++) {
                         Point3 p = pts.get(i);
