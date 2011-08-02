@@ -1,59 +1,109 @@
 package org.opencv.test.core;
 
+import org.opencv.core.Range;
 import org.opencv.test.OpenCVTestCase;
 
 public class RangeTest extends OpenCVTestCase {
 
-	protected void setUp() throws Exception {
-		super.setUp();
-	}
+    Range range;
+    Range r1;
+    Range r2;
 
-	public void testAll() {
-		fail("Not yet implemented");
-	}
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        
+        range = new Range();
+        r1 = new Range(1, 11);
+        r2 = new Range(1, 1);
+    }
 
-	public void testClone() {
-		fail("Not yet implemented");
-	}
+    public void testAll() {
+        range = Range.all();
+        assertEquals(Integer.MIN_VALUE, range.start);
+        assertEquals(Integer.MAX_VALUE, range.end);
+    }
 
-	public void testEmpty() {
-		fail("Not yet implemented");
-	}
+    public void testClone() {
+        Range dstRange = new Range();
+        dstRange = r1.clone();
+        assertEquals(r1, dstRange);
+    }
 
-	public void testEqualsObject() {
-		fail("Not yet implemented");
-	}
+    public void testEmpty() {
+        boolean flag;
 
-	public void testIntersection() {
-		fail("Not yet implemented");
-	}
+        flag = r1.empty();
+        assertFalse(flag);
 
-	public void testRange() {
-		fail("Not yet implemented");
-	}
+        flag = r2.empty();
+        assertTrue(flag);
+    }
 
-	public void testRangeDoubleArray() {
-		fail("Not yet implemented");
-	}
+    public void testEqualsObject() {
+        assertFalse(r2.equals(r1));
+        
+        range = r1.clone();
+        assertTrue(r1.equals(range));
+    }
 
-	public void testRangeIntInt() {
-		fail("Not yet implemented");
-	}
+    public void testIntersection() {
+        range = r1.intersection(r2);
+        assertEquals(r2, range);
+    }
 
-	public void testSet() {
-		fail("Not yet implemented");
-	}
+    public void testRange() {
+        range = new Range();
+        
+        assertNotNull(range);
+        assertEquals(0, range.start);
+        assertEquals(0, range.end);
+    }
 
-	public void testShift() {
-		fail("Not yet implemented");
-	}
+    public void testRangeDoubleArray() {
+        double[] vals = { 2, 4 };
+        Range r = new Range(vals);
 
-	public void testSize() {
-		fail("Not yet implemented");
-	}
+        assertTrue(2 == r.start);
+        assertTrue(4 == r.end);
+    }
 
-	public void testToString() {
-		fail("Not yet implemented");
-	}
+    public void testRangeIntInt() {
+        r1 = new Range(12, 13);
+        
+        assertNotNull(r1);
+        assertEquals(12, r1.start);
+        assertEquals(13, r1.end);
+    }
+
+    public void testSet() {
+        double[] vals1 = {};
+        r1.set(vals1);
+        assertEquals(0, r1.start);
+        assertEquals(0, r1.end);
+
+        double[] vals2 = { 6, 10 };
+        r2.set(vals2);
+        assertEquals(6, r2.start);
+        assertEquals(10, r2.end);
+    }
+
+    public void testShift() {
+        int delta = 1;
+        range = range.shift(delta);
+        assertEquals(r2, range);
+    }
+
+    public void testSize() {
+        assertEquals(10, r1.size());
+
+        assertEquals(0, r2.size());
+    }
+
+    public void testToString() {
+        String actual = r1.toString();
+        String expected = "[1, 11)";
+        assertEquals(expected, actual);
+    }
 
 }

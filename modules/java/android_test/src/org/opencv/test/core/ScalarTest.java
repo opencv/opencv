@@ -1,63 +1,100 @@
 package org.opencv.test.core;
 
+import org.opencv.core.Scalar;
 import org.opencv.test.OpenCVTestCase;
 
 public class ScalarTest extends OpenCVTestCase {
 
-	protected void setUp() throws Exception {
-		super.setUp();
-	}
+    private Scalar s1;
+    private Scalar s2;
+    private Scalar dstScalar;
 
-	public void testAll() {
-		fail("Not yet implemented");
-	}
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
 
-	public void testClone() {
-		fail("Not yet implemented");
-	}
+        s1 = new Scalar(1.0);
+        s2 = Scalar.all(1.0);        
+        dstScalar = null;
+    }
 
-	public void testConj() {
-		fail("Not yet implemented");
-	}
+    public void testAll() {
+        dstScalar = Scalar.all(2.0);
+        Scalar truth = new Scalar(2.0, 2.0, 2.0, 2.0);
+        assertEquals(truth, dstScalar);
+    }
 
-	public void testEqualsObject() {
-		fail("Not yet implemented");
-	}
+    public void testClone() {
+        dstScalar = s2.clone();
+        assertEquals(s2, dstScalar);
+    }
 
-	public void testIsReal() {
-		fail("Not yet implemented");
-	}
+    public void testConj() {
+        dstScalar = s2.conj();
+        Scalar truth = new Scalar(1, -1, -1, -1);
+        assertEquals(truth, dstScalar);
+    }
 
-	public void testMulScalar() {
-		fail("Not yet implemented");
-	}
+    public void testEqualsObject() {
+        dstScalar = s2.clone();
+        assertTrue(s2.equals(dstScalar));
 
-	public void testMulScalarDouble() {
-		fail("Not yet implemented");
-	}
+        assertFalse(s2.equals(s1));
+    }
 
-	public void testScalarDouble() {
-		fail("Not yet implemented");
-	}
+    public void testIsReal() {
+        assertTrue(s1.isReal());
 
-	public void testScalarDoubleArray() {
-		fail("Not yet implemented");
-	}
+        assertFalse(s2.isReal());
+    }
 
-	public void testScalarDoubleDouble() {
-		fail("Not yet implemented");
-	}
+    public void testMulScalar() {
+        dstScalar = s2.mul(s1);
+        assertEquals(s1, dstScalar);
+    }
 
-	public void testScalarDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
+    public void testMulScalarDouble() {
+        double multiplier = 2.0;
+        dstScalar = s2.mul(s1, multiplier);
+        Scalar truth = new Scalar(2);
+        assertEquals(truth, dstScalar);
+    }
 
-	public void testScalarDoubleDoubleDoubleDouble() {
-		fail("Not yet implemented");
-	}
+    public void testScalarDouble() {
+        Scalar truth = new Scalar(1);
+        assertEquals(truth, s1);
+    }
 
-	public void testSet() {
-		fail("Not yet implemented");
-	}
+    public void testScalarDoubleArray() {
+        double[] vals = { 2.0, 4.0, 5.0, 3.0 };
+        dstScalar = new Scalar(vals);
+        
+        Scalar truth = new Scalar(2.0, 4.0, 5.0, 3.0);        
+        assertEquals(truth, dstScalar);
+    }
+
+    public void testScalarDoubleDouble() {
+        dstScalar = new Scalar(2, 5);
+        Scalar truth = new Scalar(2.0, 5.0, 0.0, 0.0);
+        assertEquals(truth, dstScalar);
+    }
+
+    public void testScalarDoubleDoubleDouble() {
+        dstScalar = new Scalar(2.0, 5.0, 5.0);
+        Scalar truth = new Scalar(2.0, 5.0, 5.0, 0.0);
+        assertEquals(truth, dstScalar);
+    }
+
+    public void testScalarDoubleDoubleDoubleDouble() {
+        dstScalar = new Scalar(2.0, 5.0, 5.0, 9.0);
+        Scalar truth = new Scalar(2.0, 5.0, 5.0, 9.0);
+        assertEquals(truth, dstScalar);
+    }
+
+    public void testSet() {
+        double[] vals = { 1.0, 1.0, 1.0, 1.0 };
+        s1.set(vals);
+        assertEquals(s2, s1);
+    }
 
 }

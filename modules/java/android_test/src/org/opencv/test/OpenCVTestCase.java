@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Core;
 import org.opencv.features2d.KeyPoint;
@@ -20,7 +21,7 @@ public class OpenCVTestCase extends TestCase {
 
     protected static Mat dst;
     protected static Mat truth;
-    
+
     protected static Scalar colorBlack;
 
     // Naming notation: <channels info>_[depth]_[dimensions]_value
@@ -67,7 +68,7 @@ public class OpenCVTestCase extends TestCase {
 
     protected static Mat v1;
     protected static Mat v2;
-    
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -76,7 +77,7 @@ public class OpenCVTestCase extends TestCase {
         assertTrue(dst.empty());
         truth = new Mat();
         assertTrue(truth.empty());
-        
+
         colorBlack = new Scalar(0);
 
         gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
@@ -98,8 +99,7 @@ public class OpenCVTestCase extends TestCase {
         gray1_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1.0));
         gray3_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(3.0));
         gray9_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(9.0));
-        gray255_32f = new Mat(matSize, matSize, CvType.CV_32F,
-                new Scalar(255.0));
+        gray255_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(255.0));
         grayE_32f = new Mat(matSize, matSize, CvType.CV_32F);
         grayE_32f = Mat.eye(matSize, matSize, CvType.CV_32FC1);
         grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F);
@@ -121,10 +121,10 @@ public class OpenCVTestCase extends TestCase {
         v2 = new Mat(1, 3, CvType.CV_32F);
         v2.put(0, 0, 2.0, 1.0, 3.0);
     }
-    
+
     @Override
     protected void tearDown() throws Exception {
-        
+
         gray0.release();
         gray1.release();
         gray2.release();
@@ -153,20 +153,71 @@ public class OpenCVTestCase extends TestCase {
         grayChess.release();
         v1.release();
         v2.release();
-        
+
         super.tearDown();
     }
     
-    public static void assertListEqual(List<Float> list1, List<Float> list2, double epsilon)
-    {
+    public static void assertListIntegerEquals(List<Integer> list1, List<Integer> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-    	
-    	for (int i = 0; i < list1.size(); i++)
-    		assertTrue(Math.abs(list1.get(i) - list2.get(i)) <= epsilon);
+
+        for (int i = 0; i < list1.size(); i++)
+            assertEquals(list1.get(i), list2.get(i));
     }
-    
+
+    public static void assertListFloatEquals(List<Float> list1, List<Float> list2, double epsilon) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertTrue(Math.abs(list1.get(i) - list2.get(i)) <= epsilon);
+    }
+
+    public static void assertListMatEquals(List<Mat> list1, List<Mat> list2, double epsilon) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertMatEqual(list1.get(i), list2.get(i), epsilon);
+    }
+
+    public static void assertListPointEquals(List<Point> list1, List<Point> list2, double epsilon) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertPointEquals(list1.get(i), list2.get(i), epsilon);
+    }
+
+    public static void assertListKeyPointEquals(List<KeyPoint> list1, List<KeyPoint> list2, double epsilon) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+        
+        for (int i = 0; i < list1.size(); i++)
+            assertKeyPointEqual(list1.get(i), list2.get(i), epsilon);
+    }
+
+    public static void assertListRectEquals(List<Rect> list1, List<Rect> list2) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+        
+        for (int i = 0; i < list1.size(); i++)
+            assertRectEquals(list1.get(i), list2.get(i));
+    }
+
+    public static void assertRectEquals(Rect expected, Rect actual) {
+        assertEquals(expected.x, actual.x);
+        assertEquals(expected.y, actual.y);
+        assertEquals(expected.width, actual.width);
+        assertEquals(expected.height, actual.height);
+    }
+
     public static void assertMatEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, true);
     }
@@ -174,16 +225,16 @@ public class OpenCVTestCase extends TestCase {
     public static void assertMatNotEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, false);
     }
-    
-    public static void assertMatEqual(Mat expected, Mat actual, double eps){
+
+    public static void assertMatEqual(Mat expected, Mat actual, double eps) {
         compareMats(expected, actual, eps, true);
     }
-    
-    public static void assertMatNotEqual(Mat expected, Mat actual, double eps){
+
+    public static void assertMatNotEqual(Mat expected, Mat actual, double eps) {
         compareMats(expected, actual, eps, false);
     }
-    
-    public static void assertKeyPointEqual(KeyPoint expected, KeyPoint actual, double eps){
+
+    public static void assertKeyPointEqual(KeyPoint expected, KeyPoint actual, double eps) {
         assertTrue(Math.hypot(expected.pt.x - actual.pt.x, expected.pt.y - actual.pt.y) < eps);
         assertTrue(Math.abs(expected.size - actual.size) < eps);
         assertTrue(Math.abs(expected.angle - actual.angle) < eps);
@@ -191,47 +242,49 @@ public class OpenCVTestCase extends TestCase {
         assertEquals(expected.octave, actual.octave);
         assertEquals(expected.class_id, actual.class_id);
     }
-    
-    public static void assertPointEquals(Point expected, Point actual, double eps){
+
+    public static void assertPointEquals(Point expected, Point actual, double eps) {
         assertEquals(expected.x, actual.x, eps);
         assertEquals(expected.y, actual.y, eps);
     }
 
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols()
-                || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
             throw new UnsupportedOperationException();
         }
-        
-        if (expected.depth() == CvType.CV_32F || expected.depth() == CvType.CV_64F){
+
+        if (expected.depth() == CvType.CV_32F || expected.depth() == CvType.CV_64F) {
             if (isEqualityMeasured)
-                throw new UnsupportedOperationException("Floating-point Mats must not be checked for exact match. Use assertMatEqual(Mat expected, Mat actual, double eps) instead.");
+                throw new UnsupportedOperationException(
+                        "Floating-point Mats must not be checked for exact match. Use assertMatEqual(Mat expected, Mat actual, double eps) instead.");
             else
-                throw new UnsupportedOperationException("Floating-point Mats must not be checked for exact match. Use assertMatNotEqual(Mat expected, Mat actual, double eps) instead.");
+                throw new UnsupportedOperationException(
+                        "Floating-point Mats must not be checked for exact match. Use assertMatNotEqual(Mat expected, Mat actual, double eps) instead.");
         }
-        
+
         Mat diff = new Mat();
         Core.absdiff(expected, actual, diff);
         Mat reshaped = diff.reshape(1);
         int mistakes = Core.countNonZero(reshaped);
-        
+
         reshaped.release();
         diff.release();
-        
-        if(isEqualityMeasured)
+
+        if (isEqualityMeasured)
             assertTrue("Mats are different in " + mistakes + " points", 0 == mistakes);
         else
             assertFalse("Mats are equal", 0 == mistakes);
     }
-    
+
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols()
-                || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
             throw new UnsupportedOperationException();
         }
+
         Mat diff = new Mat();
         Core.absdiff(expected, actual, diff);
-        if(isEqualityMeasured)
+
+        if (isEqualityMeasured)
             assertTrue("Max difference between expected and actiual Mats is bigger than " + eps,
                     Core.checkRange(diff, true, new Point(), 0.0, eps));
         else
@@ -240,8 +293,7 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public void test_1(String label) {
-        OpenCVTestRunner
-                .Log("================================================");
+        OpenCVTestRunner.Log("================================================");
         OpenCVTestRunner.Log("=============== " + label);
     }
 }

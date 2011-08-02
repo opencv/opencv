@@ -160,13 +160,11 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testMatIntIntCvTypeScalar() {
-        dst = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8U, new Scalar(
-                127));
+        dst = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8U, new Scalar(127));
         assertFalse(dst.empty());
         assertMatEqual(dst, gray127);
 
-        dst = new Mat(rgba128.rows(), rgba128.cols(), CvType.CV_8UC4,
-                Scalar.all(128));
+        dst = new Mat(rgba128.rows(), rgba128.cols(), CvType.CV_8UC4, Scalar.all(128));
         assertFalse(dst.empty());
         assertMatEqual(dst, rgba128);
     }
@@ -180,13 +178,11 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testMatIntIntIntScalar() {
-        Mat m1 = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8U,
-                new Scalar(127));
+        Mat m1 = new Mat(gray127.rows(), gray127.cols(), CvType.CV_8U, new Scalar(127));
         assertFalse(m1.empty());
         assertMatEqual(m1, gray127);
 
-        Mat m2 = new Mat(gray0_32f.rows(), gray0_32f.cols(), CvType.CV_32F,
-                new Scalar(0));
+        Mat m2 = new Mat(gray0_32f.rows(), gray0_32f.cols(), CvType.CV_32F, new Scalar(0));
         assertFalse(m2.empty());
         assertMatEqual(m2, gray0_32f, EPS);
     }

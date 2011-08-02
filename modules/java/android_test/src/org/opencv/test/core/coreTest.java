@@ -100,7 +100,7 @@ public class coreTest extends OpenCVTestCase {
         Mat mean = new Mat(1, matSize, CvType.CV_64FC1);
 
         Core.calcCovarMatrix(gray0_32f, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL);
-        
+
         assertMatEqual(gray0_64f, covar, EPS);
         assertMatEqual(gray0_64f_1d, mean, EPS);
     }
@@ -151,8 +151,7 @@ public class coreTest extends OpenCVTestCase {
 
     public void testCheckRangeMat() {
         Mat outOfRange = new Mat(2, 2, CvType.CV_64F);
-        outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY,
-                Double.POSITIVE_INFINITY, 0);
+        outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0);
 
         assertTrue(Core.checkRange(grayRnd_32f));
         assertTrue(Core.checkRange(new Mat()));
@@ -161,8 +160,7 @@ public class coreTest extends OpenCVTestCase {
 
     public void testCheckRangeMatBoolean() {
         Mat outOfRange = new Mat(2, 2, CvType.CV_64F);
-        outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY,
-                Double.POSITIVE_INFINITY, 0);
+        outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0);
 
         assertFalse(Core.checkRange(outOfRange, true));
 
@@ -336,12 +334,10 @@ public class coreTest extends OpenCVTestCase {
         assertMatEqual(gray0_32f_1d, dst, EPS);
 
         Mat in = new Mat(1, 8, CvType.CV_32F);
-        in.put(0, 0, 0.203056, 0.980407, 0.35312, -0.106651, 0.0399382,
-                0.871475, -0.648355, 0.501067);
+        in.put(0, 0, 0.203056, 0.980407, 0.35312, -0.106651, 0.0399382, 0.871475, -0.648355, 0.501067);
 
         truth = new Mat(1, 8, CvType.CV_32F);
-        truth.put(0, 0, 0.77571625, 0.37270021, 0.18529896, 0.012146413,
-                -0.32499927, -0.99302113, 0.55979407, -0.6251272);
+        truth.put(0, 0, 0.77571625, 0.37270021, 0.18529896, 0.012146413, -0.32499927, -0.99302113, 0.55979407, -0.6251272);
 
         Core.dct(in, dst);
         assertMatEqual(truth, dst, EPS);
@@ -476,10 +472,10 @@ public class coreTest extends OpenCVTestCase {
 
     public void testFillConvexPolyMatMatScalar() {
         List<Point> lp = new ArrayList<Point>(4);
-        lp.add( new Point(1, 1) );
-        lp.add( new Point(5, 0) );
-        lp.add( new Point(6, 8) );
-        lp.add( new Point(0, 9) );
+        lp.add(new Point(1, 1));
+        lp.add(new Point(5, 0));
+        lp.add(new Point(6, 8));
+        lp.add(new Point(0, 9));
         Mat points = Converters.vector_Point_to_Mat(lp);
         assertTrue(0 == Core.countNonZero(gray0));
 
@@ -492,10 +488,10 @@ public class coreTest extends OpenCVTestCase {
 
     public void testFillConvexPolyMatMatScalarInt() {
         List<Point> lp = new ArrayList<Point>(4);
-        lp.add( new Point(1, 1) );
-        lp.add( new Point(5, 0) );
-        lp.add( new Point(6, 8) );
-        lp.add( new Point(0, 9) );
+        lp.add(new Point(1, 1));
+        lp.add(new Point(5, 0));
+        lp.add(new Point(6, 8));
+        lp.add(new Point(0, 9));
         Mat points = Converters.vector_Point_to_Mat(lp);
         assertTrue(0 == Core.countNonZero(gray0));
 
@@ -508,16 +504,16 @@ public class coreTest extends OpenCVTestCase {
 
     public void testFillConvexPolyMatMatScalarIntInt() {
         List<Point> lp = new ArrayList<Point>(4);
-        lp.add( new Point(1, 1) );
-        lp.add( new Point(5, 1) );
-        lp.add( new Point(5, 8) );
-        lp.add( new Point(1, 8) );
+        lp.add(new Point(1, 1));
+        lp.add(new Point(5, 1));
+        lp.add(new Point(5, 8));
+        lp.add(new Point(1, 8));
         Mat points = Converters.vector_Point_to_Mat(lp);
         List<Point> lp2 = new ArrayList<Point>(4);
-        lp2.add( new Point(2, 2) );
-        lp2.add( new Point(10, 2) );
-        lp2.add( new Point(10, 17) ); //TODO: don't know why '16' fails the test
-        lp2.add( new Point(2, 17) );  //TODO: don't know why '16' fails the test
+        lp2.add(new Point(2, 2));
+        lp2.add(new Point(10, 2));
+        lp2.add(new Point(10, 17)); // TODO: don't know why '16' fails the test
+        lp2.add(new Point(2, 17)); // TODO: don't know why '16' fails the test
         Mat points2 = Converters.vector_Point_to_Mat(lp2);
         assertTrue(0 == Core.countNonZero(gray0));
 
@@ -654,8 +650,7 @@ public class coreTest extends OpenCVTestCase {
         in.put(0, 0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0);
 
         truth = new Mat(1, 8, CvType.CV_32F);
-        truth.put(0, 0, 3.3769724, -1.6215782, 2.3608727, 0.20730907,
-                -0.86502546, 0.028082132, -0.7673766, 0.10917115);
+        truth.put(0, 0, 3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115);
 
         Core.idct(in, dst);
         assertMatEqual(truth, dst, EPS);
@@ -666,8 +661,7 @@ public class coreTest extends OpenCVTestCase {
         in.put(0, 0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0);
 
         truth = new Mat(1, 8, CvType.CV_32F);
-        truth.put(0, 0, 3.3769724, -1.6215782, 2.3608727, 0.20730907,
-                -0.86502546, 0.028082132, -0.7673766, 0.10917115);
+        truth.put(0, 0, 3.3769724, -1.6215782, 2.3608727, 0.20730907, -0.86502546, 0.028082132, -0.7673766, 0.10917115);
 
         Core.idct(in, dst, Core.DCT_ROWS);
         assertMatEqual(truth, dst, EPS);
@@ -705,13 +699,13 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testInRange() {
-    	gray0.put(1, 1, 100, 150, 200);
+        gray0.put(1, 1, 100, 150, 200);
         Core.inRange(gray0, new Scalar(120), new Scalar(160), dst);
         byte vals[] = new byte[3];
         dst.get(1, 1, vals);
-        assertEquals(0,  vals[0]);
+        assertEquals(0, vals[0]);
         assertEquals(-1, vals[1]);
-        assertEquals(0,  vals[2]);
+        assertEquals(0, vals[2]);
         assertEquals(1, Core.countNonZero(dst));
     }
 
@@ -900,8 +894,7 @@ public class coreTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(mean));
         assertEquals(0, Core.countNonZero(stddev));
 
-        Mat submat = grayRnd.submat(0, grayRnd.rows() / 2, 0,
-                grayRnd.cols() / 2);
+        Mat submat = grayRnd.submat(0, grayRnd.rows() / 2, 0, grayRnd.cols() / 2);
         submat.setTo(new Scalar(33));
 
         Mat mask = gray0.clone();
@@ -953,31 +946,35 @@ public class coreTest extends OpenCVTestCase {
 
     public void testMixChannels() {
         rgba0.setTo(new Scalar(10, 20, 30, 40));
-        
+
         List<Mat> result = new ArrayList<Mat>();
         Core.split(rgba0, result);
         assertEquals(10, (int) result.get(0).get(0, 0)[0]);
         assertEquals(20, (int) result.get(1).get(0, 0)[0]);
         assertEquals(30, (int) result.get(2).get(0, 0)[0]);
         assertEquals(40, (int) result.get(3).get(0, 0)[0]);
-        
+
         List<Mat> src = new ArrayList<Mat>(1);
         src.add(rgba0);
-        
+
         List<Mat> dst = new ArrayList<Mat>(4);
         dst.add(gray3);
         dst.add(gray2);
         dst.add(gray1);
         dst.add(gray0);
-        
+
         List<Integer> fromTo = new ArrayList<Integer>(8);
-        fromTo.add(0); fromTo.add(3);
-        fromTo.add(1); fromTo.add(2);
-        fromTo.add(2); fromTo.add(1);
-        fromTo.add(3); fromTo.add(0);
-    	
+        fromTo.add(0);
+        fromTo.add(3);
+        fromTo.add(1);
+        fromTo.add(2);
+        fromTo.add(2);
+        fromTo.add(1);
+        fromTo.add(3);
+        fromTo.add(0);
+
         Core.mixChannels(src, dst, fromTo);
-        
+
         assertMatEqual(result.get(0), gray0);
         assertMatEqual(result.get(1), gray1);
         assertMatEqual(result.get(2), gray2);
@@ -1155,26 +1152,26 @@ public class coreTest extends OpenCVTestCase {
 
     public void testPerspectiveTransform() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
-        
+
         Core.randu(src, 0, 256);
-        
-        //FIXME: use Mat.diag
+
+        // FIXME: use Mat.diag
         Mat transformMatrix = Mat.eye(3, 3, CvType.CV_32F);
-        
+
         Core.perspectiveTransform(src, dst, transformMatrix);
-        
+
         assertMatEqual(src, dst, EPS);
     }
-    
+
     public void testPerspectiveTransform3D() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC3);
-        
+
         Core.randu(src, 0, 256);
-        
+
         Mat transformMatrix = Mat.eye(4, 4, CvType.CV_32F);
-        
+
         Core.perspectiveTransform(src, dst, transformMatrix);
-        
+
         assertMatEqual(src, dst, EPS);
     }
 
@@ -1233,8 +1230,8 @@ public class coreTest extends OpenCVTestCase {
         pts.add(new Point(7, 6));
         pts.add(new Point(1, 6));
         List<Mat> mats = new ArrayList<Mat>();
-        mats.add( Converters.vector_Point_to_Mat(pts) );
-        
+        mats.add(Converters.vector_Point_to_Mat(pts));
+
         assertEquals(0, Core.countNonZero(img));
         Core.polylines(img, mats, true, new Scalar(100));
         assertEquals(22, Core.countNonZero(img));
@@ -1250,8 +1247,8 @@ public class coreTest extends OpenCVTestCase {
         pts.add(new Point(7, 6));
         pts.add(new Point(1, 6));
         List<Mat> mats = new ArrayList<Mat>();
-        mats.add( Converters.vector_Point_to_Mat(pts) );
-        
+        mats.add(Converters.vector_Point_to_Mat(pts));
+
         assertEquals(0, Core.countNonZero(img));
         Core.polylines(img, mats, true, new Scalar(100), 2);
         assertEquals(62, Core.countNonZero(img));
@@ -1259,21 +1256,25 @@ public class coreTest extends OpenCVTestCase {
 
     public void testPolylinesMatListOfMatBooleanScalarIntInt() {
         Mat img = gray0;
-        List<Point> pts  = new ArrayList<Point>();
+        List<Point> pts = new ArrayList<Point>();
         List<Point> pts2 = new ArrayList<Point>();
-        pts.add(new Point(1, 1));  pts2.add(new Point(2, 2));
-        pts.add(new Point(7, 1));  pts2.add(new Point(14, 2));
-        pts.add(new Point(7, 6));  pts2.add(new Point(14, 12));
-        pts.add(new Point(1, 6));  pts2.add(new Point(2, 12));
-        List<Mat> mats  = new ArrayList<Mat>();
+        pts.add(new Point(1, 1));
+        pts2.add(new Point(2, 2));
+        pts.add(new Point(7, 1));
+        pts2.add(new Point(14, 2));
+        pts.add(new Point(7, 6));
+        pts2.add(new Point(14, 12));
+        pts.add(new Point(1, 6));
+        pts2.add(new Point(2, 12));
+        List<Mat> mats = new ArrayList<Mat>();
         List<Mat> mats2 = new ArrayList<Mat>();
-        mats.add( Converters.vector_Point_to_Mat(pts) );
-        mats2.add( Converters.vector_Point_to_Mat(pts2) );
-        
+        mats.add(Converters.vector_Point_to_Mat(pts));
+        mats2.add(Converters.vector_Point_to_Mat(pts2));
+
         assertTrue(0 == Core.countNonZero(img));
-        Core.polylines(img, mats,  true, new Scalar(100), 2, 8, 0);
+        Core.polylines(img, mats, true, new Scalar(100), 2, 8, 0);
         assertFalse(0 == Core.countNonZero(img));
-        Core.polylines(img, mats2, true, new Scalar(0),   2, 8, 1);
+        Core.polylines(img, mats2, true, new Scalar(0), 2, 8, 1);
         assertTrue(0 == Core.countNonZero(img));
     }
 
@@ -1584,8 +1585,7 @@ public class coreTest extends OpenCVTestCase {
         Mat subgray0 = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols());
         Mat destination = new Mat(matSize, matSize, CvType.CV_8U);
         destination.setTo(new Scalar(0));
-        Mat subdst = destination.submat(0, destination.rows(), 0,
-                destination.cols() / 2);
+        Mat subdst = destination.submat(0, destination.rows(), 0, destination.cols() / 2);
         subgray0.setTo(new Scalar(1));
         Core.transpose(gray0, destination);
         assertTrue(subdst.total() == Core.countNonZero(subdst));

@@ -1,43 +1,83 @@
 package org.opencv.test.core;
 
+import org.opencv.core.Point;
+import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 
 public class SizeTest extends OpenCVTestCase {
 
-	protected void setUp() throws Exception {
-		super.setUp();
-	}
+    Size sz1;
+    Size sz2;
+    Size dstSize;
 
-	public void testArea() {
-		fail("Not yet implemented");
-	}
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        
+        sz1 = new Size(10.0, 10.0);
+        sz2 = new Size(-1, -1);
+        dstSize = null;
+    }
 
-	public void testClone() {
-		fail("Not yet implemented");
-	}
+    public void testArea() {
+        double area = sz1.area();
+        assertEquals(100.0, area);
+    }
 
-	public void testEqualsObject() {
-		fail("Not yet implemented");
-	}
+    public void testClone() {
+        dstSize = sz1.clone();
+        assertEquals(sz1, dstSize);
+    }
 
-	public void testSet() {
-		fail("Not yet implemented");
-	}
+    public void testEqualsObject() {
+        assertFalse(sz1.equals(sz2));
 
-	public void testSize() {
-		fail("Not yet implemented");
-	}
+        sz2 = sz1.clone();
+        assertTrue(sz1.equals(sz2));
+    }
 
-	public void testSizeDoubleArray() {
-		fail("Not yet implemented");
-	}
+    public void testSet() {
+        double[] vals1 = {};
+        sz2.set(vals1);
+        assertEquals(0., sz2.width);
+        assertEquals(0., sz2.height);
 
-	public void testSizeDoubleDouble() {
-		fail("Not yet implemented");
-	}
+        double[] vals2 = { 9, 12 };
+        sz1 .set(vals2);
+        assertEquals(9., sz1.width);
+        assertEquals(12., sz1.height);
+    }
 
-	public void testSizePoint() {
-		fail("Not yet implemented");
-	}
+    public void testSize() {
+        dstSize = new Size();
+        
+        assertNotNull(dstSize);
+        assertEquals(0., dstSize.width);
+        assertEquals(0., dstSize.height);
+    }
+
+    public void testSizeDoubleArray() {
+        double[] vals = { 10, 20 };
+        sz2 = new Size(vals);
+
+        assertEquals(10., sz2.width);
+        assertEquals(20., sz2.height);
+    }
+
+    public void testSizeDoubleDouble() {
+        assertNotNull(sz1);
+
+        assertEquals(10.0, sz1.width);
+        assertEquals(10.0, sz1.height);
+    }
+
+    public void testSizePoint() {
+        Point p = new Point(2, 4);
+        sz1 = new Size(p);
+
+        assertNotNull(sz1);
+        assertEquals(2.0, sz1.width);
+        assertEquals(4.0, sz1.height);
+    }
 
 }

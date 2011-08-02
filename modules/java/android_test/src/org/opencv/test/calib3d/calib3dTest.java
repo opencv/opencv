@@ -1,6 +1,8 @@
 package org.opencv.test.calib3d;
 
-import org.opencv.Converters;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -10,9 +12,6 @@ import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class calib3dTest extends OpenCVTestCase {
 
@@ -167,8 +166,7 @@ public class calib3dTest extends OpenCVTestCase {
 
     public void testFilterSpecklesMatDoubleIntDouble() {
         gray_16s_1024.copyTo(dst);
-        Point center = new Point(gray_16s_1024.rows() / 2.,
-                gray_16s_1024.cols() / 2.);
+        Point center = new Point(gray_16s_1024.rows() / 2., gray_16s_1024.cols() / 2.);
         Core.circle(dst, center, 1, Scalar.all(4096));
 
         assertMatNotEqual(gray_16s_1024, dst);
@@ -188,10 +186,8 @@ public class calib3dTest extends OpenCVTestCase {
 
     public void testFindChessboardCornersMatSizeMatInt() {
         Size patternSize = new Size(9, 6);
-        Calib3d.findChessboardCorners(grayChess, patternSize, dst,
-                Calib3d.CALIB_CB_ADAPTIVE_THRESH
-                        + Calib3d.CALIB_CB_NORMALIZE_IMAGE
-                        + Calib3d.CALIB_CB_FAST_CHECK);
+        Calib3d.findChessboardCorners(grayChess, patternSize, dst, Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE
+                + Calib3d.CALIB_CB_FAST_CHECK);
         assertTrue(!dst.empty());
     }
 
@@ -201,13 +197,11 @@ public class calib3dTest extends OpenCVTestCase {
         img.setTo(new Scalar(255));
         Mat centers = new Mat();
 
-        assertFalse(Calib3d
-                .findCirclesGridDefault(img, new Size(5, 5), centers));
+        assertFalse(Calib3d.findCirclesGridDefault(img, new Size(5, 5), centers));
 
         for (int i = 0; i < 5; i++)
             for (int j = 0; j < 5; j++) {
-                Point pt = new Point(size * (2 * i + 1) / 10, size
-                        * (2 * j + 1) / 10);
+                Point pt = new Point(size * (2 * i + 1) / 10, size * (2 * j + 1) / 10);
                 Core.circle(img, pt, 10, new Scalar(0), -1);
             }
 
@@ -227,22 +221,20 @@ public class calib3dTest extends OpenCVTestCase {
         img.setTo(new Scalar(255));
         Mat centers = new Mat();
 
-        assertFalse(Calib3d.findCirclesGridDefault(img, new Size(3, 5),
-                centers, Calib3d.CALIB_CB_CLUSTERING
-                        | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
+        assertFalse(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
+                | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
 
         int step = size * 2 / 15;
         int offsetx = size / 6;
         int offsety = (size - 4 * step) / 2;
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 5; j++) {
-                Point pt = new Point(offsetx + (2 * i + j % 2) * step, offsety
-                        + step * j);
+                Point pt = new Point(offsetx + (2 * i + j % 2) * step, offsety + step * j);
                 Core.circle(img, pt, 10, new Scalar(0), -1);
             }
 
-        assertTrue(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers,
-                Calib3d.CALIB_CB_CLUSTERING | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
+        assertTrue(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
+                | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
 
         assertEquals(15, centers.rows());
         assertEquals(1, centers.cols());
@@ -253,17 +245,18 @@ public class calib3dTest extends OpenCVTestCase {
         List<Point> pts1 = new ArrayList<Point>();
         List<Point> pts2 = new ArrayList<Point>();
 
-        int minFundamentalMatPoints = 9; //FIXME: probably should be 8 (see ticket #1262)
+        int minFundamentalMatPoints = 9; // FIXME: probably should be 8 (see
+                                         // ticket #1262)
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;
             pts1.add(new Point(x, y));
             pts2.add(new Point(x, y));
         }
-        
+
         Mat fm = Calib3d.findFundamentalMat(pts1, pts2);
-        
-        truth = new Mat(3,3,CvType.CV_64F);
+
+        truth = new Mat(3, 3, CvType.CV_64F);
         truth.put(0, 0, 0, -0.5, -0.5, 0.5, 0, 0, 0.5, 0, 0);
         assertMatEqual(truth, fm, EPS);
     }
@@ -365,121 +358,106 @@ public class calib3dTest extends OpenCVTestCase {
     }
 
     public void testReprojectImageTo3DMatMatMat() {
-        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
-        transformMatrix.put(0, 0,
-                0, 1, 0, 0,
-                1, 0, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-        
-        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
-        
+        Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
+        transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+        Mat disparity = new Mat(matSize, matSize, CvType.CV_32F);
+
         float[] disp = new float[matSize * matSize];
         for (int i = 0; i < matSize; i++)
-            for(int j = 0; j < matSize; j++)
+            for (int j = 0; j < matSize; j++)
                 disp[i * matSize + j] = i - j;
         disparity.put(0, 0, disp);
-        
+
         Mat _3dPoints = new Mat();
-        
+
         Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix);
-        
+
         assertEquals(CvType.CV_32FC3, _3dPoints.type());
         assertEquals(matSize, _3dPoints.rows());
         assertEquals(matSize, _3dPoints.cols());
-        
-        truth = new Mat(matSize,matSize,CvType.CV_32FC3);
-        
+
+        truth = new Mat(matSize, matSize, CvType.CV_32FC3);
+
         float[] _truth = new float[matSize * matSize * 3];
         for (int i = 0; i < matSize; i++)
-            for(int j = 0; j < matSize; j++)
-            {
+            for (int j = 0; j < matSize; j++) {
                 _truth[(i * matSize + j) * 3 + 0] = i;
                 _truth[(i * matSize + j) * 3 + 1] = j;
-                _truth[(i * matSize + j) * 3 + 2] = i-j;
+                _truth[(i * matSize + j) * 3 + 2] = i - j;
             }
         truth.put(0, 0, _truth);
-        
+
         assertMatEqual(truth, _3dPoints, EPS);
     }
 
     public void testReprojectImageTo3DMatMatMatBoolean() {
-        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
-        transformMatrix.put(0, 0,
-                0, 1, 0, 0,
-                1, 0, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-        
-        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
-        
+        Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
+        transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+        Mat disparity = new Mat(matSize, matSize, CvType.CV_32F);
+
         float[] disp = new float[matSize * matSize];
         for (int i = 0; i < matSize; i++)
-            for(int j = 0; j < matSize; j++)
+            for (int j = 0; j < matSize; j++)
                 disp[i * matSize + j] = i - j;
         disp[0] = -Float.MAX_VALUE;
         disparity.put(0, 0, disp);
-        
+
         Mat _3dPoints = new Mat();
-        
+
         Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix, true);
-        
+
         assertEquals(CvType.CV_32FC3, _3dPoints.type());
         assertEquals(matSize, _3dPoints.rows());
         assertEquals(matSize, _3dPoints.cols());
-        
-        truth = new Mat(matSize,matSize,CvType.CV_32FC3);
-        
+
+        truth = new Mat(matSize, matSize, CvType.CV_32FC3);
+
         float[] _truth = new float[matSize * matSize * 3];
         for (int i = 0; i < matSize; i++)
-            for(int j = 0; j < matSize; j++)
-            {
+            for (int j = 0; j < matSize; j++) {
                 _truth[(i * matSize + j) * 3 + 0] = i;
                 _truth[(i * matSize + j) * 3 + 1] = j;
-                _truth[(i * matSize + j) * 3 + 2] = i-j;
+                _truth[(i * matSize + j) * 3 + 2] = i - j;
             }
         _truth[2] = 10000;
         truth.put(0, 0, _truth);
-        
+
         assertMatEqual(truth, _3dPoints, EPS);
     }
 
     public void testReprojectImageTo3DMatMatMatBooleanInt() {
-        Mat transformMatrix = new Mat(4,4,CvType.CV_64F);
-        transformMatrix.put(0, 0,
-                0, 1, 0, 0,
-                1, 0, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1);
-        
-        Mat disparity = new Mat(matSize,matSize,CvType.CV_32F);
-        
+        Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
+        transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+        Mat disparity = new Mat(matSize, matSize, CvType.CV_32F);
+
         float[] disp = new float[matSize * matSize];
         for (int i = 0; i < matSize; i++)
-            for(int j = 0; j < matSize; j++)
+            for (int j = 0; j < matSize; j++)
                 disp[i * matSize + j] = i - j;
         disparity.put(0, 0, disp);
-        
+
         Mat _3dPoints = new Mat();
-        
+
         Calib3d.reprojectImageTo3D(disparity, _3dPoints, transformMatrix, false, CvType.CV_16S);
-        
+
         assertEquals(CvType.CV_16SC3, _3dPoints.type());
         assertEquals(matSize, _3dPoints.rows());
         assertEquals(matSize, _3dPoints.cols());
-        
-        truth = new Mat(matSize,matSize,CvType.CV_16SC3);
-        
+
+        truth = new Mat(matSize, matSize, CvType.CV_16SC3);
+
         short[] _truth = new short[matSize * matSize * 3];
         for (short i = 0; i < matSize; i++)
-            for(short j = 0; j < matSize; j++)
-            {
+            for (short j = 0; j < matSize; j++) {
                 _truth[(i * matSize + j) * 3 + 0] = i;
                 _truth[(i * matSize + j) * 3 + 1] = j;
-                _truth[(i * matSize + j) * 3 + 2] = (short) (i-j);
+                _truth[(i * matSize + j) * 3 + 2] = (short) (i - j);
             }
         truth.put(0, 0, _truth);
-        
+
         assertMatEqual(truth, _3dPoints, EPS);
     }
 

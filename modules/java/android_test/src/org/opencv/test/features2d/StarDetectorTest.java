@@ -17,14 +17,13 @@ public class StarDetectorTest extends OpenCVTestCase {
     public void test_1() {
         super.test_1("FEATURES2D.StarDetector");
     }
-    
-    private Mat getStarImg()
-    {
+
+    private Mat getStarImg() {
         Scalar color = new Scalar(0);
         int center = 100;
         int radius = 5;
         int offset = 40;
-        
+
         Mat img = new Mat(200, 200, CvType.CV_8U, new Scalar(255));
         Core.circle(img, new Point(center - offset, center), radius, color, -1);
         Core.circle(img, new Point(center + offset, center), radius, color, -1);
@@ -38,10 +37,10 @@ public class StarDetectorTest extends OpenCVTestCase {
         Mat img = getStarImg();
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
         StarDetector star = new StarDetector();
-        
+
         star.detect(img, keypoints);
-        
-        KeyPoint truth = new KeyPoint(100, 100, 8, -1,-223.40334f, 0, -1);
+
+        KeyPoint truth = new KeyPoint(100, 100, 8, -1, -223.40334f, 0, -1);
         assertEquals(1, keypoints.size());
         assertKeyPointEqual(truth, keypoints.get(0), EPS);
     }

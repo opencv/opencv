@@ -28,25 +28,18 @@ public class SURFTest extends OpenCVTestCase {
     protected void setUp() throws Exception {
         matSize = 100;
 
-        truth = new KeyPoint[] {
-                new KeyPoint(55.775577545166016f, 44.224422454833984f, 16,
-                        9.754629f, 8617.863f, 1, -1),
-                new KeyPoint(44.224422454833984f, 44.224422454833984f, 16,
-                        99.75463f, 8617.863f, 1, -1),
-                new KeyPoint(44.224422454833984f, 55.775577545166016f, 16,
-                        189.7546f, 8617.863f, 1, -1),
-                new KeyPoint(55.775577545166016f, 55.775577545166016f, 16,
-                        279.75464f, 8617.863f, 1, -1) };
+        truth = new KeyPoint[] { new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1),
+                new KeyPoint(44.224422454833984f, 44.224422454833984f, 16, 99.75463f, 8617.863f, 1, -1),
+                new KeyPoint(44.224422454833984f, 55.775577545166016f, 16, 189.7546f, 8617.863f, 1, -1),
+                new KeyPoint(55.775577545166016f, 55.775577545166016f, 16, 279.75464f, 8617.863f, 1, -1) };
 
         super.setUp();
     }
 
     private Mat getCross() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21,
-                matSize / 2), new Scalar(100), 2);
-        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2,
-                matSize - 21), new Scalar(100), 2);
+        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
+        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
 
         return cross;
     }
@@ -75,9 +68,9 @@ public class SURFTest extends OpenCVTestCase {
         SURF surf = new SURF(8000);
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
         Mat gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        
+
         surf.detect(gray0, new Mat(), keypoints);
-        
+
         assertEquals(0, keypoints.size());
     }
 
@@ -85,9 +78,9 @@ public class SURFTest extends OpenCVTestCase {
         SURF surf = new SURF(8000);
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
         Mat cross = getCross();
-        
+
         surf.detect(cross, new Mat(), keypoints);
-        
+
         assertEquals(truth.length, keypoints.size());
         order(keypoints);
         for (int i = 0; i < truth.length; i++)
@@ -102,9 +95,9 @@ public class SURFTest extends OpenCVTestCase {
         List<KeyPoint> keypoints = new LinkedList<KeyPoint>();
         List<Float> descriptors = new LinkedList<Float>();
         Mat cross = getCross();
-        
+
         surf.detect(cross, new Mat(), keypoints, descriptors);
-        
+
         assertEquals(truth.length, keypoints.size());
         assertEquals(truth.length * surf.descriptorSize(), descriptors.size());
         order(keypoints);
@@ -124,12 +117,10 @@ public class SURFTest extends OpenCVTestCase {
         // unmodified keypoints
         assertEquals(original_keypoints.size(), keypoints.size());
         for (int i = 0; i < keypoints.size(); i++)
-            assertKeyPointEqual(original_keypoints.get(i), keypoints.get(i),
-                    EPS);
+            assertKeyPointEqual(original_keypoints.get(i), keypoints.get(i), EPS);
 
         // zero descriptors
-        assertEquals(surf.descriptorSize() * original_keypoints.size(),
-                descriptors.size());
+        assertEquals(surf.descriptorSize() * original_keypoints.size(), descriptors.size());
         for (float d : descriptors)
             assertTrue(Math.abs(d) < EPS);
     }

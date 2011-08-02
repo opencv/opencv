@@ -27,7 +27,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     static public void Log(String message) {
         Log.e(TAG, message);
     }
-    
+
     @Override
     public void onStart() {
         context = getContext();
