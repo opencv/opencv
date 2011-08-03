@@ -122,9 +122,4 @@ public class VideoCaptureTest extends OpenCVTestCase {
         capture.release();
         assertTrue(isOpened);
     }
-
-    public void testVideoCaptureString() {
-        fail("Not yet implemented");
-    }
-
 }

@@ -70,4 +70,9 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
         androidTestRunner = super.getAndroidTestRunner();
         return androidTestRunner;
     }
+    
+    public static String getOutputFileName(String name)
+    {
+        return context.getExternalFilesDir(null).getAbsolutePath() + File.separatorChar + name;
+    }
 }
