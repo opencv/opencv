@@ -205,14 +205,11 @@ public class calib3dTest extends OpenCVTestCase {
                 Core.circle(img, pt, 10, new Scalar(0), -1);
             }
 
-        org.opencv.highgui.Highgui.imwrite("/mnt/sdcard/test3.png", img);
-
         assertTrue(Calib3d.findCirclesGridDefault(img, new Size(5, 5), centers));
 
         assertEquals(25, centers.rows());
         assertEquals(1, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
-
     }
 
     public void testFindCirclesGridDefaultMatSizeMatInt() {
