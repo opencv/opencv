@@ -9,12 +9,12 @@ extern "C" {
 #endif
 
 /*
- * Class:     org_opencv_Android
+ * Class:     org_opencv_android_Utils
  * Method:    nBitmapToMat(Bitmap b)
  * Signature: (L)J
  */
 
-JNIEXPORT jlong JNICALL Java_org_opencv_Android_nBitmapToMat
+JNIEXPORT jlong JNICALL Java_org_opencv_android_Utils_nBitmapToMat
   (JNIEnv * env, jclass cls, jobject bitmap)
 {
     AndroidBitmapInfo  info;
@@ -40,11 +40,11 @@ JNIEXPORT jlong JNICALL Java_org_opencv_Android_nBitmapToMat
 }
 
 /*
- * Class:     org_opencv_Android
+ * Class:     org_opencv_android_Utils
  * Method:    nBitmapToMat(long m, Bitmap b)
  * Signature: (JL)Z
  */
-JNIEXPORT jboolean JNICALL Java_org_opencv_Android_nMatToBitmap
+JNIEXPORT jboolean JNICALL Java_org_opencv_android_Utils_nMatToBitmap
   (JNIEnv * env, jclass cls, jlong m, jobject bitmap)
 {
     AndroidBitmapInfo  info;

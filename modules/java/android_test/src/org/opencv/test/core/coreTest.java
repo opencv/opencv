@@ -3,7 +3,7 @@ package org.opencv.test.core;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opencv.Converters;
+import org.opencv.utils.Converters;
 import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;

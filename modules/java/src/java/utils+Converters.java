@@ -1,4 +1,4 @@
-package org.opencv;
+package org.opencv.utils;
 
 import java.util.List;
 
@@ -475,7 +475,7 @@ public class Converters {
         return res;
     }
 
-	public static Mat vector_DMatch_to_Mat(List<DMatch> matches) {
+    public static Mat vector_DMatch_to_Mat(List<DMatch> matches) {
         Mat res;
         int count = (matches!=null) ? matches.size() : 0;
         if(count>0){
@@ -493,8 +493,8 @@ public class Converters {
             res = new Mat();
         }
         return res;
-	}
-	
+    }
+
     public static void Mat_to_vector_DMatch(Mat m, List<DMatch> matches) {
         if(matches == null)
             throw new java.lang.IllegalArgumentException("Output List can't be null");
@@ -507,7 +507,7 @@ public class Converters {
         double[] buff = new double[4*count];
         m.get(0, 0, buff);
         for(int i=0; i<count; i++) {
-        	matches.add( new DMatch( (int)buff[4*i], (int)buff[4*i+1], (int)buff[4*i+2], (float)buff[4*i+3] ) );
+            matches.add( new DMatch( (int)buff[4*i], (int)buff[4*i+1], (int)buff[4*i+2], (float)buff[4*i+3] ) );
         }
     }
 

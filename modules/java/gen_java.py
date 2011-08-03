@@ -811,7 +811,7 @@ extern "C" {
         if ctype.startswith('vector'):
             imports.add("java.util.List")
             imports.add("org.opencv.core.Mat")
-            imports.add("org.opencv.Converters")
+            imports.add("org.opencv.utils.Converters")
             ctype = ctype.replace('vector_', '')
         j_type = ''
         if ctype in type_dict:

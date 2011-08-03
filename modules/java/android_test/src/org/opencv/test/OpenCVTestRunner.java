@@ -5,7 +5,7 @@ import android.test.AndroidTestRunner;
 import android.test.InstrumentationTestRunner;
 import android.util.Log;
 
-import org.opencv.Android;
+import org.opencv.android.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,9 +50,9 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     @Override
     public void onStart() {
         context = getContext();
-        LENA_PATH = Android.ExportResource(context, R.drawable.lena);
-        CHESS_PATH = Android.ExportResource(context, R.drawable.chessboard);
-        LBPCASCADE_FRONTALFACE_PATH = Android.ExportResource(context, R.raw.lbpcascade_frontalface);
+        LENA_PATH = Utils.ExportResource(context, R.drawable.lena);
+        CHESS_PATH = Utils.ExportResource(context, R.drawable.chessboard);
+        LBPCASCADE_FRONTALFACE_PATH = Utils.ExportResource(context, R.raw.lbpcascade_frontalface);
 
         // List<TestCase> testCases = androidTestRunner.getTestCases();
         // Collections.shuffle(testCases); //shuffle the tests order
