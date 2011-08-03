@@ -280,6 +280,28 @@ The function acts like ``sprintf``  but forms and returns an STL string. It can 
 
 
 
+checkHardwareSupport
+--------------------
+Returns true if the specified feature is supported by the host hardware.
+
+.. ocv:function:: bool checkHardwareSupport(int feature)
+.. ocv:cfunction:: int cvCheckHardwareSupport(int feature)
+.. ocv:pyfunction:: checkHardwareSupport(feature) -> Bool
+
+    :param feature: The feature of interest, one of:
+    
+                        * ``CV_CPU_MMX`` - MMX
+                        * ``CV_CPU_SSE`` - SSE
+                        * ``CV_CPU_SSE2`` - SSE 2
+                        * ``CV_CPU_SSE3`` - SSE 3
+                        * ``CV_CPU_SSSE3`` - SSSE 3
+                        * ``CV_CPU_SSE4_1`` - SSE 4.1
+                        * ``CV_CPU_SSE4_2`` - SSE 4.2
+                        * ``CV_CPU_POPCNT`` - POPCOUNT
+                        * ``CV_CPU_AVX`` - AVX
+
+The function returns true if the host hardware supports the specified feature. When user calls ``setUseOptimized(false)``, the subsequent calls to ``checkHardwareSupport()`` will return false until ``setUseOptimized(true)`` is called. This way user can dynamically switch on and off the optimized code in OpenCV.
+
 getNumThreads
 -----------------
 Returns the number of threads used by OpenCV.

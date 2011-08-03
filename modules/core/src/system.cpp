@@ -203,7 +203,7 @@ struct IPPInitializer
 
 IPPInitializer ippInitializer;
 #else
-volatile bool useOptimizedFlag = false;
+volatile bool useOptimizedFlag = true;
 #endif
 
 volatile bool USE_SSE2 = false;
