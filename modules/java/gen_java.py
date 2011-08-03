@@ -478,6 +478,8 @@ func_arg_fix = {
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
         'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
         'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
+        'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
+                                   'status' : 'vector_uchar', 'err' : 'vector_float', },
     }, # '', i.e. no class
 } # func_arg_fix
 

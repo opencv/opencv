@@ -293,7 +293,7 @@ public class Converters {
         float[] buff = new float[count];
         m.get(0, 0, buff);
         for(int i=0; i<count; i++) {
-            fs.add( new Float(buff[i]) );
+            fs.add( buff[i] );
         }
     }
 
@@ -313,6 +313,23 @@ public class Converters {
         }
         return res;
     }
+
+    public static void Mat_to_vector_uchar(Mat m, List<Byte> us) {
+        if(us == null)
+            throw new java.lang.IllegalArgumentException("Output List can't be null");
+        int count = m.rows();
+        if( CvType.CV_8UC1 != m.type() ||  m.cols()!=1 )
+            throw new java.lang.IllegalArgumentException(
+                    "CvType.CV_8UC1 != m.type() ||  m.cols()!=1\n" + m);
+
+        us.clear();
+        byte[] buff = new byte[count];
+        m.get(0, 0, buff);
+        for(int i=0; i<count; i++) {
+            us.add( buff[i] );
+        }
+    }
+
 
     public static Mat vector_char_to_Mat(List<Byte> bs) {
         Mat res;
@@ -360,7 +377,7 @@ public class Converters {
         int[] buff = new int[count];
         m.get(0, 0, buff);
         for(int i=0; i<count; i++) {
-            is.add( new Integer(buff[i]) );
+            is.add( buff[i] );
         }
     }
 
@@ -376,7 +393,7 @@ public class Converters {
         byte[] buff = new byte[count];
         m.get(0, 0, buff);
         for(int i=0; i<count; i++) {
-            bs.add( new Byte(buff[i]) );
+            bs.add( buff[i] );
         }
     }
 

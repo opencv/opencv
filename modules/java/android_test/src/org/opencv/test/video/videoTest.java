@@ -1,10 +1,14 @@
 package org.opencv.test.video;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.utils.Converters;
 import org.opencv.video.Video;
 
 public class videoTest extends OpenCVTestCase {
@@ -17,9 +21,10 @@ public class videoTest extends OpenCVTestCase {
     private Mat subLena1 = null;
     private Mat subLena2 = null;
 
-    private Mat nextPts = null;
-    private Mat status = null;
-    private Mat err = null;
+    List<Point> prevPts = null;
+    private List<Point> nextPts = null;
+    private List<Byte> status = null;
+    private List<Float> err = null;
 
     @Override
     protected void setUp() throws Exception {
@@ -33,9 +38,14 @@ public class videoTest extends OpenCVTestCase {
         subLena1 = rgbLena.submat(shift1, h + shift1, shift1, w + shift1);
         subLena2 = rgbLena.submat(shift2, h + shift2, shift2, w + shift2);
 
-        nextPts = new Mat();
-        status = new Mat();
-        err = new Mat();
+        prevPts = new ArrayList<Point>();
+        prevPts.add(new Point(1.0, 1.0));
+        prevPts.add(new Point(5.0, 5.0));
+        prevPts.add(new Point(10.0, 10.0));
+
+        nextPts = new ArrayList<Point>();
+        status = new ArrayList<Byte>();
+        err = new ArrayList<Float>();
     }
 
     public void testCalcGlobalOrientation() {
@@ -54,39 +64,37 @@ public class videoTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMat() {
-        Mat prevPts = new Mat(1, 3, CvType.CV_32FC2);
-        prevPts.put(0, 0, 1.0, 1.0, 5.0, 5.0, 10.0, 10.0);
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleIntDouble() {
+		fail("Not yet implemented");
+	}
 
-        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
-        assertEquals(3, Core.countNonZero(status));
-    }
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleInt() {
+		fail("Not yet implemented");
+	}
 
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSize() {
-        Mat prevPts = new Mat(1, 3, CvType.CV_32FC2);
-        prevPts.put(0, 0, 1.0, 1.0, 5.0, 5.0, 10.0, 10.0);
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDouble() {
+		fail("Not yet implemented");
+	}
 
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteria() {
+		fail("Not yet implemented");
+	}
+
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeInt() {
+		fail("Not yet implemented");
+	}
+
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
         Size sz = new Size(3, 3);
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
-        assertEquals(0, Core.countNonZero(status));
-    }
+        assertEquals(0, Core.countNonZero( Converters.vector_uchar_to_Mat(status) ));
+	}
 
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSizeInt() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSizeIntTermCriteria() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSizeIntTermCriteriaDouble() {
-        fail("Not yet implemented");
-    }
-
-    public void testCalcOpticalFlowPyrLKMatMatMatMatMatMatSizeIntTermCriteriaDoubleInt() {
-        fail("Not yet implemented");
-    }
-
+	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloat() {
+        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
+        assertEquals(3, Core.countNonZero( Converters.vector_uchar_to_Mat(status) ));
+	}
+    
     public void testCamShift() {
         fail("Not yet implemented");
     }

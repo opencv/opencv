@@ -67,11 +67,21 @@ void Mat_to_vector_uchar(Mat& mat, vector<uchar>& v_uchar)
 	v_uchar = (vector<uchar>) mat;
 }
 
+void vector_uchar_to_Mat(vector<uchar>& v_uchar, Mat& mat)
+{
+	mat = Mat(v_uchar, true);
+}
+
 void Mat_to_vector_char(Mat& mat, vector<char>& v_char)
 {
 	v_char.clear();
 	CHECK_MAT(mat.type()==CV_8SC1 && mat.cols==1);
 	v_char = (vector<char>) mat;
+}
+
+void vector_char_to_Mat(vector<char>& v_char, Mat& mat)
+{
+	mat = Mat(v_char, true);
 }
 
 
