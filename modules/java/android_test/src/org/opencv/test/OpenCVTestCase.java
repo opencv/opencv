@@ -31,6 +31,7 @@ public class OpenCVTestCase extends TestCase {
     protected static Mat truth;
 
     protected static Scalar colorBlack;
+    protected static Scalar colorWhite;
 
     // Naming notation: <channels info>_[depth]_[dimensions]_value
     // examples: gray0 - single channel 8U 2d Mat filled with 0
@@ -87,6 +88,7 @@ public class OpenCVTestCase extends TestCase {
         truth = null;
 
         colorBlack = new Scalar(0);
+        colorWhite = new Scalar(255, 255, 255);
 
         gray0 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(0));
         gray1 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(1));

@@ -3,7 +3,6 @@ package org.opencv.test.core;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opencv.utils.Converters;
 import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
@@ -12,6 +11,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.utils.Converters;
 
 public class coreTest extends OpenCVTestCase {
 
@@ -503,25 +503,26 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testFillConvexPolyMatMatScalarIntInt() {
-        List<Point> lp = new ArrayList<Point>(4);
+        List<Point> lp = new ArrayList<Point>();
         lp.add(new Point(1, 1));
         lp.add(new Point(5, 1));
         lp.add(new Point(5, 8));
-        lp.add(new Point(1, 8));
+        lp.add(new Point(1, 8));        
         Mat points = Converters.vector_Point_to_Mat(lp);
-        List<Point> lp2 = new ArrayList<Point>(4);
-        lp2.add(new Point(2, 2));
+        
+        List<Point> lp2 = new ArrayList<Point>();
+        lp2.add(new Point(0, 0));
         lp2.add(new Point(10, 2));
-        lp2.add(new Point(10, 17)); // TODO: don't know why '16' fails the test
-        lp2.add(new Point(2, 17)); // TODO: don't know why '16' fails the test
+        lp2.add(new Point(10, 16));
+        lp2.add(new Point(2, 16));
         Mat points2 = Converters.vector_Point_to_Mat(lp2);
-        assertTrue(0 == Core.countNonZero(gray0));
-
-        Core.fillConvexPoly(gray0, points, new Scalar(150), 4, 0);
+        
+        assertEquals(0, Core.countNonZero(gray0));
+        Core.fillConvexPoly(gray0, points, colorWhite, 4 /*TODO: lineType*/, 0);
         assertTrue(0 < Core.countNonZero(gray0));
 
-        Core.fillConvexPoly(gray0, points2, new Scalar(0), 4, 1);
-        assertTrue(0 == Core.countNonZero(gray0));
+        Core.fillConvexPoly(gray0, points2, colorBlack, 4 /*TODO: lineType*/, 0);
+        assertEquals(0, Core.countNonZero(gray0));
     }
 
     public void testFillPolyMatListOfMatScalar() {
@@ -1152,14 +1153,11 @@ public class coreTest extends OpenCVTestCase {
 
     public void testPerspectiveTransform() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
-
         Core.randu(src, 0, 256);
 
-        // FIXME: use Mat.diag
         Mat transformMatrix = Mat.eye(3, 3, CvType.CV_32F);
 
         Core.perspectiveTransform(src, dst, transformMatrix);
-
         assertMatEqual(src, dst, EPS);
     }
 

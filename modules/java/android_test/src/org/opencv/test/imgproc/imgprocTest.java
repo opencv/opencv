@@ -14,7 +14,6 @@ import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 
 public class imgprocTest extends OpenCVTestCase {
@@ -443,8 +442,8 @@ public class imgprocTest extends OpenCVTestCase {
         int ksize = 5;
 
         // TODO: eigen vals and vectors returned = 0 for most src matrices
-        truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC(6), new Scalar(0));
         Imgproc.cornerEigenValsAndVecs(src, dst, blockSize, ksize);
+        truth = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC(6), new Scalar(0));
         assertMatEqual(truth, dst, EPS);
     }
 
@@ -767,15 +766,15 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testFitEllipse() {
-        Mat points = new Mat(1, 5, CvType.CV_32FC2); // TODO: use the list of Points
+        Mat points = new Mat(1, 5, CvType.CV_32FC2);
         points.put(0, 0, 0.0, 0.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0);
 
         RotatedRect rrect = new RotatedRect();
         rrect = Imgproc.fitEllipse(points);
         assertEquals(0.0, rrect.center.x);
         assertEquals(0.0, rrect.center.y);
-        assertEquals(2.0, rrect.size.width);
-        assertEquals(2.0, rrect.size.height);
+        assertEquals(2.53, rrect.size.width, EPS);
+        assertEquals(2.53, rrect.size.height, EPS);
     }
 
     public void testFitLine() {
@@ -1414,8 +1413,6 @@ public class imgprocTest extends OpenCVTestCase {
         points.add(new Point(1, 0));
         points.add(new Point(0, 1));
 
-        OpenCVTestRunner.Log(points.toString());
-
         Point actualCenter = new Point();
         float radius = 347.0f; // FIXME: Unexpected radius is returned i.e 0
         Imgproc.minEnclosingCircle(points, actualCenter, radius);
@@ -1424,7 +1421,6 @@ public class imgprocTest extends OpenCVTestCase {
         assertEquals(truthCenter, actualCenter);
 
         float truthRadius = 1.0f;
-        OpenCVTestRunner.Log("" + radius);
         assertEquals(truthRadius, radius, weakEPS);
     }
 
