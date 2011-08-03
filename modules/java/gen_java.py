@@ -100,6 +100,10 @@ const_private_list = (
     "CV_INPAINT_.+",
     "CV_RETR_.+",
     "CV_CHAIN_APPROX_.+",
+    "OPPONENTEXTRACTOR",
+    "GRIDRETECTOR",
+    "PYRAMIDDETECTOR",
+    "DYNAMICDETECTOR",
 )
 
 # { Module : { public : [[name, val],...], private : [[]...] } }
