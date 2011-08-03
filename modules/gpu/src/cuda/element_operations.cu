@@ -40,9 +40,10 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "internal_shared.hpp"
 
@@ -354,114 +355,11 @@ namespace cv { namespace gpu { namespace mathfunc
 
     //////////////////////////////////////////////////////////////////////////
     // min/max
-
-    struct MinOp
-    {        
-        template <typename T>
-        __device__ __forceinline__ T operator()(T a, T b)
-        {
-            return min(a, b);
-        }
-        __device__ __forceinline__ float operator()(float a, float b)
-        {
-            return fmin(a, b);
-        }
-        __device__ __forceinline__ double operator()(double a, double b)
-        {
-            return fmin(a, b);
-        }
-    };
-
-    struct MaxOp
-    {        
-        template <typename T>
-        __device__ __forceinline__ T operator()(T a, T b)
-        {
-            return max(a, b);
-        }
-        __device__ __forceinline__ float operator()(float a, float b)
-        {
-            return fmax(a, b);
-        }
-        __device__ __forceinline__ double operator()(double a, double b)
-        {
-            return fmax(a, b);
-        }
-    };
-    
-    template <typename T> struct ScalarMinOp
-    {
-        T s;
-
-        explicit ScalarMinOp(T s_) : s(s_) {}
-
-        __device__ __forceinline__ T operator()(T a)
-        {
-            return min(a, s);
-        }
-    };
-    template <> struct ScalarMinOp<float>
-    {
-        float s;
-
-        explicit ScalarMinOp(float s_) : s(s_) {}
-
-        __device__ __forceinline__ float operator()(float a)
-        {
-            return fmin(a, s);
-        }
-    };
-    template <> struct ScalarMinOp<double>
-    {
-        double s;
-
-        explicit ScalarMinOp(double s_) : s(s_) {}
-
-        __device__ __forceinline__ double operator()(double a)
-        {
-            return fmin(a, s);
-        }
-    };
-    
-    template <typename T> struct ScalarMaxOp
-    {
-        T s;
-
-        explicit ScalarMaxOp(T s_) : s(s_) {}
-
-        __device__ __forceinline__ T operator()(T a)
-        {
-            return max(a, s);
-        }
-    };
-    template <> struct ScalarMaxOp<float>
-    {
-        float s;
-
-        explicit ScalarMaxOp(float s_) : s(s_) {}
-
-        __device__ __forceinline__ float operator()(float a)
-        {
-            return fmax(a, s);
-        }
-    };
-    template <> struct ScalarMaxOp<double>
-    {
-        double s;
-
-        explicit ScalarMaxOp(double s_) : s(s_) {}
-
-        __device__ __forceinline__ double operator()(double a)
-        {
-            return fmax(a, s);
-        }
-    };
     
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        MinOp op;
-        transform(src1, src2, dst, op, stream);    
+        transform(src1, src2, dst, minimum<T>(), stream);    
     }
 
     template void min_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
@@ -475,8 +373,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        MaxOp op;
-        transform(src1, src2, dst, op, stream);    
+        transform(src1, src2, dst, maximum<T>(), stream);    
     }
     
     template void max_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
@@ -490,8 +387,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ScalarMinOp<T> op(src2);
-        transform(src1, dst, op, stream);    
+        transform(src1, dst, device::bind2nd(minimum<T>(), src2), stream);    
     }
 
     template void min_gpu<uchar >(const DevMem2D& src1, uchar src2, const DevMem2D& dst, cudaStream_t stream);
@@ -501,12 +397,11 @@ namespace cv { namespace gpu { namespace mathfunc
     template void min_gpu<int   >(const DevMem2D_<int>& src1, int src2, const DevMem2D_<int>& dst, cudaStream_t stream);
     template void min_gpu<float >(const DevMem2D_<float>& src1, float src2, const DevMem2D_<float>& dst, cudaStream_t stream);
     template void min_gpu<double>(const DevMem2D_<double>& src1, double src2, const DevMem2D_<double>& dst, cudaStream_t stream);
-    
+
     template <typename T>
     void max_gpu(const DevMem2D_<T>& src1, T src2, const DevMem2D_<T>& dst, cudaStream_t stream)
     {
-        ScalarMaxOp<T> op(src2);
-        transform(src1, dst, op, stream);    
+        transform(src1, dst, device::bind2nd(maximum<T>(), src2), stream);    
     }
 
     template void max_gpu<uchar >(const DevMem2D& src1, uchar src2, const DevMem2D& dst, cudaStream_t stream);
@@ -519,100 +414,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
     
     //////////////////////////////////////////////////////////////////////////
-    // threshold
-
-    template <typename T> struct ThreshBinary
-    {
-        ThreshBinary(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
-
-        __device__ __forceinline__ T operator()(const T& src) const
-        {
-            return src > thresh ? maxVal : 0;
-        }
-
-    private:
-        T thresh;
-        T maxVal;
-    };
-
-    template <typename T> struct ThreshBinaryInv
-    {
-        ThreshBinaryInv(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
-
-        __device__ __forceinline__ T operator()(const T& src) const
-        {
-            return src > thresh ? 0 : maxVal;
-        }
-
-    private:
-        T thresh;
-        T maxVal;
-    };
-
-    template <typename T> struct ThreshTrunc
-    {
-        ThreshTrunc(T thresh_, T) : thresh(thresh_) {}
-
-        __device__ __forceinline__ T operator()(const T& src) const
-        {
-            return min(src, thresh);
-        }
-
-    private:
-        T thresh;
-    };
-    template <> struct  ThreshTrunc<float>
-    {
-        ThreshTrunc(float thresh_, float) : thresh(thresh_) {}
-
-        __device__ __forceinline__ float operator()(const float& src) const
-        {
-            return fmin(src, thresh);
-        }
-
-    private:
-        float thresh;
-    };
-    template <> struct  ThreshTrunc<double>
-    {
-        ThreshTrunc(double thresh_, double) : thresh(thresh_) {}
-
-        __device__ __forceinline__ double operator()(const double& src) const
-        {
-            return fmin(src, thresh);
-        }
-
-    private:
-        double thresh;
-    };
-
-    template <typename T> struct ThreshToZero
-    {
-    public:
-        ThreshToZero(T thresh_, T) : thresh(thresh_) {}
-
-        __device__ __forceinline__ T operator()(const T& src) const
-        {
-            return src > thresh ? src : 0;
-        }
-
-    private:
-        T thresh;
-    };
-
-    template <typename T> struct ThreshToZeroInv
-    {
-    public:
-        ThreshToZeroInv(T thresh_, T) : thresh(thresh_) {}
-
-        __device__ __forceinline__ T operator()(const T& src) const
-        {
-            return src > thresh ? 0 : src;
-        }
-
-    private:
-        T thresh;
-    };
+    // threshold  
 
     template <template <typename> class Op, typename T>
     void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
@@ -631,11 +433,11 @@ namespace cv { namespace gpu { namespace mathfunc
 
         static const caller_t callers[] = 
         {
-            threshold_caller<ThreshBinary, T>, 
-            threshold_caller<ThreshBinaryInv, T>, 
-            threshold_caller<ThreshTrunc, T>, 
-            threshold_caller<ThreshToZero, T>, 
-            threshold_caller<ThreshToZeroInv, T>
+            threshold_caller<thresh_binary_func, T>, 
+            threshold_caller<thresh_binary_inv_func, T>, 
+            threshold_caller<thresh_trunc_func, T>, 
+            threshold_caller<thresh_to_zero_func, T>, 
+            threshold_caller<thresh_to_zero_inv_func, T>
         };
 
         callers[type]((DevMem2D_<T>)src, (DevMem2D_<T>)dst, thresh, maxVal, stream);
@@ -654,19 +456,9 @@ namespace cv { namespace gpu { namespace mathfunc
     // subtract
 
     template <typename T>
-    class SubtractOp
-    {
-    public:
-        __device__ __forceinline__ T operator()(const T& l, const T& r) const
-        {
-            return l - r;
-        }
-    };
-
-    template <typename T>
     void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
     {
-        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, SubtractOp<T>(), stream);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, minus<T>(), stream);
     }
 
     template void subtractCaller<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
@@ -675,7 +467,7 @@ namespace cv { namespace gpu { namespace mathfunc
     //////////////////////////////////////////////////////////////////////////
     // pow
     
-    template<typename T, bool Signed = device::numeric_limits_gpu<T>::is_signed>
+    template<typename T, bool Signed = device::numeric_limits<T>::is_signed>
     struct PowOp
     {    
         float power;
@@ -695,7 +487,7 @@ namespace cv { namespace gpu { namespace mathfunc
 
         __device__ __forceinline__ float operator()(const T& e)
         {
-              T res = saturate_cast<T>(__powf((float)e, power));            
+            T res = saturate_cast<T>(__powf((float)e, power));            
             
             if ( (e < 0) && (1 & (int)power) )
                     res *= -1;            

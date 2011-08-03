@@ -41,7 +41,7 @@
 //M*/
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/datamov_utils.hpp"
 
 using namespace cv::gpu;
@@ -565,7 +565,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         
         int myBestTrainIdx = -1;
         int myBestImgIdx = -1;
-        typename Dist::ResultType myMin = numeric_limits_gpu<typename Dist::ResultType>::max();
+        typename Dist::ResultType myMin = numeric_limits<typename Dist::ResultType>::max();
 
         {
             typename Dist::ResultType* sdiff_row = smem + BLOCK_DIM_X * threadIdx.y;
@@ -821,7 +821,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             const T* trainDescs = trainDescs_.ptr(trainIdx);
 
-            typename Dist::ResultType myDist = numeric_limits_gpu<typename Dist::ResultType>::max();
+            typename Dist::ResultType myDist = numeric_limits<typename Dist::ResultType>::max();
 
             if (mask(queryIdx, trainIdx))
             {
@@ -932,7 +932,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         const int tid = threadIdx.x;
         
-        T myMin = numeric_limits_gpu<T>::max();
+        T myMin = numeric_limits<T>::max();
         int myMinIdx = -1;
 
         for (int i = tid; i < n; i += BLOCK_SIZE)
@@ -1007,10 +1007,10 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (threadIdx.x == 0)
         {
             float dist = sdist[0];
-            if (dist < numeric_limits_gpu<float>::max())
+            if (dist < numeric_limits<float>::max())
             {
                 int bestIdx = strainIdx[0];
-                allDist[bestIdx] = numeric_limits_gpu<float>::max();
+                allDist[bestIdx] = numeric_limits<float>::max();
                 trainIdx[i] = bestIdx;
                 distance[i] = dist;
             }

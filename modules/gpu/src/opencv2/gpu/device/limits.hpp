@@ -45,7 +45,7 @@
 
 namespace cv { namespace gpu { namespace device
 {
-    template<class T> struct numeric_limits_gpu
+    template<class T> struct numeric_limits
     {
         typedef T type;
         __device__ __forceinline__ static type min()  { return type(); };
@@ -59,7 +59,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed;
     };
 
-    template<> struct numeric_limits_gpu<bool>
+    template<> struct numeric_limits<bool>
     {
         typedef bool type;
         __device__ __forceinline__ static type min() { return false; };
@@ -73,7 +73,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = false;
     };
 
-    template<> struct numeric_limits_gpu<char>
+    template<> struct numeric_limits<char>
     {
         typedef char type;
         __device__ __forceinline__ static type min() { return CHAR_MIN; };
@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = (char)-1 == -1;
     };
 
-     template<> struct numeric_limits_gpu<signed char>
+     template<> struct numeric_limits<signed char>
     {
         typedef char type;
         __device__ __forceinline__ static type min() { return CHAR_MIN; };
@@ -101,7 +101,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = (signed char)-1 == -1;
     };
 
-    template<> struct numeric_limits_gpu<unsigned char>
+    template<> struct numeric_limits<unsigned char>
     {
         typedef unsigned char type;
         __device__ __forceinline__ static type min() { return 0; };
@@ -115,7 +115,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = false;
     };
 
-    template<> struct numeric_limits_gpu<short>
+    template<> struct numeric_limits<short>
     {
         typedef short type;
         __device__ __forceinline__ static type min() { return SHRT_MIN; };
@@ -129,7 +129,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = true;
     };
 
-    template<> struct numeric_limits_gpu<unsigned short>
+    template<> struct numeric_limits<unsigned short>
     {
         typedef unsigned short type;
         __device__ __forceinline__ static type min() { return 0; };
@@ -143,7 +143,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = false;
     };
 
-    template<> struct numeric_limits_gpu<int>
+    template<> struct numeric_limits<int>
     {
         typedef int type;
         __device__ __forceinline__ static type min() { return INT_MIN; };
@@ -158,7 +158,7 @@ namespace cv { namespace gpu { namespace device
     };
 
 
-    template<> struct numeric_limits_gpu<unsigned int>
+    template<> struct numeric_limits<unsigned int>
     {
         typedef unsigned int type;
         __device__ __forceinline__ static type min() { return 0; };
@@ -172,7 +172,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = false;
     };
 
-    template<> struct numeric_limits_gpu<long>
+    template<> struct numeric_limits<long>
     {
         typedef long type;
         __device__ __forceinline__ static type min() { return LONG_MIN; };
@@ -186,7 +186,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = true;
     };
 
-    template<> struct numeric_limits_gpu<unsigned long>
+    template<> struct numeric_limits<unsigned long>
     {
         typedef unsigned long type;
         __device__ __forceinline__ static type min() { return 0; };
@@ -200,7 +200,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = false;
     };
 
-    template<> struct numeric_limits_gpu<float>
+    template<> struct numeric_limits<float>
     {
         typedef float type;
         __device__ __forceinline__ static type min() { return 1.175494351e-38f/*FLT_MIN*/; };
@@ -214,7 +214,7 @@ namespace cv { namespace gpu { namespace device
         static const bool is_signed = true;
     };
 
-    template<> struct numeric_limits_gpu<double>
+    template<> struct numeric_limits<double>
     {
         typedef double type;
         __device__ __forceinline__ static type min() { return 2.2250738585072014e-308/*DBL_MIN*/; };

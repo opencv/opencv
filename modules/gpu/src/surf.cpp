@@ -95,9 +95,7 @@ namespace
 
             img_cols(img.cols), img_rows(img.rows),
 
-            use_mask(!mask.empty()),
-
-            upright(surf.upright)
+            use_mask(!mask.empty())
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
@@ -223,8 +221,6 @@ namespace
         int img_cols, img_rows;
 
         bool use_mask;
-
-        bool upright;
 
         int maxCandidates;
         int maxFeatures;

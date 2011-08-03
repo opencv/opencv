@@ -42,8 +42,8 @@
 
 #include "opencv2/gpu/devmem2d.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 
 #include "safe_call.hpp"
@@ -76,7 +76,7 @@ namespace filter_krnls
 {
     template <typename T, size_t size> struct SmemType_
     {
-        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t smem_t;
+        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type smem_t;
     };
     template <typename T> struct SmemType_<T, 4>
     {
@@ -111,7 +111,7 @@ namespace filter_krnls
 
             if (x < src.cols)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t sum_t;
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
                 sDataRow += threadIdx.x + BLOCK_DIM_X - anchor;
@@ -253,7 +253,7 @@ namespace filter_krnls
 
             if (y < src.rows)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t sum_t;
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
                 sDataColumn += (threadIdx.y + BLOCK_DIM_Y - anchor) * BLOCK_DIM_X;
@@ -475,7 +475,7 @@ namespace bf_krnls
                     }
                 }
 
-                float minimum = numeric_limits_gpu<float>::max();
+                float minimum = numeric_limits<float>::max();
                 int id = 0;
 
                 if (cost[0] < minimum)

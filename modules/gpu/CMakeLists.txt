@@ -23,7 +23,9 @@ source_group("Include" FILES ${lib_hdrs})
 
 #file(GLOB lib_device_hdrs "include/opencv2/${name}/device/*.h*")
 file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
+file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
+source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
@@ -83,7 +85,7 @@ foreach(d ${DEPS})
 	endif()
 endforeach()
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
 # For dynamic link numbering convenions
 set_target_properties(${the_target} PROPERTIES

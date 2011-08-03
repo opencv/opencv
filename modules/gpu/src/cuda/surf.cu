@@ -46,8 +46,10 @@
 //M*/
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/functional.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -393,31 +395,10 @@ namespace cv { namespace gpu { namespace surf
             //dss
             H[2][2] = N9[0][1][1] - 2.0f * N9[1][1][1] + N9[2][1][1];
 
-            float det = H[0][0] * (H[1][1] * H[2][2] - H[1][2] * H[2][1])
-              - H[0][1] * (H[1][0] * H[2][2] - H[1][2] * H[2][0])
-              + H[0][2] * (H[1][0] * H[2][1] - H[1][1] * H[2][0]);
+            __shared__ float x[3];
 
-            if (det != 0.0f)
+            if (solve3x3(H, dD, x))
             {
-                float invdet = 1.0f / det;
-
-                __shared__ float x[3];
-
-                x[0] = invdet * 
-                    (dD[0] * (H[1][1] * H[2][2] - H[1][2] * H[2][1]) -
-                     H[0][1] * (dD[1] * H[2][2] - H[1][2] * dD[2]) +
-                     H[0][2] * (dD[1] * H[2][1] - H[1][1] * dD[2]));
-
-                x[1] = invdet * 
-                    (H[0][0] * (dD[1] * H[2][2] - H[1][2] * dD[2]) -
-                     dD[0] * (H[1][0] * H[2][2] - H[1][2] * H[2][0]) +
-                     H[0][2] * (H[1][0] * dD[2] - dD[1] * H[2][0]));
-
-                x[2] = invdet * 
-                    (H[0][0] * (H[1][1] * dD[2] - dD[1] * H[2][1]) -
-                     H[0][1] * (H[1][0] * dD[2] - dD[1] * H[2][0]) +
-                     dD[0] * (H[1][0] * H[2][1] - H[1][1] * H[2][0]));
-
                 if (fabs(x[0]) <= 1.f && fabs(x[1]) <= 1.f && fabs(x[2]) <= 1.f)
                 {
                     // if the step is within the interpolation region, perform it
@@ -499,20 +480,6 @@ namespace cv { namespace gpu { namespace surf
     
     __constant__ float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
     __constant__ float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
-
-    __device__ void reduceSum32(volatile float* v_sum, float& sum)
-    {
-        v_sum[threadIdx.x] = sum;
-
-        if (threadIdx.x < 16)
-        {
-            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 16];
-            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 8];
-            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 4];
-            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 2];
-            v_sum[threadIdx.x] = sum += v_sum[threadIdx.x + 1];
-        }
-    }
 
     __global__ void icvCalcOrientation(const float* featureX, const float* featureY, const float* featureSize, float* featureDir)
     {        
@@ -599,8 +566,11 @@ namespace cv { namespace gpu { namespace surf
 
                 float* s_sum_row = s_sum + threadIdx.y * 32;
 
-                reduceSum32(s_sum_row, sumx);
-                reduceSum32(s_sum_row, sumy);
+                //reduceSum32(s_sum_row, sumx);
+                //reduceSum32(s_sum_row, sumy);
+
+                warpReduce32(s_sum_row, sumx, threadIdx.x, plus<volatile float>());
+                warpReduce32(s_sum_row, sumy, threadIdx.x, plus<volatile float>());
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
                 if (temp_mod > best_mod)

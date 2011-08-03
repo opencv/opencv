@@ -42,6 +42,7 @@
 //M*/
 
 #include "internal_shared.hpp"
+#include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 
 using namespace cv::gpu;
@@ -50,14 +51,11 @@ using namespace cv::gpu::device;
 
 #define UINT_BITS 32U
 
-#define LOG2_WARP_SIZE 5U
-#define WARP_SIZE (1U << LOG2_WARP_SIZE)
-
 //Warps == subhistograms per threadblock
 #define WARP_COUNT 6
 
 //Threadblock size
-#define HISTOGRAM256_THREADBLOCK_SIZE (WARP_COUNT * WARP_SIZE)
+#define HISTOGRAM256_THREADBLOCK_SIZE (WARP_COUNT * OPENCV_GPU_WARP_SIZE)
 #define HISTOGRAM256_BIN_COUNT 256
 
 //Shared memory per threadblock
@@ -73,7 +71,7 @@ namespace cv { namespace gpu { namespace histograms
 {
     #if (!USE_SMEM_ATOMICS)
 
-        #define TAG_MASK ( (1U << (UINT_BITS - LOG2_WARP_SIZE)) - 1U )
+        #define TAG_MASK ( (1U << (UINT_BITS - OPENCV_GPU_LOG_WARP_SIZE)) - 1U )
 
         __forceinline__ __device__ void addByte(volatile uint* s_WarpHist, uint data, uint threadTag)
         {
@@ -111,7 +109,7 @@ namespace cv { namespace gpu { namespace histograms
     {
         //Per-warp subhistogram storage
         __shared__ uint s_Hist[HISTOGRAM256_THREADBLOCK_MEMORY];
-        uint* s_WarpHist= s_Hist + (threadIdx.x >> LOG2_WARP_SIZE) * HISTOGRAM256_BIN_COUNT;
+        uint* s_WarpHist= s_Hist + (threadIdx.x >> OPENCV_GPU_LOG_WARP_SIZE) * HISTOGRAM256_BIN_COUNT;
 
         //Clear shared memory storage for current threadblock before processing
         #pragma unroll
@@ -119,7 +117,7 @@ namespace cv { namespace gpu { namespace histograms
            s_Hist[threadIdx.x + i * HISTOGRAM256_THREADBLOCK_SIZE] = 0;
 
         //Cycle through the entire data set, update subhistograms for each warp
-        const uint tag = threadIdx.x << (UINT_BITS - LOG2_WARP_SIZE);
+        const uint tag = threadIdx.x << (UINT_BITS - OPENCV_GPU_LOG_WARP_SIZE);
 
         __syncthreads();
         const uint colsui = d_Data.step / sizeof(uint);

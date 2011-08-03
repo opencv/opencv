@@ -869,7 +869,7 @@ TEST(GaussianBlur)
 
 TEST(pyrDown)
 {
-    gpu::PyrDownBuf buf;
+    gpu::PyrDownBuf buf(Size(4000, 4000), CV_16SC3);
 
     for (int size = 4000; size >= 1000; size -= 1000)
     {
@@ -893,7 +893,7 @@ TEST(pyrDown)
 
 TEST(pyrUp)
 {
-    gpu::PyrUpBuf buf;
+    gpu::PyrUpBuf buf(Size(4000, 4000), CV_16SC3);
 
     for (int size = 4000; size >= 1000; size -= 1000)
     {
@@ -911,6 +911,29 @@ TEST(pyrUp)
 
         GPU_ON;
         gpu::pyrUp(d_src, d_dst, buf);
+        GPU_OFF;
+    }
+}
+
+
+TEST(equalizeHist)
+{
+    for (int size = 1000; size < 4000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, size, size, CV_8UC1, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        equalizeHist(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::equalizeHist(d_src, d_dst);
         GPU_OFF;
     }
 }

@@ -40,9 +40,9 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "internal_shared.hpp"
 
@@ -190,8 +190,8 @@ namespace cv { namespace gpu { namespace mathfunc
         uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        T mymin = numeric_limits_gpu<T>::max();
-        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : numeric_limits_gpu<T>::min();
+        T mymin = numeric_limits<T>::max();
+        T mymax = numeric_limits<T>::is_signed ? -numeric_limits<T>::max() : numeric_limits<T>::min();
         uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
         uint x_end = min(x0 + (ctwidth - 1) * blockDim.x + 1, src.cols);
         for (uint y = y0; y < y_end; y += blockDim.y)
@@ -512,9 +512,9 @@ namespace cv { namespace gpu { namespace mathfunc
         uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
         uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-        T mymin = numeric_limits_gpu<T>::max();
-        T mymax = numeric_limits_gpu<T>::is_signed ? -numeric_limits_gpu<T>::max() : 
-                                                     numeric_limits_gpu<T>::min(); 
+        T mymin = numeric_limits<T>::max();
+        T mymax = numeric_limits<T>::is_signed ? -numeric_limits<T>::max() : 
+                                                     numeric_limits<T>::min(); 
         uint myminloc = 0;
         uint mymaxloc = 0;
         uint y_end = min(y0 + (ctheight - 1) * blockDim.y + 1, src.rows);
@@ -1094,10 +1094,10 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sumKernel_C2(const DevMem2D src, typename TypeVec<R, 2>::vec_t* result)
+    __global__ void sumKernel_C2(const DevMem2D src, typename TypeVec<R, 2>::vec_type* result)
     {
-        typedef typename TypeVec<T, 2>::vec_t SrcType;
-        typedef typename TypeVec<R, 2>::vec_t DstType;
+        typedef typename TypeVec<T, 2>::vec_type SrcType;
+        typedef typename TypeVec<R, 2>::vec_type DstType;
 
         __shared__ R smem[nthreads * 2];
 
@@ -1173,9 +1173,9 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sumPass2Kernel_C2(typename TypeVec<R, 2>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C2(typename TypeVec<R, 2>::vec_type* result, int size)
     {
-        typedef typename TypeVec<R, 2>::vec_t DstType;
+        typedef typename TypeVec<R, 2>::vec_type DstType;
 
         __shared__ R smem[nthreads * 2];
 
@@ -1199,10 +1199,10 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sumKernel_C3(const DevMem2D src, typename TypeVec<R, 3>::vec_t* result)
+    __global__ void sumKernel_C3(const DevMem2D src, typename TypeVec<R, 3>::vec_type* result)
     {
-        typedef typename TypeVec<T, 3>::vec_t SrcType;
-        typedef typename TypeVec<R, 3>::vec_t DstType;
+        typedef typename TypeVec<T, 3>::vec_type SrcType;
+        typedef typename TypeVec<R, 3>::vec_type DstType;
 
         __shared__ R smem[nthreads * 3];
 
@@ -1285,9 +1285,9 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sumPass2Kernel_C3(typename TypeVec<R, 3>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C3(typename TypeVec<R, 3>::vec_type* result, int size)
     {
-        typedef typename TypeVec<R, 3>::vec_t DstType;
+        typedef typename TypeVec<R, 3>::vec_type DstType;
 
         __shared__ R smem[nthreads * 3];
 
@@ -1313,10 +1313,10 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
     template <typename T, typename R, typename Op, int nthreads>
-    __global__ void sumKernel_C4(const DevMem2D src, typename TypeVec<R, 4>::vec_t* result)
+    __global__ void sumKernel_C4(const DevMem2D src, typename TypeVec<R, 4>::vec_type* result)
     {
-        typedef typename TypeVec<T, 4>::vec_t SrcType;
-        typedef typename TypeVec<R, 4>::vec_t DstType;
+        typedef typename TypeVec<T, 4>::vec_type SrcType;
+        typedef typename TypeVec<R, 4>::vec_type DstType;
 
         __shared__ R smem[nthreads * 4];
 
@@ -1407,9 +1407,9 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
     template <typename T, typename R, int nthreads>
-    __global__ void sumPass2Kernel_C4(typename TypeVec<R, 4>::vec_t* result, int size)
+    __global__ void sumPass2Kernel_C4(typename TypeVec<R, 4>::vec_type* result, int size)
     {
-        typedef typename TypeVec<R, 4>::vec_t DstType;
+        typedef typename TypeVec<R, 4>::vec_type DstType;
 
         __shared__ R smem[nthreads * 4];
 
@@ -1454,41 +1454,41 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 1>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 2:
             sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 2>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 3:
             sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 3>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 4:
             sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 4>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
@@ -1526,19 +1526,19 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             break;
         case 2:
             sumKernel_C2<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             break;
         case 3:
             sumKernel_C3<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             break;
         case 4:
             sumKernel_C4<T, R, IdentityOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             break;
         }
         cudaSafeCall( cudaGetLastError() );
@@ -1576,41 +1576,41 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 1>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 2:
             sumKernel_C2<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 2>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 3:
             sumKernel_C3<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 3>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 4:
             sumKernel_C4<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 4>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
@@ -1648,19 +1648,19 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             break;
         case 2:
             sumKernel_C2<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             break;
         case 3:
             sumKernel_C3<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             break;
         case 4:
             sumKernel_C4<T, R, AbsOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             break;
         }
         cudaSafeCall( cudaGetLastError() );
@@ -1698,41 +1698,41 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 1>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 1>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 2:
             sumKernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C2<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 2>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 2>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 3:
             sumKernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C3<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 3>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 3>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
         case 4:
             sumKernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             cudaSafeCall( cudaGetLastError() );
 
             sumPass2Kernel_C4<T, R, threads_x * threads_y><<<1, threads_x * threads_y>>>(
-                    (typename TypeVec<R, 4>::vec_t*)buf.ptr(0), grid.x * grid.y);
+                    (typename TypeVec<R, 4>::vec_type*)buf.ptr(0), grid.x * grid.y);
             cudaSafeCall( cudaGetLastError() );
 
             break;
@@ -1770,19 +1770,19 @@ namespace cv { namespace gpu { namespace mathfunc
         {
         case 1:
             sumKernel<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 1>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 1>::vec_type*)buf.ptr(0));
             break;
         case 2:
             sumKernel_C2<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 2>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 2>::vec_type*)buf.ptr(0));
             break;
         case 3:
             sumKernel_C3<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 3>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 3>::vec_type*)buf.ptr(0));
             break;
         case 4:
             sumKernel_C4<T, R, SqrOp<R>, threads_x * threads_y><<<grid, threads>>>(
-                    src, (typename TypeVec<R, 4>::vec_t*)buf.ptr(0));
+                    src, (typename TypeVec<R, 4>::vec_type*)buf.ptr(0));
             break;
         }
         cudaSafeCall( cudaGetLastError() );

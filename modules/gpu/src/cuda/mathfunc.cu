@@ -40,9 +40,9 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "internal_shared.hpp"
 

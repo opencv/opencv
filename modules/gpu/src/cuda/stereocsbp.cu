@@ -42,7 +42,7 @@
 
 #include "opencv2/gpu/devmem2d.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "safe_call.hpp"
 
 using namespace cv::gpu;
@@ -147,7 +147,7 @@ namespace cv { namespace gpu { namespace csbp
 
             for(int i = 0; i < nr_plane; i++)
             {
-                T minimum = numeric_limits_gpu<T>::max();
+                T minimum = numeric_limits<T>::max();
                 int id = 0;
                 for(int d = 0; d < cndisp; d++)
                 {
@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace csbp
 
                 data_cost_selected[i  * cdisp_step1] = minimum;
                 selected_disparity[i  * cdisp_step1] = id;
-                data_cost         [id * cdisp_step1] = numeric_limits_gpu<T>::max();
+                data_cost         [id * cdisp_step1] = numeric_limits<T>::max();
             }
         }
     }
@@ -192,7 +192,7 @@ namespace cv { namespace gpu { namespace csbp
                     data_cost_selected[nr_local_minimum * cdisp_step1] = cur;
                     selected_disparity[nr_local_minimum * cdisp_step1] = d;
 
-                    data_cost[d * cdisp_step1] = numeric_limits_gpu<T>::max();
+                    data_cost[d * cdisp_step1] = numeric_limits<T>::max();
 
                     nr_local_minimum++;
                 }
@@ -203,7 +203,7 @@ namespace cv { namespace gpu { namespace csbp
 
             for (int i = nr_local_minimum; i < nr_plane; i++)
             {
-                T minimum = numeric_limits_gpu<T>::max();
+                T minimum = numeric_limits<T>::max();
                 int id = 0;
 
                 for (int d = 0; d < cndisp; d++)
@@ -218,7 +218,7 @@ namespace cv { namespace gpu { namespace csbp
                 data_cost_selected[i * cdisp_step1] = minimum;
                 selected_disparity[i * cdisp_step1] = id;
 
-                data_cost[id * cdisp_step1] = numeric_limits_gpu<T>::max();
+                data_cost[id * cdisp_step1] = numeric_limits<T>::max();
             }
         }
     }
@@ -610,7 +610,7 @@ namespace cv { namespace gpu { namespace csbp
     {
         for(int i = 0; i < nr_plane; i++)
         {
-            T minimum = numeric_limits_gpu<T>::max();
+            T minimum = numeric_limits<T>::max();
             int id = 0;
             for(int j = 0; j < nr_plane2; j++)
             {
@@ -630,7 +630,7 @@ namespace cv { namespace gpu { namespace csbp
             l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
             r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
 
-            data_cost_new[id * cdisp_step1] = numeric_limits_gpu<T>::max();
+            data_cost_new[id * cdisp_step1] = numeric_limits<T>::max();
         }
     }
 
@@ -737,7 +737,7 @@ namespace cv { namespace gpu { namespace csbp
     __device__ void message_per_pixel(const T* data, T* msg_dst, const T* msg1, const T* msg2, const T* msg3,
                                       const T* dst_disp, const T* src_disp, int nr_plane, T* temp)
     {
-        T minimum = numeric_limits_gpu<T>::max();
+        T minimum = numeric_limits<T>::max();
 
         for(int d = 0; d < nr_plane; d++)
         {
@@ -850,7 +850,7 @@ namespace cv { namespace gpu { namespace csbp
             const T* r = r_ + (y+0) * cmsg_step1 + (x-1);
 
             int best = 0;
-            T best_val = numeric_limits_gpu<T>::max();
+            T best_val = numeric_limits<T>::max();
             for (int i = 0; i < nr_plane; ++i)
             {
                 int idx = i * cdisp_step1;

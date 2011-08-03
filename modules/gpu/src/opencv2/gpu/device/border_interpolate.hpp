@@ -43,8 +43,8 @@
 #ifndef __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
 #define __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
 
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "saturate_cast.hpp"
+#include "vec_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -72,51 +72,40 @@ namespace cv { namespace gpu { namespace device
             return -last <= mini && maxi <= 2 * last;
         }
 
-    private:
         int last;
     };
 
-
-    template <typename D>
-    struct BrdRowReflect101: BrdReflect101
+    template <typename D> struct BrdRowReflect101 : BrdReflect101
     {
         explicit BrdRowReflect101(int len): BrdReflect101(len) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return saturate_cast<D>(data[idx_low(i)]);
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return saturate_cast<D>(data[idx_high(i)]);
         }
     };
 
-
-    template <typename D>
-    struct BrdColReflect101: BrdReflect101
+    template <typename D> struct BrdColReflect101 : BrdReflect101
     {
         BrdColReflect101(int len, int step): BrdReflect101(len), step(step) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_low(i)*step));
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-    private:
         int step;
     };
-
 
     struct BrdReplicate
     {
@@ -124,12 +113,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_low(int i) const
         {
-            return max(i, 0);
+            return ::max(i, 0);
         }
 
         __device__ __forceinline__ int idx_high(int i) const 
         {
-            return min(i, last);
+            return ::min(i, last);
         }
 
         __device__ __forceinline__ int idx(int i) const
@@ -142,64 +131,52 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-    private:
         int last;
     };
 
-
-    template <typename D>
-    struct BrdRowReplicate: BrdReplicate
+    template <typename D> struct BrdRowReplicate : BrdReplicate
     {
         explicit BrdRowReplicate(int len): BrdReplicate(len) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return saturate_cast<D>(data[idx_low(i)]);
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return saturate_cast<D>(data[idx_high(i)]);
         }
     };
 
 
-    template <typename D>
-    struct BrdColReplicate: BrdReplicate
+    template <typename D> struct BrdColReplicate : BrdReplicate
     {
         BrdColReplicate(int len, int step): BrdReplicate(len), step(step) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_low(i)*step));
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-    private:
         int step;
     };
 
-    template <typename D>
-    struct BrdRowConstant
+    template <typename D> struct BrdRowConstant
     {
         explicit BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return i >= 0 ? saturate_cast<D>(data[i]) : val;
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return i < len ? saturate_cast<D>(data[i]) : val;
         }
@@ -209,24 +186,20 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-    private:
         int len;
         D val;
     };
 
-    template <typename D>
-    struct BrdColConstant
+    template <typename D> struct BrdColConstant
     {
         BrdColConstant(int len_, int step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
 
-        template <typename T>
-        __device__ __forceinline__ D at_low(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
             return i >= 0 ? saturate_cast<D>(*(const D*)((const char*)data + i*step)) : val;
         }
 
-        template <typename T>
-        __device__ __forceinline__ D at_high(int i, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int i, const T* data) const 
         {
             return i < len ? saturate_cast<D>(*(const D*)((const char*)data + i*step)) : val;
         }
@@ -236,15 +209,12 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-    private:
         int len;
         int step;
         D val;
     };
 
-
-    template <typename OutT>
-    struct BrdConstant
+    template <typename OutT> struct BrdConstant
     {
         BrdConstant(int w, int h, const OutT &val = VecTraits<OutT>::all(0)) : w(w), h(h), val(val) {}
 
@@ -255,11 +225,9 @@ namespace cv { namespace gpu { namespace device
             return val;
         }
 
-    private:
         int w, h;
         OutT val;
     };
-
 }}}
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
