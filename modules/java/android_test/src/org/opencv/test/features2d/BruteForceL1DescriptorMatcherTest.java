@@ -17,23 +17,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
+public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
 
     DescriptorMatcher matcher;
     int matSize;
     DMatch[] truth;
 
     protected void setUp() throws Exception {
-        matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
+        matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_L1);
         matSize = 100;
 
         truth = new DMatch[] { 
-                new DMatch(0, 0, 0, 0.643284f),
-                new DMatch(1, 1, 0, 0.92945856f),
-                new DMatch(2, 1, 0, 0.2841479f),
-                new DMatch(3, 1, 0, 0.9194034f),
-                new DMatch(4, 1, 0, 0.3006621f) };
-
+                new DMatch(0, 0, 0, 3.175296f),
+                new DMatch(1, 1, 0, 3.5954158f),
+                new DMatch(2, 1, 0, 1.2537984f),
+                new DMatch(3, 1, 0, 3.5761614f),
+                new DMatch(4, 1, 0, 1.3250958f) };
         super.setUp();
     }
 
@@ -169,10 +168,6 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         matcher.match(query, train, matches);
         
         assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
-
-//        OpenCVTestRunner.Log("matches found: " + matches.size());
-//        for (DMatch m : matches)
-//            OpenCVTestRunner.Log(m.toString());
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
