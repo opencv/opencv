@@ -1637,14 +1637,31 @@ CV_IMPL void
 cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
            int lowindex, int highindex)
 {
-    cv::Mat src = cv::cvarrToMat(srcarr), evals = cv::cvarrToMat(evalsarr);
+    cv::Mat src = cv::cvarrToMat(srcarr), evals0 = cv::cvarrToMat(evalsarr), evals = evals0;
     if( evectsarr )
     {
-        cv::Mat evects = cv::cvarrToMat(evectsarr);
+        cv::Mat evects0 = cv::cvarrToMat(evectsarr), evects = evects0;
         eigen(src, evals, evects, lowindex, highindex);
+        if( evects0.data != evects.data )
+        {
+            uchar* p = evects0.data;
+            evects.convertTo(evects0, evects0.type());
+            CV_Assert( p == evects0.data );
+        }
     }
     else
         eigen(src, evals, lowindex, highindex);
+    if( evals0.data != evals.data )
+    {
+        uchar* p = evals0.data;
+        if( evals0.size() == evals.size() )
+            evals.convertTo(evals0, evals0.type());
+        else if( evals0.type() == evals.type() )
+            cv::transpose(evals, evals0);
+        else
+            cv::Mat(evals.t()).convertTo(evals0, evals0.type());
+        CV_Assert( p == evals0.data );
+    }
 }
 
 

@@ -499,7 +499,7 @@ int CvFMEstimator::run8Point( const CvMat* _m1, const CvMat* _m2, CvMat* _fmatri
                 a[j*9+k] += r[j]*r[k];
     }
 
-    cvSVD( &A, &W, 0, &V, CV_SVD_MODIFY_A + CV_SVD_V_T );
+    cvEigenVV(&A, &V, &W);
 
     for( i = 0; i < 8; i++ )
     {
@@ -616,7 +616,7 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
             (mask->rows == 1 || mask->cols == 1) &&
             mask->rows*mask->cols == count );
     }
-    if( mask || count > 8 )
+    if( mask || count >= 8 )
         tempMask = cvCreateMat( 1, count, CV_8U );
     if( !tempMask.empty() )
         cvSet( tempMask, cvScalarAll(1.) );
@@ -624,9 +624,9 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
     CvFMEstimator estimator(7);
     if( count == 7 )
         result = estimator.run7Point(m1, m2, &_F9x3);
-    else if( count == 8 || method == CV_FM_8POINT )
+    else if( method == CV_FM_8POINT )
         result = estimator.run8Point(m1, m2, &_F3x3);
-    else if( count >= 8 )
+    else
     {
         if( param1 <= 0 )
             param1 = 3;
