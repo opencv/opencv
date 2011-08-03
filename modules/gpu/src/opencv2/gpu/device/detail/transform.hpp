@@ -44,7 +44,7 @@
 #define __OPENCV_GPU_TRANSFORM_DETAIL_HPP__
 
 #include "internal_shared.hpp"
-#include "vec_traits.hpp"
+#include "../vec_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

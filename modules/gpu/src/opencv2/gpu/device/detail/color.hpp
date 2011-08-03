@@ -43,10 +43,10 @@
 #ifndef __OPENCV_GPU_COLOR_DETAIL_HPP__
 #define __OPENCV_GPU_COLOR_DETAIL_HPP__
 
-#include "vec_traits.hpp"
-#include "saturate_cast.hpp"
-#include "limits.hpp"
-#include "functional.hpp"
+#include "../vec_traits.hpp"
+#include "../saturate_cast.hpp"
+#include "../limits.hpp"
+#include "../functional.hpp"
 
 #ifndef CV_DESCALE
     #define CV_DESCALE(x, n) (((x) + (1 << ((n)-1))) >> (n))
