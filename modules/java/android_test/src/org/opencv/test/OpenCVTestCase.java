@@ -6,6 +6,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
@@ -200,15 +201,6 @@ public class OpenCVTestCase extends TestCase {
             assertPointEquals(list1.get(i), list2.get(i), epsilon);
     }
 
-    public static void assertListKeyPointEquals(List<KeyPoint> list1, List<KeyPoint> list2, double epsilon) {
-        if (list1.size() != list2.size()) {
-            throw new UnsupportedOperationException();
-        }
-        
-        for (int i = 0; i < list1.size(); i++)
-            assertKeyPointEqual(list1.get(i), list2.get(i), epsilon);
-    }
-
     public static void assertListRectEquals(List<Rect> list1, List<Rect> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -248,6 +240,25 @@ public class OpenCVTestCase extends TestCase {
         assertTrue(Math.abs(expected.response - actual.response) < eps);
         assertEquals(expected.octave, actual.octave);
         assertEquals(expected.class_id, actual.class_id);
+    }
+    
+    public static void assertListKeyPointEquals(List<KeyPoint> expected, List<KeyPoint> actual, double epsilon) {
+        assertEquals(expected.size(), actual.size());
+        for (int i = 0; i < expected.size(); i++)
+            assertKeyPointEqual(expected.get(i), actual.get(i), epsilon);
+    }
+    
+    public static void assertDMatchEqual(DMatch expected, DMatch actual, double eps) {
+        assertEquals(expected.queryIdx, actual.queryIdx);
+        assertEquals(expected.trainIdx, actual.trainIdx);
+        assertEquals(expected.imgIdx, actual.imgIdx);
+        assertTrue(Math.abs(expected.distance - actual.distance) < eps);
+    }
+    
+    public static void assertListDMatchEquals(List<DMatch> expected, List<DMatch> actual, double epsilon) {
+        assertEquals(expected.size(), actual.size());
+        for (int i = 0; i < expected.size(); i++)
+            assertDMatchEqual(expected.get(i), actual.get(i), epsilon);
     }
 
     public static void assertPointEquals(Point expected, Point actual, double eps) {

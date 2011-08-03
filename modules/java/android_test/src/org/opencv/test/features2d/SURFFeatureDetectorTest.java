@@ -11,6 +11,7 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -77,12 +78,8 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.detect(img, keypoints, mask);
         
-        KeyPoint[] _truth = new KeyPoint[] { truth[1], truth[2] };
-
-        assertEquals(_truth.length, keypoints.size());
         order(keypoints);
-        for (int i = 0; i < _truth.length; i++)
-            assertKeyPointEqual(_truth[i], keypoints.get(i), EPS);
+        assertListKeyPointEquals(Arrays.asList(truth[1], truth[2]), keypoints, EPS);
     }
 
     public void testDetectMatListOfKeyPoint() {
@@ -95,10 +92,8 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
 
         detector.detect(cross, keypoints);
 
-        assertEquals(truth.length, keypoints.size());
         order(keypoints);
-        for (int i = 0; i < truth.length; i++)
-            assertKeyPointEqual(truth[i], keypoints.get(i), EPS);
+        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
     }
 
     public void testEmpty() {

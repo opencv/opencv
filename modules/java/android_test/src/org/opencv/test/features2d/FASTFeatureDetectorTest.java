@@ -11,6 +11,7 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FASTFeatureDetectorTest extends OpenCVTestCase {
@@ -52,11 +53,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.detect(img, keypoints, mask);
 
-        KeyPoint[] _truth = new KeyPoint[] { truth[0], truth[1] };
-
-        assertEquals(_truth.length, keypoints.size());
-        for (int i = 0; i < _truth.length; i++)
-            assertKeyPointEqual(_truth[i], keypoints.get(i), EPS);
+        assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints, EPS);
     }
 
     public void testDetectMatListOfKeyPoint() {
@@ -65,9 +62,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.detect(img, keypoints);
 
-        assertEquals(truth.length, keypoints.size());
-        for (int i = 0; i < truth.length; i++)
-            assertKeyPointEqual(truth[i], keypoints.get(i), EPS);
+        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
 
         // OpenCVTestRunner.Log("points found: " + keypoints.size());
         // for (KeyPoint kp : keypoints)
