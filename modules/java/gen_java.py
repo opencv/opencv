@@ -876,7 +876,7 @@ extern "C" {
         args = fi.args[:] # copy
         suffix_counter = int( self.classes[fi.classname or self.Module].methods_suffixes.get(fi.jname, -1) )
         while True:
-            suffix_counter = suffix_counter + 1
+            suffix_counter += 1
             self.classes[fi.classname or self.Module].methods_suffixes[fi.jname] = suffix_counter
              # java native method args
             jn_args = []
@@ -923,17 +923,20 @@ extern "C" {
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
-                        set_vals = []
-                        i = 0
-                        for f in fields:
-                            set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
-                                {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
-                            )
-                            i += 1
-                        j_epilogue.append("; ".join(set_vals) + "; ")
                         c_epilogue.append( \
                             "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
                             { "n" : a.name, "cnt" : len(fields), "args" : ", ".join([a.name + f[1] for f in fields]) } )
+                        if a.ctype in ('bool', 'int', 'long', 'float', 'double'):
+                            j_epilogue.append('if(%(n)s!=null) %(n)s[0] = (%(t)s)%(n)s_out[0];' % {'n':a.name,'t':a.ctype})
+                        else:
+                            set_vals = []
+                            i = 0
+                            for f in fields:
+                                set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                    {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
+                                )
+                                i += 1
+                            j_epilogue.append( "if("+a.name+"!=null){ " + "; ".join(set_vals) + "; } ")
 
 
             # java part:
@@ -990,6 +993,13 @@ extern "C" {
             if fi.classname:
                 static = fi.static
 
+            j_args = []
+            for a in args:
+                jt = type_dict[a.ctype]["j_type"]
+                if a.out and a.ctype in ('bool', 'int', 'long', 'float', 'double'):
+                    jt += '[]'
+                j_args.append( jt + ' ' + a.name )
+
             j_code.write( Template(\
 """    public $static $j_type $j_name($j_args)
     {
@@ -1009,11 +1019,12 @@ extern "C" {
                     static=static, \
                     j_type=type_dict[fi.ctype]["j_type"], \
                     j_name=fi.jname, \
-                    j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]), \
+                    j_args=", ".join(j_args), \
                     jn_name=fi.jname + '_' + str(suffix_counter), \
                     jn_args_call=", ".join( [a.name for a in jn_args] ),\
                 )
             )
+
 
             # cpp part:
             # jni_func(..) { _retval_ = cv_func(..); return _retval_; }

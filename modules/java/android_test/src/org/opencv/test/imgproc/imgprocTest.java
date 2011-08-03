@@ -1414,14 +1414,14 @@ public class imgprocTest extends OpenCVTestCase {
         points.add(new Point(0, 1));
 
         Point actualCenter = new Point();
-        float radius = 347.0f; // FIXME: Unexpected radius is returned i.e 0
+        float[] radius = new float[]{347.0f};
         Imgproc.minEnclosingCircle(points, actualCenter, radius);
 
         Point truthCenter = new Point(0, 0);
         assertEquals(truthCenter, actualCenter);
 
         float truthRadius = 1.0f;
-        assertEquals(truthRadius, radius, weakEPS);
+        assertEquals(truthRadius, radius[0], weakEPS);
     }
 
     public void testMomentsMat() {
