@@ -26,11 +26,11 @@ public class RotatedRect {
     
     public void set(double[] vals) {
         if(vals!=null) {
-            center.x    = vals.length>0 ? (int)vals[0] : 0;
-            center.x    = vals.length>1 ? (int)vals[1] : 0;
-            size.width  = vals.length>2 ? (int)vals[2] : 0;
-            size.height = vals.length>3 ? (int)vals[3] : 0;
-            angle       = vals.length>4 ? (int)vals[4] : 0;
+            center.x    = vals.length>0 ? (double)vals[0] : 0;
+            center.y    = vals.length>1 ? (double)vals[1] : 0;
+            size.width  = vals.length>2 ? (double)vals[2] : 0;
+            size.height = vals.length>3 ? (double)vals[3] : 0;
+            angle       = vals.length>4 ? (double)vals[4] : 0;
         } else {
             center.x    = 0;
             center.x    = 0;

@@ -245,8 +245,7 @@ public class calib3dTest extends OpenCVTestCase {
         List<Point> pts1 = new ArrayList<Point>();
         List<Point> pts2 = new ArrayList<Point>();
 
-        int minFundamentalMatPoints = 9; // FIXME: probably should be 8 (see
-                                         // ticket #1262)
+        int minFundamentalMatPoints = 9; // FIXME: probably should be 8 (see ticket #1262)
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
             double y = Math.random() * 100 - 50;

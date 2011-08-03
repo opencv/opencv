@@ -38,6 +38,7 @@ public class OpenCVTestCase extends TestCase {
 
     // TODO: OpenCVTestCase refactorings
     // - rename matrices
+    // - create methods gray0() and create src1 explicitly
     // - create some masks
     // - use truth member everywhere
 
@@ -82,8 +83,7 @@ public class OpenCVTestCase extends TestCase {
 
         dst = new Mat();
         assertTrue(dst.empty());
-        truth = new Mat();
-        assertTrue(truth.empty());
+        truth = null;
 
         colorBlack = new Scalar(0);
 
@@ -96,11 +96,11 @@ public class OpenCVTestCase extends TestCase {
         gray128 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128));
         gray255 = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
 
-        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
-        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
-
         grayRnd = new Mat(matSize, matSize, CvType.CV_8U);
         Core.randu(grayRnd, 0, 256);
+        
+        gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
+        gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
 
         gray0_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(0.0));
         gray1_32f = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1.0));
@@ -112,9 +112,9 @@ public class OpenCVTestCase extends TestCase {
         grayRnd_32f = new Mat(matSize, matSize, CvType.CV_32F);
         Core.randu(grayRnd_32f, 0, 256);
 
-        gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
-
         gray0_64f = new Mat(matSize, matSize, CvType.CV_64F, new Scalar(0.0));
+        
+        gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
         gray0_64f_1d = new Mat(1, matSize, CvType.CV_64F, new Scalar(0.0));
 
         rgba0 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(0));
@@ -224,7 +224,7 @@ public class OpenCVTestCase extends TestCase {
         assertEquals(expected.width, actual.width);
         assertEquals(expected.height, actual.height);
     }
-
+    
     public static void assertMatEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, true);
     }

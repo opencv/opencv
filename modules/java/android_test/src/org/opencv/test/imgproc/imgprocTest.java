@@ -524,22 +524,22 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testCornerSubPix() {
-    	 Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128));
-    	 
-		 Point truthPosition = new Point(img.cols()/2, img.rows()/2);
-		 
-    	 Rect r = new Rect(new Point(0, 0), truthPosition);
-    	 Core.rectangle(img, r.tl(), r.br(), new Scalar(0), -1/*TODO: CV_FILLED*/);
-    	 
-    	 List<Point> corners = new ArrayList<Point>();		
-		 corners.add(new Point(truthPosition.x+1, truthPosition.y+1));
-    	 
-		 Size winSize = new Size(2, 2);
-		 Size zeroZone = new Size(-1, -1);		 
-		 TermCriteria criteria = new TermCriteria(2/*TODO: CV_TERMCRIT_EPS*/, 0, 0.01);
-		 
-		 Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
-		 assertPointEquals(truthPosition, corners.get(0), weakEPS);
+        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128));
+
+        Point truthPosition = new Point(img.cols() / 2, img.rows() / 2);
+
+        Rect r = new Rect(new Point(0, 0), truthPosition);
+        Core.rectangle(img, r.tl(), r.br(), new Scalar(0), -1/* TODO: CV_FILLED */);
+
+        List<Point> corners = new ArrayList<Point>();
+        corners.add(new Point(truthPosition.x + 1, truthPosition.y + 1));
+
+        Size winSize = new Size(2, 2);
+        Size zeroZone = new Size(-1, -1);
+        TermCriteria criteria = new TermCriteria(2/* TODO: CV_TERMCRIT_EPS */, 0, 0.01);
+
+        Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
+        assertPointEquals(truthPosition, corners.get(0), weakEPS);
     }
 
     public void testCvtColorMatMatInt() {
@@ -1157,11 +1157,11 @@ public class imgprocTest extends OpenCVTestCase {
         cameraMatrix.put(1, 0, 0, 1, 2);
         cameraMatrix.put(2, 0, 0, 0, 1);
 
+        distCoeffs.put(0, 0, 1.0, 3.0, 2.0, 4);
+        truth = new Mat(3, 3, CvType.CV_32F);
         truth.put(0, 0, 0, 0, 0);
         truth.put(1, 0, 0, 0, 0);
         truth.put(2, 0, 0, 3, 0);
-
-        distCoeffs.put(0, 0, 1.0, 3.0, 2.0, 4);
         // TODO: No documentation for this function
         // Imgproc.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
         // 5.0, m1type, truthput1, truthput2);

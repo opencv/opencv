@@ -141,15 +141,15 @@ public class RotatedRectTest extends OpenCVTestCase {
     }
 
     public void testRotatedRectDoubleArray() {
-        double[] vals = {1, 2, 3, 4, 5};
+        double[] vals = {1.5, 2.6, 3.7, 4.2, 5.1};
         RotatedRect rr = new RotatedRect(vals);
 
         assertNotNull(rr);
-        assertEquals(1., rr.center.x);
-        assertEquals(2., rr.center.y);
-        assertEquals(3., rr.size.width);
-        assertEquals(4., rr.size.height);
-        assertEquals(5., rr.angle);
+        assertEquals(1.5, rr.center.x);
+        assertEquals(2.6, rr.center.y);
+        assertEquals(3.7, rr.size.width);
+        assertEquals(4.2, rr.size.height);
+        assertEquals(5.1, rr.angle);
     }
 
     public void testRotatedRectPointSizeDouble() {
