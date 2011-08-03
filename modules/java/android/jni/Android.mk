@@ -6,7 +6,11 @@ OPENCV_CAMERA_MODULES := off
 include OpenCV.mk
 
 LOCAL_MODULE    := opencv_java
-LOCAL_SRC_FILES := android.cpp calib3d.cpp features2d.cpp imgproc.cpp ml.cpp utils.cpp VideoCapture.cpp  core.cpp highgui.cpp Mat.cpp objdetect.cpp video.cpp
+
+MY_PREFIX := $(LOCAL_PATH)
+MY_SOURCES := $(wildcard $(MY_PREFIX)/*.cpp)
+LOCAL_SRC_FILES := $(MY_SOURCES:$(MY_PREFIX)%=%)
+
 LOCAL_LDLIBS +=  -llog -ldl -ljnigraphics
 
 include $(BUILD_SHARED_LIBRARY)
