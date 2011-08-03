@@ -45,6 +45,8 @@
 
 #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
+using namespace cv::gpu::device;
+
 namespace cv { namespace gpu
 {
     namespace transform_points
