@@ -22,9 +22,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     protected void setUp() throws Exception {
         detector = FeatureDetector.create(FeatureDetector.FAST);
 
-        truth = new KeyPoint[] { new KeyPoint(32, 27, 6, -1, 254, 0, -1),
-                new KeyPoint(27, 32, 6, -1, 254, 0, -1),
-                new KeyPoint(73, 68, 6, -1, 254, 0, -1),
+        truth = new KeyPoint[] { new KeyPoint(32, 27, 6, -1, 254, 0, -1), new KeyPoint(27, 32, 6, -1, 254, 0, -1), new KeyPoint(73, 68, 6, -1, 254, 0, -1),
                 new KeyPoint(68, 73, 6, -1, 254, 0, -1) };
 
         super.setUp();
@@ -103,8 +101,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     public void testReadYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
-        writeFile(
-                filename,
+        writeFile(filename,
                 "<?xml version=\"1.0\"?>\n<opencv_storage>\n<threshold>130</threshold>\n<nonmaxSuppression>1</nonmaxSuppression>\n</opencv_storage>\n");
         detector.read(filename);
 
@@ -112,8 +109,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.detect(grayChess, keypoints1);
 
-        writeFile(
-                filename,
+        writeFile(filename,
                 "<?xml version=\"1.0\"?>\n<opencv_storage>\n<threshold>150</threshold>\n<nonmaxSuppression>1</nonmaxSuppression>\n</opencv_storage>\n");
         detector.read(filename);
 

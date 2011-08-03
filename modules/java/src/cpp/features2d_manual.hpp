@@ -230,8 +230,8 @@ public:
 #if 0
     CV_WRAP void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     CV_WRAP void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, CV_OUT vector<Mat>& descriptors ) const;
-    CV_WRAP virtual int descriptorSize() const = 0;
-    CV_WRAP virtual int descriptorType() const = 0;
+    CV_WRAP virtual int descriptorSize() const;
+    CV_WRAP virtual int descriptorType() const;
 
     CV_WRAP virtual bool empty() const;
 #endif

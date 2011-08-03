@@ -6,6 +6,7 @@ import android.test.InstrumentationTestRunner;
 import android.util.Log;
 
 import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +46,10 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     static public void Log(String message) {
         Log.e(TAG, message);
+    }
+    
+    static public void Log(Mat m) {
+        Log.e(TAG, m + "\n" + m.dump());
     }
 
     @Override
