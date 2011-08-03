@@ -1,8 +1,8 @@
 #!/bin/sh
 cd `dirname $0`
 
-BUILD_DIR=build
-opencv_android=/home/kir/work/ros_opencv_trunk/opencv/android
+BUILD_DIR=build_armeabi
+opencv_android=`pwd`/../../../android
 opencv_build_dir=$opencv_android/$BUILD_DIR
 
 mkdir -p $BUILD_DIR
