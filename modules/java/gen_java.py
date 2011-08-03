@@ -12,9 +12,7 @@ class_ignore_list = (
     #highgui
     "VideoWriter", "VideoCapture",
     #features2d
-    "KeyPoint",
-    "MSER",
-    "StarDetector",
+    "KeyPoint", "MSER", "StarDetector",
 )
 
 const_ignore_list = (
@@ -29,7 +27,9 @@ const_ignore_list = (
     "CV_CHECKBOX",
     "CV_RADIOBOX",
 
-    #attention! the following constants are added to this list using code automatic generation -- should be checked
+    #attention!
+    #the following constants are added to this list using code automatic generation
+    #TODO: should be checked
     "CV_CAP_ANY",
     "CV_CAP_MIL",
     "CV_CAP_VFW",
@@ -477,7 +477,7 @@ func_arg_fix = {
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
         'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
         'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
-    }, # '', i.e. empty class
+    }, # '', i.e. no class
 } # func_arg_fix
 
 class ConstInfo(object):
@@ -545,21 +545,15 @@ class FuncInfo(object):
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
-        self.jn_name = self.jname #"n_" + self.jname
-        self.jni_name= re.sub(r"_", "_1", self.jn_name)
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = decl[1] or ""
         self.args = []
-        #self.jni_suffix = "__"
-        #if self.classname and self.ctype and not self.static: # non-static class methods except c-tors
-        #    self.jni_suffix += "J" # artifical 'self'
         arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
             arg[0] = arg_fix_map.get(arg[1], arg[0])
             ai = ArgInfo(arg)
             self.args.append(ai)
-        #    self.jni_suffix += ctype2j.get(ai.ctype, ["","","",""])[3]
 
 
 
@@ -877,8 +871,6 @@ extern "C" {
 
         # java args
         args = fi.args[:] # copy
-##        if args and args[-1].defval:
-##            isoverload = True
         suffix_counter = int( self.classes[fi.classname or self.Module].methods_suffixes.get(fi.jname, -1) )
         while True:
             suffix_counter = suffix_counter + 1
@@ -887,7 +879,6 @@ extern "C" {
             jn_args = []
             # jni (cpp) function args
             jni_args = [ArgInfo([ "env", "env", "", [], "" ]), ArgInfo([ "cls", "cls", "", [], "" ])]
-##            suffix = "__"
             j_prologue = []
             j_epilogue = []
             c_prologue = []
@@ -903,15 +894,9 @@ extern "C" {
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
                 jni_args.append( ArgInfo([ "__int64", "self", "", [], "" ]) )
-##                suffix += "J"
             self.get_imports(fi.classname, fi.ctype)
             for a in args:
                 self.get_imports(fi.classname, a.ctype)
-##                if a.pointer:
-##                    suffix += "_3D"
-##                else:
-##                    suffix += type_dict[a.ctype].get("suffix") or ""
-
                 if "vector" in a.ctype: # pass as Mat
                     jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                     jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
@@ -951,12 +936,12 @@ extern "C" {
             # java part:
             # private java NATIVE method decl
             # e.g.
-            # private static native void n_add(long src1, long src2, long dst, long mask, int dtype);
+            # private static native void add_0(long src1, long src2, long dst, long mask, int dtype);
             jn_code.write( Template(\
-                "    private static native $jn_type $jn_name($jn_args);\n").substitute(\
-                jn_type = type_dict[fi.ctype].get("jn_type", "double[]"), \
-                jn_name = fi.jn_name + '_' + `suffix_counter`, \
-                jn_args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
+                "    private static native $type $name($args);\n").substitute(\
+                type = type_dict[fi.ctype].get("jn_type", "double[]"), \
+                name = fi.jname + '_' + `suffix_counter`, \
+                args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
             ) );
 
             # java part:
@@ -971,7 +956,7 @@ extern "C" {
             # public java wrapper method impl (calling native one above)
             # e.g.
             # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
-            # { n_add( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
+            # { add_0( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
             ret_type = fi.ctype
             if fi.ctype.endswith('*'):
                 ret_type = ret_type[:-1]
@@ -1022,7 +1007,7 @@ extern "C" {
                     j_type=type_dict[fi.ctype]["j_type"], \
                     j_name=fi.jname, \
                     j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]), \
-                    jn_name=fi.jn_name + '_' + `suffix_counter`, \
+                    jn_name=fi.jname + '_' + `suffix_counter`, \
                     jn_args_call=", ".join( [a.name for a in jn_args] ),\
                 )
             )
@@ -1124,7 +1109,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         rtype = rtype, \
         module = self.module, \
         clazz = clazz, \
-        fname = fi.jni_name + '_1' + `suffix_counter`, \
+        fname = (fi.jname + '_' + `suffix_counter`).replace('_', '_1'), \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
         epilogue = "  ".join(c_epilogue), \
@@ -1164,8 +1149,6 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             if ffi.isconstructor:
                 for fi in ffi.funcs:
                     fi.jname = ci.jname
-                    fi.jn_name = fi.jname #"n_" + fi.jname
-                    fi.jni_name= re.sub("_", "_1", fi.jn_name)
                     self.gen_func(fi)
         # other methods
         for n, ffi in fflist:
@@ -1199,7 +1182,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """
     @Override
     protected void finalize() throws Throwable {
-        n_delete(nativeObj);
+        delete(nativeObj);
         super.finalize();
     }
 """ )
@@ -1207,7 +1190,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             self.java_code[name]["jn_code"].write(
 """
     // native support for java finalize()
-    private static native void n_delete(long nativeObj);
+    private static native void delete(long nativeObj);
 """ )
 
             # native support for java finalize()
@@ -1215,10 +1198,10 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """
 //
 //  native support for java finalize()
-//  static void %(cls)s::n_delete( __int64 self )
+//  static void %(cls)s::delete( __int64 self )
 //
 
-JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_n_1delete
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_delete
   (JNIEnv* env, jclass cls, jlong self)
 {
     delete (%(cls)s*) self;
