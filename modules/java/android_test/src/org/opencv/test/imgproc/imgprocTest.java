@@ -530,14 +530,14 @@ public class imgprocTest extends OpenCVTestCase {
         Point truthPosition = new Point(img.cols() / 2, img.rows() / 2);
 
         Rect r = new Rect(new Point(0, 0), truthPosition);
-        Core.rectangle(img, r.tl(), r.br(), new Scalar(0), -1/* TODO: CV_FILLED */);
+        Core.rectangle(img, r.tl(), r.br(), new Scalar(0), -1 /*TODO: CV_FILLED*/);
 
         List<Point> corners = new ArrayList<Point>();
         corners.add(new Point(truthPosition.x + 1, truthPosition.y + 1));
 
         Size winSize = new Size(2, 2);
         Size zeroZone = new Size(-1, -1);
-        TermCriteria criteria = new TermCriteria(2/* TODO: CV_TERMCRIT_EPS */, 0, 0.01);
+        TermCriteria criteria = new TermCriteria(2 /*TODO: CV_TERMCRIT_EPS*/, 0, 0.01);
 
         Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
         assertPointEquals(truthPosition, corners.get(0), weakEPS);
@@ -767,8 +767,7 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testFitEllipse() {
-        Mat points = new Mat(1, 5, CvType.CV_32FC2); // TODO: use the list of
-                                                     // Points
+        Mat points = new Mat(1, 5, CvType.CV_32FC2); // TODO: use the list of Points
         points.put(0, 0, 0.0, 0.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0);
 
         RotatedRect rrect = new RotatedRect();

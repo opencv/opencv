@@ -4,6 +4,7 @@ classes_ignore_list = (
     'OpenCV(Test)?Case',
     'OpenCV(Test)?Runner',
     'CvException',
+    'CvType'
 )
 
 funcs_ignore_list = (

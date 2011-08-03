@@ -7,6 +7,7 @@ import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -39,10 +40,7 @@ public class CascadeClassifierTest extends OpenCVTestCase {
         Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);
 
         // TODO: doesn't detect with 1.1 scale
-        cc.detectMultiScale(greyLena, faces, 1.09, 2, 2 /*
-                                                         * TODO:
-                                                         * CV_HAAR_SCALE_IMAGE
-                                                         */, new Size(30, 30));
+        cc.detectMultiScale(greyLena, faces, 1.09, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30));
         assertEquals(1, faces.size());
     }
 

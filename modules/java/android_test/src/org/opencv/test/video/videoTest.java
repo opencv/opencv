@@ -1,11 +1,11 @@
 package org.opencv.test.video;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.core.Core;
-import org.opencv.video.Video;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.video.Video;
 
 public class videoTest extends OpenCVTestCase {
 
@@ -66,7 +66,7 @@ public class videoTest extends OpenCVTestCase {
         Mat prevPts = new Mat(1, 3, CvType.CV_32FC2);
         prevPts.put(0, 0, 1.0, 1.0, 5.0, 5.0, 10.0, 10.0);
 
-        Size sz = new Size(5, 5);
+        Size sz = new Size(3, 3);
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
         assertEquals(0, Core.countNonZero(status));
     }
