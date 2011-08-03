@@ -16,6 +16,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
+
 public class imgprocTest extends OpenCVTestCase {
 
     private Mat gray_64f_2;
@@ -1407,11 +1408,14 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testMinEnclosingCircle() {
-        Mat points = new Mat(1, 4, CvType.CV_32FC2);
-        points.put(0, 0, -1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, -1.0);
+        List<Point> points = new ArrayList<Point>();
+        points.add(new Point(0, 0));
+        points.add(new Point(-1, 0));
+        points.add(new Point(0, -1));
+        points.add(new Point(1, 0));
+        points.add(new Point(0, 1));
 
         OpenCVTestRunner.Log(points.toString());
-        OpenCVTestRunner.Log(points.dump());
 
         Point actualCenter = new Point();
         float radius = 347.0f; // FIXME: Unexpected radius is returned i.e 0

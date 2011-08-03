@@ -24,7 +24,7 @@ void Mat_to_vector_int(Mat& mat, vector<int>& v_int)
 
 void vector_int_to_Mat(vector<int>& v_int, Mat& mat)
 {
-	mat = Mat(v_int);
+	mat = Mat(v_int, true);
 }
 
 
@@ -39,7 +39,7 @@ void Mat_to_vector_double(Mat& mat, vector<double>& v_double)
 
 void vector_double_to_Mat(vector<double>& v_double, Mat& mat)
 {
-	mat = Mat(v_double);
+	mat = Mat(v_double, true);
 }
 
 
@@ -54,7 +54,7 @@ void Mat_to_vector_float(Mat& mat, vector<float>& v_float)
 
 void vector_float_to_Mat(vector<float>& v_float, Mat& mat)
 {
-	mat = Mat(v_float);
+	mat = Mat(v_float, true);
 }
 
 
@@ -86,7 +86,7 @@ void Mat_to_vector_Rect(Mat& mat, vector<Rect>& v_rect)
 
 void vector_Rect_to_Mat(vector<Rect>& v_rect, Mat& mat)
 {
-	mat = Mat(v_rect);
+	mat = Mat(v_rect, true);
 }
 
 
@@ -142,32 +142,32 @@ void Mat_to_vector_Point3d(Mat& mat, vector<Point3d>& v_point)
 
 void vector_Point_to_Mat(vector<Point>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 void vector_Point2f_to_Mat(vector<Point2f>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 void vector_Point2d_to_Mat(vector<Point2d>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 void vector_Point3i_to_Mat(vector<Point3i>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 void vector_Point3f_to_Mat(vector<Point3f>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 void vector_Point3d_to_Mat(vector<Point3d>& v_point, Mat& mat)
 {
-	mat = Mat(v_point);
+	mat = Mat(v_point, true);
 }
 
 

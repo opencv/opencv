@@ -474,6 +474,7 @@ func_arg_fix = {
         'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
         'findFundamentalMat' : { 'points1' : 'vector_Point2d', 'points2' : 'vector_Point2d', },
         'cornerSubPix' : { 'corners' : 'vector_Point2f', },
+        'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
         'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
         'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
         'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
@@ -940,7 +941,7 @@ extern "C" {
             jn_code.write( Template(\
                 "    private static native $type $name($args);\n").substitute(\
                 type = type_dict[fi.ctype].get("jn_type", "double[]"), \
-                name = fi.jname + '_' + `suffix_counter`, \
+                name = fi.jname + '_' + str(suffix_counter), \
                 args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], a.name.replace(".","_").replace("[","").replace("]","")) for a in jn_args])
             ) );
 
@@ -1007,7 +1008,7 @@ extern "C" {
                     j_type=type_dict[fi.ctype]["j_type"], \
                     j_name=fi.jname, \
                     j_args=", ".join(["%s %s" % (type_dict[a.ctype]["j_type"], a.name) for a in args]), \
-                    jn_name=fi.jname + '_' + `suffix_counter`, \
+                    jn_name=fi.jname + '_' + str(suffix_counter), \
                     jn_args_call=", ".join( [a.name for a in jn_args] ),\
                 )
             )
@@ -1109,7 +1110,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
         rtype = rtype, \
         module = self.module, \
         clazz = clazz, \
-        fname = (fi.jname + '_' + `suffix_counter`).replace('_', '_1'), \
+        fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \
         epilogue = "  ".join(c_epilogue), \
