@@ -201,7 +201,6 @@ public:
         default:
             CV_Error( CV_StsBadArg, "Specified descriptor matcher type is not supported." );
             break;
-
         }
 
         Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(name);
@@ -299,6 +298,94 @@ public:
     {
         FileStorage fs(fileName, FileStorage::READ);
         ((DescriptorExtractor*)this)->read(fs.root());
+        fs.release();
+    }
+};
+
+class CV_EXPORTS_AS(GenericDescriptorMatcher) javaGenericDescriptorMatcher : public GenericDescriptorMatcher
+{
+public:
+#if 0
+    CV_WRAP virtual void add( const vector<Mat>& images,
+                      vector<vector<KeyPoint> >& keypoints );
+    CV_WRAP const vector<Mat>& getTrainImages() const;
+    CV_WRAP const vector<vector<KeyPoint> >& getTrainKeypoints() const;
+    CV_WRAP virtual void clear();
+    CV_WRAP virtual bool isMaskSupported();
+    CV_WRAP virtual void train();
+    CV_WRAP void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                           const Mat& trainImage, vector<KeyPoint>& trainKeypoints ) const;
+    CV_WRAP void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints );
+    CV_WRAP void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    CV_WRAP void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                   const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+                   vector<vector<DMatch> >& matches, int k,
+                   const Mat& mask=Mat(), bool compactResult=false ) const;
+    CV_WRAP void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+                      vector<vector<DMatch> >& matches, float maxDistance,
+                      const Mat& mask=Mat(), bool compactResult=false ) const;
+    CV_WRAP void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() );
+    CV_WRAP void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                   vector<vector<DMatch> >& matches, int k,
+                   const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
+    CV_WRAP void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+                      vector<vector<DMatch> >& matches, float maxDistance,
+                      const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
+    CV_WRAP virtual bool empty() const;
+#endif
+
+    enum
+    {
+        ONEWAY = 1,
+        FERN   = 2
+    };
+
+    CV_WRAP_AS(clone) javaGenericDescriptorMatcher* jclone( bool emptyTrainData=false ) const
+    {
+        Ptr<GenericDescriptorMatcher> matcher = this->clone(emptyTrainData);
+        matcher.addref();
+        return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
+    }
+    
+    //supported: OneWay, Fern
+    //unsupported: Vector
+    CV_WRAP static javaGenericDescriptorMatcher* create( int matcherType )
+    {
+        string name;
+
+        switch(matcherType)
+        {
+        case ONEWAY:
+            name = "ONEWAY";
+            break;
+        case FERN:
+            name = "FERN";
+            break;
+        default:
+            CV_Error( CV_StsBadArg, "Specified generic descriptor matcher type is not supported." );
+            break;
+        }
+
+        Ptr<GenericDescriptorMatcher> matcher = GenericDescriptorMatcher::create(name);
+        matcher.addref();
+        return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
+    }
+
+    CV_WRAP void write( const string& fileName ) const
+    {
+        FileStorage fs(fileName, FileStorage::WRITE);
+        ((GenericDescriptorMatcher*)this)->write(fs);
+        fs.release();
+    }
+
+    CV_WRAP void read( const string& fileName )
+    {
+        FileStorage fs(fileName, FileStorage::READ);
+        ((GenericDescriptorMatcher*)this)->read(fs.root());
         fs.release();
     }
 };
