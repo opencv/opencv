@@ -1,4 +1,4 @@
-/* $Id: tif_thunder.c,v 1.5.2.1 2010-06-08 18:50:43 bfriesen Exp $ */
+/* $Id: tif_thunder.c,v 1.5.2.2 2011-03-21 16:01:28 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -25,6 +25,7 @@
  */
 
 #include "tiffiop.h"
+#include <assert.h>
 #ifdef THUNDER_SUPPORT
 /*
  * TIFF Library.
@@ -55,12 +56,32 @@
 static const int twobitdeltas[4] = { 0, 1, 0, -1 };
 static const int threebitdeltas[8] = { 0, 1, 2, 3, 0, -3, -2, -1 };
 
-#define	SETPIXEL(op, v) { \
-	lastpixel = (v) & 0xf; \
-	if (npixels++ & 1) \
-	    *op++ |= lastpixel; \
-	else \
+#define	SETPIXEL(op, v) {                     \
+	lastpixel = (v) & 0xf;                \
+        if ( npixels < maxpixels )         \
+        {                                     \
+	  if (npixels++ & 1)                  \
+	    *op++ |= lastpixel;               \
+	  else                                \
 	    op[0] = (tidataval_t) (lastpixel << 4); \
+        }                                     \
+}
+
+static int
+ThunderSetupDecode(TIFF* tif)
+{
+	static const char module[] = "ThunderSetupDecode";
+
+        if( tif->tif_dir.td_bitspersample != 4 )
+        {
+                TIFFErrorExt(tif->tif_clientdata, module,
+                             "Wrong bitspersample value (%d), Thunder decoder only supports 4bits per sample.",
+                             (int) tif->tif_dir.td_bitspersample );
+                return 0;
+        }
+        
+
+	return (1);
 }
 
 static int
@@ -142,7 +163,8 @@ ThunderDecodeRow(TIFF* tif, tidata_t buf, tsize_t occ, tsample_t s)
 		occ -= tif->tif_scanlinesize;
 		row += tif->tif_scanlinesize;
 	}
-	return (1);
+
+        return (1);
 }
 
 int
@@ -151,6 +173,7 @@ TIFFInitThunderScan(TIFF* tif, int scheme)
 	(void) scheme;
 	tif->tif_decoderow = ThunderDecodeRow;
 	tif->tif_decodestrip = ThunderDecodeRow;
+        tif->tif_setupdecode = ThunderSetupDecode;
 	return (1);
 }
 #endif /* THUNDER_SUPPORT */
@@ -163,3 +186,4 @@ TIFFInitThunderScan(TIFF* tif, int scheme)
  * fill-column: 78
  * End:
  */
+

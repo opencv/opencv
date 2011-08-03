@@ -1,4 +1,4 @@
-/* $Id: tif_dirread.c,v 1.92.2.9 2010-06-14 00:21:46 fwarmerdam Exp $ */
+/* $Id: tif_dirread.c,v 1.92.2.15 2010-12-31 16:12:40 olivier Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -54,7 +54,7 @@ static	float TIFFFetchRational(TIFF*, TIFFDirEntry*);
 static	int TIFFFetchNormalTag(TIFF*, TIFFDirEntry*);
 static	int TIFFFetchPerSampleShorts(TIFF*, TIFFDirEntry*, uint16*);
 static	int TIFFFetchPerSampleLongs(TIFF*, TIFFDirEntry*, uint32*);
-static	int TIFFFetchPerSampleAnys(TIFF*, TIFFDirEntry*, double*);
+static	int TIFFFetchPerSampleAnys(TIFF*, TIFFDirEntry*, double*, double*);
 static	int TIFFFetchShortArray(TIFF*, TIFFDirEntry*, uint16*);
 static	int TIFFFetchStripThing(TIFF*, TIFFDirEntry*, long, uint32**);
 static	int TIFFFetchRefBlackWhite(TIFF*, TIFFDirEntry*);
@@ -83,6 +83,7 @@ TIFFReadDirectory(TIFF* tif)
 	const TIFFFieldInfo* fip;
 	size_t fix;
 	uint16 dircount;
+	uint16 previous_tag = 0;
 	int diroutoforderwarning = 0, compressionknown = 0;
 	int haveunknowntags = 0;
 
@@ -105,7 +106,20 @@ TIFFReadDirectory(TIFF* tif)
 			     tif->tif_name, tif->tif_nextdiroff);
 		return 0;
 	}
-
+	{
+		TIFFDirEntry* ma;
+		uint16 mb;
+		for (ma=dir, mb=0; mb<dircount; ma++, mb++)
+		{
+			TIFFDirEntry* na;
+			uint16 nb;
+			for (na=ma+1, nb=mb+1; nb<dircount; na++, nb++)
+			{
+				if (ma->tdir_tag==na->tdir_tag)
+					na->tdir_tag=IGNORE;
+			}
+		}
+	}
 	tif->tif_flags &= ~TIFF_BEENWRITING;	/* reset before new dir */
 	/*
 	 * Setup default value and then make a pass over
@@ -163,23 +177,24 @@ TIFFReadDirectory(TIFF* tif)
 
 		if (dp->tdir_tag == IGNORE)
 			continue;
-		if (fix >= tif->tif_nfields)
-			fix = 0;
 
 		/*
 		 * Silicon Beach (at least) writes unordered
 		 * directory tags (violating the spec).  Handle
 		 * it here, but be obnoxious (maybe they'll fix it?).
 		 */
-		if (dp->tdir_tag < tif->tif_fieldinfo[fix]->field_tag) {
+		if (dp->tdir_tag < previous_tag) {
 			if (!diroutoforderwarning) {
 				TIFFWarningExt(tif->tif_clientdata, module,
 	"%s: invalid TIFF directory; tags are not sorted in ascending order",
 					    tif->tif_name);
 				diroutoforderwarning = 1;
 			}
-			fix = 0;			/* O(n^2) */
 		}
+		previous_tag = dp->tdir_tag;
+		if (fix >= tif->tif_nfields ||
+		    dp->tdir_tag < tif->tif_fieldinfo[fix]->field_tag)
+			fix = 0;			/* O(n^2) */
 		while (fix < tif->tif_nfields &&
 		    tif->tif_fieldinfo[fix]->field_tag < dp->tdir_tag)
 			fix++;
@@ -465,11 +480,18 @@ TIFFReadDirectory(TIFF* tif)
 			}
 			break;
 		case TIFFTAG_SMINSAMPLEVALUE:
+			{
+				double minv = 0.0, maxv = 0.0;
+				if (!TIFFFetchPerSampleAnys(tif, dp, &minv, &maxv) ||
+				    !TIFFSetField(tif, dp->tdir_tag, minv))
+					goto bad;
+			}
+			break;
 		case TIFFTAG_SMAXSAMPLEVALUE:
 			{
-				double dv = 0.0;
-				if (!TIFFFetchPerSampleAnys(tif, dp, &dv) ||
-				    !TIFFSetField(tif, dp->tdir_tag, dv))
+				double minv = 0.0, maxv = 0.0;
+				if (!TIFFFetchPerSampleAnys(tif, dp, &minv, &maxv) ||
+				    !TIFFSetField(tif, dp->tdir_tag, maxv))
 					goto bad;
 			}
 			break;
@@ -593,8 +615,7 @@ TIFFReadDirectory(TIFF* tif)
 		}
 		if (!TIFFFieldSet(tif,FIELD_SAMPLESPERPIXEL))
 		{
-			if ((td->td_photometric==PHOTOMETRIC_RGB)
-			    || (td->td_photometric==PHOTOMETRIC_YCBCR))
+			if (td->td_photometric==PHOTOMETRIC_RGB)
 			{
 				TIFFWarningExt(tif->tif_clientdata,
 					       "TIFFReadDirectory",
@@ -603,13 +624,22 @@ TIFFReadDirectory(TIFF* tif)
 				if (!TIFFSetField(tif,TIFFTAG_SAMPLESPERPIXEL,3))
 					goto bad;
 			}
-			else if ((td->td_photometric==PHOTOMETRIC_MINISWHITE)
-				 || (td->td_photometric==PHOTOMETRIC_MINISBLACK))
+			if (td->td_photometric==PHOTOMETRIC_YCBCR)
 			{
 				TIFFWarningExt(tif->tif_clientdata,
 					       "TIFFReadDirectory",
 				"SamplesPerPixel tag is missing, "
-				"assuming correct SamplesPerPixel value is 1");
+				"applying correct SamplesPerPixel value of 3");
+				if (!TIFFSetField(tif,TIFFTAG_SAMPLESPERPIXEL,3))
+					goto bad;
+			}
+			else if ((td->td_photometric==PHOTOMETRIC_MINISWHITE)
+				 || (td->td_photometric==PHOTOMETRIC_MINISBLACK))
+			{
+				/*
+				 * SamplesPerPixel tag is missing, but is not required
+				 * by spec.  Assume correct SamplesPerPixel value of 1.
+				 */
 				if (!TIFFSetField(tif,TIFFTAG_SAMPLESPERPIXEL,1))
 					goto bad;
 			}
@@ -620,8 +650,14 @@ TIFFReadDirectory(TIFF* tif)
 	 */
 	if (td->td_photometric == PHOTOMETRIC_PALETTE &&
 	    !TIFFFieldSet(tif, FIELD_COLORMAP)) {
-		MissingRequired(tif, "Colormap");
-		goto bad;
+		if ( tif->tif_dir.td_bitspersample>=8 && tif->tif_dir.td_samplesperpixel==3)
+			tif->tif_dir.td_photometric = PHOTOMETRIC_RGB;
+		else if (tif->tif_dir.td_bitspersample>=8)
+			tif->tif_dir.td_photometric = PHOTOMETRIC_MINISBLACK;
+		else {
+			MissingRequired(tif, "Colormap");
+			goto bad;
+		}
 	}
 	/*
 	 * OJPEG hack:
@@ -1086,6 +1122,7 @@ CheckDirCount(TIFF* tif, TIFFDirEntry* dir, uint32 count)
 	"incorrect count for field \"%s\" (%u, expecting %u); tag trimmed",
 		    _TIFFFieldWithTag(tif, dir->tdir_tag)->field_name,
 		    dir->tdir_count, count);
+		dir->tdir_count = count;
 		return (1);
 	}
 	return (1);
@@ -1420,7 +1457,7 @@ TIFFFetchShortPair(TIFF* tif, TIFFDirEntry* dir)
 		case TIFF_SHORT:
 		case TIFF_SSHORT:
 			{
-			uint16 v[2]={0,0};
+			uint16 v[2];
 			return TIFFFetchShortArray(tif, dir, v)
 				&& TIFFSetField(tif, dir->tdir_tag, v[0], v[1]);
 			}
@@ -1822,11 +1859,11 @@ TIFFFetchPerSampleLongs(TIFF* tif, TIFFDirEntry* dir, uint32* pl)
 }
 
 /*
- * Fetch samples/pixel ANY values for the specified tag and verify that all
- * values are the same.
+ * Fetch samples/pixel ANY values for the specified tag and returns their min
+ * and max.
  */
 static int
-TIFFFetchPerSampleAnys(TIFF* tif, TIFFDirEntry* dir, double* pl)
+TIFFFetchPerSampleAnys(TIFF* tif, TIFFDirEntry* dir, double* minv, double* maxv)
 {
     uint16 samples = tif->tif_dir.td_samplesperpixel;
     int status = 0;
@@ -1844,17 +1881,16 @@ TIFFFetchPerSampleAnys(TIFF* tif, TIFFDirEntry* dir, double* pl)
             if( samples < check_count )
                 check_count = samples;
 
+            *minv = *maxv = v[0];
             for (i = 1; i < check_count; i++)
-                if (v[i] != v[0]) {
-			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
-		"Cannot handle different per-sample values for field \"%s\"",
-			_TIFFFieldWithTag(tif, dir->tdir_tag)->field_name);
-			goto bad;
-                }
-            *pl = v[0];
+            {
+                if (v[i] < *minv)
+                    *minv = v[i];
+                if (v[i] > *maxv)
+                    *maxv = v[i];
+            }
             status = 1;
         }
-      bad:
         if (v && v != buf)
             _TIFFfree(v);
     }
