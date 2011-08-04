@@ -484,6 +484,7 @@ func_arg_fix = {
         'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f', },
         'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
                                    'status' : 'vector_uchar', 'err' : 'vector_float', },
+        'fitEllipse' : { 'points' : 'vector_Point2f', },
     }, # '', i.e. no class
 } # func_arg_fix
 

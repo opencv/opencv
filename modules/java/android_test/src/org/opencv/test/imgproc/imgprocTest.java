@@ -766,8 +766,12 @@ public class imgprocTest extends OpenCVTestCase {
     }
 
     public void testFitEllipse() {
-        Mat points = new Mat(1, 5, CvType.CV_32FC2);
-        points.put(0, 0, 0.0, 0.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0);
+        List<Point> points = new ArrayList<Point>();
+        points.add(new Point( 0,  0));
+        points.add(new Point(-1,  1));
+        points.add(new Point( 1,  1));
+        points.add(new Point( 1, -1));
+        points.add(new Point(-1, -1));
 
         RotatedRect rrect = new RotatedRect();
         rrect = Imgproc.fitEllipse(points);
