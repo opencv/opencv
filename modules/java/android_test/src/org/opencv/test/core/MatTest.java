@@ -98,7 +98,16 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testGetIntIntByteArray() {
-        fail("Not yet implemented");
+        Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
+        byte[] goodData = new byte[9];
+        byte[] badData = new byte[7];
+        m.get(1, 1, goodData);
+        try {
+        	m.get(2, 2, badData);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
     }
 
     public void testGetIntIntDoubleArray() {
@@ -192,7 +201,14 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testPutIntIntDoubleArray() {
-        fail("Not yet implemented");
+        Mat m = new Mat(5, 5, CvType.CV_8UC3);
+        m.put(1, 1, 10, 20, 30, 40, 50, 60);
+        try {
+        	m.put(2, 2, 11, 22, 33, 44, 55);
+            fail("Expected UnsupportedOperationException (data.length % CvType.channels(t) != 0)");
+        } catch (UnsupportedOperationException e) {
+            // expected
+        }
     }
 
     public void testPutIntIntFloatArray() {
