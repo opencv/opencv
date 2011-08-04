@@ -13,9 +13,11 @@ import org.opencv.test.OpenCVTestRunner;
 import java.util.Arrays;
 import java.util.List;
 
-public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
+public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     DescriptorExtractor extractor;
+    KeyPoint keypoint;
+    Mat truth;
     int matSize;
 
     private Mat getTestImg() {
@@ -28,28 +30,29 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
-        extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
+        extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
+        keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
+        truth = new Mat(1, 128, CvType.CV_32FC1) {
+            {
+                put(0,0, 123, 0, 0, 1, 123, 0, 0, 1, 123, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 123, 0, 0, 2, 123, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 123, 30,
+                        7, 31, 123, 0, 0, 0, 123, 52, 88, 0, 0, 0, 0, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 1, 110, 0, 0, 0, 0, 0, 18, 37, 18, 34, 16,
+                        21, 12, 23, 12, 50, 123, 0, 0, 0, 90, 26, 0, 3, 123, 0, 0, 1, 122, 0, 0, 2, 123, 0, 0, 1, 93, 0);
+            }
+        };
 
         super.setUp();
     }
 
     public void testCompute() {
-        KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
-        List<KeyPoint> keypoints = Arrays.asList(point);
+        List<KeyPoint> keypoints = Arrays.asList(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
         extractor.compute(img, keypoints, descriptors);
 
-        Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
-            {
-                put(0, 0, 96, 0, 76, 24, 47, 182, 68, 137, 149, 195, 67, 16, 187, 224, 74, 8, 82, 169, 87, 70, 44, 4, 192, 56, 13, 128, 44, 106, 146, 72, 194,
-                        245);
-            }
-        };
-
-        assertMatEqual(truth, descriptors);
+        assertMatEqual(truth, descriptors, EPS);
     }
 
     public void testCreate() {
@@ -57,11 +60,11 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testDescriptorSize() {
-        assertEquals(32, extractor.descriptorSize());
+        assertEquals(128, extractor.descriptorSize());
     }
 
     public void testDescriptorType() {
-        assertEquals(CvType.CV_8U, extractor.descriptorType());
+        assertEquals(CvType.CV_32F, extractor.descriptorType());
     }
 
     public void testEmpty() {
@@ -69,27 +72,25 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
-        List<KeyPoint> keypoints = Arrays.asList(point);
+        List<KeyPoint> keypoints = Arrays.asList(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nnOctaves: 4\nnOctaveLayers: 2\nextended: 1\nupright: 0\n");
+        writeFile(filename, "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 6\nnOctaveLayers: 4\nfirstOctave: -1\nangleMode: 0\n");
 
         extractor.read(filename);
 
         extractor.compute(img, keypoints, descriptors);
-        assertEquals(128, descriptors.cols());
+        assertMatNotEqual(truth, descriptors, EPS);
     }
 
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
         extractor.write(filename);
-        //OpenCVTestRunner.Log("!!!!!!!" + readFile(filename));
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>!!!!\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<magnification>3.</magnification>\n<isNormalize>1</isNormalize>\n<recalculateAngles>1</recalculateAngles>\n<nOctaves>4</nOctaves>\n<nOctaveLayers>3</nOctaveLayers>\n<firstOctave>-1</firstOctave>\n<angleMode>0</angleMode>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -97,9 +98,8 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
         extractor.write(filename);
-        //OpenCVTestRunner.Log("!!!!!!!" + readFile(filename));
 
-        String truth = "%YAML:1.0\n!!!";
+        String truth = "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 4\nnOctaveLayers: 3\nfirstOctave: -1\nangleMode: 0\n";
         assertEquals(truth, readFile(filename));
     }
 
