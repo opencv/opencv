@@ -263,3 +263,81 @@ void vector_DMatch_to_Mat(vector<DMatch>& v_dm, Mat& mat)
 		mat.at< Vec<double, 4> >(i, 0) = Vec<double, 4>(dm.queryIdx, dm.trainIdx, dm.imgIdx, dm.distance);
 	}
 }
+
+void Mat_to_vector_vector_KeyPoint(Mat& mat, vector< vector< KeyPoint > >& vv_kp)
+{
+	vector<Mat> vm;
+	vm.reserve( mat.rows );
+	Mat_to_vector_Mat(mat, vm);
+	for(size_t i=0; i<vm.size(); i++)
+	{
+		vector<KeyPoint> vkp;
+		Mat_to_vector_KeyPoint(vm[i], vkp);
+		vv_kp.push_back(vkp);
+	}
+}
+
+void vector_vector_KeyPoint_to_Mat(vector< vector< KeyPoint > >& vv_kp, Mat& mat)
+{
+	vector<Mat> vm;
+	vm.reserve( vv_kp.size() );
+	for(size_t i=0; i<vv_kp.size(); i++)
+	{
+		Mat m;
+		vector_KeyPoint_to_Mat(vv_kp[i], m);
+		vm.push_back(m);
+	}
+	vector_Mat_to_Mat(vm, mat);
+}
+
+void Mat_to_vector_vector_DMatch(Mat& mat, vector< vector< DMatch > >& vv_dm)
+{
+	vector<Mat> vm;
+	vm.reserve( mat.rows );
+	Mat_to_vector_Mat(mat, vm);
+	for(size_t i=0; i<vm.size(); i++)
+	{
+		vector<DMatch> vdm;
+		Mat_to_vector_DMatch(vm[i], vdm);
+		vv_dm.push_back(vdm);
+	}
+}
+
+void vector_vector_DMatch_to_Mat(vector< vector< DMatch > >& vv_dm, Mat& mat)
+{
+	vector<Mat> vm;
+	vm.reserve( vv_dm.size() );
+	for(size_t i=0; i<vv_dm.size(); i++)
+	{
+		Mat m;
+		vector_DMatch_to_Mat(vv_dm[i], m);
+		vm.push_back(m);
+	}
+	vector_Mat_to_Mat(vm, mat);
+}
+
+void Mat_to_vector_vector_char(Mat& mat, vector< vector< char > >& vv_ch)
+{
+	vector<Mat> vm;
+	vm.reserve( mat.rows );
+	Mat_to_vector_Mat(mat, vm);
+	for(size_t i=0; i<vm.size(); i++)
+	{
+		vector<char> vch;
+		Mat_to_vector_char(vm[i], vch);
+		vv_ch.push_back(vch);
+	}
+}
+
+void vector_vector_char_to_Mat(vector< vector< char > >& vv_ch, Mat& mat)
+{
+	vector<Mat> vm;
+	vm.reserve( vv_ch.size() );
+	for(size_t i=0; i<vv_ch.size(); i++)
+	{
+		Mat m;
+		vector_char_to_Mat(vv_ch[i], m);
+		vm.push_back(m);
+	}
+	vector_Mat_to_Mat(vm, mat);
+}

@@ -46,3 +46,12 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat);
 
 void Mat_to_vector_DMatch(cv::Mat& mat, std::vector<cv::DMatch>& v_dm);
 void vector_DMatch_to_Mat(std::vector<cv::DMatch>& v_dm, cv::Mat& mat);
+
+void Mat_to_vector_vector_KeyPoint(cv::Mat& mat, std::vector< std::vector< cv::KeyPoint > >& vv_kp);
+void vector_vector_KeyPoint_to_Mat(std::vector< std::vector< cv::KeyPoint > >& vv_kp, cv::Mat& mat);
+
+void Mat_to_vector_vector_DMatch(cv::Mat& mat, std::vector< std::vector< cv::DMatch > >& vv_dm);
+void vector_vector_DMatch_to_Mat(std::vector< std::vector< cv::DMatch > >& vv_dm, cv::Mat& mat);
+
+void Mat_to_vector_vector_char(cv::Mat& mat, std::vector< std::vector< char > >& vv_ch);
+void vector_vector_char_to_Mat(std::vector< std::vector< char > >& vv_ch, cv::Mat& mat);

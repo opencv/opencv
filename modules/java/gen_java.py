@@ -200,6 +200,10 @@ type_dict = {
     "vector_float"  : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
     "vector_double" : { "j_type" : "List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
 
+    "vector_vector_KeyPoint":{ "j_type" : "List<List<KeyPoint>>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
+    "vector_vector_DMatch" : { "j_type" : "List<List<DMatch>>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
+    "vector_vector_char"   : { "j_type" : "List<List<Byte>>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
+
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
@@ -668,7 +672,7 @@ public class %(jc)s {
 
         # class props
         for p in decl[3]:
-            if "vector" not in p[0]:
+            if True: #"vector" not in p[0]:
                 classinfo.props.append( ClassPropInfo(p) )
             else:
                 print "Skipped property: [%s]" % name, p

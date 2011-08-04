@@ -96,6 +96,28 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
     }
 
+	public void testDetectListOfMatListOfListOfKeyPoint() {
+        String filename = OpenCVTestRunner.getTempFileName("yml");
+        writeFile(filename, "%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n");
+        detector.read(filename);
+        
+        List<List<KeyPoint>> keypoints = new ArrayList<List<KeyPoint>>();
+        Mat cross = getTestImg();
+        List<Mat> crosses = new ArrayList<Mat>(3);
+        crosses.add(cross);
+        crosses.add(cross);
+        crosses.add(cross);
+
+        detector.detect(crosses, keypoints);
+        
+        assertEquals(3, keypoints.size());
+
+        for(List<KeyPoint> lkp : keypoints) {
+        	order(lkp);
+        	assertListKeyPointEquals(Arrays.asList(truth), lkp, EPS);
+        }
+	}
+
     public void testEmpty() {
         assertFalse(detector.empty());
     }
