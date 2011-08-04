@@ -1990,8 +1990,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt,
 
     if( depth < CV_32F )
     {
-        double m = 0, M = 0, badValue = 0;
-        Point mp, MP, badPt(-1,-1);
+        double m = 0, M = 0;
+        Point mp, MP;
         minMaxLoc(src.reshape(1,0), &m, &M, &mp, &MP);
         if( M >= maxVal )
         {
