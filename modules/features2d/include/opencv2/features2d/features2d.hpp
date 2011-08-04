@@ -2540,6 +2540,11 @@ public:
     virtual void add( const vector<Mat>& descriptors );
     virtual void clear();
 
+    // Reads matcher object from a file node
+    virtual void read( const FileNode& );
+    // Writes matcher object to a file storage
+    virtual void write( FileStorage& ) const;
+
     virtual void train();
     virtual bool isMaskSupported() const;
 	

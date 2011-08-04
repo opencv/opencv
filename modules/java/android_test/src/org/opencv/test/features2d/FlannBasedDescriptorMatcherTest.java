@@ -23,7 +23,80 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     DescriptorMatcher matcher;
     int matSize;
     DMatch[] truth;
+    
+    static final String ymlParamsDefault = "%YAML:1.0\n"
++ "indexParams:\n"
++ "   -\n"
++ "      name: algorithm\n"
++ "      type: 23\n"
++ "      value: 1\n"
++ "   -\n"
++ "      name: trees\n"
++ "      type: 4\n"
++ "      value: 4\n"
++ "searchParams:\n"
++ "   -\n"
++ "      name: checks\n"
++ "      type: 4\n"
++ "      value: 32\n"
++ "   -\n"
++ "      name: eps\n"
++ "      type: 5\n"
++ "      value: 0.\n"
++ "   -\n"
++ "      name: sorted\n"
++ "      type: 15\n"
++ "      value: 1\n";
+    
+    static final String xmlParamsDefault = "<?xml version=\"1.0\"?>\n"
++ "<opencv_storage>\n"
++ "<indexParams>\n"
++ "  <_>\n"
++ "    <name>algorithm</name>\n"
++ "    <type>23</type>\n"
++ "    <value>1</value></_>\n"
++ "  <_>\n"
++ "    <name>trees</name>\n"
++ "    <type>4</type>\n"
++ "    <value>4</value></_></indexParams>\n"
++ "<searchParams>\n"
++ "  <_>\n"
++ "    <name>checks</name>\n"
++ "    <type>4</type>\n"
++ "    <value>32</value></_>\n"
++ "  <_>\n"
++ "    <name>eps</name>\n"
++ "    <type>5</type>\n"
++ "    <value>0.</value></_>\n"
++ "  <_>\n"
++ "    <name>sorted</name>\n"
++ "    <type>15</type>\n"
++ "    <value>1</value></_></searchParams>\n"
++ "</opencv_storage>\n";
 
+    static final String ymlParamsModified = "%YAML:1.0\n"
++ "indexParams:\n"
++ "   -\n"
++ "      name: algorithm\n"
++ "      type: 23\n"
++ "      value: 6\n"//this line is changed
++ "   -\n"
++ "      name: trees\n"
++ "      type: 4\n"
++ "      value: 4\n"
++ "searchParams:\n"
++ "   -\n"
++ "      name: checks\n"
++ "      type: 4\n"
++ "      value: 32\n"
++ "   -\n"
++ "      name: eps\n"
++ "      type: 5\n"
++ "      value: 0.\n"
++ "   -\n"
++ "      name: sorted\n"
++ "      type: 15\n"
++ "      value: 1\n";
     protected void setUp() throws Exception {
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matSize = 100;
@@ -90,6 +163,39 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
                 put(0,0, 1, 1, 1, 1);
             }
         };
+    }
+    
+    private Mat getBriefTrainImg() {
+        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Core.line(img, new Point(40, 40), new Point(matSize - 40, matSize - 40), new Scalar(0), 8);
+        return img;
+    }
+    
+    private Mat getBriefQueryImg() {
+        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Core.line(img, new Point(40, matSize - 40), new Point(matSize - 50, 50), new Scalar(0), 8);
+        return img;
+    }
+    
+    private Mat getBriefTestDescriptors(Mat img) {
+        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+        Mat descriptors = new Mat();
+
+        FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
+        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.BRIEF);
+
+        detector.detect(img, keypoints);
+        extractor.compute(img, keypoints, descriptors);
+        
+        return descriptors;
+    }
+
+    private Mat getBriefQueryDescriptors() {
+        return getBriefTestDescriptors(getBriefQueryImg());
+    }
+    
+    private Mat getBriefTrainDescriptors() {
+        return getBriefTestDescriptors(getBriefTrainImg());
     }
 
     public void testAdd() {
@@ -200,12 +306,21 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        fail("https://code.ros.org/trac/opencv/ticket/1253");
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\n");
-
+        writeFile(filename, ymlParamsModified);
+        
         matcher.read(filename);
-        assertTrue(true);
+        
+        Mat train = getBriefTrainDescriptors();
+        Mat query = getBriefQueryDescriptors();
+        List<DMatch> matches = new ArrayList<DMatch>();
+        
+        matcher.match(query, train, matches);
+        
+        assertListDMatchEquals(Arrays.asList(new DMatch (0, 0, 0, 0),
+                new DMatch (1, 2, 0, 0),
+                new DMatch (2, 1, 0, 0),
+                new DMatch (3, 3, 0, 0)), matches, EPS);
     }
 
     public void testTrain() {
@@ -224,13 +339,19 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testWrite() {
-        fail("https://code.ros.org/trac/opencv/ticket/1253");
+        String filename = OpenCVTestRunner.getTempFileName("xml");
+
+        matcher.write(filename);
+
+        assertEquals(xmlParamsDefault, readFile(filename));
+    }
+
+    public void testWriteYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
         matcher.write(filename);
 
-        String truth = "%YAML:1.0\n!!!!!";
-        assertEquals(truth, readFile(filename));
+        assertEquals(ymlParamsDefault, readFile(filename));
     }
 
 }

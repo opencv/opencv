@@ -542,6 +542,195 @@ void FlannBasedMatcher::train()
     }
 }
 
+void FlannBasedMatcher::read( const FileNode& fn)
+{
+     if (indexParams == 0)
+         indexParams = new flann::IndexParams();
+
+     FileNode ip = fn["indexParams"];
+     CV_Assert(ip.type() == FileNode::SEQ);
+
+     for(size_t i = 0; i < ip.size(); ++i)
+     {
+        CV_Assert(ip[i].type() == FileNode::MAP);
+        std::string name =  (std::string)ip[i]["name"];
+        int type =  (int)ip[i]["type"];
+
+        switch(type)
+        {
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
+            indexParams->setInt(name, (int) ip[i]["value"]);
+            break;
+        case CV_32F:
+            indexParams->setFloat(name, (float) ip[i]["value"]);
+            break;
+        case CV_64F:
+            indexParams->setDouble(name, (double) ip[i]["value"]);
+            break;
+        case CV_USRTYPE1:
+            indexParams->setString(name, (std::string) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,2):
+            indexParams->setBool(name, (int) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,3):
+            indexParams->setAlgorithm(name, (int) ip[i]["value"]);
+            break;
+        };
+     }
+
+     if (searchParams == 0)
+         searchParams = new flann::SearchParams();
+
+     FileNode sp = fn["searchParams"];
+     CV_Assert(sp.type() == FileNode::SEQ);
+
+     for(size_t i = 0; i < sp.size(); ++i)
+     {
+        CV_Assert(sp[i].type() == FileNode::MAP);
+        std::string name =  (std::string)sp[i]["name"];
+        int type =  (int)sp[i]["type"];
+
+        switch(type)
+        {
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
+            searchParams->setInt(name, (int) sp[i]["value"]);
+            break;
+        case CV_32F:
+            searchParams->setFloat(name, (float) ip[i]["value"]);
+            break;
+        case CV_64F:
+            searchParams->setDouble(name, (double) ip[i]["value"]);
+            break;
+        case CV_USRTYPE1:
+            searchParams->setString(name, (std::string) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,2):
+            searchParams->setBool(name, (int) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,3):
+            searchParams->setAlgorithm(name, (int) ip[i]["value"]);
+            break;
+        };
+     }
+
+    flannIndex.release();
+}
+
+void FlannBasedMatcher::write( FileStorage& fs) const
+{
+     fs << "indexParams" << "[";
+
+     if (indexParams != 0)
+     {
+         std::vector<std::string> names;
+         std::vector<int> types;
+         std::vector<std::string> strValues;
+         std::vector<double> numValues;
+
+         indexParams->getAll(names, types, strValues, numValues);
+
+         for(size_t i = 0; i < names.size(); ++i)
+         {
+             fs << "{" << "name" << names[i] << "type" << types[i] << "value";
+             switch(types[i])
+             {
+             case CV_8U:
+                 fs << (uchar)numValues[i];
+                 break;
+             case CV_8S:
+                 fs << (char)numValues[i];
+                 break;
+             case CV_16U:
+                 fs << (ushort)numValues[i];
+                 break;
+             case CV_16S:
+                 fs << (short)numValues[i];
+                 break;
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
+                 fs << (int)numValues[i];
+                 break;
+             case CV_32F:
+                 fs << (float)numValues[i];
+                 break;
+             case CV_64F:
+                 fs << (double)numValues[i];
+                 break;
+             case CV_USRTYPE1:
+                 fs << strValues[i];
+                 break;
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
+             }
+             fs << "}";
+         }
+     }
+
+     fs << "]" << "searchParams" << "[";
+
+     if (searchParams != 0)
+     {
+         std::vector<std::string> names;
+         std::vector<int> types;
+         std::vector<std::string> strValues;
+         std::vector<double> numValues;
+
+         searchParams->getAll(names, types, strValues, numValues);
+
+         for(size_t i = 0; i < names.size(); ++i)
+         {
+             fs << "{" << "name" << names[i] << "type" << types[i] << "value";
+             switch(types[i])
+             {
+             case CV_8U:
+                 fs << (uchar)numValues[i];
+                 break;
+             case CV_8S:
+                 fs << (char)numValues[i];
+                 break;
+             case CV_16U:
+                 fs << (ushort)numValues[i];
+                 break;
+             case CV_16S:
+                 fs << (short)numValues[i];
+                 break;
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
+                 fs << (int)numValues[i];
+                 break;
+             case CV_32F:
+                 fs << (float)numValues[i];
+                 break;
+             case CV_64F:
+                 fs << (double)numValues[i];
+                 break;
+             case CV_USRTYPE1:
+                 fs << strValues[i];
+                 break;
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
+             }
+             fs << "}";
+         }
+     }
+     fs << "]";
+}
+
 bool FlannBasedMatcher::isMaskSupported() const
 {
     return false;

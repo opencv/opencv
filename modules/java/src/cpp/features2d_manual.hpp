@@ -245,6 +245,7 @@ public:
 
         OPPONENTEXTRACTOR = 1000,
 
+
         OPPONENT_SIFT  = OPPONENTEXTRACTOR + SIFT,
         OPPONENT_SURF  = OPPONENTEXTRACTOR + SURF,
         OPPONENT_ORB   = OPPONENTEXTRACTOR + ORB,
@@ -313,27 +314,27 @@ public:
     CV_WRAP virtual void clear();
     CV_WRAP virtual bool isMaskSupported();
     CV_WRAP virtual void train();
-    CV_WRAP void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+    CV_WRAP void classify( const Mat& queryImage, CV_IN_OUT vector<KeyPoint>& queryKeypoints,
                            const Mat& trainImage, vector<KeyPoint>& trainKeypoints ) const;
-    CV_WRAP void classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints );
+    CV_WRAP void classify( const Mat& queryImage, CV_IN_OUT vector<KeyPoint>& queryKeypoints );
     CV_WRAP void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
                 const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+                CV_OUT vector<DMatch>& matches, const Mat& mask=Mat() ) const;
     CV_WRAP void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
                    const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                   vector<vector<DMatch> >& matches, int k,
+                   CV_OUT vector<vector<DMatch> >& matches, int k,
                    const Mat& mask=Mat(), bool compactResult=false ) const;
     CV_WRAP void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
                       const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                      vector<vector<DMatch> >& matches, float maxDistance,
+                      CV_OUT vector<vector<DMatch> >& matches, float maxDistance,
                       const Mat& mask=Mat(), bool compactResult=false ) const;
     CV_WRAP void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() );
+                CV_OUT vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() );
     CV_WRAP void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                   vector<vector<DMatch> >& matches, int k,
+                   CV_OUT vector<vector<DMatch> >& matches, int k,
                    const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
     CV_WRAP void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                      vector<vector<DMatch> >& matches, float maxDistance,
+                      CV_OUT vector<vector<DMatch> >& matches, float maxDistance,
                       const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
     CV_WRAP virtual bool empty() const;
 #endif
@@ -411,7 +412,7 @@ CV_EXPORTS_W void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoint
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const vector<char>& matchesMask=vector<char>(), int flags=0 );
 
-CV_EXPORTS_W void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
+CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
                              const Mat& img2, const vector<KeyPoint>& keypoints2,
                              const vector<vector<DMatch> >& matches1to2, Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),

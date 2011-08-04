@@ -70,7 +70,21 @@ void IndexParams::setDouble(const std::string& key, double value)
 {
     setParam(*this, key, value);
 }
-    
+
+void IndexParams::setFloat(const std::string& key, float value)
+{
+    setParam(*this, key, value);
+}
+
+void IndexParams::setBool(const std::string& key, bool value)
+{
+    setParam(*this, key, value);
+}
+
+void IndexParams::setAlgorithm(const std::string& key, int value)
+{
+    setParam(*this, key, (cvflann::flann_algorithm_t)value);
+}
     
 void IndexParams::getAll(std::vector<std::string>& names,
             std::vector<int>& types,
@@ -94,23 +108,88 @@ void IndexParams::getAll(std::vector<std::string>& names,
             types.push_back(CV_USRTYPE1);
             strValues.push_back(val);
             numValues.push_back(-1);
+	    continue;
         }
-        catch (...)
+        catch (...) {}
+        
+        strValues.push_back(it->second.type().name());
+        
+        try
         {
-            try
-            {
-                double val = it->second.cast<double>();
-                strValues.push_back(std::string());
-                types.push_back( val == saturate_cast<int>(val) ? CV_32S : CV_64F );
-                numValues.push_back(val);
-            }
-            catch( ... )
-            {
-                types.push_back(-1); // unknown type
-                strValues.push_back(std::string());
-                numValues.push_back(-1);
-            }
+            double val = it->second.cast<double>();
+            types.push_back( CV_64F );
+            numValues.push_back(val);
+	    continue;
         }
+        catch (...) {}
+        try
+        {
+            float val = it->second.cast<float>();
+            types.push_back( CV_32F );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            int val = it->second.cast<int>();
+            types.push_back( CV_32S );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            short val = it->second.cast<short>();
+            types.push_back( CV_16S );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            ushort val = it->second.cast<ushort>();
+            types.push_back( CV_16U );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            char val = it->second.cast<char>();
+            types.push_back( CV_8S );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            uchar val = it->second.cast<uchar>();
+            types.push_back( CV_8U );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            bool val = it->second.cast<bool>();
+            types.push_back( CV_MAKETYPE(CV_USRTYPE1,2) );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+        try
+        {
+            cvflann::flann_algorithm_t val = it->second.cast<cvflann::flann_algorithm_t>();
+            types.push_back( CV_MAKETYPE(CV_USRTYPE1,3) );
+            numValues.push_back(val);
+	    continue;
+        }
+        catch (...) {}
+
+
+        types.push_back(-1); // unknown type
+        numValues.push_back(-1);
     }
 }
     

@@ -68,6 +68,9 @@ struct CV_EXPORTS IndexParams
     void setString(const std::string& key, const std::string& value);
     void setInt(const std::string& key, int value);
     void setDouble(const std::string& key, double value);
+    void setFloat(const std::string& key, float value);
+    void setBool(const std::string& key, bool value);
+    void setAlgorithm(const std::string& key, int value);
     
     void getAll(std::vector<std::string>& names,
                 std::vector<int>& types,
