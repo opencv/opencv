@@ -151,7 +151,7 @@ CommandLineParser::CommandLineParser(int argc, const char* argv[], const char* k
                 break;
             }
 
-            if (!hasValueThroughEq && (values_buffer.find('false') == values_buffer.npos) &&
+            if (!hasValueThroughEq && (values_buffer.find("false") == values_buffer.npos) &&
                 ((curName == keysVector[0]) || (curName == keysVector[1])))
 
             {
@@ -160,7 +160,7 @@ CommandLineParser::CommandLineParser(int argc, const char* argv[], const char* k
                 break;
             }
 
-            if (!hasValueThroughEq &&  (values_buffer.find('false') != values_buffer.npos)
+            if (!hasValueThroughEq &&  (values_buffer.find("false") != values_buffer.npos)
                 && ((curName == keysVector[0]) || (curName == keysVector[1])))
 
             {
