@@ -2052,6 +2052,9 @@ public:
     // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
     BriefDescriptorExtractor( int bytes = 32 );
 
+    virtual void read( const FileNode& );
+    virtual void write( FileStorage& ) const;
+
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
 

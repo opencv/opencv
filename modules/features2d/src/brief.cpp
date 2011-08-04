@@ -188,6 +188,31 @@ int BriefDescriptorExtractor::descriptorType() const
     return CV_8UC1;
 }
 
+void BriefDescriptorExtractor::read( const FileNode& fn)
+{
+    int descriptorSize = fn["descriptorSize"];
+    switch (descriptorSize)
+    {
+        case 16:
+            test_fn_ = pixelTests16;
+            break;
+        case 32:
+            test_fn_ = pixelTests32;
+            break;
+        case 64:
+            test_fn_ = pixelTests64;
+            break;
+        default:
+            CV_Error(CV_StsBadArg, "descriptorSize must be 16, 32, or 64");
+    }
+    bytes_ = descriptorSize;
+}
+
+void BriefDescriptorExtractor::write( FileStorage& fs) const
+{
+    fs << "descriptorSize" << bytes_;
+}
+
 void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
 {
     // Construct integral image for fast smoothing (box filter)

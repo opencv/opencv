@@ -69,27 +69,20 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
-        List<KeyPoint> keypoints = Arrays.asList(point);
-        Mat img = getTestImg();
-        Mat descriptors = new Mat();
-
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nnOctaves: 4\nnOctaveLayers: 2\nextended: 1\nupright: 0\n");
+        writeFile(filename, "%YAML:1.0\ndescriptorSize: 64\n");
 
         extractor.read(filename);
 
-        extractor.compute(img, keypoints, descriptors);
-        assertEquals(128, descriptors.cols());
+        assertEquals(64, extractor.descriptorSize());
     }
 
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
         extractor.write(filename);
-        //OpenCVTestRunner.Log("!!!!!!!" + readFile(filename));
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>!!!!\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<descriptorSize>32</descriptorSize>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -97,9 +90,8 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
         extractor.write(filename);
-        //OpenCVTestRunner.Log("!!!!!!!" + readFile(filename));
 
-        String truth = "%YAML:1.0\n!!!";
+        String truth = "%YAML:1.0\ndescriptorSize: 32\n";
         assertEquals(truth, readFile(filename));
     }
 
