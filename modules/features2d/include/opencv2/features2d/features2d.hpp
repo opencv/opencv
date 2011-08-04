@@ -1919,7 +1919,7 @@ protected:
  * - if you know the integral image, use setIntegralImage so that it is not recomputed. This calls
  * setStepSize automatically
  */
-class OrbDescriptorExtractor : public cv::DescriptorExtractor
+class CV_EXPORTS OrbDescriptorExtractor : public cv::DescriptorExtractor
 {
 public:
   /** default constructor
