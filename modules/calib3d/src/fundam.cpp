@@ -84,9 +84,9 @@ int CvHomographyEstimator::runKernel( const CvMat* m1, const CvMat* m2, CvMat* H
     const CvPoint2D64f* M = (const CvPoint2D64f*)m1->data.ptr;
     const CvPoint2D64f* m = (const CvPoint2D64f*)m2->data.ptr;
 
-    double LtL[9][9], W[9][9], V[9][9];
+    double LtL[9][9], W[9][1], V[9][9];
     CvMat _LtL = cvMat( 9, 9, CV_64F, LtL );
-    CvMat matW = cvMat( 9, 9, CV_64F, W );
+    CvMat matW = cvMat( 9, 1, CV_64F, W );
     CvMat matV = cvMat( 9, 9, CV_64F, V );
     CvMat _H0 = cvMat( 3, 3, CV_64F, V[8] );
     CvMat _Htemp = cvMat( 3, 3, CV_64F, V[7] );
