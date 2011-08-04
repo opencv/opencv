@@ -1219,13 +1219,13 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 //  static void %(cls)s::delete( __int64 self )
 //
 
-JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(cls)s_delete
+JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
   (JNIEnv* env, jclass cls, jlong self)
 {
     delete (%(cls)s*) self;
 }
 
-""" % {"module" : module, "cls" : name}
+""" % {"module" : module, "cls" : name, "j_cls" : ci.jname}
             )
 
 
