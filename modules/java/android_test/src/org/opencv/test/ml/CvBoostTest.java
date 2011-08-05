@@ -1,19 +1,17 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvBoost;
 
-public class CvBoostTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvBoostTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
     }
 
     public void testCvBoost() {
-        fail("Not yet implemented");
+        new CvBoost();
     }
 
     public void testCvBoostMatIntMat() {

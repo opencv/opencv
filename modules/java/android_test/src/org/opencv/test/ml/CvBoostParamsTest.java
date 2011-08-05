@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvBoostParams;
 
-public class CvBoostParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvBoostParamsTest extends TestCase {
+
+    public void testCvBoostParams() {
+        new CvBoostParams();
     }
 
     public void testGet_boost_type() {

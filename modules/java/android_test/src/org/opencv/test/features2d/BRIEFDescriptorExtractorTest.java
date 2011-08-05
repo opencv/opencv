@@ -34,7 +34,11 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
         super.setUp();
     }
 
-    public void testCompute() {
+    public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testComputeMatListOfKeyPointMat() {
         KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         List<KeyPoint> keypoints = Arrays.asList(point);
         Mat img = getTestImg();

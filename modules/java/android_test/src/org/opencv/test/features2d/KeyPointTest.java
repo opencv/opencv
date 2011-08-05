@@ -20,10 +20,6 @@ public class KeyPointTest extends OpenCVTestCase {
         size = 3.0f;
     }
 
-    public void test_1() {
-        super.test_1("features2d.KeyPoint");
-    }
-
     public void testGet_angle() {
         fail("Not yet implemented");
     }
@@ -99,6 +95,10 @@ public class KeyPointTest extends OpenCVTestCase {
     }
 
     public void testSet_size() {
+        fail("Not yet implemented");
+    }
+
+    public void testToString() {
         fail("Not yet implemented");
     }
 

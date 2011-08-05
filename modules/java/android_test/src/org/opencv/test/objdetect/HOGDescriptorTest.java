@@ -5,10 +5,6 @@ import org.opencv.test.OpenCVTestCase;
 
 public class HOGDescriptorTest extends OpenCVTestCase {
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     public void testCheckDetectorSize() {
         fail("Not yet implemented");
     }
@@ -170,6 +166,10 @@ public class HOGDescriptorTest extends OpenCVTestCase {
     }
 
     public void testGet_nlevels() {
+        fail("Not yet implemented");
+    }
+
+    public void testGet_svmDetector() {
         fail("Not yet implemented");
     }
 

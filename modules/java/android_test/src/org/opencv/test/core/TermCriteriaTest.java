@@ -11,7 +11,7 @@ public class TermCriteriaTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         tc1 = new TermCriteria();
         tc2 = new TermCriteria(2, 4, EPS);
     }
@@ -26,6 +26,10 @@ public class TermCriteriaTest extends OpenCVTestCase {
 
         tc1 = tc2.clone();
         assertTrue(tc2.equals(tc1));
+    }
+
+    public void testHashCode() {
+        assertEquals(tc2.hashCode(), tc2.hashCode());
     }
 
     public void testSet() {
@@ -46,7 +50,7 @@ public class TermCriteriaTest extends OpenCVTestCase {
 
     public void testTermCriteria() {
         tc1 = new TermCriteria();
-        
+
         assertNotNull(tc1);
         assertEquals(0, tc1.type);
         assertEquals(0, tc1.maxCount);
@@ -64,7 +68,7 @@ public class TermCriteriaTest extends OpenCVTestCase {
 
     public void testTermCriteriaIntIntDouble() {
         tc1 = new TermCriteria(2, 4, EPS);
-        
+
         assertNotNull(tc2);
         assertEquals(2, tc2.type);
         assertEquals(4, tc2.maxCount);

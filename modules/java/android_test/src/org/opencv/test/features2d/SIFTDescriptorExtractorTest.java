@@ -17,8 +17,8 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     DescriptorExtractor extractor;
     KeyPoint keypoint;
-    Mat truth;
     int matSize;
+    Mat truth;
 
     private Mat getTestImg() {
         Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
@@ -35,7 +35,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         matSize = 100;
         truth = new Mat(1, 128, CvType.CV_32FC1) {
             {
-                put(0,0, 123, 0, 0, 1, 123, 0, 0, 1, 123, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                put(0, 0, 123, 0, 0, 1, 123, 0, 0, 1, 123, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 123, 0, 0, 2, 123, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 123, 30,
                         7, 31, 123, 0, 0, 0, 123, 52, 88, 0, 0, 0, 0, 0, 0, 2, 123, 0, 0, 0, 0, 0, 0, 1, 110, 0, 0, 0, 0, 0, 18, 37, 18, 34, 16,
                         21, 12, 23, 12, 50, 123, 0, 0, 0, 90, 26, 0, 3, 123, 0, 0, 1, 122, 0, 0, 2, 123, 0, 0, 1, 93, 0);
@@ -45,7 +45,11 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         super.setUp();
     }
 
-    public void testCompute() {
+    public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testComputeMatListOfKeyPointMat() {
         List<KeyPoint> keypoints = Arrays.asList(keypoint);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
@@ -77,7 +81,8 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         Mat descriptors = new Mat();
 
         String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename, "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 6\nnOctaveLayers: 4\nfirstOctave: -1\nangleMode: 0\n");
+        writeFile(filename,
+                "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 6\nnOctaveLayers: 4\nfirstOctave: -1\nangleMode: 0\n");
 
         extractor.read(filename);
 

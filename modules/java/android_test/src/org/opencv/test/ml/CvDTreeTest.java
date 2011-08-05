@@ -1,19 +1,17 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvDTree;
 
-public class CvDTreeTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvDTreeTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
     }
 
     public void testCvDTree() {
-        fail("Not yet implemented");
+        new CvDTree();
     }
 
     public void testGetVarImportance() {

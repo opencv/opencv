@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvParamGrid;
 
-public class CvParamGridTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvParamGridTest extends TestCase {
+
+    public void testCvParamGrid() {
+        new CvParamGrid();
     }
 
     public void testGet_max_val() {

@@ -4,10 +4,6 @@ import org.opencv.test.OpenCVTestCase;
 
 public class MomentsTest extends OpenCVTestCase {
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     public void testGet_m00() {
         fail("Not yet implemented");
     }

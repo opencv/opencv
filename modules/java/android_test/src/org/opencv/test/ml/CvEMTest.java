@@ -1,12 +1,10 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvEM;
 
-public class CvEMTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvEMTest extends TestCase {
 
     public void testCalcLikelihood() {
         fail("Not yet implemented");
@@ -17,7 +15,7 @@ public class CvEMTest extends OpenCVTestCase {
     }
 
     public void testCvEM() {
-        fail("Not yet implemented");
+        new CvEM();
     }
 
     public void testCvEMMat() {

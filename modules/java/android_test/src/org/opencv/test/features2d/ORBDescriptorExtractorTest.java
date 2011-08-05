@@ -34,7 +34,11 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         super.setUp();
     }
 
-    public void testCompute() {
+    public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testComputeMatListOfKeyPointMat() {
         KeyPoint point = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         List<KeyPoint> keypoints = Arrays.asList(point);
         Mat img = getTestImg();
@@ -72,17 +76,17 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         List<KeyPoint> keypoints = Arrays.asList(point);
         Mat img = getTestImg();
         Mat descriptors = new Mat();
-        
+
         String filename = OpenCVTestRunner.getTempFileName("yml");
         writeFile(filename, "%YAML:1.0\nscaleFactor: 1.1\nnLevels: 3\nfirstLevel: 0\nedgeThreshold: 31\npatchSize: 31\n");
         extractor.read(filename);
-        
+
         extractor.compute(img, keypoints, descriptors);
 
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
                 put(0, 0, 20, 55, 88, 20, 14, 49, 70, 111, 148, 144, 30, 16, 252, 133, 0, 8, 5, 85, 32, 0, 74, 25, 0,
-                                                      252, 119, 191, 4, 2, 66, 1, 66, 145);
+                        252, 119, 191, 4, 2, 66, 1, 66, 145);
             }
         };
         assertMatEqual(truth, descriptors);

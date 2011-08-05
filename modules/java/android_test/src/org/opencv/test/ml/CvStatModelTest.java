@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvStatModel;
 
-public class CvStatModelTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvStatModelTest extends TestCase {
+
+    public void testCvStatModel() {
+        new CvStatModel();
     }
 
     public void testLoadString() {

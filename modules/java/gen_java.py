@@ -471,6 +471,195 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "imshow"            : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "waitKey"           : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
+    
+    'CvANN_MLP_TrainParams':
+    {
+        "CvANN_MLP_TrainParams" : 
+        {
+            'j_code' : """
+//javadoc:CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
+public CvANN_MLP_TrainParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvANN_1MLP_1TrainParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvANN_MLP_TrainParams();
+}
+            """
+        },
+    },
+    
+    'CvBoostParams':
+    {
+        "CvBoostParams" : 
+        {
+            'j_code' : """
+//javadoc:CvBoostParams::CvBoostParams()
+public CvBoostParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvBoostParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvBoostParams();
+}
+            """
+        },
+    },
+    
+    'CvDTreeParams':
+    {
+        "CvDTreeParams" : 
+        {
+            'j_code' : """
+//javadoc:CvDTreeParams::CvDTreeParams()
+public CvDTreeParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvDTreeParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvDTreeParams();
+}
+            """
+        },
+    },
+    
+    'CvEMParams':
+    {
+        "CvEMParams" : 
+        {
+            'j_code' : """
+//javadoc:CvEMParams::CvEMParams()
+public CvEMParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvEMParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvEMParams();
+}
+            """
+        },
+    },
+    
+    'CvGBTreesParams':
+    {
+        "CvGBTreesParams" : 
+        {
+            'j_code' : """
+//javadoc:CvGBTreesParams::CvGBTreesParams()
+public CvGBTreesParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvGBTreesParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvGBTreesParams();
+}
+            """
+        },
+    },
+    
+    'CvParamGrid':
+    {
+        "CvParamGrid" : 
+        {
+            'j_code' : """
+//javadoc:CvParamGrid::CvParamGrid()
+public CvParamGrid() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvParamGrid_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvParamGrid();
+}
+            """
+        },
+    },
+    
+    'CvRTParams':
+    {
+        "CvRTParams" : 
+        {
+            'j_code' : """
+//javadoc:CvRTParams::CvRTParams()
+public CvRTParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvRTParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvRTParams();
+}
+            """
+        },
+    },
+    
+    'CvStatModel':
+    {
+        "CvStatModel" : 
+        {
+            'j_code' : """
+//javadoc:CvStatModel::CvStatModel()
+public CvStatModel() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvStatModel_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvStatModel();
+}
+            """
+        },
+    },
+    
+    'CvSVMParams':
+    {
+        "CvSVMParams" : 
+        {
+            'j_code' : """
+//javadoc:CvSVMParams::CvSVMParams()
+public CvSVMParams() {
+    nativeObj = n_newObj();
+}
+            """,
+            'jn_code' : 'private static native long n_newObj();',
+            'cpp_code' : """
+JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvSVMParams_n_1newObj
+  (JNIEnv* env, jclass cls)
+{
+    return (jlong) new CvSVMParams();
+}
+            """
+        },
+    },
 }
 
 # { class : { func : {arg_name : ctype} } }
@@ -759,6 +948,16 @@ public class %(jc)s {
                     self.add_const(decl)
                 else: # function
                     self.add_func(decl)
+                    
+        #FIXME: BackgroundSubtractor is merged into BackgroundSubtractorMOG because of inheritance
+        if "BackgroundSubtractor" in self.classes:
+            bs = self.classes["BackgroundSubtractor"]
+            bsmog = self.classes["BackgroundSubtractorMOG"]
+            for name, mtd in bs.methods.items():
+                for fn in mtd.funcs:
+                    fn.classname = "BackgroundSubtractorMOG"
+                bsmog.methods[name] = mtd;
+            del self.classes["BackgroundSubtractor"]
 
         self.cpp_code = StringIO()
         self.cpp_code.write("""
@@ -1131,7 +1330,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """ ).substitute( \
         rtype = rtype, \
         module = self.module, \
-        clazz = clazz, \
+        clazz = clazz.replace('_', '_1'), \
         fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
         args = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
         prologue = "\n        ".join(c_prologue), \

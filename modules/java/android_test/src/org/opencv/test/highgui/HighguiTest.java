@@ -4,7 +4,19 @@ import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
-public class highguiTest extends OpenCVTestCase {
+public class HighguiTest extends OpenCVTestCase {
+
+    public void testImdecode() {
+        fail("Not yet implemented");
+    }
+
+    public void testImencodeStringMatListOfByte() {
+        fail("Not yet implemented");
+    }
+
+    public void testImencodeStringMatListOfByteListOfInteger() {
+        fail("Not yet implemented");
+    }
 
     public void testImreadString() {
         dst = Highgui.imread(OpenCVTestRunner.LENA_PATH);
@@ -20,6 +32,14 @@ public class highguiTest extends OpenCVTestCase {
         assertEquals(1, dst.channels());
         assertTrue(512 == dst.cols());
         assertTrue(512 == dst.rows());
+    }
+
+    public void testImwriteStringMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testImwriteStringMatListOfInteger() {
+        fail("Not yet implemented");
     }
 
 }

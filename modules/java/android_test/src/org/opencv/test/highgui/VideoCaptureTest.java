@@ -1,5 +1,8 @@
 package org.opencv.test.highgui;
 
+import java.util.List;
+
+import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 
@@ -8,8 +11,8 @@ import org.opencv.test.OpenCVTestCase;
 public class VideoCaptureTest extends OpenCVTestCase {
 
     private VideoCapture capture;
-    private boolean isSucceed;
     private boolean isOpened;
+    private boolean isSucceed;
 
     @Override
     protected void setUp() throws Exception {
@@ -20,15 +23,27 @@ public class VideoCaptureTest extends OpenCVTestCase {
         isOpened = false;
     }
 
-    public void test_1() {
-        super.test_1("HIGHGUI.VideoCapture");
+    public void testGet() {
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
+            assertTrue(0 != frameWidth);
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
-    public void testGet() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
-        capture.release();
-        assertTrue(0 != frameWidth);
+    public void testGetSupportedPreviewSizes() {
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            List<Size> sizes = capture.getSupportedPreviewSizes();
+            assertNotNull(sizes);
+            assertFalse(sizes.isEmpty());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testGrab() {
@@ -38,10 +53,13 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGrabFromRealCamera() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        isSucceed = capture.grab();
-        capture.release();
-        assertTrue(isSucceed);
+        try {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            isSucceed = capture.grab();
+            assertTrue(isSucceed);
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testIsOpened() {
@@ -50,76 +68,110 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testIsOpenedRealCamera() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        isOpened = capture.isOpened();
-        capture.release();
-        assertTrue(isOpened);
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            isOpened = capture.isOpened();
+            assertTrue(isOpened);
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testOpen() {
-        capture = new VideoCapture();
-        capture.open(Highgui.CV_CAP_ANDROID);
-        isOpened = capture.isOpened();
-        capture.release();
-        assertTrue(isOpened);
+        try
+        {
+            capture = new VideoCapture();
+            capture.open(Highgui.CV_CAP_ANDROID);
+            isOpened = capture.isOpened();
+            assertTrue(isOpened);
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testRead() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        isSucceed = capture.read(dst);
-        capture.release();
-        assertTrue(isSucceed);
-        assertFalse(dst.empty());
-        assertEquals(3, dst.channels());
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            isSucceed = capture.read(dst);
+            assertTrue(isSucceed);
+            assertFalse(dst.empty());
+            assertEquals(3, dst.channels());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testRelease() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        capture.release();
-        assertFalse(capture.isOpened());
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            capture.release();
+            assertFalse(capture.isOpened());
+            capture = null;
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testRetrieveMat() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        capture.grab();
-        isSucceed = capture.retrieve(dst);
-        capture.release();
-        assertTrue(isSucceed);
-        assertFalse(dst.empty());
-        assertEquals(3, dst.channels());
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            capture.grab();
+            isSucceed = capture.retrieve(dst);
+            assertTrue(isSucceed);
+            assertFalse(dst.empty());
+            assertEquals(3, dst.channels());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testRetrieveMatInt() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        capture.grab();
-        isSucceed = capture.retrieve(dst, 1);
-        capture.release();
-        assertTrue(isSucceed);
-        assertFalse(dst.empty());
-        // OpenCVTestRunner.Log(dst.toString());
-        assertEquals(1, dst.channels());
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            capture.grab();
+            isSucceed = capture.retrieve(dst, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+            assertTrue(isSucceed);
+            assertFalse(dst.empty());
+            assertEquals(1, dst.channels());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testSet() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640.0);
-        double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
-        capture.read(dst);
-        capture.release();
-        assertEquals(640.0, frameWidth);
-        assertEquals(640, dst.cols());
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 480);
+            double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
+            capture.read(dst);
+            assertEquals(640.0, frameWidth);
+            assertEquals(640, dst.cols());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 
     public void testVideoCapture() {
         capture = new VideoCapture();
-        assertTrue(null != capture);
+        assertNotNull(capture);
+        assertFalse(capture.isOpened());
     }
 
     public void testVideoCaptureInt() {
-        capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        assertTrue(null != capture);
-        isOpened = capture.isOpened();
-        capture.release();
-        assertTrue(isOpened);
+        try
+        {
+            capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            assertNotNull(capture);
+            assertTrue(capture.isOpened());
+        } finally {
+            if (capture != null) capture.release();
+        }
     }
 }

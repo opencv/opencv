@@ -11,20 +11,20 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.utils.Converters;
 import org.opencv.video.Video;
 
-public class videoTest extends OpenCVTestCase {
+public class VideoTest extends OpenCVTestCase {
+
+    private List<Float> err = null;
+    private int h;
+    private List<Point> nextPts = null;
+    List<Point> prevPts = null;
 
     private int shift1;
     private int shift2;
-    private int w;
-    private int h;
 
+    private List<Byte> status = null;
     private Mat subLena1 = null;
     private Mat subLena2 = null;
-
-    List<Point> prevPts = null;
-    private List<Point> nextPts = null;
-    private List<Byte> status = null;
-    private List<Float> err = null;
+    private int w;
 
     @Override
     protected void setUp() throws Exception {
@@ -64,37 +64,37 @@ public class videoTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleIntDouble() {
-		fail("Not yet implemented");
-	}
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloat() {
+        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
+        assertEquals(3, Core.countNonZero(Converters.vector_uchar_to_Mat(status)));
+    }
 
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleInt() {
-		fail("Not yet implemented");
-	}
-
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDouble() {
-		fail("Not yet implemented");
-	}
-
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteria() {
-		fail("Not yet implemented");
-	}
-
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeInt() {
-		fail("Not yet implemented");
-	}
-
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
         Size sz = new Size(3, 3);
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz);
-        assertEquals(0, Core.countNonZero( Converters.vector_uchar_to_Mat(status) ));
-	}
+        assertEquals(0, Core.countNonZero(Converters.vector_uchar_to_Mat(status)));
+    }
 
-	public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloat() {
-        Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
-        assertEquals(3, Core.countNonZero( Converters.vector_uchar_to_Mat(status) ));
-	}
-    
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteria() {
+        fail("Not yet implemented");
+    }
+
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDouble() {
+        fail("Not yet implemented");
+    }
+
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleIntDouble() {
+        fail("Not yet implemented");
+    }
+
     public void testCamShift() {
         fail("Not yet implemented");
     }

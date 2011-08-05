@@ -1,12 +1,10 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvANN_MLP;
 
-public class CvANN_MLPTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvANN_MLPTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
@@ -29,7 +27,7 @@ public class CvANN_MLPTest extends OpenCVTestCase {
     }
 
     public void testCvANN_MLP() {
-        fail("Not yet implemented");
+        new CvANN_MLP();
     }
 
     public void testCvANN_MLPMat() {

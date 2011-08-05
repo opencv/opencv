@@ -6,14 +6,14 @@ import org.opencv.test.OpenCVTestCase;
 
 public class SizeTest extends OpenCVTestCase {
 
+    Size dstSize;
     Size sz1;
     Size sz2;
-    Size dstSize;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         sz1 = new Size(10.0, 10.0);
         sz2 = new Size(-1, -1);
         dstSize = null;
@@ -36,6 +36,10 @@ public class SizeTest extends OpenCVTestCase {
         assertTrue(sz1.equals(sz2));
     }
 
+    public void testHashCode() {
+        assertEquals(sz1.hashCode(), sz1.hashCode());
+    }
+
     public void testSet() {
         double[] vals1 = {};
         sz2.set(vals1);
@@ -43,14 +47,14 @@ public class SizeTest extends OpenCVTestCase {
         assertEquals(0., sz2.height);
 
         double[] vals2 = { 9, 12 };
-        sz1 .set(vals2);
+        sz1.set(vals2);
         assertEquals(9., sz1.width);
         assertEquals(12., sz1.height);
     }
 
     public void testSize() {
         dstSize = new Size();
-        
+
         assertNotNull(dstSize);
         assertEquals(0., dstSize.width);
         assertEquals(0., dstSize.height);

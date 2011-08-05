@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvGBTreesParams;
 
-public class CvGBTreesParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvGBTreesParamsTest extends TestCase {
+
+    public void testCvGBTreesParams() {
+        new CvGBTreesParams();
     }
 
     public void testGet_loss_function_type() {

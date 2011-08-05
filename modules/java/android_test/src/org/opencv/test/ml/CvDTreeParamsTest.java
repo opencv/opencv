@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvDTreeParams;
 
-public class CvDTreeParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvDTreeParamsTest extends TestCase {
+
+    public void testCvDTreeParams() {
+        new CvDTreeParams();
     }
 
     public void testGet_cv_folds() {

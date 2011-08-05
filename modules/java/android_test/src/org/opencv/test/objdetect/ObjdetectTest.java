@@ -6,7 +6,7 @@ import org.opencv.core.Rect;
 import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
 
-public class objdetectTest extends OpenCVTestCase {
+public class ObjdetectTest extends OpenCVTestCase {
 
     public void testGroupRectanglesListOfRectInt() {
         Rect r = new Rect(10, 10, 20, 20);
@@ -34,6 +34,10 @@ public class objdetectTest extends OpenCVTestCase {
         double eps = 0.2;
         Objdetect.groupRectangles(rects, groupThreshold, eps);
         assertEquals(2, rects.size());
+    }
+
+    public void testGroupRectanglesListOfRectIntDoubleListOfIntegerListOfDouble() {
+        fail("Not yet implemented");
     }
 
     public void testGroupRectanglesListOfRectListOfIntegerInt() {

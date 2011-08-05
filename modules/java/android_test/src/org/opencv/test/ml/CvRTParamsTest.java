@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvRTParams;
 
-public class CvRTParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvRTParamsTest extends TestCase {
+
+    public void testCvRTParams() {
+        new CvRTParams();
     }
 
     public void testGet_calc_var_importance() {

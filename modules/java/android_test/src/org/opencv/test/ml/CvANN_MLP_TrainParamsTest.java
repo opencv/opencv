@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvANN_MLP_TrainParams;
 
-public class CvANN_MLP_TrainParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvANN_MLP_TrainParamsTest extends TestCase {
+
+    public void testCvANN_MLP_TrainParams() {
+        new CvANN_MLP_TrainParams();
     }
 
     public void testGet_bp_dw_scale() {

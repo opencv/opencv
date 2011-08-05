@@ -13,11 +13,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 
-public class calib3dTest extends OpenCVTestCase {
-
-    public void test_1() {
-        super.test_1("calib3d");
-    }
+public class Calib3dTest extends OpenCVTestCase {
 
     public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMat() {
         fail("Not yet implemented");
@@ -238,7 +234,7 @@ public class calib3dTest extends OpenCVTestCase {
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
-    public void testFindFundamentalMatMatMat() {
+    public void testFindFundamentalMatListOfPointListOfPoint() {
         List<Point> pts1 = new ArrayList<Point>();
         List<Point> pts2 = new ArrayList<Point>();
 
@@ -257,24 +253,23 @@ public class calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, fm, EPS);
     }
 
-    public void testFindFundamentalMatMatMatInt() {
+    public void testFindFundamentalMatListOfPointListOfPointInt() {
         fail("Not yet implemented");
     }
 
-    public void testFindFundamentalMatMatMatIntDouble() {
+    public void testFindFundamentalMatListOfPointListOfPointIntDouble() {
         fail("Not yet implemented");
     }
 
-    public void testFindFundamentalMatMatMatIntDoubleDouble() {
+    public void testFindFundamentalMatListOfPointListOfPointIntDoubleDouble() {
         fail("Not yet implemented");
     }
 
-    public void testFindFundamentalMatMatMatIntDoubleDoubleMat() {
+    public void testFindFundamentalMatListOfPointListOfPointIntDoubleDoubleMat() {
         fail("Not yet implemented");
     }
 
-    public void testFindHomographyMatMat() {
-
+    public void testFindHomographyListOfPointListOfPoint() {
         List<Point> originalPoints = new ArrayList<Point>();
         List<Point> transformedPoints = new ArrayList<Point>();
 
@@ -293,15 +288,15 @@ public class calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, hmg, EPS);
     }
 
-    public void testFindHomographyMatMatInt() {
+    public void testFindHomographyListOfPointListOfPointInt() {
         fail("Not yet implemented");
     }
 
-    public void testFindHomographyMatMatIntDouble() {
+    public void testFindHomographyListOfPointListOfPointIntDouble() {
         fail("Not yet implemented");
     }
 
-    public void testFindHomographyMatMatIntDoubleMat() {
+    public void testFindHomographyListOfPointListOfPointIntDoubleMat() {
         fail("Not yet implemented");
     }
 
@@ -495,7 +490,7 @@ public class calib3dTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPMatMatMatMatMatMat() {
+    public void testSolvePnPListOfPoint3ListOfPointMatMatMatMat() {
         Mat intrinsics = Mat.eye(3, 3, CvType.CV_32F);
         intrinsics.put(0, 0, 400);
         intrinsics.put(1, 1, 400);
@@ -527,31 +522,31 @@ public class calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth_tvec, tvec, EPS);
     }
 
-    public void testSolvePnPMatMatMatMatMatMatBoolean() {
+    public void testSolvePnPListOfPoint3ListOfPointMatMatMatMatBoolean() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMat() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMat() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMatBoolean() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBoolean() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMatBooleanInt() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanInt() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMatBooleanIntFloat() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloat() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMatBooleanIntFloatInt() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloatInt() {
         fail("Not yet implemented");
     }
 
-    public void testSolvePnPRansacMatMatMatMatMatMatBooleanIntFloatIntMat() {
+    public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloatIntMat() {
         fail("Not yet implemented");
     }
 
@@ -582,5 +577,4 @@ public class calib3dTest extends OpenCVTestCase {
     public void testValidateDisparityMatMatIntIntInt() {
         fail("Not yet implemented");
     }
-
 }

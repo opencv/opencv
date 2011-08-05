@@ -1,19 +1,17 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvSVM;
 
-public class CvSVMTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvSVMTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
     }
 
     public void testCvSVM() {
-        fail("Not yet implemented");
+        new CvSVM();
     }
 
     public void testCvSVMMatMat() {

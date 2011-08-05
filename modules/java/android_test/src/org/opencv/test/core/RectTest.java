@@ -6,14 +6,14 @@ import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 
 public class RectTest extends OpenCVTestCase {
-    
+
     private Rect r;
     private Rect rect;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         r = new Rect();
         rect = new Rect(0, 0, 10, 10);
     }
@@ -38,7 +38,7 @@ public class RectTest extends OpenCVTestCase {
 
     public void testContains() {
         Rect rect = new Rect(0, 0, 10, 10);
-        
+
         Point p_inner = new Point(5, 5);
         Point p_outer = new Point(5, 55);
         Point p_bl = new Point(0, 0);
@@ -65,9 +65,13 @@ public class RectTest extends OpenCVTestCase {
         assertTrue(flag);
     }
 
+    public void testHashCode() {
+        assertEquals(rect.hashCode(), rect.hashCode());
+    }
+
     public void testRect() {
         r = new Rect();
-        
+
         assertEquals(0, r.x);
         assertEquals(0, r.y);
         assertEquals(0, r.width);
@@ -77,7 +81,7 @@ public class RectTest extends OpenCVTestCase {
     public void testRectDoubleArray() {
         double[] vals = { 1, 3, 5, 2 };
         r = new Rect(vals);
-        
+
         assertEquals(1, r.x);
         assertEquals(3, r.y);
         assertEquals(5, r.width);
@@ -86,7 +90,7 @@ public class RectTest extends OpenCVTestCase {
 
     public void testRectIntIntIntInt() {
         r = new Rect(1, 3, 5, 2);
-        
+
         assertNotNull(rect);
         assertEquals(0, rect.x);
         assertEquals(0, rect.y);
@@ -97,8 +101,8 @@ public class RectTest extends OpenCVTestCase {
     public void testRectPointPoint() {
         Point p1 = new Point(4, 4);
         Point p2 = new Point(2, 3);
-        
-        r = new Rect(p1, p2);        
+
+        r = new Rect(p1, p2);
         assertNotNull(r);
         assertEquals(2, r.x);
         assertEquals(3, r.y);

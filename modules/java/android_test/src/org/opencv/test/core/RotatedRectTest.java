@@ -21,10 +21,6 @@ public class RotatedRectTest extends OpenCVTestCase {
         angle = 40;
     }
 
-    public void test_1() {
-        super.test_1("core.RotatedRect");
-    }
-
     public void testBoundingRect() {
         size = new Size(matSize / 2, matSize / 2);
         assertEquals(size.height, size.width);
@@ -85,6 +81,11 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertTrue(!rrect1.equals(size));
     }
 
+    public void testHashCode() {
+        RotatedRect rr = new RotatedRect(center, size, angle);
+        assertEquals(rr.hashCode(), rr.hashCode());
+    }
+
     public void testPoints() {
         RotatedRect rrect = new RotatedRect(center, size, angle);
 
@@ -105,28 +106,28 @@ public class RotatedRectTest extends OpenCVTestCase {
                 Math.abs((p[1].x + p[3].x) / 2 - center.x) + Math.abs((p[1].y + p[3].y) / 2 - center.y) < EPS);
 
         assertTrue("Orthogonal vectors 01 and 12",
-                Math.abs((p[1].x - p[0].x) * (p[2].x - p[1].x) + 
-                         (p[1].y - p[0].y) * (p[2].y - p[1].y)) < EPS);
+                Math.abs((p[1].x - p[0].x) * (p[2].x - p[1].x) +
+                        (p[1].y - p[0].y) * (p[2].y - p[1].y)) < EPS);
 
         assertTrue("Orthogonal vectors 12 and 23",
-                Math.abs((p[2].x - p[1].x) * (p[3].x - p[2].x) + 
-                         (p[2].y - p[1].y) * (p[3].y - p[2].y)) < EPS);
+                Math.abs((p[2].x - p[1].x) * (p[3].x - p[2].x) +
+                        (p[2].y - p[1].y) * (p[3].y - p[2].y)) < EPS);
 
         assertTrue("Orthogonal vectors 23 and 30",
-                Math.abs((p[3].x - p[2].x) * (p[0].x - p[3].x) + 
-                         (p[3].y - p[2].y) * (p[0].y - p[3].y)) < EPS);
+                Math.abs((p[3].x - p[2].x) * (p[0].x - p[3].x) +
+                        (p[3].y - p[2].y) * (p[0].y - p[3].y)) < EPS);
 
         assertTrue("Orthogonal vectors 30 and 01",
-                Math.abs((p[0].x - p[3].x) * (p[1].x - p[0].x) + 
-                         (p[0].y - p[3].y) * (p[1].y - p[0].y)) < EPS);
+                Math.abs((p[0].x - p[3].x) * (p[1].x - p[0].x) +
+                        (p[0].y - p[3].y) * (p[1].y - p[0].y)) < EPS);
 
         assertTrue("Length of the vector 01",
-                Math.abs((p[1].x - p[0].x) * (p[1].x - p[0].x) + 
-                         (p[1].y - p[0].y) * (p[1].y - p[0].y) - size.height * size.height) < EPS);
+                Math.abs((p[1].x - p[0].x) * (p[1].x - p[0].x) +
+                        (p[1].y - p[0].y) * (p[1].y - p[0].y) - size.height * size.height) < EPS);
 
         assertTrue("Length of the vector 21",
-                Math.abs((p[1].x - p[2].x) * (p[1].x - p[2].x) + 
-                         (p[1].y - p[2].y) * (p[1].y - p[2].y) - size.width * size.width) < EPS);
+                Math.abs((p[1].x - p[2].x) * (p[1].x - p[2].x) +
+                        (p[1].y - p[2].y) * (p[1].y - p[2].y) - size.width * size.width) < EPS);
 
         assertTrue("Angle of the vector 21 with the axes", Math.abs((p[2].x - p[1].x) / size.width - Math.cos(angle * Math.PI / 180)) < EPS);
     }
@@ -141,7 +142,7 @@ public class RotatedRectTest extends OpenCVTestCase {
     }
 
     public void testRotatedRectDoubleArray() {
-        double[] vals = {1.5, 2.6, 3.7, 4.2, 5.1};
+        double[] vals = { 1.5, 2.6, 3.7, 4.2, 5.1 };
         RotatedRect rr = new RotatedRect(vals);
 
         assertNotNull(rr);
@@ -159,6 +160,10 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertTrue(rr.center != null);
         assertTrue(rr.size != null);
         assertTrue(rr.angle == 40.0);
+    }
+
+    public void testSet() {
+        fail("Not yet implemented");
     }
 
 }

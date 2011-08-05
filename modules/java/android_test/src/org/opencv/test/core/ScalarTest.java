@@ -5,16 +5,16 @@ import org.opencv.test.OpenCVTestCase;
 
 public class ScalarTest extends OpenCVTestCase {
 
+    private Scalar dstScalar;
     private Scalar s1;
     private Scalar s2;
-    private Scalar dstScalar;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
 
         s1 = new Scalar(1.0);
-        s2 = Scalar.all(1.0);        
+        s2 = Scalar.all(1.0);
         dstScalar = null;
     }
 
@@ -40,6 +40,10 @@ public class ScalarTest extends OpenCVTestCase {
         assertTrue(s2.equals(dstScalar));
 
         assertFalse(s2.equals(s1));
+    }
+
+    public void testHashCode() {
+        assertEquals(s2.hashCode(), s2.hashCode());
     }
 
     public void testIsReal() {
@@ -68,8 +72,8 @@ public class ScalarTest extends OpenCVTestCase {
     public void testScalarDoubleArray() {
         double[] vals = { 2.0, 4.0, 5.0, 3.0 };
         dstScalar = new Scalar(vals);
-        
-        Scalar truth = new Scalar(2.0, 4.0, 5.0, 3.0);        
+
+        Scalar truth = new Scalar(2.0, 4.0, 5.0, 3.0);
         assertEquals(truth, dstScalar);
     }
 

@@ -4,10 +4,6 @@ import org.opencv.test.OpenCVTestCase;
 
 public class StereoBMTest extends OpenCVTestCase {
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     public void testComputeMatMatMat() {
         fail("Not yet implemented");
     }

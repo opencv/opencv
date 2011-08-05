@@ -19,6 +19,19 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     FeatureDetector detector;
     KeyPoint[] truth;
 
+    private Mat getMaskImg() {
+        Mat mask = new Mat(100, 100, CvType.CV_8U, new Scalar(255));
+        Mat right = mask.submat(0, 100, 50, 100);
+        right.setTo(new Scalar(0));
+        return mask;
+    }
+
+    private Mat getTestImg() {
+        Mat img = new Mat(100, 100, CvType.CV_8U, new Scalar(255));
+        Core.line(img, new Point(30, 30), new Point(70, 70), new Scalar(0), 8);
+        return img;
+    }
+
     @Override
     protected void setUp() throws Exception {
         detector = FeatureDetector.create(FeatureDetector.FAST);
@@ -29,31 +42,16 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         super.setUp();
     }
 
-    private Mat getTestImg() {
-        Mat img = new Mat(100, 100, CvType.CV_8U, new Scalar(255));
-        Core.line(img, new Point(30, 30), new Point(70, 70), new Scalar(0), 8);
-        return img;
-    }
-
-    private Mat getMaskImg() {
-        Mat mask = new Mat(100, 100, CvType.CV_8U, new Scalar(255));
-        Mat right = mask.submat(0, 100, 50, 100);
-        right.setTo(new Scalar(0));
-        return mask;
-    }
-
     public void testCreate() {
         assertNotNull(detector);
     }
 
-    public void testDetectMatListOfKeyPointMat() {
-        Mat img = getTestImg();
-        Mat mask = getMaskImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+    public void testDetectListOfMatListOfListOfKeyPoint() {
+        fail("Not yet implemented");
+    }
 
-        detector.detect(img, keypoints, mask);
-
-        assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints, EPS);
+    public void testDetectListOfMatListOfListOfKeyPointListOfMat() {
+        fail("Not yet implemented");
     }
 
     public void testDetectMatListOfKeyPoint() {
@@ -67,6 +65,16 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         // OpenCVTestRunner.Log("points found: " + keypoints.size());
         // for (KeyPoint kp : keypoints)
         // OpenCVTestRunner.Log(kp.toString());
+    }
+
+    public void testDetectMatListOfKeyPointMat() {
+        Mat img = getTestImg();
+        Mat mask = getMaskImg();
+        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+
+        detector.detect(img, keypoints, mask);
+
+        assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints, EPS);
     }
 
     public void testEmpty() {

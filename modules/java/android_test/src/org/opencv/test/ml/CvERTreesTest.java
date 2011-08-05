@@ -1,15 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvERTrees;
 
-public class CvERTreesTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvERTreesTest extends TestCase {
 
     public void testCvERTrees() {
-        fail("Not yet implemented");
+        new CvERTrees();
     }
 
     public void testTrainMatIntMat() {

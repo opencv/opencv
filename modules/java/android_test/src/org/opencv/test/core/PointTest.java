@@ -5,14 +5,14 @@ import org.opencv.core.Rect;
 import org.opencv.test.OpenCVTestCase;
 
 public class PointTest extends OpenCVTestCase {
-    
+
     private Point p1;
-    private Point p2;    
+    private Point p2;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         p1 = new Point(2, 2);
         p2 = new Point(1, 1);
     }
@@ -36,6 +36,10 @@ public class PointTest extends OpenCVTestCase {
         assertFalse(flag);
     }
 
+    public void testHashCode() {
+        assertEquals(p1.hashCode(), p1.hashCode());
+    }
+
     public void testInside() {
         Rect rect = new Rect(0, 0, 5, 3);
         assertTrue(p1.inside(rect));
@@ -46,7 +50,7 @@ public class PointTest extends OpenCVTestCase {
 
     public void testPoint() {
         Point p = new Point();
-        
+
         assertNotNull(p);
         assertEquals(0.0, p.x);
         assertEquals(0.0, p.y);
@@ -62,7 +66,7 @@ public class PointTest extends OpenCVTestCase {
 
     public void testPointDoubleDouble() {
         p1 = new Point(7, 5);
-        
+
         assertNotNull(p1);
         assertEquals(7.0, p1.x);
         assertEquals(5.0, p1.y);

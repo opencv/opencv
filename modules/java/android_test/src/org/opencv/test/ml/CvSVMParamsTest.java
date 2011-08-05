@@ -1,11 +1,13 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvSVMParams;
 
-public class CvSVMParamsTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
+public class CvSVMParamsTest extends TestCase {
+
+    public void testCvSVMParams() {
+        new CvSVMParams();
     }
 
     public void testGet_C() {

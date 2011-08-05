@@ -17,8 +17,30 @@ import java.util.List;
 public class STARFeatureDetectorTest extends OpenCVTestCase {
 
     FeatureDetector detector;
-    KeyPoint[] truth;
     int matSize;
+    KeyPoint[] truth;
+
+    private Mat getMaskImg() {
+        Mat mask = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Mat right = mask.submat(0, matSize, matSize / 2, matSize);
+        right.setTo(new Scalar(0));
+        return mask;
+    }
+
+    private Mat getTestImg() {
+        Scalar color = new Scalar(0);
+        int center = matSize / 2;
+        int radius = 6;
+        int offset = 40;
+
+        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Core.circle(img, new Point(center - offset, center), radius, color, -1);
+        Core.circle(img, new Point(center + offset, center), radius, color, -1);
+        Core.circle(img, new Point(center, center - offset), radius, color, -1);
+        Core.circle(img, new Point(center, center + offset), radius, color, -1);
+        Core.circle(img, new Point(center, center), radius, color, -1);
+        return img;
+    }
 
     protected void setUp() throws Exception {
         detector = FeatureDetector.create(FeatureDetector.STAR);
@@ -39,30 +61,25 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         super.setUp();
     }
 
-    private Mat getTestImg() {
-        Scalar color = new Scalar(0);
-        int center = matSize / 2;
-        int radius = 6;
-        int offset = 40;
-
-        Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.circle(img, new Point(center - offset, center), radius, color, -1);
-        Core.circle(img, new Point(center + offset, center), radius, color, -1);
-        Core.circle(img, new Point(center, center - offset), radius, color, -1);
-        Core.circle(img, new Point(center, center + offset), radius, color, -1);
-        Core.circle(img, new Point(center, center), radius, color, -1);
-        return img;
-    }
-
-    private Mat getMaskImg() {
-        Mat mask = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Mat right = mask.submat(0, matSize, matSize / 2, matSize);
-        right.setTo(new Scalar(0));
-        return mask;
-    }
-
     public void testCreate() {
         assertNotNull(detector);
+    }
+
+    public void testDetectListOfMatListOfListOfKeyPoint() {
+        fail("Not yet implemented");
+    }
+
+    public void testDetectListOfMatListOfListOfKeyPointListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testDetectMatListOfKeyPoint() {
+        Mat img = getTestImg();
+        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
+
+        detector.detect(img, keypoints);
+
+        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
     }
 
     public void testDetectMatListOfKeyPointMat() {
@@ -75,32 +92,23 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth[0], truth[2], truth[5], truth[7]), keypoints, EPS);
     }
 
-    public void testDetectMatListOfKeyPoint() {
-        Mat img = getTestImg();
-        List<KeyPoint> keypoints = new ArrayList<KeyPoint>();
-
-        detector.detect(img, keypoints);
-
-        assertListKeyPointEquals(Arrays.asList(truth), keypoints, EPS);
-    }
-
     public void testEmpty() {
         assertFalse(detector.empty());
     }
 
     public void testRead() {
         Mat img = getTestImg();
-        
+
         List<KeyPoint> keypoints1 = new ArrayList<KeyPoint>();
         detector.detect(img, keypoints1);
-        
+
         String filename = OpenCVTestRunner.getTempFileName("yml");
         writeFile(filename, "%YAML:1.0\nmaxSize: 45\nresponseThreshold: 150\nlineThresholdProjected: 10\nlineThresholdBinarized: 8\nsuppressNonmaxSize: 5\n");
         detector.read(filename);
-        
+
         List<KeyPoint> keypoints2 = new ArrayList<KeyPoint>();
         detector.detect(img, keypoints2);
-        
+
         assertTrue(keypoints2.size() <= keypoints1.size());
     }
 

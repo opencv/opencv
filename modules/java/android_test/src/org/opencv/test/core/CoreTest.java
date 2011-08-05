@@ -13,11 +13,7 @@ import org.opencv.core.Scalar;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.utils.Converters;
 
-public class coreTest extends OpenCVTestCase {
-
-    public void test_1() {
-        super.test_1("CORE");
-    }
+public class CoreTest extends OpenCVTestCase {
 
     public void testAbsdiff() {
         Core.absdiff(gray128, gray255, dst);
@@ -167,9 +163,8 @@ public class coreTest extends OpenCVTestCase {
         try {
             Core.checkRange(outOfRange, false);
             fail("Core.checkRange should throw the CvException");
-        } catch (Exception e) {
-            if (!(e instanceof CvException))
-                fail("Core.checkRange should throw the CvException");
+        } catch (CvException e) {
+            //expected
         }
     }
 
@@ -223,11 +218,9 @@ public class coreTest extends OpenCVTestCase {
         Scalar color0 = new Scalar(0);
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.circle(gray0, center2, radius * 2, color128, 2, 4, 1/*
-                                                                  * Number of
+        Core.circle(gray0, center2, radius * 2, color128, 2, 4, 1/* Number of
                                                                   * fractional
-                                                                  * bits
-                                                                  */);
+                                                                  * bits */);
         Core.circle(gray0, center, radius, color0, 2, 4, 0);
         assertTrue(0 == Core.countNonZero(gray0));
     }
@@ -507,21 +500,21 @@ public class coreTest extends OpenCVTestCase {
         lp.add(new Point(1, 1));
         lp.add(new Point(5, 1));
         lp.add(new Point(5, 8));
-        lp.add(new Point(1, 8));        
+        lp.add(new Point(1, 8));
         Mat points = Converters.vector_Point_to_Mat(lp);
-        
+
         List<Point> lp2 = new ArrayList<Point>();
         lp2.add(new Point(0, 0));
         lp2.add(new Point(10, 2));
         lp2.add(new Point(10, 16));
         lp2.add(new Point(2, 16));
         Mat points2 = Converters.vector_Point_to_Mat(lp2);
-        
+
         assertEquals(0, Core.countNonZero(gray0));
-        Core.fillConvexPoly(gray0, points, colorWhite, 4 /*TODO: lineType*/, 0);
+        Core.fillConvexPoly(gray0, points, colorWhite, 4 /* TODO: lineType */, 0);
         assertTrue(0 < Core.countNonZero(gray0));
 
-        Core.fillConvexPoly(gray0, points2, colorBlack, 4 /*TODO: lineType*/, 0);
+        Core.fillConvexPoly(gray0, points2, colorBlack, 4 /* TODO: lineType */, 0);
         assertEquals(0, Core.countNonZero(gray0));
     }
 
@@ -610,6 +603,10 @@ public class coreTest extends OpenCVTestCase {
     }
 
     public void testGetCPUTickCount() {
+        fail("Not yet implemented");
+    }
+
+    public void testGetNumberOfCPUs() {
         fail("Not yet implemented");
     }
 

@@ -23,34 +23,12 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     int matSize;
     DMatch[] truth;
 
-    protected void setUp() throws Exception {
-        matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
-        matSize = 100;
-
-        truth = new DMatch[] { 
-                new DMatch(0, 0, 0, 0.643284f),
-                new DMatch(1, 1, 0, 0.92945856f),
-                new DMatch(2, 1, 0, 0.2841479f),
-                new DMatch(3, 1, 0, 0.9194034f),
-                new DMatch(4, 1, 0, 0.3006621f) };
-
-        super.setUp();
-    }
-
-    private Mat getTrainImg() {
-        Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
-        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
-
-        return cross;
-    }
-
-    private Mat getQueryImg() {
-        Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
-        Core.line(cross, new Point(30, matSize / 2), new Point(matSize - 31, matSize / 2), new Scalar(100), 3);
-        Core.line(cross, new Point(matSize / 2, 30), new Point(matSize / 2, matSize - 31), new Scalar(100), 3);
-
-        return cross;
+    private Mat getMaskImg() {
+        return new Mat(5, 2, CvType.CV_8U, new Scalar(0)) {
+            {
+                put(0, 0, 1, 1, 1, 1);
+            }
+        };
     }
 
     private Mat getQueryDescriptors() {
@@ -71,6 +49,14 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         return descriptors;
     }
 
+    private Mat getQueryImg() {
+        Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Core.line(cross, new Point(30, matSize / 2), new Point(matSize - 31, matSize / 2), new Scalar(100), 3);
+        Core.line(cross, new Point(matSize / 2, 30), new Point(matSize / 2, matSize - 31), new Scalar(100), 3);
+
+        return cross;
+    }
+
     private Mat getTrainDescriptors() {
         Mat img = getTrainImg();
         List<KeyPoint> keypoints = Arrays.asList(new KeyPoint(50, 50, 16, 0, 20000, 1, -1), new KeyPoint(42, 42, 16, 160, 10000, 1, -1));
@@ -83,12 +69,26 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         return descriptors;
     }
 
-    private Mat getMaskImg() {
-        return new Mat(5, 2, CvType.CV_8U, new Scalar(0)) {
-            {
-                put(0,0, 1, 1, 1, 1);
-            }
-        };
+    private Mat getTrainImg() {
+        Mat cross = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(255));
+        Core.line(cross, new Point(20, matSize / 2), new Point(matSize - 21, matSize / 2), new Scalar(100), 2);
+        Core.line(cross, new Point(matSize / 2, 20), new Point(matSize / 2, matSize - 21), new Scalar(100), 2);
+
+        return cross;
+    }
+
+    protected void setUp() throws Exception {
+        matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
+        matSize = 100;
+
+        truth = new DMatch[] {
+                new DMatch(0, 0, 0, 0.643284f),
+                new DMatch(1, 1, 0, 0.92945856f),
+                new DMatch(2, 1, 0, 0.2841479f),
+                new DMatch(3, 1, 0, 0.9194034f),
+                new DMatch(4, 1, 0, 0.3006621f) };
+
+        super.setUp();
     }
 
     public void testAdd() {
@@ -104,15 +104,6 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(matcher.empty());
     }
 
-    public void testCloneBoolean() {
-        matcher.add(Arrays.asList(new Mat()));
-
-        DescriptorMatcher cloned = matcher.clone(true);
-
-        assertNotNull(cloned);
-        assertTrue(cloned.empty());
-    }
-
     public void testClone() {
         Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
         Mat truth = train.clone();
@@ -125,6 +116,15 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         List<Mat> descriptors = cloned.getTrainDescriptors();
         assertEquals(1, descriptors.size());
         assertMatEqual(truth, descriptors.get(0));
+    }
+
+    public void testCloneBoolean() {
+        matcher.add(Arrays.asList(new Mat()));
+
+        DescriptorMatcher cloned = matcher.clone(true);
+
+        assertNotNull(cloned);
+        assertTrue(cloned.empty());
     }
 
     public void testCreate() {
@@ -150,29 +150,39 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(matcher.isMaskSupported());
     }
 
-    public void testMatchMatMatListOfDMatchMat() {
-        Mat train = getTrainDescriptors();
-        Mat query = getQueryDescriptors();
-        Mat mask = getMaskImg();
-        List<DMatch> matches = new ArrayList<DMatch>();
-        
-        matcher.match(query, train, matches, mask);
-
-        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+    public void testKnnMatchMatListOfListOfDMatchInt() {
+        fail("Not yet implemented");
     }
 
-    public void testMatchMatMatListOfDMatch() {
+    public void testKnnMatchMatListOfListOfDMatchIntListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testKnnMatchMatListOfListOfDMatchIntListOfMatBoolean() {
+        fail("Not yet implemented");
+    }
+
+    public void testKnnMatchMatMatListOfListOfDMatchInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testKnnMatchMatMatListOfListOfDMatchIntMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testKnnMatchMatMatListOfListOfDMatchIntMatBoolean() {
+        fail("Not yet implemented");
+    }
+
+    public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         List<DMatch> matches = new ArrayList<DMatch>();
-        
-        matcher.match(query, train, matches);
-        
-        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+        matcher.add(Arrays.asList(train));
 
-//        OpenCVTestRunner.Log("matches found: " + matches.size());
-//        for (DMatch m : matches)
-//            OpenCVTestRunner.Log(m.toString());
+        matcher.match(query, matches);
+
+        assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
     }
 
     public void testMatchMatListOfDMatchListOfMat() {
@@ -187,15 +197,53 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
     }
 
-    public void testMatchMatListOfDMatch() {
+    public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         List<DMatch> matches = new ArrayList<DMatch>();
-        matcher.add(Arrays.asList(train));
-        
-        matcher.match(query, matches);
-        
+
+        matcher.match(query, train, matches);
+
         assertListDMatchEquals(Arrays.asList(truth), matches, EPS);
+
+        // OpenCVTestRunner.Log("matches found: " + matches.size());
+        // for (DMatch m : matches)
+        // OpenCVTestRunner.Log(m.toString());
+    }
+
+    public void testMatchMatMatListOfDMatchMat() {
+        Mat train = getTrainDescriptors();
+        Mat query = getQueryDescriptors();
+        Mat mask = getMaskImg();
+        List<DMatch> matches = new ArrayList<DMatch>();
+
+        matcher.match(query, train, matches, mask);
+
+        assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches, EPS);
+    }
+
+    public void testRadiusMatchMatListOfListOfDMatchFloat() {
+        fail("Not yet implemented");
+    }
+
+    public void testRadiusMatchMatListOfListOfDMatchFloatListOfMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testRadiusMatchMatListOfListOfDMatchFloatListOfMatBoolean() {
+        fail("Not yet implemented");
+    }
+
+    public void testRadiusMatchMatMatListOfListOfDMatchFloat() {
+        fail("Not yet implemented");
+    }
+
+    public void testRadiusMatchMatMatListOfListOfDMatchFloatMat() {
+        fail("Not yet implemented");
+    }
+
+    public void testRadiusMatchMatMatListOfListOfDMatchFloatMatBoolean() {
+        fail("Not yet implemented");
     }
 
     public void testRead() {

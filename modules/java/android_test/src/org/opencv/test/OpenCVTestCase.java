@@ -1,15 +1,5 @@
 package org.opencv.test;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
-import org.opencv.features2d.DMatch;
-import org.opencv.features2d.KeyPoint;
-import org.opencv.highgui.Highgui;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -20,6 +10,16 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 import junit.framework.TestCase;
+
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.features2d.DMatch;
+import org.opencv.features2d.KeyPoint;
+import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
 
@@ -167,24 +167,30 @@ public class OpenCVTestCase extends TestCase {
         super.tearDown();
     }
 
-    public static void assertListIntegerEquals(List<Integer> list1, List<Integer> list2) {
+    public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-
+        
+        if (!list1.isEmpty())
+        {
+            if (list1.get(0) instanceof Float || list1.get(0) instanceof Double)
+                throw new UnsupportedOperationException();
+        }
+        
         for (int i = 0; i < list1.size(); i++)
             assertEquals(list1.get(i), list2.get(i));
     }
-
-    public static void assertListFloatEquals(List<Float> list1, List<Float> list2, double epsilon) {
+    
+    public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-
+        
         for (int i = 0; i < list1.size(); i++)
-            assertTrue(Math.abs(list1.get(i) - list2.get(i)) <= epsilon);
+            assertTrue(Math.abs(list1.get(i).doubleValue() - list2.get(i).doubleValue()) <= epsilon);
     }
-
+    
     public static void assertListMatEquals(List<Mat> list1, List<Mat> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();

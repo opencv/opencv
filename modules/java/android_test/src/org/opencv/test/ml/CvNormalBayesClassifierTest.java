@@ -1,19 +1,17 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvNormalBayesClassifier;
 
-public class CvNormalBayesClassifierTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvNormalBayesClassifierTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
     }
 
     public void testCvNormalBayesClassifier() {
-        fail("Not yet implemented");
+        new CvNormalBayesClassifier();
     }
 
     public void testCvNormalBayesClassifierMatMat() {

@@ -5,14 +5,14 @@ import org.opencv.test.OpenCVTestCase;
 
 public class RangeTest extends OpenCVTestCase {
 
-    Range range;
     Range r1;
     Range r2;
+    Range range;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         range = new Range();
         r1 = new Range(1, 11);
         r2 = new Range(1, 1);
@@ -42,9 +42,13 @@ public class RangeTest extends OpenCVTestCase {
 
     public void testEqualsObject() {
         assertFalse(r2.equals(r1));
-        
+
         range = r1.clone();
         assertTrue(r1.equals(range));
+    }
+
+    public void testHashCode() {
+        assertEquals(r1.hashCode(), r1.hashCode());
     }
 
     public void testIntersection() {
@@ -54,7 +58,7 @@ public class RangeTest extends OpenCVTestCase {
 
     public void testRange() {
         range = new Range();
-        
+
         assertNotNull(range);
         assertEquals(0, range.start);
         assertEquals(0, range.end);
@@ -70,7 +74,7 @@ public class RangeTest extends OpenCVTestCase {
 
     public void testRangeIntInt() {
         r1 = new Range(12, 13);
-        
+
         assertNotNull(r1);
         assertEquals(12, r1.start);
         assertEquals(13, r1.end);

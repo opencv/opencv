@@ -5,14 +5,14 @@ import org.opencv.core.Point3;
 import org.opencv.test.OpenCVTestCase;
 
 public class Point3Test extends OpenCVTestCase {
-    
+
     private Point3 p1;
-    private Point3 p2;    
+    private Point3 p2;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        
+
         p1 = new Point3(2, 2, 2);
         p2 = new Point3(1, 1, 1);
     }
@@ -42,9 +42,13 @@ public class Point3Test extends OpenCVTestCase {
         assertFalse(flag);
     }
 
+    public void testHashCode() {
+        assertEquals(p1.hashCode(), p1.hashCode());
+    }
+
     public void testPoint3() {
         p1 = new Point3();
-        
+
         assertNotNull(p1);
         assertTrue(0 == p1.x);
         assertTrue(0 == p1.y);

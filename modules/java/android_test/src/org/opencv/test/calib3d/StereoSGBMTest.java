@@ -4,10 +4,6 @@ import org.opencv.test.OpenCVTestCase;
 
 public class StereoSGBMTest extends OpenCVTestCase {
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     public void testCompute() {
         fail("Not yet implemented");
     }

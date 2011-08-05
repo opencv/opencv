@@ -5,10 +5,6 @@ import org.opencv.video.KalmanFilter;
 
 public class KalmanFilterTest extends OpenCVTestCase {
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-
     public void testCorrect() {
         fail("Not yet implemented");
     }

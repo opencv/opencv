@@ -1,19 +1,17 @@
 package org.opencv.test.ml;
 
-import org.opencv.test.OpenCVTestCase;
+import org.opencv.ml.CvGBTrees;
 
-public class CvGBTreesTest extends OpenCVTestCase {
+import junit.framework.TestCase;
 
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
+public class CvGBTreesTest extends TestCase {
 
     public void testClear() {
         fail("Not yet implemented");
     }
 
     public void testCvGBTrees() {
-        fail("Not yet implemented");
+        new CvGBTrees();
     }
 
     public void testCvGBTreesMatIntMat() {
