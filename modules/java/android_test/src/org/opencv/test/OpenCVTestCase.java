@@ -318,11 +318,6 @@ public class OpenCVTestCase extends TestCase {
                     Core.checkRange(diff, true, new Point(), 0.0, eps));
     }
 
-    public void test_1(String label) {
-        OpenCVTestRunner.Log("================================================");
-        OpenCVTestRunner.Log("=============== " + label);
-    }
-
     protected static String readFile(String path) {
         FileInputStream stream = null;
         try {
