@@ -4,12 +4,13 @@ classes_ignore_list = (
     'OpenCV(Test)?Case',
     'OpenCV(Test)?Runner',
     'CvException',
-    'CvType'
 )
 
 funcs_ignore_list = (
     '\w+--HashCode',
     'Mat--MatLong',
+    '\w+--Equals',
+    'Core--MinMaxLocResult',
 )
 
 class JavaParser:
@@ -19,6 +20,8 @@ class JavaParser:
     def clear(self):
         self.mdict = {}
         self.tdict = {}
+        self.mwhere = {}
+        self.twhere = {}
         self.empty_stubs_cnt = 0
         self.r1 = re.compile("\s*public\s+(?:static\s+)?(\w+)\(([^)]*)\)") # c-tor
         self.r2 = re.compile("\s*(?:(?:public|static|final)\s+){1,3}\S+\s+(\w+)\(([^)]*)\)")
@@ -47,28 +50,52 @@ class JavaParser:
     def get_not_tested(self):
         mset = self.dict2set(self.mdict)
         tset = self.dict2set(self.tdict)
-        return mset - tset
+        nottested = mset - tset
+        out = set()
+
+        for name in nottested:
+            out.add(name + "   " + self.mwhere[name])
+
+        return out
 
 
     def parse(self, path):
         if ".svn" in path:
             return
         if os.path.isfile(path):
-            parser.parse_file(path)
+            if path.endswith("FeatureDetector.java"):
+                for prefix1 in ("", "Grid", "Pyramid", "Dynamic"):
+                    for prefix2 in ("FAST", "STAR", "MSER", "ORB", "SIFT", "SURF", "GFTT", "HARRIS"):
+                        parser.parse_file(path,prefix1+prefix2)
+            elif path.endswith("DescriptorExtractor.java"):
+                for prefix1 in ("", "Opponent"):
+                    for prefix2 in ("BRIEF", "ORB", "SIFT", "SURF"):
+                        parser.parse_file(path,prefix1+prefix2)
+            elif path.endswith("GenericDescriptorMatcher.java"):
+                for prefix in ("OneWay", "Fern"):
+                    parser.parse_file(path,prefix)
+            elif path.endswith("DescriptorMatcher.java"):
+                for prefix in ("BruteForce", "BruteForceHamming", "BruteForceHammingLUT", "BruteForceL1", "FlannBased"):
+                    parser.parse_file(path,prefix)
+            else:
+                parser.parse_file(path)
         elif os.path.isdir(path):
             for x in os.listdir(path):
                 self.parse(path + "/" + x)
         return
 
 
-    def parse_file(self, fname):
+    def parse_file(self, fname, prefix = ""):
+        istest = fname.endswith("Test.java")
         clsname = os.path.basename(fname).replace("Test", "").replace(".java", "")
-        clsname = clsname[0].upper() + clsname[1:]
+        clsname = prefix + clsname[0].upper() + clsname[1:]
         for cls in classes_ignore_list:
             if re.match(cls, clsname):
                 return
         f = open(fname, "rt")
+        linenum = 0
         for line in f:
+            linenum += 1
             m1 = self.r1.match(line)
             m2 = self.r2.match(line)
             m3 = self.r3.match(line)
@@ -89,13 +116,16 @@ class JavaParser:
                 #if "public" in line:
                     #print "UNRECOGNIZED: " + line
                 continue
-            d = (self.mdict, self.tdict)["test" in func]
+            d = (self.mdict, self.tdict)[istest]
+            w = (self.mwhere, self.twhere)[istest]
             func = re.sub(r"^test", "", func)
             func = clsname + "--" + func[0].upper() + func[1:]
             args_str = args_str.replace("[]", "Array").replace("...", "Array ")
             args_str = re.sub(r"List<(\w+)>", "ListOf\g<1>", args_str)
+            args_str = re.sub(r"List<(\w+)>", "ListOf\g<1>", args_str)
             args = [a.split()[0] for a in args_str.split(",") if a]
             func_ex = func + "".join([a[0].upper() + a[1:] for a in args])
+            func_loc = fname + " (line: " + str(linenum)  + ")"
             skip = False
             for fi in funcs_ignore_list:
                 if re.match(fi, func_ex):
@@ -107,6 +137,9 @@ class JavaParser:
                 d[func].append(func_ex)
             else:
                 d[func] = [func_ex]
+            w[func_ex] = func_loc
+            w[func] = func_loc
+
         f.close()
         return
 
