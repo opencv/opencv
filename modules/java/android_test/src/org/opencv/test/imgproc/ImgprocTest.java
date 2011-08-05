@@ -614,11 +614,28 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testDrawContoursMatListOfMatIntScalarInt() {
-        fail("Not yet implemented");
+        List<Mat> contours = new ArrayList<Mat>(5);
+        Mat hierarchy = dst;
+        Core.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
+        Imgproc.findContours(gray0, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        assertTrue(1 == contours.size());
+
+        assertFalse(0 == Core.countNonZero(gray0));
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), -1);//TODO: CV_FILLED
+        assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testDrawContoursMatListOfMatIntScalarIntInt() {
-        fail("Not yet implemented");
+        List<Mat> contours = new ArrayList<Mat>(5);
+        Mat hierarchy = dst;
+        int linetype = 8;//TODO: line type constant
+        Core.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
+        Imgproc.findContours(gray0, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        assertTrue(1 == contours.size());
+
+        assertFalse(0 == Core.countNonZero(gray0));
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), -1, linetype);//TODO: CV_FILLED
+        assertTrue(0 == Core.countNonZero(gray0));
     }
 
     public void testDrawContoursMatListOfMatIntScalarIntIntMat() {
@@ -826,6 +843,7 @@ public class ImgprocTest extends OpenCVTestCase {
         int retval = Imgproc.floodFill(img, new Mat(), new Point(matSize / 2, matSize / 2), new Scalar(1));
 
         Core.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(0));
+        
         assertEquals(Core.countNonZero(img), retval);
     }
 
@@ -866,7 +884,21 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testGetAffineTransform() {
-        fail("Not yet implemented");
+        Mat src = new Mat(3, 2, CvType.CV_32F);
+        src.put(0, 0, 2, 3);
+        src.put(1, 0, 3, 1);
+        src.put(2, 0, 1, 4);
+        Mat dstPoints = new Mat(3, 2, CvType.CV_32F);
+        dstPoints.put(0, 0, 3, 3);
+        dstPoints.put(1, 0, 7, 4);
+        dstPoints.put(2, 0, 5, 6);
+
+        dst = Imgproc.getAffineTransform(src, dstPoints);
+
+        Mat truth = new Mat(2, 3, CvType.CV_64FC1);
+        truth.put(0, 0, -8, -6, 37);
+        truth.put(1, 0, -7, -4, 29);
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testGetDefaultNewCameraMatrixMat() {
@@ -1099,11 +1131,40 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testHoughCirclesMatMatIntDoubleDoubleDouble() {
-        fail("Not yet implemented");
+        int sz = 512;
+        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
+
+        Mat circles = new Mat();
+        double param1 = 50;
+
+        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2.0, img.rows() / 4, param1);
+        assertEquals(0, circles.cols());
+
+        Point center = new Point(img.cols() / 2, img.rows() / 2);
+        int radius = Math.min(img.cols() / 4, img.rows() / 4);
+        Core.circle(img, center, radius, colorBlack, 3);
+
+        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2.0, img.rows() / 4, param1);
+        assertEquals(1, circles.cols());
     }
 
     public void testHoughCirclesMatMatIntDoubleDoubleDoubleDouble() {
-        fail("Not yet implemented");
+        int sz = 512;
+        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
+
+        Mat circles = new Mat();
+        double param1 = 50;
+        double param2 = 100;
+
+        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2.0, img.rows() / 4, param1, param2);
+        assertEquals(0, circles.cols());
+
+        Point center = new Point(img.cols() / 2, img.rows() / 2);
+        int radius = Math.min(img.cols() / 4, img.rows() / 4);
+        Core.circle(img, center, radius, colorBlack, 3);
+
+        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2.0, img.rows() / 4, param1, param2);
+        assertEquals(1, circles.cols());
     }
 
     public void testHoughCirclesMatMatIntDoubleDoubleDoubleDoubleInt() {
@@ -1115,7 +1176,19 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testHoughLinesMatMatDoubleDoubleInt() {
-        fail("Not yet implemented");
+        int sz = 512;
+        Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
+        Mat lines = new Mat();
+
+        Point point1 = new Point(50, 50);
+        Point point2 = new Point(img.cols() / 2, img.rows() / 2);
+
+        assertEquals(0, lines.cols());
+        Core.line(img, point1, point2, colorBlack, 2);
+
+        Imgproc.HoughLines(img, lines, 1, 5, 1);
+
+        assertEquals(2, lines.cols());
     }
 
     public void testHoughLinesMatMatDoubleDoubleIntDouble() {
@@ -1580,11 +1653,20 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testPyrMeanShiftFilteringMatMatDoubleDoubleInt() {
-        fail("Not yet implemented");
+        Mat src = new Mat(matSize, matSize, CvType.CV_8UC3, new Scalar(255.0));
+
+        Imgproc.pyrMeanShiftFiltering(src, dst, 10.0, 50.0, 2);
+        truth = src.clone();
+        assertMatEqual(truth, dst);
     }
 
     public void testPyrMeanShiftFilteringMatMatDoubleDoubleIntTermCriteria() {
-        fail("Not yet implemented");
+        Mat src = new Mat(matSize, matSize, CvType.CV_8UC3, new Scalar(255.0));
+        TermCriteria criteria = new TermCriteria(2 /* TODO: CV_TERMCRIT_EPS */, 0, 0.01);
+
+        Imgproc.pyrMeanShiftFiltering(src, dst, 10.0, 10.0, 3, criteria);
+        truth = src.clone();
+        assertMatEqual(truth, dst);
     }
 
     public void testPyrUpMatMat() {
