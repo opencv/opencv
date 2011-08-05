@@ -15,6 +15,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 import org.opencv.utils.Converters;
 
 public class CoreTest extends OpenCVTestCase {
@@ -850,6 +851,7 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testKmeansMatIntMatTermCriteriaIntInt() {
+        fail("Not yet implemented");
         Mat data = new Mat(4, 2, CvType.CV_32FC1);
         data.put(0, 0, 2, 4);
         data.put(1, 0, 3, 9);
@@ -862,7 +864,6 @@ public class CoreTest extends OpenCVTestCase {
         // TODO: returns 0 for most input combinations
         res = Core.kmeans(data, K, bestLabels, criteria, 0, Core.KMEANS_PP_CENTERS);
         assertEquals(10.0, res);
-        fail("Not yet implemented");
     }
 
     public void testKmeansMatIntMatTermCriteriaIntIntMat() {
@@ -1469,11 +1470,17 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
-        Point org = new Point(0, 0);
-
-        assertTrue(0 == Core.countNonZero(gray0));
-        Core.putText(gray0, text, org, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
-        assertTrue(0 != Core.countNonZero(gray0));
+        Size labelSize = new Size(175, 22);
+        
+        Mat img = new Mat(20 + (int)labelSize.height, 20 + (int)labelSize.width, CvType.CV_8U, colorBlack);
+        Point origin = new Point(10, labelSize.height + 10);
+        
+        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
+        
+        assertTrue(Core.countNonZero(img) > 0);
+        //check that border is not corrupted
+        Core.rectangle(img, new Point(11,11), new Point(labelSize.width+10, labelSize.height+10), colorBlack, -1);//TODO:CV_FILLED
+        assertEquals(0, Core.countNonZero(img));
     }
 
     public void testPutTextMatStringPointIntDoubleScalarInt() {
