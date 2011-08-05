@@ -290,7 +290,7 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
     template<> struct Accumulator<short>  { typedef int Type; };
 
     /*
-     * Squared Euclidean distance functor
+     * Euclidean distance functor
      */
     template<class T>
     struct L2

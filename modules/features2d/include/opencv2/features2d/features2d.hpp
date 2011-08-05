@@ -2084,7 +2084,7 @@ template<> struct Accumulator<char>   { typedef float Type; };
 template<> struct Accumulator<short>  { typedef float Type; };
 
 /*
- * Squared Euclidean distance functor
+ * Euclidean distance functor
  */
 template<class T>
 struct CV_EXPORTS L2
