@@ -501,13 +501,13 @@ int CvFMEstimator::run8Point( const CvMat* _m1, const CvMat* _m2, CvMat* _fmatri
 
     cvEigenVV(&A, &V, &W);
 
-    for( i = 0; i < 8; i++ )
+    for( i = 0; i < 9; i++ )
     {
         if( fabs(w[i]) < DBL_EPSILON )
             break;
     }
 
-    if( i < 7 )
+    if( i < 8 )
         return 0;
 
     F0 = cvMat( 3, 3, CV_64F, v + 9*8 ); // take the last column of v as a solution of Af = 0
