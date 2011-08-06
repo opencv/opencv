@@ -1600,15 +1600,15 @@ static int convert_to_CvMat(PyObject *o, CvMat **dst, const char *name)
   Py_ssize_t buffer_len;
 
   if (!is_cvmat(o)) {
-#if !PYTHON_USE_NUMPY
-    return failmsg("Argument '%s' must be CvMat", name);
-#else
+//#if !PYTHON_USE_NUMPY
+    return failmsg("Argument '%s' must be CvMat. Use fromarray() to convert numpy arrays to CvMat", name);
+/*#else
     PyObject *asmat = fromarray(o, 0);
     if (asmat == NULL)
       return failmsg("Argument '%s' must be CvMat", name);
     // now have the array obect as a cvmat, can use regular conversion
     return convert_to_CvMat(asmat, dst, name);
-#endif
+#endif*/
   } else {
     m->a->refcount = NULL;
     if (m->data && PyString_Check(m->data)) {
@@ -1666,15 +1666,15 @@ static int convert_to_CvArr(PyObject *o, CvArr **dst, const char *name)
   } else if (is_cvmatnd(o)) {
     return convert_to_CvMatND(o, (CvMatND**)dst, name);
   } else {
-#if !PYTHON_USE_NUMPY
-    return failmsg("CvArr argument '%s' must be IplImage, CvMat or CvMatND", name);
-#else
+//#if !PYTHON_USE_NUMPY
+    return failmsg("CvArr argument '%s' must be IplImage, CvMat or CvMatND. Use fromarray() to convert numpy arrays to CvMat or cvMatND", name);
+/*#else
     PyObject *asmat = fromarray(o, 0);
     if (asmat == NULL)
       return failmsg("CvArr argument '%s' must be IplImage, CvMat, CvMatND, or support the array interface", name);
     // now have the array obect as a cvmat, can use regular conversion
     return convert_to_CvArr(asmat, dst, name);
-#endif
+#endif*/
   }
 }
 

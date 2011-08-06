@@ -940,8 +940,8 @@ class AreaTests(OpenCVTests):
 
             # Using an array object for a CvArr parameter
             ones = numpy.ones((640, 480))
-            r = numpy.ones((640, 480))
-            cv.AddS(ones, 7, r)
+            r = cv.fromarray(numpy.ones((640, 480)))
+            cv.AddS(cv.fromarray(ones), 7, r)
             self.assert_(numpy.alltrue(r == (8 * ones)))
 
             # create arrays, use them in OpenCV and replace the the array
@@ -958,11 +958,12 @@ class AreaTests(OpenCVTests):
 
             # 
             m = numpy.identity(4, dtype = numpy.float32)
+            m = cv.fromarray(m[:3, :3])
             rvec = cv.CreateMat(3, 1, cv.CV_32FC1)
             rvec[0,0] = 1
             rvec[1,0] = 1
             rvec[2,0] = 1
-            cv.Rodrigues2(rvec, m[:3,:3])
+            cv.Rodrigues2(rvec, m)
 	    #print m
 
         else:
