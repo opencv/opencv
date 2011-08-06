@@ -9,31 +9,71 @@ help_message = '''
 USAGE: lk_track.py [<video_source>]
 
 Keys:
-  1 - toggle old/new CalcOpticalFlowPyrLK implementation
   SPACE - reset features
 '''
 
-lk_params = dict( winSize  = (21, 21), 
+lk_params = dict( winSize  = (15, 15), 
                   maxLevel = 2, 
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
                   derivLambda = 0.0 )    
 
-feature_params = dict( maxCorners = 1000, 
-                       qualityLevel = 0.1,
-                       minDistance = 5,
-                       blockSize = 5 )
+feature_params = dict( maxCorners = 500, 
+                       qualityLevel = 0.3,
+                       minDistance = 7,
+                       blockSize = 7 )
 
-def calc_flow_old(img0, img1, p0):
-    p0 = [(x, y) for x, y in p0.reshape(-1, 2)]
-    h, w = img0.shape[:2]
-    img0_cv = cv.CreateMat(h, w, cv.CV_8U)
-    img1_cv = cv.CreateMat(h, w, cv.CV_8U)
-    np.asarray(img0_cv)[:] = img0
-    np.asarray(img1_cv)[:] = img1
-    t = clock()
-    features, status, error  = cv.CalcOpticalFlowPyrLK(img0_cv, img1_cv, None, None, p0, 
-        lk_params['winSize'], lk_params['maxLevel'], lk_params['criteria'], 0, p0)
-    return np.float32(features), status, error, clock()-t
+class App:
+    def __init__(self, video_src):
+        self.track_len = 10
+        self.detect_interval = 5
+        self.tracks = []
+        self.cam = video.create_capture(video_src)
+        self.frame_idx = 0
+
+    def run(self):
+        while True:
+            ret, frame = self.cam.read()
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            vis = frame.copy()
+
+            if len(self.tracks) > 0:
+                img0, img1 = self.prev_gray, frame_gray
+                p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
+                p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+                p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+                d = abs(p0-p0r).reshape(-1, 2).max(-1)
+                good = d < 1
+                new_tracks = []
+                for tr, (x, y), good_flag in zip(self.tracks, p1.reshape(-1, 2), good):
+                    if not good_flag:
+                        continue
+                    tr.append((x, y))
+                    if len(tr) > self.track_len:
+                        del tr[0]
+                    new_tracks.append(tr)
+                    cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
+                self.tracks = new_tracks
+                cv2.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
+                draw_str(vis, (20, 20), 'track count: %d' % len(self.tracks))
+
+            if self.frame_idx % self.detect_interval == 0:
+                mask = np.zeros_like(frame_gray)
+                mask[:] = 255
+                for x, y in [np.int32(tr[-1]) for tr in self.tracks]:
+                    cv2.circle(mask, (x, y), 5, 0, -1)
+                p = cv2.goodFeaturesToTrack(frame_gray, mask = mask, **feature_params)
+                if p is not None:
+                    for x, y in np.float32(p).reshape(-1, 2):
+                        self.tracks.append([(x, y)])
+
+
+            self.frame_idx += 1
+            self.prev_gray = frame_gray
+            cv2.imshow('lk_track', vis)
+
+            ch = cv2.waitKey(1)
+            if ch == 27:
+                break
 
 def main():
     import sys
@@ -41,47 +81,7 @@ def main():
     except: video_src = video.presets['chess']
 
     print help_message
-
-    track_len = 4
-    tracks = []
-    cam = video.create_capture(video_src)
-    old_mode = True
-    while True:
-        ret, frame = cam.read()
-        vis = frame.copy()
-        if len(tracks) > 0:
-            p0 = np.float32([tr[-1] for tr in tracks]).reshape(-1, 1, 2)
-            img0 = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-            img1 = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if old_mode:
-                p1,  st, err, dt = calc_flow_old(img0, img1, p0)
-            else:
-                t = clock()
-                p1,  st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-                dt = clock()-t
-            for tr, (x, y) in zip(tracks, p1.reshape(-1, 2)):
-                tr.append((x, y))
-                if len(tr) > 10:
-                    del tr[0]
-                cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
-            cv2.polylines(vis, [np.int32(tr) for tr in tracks], False, (0, 255, 0))
-            draw_str(vis, (20, 20), ['new', 'old'][old_mode]+' mode')
-            draw_str(vis, (20, 40), 'time: %.02f ms' % (dt*1000))
-        prev_frame = frame.copy()
-
-        cv2.imshow('lk_track', vis)
-        ch = cv2.waitKey(5)
-        if ch == 27:
-            break
-        if ch == ord(' ') or len(tracks) == 0:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            p = cv2.goodFeaturesToTrack(gray, **feature_params)
-            p = [] if p is None else p.reshape(-1, 2)
-            tracks = []
-            for x, y in np.float32(p):
-                tracks.append([(x, y)])
-        if ch == ord('1'):
-            old_mode = not old_mode
+    App(video_src).run()
 
 if __name__ == '__main__':
     main()
