@@ -758,33 +758,23 @@ Performs a marker-based image segmentation using the watershed algrorithm.
 
 .. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 
+.. ocv:cfunction:: void cvWatershed( const CvArr* image, CvArr* markers )
+
 .. ocv:pyfunction:: cv2.watershed(image, markers) -> None
 
     :param image: Input 8-bit 3-channel image.
 
     :param markers: Input/output 32-bit single-channel image (map) of markers. It should have the same size as  ``image`` .
 
-The function implements one of the variants
-of watershed, non-parametric marker-based segmentation algorithm,
-described in [Meyer92]_. Before passing the image to the
-function, you have to roughly outline the desired regions in the image ``markers`` with positive (
-:math:`>0` ) indices. So, every region is
-represented as one or more connected components with the pixel values
-1, 2, 3, and so on. Such markers can be retrieved from a binary mask
-using
-:ocv:func:`findContours` and
-:ocv:func:`drawContours` (see the ``watershed.cpp`` demo).
-The markers are "seeds" of the future image
-regions. All the other pixels in ``markers`` , whose relation to the
-outlined regions is not known and should be defined by the algorithm,
-should be set to 0's. In the function output, each pixel in
-markers is set to a value of the "seed" components or to -1 at
-boundaries between the regions.
+The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer92]_.
 
-.. note:: Every two neighbor connected components are not necessarily separated by a watershed boundary (-1's pixels); for example, when such tangent components exist in the initial marker image. Visual demonstration and usage example of the function can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
+Before passing the image to the function, you have to roughly outline the desired regions in the image ``markers`` with positive (``>0``) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using :ocv:func:`findContours` and :ocv:func:`drawContours` (see the ``watershed.cpp`` demo). The markers are "seeds" of the future image regions. All the other pixels in ``markers`` , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0's. In the function output, each pixel in markers is set to a value of the "seed" components or to -1 at boundaries between the regions.
+
+Visual demonstration and usage example of the function can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
+
+.. note:: Any two neighbor connected components are not necessarily separated by a watershed boundary (-1's pixels); for example, they can touch each other in the initial marker image passed to the function.
 
 .. seealso:: :ocv:func:`findContours`
-
 
 grabCut
 -------

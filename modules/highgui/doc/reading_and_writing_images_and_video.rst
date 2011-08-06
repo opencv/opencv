@@ -9,14 +9,18 @@ Reads an image from a buffer in memory.
 
 .. ocv:function:: Mat imdecode( InputArray buf,  int flags )
 
+.. ocv:cfunction:: IplImage* cvDecodeImage( const CvMat* buf, int iscolor=CV_LOAD_IMAGE_COLOR)
+
+.. ocv:cfunction:: CvMat* cvDecodeImageM( const CvMat* buf, int iscolor=CV_LOAD_IMAGE_COLOR)
+
 .. ocv:pyfunction:: cv2.imdecode(buf, flags) -> retval
 
-    :param buf: Input array of vector of bytes.
+    :param buf: Input array or vector of bytes.
 
     :param flags: The same flags as in  :ocv:func:`imread` .
     
 The function reads an image from the specified buffer in the memory.
-If the buffer is too short or contains invalid data, the empty matrix is returned.
+If the buffer is too short or contains invalid data, the empty matrix/image is returned.
 
 See
 :ocv:func:`imread` for the list of supported formats and flags description.
@@ -26,6 +30,8 @@ imencode
 Encodes an image into a memory buffer.
 
 .. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
+
+.. ocv:cfunction:: CvMat* cvEncodeImage(const char* ext, const CvArr* image, const int* params=NULL )
 
 .. ocv:pyfunction:: cv2.imencode(ext, img, buf[, params]) -> retval
 
@@ -40,6 +46,8 @@ Encodes an image into a memory buffer.
 The function compresses the image and stores it in the memory buffer that is resized to fit the result.
 See
 :ocv:func:`imwrite` for the list of supported formats and flags description.
+
+.. note:: ``cvEncodeImage`` returns single-row matrix of type ``CV_8UC1`` that contains encoded image as array of bytes.
 
 imread
 ----------

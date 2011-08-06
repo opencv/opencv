@@ -51,7 +51,9 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
 .. ocv:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 
-.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
+.. ocv:cfunction:: void cvCalcOpticalFlowFarneback( const CvArr* prevImg, const CvArr* nextImg, CvArr* flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
+
+.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prevImg, nextImg, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
 
     :param prevImg: First 8-bit single-channel input image.
 
