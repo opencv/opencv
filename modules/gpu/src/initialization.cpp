@@ -177,8 +177,16 @@ void cv::gpu::DeviceInfo::queryMemory(size_t&, size_t&) const { throw_nogpu(); }
 int cv::gpu::getCudaEnabledDeviceCount()
 {
     int count;
-    cudaSafeCall( cudaGetDeviceCount( &count ) );
-    return count;
+    cudaError_t error = cudaGetDeviceCount( &count );
+
+    if (error == cudaErrorInsufficientDriver)
+        return -1;
+
+    if (error == cudaErrorNoDevice)
+        return 0;
+
+    cudaSafeCall(error);
+    return count;  
 }
 
 
