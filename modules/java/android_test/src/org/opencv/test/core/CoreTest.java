@@ -598,8 +598,7 @@ public class CoreTest extends OpenCVTestCase {
     public void testFillConvexPolyMatListOfPointScalarIntInt() {
         List<Point> polyline1 = Arrays.asList(new Point(1, 1), new Point(5, 1), new Point(5, 8), new Point(1, 8));
         List<Point> polyline2 = Arrays.asList(new Point(2, 2), new Point(10, 2), new Point(10, 16), new Point(2, 16));
-        /* TODO: this test fails because of a bug!
-         * find source of rounding error - java or OpenCV */
+        //FIXME: https://code.ros.org/trac/opencv/ticket/1284
 
         Core.fillConvexPoly(gray0, polyline1, colorWhite, Core.LINE_8, 0);
 
@@ -609,7 +608,7 @@ public class CoreTest extends OpenCVTestCase {
         Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
         // OpenCVTestRunner.Log(gray0);
 
-        assertEquals(0, Core.countNonZero(gray0));
+        assertEquals("see https://code.ros.org/trac/opencv/ticket/1284", 0, Core.countNonZero(gray0));
     }
 
     public void testFillPolyMatListOfListOfPointScalar() {
