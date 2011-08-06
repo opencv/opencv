@@ -688,6 +688,13 @@ func_arg_fix = {
         'fillPoly' : { 'pts' : 'vector_vector_Point', },
         'polylines' : { 'pts' : 'vector_vector_Point', },
         'fillConvexPoly' : { 'points' : 'vector_Point', },
+        'boundingRect' : { 'points' : 'vector_Point', },
+        #'approxPolyDP' : { 'curve' : 'vector_Point2f', 'CV_OUT approxCurve' : 'vector_Point2f', },
+        'arcLength' : { 'curve' : 'vector_Point2f', },
+        'isContourConvex' : { 'contour' : 'vector_Point2f', },
+        'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
+        'minAreaRect' : { 'points' : 'vector_Point2f', },
+        'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
     }, # '', i.e. no class
 } # func_arg_fix
 
