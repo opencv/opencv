@@ -1103,18 +1103,21 @@ process( const Mat_<T1>& m1, const Mat_<T2>& m2, Mat_<T3>& m3, Op op )
     
 /////////////////////////////// Input/Output Arrays /////////////////////////////////
     
-template<typename _Tp> _InputArray::_InputArray(const vector<_Tp>& vec)
+template<typename _Tp> inline _InputArray::_InputArray(const vector<_Tp>& vec)
     : flags(STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp> _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
+template<typename _Tp> inline _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
     : flags(STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp, int m, int n> _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
+template<typename _Tp, int m, int n> inline _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
     : flags(MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
 
-template<typename _Tp> _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
-template<typename _Tp> _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
-template<typename _Tp, int m, int n> _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
+inline _InputArray::_InputArray(const Scalar& s)
+    : flags(MATX + CV_64F), obj((void*)&s), sz(1, 4) {} 
+    
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
+template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
     
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 

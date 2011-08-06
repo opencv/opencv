@@ -1276,6 +1276,7 @@ public:
     template<typename _Tp> _InputArray(const vector<vector<_Tp> >& vec);
     _InputArray(const vector<Mat>& vec);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
+    _InputArray(const Scalar& s);
     _InputArray(const double& val);
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(vector<Mat>& mv) const;
