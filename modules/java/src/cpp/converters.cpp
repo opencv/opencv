@@ -264,6 +264,19 @@ void vector_DMatch_to_Mat(vector<DMatch>& v_dm, Mat& mat)
 	}
 }
 
+void Mat_to_vector_vector_Point(Mat& mat, vector< vector< Point > >& vv_pt)
+{
+	vector<Mat> vm;
+	vm.reserve( mat.rows );
+	Mat_to_vector_Mat(mat, vm);
+	for(size_t i=0; i<vm.size(); i++)
+	{
+		vector<Point> vpt;
+		Mat_to_vector_Point(vm[i], vpt);
+		vv_pt.push_back(vpt);
+	}
+}
+
 void Mat_to_vector_vector_KeyPoint(Mat& mat, vector< vector< KeyPoint > >& vv_kp)
 {
 	vector<Mat> vm;

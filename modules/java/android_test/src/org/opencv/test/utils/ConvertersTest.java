@@ -16,7 +16,7 @@ public class ConvertersTest extends OpenCVTestCase {
     public void testMat_to_vector_char() {
         fail("Not yet implemented");
     }
-
+    
     public void testMat_to_vector_DMatch() {
         fail("Not yet implemented");
     }
@@ -288,6 +288,10 @@ public class ConvertersTest extends OpenCVTestCase {
     }
 
     public void testVector_vector_KeyPoint_to_Mat() {
+        fail("Not yet implemented");
+    }
+
+    public void testVector_vector_Point_to_Mat() {
         fail("Not yet implemented");
     }
 

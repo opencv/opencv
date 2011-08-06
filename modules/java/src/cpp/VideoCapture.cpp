@@ -416,9 +416,9 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_n_1getSupportedPr
         LOGD("highgui::VideoCapture_n_1set()");
 #endif // DEBUG
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
-        double addr = me->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
-        char* result = *((char**)&addr);
-        return env->NewStringUTF(result);
+		union {double prop; const char* name;} u;
+        u.prop = me->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
+        return env->NewStringUTF(u.name);
     } catch(cv::Exception e) {
 #ifdef DEBUG
         LOGD("highgui::VideoCapture_n_1getSupportedPreviewSizes() catched cv::Exception: %s", e.what());

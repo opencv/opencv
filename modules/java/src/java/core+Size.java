@@ -15,20 +15,20 @@ public class Size {
     }
 
     public Size(Point p) {
-        width = (double) p.x;
-        height = (double) p.y;
+        width = p.x;
+        height = p.y;
     }
 
     public Size(double[] vals) {
-        this();
         set(vals);
     }
+
     public void set(double[] vals) {
-        if(vals!=null) {
-            width  = vals.length>0 ? vals[0] : 0;
-            height = vals.length>1 ? vals[1] : 0;
+        if (vals != null) {
+            width = vals.length > 0 ? vals[0] : 0;
+            height = vals.length > 1 ? vals[1] : 0;
         } else {
-            width  = 0;
+            width = 0;
             height = 0;
         }
     }
@@ -59,6 +59,11 @@ public class Size {
         if (!(obj instanceof Size)) return false;
         Size it = (Size) obj;
         return width == it.width && height == it.height;
+    }
+
+    @Override
+    public String toString() {
+        return (int)width + "x" + (int)height;
     }
 
 }

@@ -25,16 +25,17 @@ public class Point3 {
         this();
         set(vals);
     }
+
     public void set(double[] vals) {
-        if(vals!=null) {
-            x = vals.length>0 ? vals[0] : 0;
-            y = vals.length>1 ? vals[1] : 0;
-            z = vals.length>2 ? vals[2] : 0;
+        if (vals != null) {
+            x = vals.length > 0 ? vals[0] : 0;
+            y = vals.length > 1 ? vals[1] : 0;
+            z = vals.length > 2 ? vals[2] : 0;
         } else {
             x = 0;
             y = 0;
             z = 0;
-	}
+        }
     }
 
     public Point3 clone() {
@@ -69,5 +70,10 @@ public class Point3 {
         if (!(obj instanceof Point3)) return false;
         Point3 it = (Point3) obj;
         return x == it.x && y == it.y && z == it.z;
+    }
+    
+    @Override
+    public String toString() {
+        return "{" + x + ", " + y + ", " + z + "}";
     }
 }

@@ -39,7 +39,9 @@ class JavadocGenerator(object):
             module = "unknown"
         try:
             for l in inf.readlines():
-                if l.lstrip().startswith(self.javadoc_marker):
+                org = l
+                l = l.replace(" ", "").replace("\t", "")#remove all whitespace
+                if l.startswith(self.javadoc_marker):
                     marker = self.parceJavadocMarker(l)
                     self.markers_processed += 1
                     decl = self.definitions.get(marker[0],None)
@@ -55,7 +57,7 @@ class JavadocGenerator(object):
                     elif show_errors:
                         print >> sys.stderr, "gen_javadoc error: could not find documentation for %s (module: %s)" % (l.lstrip()[len(self.javadoc_marker):-1].strip(), module)
                 else:
-                    outf.write(l.replace("\t", "    ").rstrip()+"\n")
+                    outf.write(org.replace("\t", "    ").rstrip()+"\n")
         except:
             inf.close()
             outf.close()

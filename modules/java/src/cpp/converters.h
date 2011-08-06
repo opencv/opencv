@@ -55,3 +55,5 @@ void vector_vector_DMatch_to_Mat(std::vector< std::vector< cv::DMatch > >& vv_dm
 
 void Mat_to_vector_vector_char(cv::Mat& mat, std::vector< std::vector< char > >& vv_ch);
 void vector_vector_char_to_Mat(std::vector< std::vector< char > >& vv_ch, cv::Mat& mat);
+
+void Mat_to_vector_vector_Point(cv::Mat& mat, std::vector< std::vector< cv::Point > >& vv_pt);

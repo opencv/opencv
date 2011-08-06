@@ -100,5 +100,11 @@ public class ScalarTest extends OpenCVTestCase {
         s1.set(vals);
         assertEquals(s2, s1);
     }
+    
+    public void testToString() {
+        String actual = s2.toString();
+        String expected = "[1.0, 1.0, 1.0, 1.0]";
+        assertEquals(expected, actual);
+    }
 
 }

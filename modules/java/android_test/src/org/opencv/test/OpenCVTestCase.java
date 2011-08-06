@@ -23,15 +23,15 @@ import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
 
-    protected static int matSize = 10;
-    protected static double EPS = 0.001;
-    protected static double weakEPS = 0.5;
+    protected static final int matSize = 10;
+    protected static final double EPS = 0.001;
+    protected static final double weakEPS = 0.5;
 
-    protected static Mat dst;
-    protected static Mat truth;
+    protected Mat dst;
+    protected Mat truth;
 
-    protected static Scalar colorBlack;
-    protected static Scalar colorWhite;
+    protected Scalar colorBlack;
+    protected Scalar colorWhite;
 
     // Naming notation: <channels info>_[depth]_[dimensions]_value
     // examples: gray0 - single channel 8U 2d Mat filled with 0
@@ -42,42 +42,42 @@ public class OpenCVTestCase extends TestCase {
     // - rename matrices
     // - create methods gray0() and create src1 explicitly
     // - create some masks
-    // - use truth member everywhere
+    // - use truth member everywhere - remove truth from base class - each test fixture should use own truth filed
 
-    protected static Mat gray0;
-    protected static Mat gray1;
-    protected static Mat gray2;
-    protected static Mat gray3;
-    protected static Mat gray9;
-    protected static Mat gray127;
-    protected static Mat gray128;
-    protected static Mat gray255;
-    protected static Mat grayRnd;
+    protected Mat gray0;
+    protected Mat gray1;
+    protected Mat gray2;
+    protected Mat gray3;
+    protected Mat gray9;
+    protected Mat gray127;
+    protected Mat gray128;
+    protected Mat gray255;
+    protected Mat grayRnd;
 
-    protected static Mat gray_16u_256;
-    protected static Mat gray_16s_1024;
+    protected Mat gray_16u_256;
+    protected Mat gray_16s_1024;
 
-    protected static Mat gray0_32f;
-    protected static Mat gray1_32f;
-    protected static Mat gray3_32f;
-    protected static Mat gray9_32f;
-    protected static Mat gray255_32f;
-    protected static Mat grayE_32f;
-    protected static Mat grayRnd_32f;
+    protected Mat gray0_32f;
+    protected Mat gray1_32f;
+    protected Mat gray3_32f;
+    protected Mat gray9_32f;
+    protected Mat gray255_32f;
+    protected Mat grayE_32f;
+    protected Mat grayRnd_32f;
 
-    protected static Mat gray0_32f_1d;
+    protected Mat gray0_32f_1d;
 
-    protected static Mat gray0_64f;
-    protected static Mat gray0_64f_1d;
+    protected Mat gray0_64f;
+    protected Mat gray0_64f_1d;
 
-    protected static Mat rgba0;
-    protected static Mat rgba128;
+    protected Mat rgba0;
+    protected Mat rgba128;
 
-    protected static Mat rgbLena;
-    protected static Mat grayChess;
+    protected Mat rgbLena;
+    protected Mat grayChess;
 
-    protected static Mat v1;
-    protected static Mat v2;
+    protected Mat v1;
+    protected Mat v2;
 
     @Override
     protected void setUp() throws Exception {

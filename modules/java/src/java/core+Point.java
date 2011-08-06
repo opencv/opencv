@@ -18,16 +18,16 @@ public class Point {
         this();
         set(vals);
     }
+
     public void set(double[] vals) {
-        if(vals!=null) {
-            x = vals.length>0 ? vals[0] : 0;
-            y = vals.length>1 ? vals[1] : 0;
+        if (vals != null) {
+            x = vals.length > 0 ? vals[0] : 0;
+            y = vals.length > 1 ? vals[1] : 0;
         } else {
             x = 0;
             y = 0;
-	}
+        }
     }
-
 
     public Point clone() {
         return new Point(x, y);
@@ -52,7 +52,7 @@ public class Point {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if ( ! (obj instanceof Point) ) return false;
+        if (!(obj instanceof Point)) return false;
         Point it = (Point) obj;
         return x == it.x && y == it.y;
     }
@@ -61,10 +61,8 @@ public class Point {
         return r.contains(this);
     }
 
-
     @Override
     public String toString() {
-        if (this == null) return "null";
         return "{" + x + ", " + y + "}";
     }
 }

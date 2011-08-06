@@ -24,25 +24,25 @@ public class Rect {
     }
 
     public Rect(Point p, Size s) {
-        this((int)p.x, (int)p.y, (int)s.width, (int)s.height);
+        this((int) p.x, (int) p.y, (int) s.width, (int) s.height);
     }
 
     public Rect(double[] vals) {
-        this();
         set(vals);
     }
+
     public void set(double[] vals) {
-        if(vals!=null) {
-            x      = vals.length>0 ? (int)vals[0] : 0;
-            y      = vals.length>1 ? (int)vals[1] : 0;
-            width  = vals.length>2 ? (int)vals[2] : 0;
-            height = vals.length>3 ? (int)vals[3] : 0;
+        if (vals != null) {
+            x = vals.length > 0 ? (int) vals[0] : 0;
+            y = vals.length > 1 ? (int) vals[1] : 0;
+            width = vals.length > 2 ? (int) vals[2] : 0;
+            height = vals.length > 3 ? (int) vals[3] : 0;
         } else {
-            x      = 0;
-            y      = 0;
-            width  = 0;
+            x = 0;
+            y = 0;
+            width = 0;
             height = 0;
-	}
+        }
     }
 
     public Rect clone() {
@@ -95,7 +95,6 @@ public class Rect {
 
     @Override
     public String toString() {
-        if (this == null) return "null";
-        return "{" + x + ", " + y + ", " + width + "x" + height+"}";
+        return "{" + x + ", " + y + ", " + width + "x" + height + "}";
     }
 }

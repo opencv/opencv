@@ -1,6 +1,7 @@
 package org.opencv.test.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.opencv.core.Core;
@@ -15,7 +16,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 import org.opencv.utils.Converters;
 
 public class CoreTest extends OpenCVTestCase {
@@ -169,7 +169,7 @@ public class CoreTest extends OpenCVTestCase {
             Core.checkRange(outOfRange, false);
             fail("Core.checkRange should throw the CvException");
         } catch (CvException e) {
-            //expected
+            // expected
         }
     }
 
@@ -180,8 +180,8 @@ public class CoreTest extends OpenCVTestCase {
 
         assertFalse(Core.checkRange(outOfRange, true, null));
         assertFalse(Core.checkRange(outOfRange, true, pt));
-        
-        assertPointEquals(new Point(2,0), pt, EPS);
+
+        assertPointEquals(new Point(2, 0), pt, EPS);
     }
 
     public void testCheckRangeMatBooleanPointDouble() {
@@ -221,7 +221,7 @@ public class CoreTest extends OpenCVTestCase {
         Scalar color = new Scalar(128);
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.circle(gray0, center, radius, color, -1 /* filled circle */);
+        Core.circle(gray0, center, radius, color, Core.FILLED);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -231,7 +231,7 @@ public class CoreTest extends OpenCVTestCase {
         Scalar color = new Scalar(128);
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.circle(gray0, center, radius, color, 2, 4/* 4-connected line */);
+        Core.circle(gray0, center, radius, color, 2, Core.LINE_4);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -482,7 +482,7 @@ public class CoreTest extends OpenCVTestCase {
         double angle = 30, startAngle = 60, endAngle = 90;
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, -1);//TODO: CV_FILLED ??
+        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -490,10 +490,9 @@ public class CoreTest extends OpenCVTestCase {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Size axes = new Size(2, 2);
         double angle = 30, startAngle = 0, endAngle = 30;
-        int lineType = 4;//FIXME: use constant
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, -1, lineType);
+        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Core.LINE_4);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -501,30 +500,60 @@ public class CoreTest extends OpenCVTestCase {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Size axes = new Size(2, 2);
         double angle = 30, startAngle = 0, endAngle = 30;
-        int lineType = 4;//FIXME: use constant
         int shift = 1;
-        assertTrue(0 == Core.countNonZero(gray0));
-        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, -1, lineType, shift);
+
+        Core.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Core.LINE_4, shift);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
     public void testEllipseMatRotatedRectScalar() {
+        int matSize = 10;
+        gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
         Point center = new Point(matSize / 2, matSize / 2);
         Size size = new Size(matSize / 4, matSize / 2);
-        double angle = 40;
-        RotatedRect box = new RotatedRect(center, size, angle);
-        Core.ellipse(gray0, box, colorWhite);
-        // TODO: How do we get access to ellipse's center
-        // assertTrue(box.center.equals(ellipse.center));
-        fail("Not yet implemented");
+        RotatedRect box = new RotatedRect(center, size, 45);
+
+        Core.ellipse(gray0, box, new Scalar(1));
+
+        final byte[] truth = new byte[] {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+                0, 0, 0, 0, 1, 1, 0, 1, 0, 0,
+                0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+                0, 0, 0, 1, 0, 1, 1, 0, 0, 0,
+                0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+        assertMatEqual(new Mat(gray0.size(), CvType.CV_8U) {
+            {
+                put(0, 0, truth);
+            }
+        }, gray0);
     }
 
     public void testEllipseMatRotatedRectScalarInt() {
-        fail("Not yet implemented");
+        Point center = new Point(matSize / 2, matSize / 2);
+        Size size = new Size(matSize / 4, matSize / 2);
+        RotatedRect box = new RotatedRect(center, size, 45);
+
+        Core.ellipse(gray0, box, new Scalar(1), Core.FILLED);
+        Core.ellipse(gray0, box, new Scalar(0));
+
+        assertTrue(0 < Core.countNonZero(gray0));
     }
 
     public void testEllipseMatRotatedRectScalarIntInt() {
-        fail("Not yet implemented");
+        Point center = new Point(matSize / 2, matSize / 2);
+        Size size = new Size(2, matSize * 2 / 3);
+        RotatedRect box = new RotatedRect(center, size, 20);
+
+        Core.ellipse(gray0, box, new Scalar(9), 1, Core.LINE_AA);
+        Core.ellipse(gray0, box, new Scalar(0), 1, Core.LINE_4);
+
+        assertTrue(0 < Core.countNonZero(gray0));
     }
 
     public void testExp() {
@@ -548,75 +577,116 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(75.96, res2, delta);
     }
 
-    public void testFillConvexPolyMatMatScalar() {
-        List<Point> lp = new ArrayList<Point>(4);
-        lp.add(new Point(1, 1));
-        lp.add(new Point(5, 0));
-        lp.add(new Point(6, 8));
-        lp.add(new Point(0, 9));
-        Mat points = Converters.vector_Point_to_Mat(lp);
-        assertTrue(0 == Core.countNonZero(gray0));
+    public void testFillConvexPolyMatListOfPointScalar() {
+        List<Point> polyline = Arrays.asList(new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9));
 
-        Core.fillConvexPoly(gray0, points, new Scalar(150));
+        Core.fillConvexPoly(gray0, polyline, new Scalar(150));
         assertTrue(0 < Core.countNonZero(gray0));
-
-        Core.fillConvexPoly(gray0, points, new Scalar(0));
-        assertTrue(0 == Core.countNonZero(gray0));
+        assertTrue(gray0.total() > Core.countNonZero(gray0));
     }
 
-    public void testFillConvexPolyMatMatScalarInt() {
-        List<Point> lp = new ArrayList<Point>(4);
-        lp.add(new Point(1, 1));
-        lp.add(new Point(5, 0));
-        lp.add(new Point(6, 8));
-        lp.add(new Point(0, 9));
-        Mat points = Converters.vector_Point_to_Mat(lp);
-        assertTrue(0 == Core.countNonZero(gray0));
+    public void testFillConvexPolyMatListOfPointScalarInt() {
+        List<Point> polyline = Arrays.asList(new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9));
 
-        Core.fillConvexPoly(gray0, points, new Scalar(150), 4);
+        Core.fillConvexPoly(gray0, polyline, new Scalar(150), Core.LINE_8);
+        Core.fillConvexPoly(gray0, polyline, new Scalar(0), Core.LINE_4);
+
         assertTrue(0 < Core.countNonZero(gray0));
-
-        Core.fillConvexPoly(gray0, points, new Scalar(0), 4);
-        assertTrue(0 == Core.countNonZero(gray0));
+        assertTrue(gray0.total() > Core.countNonZero(gray0));
     }
 
-    public void testFillConvexPolyMatMatScalarIntInt() {
-        List<Point> lp = new ArrayList<Point>();
-        lp.add(new Point(1, 1));
-        lp.add(new Point(5, 1));
-        lp.add(new Point(5, 8));
-        lp.add(new Point(1, 8));
-        Mat points = Converters.vector_Point_to_Mat(lp);
+    public void testFillConvexPolyMatListOfPointScalarIntInt() {
+        List<Point> polyline1 = Arrays.asList(new Point(1, 1), new Point(5, 1), new Point(5, 8), new Point(1, 8));
+        List<Point> polyline2 = Arrays.asList(new Point(2, 2), new Point(10, 2), new Point(10, 16), new Point(2, 16));
+        /* TODO: this test fails because of a bug!
+         * find source of rounding error - java or OpenCV */
 
-        List<Point> lp2 = new ArrayList<Point>();
-        lp2.add(new Point(0, 0));
-        lp2.add(new Point(10, 2));
-        lp2.add(new Point(10, 16));
-        lp2.add(new Point(2, 16));
-        Mat points2 = Converters.vector_Point_to_Mat(lp2);
+        Core.fillConvexPoly(gray0, polyline1, colorWhite, Core.LINE_8, 0);
 
-        assertEquals(0, Core.countNonZero(gray0));
-        Core.fillConvexPoly(gray0, points, colorWhite, 4 /* TODO: lineType */, 0);
         assertTrue(0 < Core.countNonZero(gray0));
+        assertTrue(gray0.total() > Core.countNonZero(gray0));
 
-        Core.fillConvexPoly(gray0, points2, colorBlack, 4 /* TODO: lineType */, 0);
+        Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
+        // OpenCVTestRunner.Log(gray0);
+
         assertEquals(0, Core.countNonZero(gray0));
     }
 
-    public void testFillPolyMatListOfMatScalar() {
-        fail("Not yet implemented");
+    public void testFillPolyMatListOfListOfPointScalar() {
+        int matSize = 10;
+        gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
+        List<Point> polyline = Arrays.asList(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+        List<List<Point>> polylines = new ArrayList<List<Point>>();
+        polylines.add(polyline);
+
+        Core.fillPoly(gray0, polylines, new Scalar(1));
+
+        final byte[] truth = new byte[] {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+                0, 0, 0, 1, 1, 1, 0, 0, 0, 0,
+                0, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+                0, 1, 1, 0, 0, 0, 1, 1, 0, 0,
+                0, 1, 1, 0, 0, 0, 1, 1, 0, 0,
+                0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
+                0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+        assertMatEqual(new Mat(gray0.size(), CvType.CV_8U) {
+            {
+                put(0, 0, truth);
+            }
+        }, gray0);
     }
 
-    public void testFillPolyMatListOfMatScalarInt() {
-        fail("Not yet implemented");
+    public void testFillPolyMatListOfListOfPointScalarInt() {
+        List<Point> polyline = Arrays.asList(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(9, 3));
+        List<List<Point>> polylines = new ArrayList<List<Point>>();
+        polylines.add(polyline);
+
+        Core.fillPoly(gray0, polylines, new Scalar(1), Core.LINE_8);
+        Core.fillPoly(gray0, polylines, new Scalar(0), Core.LINE_4);
+
+        assertTrue(0 < Core.countNonZero(gray0));
     }
 
-    public void testFillPolyMatListOfMatScalarIntInt() {
-        fail("Not yet implemented");
+    public void testFillPolyMatListOfListOfPointScalarIntInt() {
+        List<Point> polyline1 = Arrays.asList(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+        List<Point> polyline2 = Arrays.asList(new Point(2, 8), new Point(2, 16), new Point(8, 2), new Point(14, 16), new Point(14, 8));
+
+        List<List<Point>> polylines1 = new ArrayList<List<Point>>();
+        polylines1.add(polyline1);
+
+        List<List<Point>> polylines2 = new ArrayList<List<Point>>();
+        polylines2.add(polyline2);
+
+        Core.fillPoly(gray0, polylines1, new Scalar(1), Core.LINE_8, 0);
+
+        assertTrue(0 < Core.countNonZero(gray0));
+
+        Core.fillPoly(gray0, polylines2, new Scalar(0), Core.LINE_8, 1);
+
+        assertEquals(0, Core.countNonZero(gray0));
     }
 
-    public void testFillPolyMatListOfMatScalarIntIntPoint() {
-        fail("Not yet implemented");
+    public void testFillPolyMatListOfListOfPointScalarIntIntPoint() {
+        List<Point> polyline1 = Arrays.asList(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+        List<Point> polyline2 = Arrays.asList(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
+
+        List<List<Point>> polylines1 = new ArrayList<List<Point>>();
+        polylines1.add(polyline1);
+
+        List<List<Point>> polylines2 = new ArrayList<List<Point>>();
+        polylines2.add(polyline2);
+
+        Core.fillPoly(gray0, polylines1, new Scalar(1), Core.LINE_8, 0, new Point(0, 0));
+
+        assertTrue(0 < Core.countNonZero(gray0));
+
+        Core.fillPoly(gray0, polylines2, new Scalar(0), Core.LINE_8, 0, new Point(1, 1));
+
+        assertEquals(0, Core.countNonZero(gray0));
     }
 
     public void testFlip() {
@@ -697,7 +767,8 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testGetNumberOfCPUs() {
-        fail("Not yet implemented");
+        int cpus = Core.getNumberOfCPUs();
+        assertEquals(Runtime.getRuntime().availableProcessors(), cpus);
     }
 
     public void testGetOptimalDFTSize() {
@@ -851,23 +922,65 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testKmeansMatIntMatTermCriteriaIntInt() {
-        fail("Not yet implemented");
-        Mat data = new Mat(4, 2, CvType.CV_32FC1);
-        data.put(0, 0, 2, 4);
-        data.put(1, 0, 3, 9);
-        data.put(1, 0, 1, 4);
-        data.put(1, 0, 8, 12);
-        int K = 3;
-        Mat bestLabels = new Mat();
-        TermCriteria criteria = new TermCriteria(2/* TODO: CV_TERMCRIT_EPS */, 100, 0);
-        double res;
-        // TODO: returns 0 for most input combinations
-        res = Core.kmeans(data, K, bestLabels, criteria, 0, Core.KMEANS_PP_CENTERS);
-        assertEquals(10.0, res);
+        Mat data = new Mat(4, 5, CvType.CV_32FC1) {
+            {
+                put(0, 0, 1, 2, 3, 4, 5);
+                put(1, 0, 2, 3, 4, 5, 6);
+                put(2, 0, 5, 4, 3, 2, 1);
+                put(3, 0, 6, 5, 4, 3, 2);
+            }
+        };
+        TermCriteria criteria = new TermCriteria(TermCriteria.EPS, 0, EPS);
+        Mat labels = new Mat();
+
+        Core.kmeans(data, 2, labels, criteria, 1, Core.KMEANS_PP_CENTERS);
+
+        int[] first_center = new int[1];
+        labels.get(0, 0, first_center);
+        final int c1 = first_center[0];
+
+        Mat expected_labels = new Mat(4, 1, CvType.CV_32S) {
+            {
+                put(0, 0, c1, c1, 1 - c1, 1 - c1);
+            }
+        };
+
+        assertMatEqual(expected_labels, labels);
     }
 
     public void testKmeansMatIntMatTermCriteriaIntIntMat() {
-        fail("Not yet implemented");
+        Mat data = new Mat(4, 5, CvType.CV_32FC1) {
+            {
+                put(0, 0, 1, 2, 3, 4, 5);
+                put(1, 0, 2, 3, 4, 5, 6);
+                put(2, 0, 5, 4, 3, 2, 1);
+                put(3, 0, 6, 5, 4, 3, 2);
+            }
+        };
+        TermCriteria criteria = new TermCriteria(TermCriteria.EPS, 0, EPS);
+        Mat labels = new Mat();
+        Mat centers = new Mat();
+
+        Core.kmeans(data, 2, labels, criteria, 6, Core.KMEANS_RANDOM_CENTERS, centers);
+
+        int[] first_center = new int[1];
+        labels.get(0, 0, first_center);
+        final int c1 = first_center[0];
+
+        Mat expected_labels = new Mat(4, 1, CvType.CV_32S) {
+            {
+                put(0, 0, c1, c1, 1 - c1, 1 - c1);
+            }
+        };
+        Mat expected_centers = new Mat(2, 5, CvType.CV_32FC1) {
+            {
+                put(c1, 0, 1.5, 2.5, 3.5, 4.5, 5.5);
+                put(1 - c1, 0, 5.5, 4.5, 3.5, 2.5, 1.5);
+            }
+        };
+
+        assertMatEqual(expected_labels, labels);
+        assertMatEqual(expected_centers, centers, EPS);
     }
 
     public void testLineMatPointPointScalar() {
@@ -877,7 +990,6 @@ public class CoreTest extends OpenCVTestCase {
         Point point2 = new Point(nPoints, nPoints);
         Scalar color = new Scalar(255);
 
-        assertTrue(0 == Core.countNonZero(gray0));
         Core.line(gray0, point1, point2, color);
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
@@ -888,17 +1000,41 @@ public class CoreTest extends OpenCVTestCase {
         Point point1 = new Point(0, 0);
         Point point2 = new Point(nPoints, nPoints);
 
-        assertTrue(0 == Core.countNonZero(gray0));
         Core.line(gray0, point1, point2, colorWhite, 0);
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
 
     public void testLineMatPointPointScalarIntInt() {
-        fail("Not yet implemented");
+        int nPoints = Math.min(gray0.cols(), gray0.rows());
+
+        Point point1 = new Point(0, 3);
+        Point point2 = new Point(nPoints, nPoints);
+
+        Core.line(gray0, point2, point1, colorWhite, 2, Core.LINE_AA);
+
+        assertFalse(0 == Core.countNonZero(gray0));
+
+        Core.line(gray0, point2, point1, colorBlack, 2, Core.LINE_4);
+
+        assertFalse(0 == Core.countNonZero(gray0));
     }
 
     public void testLineMatPointPointScalarIntIntInt() {
-        fail("Not yet implemented");
+        int nPoints = Math.min(gray0.cols(), gray0.rows());
+
+        Point point1 = new Point(3, 4);
+        Point point2 = new Point(nPoints, nPoints);
+        
+        Point point1_4 = new Point(3*4, 4*4);
+        Point point2_4 = new Point(nPoints*4, nPoints*4);
+
+        Core.line(gray0, point2, point1, colorWhite, 2, Core.LINE_8, 0);
+
+        assertFalse(0 == Core.countNonZero(gray0));
+
+        Core.line(gray0, point2_4, point1_4, colorBlack, 2, Core.LINE_8, 2);
+
+        assertEquals(0, Core.countNonZero(gray0));
     }
 
     public void testLog() {
@@ -1285,26 +1421,118 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testPCABackProject() {
-        Mat data = new Mat(2, 2, CvType.CV_32F);
-        data.put(0, 0, 1, 3);
-        data.put(1, 0, 0, 2);
-        Mat eigenvectors = new Mat(1, 2, CvType.CV_32F);
-        eigenvectors.put(0, 0, 1, 3);
-        // Mat mean = new Mat(1, 1, CvType.CV_32F, new Scalar(2.5));
-        // Core.PCABackProject(data, new Mat(), eigenvectors, dst);
-        fail("Not yet implemented");
+        Mat mean = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 4, 4, 8);
+            }
+        };
+        Mat vectors = new Mat(1, 4, CvType.CV_32F, new Scalar(0)) {
+            {
+                put(0, 0, 0.2, 0.4, 0.4, 0.8);
+            }
+        };
+        Mat data = new Mat(3, 1, CvType.CV_32F) {
+            {
+                put(0, 0, -5, 0, -10);
+            }
+        };
+        Mat result = new Mat();
+
+        Core.PCABackProject(data, mean, vectors, result);
+
+        Mat truth = new Mat(3, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 2, 2, 4);
+                put(1, 0, 2, 4, 4, 8);
+                put(2, 0, 0, 0, 0, 0);
+            }
+        };
+
+        assertMatEqual(truth, result, EPS);
     }
 
     public void testPCAComputeMatMatMat() {
-        fail("Not yet implemented");
+        Mat data = new Mat(3, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 2, 2, 4);
+                put(1, 0, 2, 4, 4, 8);
+                put(2, 0, 3, 6, 6, 12);
+            }
+        };
+        Mat mean = new Mat();
+        Mat vectors = new Mat();
+
+        Core.PCACompute(data, mean, vectors);
+
+        Mat mean_truth = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 4, 4, 8);
+            }
+        };
+        Mat vectors_truth = new Mat(3, 4, CvType.CV_32F, new Scalar(0)) {
+            {
+                put(0, 0, 0.2, 0.4, 0.4, 0.8);
+            }
+        };
+        assertMatEqual(mean_truth, mean, EPS);
+        assertMatEqual(vectors_truth, vectors, EPS);
     }
 
     public void testPCAComputeMatMatMatInt() {
-        fail("Not yet implemented");
+        Mat data = new Mat(3, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 2, 2, 4);
+                put(1, 0, 2, 4, 4, 8);
+                put(2, 0, 3, 6, 6, 12);
+            }
+        };
+        Mat mean = new Mat();
+        Mat vectors = new Mat();
+
+        Core.PCACompute(data, mean, vectors, 1);
+
+        Mat mean_truth = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 4, 4, 8);
+            }
+        };
+        Mat vectors_truth = new Mat(1, 4, CvType.CV_32F, new Scalar(0)) {
+            {
+                put(0, 0, 0.2, 0.4, 0.4, 0.8);
+            }
+        };
+        assertMatEqual(mean_truth, mean, EPS);
+        assertMatEqual(vectors_truth, vectors, EPS);
     }
 
     public void testPCAProject() {
-        fail("Not yet implemented");
+        Mat mean = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 4, 4, 8);
+            }
+        };
+        Mat vectors = new Mat(1, 4, CvType.CV_32F, new Scalar(0)) {
+            {
+                put(0, 0, 0.2, 0.4, 0.4, 0.8);
+            }
+        };
+        Mat data = new Mat(3, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 2, 2, 4);
+                put(1, 0, 2, 4, 4, 8);
+                put(2, 0, 0, 0, 0, 0);
+            }
+        };
+        Mat result = new Mat();
+
+        Core.PCAProject(data, mean, vectors, result);
+
+        Mat truth = new Mat(3, 1, CvType.CV_32F) {
+            {
+                put(0, 0, -5, 0, -10);
+            }
+        };
+        assertMatEqual(truth, result, EPS);
     }
 
     public void testPerspectiveTransform() {
@@ -1392,75 +1620,72 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(y, yCoordinate, EPS);
     }
 
-    public void testPolylinesMatListOfMatBooleanScalar() {
+    public void testPolylinesMatListOfListOfPointBooleanScalar() {
         Mat img = gray0;
         List<Point> pts = new ArrayList<Point>();
         pts.add(new Point(1, 1));
         pts.add(new Point(7, 1));
         pts.add(new Point(7, 6));
         pts.add(new Point(1, 6));
-        List<Mat> mats = new ArrayList<Mat>();
-        mats.add(Converters.vector_Point_to_Mat(pts));
 
-        assertEquals(0, Core.countNonZero(img));
-        Core.polylines(img, mats, true, new Scalar(100));
+        List<List<Point>> polyline = new ArrayList<List<Point>>();
+        polyline.add(pts);
+
+        Core.polylines(img, polyline, true, new Scalar(100));
+
         assertEquals(22, Core.countNonZero(img));
-        Core.polylines(img, mats, false, new Scalar(0));
+        Core.polylines(img, polyline, false, new Scalar(0));
         assertEquals(4, Core.countNonZero(img));
     }
 
-    public void testPolylinesMatListOfMatBooleanScalarInt() {
+    public void testPolylinesMatListOfListOfPointBooleanScalarInt() {
         Mat img = gray0;
         List<Point> pts = new ArrayList<Point>();
         pts.add(new Point(1, 1));
         pts.add(new Point(7, 1));
         pts.add(new Point(7, 6));
         pts.add(new Point(1, 6));
-        List<Mat> mats = new ArrayList<Mat>();
-        mats.add(Converters.vector_Point_to_Mat(pts));
 
-        assertEquals(0, Core.countNonZero(img));
-        Core.polylines(img, mats, true, new Scalar(100), 2);
+        List<List<Point>> polyline = new ArrayList<List<Point>>();
+        polyline.add(pts);
+
+        Core.polylines(img, polyline, true, new Scalar(100), 2);
+
         assertEquals(62, Core.countNonZero(img));
     }
 
-    public void testPolylinesMatListOfMatBooleanScalarIntInt() {
+    public void testPolylinesMatListOfListOfPointBooleanScalarIntInt() {
         Mat img = gray0;
         List<Point> pts = new ArrayList<Point>();
         pts.add(new Point(1, 1));
         pts.add(new Point(4, 1));
         pts.add(new Point(3, 6));
         pts.add(new Point(1, 3));
-        List<Mat> mats = new ArrayList<Mat>();
-        mats.add(Converters.vector_Point_to_Mat(pts));
 
-        assertEquals(0, Core.countNonZero(img));
-        Core.polylines(img, mats, true, new Scalar(100), 2, 8);
+        List<List<Point>> polyline = new ArrayList<List<Point>>();
+        polyline.add(pts);
+
+        Core.polylines(img, polyline, true, new Scalar(100), 2, Core.LINE_4);
+
         assertEquals(36, Core.countNonZero(img));
     }
 
-    public void testPolylinesMatListOfMatBooleanScalarIntIntInt() {
+    public void testPolylinesMatListOfListOfPointBooleanScalarIntIntInt() {
         Mat img = gray0;
-        List<Point> pts = new ArrayList<Point>();
-        List<Point> pts2 = new ArrayList<Point>();
-        pts.add(new Point(1, 1));
-        pts2.add(new Point(2, 2));
-        pts.add(new Point(7, 1));
-        pts2.add(new Point(14, 2));
-        pts.add(new Point(7, 6));
-        pts2.add(new Point(14, 12));
-        pts.add(new Point(1, 6));
-        pts2.add(new Point(2, 12));
-        List<Mat> mats = new ArrayList<Mat>();
-        List<Mat> mats2 = new ArrayList<Mat>();
-        mats.add(Converters.vector_Point_to_Mat(pts));
-        mats2.add(Converters.vector_Point_to_Mat(pts2));
 
-        assertTrue(0 == Core.countNonZero(img));
-        Core.polylines(img, mats, true, new Scalar(100), 2, 8, 0);
-        assertFalse(0 == Core.countNonZero(img));
-        Core.polylines(img, mats2, true, new Scalar(0), 2, 8, 1);
-        assertTrue(0 == Core.countNonZero(img));
+        List<List<Point>> polyline1 = new ArrayList<List<Point>>();
+        polyline1.add(Arrays.asList(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6)));
+
+        List<List<Point>> polyline2 = new ArrayList<List<Point>>();
+        polyline2.add(Arrays.asList(new Point(2, 2), new Point(14, 2), new Point(14, 12), new Point(2, 12)));
+
+        Core.polylines(img, polyline1, true, new Scalar(100), 2, Core.LINE_8, 0);
+
+        assertTrue(Core.countNonZero(img) > 0);
+
+        Core.polylines(img, polyline2, true, new Scalar(0), 2, Core.LINE_8, 1);
+
+        assertEquals(0, Core.countNonZero(img));
     }
 
     public void testPow() {
@@ -1471,28 +1696,61 @@ public class CoreTest extends OpenCVTestCase {
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
         Size labelSize = new Size(175, 22);
-        
-        Mat img = new Mat(20 + (int)labelSize.height, 20 + (int)labelSize.width, CvType.CV_8U, colorBlack);
+
+        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
-        
+
         Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
-        
+
         assertTrue(Core.countNonZero(img) > 0);
-        //check that border is not corrupted
-        Core.rectangle(img, new Point(11,11), new Point(labelSize.width+10, labelSize.height+10), colorBlack, -1);//TODO:CV_FILLED
+        // check that border is not corrupted
+        Core.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Core.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
     public void testPutTextMatStringPointIntDoubleScalarInt() {
-        fail("Not yet implemented");
+        String text = "Hello World";
+        Size labelSize = new Size(176, 22);
+
+        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
+        Point origin = new Point(10, labelSize.height + 10);
+
+        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
+
+        assertTrue(Core.countNonZero(img) > 0);
+        // check that border is not corrupted
+        Core.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Core.FILLED);
+        assertEquals(0, Core.countNonZero(img));
     }
 
     public void testPutTextMatStringPointIntDoubleScalarIntInt() {
-        fail("Not yet implemented");
+        String text = "Hello World";
+        Size labelSize = new Size(175, 22);
+
+        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
+        Point origin = new Point(10, labelSize.height + 10);
+
+        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Core.LINE_AA);
+
+        assertTrue(Core.countNonZero(img) > 0);
+        // check that text differs from 8-connected line
+        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorBlack, 1, Core.LINE_8);
+        assertFalse(0 == Core.countNonZero(img));
     }
 
     public void testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
-        fail("Not yet implemented");
+        String text = "Hello World";
+        Size labelSize = new Size(175, 22);
+
+        Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
+        Point origin = new Point(10, 10);
+
+        Core.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Core.LINE_8, true);
+
+        assertTrue(Core.countNonZero(img) > 0);
+        // check that border is not corrupted
+        Core.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Core.FILLED);
+        assertEquals(0, Core.countNonZero(img));
     }
 
     public void testRandn() {
@@ -1505,9 +1763,9 @@ public class CoreTest extends OpenCVTestCase {
         Mat original = new Mat(1, 5, CvType.CV_32F);
         original.put(0, 0, 7, 5, 2, 8, 1);
         Mat shuffled = original.clone();
-        
+
         Core.randShuffle(shuffled);
-        
+
         assertMatNotEqual(original, shuffled, EPS);
         Mat dst1 = new Mat();
         Mat dst2 = new Mat();
@@ -1520,9 +1778,9 @@ public class CoreTest extends OpenCVTestCase {
         Mat original = new Mat(1, 5, CvType.CV_32F);
         original.put(0, 0, 7, 5, 2, 8, 1);
         Mat shuffled = original.clone();
-        
+
         Core.randShuffle(shuffled, 10);
-        
+
         assertMatNotEqual(original, shuffled, EPS);
         Mat dst1 = new Mat();
         Mat dst2 = new Mat();
@@ -1563,7 +1821,7 @@ public class CoreTest extends OpenCVTestCase {
         Scalar color = new Scalar(128);
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.rectangle(gray0, center, origin, color, 2, 8);
+        Core.rectangle(gray0, center, origin, color, 2, Core.LINE_8);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -1573,7 +1831,7 @@ public class CoreTest extends OpenCVTestCase {
         Scalar color = new Scalar(128);
 
         assertTrue(0 == Core.countNonZero(gray0));
-        Core.rectangle(gray0, center, origin, color, 2, 4, 2);
+        Core.rectangle(gray0, center, origin, color, 2, Core.LINE_4, 2);
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
@@ -1812,18 +2070,13 @@ public class CoreTest extends OpenCVTestCase {
         Mat w = new Mat();
         Mat u = new Mat();
         Mat vt = new Mat();
-        Core.SVDecomp(src, w, u, vt, 1/* TODO: SVD::MODIFY_A */);
+
+        Core.SVDecomp(src, w, u, vt, Core.SVD_NO_UV);
 
         Mat truthW = new Mat(1, 1, CvType.CV_32FC1, new Scalar(10.816654));
         assertMatEqual(truthW, w, EPS);
-
-        Mat truthU = new Mat(1, 1, CvType.CV_32FC1, new Scalar(1));
-        assertMatEqual(truthU, u, EPS);
-
-        Mat truthVT = new Mat(1, 4, CvType.CV_32FC1);
-        truthVT.put(0, 0, 0.09245003, 0.36980012, 0.73960024, 0.5547002);
-        assertMatEqual(truthVT, vt, EPS);
-
+        assertTrue(u.empty());
+        assertTrue(vt.empty());
     }
 
     public void testTrace() {

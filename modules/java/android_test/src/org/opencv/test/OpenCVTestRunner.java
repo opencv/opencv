@@ -12,8 +12,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * This only class is Android specific. The original idea about test order
- * randomization is from marek.defecinski blog.
+ * This only class is Android specific.
  * 
  * @see <a href="http://opencv.itseez.com">OpenCV</a>
  */
@@ -49,7 +48,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     }
     
     static public void Log(Mat m) {
-        Log.e(TAG, m + "\n" + m.dump());
+        Log.e(TAG, m + "\n " + m.dump());
     }
 
     @Override
@@ -59,6 +58,9 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
         CHESS_PATH = Utils.ExportResource(context, R.drawable.chessboard);
         LBPCASCADE_FRONTALFACE_PATH = Utils.ExportResource(context, R.raw.lbpcascade_frontalface);
 
+        /*
+         * The original idea about test order randomization is from marek.defecinski blog.
+         */
         // List<TestCase> testCases = androidTestRunner.getTestCases();
         // Collections.shuffle(testCases); //shuffle the tests order
 
