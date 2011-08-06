@@ -718,7 +718,7 @@ struct FindStereoCorrespInvoker
         uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
         
-        Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1);
+        Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
             return;
         int row0 = roi.y;
