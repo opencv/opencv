@@ -32,8 +32,8 @@ public class VideoTest extends OpenCVTestCase {
 
         shift1 = 10;
         shift2 = 17;
-        w = rgbLena.cols() / 2;
-        h = rgbLena.rows() / 2;
+        w = (int)(rgbLena.cols() / 2);
+        h = (int)(rgbLena.rows() / 2);
 
         subLena1 = rgbLena.submat(shift1, h + shift1, shift1, w + shift1);
         subLena2 = rgbLena.submat(shift2, h + shift2, shift2, w + shift2);
