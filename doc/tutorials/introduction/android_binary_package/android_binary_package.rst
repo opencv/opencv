@@ -1,4 +1,6 @@
+
 .. _Android_Binary_Package:
+
 
 Using Android binary package with Eclipse
 *****************************************
@@ -16,9 +18,17 @@ You need the following tools to be installed:
 
    Visit http://www.oracle.com/technetwork/java/javase/downloads/index.html and download installer for your OS.
 
-   Here is a detailed JDK installation guide for Ubuntu and Mac OS: http://source.android.com/source/initializing.html (only JDK sections are applicable for OpenCV)
+   Here is a detailed JDK installation guide for Ubuntu and Mac OS: http://source.android.com/source/initializing.html#installing-the-jdk (only JDK sections are applicable for OpenCV)
 
    .. note:: OpenJDK is not usable for Android development because Android SDK supports only Sun JDK.
+        If you use Ubuntu, after installation of Sun JDK you should run the following command to set Sun java environment:
+
+        .. code-block:: bash
+
+           sudo update-java-alternatives --set java-6-sun
+
+        
+
 
 #. **Android SDK**
 
@@ -222,7 +232,7 @@ Open OpenCV library and samples in Eclipse
 Running OpenCV Samples
 ======================
 
-At this point you should be able to build and run all samples except two from Advanced tutorial (these samples require Android NDK to build working applications). 
+At this point you should be able to build and run all samples except two from Advanced tutorial (these samples require Android NDK to build working applications, see the document :ref:`Android_Binary_Package_with_NDK`). 
 
 Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tutorial 1 Basic - 1. Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which is supported only for ARM v7 CPUs.
 
@@ -254,3 +264,19 @@ Well, running samples from Eclipse is very simple:
      :height: 600px 
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center
+
+
+
+How to use OpenCV library project in your application
+=====================================================
+
+If you already have an Android application, you can add a reference to OpenCV and import all its functionality. 
+
+#. First of all you need to have both projects (your app and OpenCV) in a single workspace. 
+   So, open workspace with your application and import the OpenCV project into your workspace as stated above. 
+
+#. Add a reference to OpenCV project.
+
+   Do the right mouse click on your app in Package Explorer, go to **Properties > Android > Library > Add**
+   and choose the OpenCV library project. 
+

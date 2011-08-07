@@ -121,6 +121,24 @@ Here you can read tutorials about how to set up your computer to work with the O
                            :height: 90pt
                            :width:  90pt
 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+    
+  ================ ======================================================
+  |AndroidNDKPack| **Title:** :ref:`Android_Binary_Package_with_NDK`
+
+                   *Compatibility:* > OpenCV 2.3.1
+
+                   *Author:* |Author_LeonidBLB|
+
+                   You will learn how to work with C++ OpenCV code for Android platform
+
+  ================ ======================================================
+
+     .. |AndroidNDKPack| image:: images/android_logo.png
+                           :height: 90pt
+                           :width:  90pt
+
 * **From where to start?**
 
   .. tabularcolumns:: m{100pt} m{300pt}
@@ -173,5 +191,6 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
    ../android_binary_package/android_binary_package
+   ../android_binary_package/android_binary_package_using_with_NDK
    ../display_image/display_image
    ../load_save_image/load_save_image
