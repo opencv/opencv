@@ -2163,13 +2163,13 @@ PCA constructors
 
     :param data: Input samples stored as matrix rows or matrix columns.
 
-    :param mean: Optional mean value. If the matrix is empty ( ``Mat()`` ), the mean is computed from the data.
+    :param mean: Optional mean value. If the matrix is empty ( ``noArray()`` ), the mean is computed from the data.
 
     :param flags: Operation flags. Currently the parameter is only used to specify the data layout.
 
-        * **CV_PCA_DATA_AS_ROWS** indicates that the input samples are stored as matrix rows.
+        * **CV_PCA_DATA_AS_ROW** indicates that the input samples are stored as matrix rows.
 
-        * **CV_PCA_DATA_AS_COLS** indicates that the input samples are stored as matrix columns.
+        * **CV_PCA_DATA_AS_COL** indicates that the input samples are stored as matrix columns.
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
@@ -2188,13 +2188,13 @@ Performs Principal Component Analysis of the supplied dataset.
 
     :param data: Input samples stored as the matrix rows or as the matrix columns.
 
-    :param mean: Optional mean value. If the matrix is empty ( ``Mat()`` ), the mean is computed from the data.
+    :param mean: Optional mean value. If the matrix is empty ( ``noArray()`` ), the mean is computed from the data.
 
     :param flags: Operation flags. Currently the parameter is only used to specify the data layout.
 
-        * **CV_PCA_DATA_AS_ROWS** indicates that the input samples are stored as matrix rows.
+        * **CV_PCA_DATA_AS_ROW** indicates that the input samples are stored as matrix rows.
 
-        * **CV_PCA_DATA_AS_COLS** indicates that the input samples are stored as matrix columns.
+        * **CV_PCA_DATA_AS_COL** indicates that the input samples are stored as matrix columns.
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
@@ -2214,9 +2214,9 @@ Projects vector(s) to the principal component subspace.
 
 .. ocv:pyfunction:: cv2.PCAProject(vec, mean, eigenvectors[, result]) -> result
 
-    :param vec: Input vector(s). They must have the same dimensionality and the same layout as the input data used at PCA phase. That is, if  ``CV_PCA_DATA_AS_ROWS``  are specified, then  ``vec.cols==data.cols``  (vector dimensionality) and  ``vec.rows``  is the number of vectors to project. The same is true for the  ``CV_PCA_DATA_AS_COLS``  case.
+    :param vec: Input vector(s). They must have the same dimensionality and the same layout as the input data used at PCA phase. That is, if  ``CV_PCA_DATA_AS_ROW``  are specified, then  ``vec.cols==data.cols``  (vector dimensionality) and  ``vec.rows``  is the number of vectors to project. The same is true for the  ``CV_PCA_DATA_AS_COL``  case.
 
-    :param result: Output vectors. In case of  ``CV_PCA_DATA_AS_COLS``  , the output matrix has as many columns as the number of input vectors. This means that  ``result.cols==vec.cols``  and the number of rows match the number of principal components (for example,  ``maxComponents``  parameter passed to the constructor).
+    :param result: Output vectors. In case of  ``CV_PCA_DATA_AS_COL``  , the output matrix has as many columns as the number of input vectors. This means that  ``result.cols==vec.cols``  and the number of rows match the number of principal components (for example,  ``maxComponents``  parameter passed to the constructor).
 
 The methods project one or more vectors to the principal component subspace, where each vector projection is represented by coefficients in the principal component basis. The first form of the method returns the matrix that the second form writes to the result. So the first form can be used as a part of expression while the second form can be more efficient in a processing loop.
 
