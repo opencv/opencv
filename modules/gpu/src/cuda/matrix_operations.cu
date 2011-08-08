@@ -62,7 +62,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
 ///////////////////////////////////////////////////////////////////////////
 
     template<typename T>
-    __global__ void copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, int step_mat, int step_mask, int channels)
+    __global__ void copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, size_t step_mat, size_t step_mask, int channels)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -162,7 +162,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     }
 
     template<typename T>
-    __global__ void set_to_without_mask(T * mat, int cols, int rows, int step, int channels)
+    __global__ void set_to_without_mask(T * mat, int cols, int rows, size_t step, int channels)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -175,7 +175,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     }
 
     template<typename T>
-    __global__ void set_to_with_mask(T * mat, const unsigned char * mask, int cols, int rows, int step, int channels, int step_mask)
+    __global__ void set_to_with_mask(T * mat, const unsigned char * mask, int cols, int rows, size_t step, int channels, size_t step_mask)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;

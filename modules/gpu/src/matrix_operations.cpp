@@ -177,7 +177,7 @@ namespace
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            nppSafeCall( func(src.ptr<src_t>(), src.step, dst.ptr<dst_t>(), dst.step, sz) );
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -191,7 +191,7 @@ namespace
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            nppSafeCall( func(src.ptr<Npp32f>(), src.step, dst.ptr<dst_t>(), dst.step, sz, NPP_RND_NEAR) );
+            nppSafeCall( func(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz, NPP_RND_NEAR) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -347,7 +347,7 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
-            nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz) );
+            nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -362,7 +362,7 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
-            nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz) );
+            nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -398,7 +398,7 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
-            nppSafeCall( func(nppS.val, src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+            nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
@@ -413,7 +413,7 @@ namespace
             sz.width = src.cols;
             sz.height = src.rows;
             Scalar_<src_t> nppS = s;
-            nppSafeCall( func(nppS[0], src.ptr<src_t>(), src.step, sz, mask.ptr<Npp8u>(), mask.step) );
+            nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }

@@ -56,11 +56,11 @@ void cv::gpu::split(const GpuMat& /*src*/, vector<GpuMat>& /*dst*/, Stream& /*st
 namespace cv { namespace gpu { namespace split_merge 
 {    
     extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst, 
-                                 int total_channels, int elem_size, 
+                                 int total_channels, size_t elem_size, 
                                  const cudaStream_t& stream);
 
     extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst, 
-                                 int num_channels, int elem_size1, 
+                                 int num_channels, size_t elem_size1, 
                                  const cudaStream_t& stream);
 
     void merge(const GpuMat* src, size_t n, GpuMat& dst, const cudaStream_t& stream) 

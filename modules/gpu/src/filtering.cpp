@@ -253,7 +253,8 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiSumWindowRow_8u32f_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp32f>(), dst.step, sz, ksize, anchor) );
+            nppSafeCall( nppiSumWindowRow_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -287,7 +288,8 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiSumWindowColumn_8u32f_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp32f>(), dst.step, sz, ksize, anchor) );
+            nppSafeCall( nppiSumWindowColumn_8u32f_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, ksize, anchor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -333,7 +335,8 @@ namespace
 
             NppStreamHandler h(stream);
             
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, oKernelSize, oAnchor) );
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -401,7 +404,8 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, kernel.ptr<Npp8u>(), oKernelSize, oAnchor) );
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, kernel.ptr<Npp8u>(), oKernelSize, oAnchor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -584,7 +588,7 @@ namespace
 
             NppStreamHandler h(stream);
                                   
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, 
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
                 kernel.ptr<Npp32s>(), oKernelSize, oAnchor, nDivisor) );
 
             if (stream == 0)
@@ -666,7 +670,8 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
+                kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -780,7 +785,8 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 
+                kernel.ptr<Npp32s>(), ksize, anchor, nDivisor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -1040,7 +1046,7 @@ namespace
 
             NppStreamHandler h(stream);
             
-            nppSafeCall( func(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, oKernelSize, oAnchor) );
+            nppSafeCall( func(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, oKernelSize, oAnchor) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );

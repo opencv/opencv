@@ -457,7 +457,7 @@ NCVStatus nppiStIntegralGetSize_8u32u(NcvSize32u roiSize, Ncv32u *pBufsize, cuda
     ncvAssertReturn(pBufsize != NULL, NPPST_NULL_POINTER_ERROR);
     ncvAssertReturn(roiSize.width > 0 && roiSize.height > 0, NPPST_INVALID_ROI);
 
-    NCVMemStackAllocator gpuCounter(devProp.textureAlignment);
+    NCVMemStackAllocator gpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
     ncvAssertReturn(gpuCounter.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvIntegralImage_device((Ncv8u*)NULL, roiSize.width,
@@ -475,7 +475,7 @@ NCVStatus nppiStIntegralGetSize_32f32f(NcvSize32u roiSize, Ncv32u *pBufsize, cud
     ncvAssertReturn(pBufsize != NULL, NPPST_NULL_POINTER_ERROR);
     ncvAssertReturn(roiSize.width > 0 && roiSize.height > 0, NPPST_INVALID_ROI);
 
-    NCVMemStackAllocator gpuCounter(devProp.textureAlignment);
+    NCVMemStackAllocator gpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
     ncvAssertReturn(gpuCounter.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvIntegralImage_device((Ncv32f*)NULL, roiSize.width * sizeof(Ncv32f),
@@ -493,7 +493,7 @@ NCVStatus nppiStSqrIntegralGetSize_8u64u(NcvSize32u roiSize, Ncv32u *pBufsize, c
     ncvAssertReturn(pBufsize != NULL, NPPST_NULL_POINTER_ERROR);
     ncvAssertReturn(roiSize.width > 0 && roiSize.height > 0, NPPST_INVALID_ROI);
 
-    NCVMemStackAllocator gpuCounter(devProp.textureAlignment);
+    NCVMemStackAllocator gpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
     ncvAssertReturn(gpuCounter.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvSquaredIntegralImage_device(NULL, roiSize.width,
@@ -511,7 +511,7 @@ NCVStatus nppiStIntegral_8u32u_C1R(Ncv8u *d_src, Ncv32u srcStep,
                                    NcvSize32u roiSize, Ncv8u *pBuffer,
                                    Ncv32u bufSize, cudaDeviceProp &devProp)
 {
-    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, devProp.textureAlignment, pBuffer);
+    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), pBuffer);
     ncvAssertReturn(gpuAllocator.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvIntegralImage_device(d_src, srcStep, d_dst, dstStep, roiSize, gpuAllocator);
@@ -526,7 +526,7 @@ NCVStatus nppiStIntegral_32f32f_C1R(Ncv32f *d_src, Ncv32u srcStep,
                                     NcvSize32u roiSize, Ncv8u *pBuffer,
                                     Ncv32u bufSize, cudaDeviceProp &devProp)
 {
-    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, devProp.textureAlignment, pBuffer);
+    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), pBuffer);
     ncvAssertReturn(gpuAllocator.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvIntegralImage_device(d_src, srcStep, d_dst, dstStep, roiSize, gpuAllocator);
@@ -541,7 +541,7 @@ NCVStatus nppiStSqrIntegral_8u64u_C1R(Ncv8u *d_src, Ncv32u srcStep,
                                       NcvSize32u roiSize, Ncv8u *pBuffer,
                                       Ncv32u bufSize, cudaDeviceProp &devProp)
 {
-    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, devProp.textureAlignment, pBuffer);
+    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), pBuffer);
     ncvAssertReturn(gpuAllocator.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = ncvSquaredIntegralImage_device(d_src, srcStep, d_dst, dstStep, roiSize, gpuAllocator);
@@ -1506,7 +1506,7 @@ NCVStatus nppsStCompactGetSize_32u(Ncv32u srcLen, Ncv32u *pBufsize, cudaDevicePr
         return NPPST_SUCCESS;
     }
 
-    NCVMemStackAllocator gpuCounter(devProp.textureAlignment);
+    NCVMemStackAllocator gpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
     ncvAssertReturn(gpuCounter.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = compactVector_32u_device(NULL, srcLen, NULL, NULL, 0xC001C0DE,
@@ -1535,7 +1535,7 @@ NCVStatus nppsStCompact_32u(Ncv32u *d_src, Ncv32u srcLen,
                             Ncv32u elemRemove, Ncv8u *pBuffer,
                             Ncv32u bufSize, cudaDeviceProp &devProp)
 {
-    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, devProp.textureAlignment, pBuffer);
+    NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), pBuffer);
     ncvAssertReturn(gpuAllocator.isInitialized(), NPPST_MEM_INTERNAL_ERROR);
 
     NCVStatus ncvStat = compactVector_32u_device(d_src, srcLen, d_dst, p_dstLen, elemRemove,

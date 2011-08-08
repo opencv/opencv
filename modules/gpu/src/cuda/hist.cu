@@ -176,7 +176,7 @@ namespace cv { namespace gpu { namespace histograms
         histogram256<<<PARTIAL_HISTOGRAM256_COUNT, HISTOGRAM256_THREADBLOCK_SIZE, 0, stream>>>(
             DevMem2D_<uint>(src),
             buf, 
-            src.rows * src.step / sizeof(uint),
+            static_cast<uint>(src.rows * src.step / sizeof(uint)),
             src.cols);
 
         cudaSafeCall( cudaGetLastError() );

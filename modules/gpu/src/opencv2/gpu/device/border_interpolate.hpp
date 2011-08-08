@@ -92,7 +92,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename D> struct BrdColReflect101 : BrdReflect101
     {
-        BrdColReflect101(int len, int step): BrdReflect101(len), step(step) {}
+        BrdColReflect101(int len, size_t step): BrdReflect101(len), step(step) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -104,7 +104,7 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-        int step;
+        size_t step;
     };
 
     struct BrdReplicate
@@ -152,7 +152,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename D> struct BrdColReplicate : BrdReplicate
     {
-        BrdColReplicate(int len, int step): BrdReplicate(len), step(step) {}
+        BrdColReplicate(int len, size_t step): BrdReplicate(len), step(step) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -164,7 +164,7 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-        int step;
+        size_t step;
     };
 
     template <typename D> struct BrdRowConstant
@@ -192,7 +192,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename D> struct BrdColConstant
     {
-        BrdColConstant(int len_, int step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
+        BrdColConstant(int len_, size_t step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -210,7 +210,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         int len;
-        int step;
+        size_t step;
         D val;
     };
 

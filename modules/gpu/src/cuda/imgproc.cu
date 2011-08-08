@@ -161,7 +161,7 @@ namespace cv { namespace gpu { namespace imgproc
     texture<uchar4, 2> tex_meanshift;
 
     __device__ short2 do_mean_shift(int x0, int y0, unsigned char* out, 
-                                    int out_step, int cols, int rows, 
+                                    size_t out_step, int cols, int rows, 
                                     int sp, int sr, int maxIter, float eps)
     {
         int isr2 = sr*sr;
@@ -225,7 +225,7 @@ namespace cv { namespace gpu { namespace imgproc
         return make_short2((short)x0, (short)y0);
     }
 
-    extern "C" __global__ void meanshift_kernel( unsigned char* out, int out_step, int cols, int rows, 
+    extern "C" __global__ void meanshift_kernel( unsigned char* out, size_t out_step, int cols, int rows, 
                                                  int sp, int sr, int maxIter, float eps )
     {
         int x0 = blockIdx.x * blockDim.x + threadIdx.x;
@@ -235,8 +235,8 @@ namespace cv { namespace gpu { namespace imgproc
             do_mean_shift(x0, y0, out, out_step, cols, rows, sp, sr, maxIter, eps);
     }
 
-    extern "C" __global__ void meanshiftproc_kernel( unsigned char* outr, int outrstep, 
-                                                 unsigned char* outsp, int outspstep, 
+    extern "C" __global__ void meanshiftproc_kernel( unsigned char* outr, size_t outrstep, 
+                                                 unsigned char* outsp, size_t outspstep, 
                                                  int cols, int rows, 
                                                  int sp, int sr, int maxIter, float eps )
     {

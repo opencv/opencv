@@ -171,10 +171,10 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    void bitwiseNotCaller(int rows, int cols, int elem_size1, int cn, 
+    void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, 
                           const PtrStep src, PtrStep dst, cudaStream_t stream)
     {
-        bitwiseUnOp<UN_OP_NOT>(rows, cols * elem_size1 * cn, src, dst, stream);
+        bitwiseUnOp<UN_OP_NOT>(rows, static_cast<int>(cols * elem_size1 * cn), src, dst, stream);
     }
 
 
@@ -296,10 +296,10 @@ namespace cv { namespace gpu { namespace mathfunc
     }
 
 
-    void bitwiseOrCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, 
+    void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, 
                          const PtrStep src2, PtrStep dst, cudaStream_t stream)
     {
-        bitwiseBinOp<BIN_OP_OR>(rows, cols * elem_size1 * cn, src1, src2, dst, stream);
+        bitwiseBinOp<BIN_OP_OR>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
     }
 
 
@@ -315,10 +315,10 @@ namespace cv { namespace gpu { namespace mathfunc
     template void bitwiseMaskOrCaller<uint>(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
 
 
-    void bitwiseAndCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, 
+    void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, 
                           const PtrStep src2, PtrStep dst, cudaStream_t stream)
     {
-        bitwiseBinOp<BIN_OP_AND>(rows, cols * elem_size1 * cn, src1, src2, dst, stream);
+        bitwiseBinOp<BIN_OP_AND>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
     }
 
 
@@ -334,10 +334,10 @@ namespace cv { namespace gpu { namespace mathfunc
     template void bitwiseMaskAndCaller<uint>(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
 
 
-    void bitwiseXorCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, 
+    void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, 
                           const PtrStep src2, PtrStep dst, cudaStream_t stream)
     {
-        bitwiseBinOp<BIN_OP_XOR>(rows, cols * elem_size1 * cn, src1, src2, dst, stream);
+        bitwiseBinOp<BIN_OP_XOR>(rows, static_cast<int>(cols * elem_size1 * cn), src1, src2, dst, stream);
     }
 
 

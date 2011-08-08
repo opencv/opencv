@@ -287,13 +287,13 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcrect,
-            dst.ptr<Npp8u>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
+        nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
     }
     else
     {
-        nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcrect,
-            dst.ptr<Npp8u>(), dst.step, dstsz, fx, fy, npp_inter[interpolation]) );
+        nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
     }
 
     if (stream == 0)
@@ -325,30 +325,30 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
     case CV_8UC1:
         {
             Npp8u nVal = static_cast<Npp8u>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), src.step, srcsz,
-            dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
+            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
             break;
         }
     case CV_8UC4:
         {
             Npp8u nVal[] = {static_cast<Npp8u>(value[0]), static_cast<Npp8u>(value[1]), static_cast<Npp8u>(value[2]), static_cast<Npp8u>(value[3])};
-            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), src.step, srcsz,
-                dst.ptr<Npp8u>(), dst.step, dstsz, top, left, nVal) );
+            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
             break;
         }
     case CV_32SC1:
         {
             Npp32s nVal = static_cast<Npp32s>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
-                dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
+            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
+                dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
             break;
         }
     case CV_32FC1:
         {
             Npp32f val = static_cast<Npp32f>(value[0]);
             Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), src.step, srcsz,
-                dst.ptr<Npp32s>(), dst.step, dstsz, top, left, nVal) );
+            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
+                dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
             break;
         }
     default:
@@ -409,20 +409,20 @@ namespace
         switch (src.depth())
         {
         case CV_8U:
-            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, src.step, srcroi,
-                dst.ptr<Npp8u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
+            nppSafeCall( npp_warp_8u[src.channels()][warpInd](src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_16U:
-            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, src.step, srcroi,
-                dst.ptr<Npp16u>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
+            nppSafeCall( npp_warp_16u[src.channels()][warpInd](src.ptr<Npp16u>(), srcsz, static_cast<int>(src.step), srcroi,
+                dst.ptr<Npp16u>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32S:
-            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, src.step, srcroi,
-                dst.ptr<Npp32s>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
+            nppSafeCall( npp_warp_32s[src.channels()][warpInd](src.ptr<Npp32s>(), srcsz, static_cast<int>(src.step), srcroi,
+                dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         case CV_32F:
-            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, src.step, srcroi,
-                dst.ptr<Npp32f>(), dst.step, dstroi, coeffs, npp_inter[interpolation]) );
+            nppSafeCall( npp_warp_32f[src.channels()][warpInd](src.ptr<Npp32f>(), srcsz, static_cast<int>(src.step), srcroi,
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
             break;
         default:
             CV_Assert(!"Unsupported source type");
@@ -541,7 +541,8 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, doub
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
     imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                f, s, dist, 0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
+                                static_cast<float>(f), static_cast<float>(s), static_cast<float>(dist), 
+                                0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -564,7 +565,8 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
     imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                      f, s, 0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
+                                      static_cast<float>(f), static_cast<float>(s), 0.5f*src_size.width, 0.5f*src_size.height, 
+                                      StreamAccessor::getStream(stream));
 }
 
 
@@ -588,7 +590,8 @@ void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
     imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                    f, s, 0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
+                                    static_cast<float>(f), static_cast<float>(s), 0.5f*src_size.width, 0.5f*src_size.height, 
+                                    StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -621,13 +624,13 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, src.step, srcroi,
-            dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
+        nppSafeCall( nppiRotate_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
     else
     {
-        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, src.step, srcroi,
-            dst.ptr<Npp8u>(), dst.step, dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
+        nppSafeCall( nppiRotate_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcroi,
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstroi, angle, xShift, yShift, npp_inter[interpolation]) );
     }
 
     if (stream == 0)
@@ -664,8 +667,8 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     NppStStreamHandler h(stream);
 
-    nppSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), src.step, 
-        sum.ptr<Ncv32u>(), sum.step, roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
+    nppSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step), 
+        sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -688,8 +691,8 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& s)
 
     NppStreamHandler h(stream);
 
-    nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(const_cast<Npp8u*>(src.ptr<Npp8u>()), src.step, sum.ptr<Npp32s>(),
-        sum.step, sqsum.ptr<Npp32f>(), sqsum.step, sz, 0, 0.0f, height) );
+    nppSafeCall( nppiSqrIntegral_8u32s32f_C1R(const_cast<Npp8u*>(src.ptr<Npp8u>()), static_cast<int>(src.step), 
+        sum.ptr<Npp32s>(), static_cast<int>(sum.step), sqsum.ptr<Npp32f>(), static_cast<int>(sqsum.step), sz, 0, 0.0f, height) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -718,8 +721,8 @@ void cv::gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& s)
     NppStStreamHandler h(stream);
 
     sqsum.create(src.rows + 1, src.cols + 1, CV_64F);
-    nppSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), src.step, 
-            sqsum.ptr<Ncv64u>(0), sqsum.step, roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
+    nppSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), static_cast<int>(src.step), 
+            sqsum.ptr<Ncv64u>(0), static_cast<int>(sqsum.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -761,8 +764,8 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 
     NppStreamHandler h(stream);
 
-    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), src.step, sqr.ptr<Npp32f>(), sqr.step,
-                dst.ptr<Npp32f>(), dst.step, sz, nppRect) );
+    nppSafeCall( nppiRectStdDev_32s32f_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), sqr.ptr<Npp32f>(), static_cast<int>(sqr.step),
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, nppRect) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -820,7 +823,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels,
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, hist.ptr<Npp32s>(), levels,
                 lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
@@ -854,7 +857,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, pHist, levels, lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, levels, lowerLevel, upperLevel, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -923,7 +926,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, hist.ptr<Npp32s>(), levels.ptr<level_t>(), levels.cols, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -964,7 +967,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<src_t>(), src.step, sz, pHist, pLevels, nLevels, buffer.ptr<Npp8u>()) );
+            nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), sz, pHist, pLevels, nLevels, buffer.ptr<Npp8u>()) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -1103,7 +1106,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
     int intBufSize;
     nppSafeCall( nppsIntegralGetBufferSize_32s(256, &intBufSize) );
 
-    int bufSize = std::max(256 * 240 * sizeof(int), intBufSize + 256 * sizeof(int));
+    int bufSize = static_cast<int>(std::max(256 * 240 * sizeof(int), intBufSize + 256 * sizeof(int)));
 
     ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
 

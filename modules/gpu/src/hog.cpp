@@ -218,7 +218,7 @@ void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
     Size blocks_per_img = numPartsWithin(img.size(), block_size, block_stride);
 
 	//   block_hists.create(1, block_hist_size * blocks_per_img.area(), CV_32F);
-	block_hists = getBuffer(1, block_hist_size * blocks_per_img.area(), CV_32F, block_hists_buf);
+	block_hists = getBuffer(1, static_cast<int>(block_hist_size * blocks_per_img.area()), CV_32F, block_hists_buf);
     
     hog::compute_hists(nbins, block_stride.width, block_stride.height, img.rows, img.cols, 
 						grad, qangle, (float)getWinSigma(), block_hists.ptr<float>());
@@ -234,11 +234,11 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
 
     computeBlockHistograms(img);
 
-    const int block_hist_size = getBlockHistogramSize();
+    const size_t block_hist_size = getBlockHistogramSize();
     Size blocks_per_win = numPartsWithin(win_size, block_size, block_stride);
     Size wins_per_img   = numPartsWithin(img.size(), win_size, win_stride);
 
-    descriptors.create(wins_per_img.area(), blocks_per_win.area() * block_hist_size, CV_32F);
+    descriptors.create(wins_per_img.area(), static_cast<int>(blocks_per_win.area() * block_hist_size), CV_32F);
 
     switch (descr_format)
     {

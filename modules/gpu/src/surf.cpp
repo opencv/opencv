@@ -260,7 +260,7 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
         keypointsGPU.release();
     else
     {
-        Mat keypointsCPU(SURF_GPU::SF_FEATURE_STRIDE, keypoints.size(), CV_32FC1);
+        Mat keypointsCPU(SURF_GPU::SF_FEATURE_STRIDE, static_cast<int>(keypoints.size()), CV_32FC1);
 
         float* kp_x = keypointsCPU.ptr<float>(SURF_GPU::SF_X);
         float* kp_y = keypointsCPU.ptr<float>(SURF_GPU::SF_Y);

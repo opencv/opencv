@@ -276,7 +276,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     extern "C" void merge_caller(const DevMem2D* src, DevMem2D& dst,
-                                 int total_channels, int elem_size,
+                                 int total_channels, size_t elem_size,
                                  const cudaStream_t& stream)
     {
         static MergeFunction merge_func_tbl[] =
@@ -286,7 +286,7 @@ namespace cv { namespace gpu { namespace split_merge {
             mergeC4_<char>, mergeC4_<short>, mergeC4_<int>, 0, mergeC4_<double>,
         };
 
-        int merge_func_id = (total_channels - 2) * 5 + (elem_size >> 1);
+        size_t merge_func_id = (total_channels - 2) * 5 + (elem_size >> 1);
         MergeFunction merge_func = merge_func_tbl[merge_func_id];
 
         if (merge_func == 0)
@@ -485,7 +485,7 @@ namespace cv { namespace gpu { namespace split_merge {
 
 
     extern "C" void split_caller(const DevMem2D& src, DevMem2D* dst,
-                                 int num_channels, int elem_size1,
+                                 int num_channels, size_t elem_size1,
                                  const cudaStream_t& stream)
     {
         static SplitFunction split_func_tbl[] =
@@ -495,7 +495,7 @@ namespace cv { namespace gpu { namespace split_merge {
             splitC4_<char>, splitC4_<short>, splitC4_<int>, 0, splitC4_<double>,
         };
 
-        int split_func_id = (num_channels - 2) * 5 + (elem_size1 >> 1);
+        size_t split_func_id = (num_channels - 2) * 5 + (elem_size1 >> 1);
         SplitFunction split_func = split_func_tbl[split_func_id];
 
         if (split_func == 0)

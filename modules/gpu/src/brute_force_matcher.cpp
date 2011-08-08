@@ -265,7 +265,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
 
     if (masks.empty())
     {
-        Mat trainCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(DevMem2D)));
+        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2D)));
 
         for (size_t i = 0; i < trainDescCollection.size(); ++i)
         {
@@ -280,8 +280,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollect
     {
         CV_Assert(masks.size() == trainDescCollection.size());
 
-        Mat trainCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(DevMem2D)));
-        Mat maskCollectionCPU(1, trainDescCollection.size(), CV_8UC(sizeof(PtrStep)));
+        Mat trainCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(DevMem2D)));
+        Mat maskCollectionCPU(1, static_cast<int>(trainDescCollection.size()), CV_8UC(sizeof(PtrStep)));
 
         for (size_t i = 0; i < trainDescCollection.size(); ++i)
         {

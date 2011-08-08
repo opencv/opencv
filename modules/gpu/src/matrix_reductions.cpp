@@ -116,7 +116,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
 
     DeviceBuffer dbuf(2);
 
-    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), src.step, sz, dbuf, (double*)dbuf + 1) );
+    nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, dbuf, (double*)dbuf + 1) );
 
     cudaSafeCall( cudaDeviceSynchronize() );
     
@@ -177,7 +177,7 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 
     DeviceBuffer dbuf;
 
-    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, sz, dbuf) );
+    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
 
     cudaSafeCall( cudaDeviceSynchronize() );
     
@@ -409,7 +409,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
     double maxVal_; if (!maxVal) maxVal = &maxVal_;
     
     Size buf_size;
-    getBufSizeRequired(src.cols, src.rows, src.elemSize(), buf_size.width, buf_size.height);
+    getBufSizeRequired(src.cols, src.rows, static_cast<int>(src.elemSize()), buf_size.width, buf_size.height);
     ensureSizeIsEnough(buf_size, CV_8U, buf);
 
     if (mask.empty())
@@ -510,7 +510,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
     int maxLoc_[2];
 
     Size valbuf_size, locbuf_size;
-    getBufSizeRequired(src.cols, src.rows, src.elemSize(), valbuf_size.width, 
+    getBufSizeRequired(src.cols, src.rows, static_cast<int>(src.elemSize()), valbuf_size.width, 
                        valbuf_size.height, locbuf_size.width, locbuf_size.height);
     ensureSizeIsEnough(valbuf_size, CV_8U, valBuf);
     ensureSizeIsEnough(locbuf_size, CV_8U, locBuf);
