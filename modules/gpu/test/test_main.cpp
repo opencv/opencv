@@ -109,9 +109,11 @@ int main(int argc, char** argv)
     cvtest::TS::ptr()->init("gpu");
     testing::InitGoogleTest(&argc, argv);
 
-    //cv::CommandLineParser parser(argc, (const char**)argv);
+    const char* keys ="{ nvtest_output_level | nvtest_output_level | none | NVidia test verbosity level }";
 
-    std::string outputLevel = "none";//parser.get<std::string>("nvtest_output_level", "none");
+    cv::CommandLineParser parser(argc, (const char**)argv, keys);
+
+    std::string outputLevel = parser.get<std::string>("nvtest_output_level", "none");
 
     if (outputLevel == "none")
         nvidiaTestOutputLevel = OutputLevelNone;

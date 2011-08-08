@@ -73,7 +73,7 @@ namespace cv {  namespace gpu { namespace device
     }
 
     // warp-synchronous 32 elements reduction
-    template <typename T, typename Op> __device__ __forceinline__ void warpReduce32(volatile T* data, volatile T& partial_reduction, int tid, Op op)
+    template <typename T, typename Op> __device__ __forceinline__ void warpReduce32(volatile T* data, T& partial_reduction, int tid, Op op)
     {
         data[tid] = partial_reduction;
 
@@ -88,7 +88,7 @@ namespace cv {  namespace gpu { namespace device
     }
 
     // warp-synchronous 16 elements reduction
-    template <typename T, typename Op> __device__ __forceinline__ void warpReduce16(volatile T* data, volatile T& partial_reduction, int tid, Op op)
+    template <typename T, typename Op> __device__ __forceinline__ void warpReduce16(volatile T* data, T& partial_reduction, int tid, Op op)
     {
         data[tid] = partial_reduction;
 
@@ -102,7 +102,7 @@ namespace cv {  namespace gpu { namespace device
     }
 
     // warp-synchronous reduction
-    template <int n, typename T, typename Op> __device__ __forceinline__ void warpReduce(volatile T* data, volatile T& partial_reduction, int tid, Op op)
+    template <int n, typename T, typename Op> __device__ __forceinline__ void warpReduce(volatile T* data, T& partial_reduction, int tid, Op op)
     {
         if (tid < n)
             data[tid] = partial_reduction;

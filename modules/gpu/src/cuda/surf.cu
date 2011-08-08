@@ -566,9 +566,6 @@ namespace cv { namespace gpu { namespace surf
 
                 float* s_sum_row = s_sum + threadIdx.y * 32;
 
-                //reduceSum32(s_sum_row, sumx);
-                //reduceSum32(s_sum_row, sumy);
-
                 warpReduce32(s_sum_row, sumx, threadIdx.x, plus<volatile float>());
                 warpReduce32(s_sum_row, sumy, threadIdx.x, plus<volatile float>());
 
