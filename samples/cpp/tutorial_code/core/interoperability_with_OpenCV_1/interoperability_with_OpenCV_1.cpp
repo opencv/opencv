@@ -50,7 +50,7 @@ int main( int argc, char** argv )
     vector<Mat> planes;    // Use the STL's vector structure to store multiple Mat objects 
     split(I_YUV, planes);  // split the image into separate color planes (Y U V)
 
-#if 0 // change it to 0 if you want to see a blurred and noisy version of this processing
+#if 1 // change it to 0 if you want to see a blurred and noisy version of this processing
     // Mat scanning
     // Method 1. process Y plane using an iterator
     MatIterator_<uchar> it = planes[0].begin<uchar>(), it_end = planes[0].end<uchar>();

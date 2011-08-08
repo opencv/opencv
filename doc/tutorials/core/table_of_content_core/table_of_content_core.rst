@@ -181,6 +181,27 @@ Here you will learn the about the basic building blocks of the library. A must r
                    :height: 90pt
                    :width:  90pt
 
++
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+  |InterOOpenCV1| **Title:** :ref:`InteroperabilityWithOpenCV1`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  Did you used OpenCV before its 2.0 version? Do you wanna know what happened with your library with 2.0? Don't you know how to convert your old OpenCV programs to the new C++ interface? Look here to shed light on all this questions.
+                  
+  =============== ======================================================
+
+  .. |InterOOpenCV1| image:: images/interopOpenCV1.png
+                   :height: 90pt
+                   :width:  90pt
+
+
+
 .. raw:: latex
 
    \pagebreak
@@ -197,3 +218,4 @@ Here you will learn the about the basic building blocks of the library. A must r
    ../random_generator_and_text/random_generator_and_text
    ../discrete_fourier_transform/discrete_fourier_transform
    ../file_input_output_with_xml_yml/file_input_output_with_xml_yml
+   ../interoperability_with_OpenCV_1/interoperability_with_OpenCV_1
