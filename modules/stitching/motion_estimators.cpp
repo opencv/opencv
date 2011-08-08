@@ -405,7 +405,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
         }
     }
 
-    int max_comp = max_element(comps.size.begin(), comps.size.end()) - comps.size.begin();
+    int max_comp = static_cast<int>(max_element(comps.size.begin(), comps.size.end()) - comps.size.begin());
 
     vector<int> indices;
     vector<int> indices_removed;
@@ -423,8 +423,8 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
         for (size_t j = 0; j < indices.size(); ++j)
         {
             pairwise_matches_subset.push_back(pairwise_matches[indices[i]*num_images + indices[j]]);
-            pairwise_matches_subset.back().src_img_idx = i;
-            pairwise_matches_subset.back().dst_img_idx = j;
+            pairwise_matches_subset.back().src_img_idx = static_cast<int>(i);
+            pairwise_matches_subset.back().dst_img_idx = static_cast<int>(j);
         }
     }
 

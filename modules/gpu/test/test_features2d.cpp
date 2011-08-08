@@ -143,7 +143,7 @@ TEST_P(SURF, Accuracy)
     cv::BruteForceMatcher< cv::L2<float> > matcher;
     std::vector<cv::DMatch> matches;
 
-    matcher.match(cv::Mat(keypoints_gold.size(), 64, CV_32FC1, &descriptors_gold[0]), descriptors, matches);
+    matcher.match(cv::Mat(static_cast<int>(keypoints_gold.size()), 64, CV_32FC1, &descriptors_gold[0]), descriptors, matches);
 
     int validCount = 0;
     

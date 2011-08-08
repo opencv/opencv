@@ -397,8 +397,8 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         return;
 
     // Construct point-point correspondences for homography estimation
-    Mat src_points(1, matches_info.matches.size(), CV_32FC2);
-    Mat dst_points(1, matches_info.matches.size(), CV_32FC2);
+    Mat src_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    Mat dst_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
     for (size_t i = 0; i < matches_info.matches.size(); ++i)
     {
         const DMatch& m = matches_info.matches[i];
@@ -406,12 +406,12 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         Point2f p = features1.keypoints[m.queryIdx].pt;
         p.x -= features1.img_size.width * 0.5f;
         p.y -= features1.img_size.height * 0.5f;
-        src_points.at<Point2f>(0, i) = p;
+        src_points.at<Point2f>(0, static_cast<int>(i)) = p;
 
         p = features2.keypoints[m.trainIdx].pt;
         p.x -= features2.img_size.width * 0.5f;
         p.y -= features2.img_size.height * 0.5f;
-        dst_points.at<Point2f>(0, i) = p;
+        dst_points.at<Point2f>(0, static_cast<int>(i)) = p;
     }
 
     // Find pair-wise motion

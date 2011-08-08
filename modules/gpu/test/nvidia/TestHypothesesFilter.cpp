@@ -132,7 +132,7 @@ bool TestHypothesesFilter::process()
     }
     NCV_SKIP_COND_END
 
-    Ncv32u numHypothesesSrc = h_vecSrc.length();
+    Ncv32u numHypothesesSrc = static_cast<Ncv32u>(h_vecSrc.length());
     NCV_SKIP_COND_BEGIN
     ncvStat = ncvGroupRectangles_host(h_vecSrc, numHypothesesSrc, this->minNeighbors, this->eps, NULL);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);

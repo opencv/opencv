@@ -1486,7 +1486,7 @@ struct BitwiseNot : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
         
         for (int i = 0; i < mat.rows; ++i)
         {
-            cv::Mat row(1, mat.cols * mat.elemSize(), CV_8U, (void*)mat.ptr(i));
+            cv::Mat row(1, static_cast<int>(mat.cols * mat.elemSize()), CV_8U, (void*)mat.ptr(i));
             rng.fill(row, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
         }
 
@@ -1547,10 +1547,10 @@ struct BitwiseOr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, 
         
         for (int i = 0; i < mat1.rows; ++i)
         {
-            cv::Mat row1(1, mat1.cols * mat1.elemSize(), CV_8U, (void*)mat1.ptr(i));
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
             rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
 
-            cv::Mat row2(1, mat2.cols * mat2.elemSize(), CV_8U, (void*)mat2.ptr(i));
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
             rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
         }
 
@@ -1611,10 +1611,10 @@ struct BitwiseAnd : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
         
         for (int i = 0; i < mat1.rows; ++i)
         {
-            cv::Mat row1(1, mat1.cols * mat1.elemSize(), CV_8U, (void*)mat1.ptr(i));
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
             rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
 
-            cv::Mat row2(1, mat2.cols * mat2.elemSize(), CV_8U, (void*)mat2.ptr(i));
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
             rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
         }
 
@@ -1675,10 +1675,10 @@ struct BitwiseXor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo,
         
         for (int i = 0; i < mat1.rows; ++i)
         {
-            cv::Mat row1(1, mat1.cols * mat1.elemSize(), CV_8U, (void*)mat1.ptr(i));
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
             rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
 
-            cv::Mat row2(1, mat2.cols * mat2.elemSize(), CV_8U, (void*)mat2.ptr(i));
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
             rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
         }
 
