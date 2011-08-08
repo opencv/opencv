@@ -862,9 +862,11 @@ namespace cv
 
         //! computes Harris cornerness criteria at each image pixel
         CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
 
         //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
         CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
 
         //! performs per-element multiplication of two full (not packed) Fourier spectrums
         //! supports 32FC2 matrixes only (interleaved format)
@@ -1096,22 +1098,26 @@ namespace cv
         //! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
         //! Output hist will have one row and histSize cols and CV_32SC1 type.
         CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
         //! Calculates histogram with evenly distributed bins for four-channel source.
         //! All channels of source are processed separately.
         //! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
         //! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
         CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], GpuMat& buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
         //! Calculates histogram with bins determined by levels array.
         //! levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
         //! Supports CV_8UC1, CV_16UC1, CV_16SC1 and CV_32FC1 source types.
         //! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, Stream& stream = Stream::Null());
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream = Stream::Null());
         //! Calculates histogram with bins determined by levels array.
         //! All levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
         //! All channels of source are processed separately.
         //! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
         //! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], GpuMat& buf, Stream& stream = Stream::Null());
         
         //! Calculates histogram for 8u one channel image
         //! Output hist will have one row, 256 cols and CV32SC1 type.
