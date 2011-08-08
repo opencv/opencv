@@ -3,163 +3,254 @@
 .. _Android_Binary_Package_with_NDK:
 
 
-Using OpenCV Android binary package to compile applications, which use OpenCV from native level
-************************************************************************************************
+Using Android binary package to compile applications, which use OpenCV on native (C++) level
+********************************************************************************************
 
-This tutorial describes a simple way to build Android application which uses OpenCV from the native (C++) level. 
+This tutorial describes a fast way how to create and build Android applications containing OpenCV code written in C++ with OpenCV binary package.
 
-This is impotant when you have some functionality which is written in C++ and uses OpenCV, and you want to use it in your Android application,
-but do not want to rewrite the C++ code to Java (e.g. if the speed is critical for this part of the code).
+This is important when you already have some computer vision functionality which is written in C++ and uses OpenCV, and you want to use it in your Android application,
+but do not want to rewrite the C++ code to Java. 
+In this case the only way is to use JNI mechanism. 
+It means, that you should add a class with native methods wrapping your C++ functionality into the Java part of your Android application.
 
-In this case the only way is to use JNI. 
-It means, that into the Java code of your Android application should be added a Java class with native methods,
-which will be wrappers for your C++ functionality.
-
-This tutorial describes a way how to use OpenCV binary package to compile Android applications, which contains C++ native code using OpenCV.
-
-Note that before using this tutorial you should fulfill all the operations,
-described in the tutorial :ref:`Android_Binary_Package` .
+Please note that before starting this tutorial you should fulfill all the steps, described in the tutorial :ref:`Android_Binary_Package`.
 
 The tutorial was tested using Ubuntu 10.04 operating systems (Windows 7 SP1 coming soon). 
 Nevertheless, it should also work on Mac OS X. If you encounter errors after following the steps described here, feel free to contact us via *android-opencv* discussion group https://groups.google.com/group/android-opencv/ and we will try to help you.
 
 
-Setup NDK
-==============================================
+Prerequisites: Setup NDK
+========================
 
-To compile C++ code for using in Android applications you need Android NDK.
+To compile C++ code for Android platform you need Android NDK.
 
-You can get the latest version of Android NDK as an archive from the page http://developer.android.com/sdk/ndk/index.html .
+You can get the latest version of NDK from the page http://developer.android.com/sdk/ndk/index.html .
 
-To install Android NDK just extract the archive to some folder on your computer.
+To install Android NDK just extract the archive to some folder on your computer. Here is installation instructions on the NDK home page: http://developer.android.com/sdk/ndk/index.html#installing
 
+.. note:: Before start you can read official Android NDK documentation which is in the Android NDK archive, in the folder :file:`docs/`.
 
-Android NDK Documentation
-==============================================
+    The main article about using Android NDK build system you can read in the file :file:`ANDROID-MK.html`. 
 
-Before start you can read official Android NDK documentation which is in the Android NDK archive, in the folder **docs/**.
+    Also some additional useful information you can read in the files
+    :file:`APPLICATION-MK.html`, :file:`NDK-BUILD.html`, and in the files :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`,  :file:`PREBUILTS.html`. 
 
-The main article about using Android NDK build system you can read in the file **ANDROID-MK.html**. 
+Theory: Android application structure
+=====================================
 
-Also some additional useful information you can read in the files
-**APPLICATION-MK.html**, **NDK-BUILD.html**, and in the files **CPU-ARM-NEON.html**, **CPLUSPLUS-SUPPORT.html**,  **PREBUILTS.html**. 
+Usually code of an Android application has the following structure:
 
-Android application source code structure
-==========================================
++ :file:`root folder of the project/`
 
-Usually source code of an Android application has the following structure:
+  - :file:`jni/`
 
-+ root folder of the project/
+  - :file:`libs/`
 
-  - jni/
+  - :file:`res/`
 
-  - res/
+  - :file:`src/`
 
-  - src/
+  - :file:`AndroidManifest.xml`
 
-  - AndroidManifest.xml
+  - :file:`default.properties`
 
-  - default.properties
-
-  - ... other files ... 
+  - :file:`... other files ...`
 
 where
 
-+ the folder **src** contains the Java code of the application,
++ the :file:`src` folder contains the Java code of the application,
 
-+ the folder **res** contains resources of the application (images, xml files describing the application layout, etc),
++ the :file:`res` folder contains resources of the application (images, xml files describing UI layout , etc),
 
-+ and the folder **jni** contains C/C++ application source code and simple scripts **Android.mk** and **Application.mk**. 
++ the :file:`libs` folder will contain native libraries after successful build,
+
++ and the :file:`jni` folder contains C/C++ application source code and NDK build scripts :file:`Android.mk` and :file:`Application.mk`.
    
   These scripts control the C++ build process (they are written in Makefile language). 
 
 
 Also the root folder should contain the following files 
 
+* the :file:`AndroidManifest.xml` file presents essential information about the application to the Android system 
+  (name of the Application, name of the main application's Java package, components of the application, required permissions, etc) 
+  
+  It can be created using Eclipse wizard or :file:`android` tool from Android SDK
 
-* the file **AndroidManifest.xml** presents essential information about the application to the Android system 
-  (name of the Application, name of the main application's Java package, components of the application, etc) 
-  --- it can be created using Eclipse wizard, android tool from SDK, or manually 
+* the :file:`default.properties` is a text file containing information about target Android platform and other build details.
+  
+  This file is generated by Eclipse or can be created with :file:`android` tool from Android SDK
 
-* the text file **default.properties** contains information about Android target platform and some other details. 
-
-  The file is generated by Eclipse or console ant application. 
+.. note:: Both files (AndroidManifest.xml and default.properties) are required to compile the C++ part of the application (the Android build system uses information from these files). If the files don't exist, compile the Java part of the project before the C++ part of the project. 
 
 
-**Attention**: Both files (AndroidManifest.xml and default.properties) are required to compile the C++ part of the application source code (the Android build system uses information from these files). If the files don't exist, compile the Java part of the project before the C++ part of the project. 
-
-
-How to build Android application which have C++ native part (from console)
-===========================================================================
+Theory: How to build Android application having C++ native part (from command line)
+===================================================================================
 
 Here is the standard way to compile C++ part of an Android application: 
 
-#. Open console and go to the folder jni of the application project. 
+#. Open console and go to the root folder of Android application
+
+   .. code-block:: bash
+
+        cd <root folder of the project>/
+
+   .. note:: Alternatively you can go to the folder :file:`jni` of Android project but samples from OpenCV binary package are configured for building from project root level (because of relative path to OpenCV library).
+
 #. Run the following command
 
-        .. code-block:: bash
+    + *UNIX*
 
-                <path_where_NDK_is_placed>/ndk-build
+     .. code-block:: bash
 
-        After executing this command the C++ part of the source code is compiled.
+          <path_where_NDK_is_placed>/ndk-build
 
-After that the Java part of the application can be recompiled (using either Eclipse, or ant build tool, or scripts calling ant commands, etc), and then the built application can be installed on a device. 
+    + *Cygwin*
 
-Note that some parameters can be set for the script ndk-build.
+     .. code-block:: bash
 
-**Example 1**: Verbose compilation
+          export NDK_USE_CYGPATH=1
+          <path_where_NDK_is_placed>/ndk-build
 
-.. code-block:: bash
+
+#.   After executing this command the C++ part of the source code is compiled.
+
+After that the Java part of the application can be (re)compiled (using either *Eclipse* or *ant* build tool). 
+
+.. note:: Some parameters can be set for the :file:`ndk-build`:
+
+    **Example 1**: Verbose compilation
+
+    .. code-block:: bash
 
         <path_where_NDK_is_placed>/ndk-build V=1
 
-**Example 2**: Rebuild all
+    **Example 2**: Rebuild all
 
-.. code-block:: bash
+    .. code-block:: bash
 
         <path_where_NDK_is_placed>/ndk-build -B
-
-The tutorials 3 and 4 in OpenCV package may be compiled by this way.
 
 
 .. _Android_NDK_integration_with_Eclipse:
 
 
-How to build Android application which have C++ native part (from Eclipse)
-=============================================================================
+Theory: How to build Android application having C++ native part (from *Eclipse*)
+================================================================================
 
-There is a simple way to integrate compilation of C++ code by Android NDK into Eclipse compilation process.
+There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse compilation process. We recommend the approach taken from this site: http://mobilepearls.com/labs/ndk-builder-in-eclipse/
 
-To use it follow instructions from this site: http://mobilepearls.com/labs/ndk-builder-in-eclipse/
+.. important:: This instructions should be applied for each Android project in *Eclipse* workspace, which contains native C++ code.
 
-**Important:** This instructions should be applied for each Android project in Eclipse workspace, which contains native C++ code.
+Below is an adapted version of this guide:
 
-Note that in the instructions the folder "lib" is shown on pictures, whereas the name of the folder  is "libs" indeed (if the folder "libs" is absent in your project, compile the Java part of your project or just create it).
+#. Navigate to *Package Explorer* window and expand your project having JNI resources.
 
-Also note that if you have followed this instructions for new project in the workspace, sometimes you will have to change the name of the builder (as example, you can give it name "NDK Builder1" instead of "NDK builder", etc)
+   If you can not see :file:`libs` folder under this project then you need to create it manually.
 
-The tutorials 3 and 4 in OpenCV package may be compiled by this way.
+#. Right click on your project in *Package Explorer* window and select *Properties*.
 
+#. In the *Properties* dialog select *Builders* menu and press the *New...* button:
 
-The structure of Android.mk and Application.mk scripts
-======================================================
+     .. image:: images/eclipse_builders.png
+        :alt: Configure builders
+        :align: center
 
-The script Android.mk usually have the following structure: 
+#. In the resulting dialog select the *Program* type and press the *OK* button:
+
+     .. image:: images/eclipse_builder_types.png
+        :alt: Choose builder type
+        :align: center
+
+#. In the *Main* tab fill the following fields:
+
+    * *Name* - any name for your builder. ("Tutorial 2.1 Builder" in my case.)
+
+      .. note:: This name has to be unique for each project in your workspace.
+
+    * *Location* - path to :file:`ndk-build` tool.
+
+      + *UNIX*
+
+        Just put full path to :file:`ndk-build` into this filed. Also you can add some options to the *Arguments* fied, for example **-B** option.
+
+      + *Cygwin*
+
+        - Instead of path to the :file:`ndk-build` tool you need to put full path to *cygwin* :file:`bash.exe` location. E.g: :file:`C:\\cygwin\\bin\\bash.exe`.
+
+        - Put full path to :file:`ndk-build` into the *Arguments* field E.g. :file:`C:\\Android\\android-ndk-r6\\ndk-build`.
+
+        - Go to the *Environment* tab and define 2 environment variables:
+             
+           * **PATH** - full path to the *cygwin* tools. E.g. :file:`C:\\cygwin\\bin`
+
+           * **NDK_USE_CYGPATH** - set to 1
+
+    
+        .. image:: images/eclipse_windows_environment.png
+                   :alt: Define environment variables
+                   :align: center
+
+    * *Working Directory* - put path to your project into this field. Instead of hardcoding full path you can click *Browse Workspace..." button and select your project.
+
+    .. image:: images/eclipse_edit_configuration_main.png
+               :alt: Define environment variables
+               :align: center
+
+#. Go to the *Refresh* tab and select both *"Refresh resources upon completion"* and *"Recursively include sub-folders"*.
+
+   Next click the *"Specific resources"* option and click the *"Specify resources..."* button:
+
+    .. image:: images/eclipse_edit_configuration_refresh.png
+               :alt: Define environment variables
+               :align: center
+
+#. Select :file:`libs` folder under your project and click finish:
+
+    .. image:: images/eclipse_edit_configuration_specify_resources.png
+               :alt: Select resources folder to refresh automatically 
+               :align: center
+
+#. Go to the last tab *"Build options"*. Make sure that all checkboxes are set as shown on the next screen:
+
+    .. image:: images/eclipse_edit_configuration_build_options.png
+               :alt: Configure build options
+               :align: center
+
+#. Next, click the *"Specify resources..."* button.
+
+#. Select :file:`jni` folder of your project and click the *Finish* button:
+
+    .. image:: images/eclipse_edit_configuration_build_resources.png
+               :alt: Select resources to build
+               :align: center
+
+#. Finally press *OK* in the builder configuration and project properties dialogs. If you have automatic build turned on then console showing build log should appear:
+
+    .. image:: images/eclipse_NDK_build_success.png
+               :alt: Select resources to build
+               :align: center
+
+Theory: The structure of Android.mk and Application.mk scripts
+==============================================================
+
+The script :file:`Android.mk` usually have the following structure: 
 
 .. code-block:: make
 
         LOCAL_PATH := $(call my-dir)
+
         include $(CLEAR_VARS)
         LOCAL_MODULE    := <module_name>
         LOCAL_SRC_FILES := <list of .c and .cpp project files>
         <some variable name> := <some variable value>
         ...
         <some variable name> := <some variable value>
+
         include $(BUILD_SHARED_LIBRARY)
 
-This is the minimal file Android.mk, which builds a C++ source code of an Android application. Note that the first two lines and the last line are mandatory for any Android.mk.
+This is the minimal file Android.mk, which builds a C++ source code of an Android application. Note that the first two lines and the last line are mandatory for any :file:`Android.mk`.
 
-Usually the file Application.mk is optional, but sometimes, when STL or exceptions are used in C++, it also should be written. Example of the file Application.mk:
+Usually the file :file:`Application.mk` is optional, but in case of project using OpenCV, when STL and exceptions are used in C++, it also should be written. Example of the file :file:`Application.mk`:
 
 .. code-block:: make
 
@@ -167,53 +258,93 @@ Usually the file Application.mk is optional, but sometimes, when STL or exceptio
         APP_CPPFLAGS := -frtti -fexceptions
         APP_ABI := armeabi-v7a
 
-How to build an Android application, which uses OpenCV
-======================================================
+Practice: Build samples from OpenCV binary package
+==================================================
+
+OpenCV binary package includes two samples having JNI resources:
+
+* *Tutorial 2 Advanced - 1. Add Native OpenCV*
+  
+  This sample illustrate how you can use OpenCV in C++ but without OpenCV Java API.
+
+* *Tutorial 2 Advanced - 2. Mix Java+Native OpenCV*
+
+  This sample shows how you can mix OpenCV Java API and native C++ code.
+
+To build these samples you need to:
+
+#. Fulfill all the steps, described in the tutorial :ref:`Android_Binary_Package`.
+
+#. Setup one builder for *"Tutorial 2 Advanced - 1. Add Native OpenCV"* project
+
+#. Setup second builder for *"Tutorial 2 Advanced - 2. Mix Java+Native OpenCV"*
+
+#. Clean these projects (in the main *Eclipse* menu: *Project* > *Clean...*)
+
+#. Run Eclipse build command (if option *"Build Automatically"* is not set)
+
+
+Practice: Create an Android application, which uses OpenCV
+==========================================================
 
 To build your own Android application, which uses OpenCV from native part, the following steps should be done:
 
-1. The archive with OpenCV binary package should be downloaded and extracted to some folder (as example, into the home folder)
+#. The archive with OpenCV binary package should be downloaded and extracted to some folder (as example, into the home folder)
 
-2. The environment variable OPENCV_PACKAGE_DIR should be defined. 
+#. We recommend to use an environment variable to specify the location of OpenCV package. Full or relative path hardcoded in :file:`jni/Android.mk` will also work.
+
+   So, the environment variable **OPENCV_PACKAGE_DIR** should be defined. 
    The value of the variable should points to the folder, where the OpenCV package has been extracted. 
-   As an example, you can add add the following line into the hidden file .bashrc placed in your home folder: 
+
+
+   As an example, on *UNIX* you can add add the following line into the hidden file :file:`.bashrc` placed in your home folder: 
    
    .. code-block:: bash
 
         export OPENCV_PACKAGE_DIR = <path to the extracted OpenCV package>
         
-   Then reboot your computer. 
+   Then relogin (or better reboot your computer).
    
-   **Attention**: without rebooting (or logout) this change won't work.
+   .. attention:: without rebooting (or logout) this change might not work.
 
-3.  The file jni/Android.mk should be written for the current application using the common rules for the file.
+   If you are a *Windows* user, then navigate to:
+
+   * *Windows 7 / Windows Vista*
+
+     My Computer (Right Click on Icon) > Properties (Link) > Advanced System Settings (Link) > Advanced (Tab) > Environment Variables (Button) > System variables (Section)
+
+   * *Windows XP*
+
+     My Computer (Right Click on Icon) > Properties (Link) > Advanced (Tab) > Environment Variables (Button) > System variables (Section)
+
+   Create new variable **OPENCV_PACKAGE_DIR** and similarly to *UNIX* relogin or reboot.
+
+   If you are setting NDK builder as described above in :ref:`Android_NDK_integration_with_Eclipse`, then you can define this variable in builder settings. It can be done on third *Environment* tab of the builder configuration window (we have already added some variables to this tab on *Windows* but skipped it for other platforms). 
+
+#  The file :file:`jni/Android.mk` should be written for the current application using the common rules for the file.
 
     For detailed information see the Android NDK documentation from the Android NDK archive, in the file
-    <path_where_NDK_is_placed>/docs/ANDROID-MK.html 
+    :file:`<path_where_NDK_is_placed>/docs/ANDROID-MK.html`
 
-4. The line 
+#. The line 
 
    .. code-block:: make
 
            include $(OPENCV_PACKAGE_DIR)/share/OpenCV/OpenCV.mk
 
-   should be inserted into the jni/Android.mk file right after the line
+   should be inserted into the :file:`jni/Android.mk` file right after the line
 
    .. code-block:: make
 
         include $(CLEAR_VARS)
 
-   (check the path to the included file)
+   .. note:: If your application utilize both native (C++) OpenCV and its Java API you need to put the following line before including :file:`OpenCV.mk` to avoid conflict between C++ and Java builders:
 
-5. Also the line 
+       .. code-block:: make
 
-   .. code-block:: make
+            OPENCV_CAMERA_MODULES:=off
 
-        LOCAL_ARM_NEON := true
-
-   is recommended to be added to the jni/Android.mk file, if the application should be run on Android devices with ARM NEON support. 
-
-6. The file Application.mk should exist and should contain lines
+#. The file :file:`Application.mk` should exist and should contain lines
 
    .. code-block:: make
 
@@ -226,13 +357,13 @@ To build your own Android application, which uses OpenCV from native part, the f
 
                  APP_ABI := armeabi-v7a 
 
-   is recommended to run the application on modern ARMs 
+   is recommended for the applications targeting modern ARMs 
    
-7. To build the C++ code the Android NDK script **ndk-build** should be run in the root directory of application. 
+#. To build the C++ code the Android NDK script :file:`ndk-build` should be run in the root directory of application. 
    Then the C++ source code using OpenCV will be built by Android NDK build system. 
    After that the Java part of the application can be rebuild and the application can be installed on an Android device. 
 
-   Note that this step requires calling the ndk-build script from the console; instead of this step you can use integration of Android NDK into Eclipse
+   Note that this step requires calling the :file:`ndk-build` script from the console; instead of this step you can use integration of Android NDK into Eclipse
    as stated above in  the section :ref:`Android_NDK_integration_with_Eclipse` .
 
 
@@ -243,7 +374,7 @@ Note that you can install additional C++ plugins in Eclipse:
 
 #. Open Help / Install New Software. This shows the “Install” dialog.
 
-#. In the “Work with” dropdown list choose "Helios - http://download.eclipse.org/releases/helios" and wait while the list of 
+#. In the “Work with” drop-down list choose "Helios - http://download.eclipse.org/releases/helios" and wait while the list of 
    available software is loaded.
 
 #. From the list of available software select “Programming Languages” / “C/C++ Development Tools 7.0.1”.

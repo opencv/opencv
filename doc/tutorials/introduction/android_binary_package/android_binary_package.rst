@@ -48,7 +48,7 @@ You need the following tools to be installed:
 
       .. code-block:: bash
 
-         yum install libXtst.i386 
+         sudo yum install libXtst.i386 
 
 #. **Android SDK components**
 
@@ -126,12 +126,12 @@ Get the OpenCV package for Android development
    
    .. code-block:: bash
 
-      tar -jxvf ~/Downloads/OpenCV-2.3.1-beta1-android-bin.tar.bz2
+      tar -jxvf ~/Downloads/OpenCV-2.3.1-android-bin.tar.bz2
       
    For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\android-opencv\\` directory.
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.3.1-beta1-android-bin.tar.bz2
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.3/OpenCV-2.3.1-beta1-android-bin.tar.bz2/download
+.. |opencv_android_bin_pack| replace:: OpenCV-2.3.1-android-bin.tar.bz2
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.3.1/OpenCV-2.3.1-android-bin.tar.bz2/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
@@ -141,7 +141,7 @@ Open OpenCV library and samples in Eclipse
 
 #. Start the *Eclipse* and choose your workspace location.
 
-   I recommend to start familiarising yourself with OpenCV for Android from a new clean workspace. So I have chosen my OpenCV package directory for the new workspace:
+   I recommend to start familiarizing yourself with OpenCV for Android from a new clean workspace. So I have chosen my OpenCV package directory for the new workspace:
 
       .. image:: images/eclipse_1_choose_workspace.png
          :alt: Choosing C:\Work\android-opencv\ as workspace location
@@ -279,4 +279,9 @@ If you already have an Android application, you can add a reference to OpenCV an
 
    Do the right mouse click on your app in Package Explorer, go to **Properties > Android > Library > Add**
    and choose the OpenCV library project. 
+
+Whats next?
+===========
+
+Read the :ref:`Android_Binary_Package_with_NDK` tutorial to learn how add native OpenCV code to your Android project.
 
