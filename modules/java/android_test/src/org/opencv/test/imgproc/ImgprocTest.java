@@ -16,7 +16,6 @@ import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class ImgprocTest extends OpenCVTestCase {
 
@@ -31,17 +30,6 @@ public class ImgprocTest extends OpenCVTestCase {
         imgprocSz = 2;
         anchorPoint = new Point(2, 2);
         size = new Size(3, 3);
-    }
-
-    private Mat getMat(int type, double... vals)
-    {
-        return new Mat(matSize, matSize, type, new Scalar(vals));
-    }
-
-    private Mat makeMask(Mat m, double... vals)
-    {
-        m.submat(0, m.rows(), 0, m.cols() / 2).setTo(new Scalar(vals));
-        return m;
     }
 
     public void testAccumulateMatMat() {
@@ -1321,7 +1309,6 @@ public class ImgprocTest extends OpenCVTestCase {
         Core.circle(gray0, new Point(matSize / 2, matSize / 2), 2, colorWhite, Core.FILLED);
 
         Imgproc.inpaint(gray255, gray0, dst, 3, Imgproc.INPAINT_TELEA);
-        OpenCVTestRunner.Log(dst);// TODO:remove
 
         assertMatEqual(getMat(CvType.CV_8U, 255), dst);
     }
@@ -1849,7 +1836,6 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testResizeMatMatSizeDoubleDouble() {
         Imgproc.resize(gray255, dst, new Size(), 0.5, 0.5);
-        OpenCVTestRunner.Log(dst);
 
         truth = new Mat((int) (matSize * 0.5), (int) (matSize * 0.5), CvType.CV_8U, new Scalar(255));
         assertMatEqual(truth, dst);

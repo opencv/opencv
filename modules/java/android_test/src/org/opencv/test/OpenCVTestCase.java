@@ -42,7 +42,8 @@ public class OpenCVTestCase extends TestCase {
     // - rename matrices
     // - create methods gray0() and create src1 explicitly
     // - create some masks
-    // - use truth member everywhere - remove truth from base class - each test fixture should use own truth filed
+    // - use truth member everywhere - remove truth from base class - each test
+    // fixture should use own truth filed
 
     protected Mat gray0;
     protected Mat gray1;
@@ -101,7 +102,7 @@ public class OpenCVTestCase extends TestCase {
 
         grayRnd = new Mat(matSize, matSize, CvType.CV_8U);
         Core.randu(grayRnd, 0, 256);
-        
+
         gray_16u_256 = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(256));
         gray_16s_1024 = new Mat(matSize, matSize, CvType.CV_16S, new Scalar(1024));
 
@@ -116,7 +117,7 @@ public class OpenCVTestCase extends TestCase {
         Core.randu(grayRnd_32f, 0, 256);
 
         gray0_64f = new Mat(matSize, matSize, CvType.CV_64F, new Scalar(0.0));
-        
+
         gray0_32f_1d = new Mat(1, matSize, CvType.CV_32F, new Scalar(0.0));
         gray0_64f_1d = new Mat(1, matSize, CvType.CV_64F, new Scalar(0.0));
 
@@ -167,30 +168,41 @@ public class OpenCVTestCase extends TestCase {
         super.tearDown();
     }
 
+    protected Mat getMat(int type, double... vals)
+    {
+        return new Mat(matSize, matSize, type, new Scalar(vals));
+    }
+
+    protected Mat makeMask(Mat m, double... vals)
+    {
+        m.submat(0, m.rows(), 0, m.cols() / 2).setTo(new Scalar(vals));
+        return m;
+    }
+
     public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-        
+
         if (!list1.isEmpty())
         {
             if (list1.get(0) instanceof Float || list1.get(0) instanceof Double)
                 throw new UnsupportedOperationException();
         }
-        
+
         for (int i = 0; i < list1.size(); i++)
             assertEquals(list1.get(i), list2.get(i));
     }
-    
+
     public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-        
+
         for (int i = 0; i < list1.size(); i++)
             assertTrue(Math.abs(list1.get(i).doubleValue() - list2.get(i).doubleValue()) <= epsilon);
     }
-    
+
     public static void assertListMatEquals(List<Mat> list1, List<Mat> list2, double epsilon) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -213,18 +225,19 @@ public class OpenCVTestCase extends TestCase {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
         }
-        
+
         for (int i = 0; i < list1.size(); i++)
             assertRectEquals(list1.get(i), list2.get(i));
     }
 
     public static void assertRectEquals(Rect expected, Rect actual) {
-        assertEquals(expected.x, actual.x);
-        assertEquals(expected.y, actual.y);
-        assertEquals(expected.width, actual.width);
-        assertEquals(expected.height, actual.height);
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.x, actual.x);
+        assertEquals(msg, expected.y, actual.y);
+        assertEquals(msg, expected.width, actual.width);
+        assertEquals(msg, expected.height, actual.height);
     }
-    
+
     public static void assertMatEqual(Mat m1, Mat m2) {
         compareMats(m1, m2, true);
     }
@@ -242,27 +255,37 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public static void assertKeyPointEqual(KeyPoint expected, KeyPoint actual, double eps) {
-        assertTrue(Math.hypot(expected.pt.x - actual.pt.x, expected.pt.y - actual.pt.y) < eps);
-        assertTrue(Math.abs(expected.size - actual.size) < eps);
-        assertTrue(Math.abs(expected.angle - actual.angle) < eps);
-        assertTrue(Math.abs(expected.response - actual.response) < eps);
-        assertEquals(expected.octave, actual.octave);
-        assertEquals(expected.class_id, actual.class_id);
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertTrue(msg, Math.hypot(expected.pt.x - actual.pt.x, expected.pt.y - actual.pt.y) < eps);
+        assertTrue(msg, Math.abs(expected.size - actual.size) < eps);
+        assertTrue(msg, Math.abs(expected.angle - actual.angle) < eps);
+        assertTrue(msg, Math.abs(expected.response - actual.response) < eps);
+        assertEquals(msg, expected.octave, actual.octave);
+        assertEquals(msg, expected.class_id, actual.class_id);
     }
-    
+
     public static void assertListKeyPointEquals(List<KeyPoint> expected, List<KeyPoint> actual, double epsilon) {
         assertEquals(expected.size(), actual.size());
         for (int i = 0; i < expected.size(); i++)
             assertKeyPointEqual(expected.get(i), actual.get(i), epsilon);
     }
-    
+
     public static void assertDMatchEqual(DMatch expected, DMatch actual, double eps) {
-        assertEquals(expected.queryIdx, actual.queryIdx);
-        assertEquals(expected.trainIdx, actual.trainIdx);
-        assertEquals(expected.imgIdx, actual.imgIdx);
-        assertTrue(Math.abs(expected.distance - actual.distance) < eps);
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.queryIdx, actual.queryIdx);
+        assertEquals(msg, expected.trainIdx, actual.trainIdx);
+        assertEquals(msg, expected.imgIdx, actual.imgIdx);
+        assertTrue(msg, Math.abs(expected.distance - actual.distance) < eps);
     }
-    
+
+    public static void assertScalarEqual(Scalar expected, Scalar actual, double eps) {
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertTrue(msg, Math.abs(expected.val[0] - actual.val[0]) < eps);
+        assertTrue(msg, Math.abs(expected.val[1] - actual.val[1]) < eps);
+        assertTrue(msg, Math.abs(expected.val[2] - actual.val[2]) < eps);
+        assertTrue(msg, Math.abs(expected.val[3] - actual.val[3]) < eps);
+    }
+
     public static void assertListDMatchEquals(List<DMatch> expected, List<DMatch> actual, double epsilon) {
         assertEquals(expected.size(), actual.size());
         for (int i = 0; i < expected.size(); i++)
@@ -270,13 +293,14 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public static void assertPointEquals(Point expected, Point actual, double eps) {
-        assertEquals(expected.x, actual.x, eps);
-        assertEquals(expected.y, actual.y, eps);
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.x, actual.x, eps);
+        assertEquals(msg, expected.y, actual.y, eps);
     }
 
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
         if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
         if (expected.depth() == CvType.CV_32F || expected.depth() == CvType.CV_64F) {
@@ -304,7 +328,7 @@ public class OpenCVTestCase extends TestCase {
 
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
         if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
         Mat diff = new Mat();

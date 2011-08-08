@@ -124,6 +124,7 @@ missing_consts = \
             ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4), 
             ('FILLED', -1),
             ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
+            ('REDUCE_SUM', 0), ('REDUCE_AVG', 1), ('REDUCE_MAX', 2), ('REDUCE_MIN', 3),
         ) #public
     }, # Core
 
@@ -461,7 +462,6 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "checkHardwareSupport" : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "setUseOptimized"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "useOptimized"         : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
-        "vconcat"              : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
 
     }, # Core
 
@@ -695,6 +695,9 @@ func_arg_fix = {
         'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
         'minAreaRect' : { 'points' : 'vector_Point2f', },
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
+        'hconcat' : { 'src' : 'vector_Mat', },
+        'vconcat' : { 'src' : 'vector_Mat', },
+        
     }, # '', i.e. no class
 } # func_arg_fix
 
