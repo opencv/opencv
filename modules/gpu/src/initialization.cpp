@@ -190,9 +190,17 @@ void cv::gpu::setDevice(int device)
 
 int cv::gpu::getDevice()
 {
-    int device;    
-    cudaSafeCall( cudaGetDevice( &device ) );
-    return device;
+    int count;
+    cudaError_t error = cudaGetDeviceCount( &count );
+
+    if (error == cudaErrorInsufficientDriver)
+        return -1;
+
+    if (error == cudaErrorNoDevice)
+        return 0;
+
+    cudaSafeCall(error);
+    return count;
 }
 
 
