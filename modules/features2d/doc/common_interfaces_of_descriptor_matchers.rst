@@ -300,6 +300,20 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
 
         ResultType operator()( const T* a, const T* b, int size ) const;
     };
+    
+    /*
+     * Squared Euclidean distance functor
+     */
+    template<class T>
+    struct SL2
+    {
+        typedef T ValueType;
+        typedef typename Accumulator<T>::Type ResultType;
+
+        ResultType operator()( const T* a, const T* b, int size ) const;
+    };
+    // Note: in case of SL2 distance a parameter maxDistance in the method DescriptorMatcher::radiusMatch 
+    // is a squared maximum distance in L2.
 
     /*
      * Manhattan distance (city block distance) functor
@@ -311,7 +325,6 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
         typedef typename Accumulator<T>::Type ResultType;
 
         ResultType operator()( const T* a, const T* b, int size ) const;
-        ...
     };
 
     /*
@@ -334,7 +347,6 @@ For efficiency, ``BruteForceMatcher`` is used as a template parameterized with t
 
         ResultType operator()( const unsigned char* a, const unsigned char* b,
                                int size ) const;
-        ...
     };
 
 

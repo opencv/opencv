@@ -328,6 +328,10 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     {
         dm = new BruteForceMatcher<L2<float> >();
     }
+    else if( !descriptorMatcherType.compare( "BruteForce-SL2" ) ) // Squared L2
+    {
+        dm = new BruteForceMatcher<SL2<float> >();
+    }
     else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
         dm = new BruteForceMatcher<L1<float> >();
@@ -345,10 +349,10 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
 }
 
 /*
- * BruteForce L2 specialization
+ * BruteForce SL2 and L2 specialization
  */
 template<>
-void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
+void BruteForceMatcher<SL2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                               const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN
@@ -427,7 +431,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
                     break;
 
                 e_allDists[bestImgIdx](bestTrainIdx) = -std::numeric_limits<float>::max();
-                curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, sqrt((-2)*totalMaxCoeff + queryNorm2)) );
+                curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, (-2)*totalMaxCoeff + queryNorm2) );
             }
             std::sort( curMatches->begin(), curMatches->end() );
         }
@@ -436,7 +440,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
 }
 
 template<>
-void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+void BruteForceMatcher<SL2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                                                      const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN
@@ -492,7 +496,7 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
                 {
                     if( masks.empty() || isPossibleMatch(masks[iIdx], qIdx, tIdx) )
                     {
-                        float d =  sqrt((-2)*e_allDists[iIdx](tIdx) + queryNorm2);
+                        float d =  (-2)*e_allDists[iIdx](tIdx) + queryNorm2;
                         if( d < maxDistance )
                             curMatches->push_back( DMatch( qIdx, tIdx, iIdx, d ) );
                     }
@@ -502,6 +506,40 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
         }
     }
 #endif
+}
+
+inline void sqrtDistance( vector<vector<DMatch> >& matches )
+{
+    for( size_t imgIdx = 0; imgIdx < matches.size(); imgIdx++ )
+    {
+        for( size_t matchIdx = 0; matchIdx < matches[imgIdx].size(); matchIdx++ )
+        {
+            matches[imgIdx][matchIdx].distance = std::sqrt( matches[imgIdx][matchIdx].distance );
+        }
+    }
+}
+
+template<>
+void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
+                                              const vector<Mat>& masks, bool compactResult )
+{
+    BruteForceMatcher<SL2<float> > matcherSL2;
+    matcherSL2.add( getTrainDescriptors() );
+    matcherSL2.knnMatch( queryDescriptors, matches, knn, masks, compactResult );
+
+    sqrtDistance( matches );
+}
+
+template<>
+void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+                                                     const vector<Mat>& masks, bool compactResult )
+{
+    const float maxDistance2 = maxDistance * maxDistance;
+    BruteForceMatcher<SL2<float> > matcherSL2;
+    matcherSL2.add( getTrainDescriptors() );
+    matcherSL2.radiusMatch( queryDescriptors, matches, maxDistance2, masks, compactResult );
+
+    sqrtDistance( matches );
 }
 
 /*
