@@ -1663,7 +1663,9 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         // filter points by subMask and convert the points coordinates from subImage size to image size
         KeyPointsFilter::runByPixelsMask( keypoints, subMask );
         int dx = brect.x, dy = brect.y;
-        for( vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it )
+        vector<KeyPoint>::iterator it = keypoints.begin(),
+                                   end = keypoints.end();
+        for( ; it != end; ++it )
         {
             it->pt.x += dx;
             it->pt.y += dy;

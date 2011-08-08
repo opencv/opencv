@@ -113,10 +113,12 @@ void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& ou
     bool isRandColor = _color == Scalar::all(-1);
 
     CV_Assert( !outImage.empty() );
-    for( vector<KeyPoint>::const_iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
+    vector<KeyPoint>::const_iterator it = keypoints.begin(),
+                                     end = keypoints.end();
+    for( ; it != end; ++it )
     {
         Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
-        _drawKeypoint( outImage, *i, color, flags );
+        _drawKeypoint( outImage, *it, color, flags );
     }
 }
 

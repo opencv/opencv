@@ -575,8 +575,9 @@ void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>&
             vector<KeyPoint> sub_keypoints;
             detector->detect( sub_image, sub_keypoints, sub_mask );
             keepStrongest( maxPerCell, sub_keypoints );
-            for( std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(), end = sub_keypoints.end();
-                 it != end; ++it )
+            std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(),
+                                                end = sub_keypoints.end();
+            for( ; it != end; ++it )
             {
                 it->pt.x += col_range.start;
                 it->pt.y += row_range.start;
@@ -618,7 +619,9 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
         // Detect on current level of the pyramid
         vector<KeyPoint> new_pts;
         detector->detect( src, new_pts, src_mask );
-        for( vector<KeyPoint>::iterator it = new_pts.begin(), end = new_pts.end(); it != end; ++it)
+        vector<KeyPoint>::iterator it = new_pts.begin(),
+                                   end = new_pts.end();
+        for( ; it != end; ++it)
         {
             it->pt.x *= multiplier;
             it->pt.y *= multiplier;
