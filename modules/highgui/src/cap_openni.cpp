@@ -118,7 +118,7 @@ protected:
     IplImage* retrieveBGRImage();
     IplImage* retrieveGrayImage();
 
-    void readCamerasParams();
+    bool readCamerasParams();
 
     double getDepthGeneratorProperty(int propIdx);
     bool setDepthGeneratorProperty(int propIdx, double propVal);
@@ -177,6 +177,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     depthOutputMode.nFPS = imageOutputMode.nFPS = 30;
 
     m_isOpened = false;
+    bool isContextInitialized = false;
 
     // Initialize and configure the context.
     if( context.Init() == XN_STATUS_OK )
@@ -185,7 +186,11 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         xn::NodeInfoList devicesList;
         status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
         if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to enumerate production trees: " + std::string(xnGetStatusString(status))).c_str() );
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
 
         // Chose device according to index
         xn::NodeInfoList::Iterator it = devicesList.Begin();
@@ -194,7 +199,11 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         xn::NodeInfo deviceNode = *it;
         status = context.CreateProductionTree( deviceNode );
         if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to create production tree: " + std::string(xnGetStatusString(status))).c_str() );
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
 
 #ifdef HACK_WITH_XML
         // Write configuration to the temporary file.
@@ -206,39 +215,65 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         outfile.close();
 
         status = context.RunXmlScriptFromFile( xmlFilename.c_str() );
+        if( status != XN_STATUS_OK )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
 
         // Remove temporary configuration file.
         remove( xmlFilename.c_str() );
 #else
         status = context.RunXmlScript( XMLConfig.c_str() );
 #endif
-        m_isOpened = ( status == XN_STATUS_OK );
+        isContextInitialized = ( status == XN_STATUS_OK );
     }
 
-    if( m_isOpened )
+    if( isContextInitialized )
     {
         // Associate generators with context.
         status = depthGenerator.Create( context );
-        if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to create depth generator: " + std::string(xnGetStatusString(status))).c_str() );
+        if( status != XN_STATUS_OK )\
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
+
         imageGenerator.Create( context );
         if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to create image generator: " + std::string(xnGetStatusString(status))).c_str() );
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
+                      <<  std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
 
         // Set map output mode.
         CV_Assert( depthGenerator.SetMapOutputMode( depthOutputMode ) == XN_STATUS_OK ); // xn::DepthGenerator supports VGA only! (Jan 2011)
         CV_Assert( imageGenerator.SetMapOutputMode( imageOutputMode ) == XN_STATUS_OK );
-        CV_Assert( setProperty(CV_CAP_PROP_OPENNI_REGISTRATION, 1.0) );
 
         //  Start generating data.
         status = context.StartGeneratingAll();
         if( status != XN_STATUS_OK )
-            CV_Error(CV_StsError, ("Failed to start generating OpenNI data: " + std::string(xnGetStatusString(status))).c_str() );
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: "
+                      << std::string(xnGetStatusString(status)) << std::endl;
+            return;
+        }
 
-        readCamerasParams();
+        if( !readCamerasParams() )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
+            return;
+        }
 
         outputMaps.resize( outputTypesCount );
+
+        m_isOpened = true;
     }
+
+    setProperty(CV_CAP_PROP_OPENNI_REGISTRATION, 1.0);
 }
 
 CvCapture_OpenNI::~CvCapture_OpenNI()
@@ -247,11 +282,14 @@ CvCapture_OpenNI::~CvCapture_OpenNI()
     context.Shutdown();
 }
 
-void CvCapture_OpenNI::readCamerasParams()
+bool CvCapture_OpenNI::readCamerasParams()
 {
     XnDouble pixelSize = 0;
     if( depthGenerator.GetRealProperty( "ZPPS", pixelSize ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read pixel size!" );
+    {
+        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read pixel size!" << std::endl;
+        return false;
+    }
 
     // pixel size @ VGA = pixel size @ SXGA x 2
     pixelSize *= 2.0; // in mm
@@ -259,10 +297,16 @@ void CvCapture_OpenNI::readCamerasParams()
     // focal length of IR camera in pixels for VGA resolution
     XnUInt64 zeroPlanDistance; // in mm
     if( depthGenerator.GetIntProperty( "ZPD", zeroPlanDistance ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read virtual plane distance!" );
+    {
+        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read virtual plane distance!" << std::endl;
+        return false;
+    }
 
     if( depthGenerator.GetRealProperty( "LDDIS", baseline ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read base line!" );
+    {
+        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read base line!" << std::endl;
+        return false;
+    }
 
     // baseline from cm -> mm
     baseline *= 10;
@@ -271,10 +315,18 @@ void CvCapture_OpenNI::readCamerasParams()
     depthFocalLength_VGA = (XnUInt64)((double)zeroPlanDistance / (double)pixelSize);
 
     if( depthGenerator.GetIntProperty( "ShadowValue", shadowValue ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read property \"ShadowValue\"!" );
+    {
+        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read property \"ShadowValue\"!" << std::endl;
+        return false;
+    }
 
     if( depthGenerator.GetIntProperty("NoSampleValue", noSampleValue ) != XN_STATUS_OK )
-        CV_Error( CV_StsError, "Could not read property \"NoSampleValue\"!" );
+    {
+        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read property \"NoSampleValue\"!" <<std::endl;
+        return false;
+    }
+
+    return true;
 }
 
 double CvCapture_OpenNI::getProperty( int propIdx )
