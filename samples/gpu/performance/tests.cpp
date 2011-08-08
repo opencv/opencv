@@ -937,3 +937,25 @@ TEST(equalizeHist)
         GPU_OFF;
     }
 }
+
+
+TEST(Canny)
+{
+    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+
+    if (img.empty()) throw runtime_error("can't open aloeL.jpg");
+
+    Mat edges(img.size(), CV_8UC1);
+
+    CPU_ON;
+    Canny(img, edges, 50.0, 100.0);
+    CPU_OFF;
+    
+    gpu::GpuMat d_img(img);
+    gpu::GpuMat d_edges(img.size(), CV_8UC1);
+    gpu::CannyBuf d_buf(img.size());
+
+    GPU_ON;
+    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    GPU_OFF;
+}

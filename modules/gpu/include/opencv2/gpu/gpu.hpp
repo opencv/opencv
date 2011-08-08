@@ -976,7 +976,32 @@ namespace cv
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
         CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
-            GpuMat& result, Stream& stream = Stream::Null());       
+            GpuMat& result, Stream& stream = Stream::Null());
+
+        
+        struct CV_EXPORTS CannyBuf;
+        
+        CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
+
+        struct CV_EXPORTS CannyBuf
+        {
+            CannyBuf() {}
+            explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
+            CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
+
+            void create(const Size& image_size, int apperture_size = 3);
+            
+            void release();
+
+            GpuMat dx, dy;
+            GpuMat dx_buf, dy_buf;
+            GpuMat edgeBuf;
+            GpuMat trackBuf1, trackBuf2;
+            Ptr<FilterEngine_GPU> filterDX, filterDY;
+        };
 
         ////////////////////////////// Matrix reductions //////////////////////////////
 

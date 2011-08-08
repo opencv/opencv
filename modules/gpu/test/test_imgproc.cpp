@@ -2217,4 +2217,71 @@ TEST_P(PyrUp, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::ValuesIn(devices()));
 
+////////////////////////////////////////////////////////
+// Canny
+
+struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, bool> >
+{
+    static cv::Mat img;
+
+    static void SetUpTestCase() 
+    {
+        img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE); 
+    }
+
+    static void TearDownTestCase() 
+    {
+        img.release();
+    } 
+
+    cv::gpu::DeviceInfo devInfo;
+    int apperture_size;
+    bool L2gradient;
+
+    double low_thresh;
+    double high_thresh;
+
+    cv::Mat edges_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        apperture_size = std::tr1::get<1>(GetParam());
+        L2gradient = std::tr1::get<2>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        low_thresh = 50.0;
+        high_thresh = 100.0;
+        
+        cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, L2gradient);
+    }
+};
+
+cv::Mat Canny::img;
+
+TEST_P(Canny, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(apperture_size);
+    PRINT_PARAM(L2gradient);
+
+    cv::Mat edges;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat d_edges;
+
+        cv::gpu::Canny(cv::gpu::GpuMat(img), d_edges, low_thresh, high_thresh, apperture_size, L2gradient);
+
+        d_edges.download(edges);
+    );
+
+    EXPECT_MAT_SIMILAR(edges_gold, edges, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(3, 5),
+                        testing::Values(false, true)));
+
 #endif // HAVE_CUDA
