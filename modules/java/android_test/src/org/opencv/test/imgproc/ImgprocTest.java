@@ -1655,7 +1655,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<Point> contour = Arrays.asList(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
 
         double sign1 = Imgproc.pointPolygonTest(contour, new Point(2, 2), false);
-        assertEquals(100.0, sign1); //FIXME: 1.0 should be expected 
+        assertEquals(1.0, sign1);
 
         double sign2 = Imgproc.pointPolygonTest(contour, new Point(4, 4), true);
         assertEquals(-Math.sqrt(0.5), sign2);

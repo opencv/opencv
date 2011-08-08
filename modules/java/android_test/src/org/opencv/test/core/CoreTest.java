@@ -36,14 +36,14 @@ public class CoreTest extends OpenCVTestCase {
 
         Core.add(gray127, gray1, dst, mask);
 
-        assertMatEqual(makeMask(gray128), dst);
+        assertMatEqual(makeMask(gray128, 127), dst);
 
-        /* TODO: !!!! BUG !!!!
-         * Explaination:
-         * 1) dst is uninitialized => add allocates it
-         * 2) left half of mask is zeor => add do not assign it
-         * 3) so left part of dst remains uninitialized => filled with random
-         * values */
+        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
+        /*
+         * dst is uninitialized => add allocates it 2) left half of mask is zeor
+         * => add do not assign it 3) so left part of dst remains uninitialized
+         * => filled with random junk values
+         */
     }
 
     public void testAddMatMatMatMatInt() {
@@ -286,10 +286,12 @@ public class CoreTest extends OpenCVTestCase {
         Scalar color128 = new Scalar(128);
         Scalar color0 = new Scalar(0);
 
-        Core.circle(gray0, center2, radius * 2, color128, 2, Core.LINE_4, 1/* Number
+        Core.circle(gray0, center2, radius * 2, color128, 2, Core.LINE_4, 1/*
+                                                                            * Number
                                                                             * of
                                                                             * fractional
-                                                                            * bits */);
+                                                                            * bits
+                                                                            */);
         assertFalse(0 == Core.countNonZero(gray0));
 
         Core.circle(gray0, center, radius, color0, 2, Core.LINE_4, 0);
@@ -1632,7 +1634,7 @@ public class CoreTest extends OpenCVTestCase {
         };
 
         Core.normalize(src, dst, 1, 2, Core.NORM_MINMAX, CvType.CV_32F, mask);
-        // OpenCVTestRunner.Log(dst);
+        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
         Mat expected = new Mat(1, 5, CvType.CV_32F) {
             {
                 put(0, 0, 1, 1, 2, 3, 2);
@@ -1912,7 +1914,7 @@ public class CoreTest extends OpenCVTestCase {
         };
         assertMatEqual(x, xCoordinate, EPS);
         assertMatEqual(y, yCoordinate, EPS);
-    }// TODO:FIX
+    }
 
     public void testPolylinesMatListOfListOfPointBooleanScalar() {
         Mat img = gray0;
@@ -2352,12 +2354,13 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray127, dst);
     }
 
-    public void testSubtractMatMatMatMat() {// TODO: fix
+    public void testSubtractMatMatMatMat() {
         Mat mask = makeMask(gray1.clone());
 
         Core.subtract(gray128, gray1, dst, mask);
 
-        assertMatEqual(makeMask(gray127), dst);
+        assertMatEqual(makeMask(gray127, 128), dst);
+        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
     }
 
     public void testSubtractMatMatMatMatInt() {

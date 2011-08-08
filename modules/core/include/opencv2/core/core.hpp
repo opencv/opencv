@@ -2049,7 +2049,7 @@ CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts
                             const int* fromTo, size_t npairs);
 CV_EXPORTS void mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                             const int* fromTo, size_t npairs);
-CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+CV_EXPORTS_W void mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
                               const vector<int>& fromTo);
 
 //! extracts a single channel from src (coi is 0-based index)

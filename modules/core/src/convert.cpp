@@ -503,7 +503,7 @@ void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
                 !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
 }
 
-void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+void cv::mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
                      const vector<int>& fromTo)
 {
     if(fromTo.empty())
