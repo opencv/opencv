@@ -56,7 +56,7 @@ class Sample4View extends SampleViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(getFrameWidth(), getFrameHeight(), Bitmap.Config.ARGB_8888);
 
-        if (Utils.MatToBitmap(mRgba, bmp))
+        if (Utils.matToBitmap(mRgba, bmp))
             return bmp;
 
         bmp.recycle();

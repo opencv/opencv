@@ -135,7 +135,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
-        if (Utils.MatToBitmap(mRgba, bmp))
+        if (Utils.matToBitmap(mRgba, bmp))
             return bmp;
 
         bmp.recycle();

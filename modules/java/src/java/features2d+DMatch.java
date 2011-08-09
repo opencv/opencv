@@ -48,7 +48,7 @@ public class DMatch {
     /**
      * less is better
      */
-    boolean lessThan(DMatch it) {
+    public boolean lessThan(DMatch it) {
         return distance < it.distance;
     }
 

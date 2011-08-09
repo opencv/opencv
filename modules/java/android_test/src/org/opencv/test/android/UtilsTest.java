@@ -16,6 +16,14 @@ public class UtilsTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    public void testLoadResourceContextInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testLoadResourceContextIntInt() {
+        fail("Not yet implemented");
+    }
+
     public void testMatToBitmap() {
         fail("Not yet implemented");
     }

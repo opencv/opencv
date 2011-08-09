@@ -26,7 +26,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     private AndroidTestRunner androidTestRunner;
     private static String TAG = "opencv_test_java";
-    
+
     public static String getTempFileName(String extension)
     {
         File cache = context.getCacheDir();
@@ -46,7 +46,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     static public void Log(String message) {
         Log.e(TAG, message);
     }
-    
+
     static public void Log(Mat m) {
         Log.e(TAG, m + "\n " + m.dump());
     }
@@ -54,12 +54,13 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
     @Override
     public void onStart() {
         context = getContext();
-        LENA_PATH = Utils.ExportResource(context, R.drawable.lena);
-        CHESS_PATH = Utils.ExportResource(context, R.drawable.chessboard);
-        LBPCASCADE_FRONTALFACE_PATH = Utils.ExportResource(context, R.raw.lbpcascade_frontalface);
+        LENA_PATH = Utils.exportResource(context, R.drawable.lena);
+        CHESS_PATH = Utils.exportResource(context, R.drawable.chessboard);
+        LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);
 
         /*
-         * The original idea about test order randomization is from marek.defecinski blog.
+         * The original idea about test order randomization is from
+         * marek.defecinski blog.
          */
         // List<TestCase> testCases = androidTestRunner.getTestCases();
         // Collections.shuffle(testCases); //shuffle the tests order
@@ -72,7 +73,7 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
         androidTestRunner = super.getAndroidTestRunner();
         return androidTestRunner;
     }
-    
+
     public static String getOutputFileName(String name)
     {
         return context.getExternalFilesDir(null).getAbsolutePath() + File.separatorChar + name;

@@ -137,7 +137,7 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         drawGrid(cols, rows);
 
         Bitmap bmp = Bitmap.createBitmap(cols, rows, Bitmap.Config.ARGB_8888);
-        if (Utils.MatToBitmap(mRgba15, bmp))
+        if (Utils.matToBitmap(mRgba15, bmp))
             return bmp;
 
         bmp.recycle();
