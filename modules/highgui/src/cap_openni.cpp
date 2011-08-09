@@ -403,6 +403,8 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
         res = depthFocalLength_VGA;
         break;
+    case CV_CAP_PROP_OPENNI_REGISTRATION :
+        res = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
     default :
         CV_Error( CV_StsBadArg, "Depth generator does not support such parameter for getting.\n");
     }
