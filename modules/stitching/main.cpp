@@ -363,6 +363,8 @@ int main(int argc, char* argv[])
         images[i] = img.clone();
     }
 
+    finder.releaseMemory();
+
     full_img.release();
     img.release();
 
@@ -373,6 +375,7 @@ int main(int argc, char* argv[])
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(try_gpu, match_conf);
     matcher(features, pairwise_matches);
+    matcher.releaseMemory();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Leave only images we are sure are from the same panorama
@@ -571,7 +574,7 @@ int main(int argc, char* argv[])
         resize(dilated_mask, seam_mask, mask_warped.size());
         mask_warped = seam_mask & mask_warped;
 
-        if (static_cast<Blender*>(blender) == 0)
+        if (blender.empty())
         {            
             blender = Blender::createDefault(blend_type, try_gpu);
             Size dst_sz = resultRoi(corners, sizes).size();
@@ -598,7 +601,7 @@ int main(int argc, char* argv[])
     }
    
     Mat result, result_mask;
-    blender->blend(result, result_mask);    
+    blender->blend(result, result_mask);
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 

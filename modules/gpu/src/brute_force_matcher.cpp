@@ -203,8 +203,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
 
     const int nQuery = queryDescs.rows;
 
-    trainIdx.create(1, nQuery, CV_32S);
-    distance.create(1, nQuery, CV_32F);
+    ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32F, distance);
 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
@@ -335,9 +335,9 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
 
     const int nQuery = queryDescs.rows;
 
-    trainIdx.create(1, nQuery, CV_32S);
-    imgIdx.create(1, nQuery, CV_32S);
-    distance.create(1, nQuery, CV_32F);
+    ensureSizeIsEnough(1, nQuery, CV_32S, trainIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
+    ensureSizeIsEnough(1, nQuery, CV_32F, distance);
 
     match_caller_t func = match_callers[distType][queryDescs.depth()];
     CV_Assert(func != 0);
@@ -435,8 +435,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;
 
-    trainIdx.create(nQuery, k, CV_32S);
-    distance.create(nQuery, k, CV_32F);
+    ensureSizeIsEnough(nQuery, k, CV_32S, trainIdx);
+    ensureSizeIsEnough(nQuery, k, CV_32F, distance);
     ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
 
     if (stream)
@@ -593,8 +593,8 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     ensureSizeIsEnough(1, nQuery, CV_32SC1, nMatches);
     if (trainIdx.empty())
     {
-        trainIdx.create(nQuery, nTrain, CV_32SC1);
-        distance.create(nQuery, nTrain, CV_32FC1);
+        ensureSizeIsEnough(nQuery, nTrain, CV_32SC1, trainIdx);
+        ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, distance);
     }
 
     if (stream)

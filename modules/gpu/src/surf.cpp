@@ -59,6 +59,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, vector<KeyPoint>&, vector<float>&, bool) { throw_nogpu(); }
+void cv::gpu::SURF_GPU::releaseMemory() { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -201,7 +202,7 @@ namespace
             const int nFeatures = keypoints.cols;
             if (nFeatures > 0)
             {
-                descriptors.create(nFeatures, descriptorSize, CV_32F);
+                ensureSizeIsEnough(nFeatures, descriptorSize, CV_32F, descriptors);
                 compute_descriptors_gpu(descriptors, keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
                     keypoints.ptr<float>(SURF_GPU::SF_SIZE), keypoints.ptr<float>(SURF_GPU::SF_DIR), nFeatures);
             }
@@ -429,6 +430,17 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, vector
     (*this)(img, mask, keypoints, descriptorsGPU, useProvidedKeypoints);
 
     downloadDescriptors(descriptorsGPU, descriptors);
+}
+
+void cv::gpu::SURF_GPU::releaseMemory() 
+{
+    sum.release(); 
+    mask1.release();
+    maskSum.release();
+    intBuffer.release();
+    det.release();
+    trace.release();
+    maxPosBuffer.release();
 }
 
 #endif /* !defined (HAVE_CUDA) */

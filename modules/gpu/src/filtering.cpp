@@ -192,8 +192,8 @@ namespace
             Size src_size = src.size();
 
             dst.create(src_size, dstType);
+
             ensureSizeIsEnough(src_size, bufType, dstBuf);
-            //dstBuf.create(src_size, bufType);
 
             if (stream)
             {
