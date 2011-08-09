@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include "opencv2/gpu/devmem2d.hpp"
 #include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace split_merge {

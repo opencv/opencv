@@ -40,10 +40,9 @@
 //
 //M*/
 
-#include "opencv2/gpu/devmem2d.hpp"
+#include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/limits.hpp"
-#include "safe_call.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

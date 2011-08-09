@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include <utility>
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 
@@ -463,7 +464,7 @@ namespace cv { namespace gpu { namespace canny
 
             cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
-            swap(st1, st2);
+            std::swap(st1, st2);
         }
     }
 

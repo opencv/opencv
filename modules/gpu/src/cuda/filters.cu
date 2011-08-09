@@ -40,14 +40,11 @@
 //
 //M*/
 
-#include "opencv2/gpu/devmem2d.hpp"
+#include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
-
-#include "safe_call.hpp"
-#include "internal_shared.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
