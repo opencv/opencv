@@ -149,6 +149,8 @@ Open OpenCV library and samples in Eclipse
 
 #. Configure your ADT plugin
 
+   .. important:: ADT plugin settings are workspace-dependent. So you have to repeat this step each time when you create a new workspace.
+
    Once you have created a new workspace, you have to point the ADT plugin to the Android SDK directory. This setting is stored in workspace metadata, as result this step is required each time when you are creating new workspace for Android development. See `Configuring the ADT Plugin
    <http://developer.android.com/sdk/eclipse-adt.html#configuring>`_ document for the original instructions from *Google*.
    
@@ -232,9 +234,9 @@ Open OpenCV library and samples in Eclipse
 Running OpenCV Samples
 ======================
 
-At this point you should be able to build and run all samples except two from Advanced tutorial (these samples require Android NDK to build working applications, see the document :ref:`Android_Binary_Package_with_NDK`). 
+At this point you should be able to build and run all samples except two from Advanced tutorial (these samples require Android NDK to build working applications, see the next tutorial :ref:`Android_Binary_Package_with_NDK` to learn how to compile them).
 
-Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tutorial 1 Basic - 1. Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which is supported only for ARM v7 CPUs.
+Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tutorial 1 Basic - 1. Add OpenCV`` samples are able to run on Emulator from Android SDK. Other samples are using OpenCV Native Camera which does not work with emulator.
 
 .. note:: Latest *Android SDK tools, revision 12* can run ARM v7 OS images but *Google* does not provide such images with SDK.
 
@@ -249,6 +251,8 @@ Well, running samples from Eclipse is very simple:
 
 
 * Select project you want to start in *Package Explorer* and just press **Ctrl + F11** or select option **Run** > **Run** from main menu, or click **Run** button on the toolbar.
+
+  .. note:: Android Emulator can take several minutes to start. So, please, be patient.
 
 * On the first run Eclipse will ask you how to run your application:
 
