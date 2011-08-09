@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android">
-<item android:id="@+id/cv_menu_invert" android:title="Invert"></item>
-<item android:id="@+id/cv_menu_canny" android:title="Canny"></item>
-<item android:id="@+id/cv_menu_blur" android:title="Blur"></item>
-<item android:id="@+id/cv_menu_nothing" android:title="Nothing"></item>
-</menu>
