@@ -50,7 +50,7 @@ struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
     void run() 
     {       
         cv::Mat img_rgb = readImage("hog/road.png");
-        ASSERT_TRUE(!img_rgb.empty());
+        ASSERT_FALSE(img_rgb.empty());
 
 #ifdef DUMP
         f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
@@ -201,7 +201,7 @@ struct CV_GpuHogGetDescriptorsTestRunner : cv::gpu::HOGDescriptor
     {
         // Load image (e.g. train data, composed from windows)
         cv::Mat img_rgb = readImage("hog/train_data.png");
-        ASSERT_TRUE(!img_rgb.empty());
+        ASSERT_FALSE(img_rgb.empty());
 
         // Convert to C4
         cv::Mat img;

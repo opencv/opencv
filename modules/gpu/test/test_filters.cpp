@@ -43,39 +43,20 @@
 
 #ifdef HAVE_CUDA
 
-struct FilterTest
+namespace
 {
-    static cv::Mat img_rgba;
-    static cv::Mat img_gray;
-
-    static void SetUpTestCase() 
+    double checkNorm(const cv::Mat& m1, const cv::Mat& m2, const cv::Size& ksize)
     {
-        cv::Mat img = readImage("stereobp/aloe-L.png");
-        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
-        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
+        cv::Rect roi(ksize.width, ksize.height, m1.cols - 2 * ksize.width, m1.rows - 2 * ksize.height);
+        cv::Mat m1ROI = m1(roi);
+        cv::Mat m2ROI = m2(roi);
+        return ::checkNorm(m1ROI, m2ROI);
     }
 
-    static void TearDownTestCase() 
+    double checkNorm(const cv::Mat& m1, const cv::Mat& m2, int ksize)
     {
-        img_rgba.release();
-        img_gray.release();
+        return checkNorm(m1, m2, cv::Size(ksize, ksize));
     }
-};
-
-cv::Mat FilterTest::img_rgba;
-cv::Mat FilterTest::img_gray;
-
-static double checkNorm(const cv::Mat& m1, const cv::Mat& m2, const cv::Size& ksize)
-{
-    cv::Rect roi(ksize.width, ksize.height, m1.cols - 2 * ksize.width, m1.rows - 2 * ksize.height);
-    cv::Mat m1ROI = m1(roi);
-    cv::Mat m2ROI = m2(roi);
-    return checkNorm(m1ROI, m2ROI);
-}
-
-static double checkNorm(const cv::Mat& m1, const cv::Mat& m2, int ksize)
-{
-    return checkNorm(m1, m2, cv::Size(ksize, ksize));
 }
 
 #define EXPECT_MAT_NEAR_KSIZE(mat1, mat2, ksize, eps) \
@@ -88,16 +69,16 @@ static double checkNorm(const cv::Mat& m1, const cv::Mat& m2, int ksize)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // blur
 
-struct Blur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+struct Blur : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size ksize;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -105,6 +86,12 @@ struct Blur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Devic
         ksize = cv::Size(std::tr1::get<1>(GetParam()), std::tr1::get<2>(GetParam()));
 
         cv::gpu::setDevice(devInfo.deviceID());
+                
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         cv::blur(img_rgba, dst_gold_rgba, ksize);
         cv::blur(img_gray, dst_gold_gray, ksize);
@@ -113,8 +100,6 @@ struct Blur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Devic
 
 TEST_P(Blur, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(ksize);
 
@@ -144,17 +129,17 @@ INSTANTIATE_TEST_CASE_P(Filter, Blur, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // sobel
 
-struct Sobel : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, std::pair<int, int> > >
+struct Sobel : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, std::pair<int, int> > >
 {
     cv::gpu::DeviceInfo devInfo;
     int ksize;
     int dx, dy;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -165,6 +150,12 @@ struct Sobel : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Devi
 
         cv::gpu::setDevice(devInfo.deviceID());
         
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
+        
         cv::Sobel(img_rgba, dst_gold_rgba, -1, dx, dy, ksize);
         cv::Sobel(img_gray, dst_gold_gray, -1, dx, dy, ksize);
     }
@@ -172,8 +163,6 @@ struct Sobel : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Devi
 
 TEST_P(Sobel, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(ksize);
     PRINT_PARAM(dx);
@@ -205,16 +194,16 @@ INSTANTIATE_TEST_CASE_P(Filter, Sobel, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // scharr
 
-struct Scharr : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<int, int> > >
+struct Scharr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<int, int> > >
 {
     cv::gpu::DeviceInfo devInfo;
     int dx, dy;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -223,6 +212,12 @@ struct Scharr : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Dev
         dx = d.first; dy = d.second;
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         cv::Scharr(img_rgba, dst_gold_rgba, -1, dx, dy);
         cv::Scharr(img_gray, dst_gold_gray, -1, dx, dy);
@@ -231,8 +226,6 @@ struct Scharr : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::Dev
 
 TEST_P(Scharr, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(dx);
     PRINT_PARAM(dy);
@@ -262,18 +255,18 @@ INSTANTIATE_TEST_CASE_P(Filter, Scharr, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // gaussianBlur
 
-struct GaussianBlur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
+struct GaussianBlur : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size ksize;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     double sigma1, sigma2;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -281,6 +274,12 @@ struct GaussianBlur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gp
         ksize = cv::Size(std::tr1::get<1>(GetParam()), std::tr1::get<2>(GetParam()));
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
         
         cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
@@ -294,8 +293,6 @@ struct GaussianBlur : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gp
 
 TEST_P(GaussianBlur, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(ksize);
     PRINT_PARAM(sigma1);
@@ -327,16 +324,16 @@ INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // laplacian
 
-struct Laplacian : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+struct Laplacian : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     int ksize;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -344,6 +341,12 @@ struct Laplacian : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::
         ksize = std::tr1::get<1>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         cv::Laplacian(img_rgba, dst_gold_rgba, -1, ksize);
         cv::Laplacian(img_gray, dst_gold_gray, -1, ksize);
@@ -352,8 +355,6 @@ struct Laplacian : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::
 
 TEST_P(Laplacian, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(ksize);
 
@@ -382,17 +383,17 @@ INSTANTIATE_TEST_CASE_P(Filter, Laplacian, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // erode
 
-struct Erode : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Erode : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat kernel;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -401,6 +402,12 @@ struct Erode : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::gpu::setDevice(devInfo.deviceID());
 
         kernel = cv::Mat::ones(3, 3, CV_8U);
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         cv::erode(img_rgba, dst_gold_rgba, kernel);
         cv::erode(img_gray, dst_gold_gray, kernel);
@@ -409,8 +416,6 @@ struct Erode : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Erode, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
 
     cv::Mat dst_rgba;
@@ -436,17 +441,17 @@ INSTANTIATE_TEST_CASE_P(Filter, Erode, testing::ValuesIn(devices()));
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // dilate
 
-struct Dilate : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Dilate : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat kernel;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -455,6 +460,12 @@ struct Dilate : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::gpu::setDevice(devInfo.deviceID());
 
         kernel = cv::Mat::ones(3, 3, CV_8U);
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         cv::dilate(img_rgba, dst_gold_rgba, kernel);
         cv::dilate(img_gray, dst_gold_gray, kernel);
@@ -463,8 +474,6 @@ struct Dilate : FilterTest, testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Dilate, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     PRINT_PARAM(devInfo);
 
     cv::Mat dst_rgba;
@@ -493,18 +502,18 @@ INSTANTIATE_TEST_CASE_P(Filter, Dilate, testing::ValuesIn(devices()));
 static const int morphOps[] = {cv::MORPH_OPEN, CV_MOP_CLOSE, CV_MOP_GRADIENT, CV_MOP_TOPHAT, CV_MOP_BLACKHAT};
 static const char* morphOps_str[] = {"MORPH_OPEN", "MOP_CLOSE", "MOP_GRADIENT", "MOP_TOPHAT", "MOP_BLACKHAT"};
 
-struct MorphEx : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+struct MorphEx : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     int morphOpsIdx;
+    
+    cv::Mat img_rgba;
+    cv::Mat img_gray;
 
     cv::Mat kernel;
 
     cv::Mat dst_gold_rgba;
     cv::Mat dst_gold_gray;
-
-    using FilterTest::SetUpTestCase;
-    using FilterTest::TearDownTestCase;
     
     virtual void SetUp()
     {
@@ -512,9 +521,15 @@ struct MorphEx : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::De
         morphOpsIdx = std::tr1::get<1>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobp/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, img_rgba, CV_BGR2BGRA);
+        cv::cvtColor(img, img_gray, CV_BGR2GRAY);
 
         kernel = cv::Mat::ones(3, 3, CV_8U);
-
+        
         cv::morphologyEx(img_rgba, dst_gold_rgba, morphOps[morphOpsIdx], kernel);
         cv::morphologyEx(img_gray, dst_gold_gray, morphOps[morphOpsIdx], kernel);
     }
@@ -522,8 +537,6 @@ struct MorphEx : FilterTest, testing::TestWithParam< std::tr1::tuple<cv::gpu::De
 
 TEST_P(MorphEx, Accuracy)
 {
-    ASSERT_TRUE(!img_rgba.empty() && !img_gray.empty());
-
     const char* morphOpStr = morphOps_str[morphOpsIdx];
 
     PRINT_PARAM(devInfo);

@@ -43,50 +43,35 @@
 
 #ifdef HAVE_CUDA
 
-struct StereoTest : testing::TestWithParam<cv::gpu::DeviceInfo>
+//////////////////////////////////////////////////////////////////////////
+// BlockMatching
+
+struct StereoBlockMatching : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static cv::Mat img_l;
-    static cv::Mat img_r;
-    static cv::Mat img_template;
-
-    static void TearDownTestCase() 
-    {
-        img_l.release();
-        img_r.release();
-        img_template.release();
-    }
-
-    cv::gpu::DeviceInfo devInfo;
-
+    cv::Mat img_l;
+    cv::Mat img_r;
+    cv::Mat img_template;
+    
+    cv::gpu::DeviceInfo devInfo;    
+    
     virtual void SetUp() 
     {
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
-    }
-};
-
-cv::Mat StereoTest::img_l;
-cv::Mat StereoTest::img_r;
-cv::Mat StereoTest::img_template;
-
-//////////////////////////////////////////////////////////////////////////
-// BlockMatching
-
-struct StereoBlockMatching : StereoTest
-{
-    static void SetUpTestCase() 
-    {
+        
         img_l = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
         img_r = readImage("stereobm/aloe-R.png", CV_LOAD_IMAGE_GRAYSCALE);
         img_template = readImage("stereobm/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
+        
+        ASSERT_FALSE(img_l.empty());
+        ASSERT_FALSE(img_r.empty());
+        ASSERT_FALSE(img_template.empty());
     }
 };
 
 TEST_P(StereoBlockMatching, Regression) 
 {
-    ASSERT_TRUE(!img_l.empty() && !img_r.empty() && !img_template.empty());
-
     PRINT_PARAM(devInfo);
     
     cv::Mat disp;
@@ -110,20 +95,32 @@ INSTANTIATE_TEST_CASE_P(Calib3D, StereoBlockMatching, testing::ValuesIn(devices(
 //////////////////////////////////////////////////////////////////////////
 // BeliefPropagation
 
-struct StereoBeliefPropagation : StereoTest
+struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static void SetUpTestCase() 
+    cv::Mat img_l;
+    cv::Mat img_r;
+    cv::Mat img_template;
+    
+    cv::gpu::DeviceInfo devInfo;  
+
+    virtual void SetUp() 
     {
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
+           
         img_l = readImage("stereobp/aloe-L.png");
         img_r = readImage("stereobp/aloe-R.png");
         img_template = readImage("stereobp/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
+        
+        ASSERT_FALSE(img_l.empty());
+        ASSERT_FALSE(img_r.empty());
+        ASSERT_FALSE(img_template.empty());
     }
 };
 
 TEST_P(StereoBeliefPropagation, Regression) 
 {
-    ASSERT_TRUE(!img_l.empty() && !img_r.empty() && !img_template.empty());
-
     PRINT_PARAM(devInfo);
 
     cv::Mat disp;
@@ -147,29 +144,36 @@ INSTANTIATE_TEST_CASE_P(Calib3D, StereoBeliefPropagation, testing::ValuesIn(devi
 //////////////////////////////////////////////////////////////////////////
 // ConstantSpaceBP
 
-struct StereoConstantSpaceBP : StereoTest
+struct StereoConstantSpaceBP : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static void SetUpTestCase() 
-    {
-        img_l = readImage("csstereobp/aloe-L.png");
-        img_r = readImage("csstereobp/aloe-R.png");
-    }
+    cv::Mat img_l;
+    cv::Mat img_r;
+    cv::Mat img_template;
+    
+    cv::gpu::DeviceInfo devInfo;
 
     virtual void SetUp() 
     {
-        StereoTest::SetUp();
+        devInfo = GetParam();
 
-        if (supportFeature(GetParam(), cv::gpu::FEATURE_SET_COMPUTE_20))
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        img_l = readImage("csstereobp/aloe-L.png");
+        img_r = readImage("csstereobp/aloe-R.png");
+
+        if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
             img_template = readImage("csstereobp/aloe-disp.png", CV_LOAD_IMAGE_GRAYSCALE);
         else
             img_template = readImage("csstereobp/aloe-disp_CC1X.png", CV_LOAD_IMAGE_GRAYSCALE);
+            
+        ASSERT_FALSE(img_l.empty());
+        ASSERT_FALSE(img_r.empty());
+        ASSERT_FALSE(img_template.empty());        
     }
 };
 
 TEST_P(StereoConstantSpaceBP, Regression) 
 {
-    ASSERT_TRUE(!img_l.empty() && !img_r.empty() && !img_template.empty());
-
     PRINT_PARAM(devInfo);
 
     cv::Mat disp;

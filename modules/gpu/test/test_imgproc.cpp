@@ -441,21 +441,9 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Integral, testing::ValuesIn(devices()));
 
 struct CvtColor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    static cv::Mat imgBase;
-
-    static void SetUpTestCase() 
-    {
-        imgBase = readImage("stereobm/aloe-L.png"); 
-    }
-
-    static void TearDownTestCase() 
-    {
-        imgBase.release();
-    } 
-
     cv::gpu::DeviceInfo devInfo;
     int type;
-
+    
     cv::Mat img;
     
     virtual void SetUp()
@@ -463,18 +451,17 @@ struct CvtColor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, i
         devInfo = std::tr1::get<0>(GetParam());
         type = std::tr1::get<1>(GetParam());
 
-        cv::gpu::setDevice(devInfo.deviceID());   
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat imgBase = readImage("stereobm/aloe-L.png");
+        ASSERT_FALSE(imgBase.empty());
 
         imgBase.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
     }
 };
 
-cv::Mat CvtColor::imgBase;
-
 TEST_P(CvtColor, BGR2RGB)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -497,8 +484,6 @@ TEST_P(CvtColor, BGR2RGB)
 
 TEST_P(CvtColor, BGR2RGBA)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -521,8 +506,6 @@ TEST_P(CvtColor, BGR2RGBA)
 
 TEST_P(CvtColor, BGRA2RGB)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -546,8 +529,6 @@ TEST_P(CvtColor, BGRA2RGB)
 
 TEST_P(CvtColor, BGR2YCrCb)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -570,8 +551,6 @@ TEST_P(CvtColor, BGR2YCrCb)
 
 TEST_P(CvtColor, YCrCb2RGB)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -595,8 +574,6 @@ TEST_P(CvtColor, YCrCb2RGB)
 
 TEST_P(CvtColor, BGR2YUV)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -619,8 +596,6 @@ TEST_P(CvtColor, BGR2YUV)
 
 TEST_P(CvtColor, YUV2BGR)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -644,8 +619,6 @@ TEST_P(CvtColor, YUV2BGR)
 
 TEST_P(CvtColor, BGR2XYZ)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -668,8 +641,6 @@ TEST_P(CvtColor, BGR2XYZ)
 
 TEST_P(CvtColor, XYZ2BGR)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -696,8 +667,6 @@ TEST_P(CvtColor, BGR2HSV)
     if (type == CV_16U)
         return;
 
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -722,8 +691,6 @@ TEST_P(CvtColor, HSV2BGR)
 {
     if (type == CV_16U)
         return;
-
-    ASSERT_TRUE(!img.empty());
 
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
@@ -751,8 +718,6 @@ TEST_P(CvtColor, BGR2HSV_FULL)
     if (type == CV_16U)
         return;
 
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -777,8 +742,6 @@ TEST_P(CvtColor, HSV2BGR_FULL)
 {
     if (type == CV_16U)
         return;
-
-    ASSERT_TRUE(!img.empty());
 
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
@@ -806,8 +769,6 @@ TEST_P(CvtColor, BGR2HLS)
     if (type == CV_16U)
         return;
 
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -832,8 +793,6 @@ TEST_P(CvtColor, HLS2BGR)
 {
     if (type == CV_16U)
         return;
-
-    ASSERT_TRUE(!img.empty());
 
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
@@ -861,8 +820,6 @@ TEST_P(CvtColor, BGR2HLS_FULL)
     if (type == CV_16U)
         return;
 
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -888,8 +845,6 @@ TEST_P(CvtColor, HLS2BGR_FULL)
     if (type == CV_16U)
         return;
 
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -913,8 +868,6 @@ TEST_P(CvtColor, HLS2BGR_FULL)
 
 TEST_P(CvtColor, BGR2GRAY)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -937,8 +890,6 @@ TEST_P(CvtColor, BGR2GRAY)
 
 TEST_P(CvtColor, GRAY2RGB)
 {
-    ASSERT_TRUE(!img.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
 
@@ -969,20 +920,9 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
 
 struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static cv::Mat hsv;
-
-    static void SetUpTestCase() 
-    {
-        cv::Mat img = readImage("stereobm/aloe-L.png");
-        cv::cvtColor(img, hsv, CV_BGR2HSV);
-    }
-
-    static void TearDownTestCase() 
-    {
-        hsv.release();
-    }
-
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat hsv;
     
     int hbins;
     float hranges[2];
@@ -994,6 +934,11 @@ struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobm/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, hsv, CV_BGR2HSV);
 
         hbins = 30;
 
@@ -1013,8 +958,6 @@ struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
         hist_gold.convertTo(hist_gold, CV_32S);
     }
 };
-
-cv::Mat HistEven::hsv;
 
 TEST_P(HistEven, Accuracy)
 {
@@ -1146,18 +1089,6 @@ static const char* borderTypes_str[] = {"BORDER_REPLICATE", "BORDER_CONSTANT", "
 
 struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
-    static cv::Mat img;
-
-    static void SetUpTestCase() 
-    {
-        img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
-    }
-
-    static void TearDownTestCase() 
-    {
-        img.release();
-    }
-
     cv::gpu::DeviceInfo devInfo;
     int type;
     int borderTypeIdx;
@@ -1179,6 +1110,9 @@ struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
     
         cv::RNG& rng = cvtest::TS::ptr()->get_rng();
         
+        cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
+        
         img.convertTo(src, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
         
         blockSize = 1 + rng.next() % 5;
@@ -1188,8 +1122,6 @@ struct CornerHarris : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInf
         cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderTypes[borderTypeIdx]);
     }
 };
-
-cv::Mat CornerHarris::img;
 
 TEST_P(CornerHarris, Accuracy)
 {
@@ -1222,18 +1154,6 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, testing::Combine(
 
 struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
-    static cv::Mat img;
-
-    static void SetUpTestCase() 
-    {
-        img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
-    }
-
-    static void TearDownTestCase() 
-    {
-        img.release();
-    }
-
     cv::gpu::DeviceInfo devInfo;
     int type;
     int borderTypeIdx;
@@ -1250,9 +1170,12 @@ struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
         type = std::tr1::get<1>(GetParam());
         borderTypeIdx = std::tr1::get<2>(GetParam());
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::gpu::setDevice(devInfo.deviceID());        
     
         cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+        
+        cv::Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
 
         img.convertTo(src, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
         
@@ -1262,8 +1185,6 @@ struct CornerMinEigen : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
         cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderTypes[borderTypeIdx]);
     }
 };
-
-cv::Mat CornerMinEigen::img;
 
 TEST_P(CornerMinEigen, Accuracy)
 {
@@ -1475,20 +1396,9 @@ INSTANTIATE_TEST_CASE_P(ImgProc, ReprojectImageTo3D, testing::ValuesIn(devices()
 
 struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static cv::Mat rgba;
-
-    static void SetUpTestCase() 
-    {
-        cv::Mat img = readImage("meanshift/cones.png");
-        cv::cvtColor(img, rgba, CV_BGR2BGRA);
-    }
-
-    static void TearDownTestCase() 
-    {
-        rgba.release();
-    }
-
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat rgba;
 
     int spatialRad;
     int colorRad;
@@ -1498,13 +1408,16 @@ struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("meanshift/cones.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, rgba, CV_BGR2BGRA);
 
         spatialRad = 30;
         colorRad = 30;
     }
 };
-
-cv::Mat MeanShift::rgba;
 
 TEST_P(MeanShift, Filtering)
 {
@@ -1515,7 +1428,7 @@ TEST_P(MeanShift, Filtering)
     else
         img_template = readImage("meanshift/con_result_CC1X.png");
 
-    ASSERT_TRUE(!rgba.empty() && !img_template.empty());
+    ASSERT_FALSE(img_template.empty());
 
     PRINT_PARAM(devInfo);
 
@@ -1580,21 +1493,10 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MeanShift, testing::ValuesIn(devices()));
 
 struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    static cv::Mat rgba;
-
-    static void SetUpTestCase() 
-    {
-        cv::Mat img = readImage("meanshift/cones.png");
-        cv::cvtColor(img, rgba, CV_BGR2BGRA);
-    }
-
-    static void TearDownTestCase() 
-    {
-        rgba.release();
-    }
-
     cv::gpu::DeviceInfo devInfo;
     int minsize;
+    
+    cv::Mat rgba;
 
     cv::Mat dst_gold;
 
@@ -1604,6 +1506,11 @@ struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::
         minsize = std::tr1::get<1>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("meanshift/cones.png");
+        ASSERT_FALSE(img.empty());
+        
+        cv::cvtColor(img, rgba, CV_BGR2BGRA);
 
         std::ostringstream path;
         path << "meanshift/cones_segmented_sp10_sr10_minsize" << minsize;
@@ -1613,15 +1520,12 @@ struct MeanShiftSegmentation : testing::TestWithParam< std::tr1::tuple<cv::gpu::
             path << "_CC1X.png";
 
         dst_gold = readImage(path.str());
+        ASSERT_FALSE(dst_gold.empty());
     }
 };
 
-cv::Mat MeanShiftSegmentation::rgba;
-
 TEST_P(MeanShiftSegmentation, Regression)
 {
-    ASSERT_TRUE(!rgba.empty() && !dst_gold.empty());
-
     PRINT_PARAM(devInfo);
     PRINT_PARAM(minsize);
 
@@ -1768,24 +1672,10 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate32F, testing::Combine(
 
 struct MatchTemplate : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    static cv::Mat image;
-    static cv::Mat pattern;
+    cv::Mat image;
+    cv::Mat pattern;
 
-    static cv::Point maxLocGold;
-
-    static void SetUpTestCase() 
-    {
-        image = readImage("matchtemplate/black.png");
-        pattern = readImage("matchtemplate/cat.png");
-
-        maxLocGold = cv::Point(284, 12);
-    }
-
-    static void TearDownTestCase() 
-    {
-        image.release();
-        pattern.release();
-    }
+    cv::Point maxLocGold;
 
     cv::gpu::DeviceInfo devInfo;
     int method;
@@ -1796,17 +1686,19 @@ struct MatchTemplate : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceIn
         method = std::tr1::get<1>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        image = readImage("matchtemplate/black.png");
+        ASSERT_FALSE(image.empty());
+        
+        pattern = readImage("matchtemplate/cat.png");
+        ASSERT_FALSE(pattern.empty());
+
+        maxLocGold = cv::Point(284, 12);
     }
 };
 
-cv::Mat MatchTemplate::image;
-cv::Mat MatchTemplate::pattern;
-cv::Point MatchTemplate::maxLocGold;
-
 TEST_P(MatchTemplate, FindPatternInBlack)
 {
-    ASSERT_TRUE(!image.empty() && !pattern.empty());
-
     const char* matchTemplateMethodStr = matchTemplateMethods[method];
 
     PRINT_PARAM(devInfo);
@@ -1918,6 +1810,7 @@ struct Dft : testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::gpu::setDevice(devInfo.deviceID());
     }
 };
+
 
 static void testC2C(const std::string& hint, int cols, int rows, int flags, bool inplace)
 {
@@ -2143,36 +2036,47 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Blend, testing::Combine(
 // pyrDown
 
 struct PyrDown : testing::TestWithParam<cv::gpu::DeviceInfo>
-{
+{    
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat src;
+    
+    cv::Mat dst_gold;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobm/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        img.convertTo(src, CV_16S);
+        
+        cv::pyrDown(src, dst_gold);
     }
 };
 
 TEST_P(PyrDown, Accuracy)
 {
     PRINT_PARAM(devInfo);
+    
+    cv::Mat dst;
 
-    cv::Mat src;
-    readImage("stereobm/aloe-L.png").convertTo(src, CV_16S);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat d_dst;
+        
+        cv::gpu::pyrDown(cv::gpu::GpuMat(src), d_dst);
+        
+        d_dst.download(dst);
+    );
 
-    cv::Mat dst_gold;
-    cv::pyrDown(src, dst_gold);
+    ASSERT_EQ(dst_gold.cols, dst.cols);
+    ASSERT_EQ(dst_gold.rows, dst.rows);
+    ASSERT_EQ(dst_gold.type(), dst.type());
 
-    cv::gpu::GpuMat d_dst;
-    cv::gpu::pyrDown(cv::gpu::GpuMat(src), d_dst);
-    cv::Mat dst_mine = d_dst;
-
-    ASSERT_EQ(dst_gold.cols, dst_mine.cols);
-    ASSERT_EQ(dst_gold.rows, dst_mine.rows);
-    ASSERT_EQ(dst_gold.type(), dst_mine.type());
-
-    double err = cvtest::crossCorr(dst_gold, dst_mine) /
-            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst_mine,cv::NORM_L2));
+    double err = cvtest::crossCorr(dst_gold, dst) /
+            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
@@ -2182,36 +2086,47 @@ INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::ValuesIn(devices()));
 // pyrUp
 
 struct PyrUp: testing::TestWithParam<cv::gpu::DeviceInfo>
-{
+{    
     cv::gpu::DeviceInfo devInfo;
+    
+    cv::Mat src;
+    
+    cv::Mat dst_gold;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::Mat img = readImage("stereobm/aloe-L.png");
+        ASSERT_FALSE(img.empty());
+        
+        img.convertTo(src, CV_16S);
+        
+        cv::pyrUp(src, dst_gold);
     }
 };
 
 TEST_P(PyrUp, Accuracy)
 {
     PRINT_PARAM(devInfo);
+    
+    cv::Mat dst;
 
-    cv::Mat src;
-    readImage("stereobm/aloe-L.png").convertTo(src, CV_16S);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat d_dst;
+        
+        cv::gpu::pyrUp(cv::gpu::GpuMat(src), d_dst);
+        
+        d_dst.download(dst);
+    );
 
-    cv::Mat dst_gold;
-    cv::pyrUp(src, dst_gold);
+    ASSERT_EQ(dst_gold.cols, dst.cols);
+    ASSERT_EQ(dst_gold.rows, dst.rows);
+    ASSERT_EQ(dst_gold.type(), dst.type());
 
-    cv::gpu::GpuMat d_dst;
-    cv::gpu::pyrUp(cv::gpu::GpuMat(src), d_dst);
-    cv::Mat dst_mine = d_dst;
-
-    ASSERT_EQ(dst_gold.cols, dst_mine.cols);
-    ASSERT_EQ(dst_gold.rows, dst_mine.rows);
-    ASSERT_EQ(dst_gold.type(), dst_mine.type());
-
-    double err = cvtest::crossCorr(dst_gold, dst_mine) /
-            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst_mine,cv::NORM_L2));
+    double err = cvtest::crossCorr(dst_gold, dst) /
+            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
@@ -2222,21 +2137,11 @@ INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::ValuesIn(devices()));
 
 struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, bool> >
 {
-    static cv::Mat img;
-
-    static void SetUpTestCase() 
-    {
-        img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE); 
-    }
-
-    static void TearDownTestCase() 
-    {
-        img.release();
-    } 
-
     cv::gpu::DeviceInfo devInfo;
     int apperture_size;
     bool L2gradient;
+    
+    cv::Mat img;
 
     double low_thresh;
     double high_thresh;
@@ -2250,6 +2155,9 @@ struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
         L2gradient = std::tr1::get<2>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(img.empty()); 
 
         low_thresh = 50.0;
         high_thresh = 100.0;
@@ -2257,8 +2165,6 @@ struct Canny : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
         cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, L2gradient);
     }
 };
-
-cv::Mat Canny::img;
 
 TEST_P(Canny, Accuracy)
 {

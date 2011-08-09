@@ -48,29 +48,10 @@
 
 struct SURF : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    static cv::Mat image;
-    static cv::Mat mask;
-    static std::vector<cv::KeyPoint> keypoints_gold;
-    static std::vector<float> descriptors_gold;
-
-    static void SetUpTestCase() 
-    {
-        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);        
-        
-        mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
-        mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
-                
-        cv::SURF fdetector_gold; fdetector_gold.extended = false;
-        fdetector_gold(image, mask, keypoints_gold, descriptors_gold);
-    }
-
-    static void TearDownTestCase() 
-    {
-        image.release();
-        mask.release();
-        keypoints_gold.clear();
-        descriptors_gold.clear();
-    }
+    cv::Mat image;
+    cv::Mat mask;
+    std::vector<cv::KeyPoint> keypoints_gold;
+    std::vector<float> descriptors_gold;
 
     cv::gpu::DeviceInfo devInfo;
     
@@ -79,6 +60,15 @@ struct SURF : testing::TestWithParam<cv::gpu::DeviceInfo>
         devInfo = GetParam();
 
         cv::gpu::setDevice(devInfo.deviceID());
+        
+        image = readImage("features2d/aloe.png", CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(image.empty());        
+        
+        mask = cv::Mat(image.size(), CV_8UC1, cv::Scalar::all(1));
+        mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
+                
+        cv::SURF fdetector_gold; fdetector_gold.extended = false;
+        fdetector_gold(image, mask, keypoints_gold, descriptors_gold);        
     }
 
     bool isSimilarKeypoints(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
@@ -97,11 +87,6 @@ struct SURF : testing::TestWithParam<cv::gpu::DeviceInfo>
                 p1.class_id == p2.class_id );
     }
 };
-
-cv::Mat SURF::image;
-cv::Mat SURF::mask;
-std::vector<cv::KeyPoint> SURF::keypoints_gold;
-std::vector<float> SURF::descriptors_gold;
 
 TEST_P(SURF, EmptyDataTest)
 {
@@ -123,8 +108,6 @@ TEST_P(SURF, EmptyDataTest)
 
 TEST_P(SURF, Accuracy)
 {
-    ASSERT_TRUE(!image.empty());
-
     PRINT_PARAM(devInfo);
 
     // Compute keypoints.
@@ -161,11 +144,11 @@ TEST_P(SURF, Accuracy)
 
         float dist = (float)cv::norm(p1.pt - p2.pt);
         if (dist < maxPtDif &&
-                fabs(p1.size - p2.size) < maxSizeDif &&
-                abs(p1.angle - p2.angle) < maxAngleDif &&
-                abs(p1.response - p2.response) < maxResponseDif &&
-                p1.octave == p2.octave &&
-                p1.class_id == p2.class_id )
+            fabs(p1.size - p2.size) < maxSizeDif &&
+            abs(p1.angle - p2.angle) < maxAngleDif &&
+            abs(p1.response - p2.response) < maxResponseDif &&
+            p1.octave == p2.octave &&
+            p1.class_id == p2.class_id)
         {
             ++validCount;
         }
