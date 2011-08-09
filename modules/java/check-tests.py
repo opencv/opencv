@@ -75,7 +75,7 @@ class JavaParser:
                 for prefix in ("OneWay", "Fern"):
                     parser.parse_file(path,prefix)
             elif path.endswith("DescriptorMatcher.java"):
-                for prefix in ("BruteForce", "BruteForceHamming", "BruteForceHammingLUT", "BruteForceL1", "FlannBased"):
+                for prefix in ("BruteForce", "BruteForceHamming", "BruteForceHammingLUT", "BruteForceL1", "FlannBased", "BruteForceSL2"):
                     parser.parse_file(path,prefix)
             else:
                 parser.parse_file(path)

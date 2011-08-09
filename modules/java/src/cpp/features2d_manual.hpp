@@ -166,7 +166,8 @@ public:
         BRUTEFORCE            = 2,
         BRUTEFORCE_L1         = 3,
         BRUTEFORCE_HAMMING    = 4,
-        BRUTEFORCE_HAMMINGLUT = 5
+        BRUTEFORCE_HAMMINGLUT = 5,
+        BRUTEFORCE_SL2        = 6
     };
 
     CV_WRAP_AS(clone) javaDescriptorMatcher* jclone( bool emptyTrainData=false ) const
@@ -197,6 +198,9 @@ public:
             break;
         case BRUTEFORCE_HAMMINGLUT:
             name = "BruteForce-HammingLUT";
+            break;
+        case BRUTEFORCE_SL2:
+            name = "BruteForce-SL2";
             break;
         default:
             CV_Error( CV_StsBadArg, "Specified descriptor matcher type is not supported." );
@@ -244,6 +248,7 @@ public:
 
 
         OPPONENTEXTRACTOR = 1000,
+
 
 
         OPPONENT_SIFT  = OPPONENTEXTRACTOR + SIFT,
