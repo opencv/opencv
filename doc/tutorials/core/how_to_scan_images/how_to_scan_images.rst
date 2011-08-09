@@ -126,15 +126,17 @@ In case of the efficient way making sure that you pass through the right amount 
 
 In case of color images we have three uchar items per column. This may be considered a short vector of uchar items, that has been baptized in OpenCV with the *Vec3b* name. To access the n-th sub column we use simple operator[] access. It's important to remember that OpenCV iterators go through the columns and automatically skip to the next row. Therefore in case of color images if you use a simple *uchar* iterator you'll be able to access only the blue channel values. 
 
-Random Pixel Access
-===================
+On-the-fly address calculation with reference returning
+=======================================================
 
-The final method isn't recommended for scanning. It was made to acquire or modify random elements in the image. Its basic usage is to specify the row and column number of the item you want to access. During our earlier scanning methods you could already observe that is important through what type we are looking at the image. It's no different here as you need manually to specify what type to use at the automatic lookup. You can observe this in case of the gray scale images for the following source code (the usage of the + :basicstructures:`at() <mat-at>` function):
+The final method isn't recommended for scanning. It was made to acquire or modify somehow random elements in the image. Its basic usage is to specify the row and column number of the item you want to access. During our earlier scanning methods you could already observe that is important through what type we are looking at the image. It's no different here as you need manually to specify what type to use at the automatic lookup. You can observe this in case of the gray scale images for the following source code (the usage of the + :basicstructures:`at() <mat-at>` function):
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
    :tab-width: 4
    :lines: 175-207
+
+The functions takes your input type and coordinates and calculates on the fly the address of the queried item. Then returns a reference to that. This may be a constant when you *get* the value and non-constant when you *set* the value. As a safety step in **debug mode only*** there is performed a check that your input coordinates are valid and does exist. If this isn't the case you'll get a nice output message of this on the standard error output stream. Compared to the efficient way in release mode the only difference in using this is that for every element of the image you'll get a new row pointer for what we use the C operator[] to acquire the column element. 
 
 If you need to multiple lookups using this method for an image it may be troublesome and time consuming to enter the type and the at keyword for each of the accesses. To solve this problem OpenCV has a :basicstructures:`Mat_ <id3>` data type. It's the same as Mat with the extra need that at definition you need to specify the data type through what to look at the data matrix, however in return you can use the operator() for fast access of items. To make things even better this is easily convertible from and to the usual :basicstructures:`Mat <id3>` data type. A sample usage of this you can see in case of the color images of the upper function. Nevertheless, it's important to note that the same operation (with the same runtime speed) could have been done with the :basicstructures:`at() <mat-at>` function. It's just a less to write for the lazy programmer trick.
 
@@ -165,12 +167,12 @@ Efficient Way 79.4717 milliseconds
 
 Iterator      83.7201 milliseconds
 
-Random Access 93.7878 milliseconds
+On-The-Fly RA 93.7878 milliseconds
 
 LUT function  32.5759 milliseconds
 ============= ====================
 
-We can conclude a couple of things. If possible, use the already made functions of OpenCV (instead reinventing these). The fastest method turns out to be the LUT function. This is because the OpenCV library is multi-thread enabled via Intel Threaded Building Blocks. However, if you need to write a simple image scan prefer the pointer method. The iterator is a safer bet, however quite slower. Using the random access method for full image scan is the most costly. Your compiler might observe what you want to do and optimize it out somewhat, however in general case this approach is with a little slower than the iterator method.
+We can conclude a couple of things. If possible, use the already made functions of OpenCV (instead reinventing these). The fastest method turns out to be the LUT function. This is because the OpenCV library is multi-thread enabled via Intel Threaded Building Blocks. However, if you need to write a simple image scan prefer the pointer method. The iterator is a safer bet, however quite slower. Using the on-the-fly reference access method for full image scan is the most costly in debug mode. In the release mode it may beat the iterator approach or not, however it surely sacrifices for this the safety trait of iterators.
 
 Finally, you may watch a sample run of the program on the `video posted <https://www.youtube.com/watch?v=fB3AN5fjgwc>`_ on our YouTube channel.
 

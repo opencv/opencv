@@ -12,7 +12,7 @@ void help()
         << "\n--------------------------------------------------------------------------" << endl
         << "This program shows how to scan image objects in OpenCV (cv::Mat). As use case"
         << " we take an input image and divide the native color palette (255) with the "  << endl
-        << "input. Shows C operator[] method, iterators and at function for random access"<< endl
+        << "input. Shows C operator[] method, iterators and at function for on-the-fly item address calculation."<< endl
         << "Usage:"                                                                       << endl
         << "./howToScanImages imageNameToUse divideWith [G]"                              << endl
         << "if you add a G parameter the image is processed in gray scale"                << endl
@@ -92,7 +92,7 @@ int main( int argc, char* argv[])
     t = 1000*((double)getTickCount() - t)/getTickFrequency();
     t /= times;
 
-    cout << "Time of reducing with the random access operator (averaged for " 
+    cout << "Time of reducing with the on-the-fly address generation - at function (averaged for " 
         << times << " runs): " << t << " milliseconds."<< endl;  
 
     Mat lookUpTable(1, 256, CV_8U);
