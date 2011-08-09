@@ -389,6 +389,7 @@ GpuMat cv::gpu::GpuMat::reshape(int, int) const { throw_nogpu(); return GpuMat()
 void cv::gpu::GpuMat::create(int, int, int) { throw_nogpu(); }
 void cv::gpu::GpuMat::release() {}
 void cv::gpu::createContinuous(int, int, int, GpuMat&) { throw_nogpu(); }
+void cv::gpu::ensureSizeIsEnough(int, int, int, GpuMat&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
