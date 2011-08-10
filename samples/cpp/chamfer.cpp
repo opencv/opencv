@@ -2,36 +2,45 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
 
-#include <iostream>
-
 using namespace cv;
 using namespace std;
 
 void help()
 {
-    cout <<
-        "\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
+ 
+   printf("\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
         "edge template and a query edge image.\n"
-        "Usage:\n"
+        "Usage: \n"
         "./chamfer <image edge map> <template edge map>,"
-        " By default the inputs are logo_in_clutter.png logo.png\n" << endl;
+        " By default the inputs are logo_in_clutter.png logo.png\n");
 
-    return;
+
 }
 
-
-int main( int argc, char** argv )
+const char* keys = 
 {
-    if( argc != 3 )
-    {
-        help();
-        return 0;
-    }
+	"{1| |logo_in_clutter.png|image edge map    }"
+	"{2| |logo.png               |template edge map}"
+};
 
-    Mat img = imread(argc == 3 ? argv[1] : "logo_in_clutter.png", 0);
+int main( int argc, const char** argv )
+{
+
+	help();
+	CommandLineParser parser(argc, argv, keys);
+
+	string image = parser.get<string>("1");
+	string templ = parser.get<string>("2");
+	Mat img = imread(image.c_str(), 0);
+	Mat tpl = imread(templ.c_str(), 0);
+
+	if (img.empty() || tpl.empty())
+		{
+			printf("Could not read image file %s or %s \n", image.c_str(), templ.c_str());
+			return -1;
+		}
     Mat cimg;
     cvtColor(img, cimg, CV_GRAY2BGR);
-    Mat tpl = imread(argc == 3 ? argv[2] : "logo.png", 0);
 
     // if the image and the template are not edge maps but normal grayscale images,
     // you might want to uncomment the lines below to produce the maps. You can also
@@ -45,8 +54,8 @@ int main( int argc, char** argv )
     int best = chamerMatching( img, tpl, results, costs );
     if( best < 0 )
     {
-        cout << "matching not found\n";
-        return 0;
+        printf("matching not found\n");
+        return -1;
     }
 
     size_t i, n = results[best].size();
