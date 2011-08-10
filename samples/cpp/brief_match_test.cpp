@@ -4,6 +4,7 @@
  *  Created on: Oct 17, 2010
  *      Author: ethan
  */
+#include "opencv2/core/core.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -12,20 +13,7 @@
 #include <iostream>
 
 using namespace cv;
-
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::vector;
-
-void help(char **av)
-{
-	   cerr << "usage: " << av[0] << " im1.jpg im2.jpg"
-			   << "\n"
-			   << "This program shows how to use BRIEF descriptor to match points in features2d\n"
-			   << "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
-			   << endl;
-}
+using namespace std;
 
 //Copy (x,y) location of descriptor matches found from KeyPoint data structures into Point2f vectors
 void matches2points(const vector<DMatch>& matches, const vector<KeyPoint>& kpts_train,
@@ -53,25 +41,38 @@ double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*k
   return ((double)getTickCount() - t) / getTickFrequency();
 }
 
-
-
-int main(int ac, char ** av)
+void help()
 {
-  if (ac != 3)
-  {
-	help(av);
-    return 1;
-  }
-  string im1_name, im2_name;
-  im1_name = av[1];
-  im2_name = av[2];
+	   printf ("This program shows how to use BRIEF descriptor to match points in features2d\n"
+			   "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
+				"Usage: \n"
+					"image1 image2 \n"
+				"Example: \n"
+					"box.png box_in_scene.png \n");	   
+}
+
+const char* keys = 
+{
+	"{1|  |box.png               |the first image}"
+	"{2|  |box_in_scene.png|the second image}"
+};
+
+int main(int argc, const char ** argv)
+{
+
+  help();
+  CommandLineParser parser(argc, argv, keys);
+  string im1_name = parser.get<string>("1");
+  string im2_name = parser.get<string>("2");
 
   Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
   Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);
 
   if (im1.empty() || im2.empty())
   {
-    cerr << "could not open one of the images..." << endl;
+    printf( "could not open one of the images...\n");
+	printf("the cmd parameters have next current value: \n");
+	parser.printParams();
     return 1;
   }
 
