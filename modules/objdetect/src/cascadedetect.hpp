@@ -371,7 +371,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
         CascadeClassifier::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
 #ifdef HAVE_TEGRA_OPTIMIZATION
-	tmp = 0;
+        tmp = 0;
 #else
         sum = 0;
 #endif
@@ -391,9 +391,9 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
         }
 #ifdef HAVE_TEGRA_OPTIMIZATION
         if( tmp < stage.threshold ) {
-	    sum = (double)tmp;
+            sum = (double)tmp;
             return -si;            
-	}
+        }
 #else
         if( sum < stage.threshold )
             return -si;            
