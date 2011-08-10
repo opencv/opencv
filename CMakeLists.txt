@@ -1629,9 +1629,7 @@ status("    TIFF:"      NOT WITH_TIFF OR TIFF_FOUND        THEN ${TIFF_FOUND}   
 status("    JPEG 2000:" NOT WITH_JASPER OR JASPER_FOUND    THEN ${JASPER_FOUND} ELSE build)
 status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN YES             ELSE NO)
 
-status("    OpenNI:"    NOT HAVE_OPENNI OR HAVE_OPENNI_PRIME_SENSOR_MODULE
-                            THEN NO
-                            ELSE "${HAVE_OPENNI} (WARNING: PrimeSensor Modules for OpenNI are not installed (not found in OPENNI_PRIME_SENSOR_MODULE_BIN_DIR).)")
+status("    OpenNI:"    HAVE_OPENNI AND HAVE_OPENNI_PRIME_SENSOR_MODULE THEN YES ELSE NO)
 
 # video
 status("")
