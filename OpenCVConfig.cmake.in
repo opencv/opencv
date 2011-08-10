@@ -137,6 +137,10 @@ IF (NOT OpenCV_SHARED)
         # Old CMake:
         set(OpenCV_LIBS ${OpenCV_LIBS} ${OpenCV_EXTRA_COMPONENTS})
     endif()
+    
+    if (APPLE)
+        set(OpenCV_LIBS ${OpenCV_LIBS} "-lbz2" "-framework Cocoa" "-framework QuartzCore" "-framework QTKit")
+    endif()
 ENDIF()
 
 # ======================================================
