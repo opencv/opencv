@@ -250,6 +250,10 @@ public class ConvertersTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    public void testMat_to_vector_vector_Point2f() {
+        fail("Not yet implemented");
+    }
+
     public void testVector_char_to_Mat() {
         List<Byte> bytes = new ArrayList<Byte>();
         byte value1 = 1;
