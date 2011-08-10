@@ -2,19 +2,19 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
 
+#include <iostream>
+
 using namespace cv;
 using namespace std;
 
 void help()
 {
  
-   printf("\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
-        "edge template and a query edge image.\n"
-        "Usage: \n"
-        "./chamfer <image edge map> <template edge map>,"
-        " By default the inputs are logo_in_clutter.png logo.png\n");
-
-
+   cout << "\nThis program demonstrates Chamfer matching -- computing a distance between an \n"
+            "edge template and a query edge image.\n"
+            "Usage: \n"
+            "./chamfer <image edge map> <template edge map>,"
+            " By default the inputs are logo_in_clutter.png logo.png\n";
 }
 
 const char* keys = 
@@ -35,10 +35,10 @@ int main( int argc, const char** argv )
 	Mat tpl = imread(templ.c_str(), 0);
 
 	if (img.empty() || tpl.empty())
-		{
-			printf("Could not read image file %s or %s \n", image.c_str(), templ.c_str());
-			return -1;
-		}
+    {
+        cout << "Could not read image file " << image << " or " << templ << "." << endl;
+        return -1;
+    }
     Mat cimg;
     cvtColor(img, cimg, CV_GRAY2BGR);
 
@@ -54,7 +54,7 @@ int main( int argc, const char** argv )
     int best = chamerMatching( img, tpl, results, costs );
     if( best < 0 )
     {
-        printf("matching not found\n");
+        cout << "matching not found" << endl;
         return -1;
     }
 

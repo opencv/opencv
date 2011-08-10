@@ -47,19 +47,19 @@ void onMouse( int event, int x, int y, int, void* )
 
 void help()
 {
-	printf("\nThis is a demo that shows mean-shift based tracking\n"
+    cout << "\nThis is a demo that shows mean-shift based tracking\n"
 			"You select a color objects such as your face and it tracks it.\n"
 			"This reads from video camera (0 by default, or the camera number the user enters\n"
 			"Usage: \n"
-			"	./camshiftdemo [camera number]\n");
+            "	./camshiftdemo [camera number]\n";
 
-	printf("\n\nHot keys: \n"
+    cout << "\n\nHot keys: \n"
 			"\tESC - quit the program\n"
 			"\tc - stop the tracking\n"
 			"\tb - switch to/from backprojection view\n"
 			"\th - show/hide object histogram\n"
 			"\tp - pause video\n"
-			"To initialize tracking, select the object with mouse\n");
+            "To initialize tracking, select the object with mouse\n";
 }
 
 const char* keys = 
@@ -85,8 +85,8 @@ int main( int argc, const char** argv )
     if( !cap.isOpened() )
     {
     	help();
-        printf("***Could not initialize capturing...***\n");
-		printf("Current parameter's value: \n");
+        cout << "***Could not initialize capturing...***\n";
+        cout << "Current parameter's value: \n";
 		parser.printParams();
         return -1;
     }

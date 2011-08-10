@@ -251,7 +251,7 @@ static void findConstrainedCorrespondences(const Mat& _F,
                 if( dist < threshold )
                     break;
             }
-            if( i1 == keypoints1.size() )
+            if( i1 == (int)keypoints1.size() )
                 matches.push_back(Vec2i(i,bestIdx1));
         }
     }
