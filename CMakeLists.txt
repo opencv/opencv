@@ -1629,7 +1629,9 @@ status("    TIFF:"      NOT WITH_TIFF OR TIFF_FOUND        THEN ${TIFF_FOUND}   
 status("    JPEG 2000:" NOT WITH_JASPER OR JASPER_FOUND    THEN ${JASPER_FOUND} ELSE build)
 status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN YES             ELSE NO)
 
-status("    OpenNI:"    HAVE_OPENNI AND HAVE_OPENNI_PRIME_SENSOR_MODULE THEN YES ELSE NO)
+status("    OpenNI:"    HAVE_OPENNI                        THEN YES             ELSE NO)
+status("    OpenNI PrimeSensor Modules:"
+                        HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN YES             ELSE NO)
 
 # video
 status("")
