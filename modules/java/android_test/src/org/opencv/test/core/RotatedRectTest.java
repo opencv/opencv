@@ -163,11 +163,27 @@ public class RotatedRectTest extends OpenCVTestCase {
     }
 
     public void testSet() {
-        fail("Not yet implemented");
+        double[] vals1 = {};
+        RotatedRect r1 = new RotatedRect(center, size, 40);
+
+        r1.set(vals1);
+
+        assertEquals(0., r1.angle);
+        assertPointEquals(new Point(0, 0), r1.center, EPS);
+        assertSizeEquals(new Size(0, 0), r1.size, EPS);
+
+        double[] vals2 = { 1, 2, 3, 4, 5 };
+        RotatedRect r2 = new RotatedRect(center, size, 40);
+
+        r2.set(vals2);
+
+        assertEquals(5., r2.angle);
+        assertPointEquals(new Point(1, 2), r2.center, EPS);
+        assertSizeEquals(new Size(3, 4), r2.size, EPS);
     }
-    
+
     public void testToString() {
-        String actual = new RotatedRect(new Point(1,2), new Size(10,12), 4.5).toString();
+        String actual = new RotatedRect(new Point(1, 2), new Size(10, 12), 4.5).toString();
         String expected = "{ {1.0, 2.0} 10x12 * 4.5 }";
         assertEquals(expected, actual);
     }

@@ -549,9 +549,11 @@ public class Mat {
     // javadoc: Mat::locateROI(wholeSize, ofs)
     public void locateROI(Size wholeSize, Point ofs)
     {
-
-        n_locateROI(nativeObj, wholeSize.width, wholeSize.height, ofs.x, ofs.y);
-
+        double[] wholeSize_out = new double[2];
+        double[] ofs_out = new double[2];
+        locateROI_0(nativeObj, wholeSize_out, ofs_out);
+        if(wholeSize!=null){ wholeSize.width = wholeSize_out[0]; wholeSize.height = wholeSize_out[1]; } 
+        if(ofs!=null){ ofs.x = ofs_out[0]; ofs.y = ofs_out[1]; } 
         return;
     }
 
@@ -1190,7 +1192,7 @@ public class Mat {
     private static native boolean n_isSubmatrix(long nativeObj);
 
     // C++: void Mat::locateROI(Size wholeSize, Point ofs)
-    private static native void n_locateROI(long nativeObj, double wholeSize_width, double wholeSize_height, double ofs_x, double ofs_y);
+    private static native void locateROI_0(long nativeObj, double[] wholeSize_out, double[] ofs_out);
 
     // C++: Mat Mat::mul(Mat m, double scale = 1)
     private static native long n_mul(long nativeObj, long m_nativeObj, double scale);

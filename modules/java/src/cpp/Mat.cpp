@@ -1174,27 +1174,27 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_core_Mat_n_1isSubmatrix
 //
 
 
-JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1locateROI
-  (JNIEnv* env, jclass cls, jlong self, jdouble wholeSize_width, jdouble wholeSize_height, jdouble ofs_x, jdouble ofs_y)
+JNIEXPORT void JNICALL Java_org_opencv_core_Mat_locateROI_10
+  (JNIEnv* env, jclass cls, jlong self, jdoubleArray wholeSize_out, jdoubleArray ofs_out)
 {
     try {
-        LOGD("Mat::n_1locateROI()");
+        LOGD("core::locateROI_10()");
         Mat* me = (Mat*) self; //TODO: check for NULL
-        Size wholeSize((int)wholeSize_width, (int)wholeSize_height);
-        Point ofs((int)ofs_x, (int)ofs_y);
+        Size wholeSize;
+        Point ofs;
         me->locateROI( wholeSize, ofs );
-        
+        jdouble tmp_wholeSize[2] = {wholeSize.width, wholeSize.height}; env->SetDoubleArrayRegion(wholeSize_out, 0, 2, tmp_wholeSize);  jdouble tmp_ofs[2] = {ofs.x, ofs.y}; env->SetDoubleArrayRegion(ofs_out, 0, 2, tmp_ofs);
         return;
     } catch(cv::Exception e) {
-        LOGD("Mat::n_1locateROI() catched cv::Exception: %s", e.what());
+        LOGD("Mat::locateROI_10() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, e.what());
         return;
     } catch (...) {
-        LOGD("Mat::n_1locateROI() catched unknown exception (...)");
+        LOGD("Mat::locateROI_10() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, "Unknown exception in JNI code {Mat::n_1locateROI()}");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::locateROI_10()}");
         return;
     }
 }

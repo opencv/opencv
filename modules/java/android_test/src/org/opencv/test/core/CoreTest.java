@@ -16,6 +16,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.test.OpenCVTestCase;
+import org.opencv.test.OpenCVTestRunner;
 
 public class CoreTest extends OpenCVTestCase {
 
@@ -33,17 +34,11 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testAddMatMatMatMat() {
         Mat mask = makeMask(gray1.clone());
+        dst = gray127.clone();
 
         Core.add(gray127, gray1, dst, mask);
 
         assertMatEqual(makeMask(gray128, 127), dst);
-
-        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
-        /*
-         * dst is uninitialized => add allocates it 2) left half of mask is zeor
-         * => add do not assign it 3) so left part of dst remains uninitialized
-         * => filled with random junk values
-         */
     }
 
     public void testAddMatMatMatMatInt() {
@@ -735,16 +730,19 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testFillConvexPolyMatListOfPointScalarIntInt() {
-        List<Point> polyline1 = Arrays.asList(new Point(1, 1), new Point(5, 1), new Point(5, 8), new Point(1, 8));
-        List<Point> polyline2 = Arrays.asList(new Point(2, 2), new Point(10, 2), new Point(10, 16), new Point(2, 16));
-        // FIXME: https://code.ros.org/trac/opencv/ticket/1284
+        List<Point> polyline1 = Arrays.asList(new Point(2, 1), new Point(5, 1), new Point(5, 7), new Point(2, 7));
+        List<Point> polyline2 = Arrays.asList(new Point(4, 2), new Point(10, 2), new Point(10, 14), new Point(4, 14));
 
+        // current implementation of fixed-point version of fillConvexPoly
+        // requires image to be at least 2-pixel wider in each direction than
+        // contour
         Core.fillConvexPoly(gray0, polyline1, colorWhite, Core.LINE_8, 0);
 
         assertTrue(0 < Core.countNonZero(gray0));
         assertTrue(gray0.total() > Core.countNonZero(gray0));
 
         Core.fillConvexPoly(gray0, polyline2, colorBlack, Core.LINE_8, 1);
+        OpenCVTestRunner.Log(gray0);
 
         assertEquals("see https://code.ros.org/trac/opencv/ticket/1284", 0, Core.countNonZero(gray0));
     }
@@ -1632,9 +1630,10 @@ public class CoreTest extends OpenCVTestCase {
                 put(0, 0, 1, 0, 0, 0, 1);
             }
         };
+        dst = src.clone();
 
         Core.normalize(src, dst, 1, 2, Core.NORM_MINMAX, CvType.CV_32F, mask);
-        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
+
         Mat expected = new Mat(1, 5, CvType.CV_32F) {
             {
                 put(0, 0, 1, 1, 2, 3, 2);
@@ -2356,11 +2355,11 @@ public class CoreTest extends OpenCVTestCase {
 
     public void testSubtractMatMatMatMat() {
         Mat mask = makeMask(gray1.clone());
+        dst = gray128.clone();
 
         Core.subtract(gray128, gray1, dst, mask);
 
         assertMatEqual(makeMask(gray127, 128), dst);
-        // FIXME: https://code.ros.org/trac/opencv/ticket/1286
     }
 
     public void testSubtractMatMatMatMatInt() {

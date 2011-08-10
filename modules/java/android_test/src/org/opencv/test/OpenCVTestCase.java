@@ -18,6 +18,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
@@ -307,7 +308,13 @@ public class OpenCVTestCase extends TestCase {
         assertEquals(msg, expected.x, actual.x, eps);
         assertEquals(msg, expected.y, actual.y, eps);
     }
-    
+
+    public static void assertSizeEquals(Size expected, Size actual, double eps) {
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.width, actual.width, eps);
+        assertEquals(msg, expected.height, actual.height, eps);
+    }
+
     public static void assertPoint3Equals(Point3 expected, Point3 actual, double eps) {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
         assertEquals(msg, expected.x, actual.x, eps);
