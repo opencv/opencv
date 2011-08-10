@@ -63,7 +63,7 @@ namespace cv
 
 			struct Warp
 			{
-				static __forceinline__ __device__ int STRIDE() { return warpSize;            
+				static __forceinline__ __device__ int STRIDE() { return warpSize };            
 				static __forceinline__ __device__ int SHIFT()  { return threadIdx.x & (warpSize - 1); }			
 			};
 
@@ -77,8 +77,8 @@ namespace cv
 	                out[idx] = in[idx];
 			}
 
-			template <class Worker, typename ForwardIterator, typename ForwardIterator>
-			__forceinline__ __device__ void Copy(ForwardIterator beg, ForwardIterator end, OutIter out)
+			template <class Worker, typename InIter, typename OutIter>
+			__forceinline__ __device__ void Copy(InIter beg, InIter end, OutIter out)
 			{
 				int STRIDE = Worker::STRIDE();
 				int SHIFT  = Worker::SHIFT();
@@ -102,6 +102,19 @@ namespace cv
 				
 				for (; idx < length; idx += STRIDE, cur += STRIDE)
 					out[idx] = cur;				
+			}
+
+			template <class Worker, typename OutIter>
+			__forceinline__ __device__ void Yota(OutIter beg, OutIter end, int val)
+			{
+				int STRIDE = Worker::STRIDE();
+				int SHIFT  = Worker::SHIFT();
+
+				beg += SHIFT;
+				val += SHIFT;
+				
+				for (; beg < end; beg += STRIDE, val += STRIDE)
+					*beg = val;
 			}
 		}
 	}
