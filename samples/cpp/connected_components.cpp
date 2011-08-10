@@ -8,19 +8,6 @@ using namespace std;
 Mat img;
 int threshval = 100;
 
-void help()
-{
-	cout <<
-		   "\n This program demonstrates connected components and use of the trackbar\n"
-		<< "\n"
-		<< "Usage: ./connected_components <image>\n"
-		<< "\n"
-		<< "The image is converted to grayscale and displayed, another image has a trackbar\n"
-		<< "that controls thresholding and thereby the extracted contours which are drawn in color\n"
-		<< endl;
-}
-
-
 void on_trackbar(int, void*)
 {
 	Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
@@ -47,18 +34,34 @@ void on_trackbar(int, void*)
 	imshow( "Connected Components", dst );
 }
 
-int main( int argc, char** argv )
+void help()
 {
-    // the first command line parameter
-	if(argc != 2)
+	printf("\n This program demonstrates connected components and use of the trackbar\n"
+			 "Usage: \n"
+			 "	./connected_components <image(stuff.jpg as default)>\n"
+			 "The image is converted to grayscale and displayed, another image has a trackbar\n"
+			 "that controls thresholding and thereby the extracted contours which are drawn in color\n");
+}
+
+const char* keys = 
+{
+	"{1| |stuff.jpg|image for converting to a grayscale}"
+};
+
+int main( int argc, const char** argv )
+{
+	help();
+	CommandLineParser parser(argc, argv, keys);
+	string inputImage = parser.get<string>("1");
+	img = imread(inputImage.c_str(), 0);
+
+	if(img.empty())
 	{
-		help();
+		printf("Could not read input image file: %s\n", inputImage.c_str());
 		return -1;
 	}
-    if( !(img=imread(argc == 2 ? argv[1] : "stuff.jpg", 0)).data) //The ending 0 in imread converts the image to grayscale.
-        return -1;
 
-    namedWindow( "Image", 1 );
+	namedWindow( "Image", 1 );
     imshow( "Image", img );
 
 	namedWindow( "Connected Components", 1 );
