@@ -43,12 +43,12 @@ double match(const vector<KeyPoint>& /*kpts_train*/, const vector<KeyPoint>& /*k
 
 void help()
 {
-	   printf ("This program shows how to use BRIEF descriptor to match points in features2d\n"
-			   "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results\n"
-				"Usage: \n"
-					"image1 image2 \n"
-				"Example: \n"
-					"box.png box_in_scene.png \n");	   
+       cout << "This program shows how to use BRIEF descriptor to match points in features2d" << endl <<
+               "It takes in two images, finds keypoints and matches them displaying matches and final homography warped results" << endl <<
+                "Usage: " << endl <<
+                    "image1 image2 " << endl <<
+                "Example: " << endl <<
+                    "box.png box_in_scene.png " << endl;
 }
 
 const char* keys = 
@@ -70,8 +70,8 @@ int main(int argc, const char ** argv)
 
   if (im1.empty() || im2.empty())
   {
-    printf( "could not open one of the images...\n");
-	printf("the cmd parameters have next current value: \n");
+    cout << "could not open one of the images..." << endl;
+    cout << "the cmd parameters have next current value: " << endl;
 	parser.printParams();
     return 1;
   }
