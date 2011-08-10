@@ -84,9 +84,77 @@ SimpleBlobDetector::Params::Params()
 	maxConvexity = std::numeric_limits<float>::max();
 }
 
+void SimpleBlobDetector::Params::read(const cv::FileNode& fn )
+{
+    thresholdStep = fn["thresholdStep"];
+    minThreshold = fn["minThreshold"];
+    maxThreshold = fn["maxThreshold"];
+
+    minRepeatability = (size_t)(int)fn["minRepeatability"];
+    minDistBetweenBlobs = fn["minDistBetweenBlobs"];
+
+    filterByColor = (int)fn["filterByColor"] != 0 ? true : false;
+    blobColor = (uchar)(int)fn["blobColor"];
+
+    filterByArea = (int)fn["filterByArea"] != 0 ? true : false;
+    minArea = fn["minArea"];
+    maxArea = fn["maxArea"];
+
+    filterByCircularity = (int)fn["filterByCircularity"] != 0 ? true : false;
+    minCircularity = fn["minCircularity"];
+    maxCircularity = fn["maxCircularity"];
+
+    filterByInertia = (int)fn["filterByInertia"] != 0 ? true : false;
+    minInertiaRatio = fn["minInertiaRatio"];
+    maxInertiaRatio = fn["maxInertiaRatio"];
+
+    filterByConvexity = (int)fn["filterByConvexity"] != 0 ? true : false;
+    minConvexity = fn["minConvexity"];
+    maxConvexity = fn["maxConvexity"];
+}
+
+void SimpleBlobDetector::Params::write(cv::FileStorage& fs) const
+{
+    fs << "thresholdStep" << thresholdStep;
+    fs << "minThreshold" << minThreshold;
+    fs << "maxThreshold" << maxThreshold;
+
+    fs << "minRepeatability" << (int)minRepeatability;
+    fs << "minDistBetweenBlobs" << minDistBetweenBlobs;
+
+    fs << "filterByColor" << (int)filterByColor;
+    fs << "blobColor" << (int)blobColor;
+
+    fs << "filterByArea" << (int)filterByArea;
+    fs << "minArea" << minArea;
+    fs << "maxArea" << maxArea;
+
+    fs << "filterByCircularity" << (int)filterByCircularity;
+    fs << "minCircularity" << minCircularity;
+    fs << "maxCircularity" << maxCircularity;
+
+    fs << "filterByInertia" << (int)filterByInertia;
+    fs << "minInertiaRatio" << minInertiaRatio;
+    fs << "maxInertiaRatio" << maxInertiaRatio;
+
+    fs << "filterByConvexity" << (int)filterByConvexity;
+    fs << "minConvexity" << minConvexity;
+    fs << "maxConvexity" << maxConvexity;
+}
+
 SimpleBlobDetector::SimpleBlobDetector(const SimpleBlobDetector::Params &parameters) :
 params(parameters)
 {
+}
+
+void SimpleBlobDetector::read( const cv::FileNode& fn )
+{
+    params.read(fn);
+}
+
+void SimpleBlobDetector::write( cv::FileStorage& fs ) const
+{
+    params.write(fs);
 }
 
 void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, vector<Center> &centers) const

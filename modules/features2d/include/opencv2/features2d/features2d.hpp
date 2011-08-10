@@ -1583,9 +1583,15 @@ public:
 
       bool filterByConvexity;
       float minConvexity, maxConvexity;
+
+      void read( const FileNode& fn );
+      void write( FileStorage& fs ) const;
   };
 
   SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+  virtual void read( const FileNode& fn );
+  virtual void write( FileStorage& fs ) const;
 
 protected:
   struct CV_EXPORTS Center
@@ -1618,11 +1624,15 @@ public:
 
         bool varyXyStepWithScale;
         bool varyImgBoundWithScale;
+
+        void read( const FileNode& fn );
+        void write( FileStorage& fs ) const;
     };
 
     DenseFeatureDetector( const DenseFeatureDetector::Params& params=DenseFeatureDetector::Params() );
     
-	// TODO implement read/write
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;

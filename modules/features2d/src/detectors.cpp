@@ -126,6 +126,14 @@ Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
         params.useHarrisDetector = true;
         fd = new GoodFeaturesToTrackDetector(params);
     }
+    else if( !detectorType.compare( "Dense" ) )
+    {
+        fd = new DenseFeatureDetector();
+    }
+    else if( !detectorType.compare( "SimpleBlob" ) )
+    {
+        fd = new SimpleBlobDetector();
+    }
     else if( (pos=detectorType.find("Grid")) == 0 )
     {
         pos += string("Grid").size();
@@ -499,8 +507,44 @@ DenseFeatureDetector::Params::Params( float _initFeatureScale, int _featureScale
 	varyXyStepWithScale(_varyXyStepWithScale), varyImgBoundWithScale(_varyImgBoundWithScale)
 {}
 
+void DenseFeatureDetector::Params::read( const FileNode& fn )
+{
+    initFeatureScale = fn["initFeatureScale"];
+    featureScaleLevels = fn["featureScaleLevels"];
+    featureScaleMul = fn["featureScaleMul"];
+
+    initXyStep = fn["initXyStep"];
+    initImgBound = fn["initImgBound"];
+
+    varyXyStepWithScale = (int)fn["varyXyStepWithScale"] != 0 ? true : false;
+    varyImgBoundWithScale = (int)fn["varyImgBoundWithScale"] != 0 ? true : false;
+}
+
+void DenseFeatureDetector::Params::write( FileStorage& fs ) const
+{
+    fs << "initFeatureScale" << initFeatureScale;
+    fs << "featureScaleLevels" << featureScaleLevels;
+    fs << "featureScaleMul" << featureScaleMul;
+
+    fs << "initXyStep" << initXyStep;
+    fs << "initImgBound" << initImgBound;
+
+    fs << "varyXyStepWithScale" << (int)varyXyStepWithScale;
+    fs << "varyImgBoundWithScale" << (int)varyImgBoundWithScale;
+}
+
 DenseFeatureDetector::DenseFeatureDetector(const DenseFeatureDetector::Params &_params) : params(_params)
 {}
+
+void DenseFeatureDetector::read( const FileNode &fn )
+{
+    params.read(fn);
+}
+
+void DenseFeatureDetector::write( FileStorage &fs ) const
+{
+    params.write(fs);
+}
 
 void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
