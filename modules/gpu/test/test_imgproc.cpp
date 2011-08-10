@@ -179,6 +179,63 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
                         testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// remap
+
+struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat src;
+    cv::Mat xmap;
+    cv::Mat ymap;
+
+    cv::Mat dst_gold;
+    
+    virtual void SetUp()
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
+
+        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        xmap = cvtest::randomMat(rng, size, CV_32FC1, 0.0, src.cols - 1, false);
+        ymap = cvtest::randomMat(rng, size, CV_32FC1, 0.0, src.rows - 1, false);
+        
+        cv::remap(src, dst_gold, xmap, ymap, cv::INTER_LINEAR, cv::BORDER_WRAP);
+    }
+};
+
+TEST_P(Remap, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+        
+        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap));
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_SIMILAR(dst_gold, dst, 0.5);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Remap, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(CV_8UC1, CV_8UC3)));
+                        
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
 struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >

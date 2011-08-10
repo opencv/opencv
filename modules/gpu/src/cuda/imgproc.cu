@@ -131,7 +131,7 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(dst.cols, threads.x);
         grid.y = divUp(dst.rows, threads.y);
 
-        TextureBinder tex_remap(&tex_remap, src);
+        TextureBinder tex(&tex_remap, src);
 
         remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
