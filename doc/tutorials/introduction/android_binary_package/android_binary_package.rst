@@ -7,10 +7,39 @@ Using Android binary package with Eclipse
 
 This tutorial was tested using Ubuntu 10.04 and Windows 7 SP1 operating systems. Nevertheless, it should also work on any other **OS**\ es supported by Android SDK (including Mac OS X). If you encounter errors after following the steps described here, feel free to contact us via *android-opencv* discussion group https://groups.google.com/group/android-opencv/ and we will try to help you.
 
+Quick environment setup for Android development
+===============================================
+
+If you are making a clean environment installation then you can try **T**\ egra **A**\ ndroid **D**\ evelopment **P**\ ack (*TADP*) released by *NVIDIA*:
+
+  http://developer.nvidia.com/tegra-android-development-pack
+
+It will cover all of the environment set up automatically and you can go to the next step :ref:`Get_the_OpenCV_package_for_Android_development` right after automatic setup.
+
+If you are a beginner in Android development then we recommentd you to start with TADP.
+
+.. note:: *NVIDIA*\ 's Tegra Android Development Pack includes some special features for |Nvidia_Tegra_Platform|_ but it is not just for *Tegra* devices
+  
+   + You need at least *1.6 Gb* free disk space for installation.
+
+   + TADP will download Android SDK platforms and Android NDK from Google's server, so you need an Internet connection for the installation.
+
+   + TADP can ask you to flash your development kit at the end of installation process. Just skip this step if you have no |Tegra_Ventana_Development_Kit|_\ .
+
+   + (``UNIX``) TADP will ask you for a *root* in the middle of installation, so you need to be a member of *sudo* group.
+
+     ..
+
+
+.. |Nvidia_Tegra_Platform| replace:: *NVIDIA*\ ’s Tegra platform
+.. _Nvidia_Tegra_Platform: http://developer.nvidia.com/node/19071
+.. |Tegra_Ventana_Development_Kit| replace:: Tegra Ventana Development Kit
+.. _Tegra_Ventana_Development_Kit: http://developer.nvidia.com/tegra-ventana-development-kit
+
 .. _Android_Environment_Setup_Lite: 
 
-Setup environment to start Android Development
-==============================================
+Manual environment setup for Android Development
+================================================
 
 You need the following tools to be installed:
 
@@ -18,7 +47,7 @@ You need the following tools to be installed:
 
    Visit http://www.oracle.com/technetwork/java/javase/downloads/index.html and download installer for your OS.
 
-   Here is a detailed JDK installation guide for Ubuntu and Mac OS: http://source.android.com/source/initializing.html#installing-the-jdk (only JDK sections are applicable for OpenCV)
+   Here is a detailed :abbr:`JDK (Java Development Kit)` installation guide for Ubuntu and Mac OS: http://source.android.com/source/initializing.html#installing-the-jdk (only JDK sections are applicable for OpenCV)
 
    .. note:: OpenJDK is not usable for Android development because Android SDK supports only Sun JDK.
         If you use Ubuntu, after installation of Sun JDK you should run the following command to set Sun java environment:
@@ -26,9 +55,6 @@ You need the following tools to be installed:
         .. code-block:: bash
 
            sudo update-java-alternatives --set java-6-sun
-
-        
-
 
 #. **Android SDK**
 
@@ -87,23 +113,25 @@ You need the following tools to be installed:
 
    Assuming that you have Eclipse IDE installed, as described above, follow these steps to download and install the ADT plugin:
 
-   #. Start Eclipse, then select **Help** > **Install New Software...**
-   #. Click **Add**, in the top-right corner.
-   #. In the Add Repository dialog that appears, enter "ADT Plugin" for the Name and the following URL for the Location:
+   #. Start Eclipse, then select :menuselection:`Help --> Install New Software...`
+   #. Click :guilabel:`Add` (in the top-right corner).
+   #. In the :guilabel:`Add Repository` dialog that appears, enter "ADT Plugin" for the Name and the following URL for the Location:
 
       https://dl-ssl.google.com/android/eclipse/
 
-   #. Click **OK**
+   #. Click :guilabel:`OK`
 
       .. note:: If you have trouble acquiring the plugin, try using "http" in the Location URL, instead of "https" (https is preferred for security reasons).
    
-   #. In the Available Software dialog, select the checkbox next to Developer Tools and click **Next**.
-   #. In the next window, you'll see a list of the tools to be downloaded. Click **Next**.
-   #. Read and accept the license agreements, then click **Finish**.
+   #. In the :guilabel:`Available Software` dialog, select the checkbox next to :guilabel:`Developer Tools` and click :guilabel:`Next`.
+   #. In the next window, you'll see a list of the tools to be downloaded. Click :guilabel:`Next`.
+   #. Read and accept the license agreements, then click :guilabel:`Finish`.
 
-      .. note:: If you get a security warning saying that the authenticity or validity of the software can't be established, click **OK**.
+      .. note:: If you get a security warning saying that the authenticity or validity of the software can't be established, click :guilabel:`OK`.
    
    #. When the installation completes, restart Eclipse. 
+
+.. _Get_the_OpenCV_package_for_Android_development:
 
 Get the OpenCV package for Android development
 ==============================================
@@ -112,7 +140,7 @@ Get the OpenCV package for Android development
 
 #. Create new folder for Android+OpenCV development.
 
-      .. note:: Better to use a path without spaces in it. Otherwise you will probably have problems with ndk-build.
+      .. note:: Better to use a path without spaces in it. Otherwise you will probably have problems with :command:`ndk-build`.
 
 #. Unpack the OpenCV package into that dir.
 
@@ -154,30 +182,30 @@ Open OpenCV library and samples in Eclipse
    Once you have created a new workspace, you have to point the ADT plugin to the Android SDK directory. This setting is stored in workspace metadata, as result this step is required each time when you are creating new workspace for Android development. See `Configuring the ADT Plugin
    <http://developer.android.com/sdk/eclipse-adt.html#configuring>`_ document for the original instructions from *Google*.
    
-   * Select **Window > Preferences...** to open the Preferences panel (Mac OS X: **Eclipse > Preferences**):
+   * Select :menuselection:`Window --> Preferences...` to open the Preferences panel (Mac OS X: :menuselection:`Eclipse --> Preferences`):
 
       .. image:: images/eclipse_2_window_preferences.png
          :height: 400px 
          :alt: Select Window > Preferences...
          :align: center
    
-   * Select **Android** from the left panel.
+   * Select :guilabel:`Android` from the left panel.
 
-    You may see a dialog asking whether you want to send usage statistics to *Google*. If so, make your choice and click **Proceed**. You cannot continue with this procedure until you click **Proceed**.
+    You may see a dialog asking whether you want to send usage statistics to *Google*. If so, make your choice and click :guilabel:`Proceed`. You cannot continue with this procedure until you click :guilabel:`Proceed`.
 
       .. image:: images/eclipse_3_preferences_android.png
          :alt: Select Android from the left panel
          :align: center
 
-   * For the SDK Location in the main panel, click **Browse...** and locate your Android SDK directory. 
+   * For the SDK Location in the main panel, click :guilabel:`Browse...` and locate your Android SDK directory. 
 
-   * Click **Apply** button at the bottom right corner of main panel:
+   * Click :guilabel:`Apply` button at the bottom right corner of main panel:
 
       .. image:: images/eclipse_4_locate_sdk.png
          :alt: Locate Android SDK
          :align: center
 
-   * Click **OK** to close preferences dialog.
+   * Click :guilabel:`OK` to close preferences dialog.
    
 #. Import OpenCV and samples into workspace.
 
@@ -187,27 +215,27 @@ Open OpenCV library and samples in Eclipse
    Each sample included into |opencv_android_bin_pack| is a regular Android project that already references OpenCV library.
    Follow next steps to import OpenCV and samples into workspace:
    
-   * Right click on the *Package Explorer* window and choose **Import...** option from the context menu:
+   * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option from the context menu:
 
       .. image:: images/eclipse_5_import_command.png
          :alt: Select Import... from context menu
          :align: center
 
-   * In the main panel select **General** > **Existing Projects into Workspace** and press **Next** button:
+   * In the main panel select :menuselection:`General --> Existing Projects into Workspace` and press :guilabel:`Next` button:
 
       .. image:: images/eclipse_6_import_existing_projects.png
          :alt: General > Existing Projects into Workspace
          :align: center
 
-   * For the *Select root directory* in the main panel locate your OpenCV package folder. (If you have created workspace in the package directory, then just click **Browse...** button and instantly close directory choosing dialog with **OK** button!) Eclipse should automatically locate OpenCV library and samples:
+   * For the :guilabel:`Select root directory` in the main panel locate your OpenCV package folder. (If you have created workspace in the package directory, then just click :guilabel:`Browse...` button and instantly close directory choosing dialog with :guilabel:`OK` button!) Eclipse should automatically locate OpenCV library and samples:
 
       .. image:: images/eclipse_7_select_projects.png
          :alt: Locate OpenCV library and samples
          :align: center
 
-   * Click **Finish** button to complete the import operation.
+   * Click :guilabel:`Finish` button to complete the import operation.
    
-   After clicking **Finish** button Eclipse will load all selected projects into workspace. And... will indicate numerous errors:
+   After clicking :guilabel:`Finish` button Eclipse will load all selected projects into workspace. And... will indicate numerous errors:
 
       .. image:: images/eclipse_8_false_alarm.png
          :alt: Confusing Eclipse screen with numerous errors
@@ -215,7 +243,7 @@ Open OpenCV library and samples in Eclipse
 
    However **all these errors are only false-alarms**!
    
-   To help Eclipse to understand that there are no any errors choose OpenCV library in *Package Explorer* (left mouse click) and press **F5** button on your keyboard. Then choose any sample (except first samples in *Tutorial Base* and *Tutorial Advanced*) and also press **F5**.
+   To help Eclipse to understand that there are no any errors choose OpenCV library in :guilabel:`Package Explorer` (left mouse click) and press :kbd:`F5` button on your keyboard. Then choose any sample (except first samples in *Tutorial Base* and *Tutorial Advanced*) and also press :kbd:`F5`.
    
    After this manipulation Eclipse will rebuild your workspace and error icons will disappear one after another:
 
@@ -229,7 +257,7 @@ Open OpenCV library and samples in Eclipse
          :alt: OpenCV package imported into Eclipse
          :align: center
 
-   .. note:: If you are importing only OpenCV library without samples then instead of second refresh command (**F5**) you might need to make **Android Tools** > **Fix Project Properties** from project context menu.
+   .. note:: If you are importing only OpenCV library without samples then instead of second refresh command (:kbd:`F5`) you might need to make :menuselection:`Android Tools --> Fix Project Properties` from project context menu.
    
 Running OpenCV Samples
 ======================
@@ -242,7 +270,7 @@ Also I want to note that only ``Tutorial 1 Basic - 0. Android Camera`` and ``Tut
 
 Well, running samples from Eclipse is very simple:
 
-* Connect your device with ``adb`` tool from Android SDK or create Emulator with camera support.
+* Connect your device with :command:`adb` tool from Android SDK or create Emulator with camera support.
 
    * See `Managing Virtual Devices
      <http://developer.android.com/guide/developing/devices/index.html>`_ document for help with Android Emulator.
@@ -250,7 +278,7 @@ Well, running samples from Eclipse is very simple:
      <http://developer.android.com/guide/developing/device.html>`_ for help with real devices (not emulators).
 
 
-* Select project you want to start in *Package Explorer* and just press **Ctrl + F11** or select option **Run** > **Run** from main menu, or click **Run** button on the toolbar.
+* Select project you want to start in :guilabel:`Package Explorer:guilabel:` and just press :kbd:`Ctrl + F11` or select option :menuselection:`Run --> Run` from main menu, or click :guilabel:`Run` button on the toolbar.
 
   .. note:: Android Emulator can take several minutes to start. So, please, be patient.
 
@@ -260,7 +288,7 @@ Well, running samples from Eclipse is very simple:
      :alt: Run sample as Android Application
      :align: center
 
-* Select the *Android Application* option and click **OK** button. Eclipse will install and run the sample.
+* Select the :guilabel:`Android Application` option and click :guilabel:`OK` button. Eclipse will install and run the sample.
   
   Here is ``Tutorial 1 Basic - 1. Add OpenCV`` sample detecting edges using Canny algorithm from OpenCV:
 
@@ -281,7 +309,7 @@ If you already have an Android application, you can add a reference to OpenCV an
 
 #. Add a reference to OpenCV project.
 
-   Do the right mouse click on your app in Package Explorer, go to **Properties > Android > Library > Add**
+   Do the right mouse click on your app in Package Explorer, go to :menuselection:`Properties --> Android --> Library --> Add`
    and choose the OpenCV library project. 
 
 Whats next?

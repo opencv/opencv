@@ -864,6 +864,13 @@ class DefinitionParser(object):
 
     def _parse_type_expr(self):
         typename = self._parse_name()
+        if typename and self.skip_string('['):
+            typename.name += '['
+            if self.match(re.compile(r'\d*')):
+                typename.name += self.last_match.group(0)
+            typename.name += ']'
+            if not self.skip_string(']'):
+                self.fail('expected type')
         self.skip_ws()
         if not self.skip_string('<'):
             return typename

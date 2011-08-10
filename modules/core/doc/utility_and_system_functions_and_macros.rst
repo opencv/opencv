@@ -269,7 +269,7 @@ The function deallocates the buffer allocated with :ocv:func:`fastMalloc` . If N
 
 format
 ------
-Returns a text string formatted using the ``printf`` -like expression.
+Returns a text string formatted using the ``printf``\ -like expression.
 
 .. ocv:function:: string format( const char* fmt, ... )
 

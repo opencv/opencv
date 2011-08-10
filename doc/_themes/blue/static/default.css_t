@@ -309,6 +309,10 @@ ul.simple {
     list-style: none;
 }
 
+em.menuselection, em.guilabel {
+    font-family: {{ theme_guifont }};
+}
+
 .enumeratevisibleitemswithsquare ul {
 list-style: square; 
 margin-bottom: 0px;
