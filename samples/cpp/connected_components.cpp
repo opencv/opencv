@@ -36,11 +36,11 @@ void on_trackbar(int, void*)
 
 void help()
 {
-	printf("\n This program demonstrates connected components and use of the trackbar\n"
+    cout << "\n This program demonstrates connected components and use of the trackbar\n"
 			 "Usage: \n"
 			 "	./connected_components <image(stuff.jpg as default)>\n"
 			 "The image is converted to grayscale and displayed, another image has a trackbar\n"
-			 "that controls thresholding and thereby the extracted contours which are drawn in color\n");
+             "that controls thresholding and thereby the extracted contours which are drawn in color\n";
 }
 
 const char* keys = 
@@ -57,7 +57,7 @@ int main( int argc, const char** argv )
 
 	if(img.empty())
 	{
-		printf("Could not read input image file: %s\n", inputImage.c_str());
+        cout << "Could not read input image file: " << inputImage << endl;
 		return -1;
 	}
 
