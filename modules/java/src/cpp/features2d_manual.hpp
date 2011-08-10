@@ -25,41 +25,49 @@ public:
         MSER          = 6,
         GFTT          = 7,
         HARRIS        = 8,
+        SIMPLEBLOB    = 9,
+        DENSE         = 10,
 
 
         GRIDRETECTOR = 1000,
 
-        GRID_FAST      = GRIDRETECTOR + FAST,
-        GRID_STAR      = GRIDRETECTOR + STAR,
-        GRID_SIFT      = GRIDRETECTOR + SIFT,
-        GRID_SURF      = GRIDRETECTOR + SURF,
-        GRID_ORB       = GRIDRETECTOR + ORB,
-        GRID_MSER      = GRIDRETECTOR + MSER,
-        GRID_GFTT      = GRIDRETECTOR + GFTT,
-        GRID_HARRIS    = GRIDRETECTOR + HARRIS,
+        GRID_FAST          = GRIDRETECTOR + FAST,
+        GRID_STAR          = GRIDRETECTOR + STAR,
+        GRID_SIFT          = GRIDRETECTOR + SIFT,
+        GRID_SURF          = GRIDRETECTOR + SURF,
+        GRID_ORB           = GRIDRETECTOR + ORB,
+        GRID_MSER          = GRIDRETECTOR + MSER,
+        GRID_GFTT          = GRIDRETECTOR + GFTT,
+        GRID_HARRIS        = GRIDRETECTOR + HARRIS,
+        GRID_SIMPLEBLOB    = GRIDRETECTOR + SIMPLEBLOB,
+        GRID_DENSE         = GRIDRETECTOR + DENSE,
 
 
         PYRAMIDDETECTOR = 2000,
 
-        PYRAMID_FAST   = PYRAMIDDETECTOR + FAST,
-        PYRAMID_STAR   = PYRAMIDDETECTOR + STAR,
-        PYRAMID_SIFT   = PYRAMIDDETECTOR + SIFT,
-        PYRAMID_SURF   = PYRAMIDDETECTOR + SURF,
-        PYRAMID_ORB    = PYRAMIDDETECTOR + ORB,
-        PYRAMID_MSER   = PYRAMIDDETECTOR + MSER,
-        PYRAMID_GFTT   = PYRAMIDDETECTOR + GFTT,
-        PYRAMID_HARRIS = PYRAMIDDETECTOR + HARRIS,
+        PYRAMID_FAST       = PYRAMIDDETECTOR + FAST,
+        PYRAMID_STAR       = PYRAMIDDETECTOR + STAR,
+        PYRAMID_SIFT       = PYRAMIDDETECTOR + SIFT,
+        PYRAMID_SURF       = PYRAMIDDETECTOR + SURF,
+        PYRAMID_ORB        = PYRAMIDDETECTOR + ORB,
+        PYRAMID_MSER       = PYRAMIDDETECTOR + MSER,
+        PYRAMID_GFTT       = PYRAMIDDETECTOR + GFTT,
+        PYRAMID_HARRIS     = PYRAMIDDETECTOR + HARRIS,
+        PYRAMID_SIMPLEBLOB = PYRAMIDDETECTOR + SIMPLEBLOB,
+        PYRAMID_DENSE      = PYRAMIDDETECTOR + DENSE,
 
         DYNAMICDETECTOR = 3000,
 
-        DYNAMIC_FAST   = DYNAMICDETECTOR + FAST,
-        DYNAMIC_STAR   = DYNAMICDETECTOR + STAR,
-        DYNAMIC_SIFT   = DYNAMICDETECTOR + SIFT,
-        DYNAMIC_SURF   = DYNAMICDETECTOR + SURF,
-        DYNAMIC_ORB    = DYNAMICDETECTOR + ORB,
-        DYNAMIC_MSER   = DYNAMICDETECTOR + MSER,
-        DYNAMIC_GFTT   = DYNAMICDETECTOR + GFTT,
-        DYNAMIC_HARRIS = DYNAMICDETECTOR + HARRIS
+        DYNAMIC_FAST       = DYNAMICDETECTOR + FAST,
+        DYNAMIC_STAR       = DYNAMICDETECTOR + STAR,
+        DYNAMIC_SIFT       = DYNAMICDETECTOR + SIFT,
+        DYNAMIC_SURF       = DYNAMICDETECTOR + SURF,
+        DYNAMIC_ORB        = DYNAMICDETECTOR + ORB,
+        DYNAMIC_MSER       = DYNAMICDETECTOR + MSER,
+        DYNAMIC_GFTT       = DYNAMICDETECTOR + GFTT,
+        DYNAMIC_HARRIS     = DYNAMICDETECTOR + HARRIS,
+        DYNAMIC_SIMPLEBLOB = DYNAMICDETECTOR + SIMPLEBLOB,
+        DYNAMIC_DENSE      = DYNAMICDETECTOR + DENSE
     };
 
     //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
@@ -108,6 +116,12 @@ public:
             break;
         case HARRIS:
             name += "HARRIS";
+            break;
+        case SIMPLEBLOB:
+            name += "SimpleBlob";
+            break;
+        case DENSE:
+            name += "Dense";
             break;
         default:
             CV_Error( CV_StsBadArg, "Specified feature detector type is not supported." );

@@ -1,11 +1,15 @@
 package org.opencv.test.core;
 
-import java.util.Arrays;
-
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Range;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
+
+import java.util.Arrays;
 
 public class MatTest extends OpenCVTestCase {
 
@@ -14,7 +18,11 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testAssignToMat() {
-        fail("Not yet implemented");
+        gray0.assignTo(dst);
+        assertMatEqual(gray0, dst);
+
+        gray255.assignTo(dst);
+        assertMatEqual(gray255, dst);
     }
 
     public void testAssignToMatInt() {
@@ -28,6 +36,8 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testCheckVectorInt() {
+        // ! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel
+        // (1 x N) or (N x 1); negative number otherwise
         fail("Not yet implemented");
     }
 
@@ -54,12 +64,17 @@ public class MatTest extends OpenCVTestCase {
 
     public void testColRangeIntInt() {
         Mat cols = gray0.colRange(0, gray0.cols() / 2);
+
         assertEquals(gray0.cols() / 2, cols.cols());
         assertEquals(gray0.rows(), cols.rows());
     }
 
     public void testColRangeRange() {
-        fail("Not yet implemented");
+        Range range = new Range(0, 5);
+        dst = gray0.colRange(range);
+
+        truth = new Mat(10, 5, CvType.CV_8UC1, new Scalar(0.0));
+        assertMatEqual(truth, dst);
     }
 
     public void testCols() {
@@ -67,36 +82,64 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testConvertToMatInt() {
-        fail("Not yet implemented");
+        gray255.convertTo(dst, CvType.CV_32F);
+
+        truth = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(255));
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testConvertToMatIntDouble() {
-        fail("Not yet implemented");
+        gray2.convertTo(dst, CvType.CV_16U, 2.0);
+
+        truth = new Mat(matSize, matSize, CvType.CV_16U, new Scalar(4));
+        assertMatEqual(truth, dst);
     }
 
     public void testConvertToMatIntDoubleDouble() {
-        fail("Not yet implemented");
+        gray0_32f.convertTo(dst, CvType.CV_8U, 2.0, 4.0);
+
+        truth = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(4));
+        assertMatEqual(truth, dst);
     }
 
-    public void testCopyTo() {
+    public void testCopyToMat() {
         rgbLena.copyTo(dst);
         assertMatEqual(rgbLena, dst);
     }
 
-    public void testCopyToMat() {
-        fail("Not yet implemented");
-    }
-
     public void testCopyToMatMat() {
-        fail("Not yet implemented");
+        Mat src = new Mat(4, 4, CvType.CV_8U, new Scalar(5));
+        Mat mask = makeMask(src.clone());
+
+        src.copyTo(dst, mask);
+
+        truth = new Mat(4, 4, CvType.CV_8U) {
+            {
+                put(0, 0, 0, 0, 5, 5);
+                put(1, 0, 0, 0, 5, 5);
+                put(2, 0, 0, 0, 5, 5);
+                put(3, 0, 0, 0, 5, 5);
+            }
+        };
+        assertMatEqual(truth, dst);
+
     }
 
     public void testCreateIntIntInt() {
-        fail("Not yet implemented");
+        gray255.create(4, 5, CvType.CV_32F);
+
+        assertEquals(4, gray255.rows());
+        assertEquals(5, gray255.cols());
+        assertEquals(CvType.CV_32F, gray255.type());
     }
 
     public void testCreateSizeInt() {
-        fail("Not yet implemented");
+        Size size = new Size(5, 5);
+        dst.create(size, CvType.CV_16U);
+
+        assertEquals(5, dst.rows());
+        assertEquals(5, dst.cols());
+        assertEquals(CvType.CV_16U, dst.type());
     }
 
     public void testCross() {
@@ -118,15 +161,25 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testDiag() {
-        fail("Not yet implemented");
+        dst = gray0.diag();
+
+        truth = new Mat(10, 1, CvType.CV_8UC1, new Scalar(0));
+        assertMatEqual(truth, dst);
     }
 
     public void testDiagInt() {
-        fail("Not yet implemented");
+        dst = gray255.diag(2);
+
+        truth = new Mat(8, 1, CvType.CV_8UC1, new Scalar(255));
+        assertMatEqual(truth, dst);
     }
 
     public void testDiagMat() {
-        fail("Not yet implemented");
+        dst = Mat.diag(gray255);
+
+        truth = new Mat(1, matSize, CvType.CV_8U, new Scalar(255));
+
+        assertMatEqual(truth, dst);
     }
 
     public void testDot() {
@@ -139,13 +192,15 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testElemSize() {
-        assertEquals(1, gray0.elemSize());
-        assertEquals(4, gray0_32f.elemSize());
-        assertEquals(3, rgbLena.elemSize());
+        assertEquals(Byte.SIZE / 8 * gray0.channels(), gray0.elemSize());
+        assertEquals(Double.SIZE / 8 * gray0_32f.channels(), gray0_32f.elemSize());
+        assertEquals(Byte.SIZE / 8 * rgbLena.channels(), rgbLena.elemSize());
     }
 
     public void testElemSize1() {
-        fail("Not yet implemented");
+        assertEquals(Byte.SIZE / 8, gray255.elemSize1());
+        assertEquals(Double.SIZE / 8, gray0_64f.elemSize1());
+        assertEquals(Byte.SIZE / 8, rgbLena.elemSize1());
     }
 
     public void testEmpty() {
@@ -153,21 +208,26 @@ public class MatTest extends OpenCVTestCase {
         assertTrue(!gray0.empty());
     }
 
-    public void testEye() {
+    public void testEyeIntIntInt() {
         Mat eye = Mat.eye(3, 3, CvType.CV_32FC1);
+
         assertMatEqual(eye, eye.inv(), EPS);
     }
 
-    public void testEyeIntIntInt() {
-        fail("Not yet implemented");
-    }
-
     public void testEyeSizeInt() {
-        fail("Not yet implemented");
+        Size size = new Size(5, 5);
+
+        Mat eye = Mat.eye(size, CvType.CV_32S);
+
+        assertEquals(5, Core.countNonZero(eye));
+
     }
 
     public void testGetIntInt() {
-        fail("Not yet implemented");
+        Mat src = new Mat(3, 3, CvType.CV_8U, new Scalar(2));
+        double[] actualArray = src.get(1, 1);
+
+        assertTrue(Arrays.equals(new double[] { 2 }, actualArray));
     }
 
     public void testGetIntIntByteArray() {
@@ -187,19 +247,35 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testGetIntIntDoubleArray() {
-        fail("Not yet implemented");
+        Mat src = new Mat(2, 2, CvType.CV_64F);
+        double[] doubleArray = { 1.0, 2.0, 3.0 };
+
+        int numOfBytes = src.get(0, 0, doubleArray);
+        assertEquals(24, numOfBytes);
     }
 
     public void testGetIntIntFloatArray() {
-        fail("Not yet implemented");
+        Mat src = new Mat(2, 2, CvType.CV_32F);
+        float[] floatArray = { 3.0f, 1.0f, 4.0f };
+
+        int numOfBytes = src.get(0, 0, floatArray);
+        assertEquals(12, numOfBytes);
     }
 
     public void testGetIntIntIntArray() {
-        fail("Not yet implemented");
+        Mat src = new Mat(2, 2, CvType.CV_32S);
+        int[] intArray = { 3, 1, 4, 7 };
+
+        int numOfBytes = src.get(0, 0, intArray);
+        assertEquals(16, numOfBytes);
     }
 
     public void testGetIntIntShortArray() {
-        fail("Not yet implemented");
+        Mat src = new Mat(2, 2, CvType.CV_16U);
+        short[] data = { 3, 1, 4, 7 };
+
+        int numOfBytes = src.get(1, 1, data);
+        assertEquals(2, numOfBytes);
     }
 
     public void testGetNativeObjAddr() {
@@ -219,6 +295,8 @@ public class MatTest extends OpenCVTestCase {
 
     public void testInvInt() {
         fail("Not yet implemented");
+        dst = gray0_32f.inv(Core.DECOMP_CHOLESKY);
+        assertMatEqual(gray0_32f, dst, EPS);
     }
 
     public void testIsContinuous() {
@@ -280,48 +358,98 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(m2, gray0_32f, EPS);
     }
 
-    public void testMatLong() {
-        fail("Not yet implemented");
-    }
-
     public void testMatMatRange() {
-        fail("Not yet implemented");
+        dst = new Mat(gray0, new Range(0, 5));
+
+        truth = new Mat(5, 10, CvType.CV_8UC1, new Scalar(0));
+        assertFalse(dst.empty());
+        assertMatEqual(truth, dst);
     }
 
     public void testMatMatRangeRange() {
-        fail("Not yet implemented");
+        dst = new Mat(gray255_32f, new Range(0, 5), new Range(0, 5));
+
+        truth = new Mat(5, 5, CvType.CV_32FC1, new Scalar(255));
+
+        assertFalse(dst.empty());
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testMatMatRect() {
-        fail("Not yet implemented");
+        dst = new Mat(gray255_32f, new Rect(2, 2, 7, 7));
+
+        truth = new Mat(7, 7, CvType.CV_32FC1, new Scalar(255));
+
+        assertFalse(dst.empty());
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testMatSizeInt() {
-        fail("Not yet implemented");
+        dst = new Mat(new Size(10, 10), CvType.CV_8U);
+
+        assertFalse(dst.empty());
     }
 
     public void testMatSizeIntScalar() {
-        fail("Not yet implemented");
+        dst = new Mat(new Size(10, 10), CvType.CV_32F, new Scalar(255));
+
+        assertFalse(dst.empty());
+        assertMatEqual(gray255_32f, dst, EPS);
     }
 
     public void testMulMat() {
-        fail("Not yet implemented");
+        assertMatEqual(gray0, gray0.mul(gray255));
+
+        Mat m1 = new Mat(2, 2, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(2, 2, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.mul(m2);
+
+        truth = new Mat(2, 2, CvType.CV_32F, new Scalar(6));
+        assertMatEqual(truth, dst, EPS);
+
     }
 
     public void testMulMatDouble() {
-        fail("Not yet implemented");
+        Mat m1 = new Mat(2, 2, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(2, 2, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.mul(m2, 3.0);
+
+        truth = new Mat(2, 2, CvType.CV_32F, new Scalar(18));
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testOnesIntIntInt() {
-        fail("Not yet implemented");
+        dst = Mat.ones(matSize, matSize, CvType.CV_32F);
+
+        truth = new Mat(matSize, matSize, CvType.CV_32F, new Scalar(1));
+        assertMatEqual(truth, dst, EPS);
     }
 
     public void testOnesSizeInt() {
-        fail("Not yet implemented");
+        dst = Mat.ones(new Size(2, 2), CvType.CV_16S);
+        truth = new Mat(2, 2, CvType.CV_16S, new Scalar(1));
+        assertMatEqual(truth, dst);
     }
 
     public void testPush_back() {
-        fail("Not yet implemented");
+        Mat m1 = new Mat(2, 4, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(3, 4, CvType.CV_32F, new Scalar(3));
+
+        m1.push_back(m2);
+
+        truth = new Mat(5, 4, CvType.CV_32FC1) {
+            {
+                put(0, 0, 2, 2, 2, 2);
+                put(1, 0, 2, 2, 2, 2);
+                put(2, 0, 3, 3, 3, 3);
+                put(3, 0, 3, 3, 3, 3);
+                put(4, 0, 3, 3, 3, 3);
+            }
+        };
+
+        assertMatEqual(truth, m1, EPS);
     }
 
     public void testPutIntIntByteArray() {
@@ -364,11 +492,19 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testReshapeInt() {
-        fail("Not yet implemented");
+        Mat src = new Mat(4, 4, CvType.CV_8U, new Scalar(0));
+        dst = src.reshape(4);
+
+        truth = new Mat(4, 1, CvType.CV_8UC4, new Scalar(0));
+        assertMatEqual(truth, dst);
     }
 
     public void testReshapeIntInt() {
-        fail("Not yet implemented");
+        Mat src = new Mat(5, 7, CvType.CV_8U, new Scalar(0));
+        dst = src.reshape(7, 5);
+
+        truth = new Mat(5, 1, CvType.CV_8UC(7), new Scalar(0));
+        assertMatEqual(truth, dst);
     }
 
     public void testRow() {
@@ -385,7 +521,10 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testRowRangeRange() {
-        fail("Not yet implemented");
+        Mat rows = gray255.rowRange(new Range(0, 5));
+
+        assertEquals(gray255.rows() / 2, rows.rows());
+        assertEquals(gray255.cols(), rows.cols());
     }
 
     public void testRows() {
@@ -403,15 +542,18 @@ public class MatTest extends OpenCVTestCase {
     public void testSetToScalar() {
         gray0.setTo(new Scalar(127));
         assertMatEqual(gray127, gray0);
-
     }
 
     public void testSize() {
-        fail("Not yet implemented");
+        assertEquals(new Size(matSize, matSize), gray0.size());
+
+        assertEquals(new Size(3, 1), v1.size());
     }
 
     public void testStep1() {
-        fail("Not yet implemented");
+        assertEquals(10, gray0.step1());
+
+        assertEquals(3, v2.step1());
     }
 
     public void testStep1Int() {
@@ -420,6 +562,7 @@ public class MatTest extends OpenCVTestCase {
 
     public void testSubmatIntIntIntInt() {
         Mat submat = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols() / 2);
+
         assertTrue(submat.isSubmatrix());
         assertFalse(submat.isContinuous());
         assertEquals(gray0.rows() / 2, submat.rows());
@@ -427,15 +570,44 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testSubmatRangeRange() {
-        fail("Not yet implemented");
+        Mat submat = gray255.submat(new Range(2, 4), new Range(2, 4));
+        assertTrue(submat.isSubmatrix());
+        assertFalse(submat.isContinuous());
+
+        assertEquals(2, submat.rows());
+        assertEquals(2, submat.cols());
     }
 
     public void testSubmatRect() {
-        fail("Not yet implemented");
+        Mat submat = gray255.submat(new Rect(5, gray255.rows() / 2, 5, gray255.cols() / 2));
+        assertTrue(submat.isSubmatrix());
+        assertFalse(submat.isContinuous());
+
+        assertEquals(gray255.rows() / 2, submat.rows());
+        assertEquals(gray255.cols() / 2, submat.cols());
     }
 
     public void testT() {
-        fail("Not yet implemented");
+        assertMatEqual(gray255, gray255.t());
+
+        Mat src = new Mat(3, 3, CvType.CV_16U) {
+            {
+                put(0, 0, 1, 2, 4);
+                put(1, 0, 7, 5, 0);
+                put(2, 0, 3, 4, 6);
+            }
+        };
+
+        dst = src.t();
+
+        truth = new Mat(3, 3, CvType.CV_16U) {
+            {
+                put(0, 0, 1, 7, 3);
+                put(1, 0, 2, 5, 4);
+                put(2, 0, 4, 0, 6);
+            }
+        };
+        assertMatEqual(truth, dst);
     }
 
     public void testToString() {
@@ -460,11 +632,16 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testZerosIntIntInt() {
-        fail("Not yet implemented");
+        dst = Mat.zeros(matSize, matSize, CvType.CV_32F);
+
+        assertMatEqual(gray0_32f, dst, EPS);
     }
 
     public void testZerosSizeInt() {
-        fail("Not yet implemented");
+        dst = Mat.zeros(new Size(2, 2), CvType.CV_16S);
+
+        truth = new Mat(2, 2, CvType.CV_16S, new Scalar(0));
+        assertMatEqual(truth, dst);
     }
 
 }

@@ -38,6 +38,9 @@ void vector_Point3i_to_Mat(std::vector<cv::Point3i>& v_point, cv::Mat& mat);
 void vector_Point3f_to_Mat(std::vector<cv::Point3f>& v_point, cv::Mat& mat);
 void vector_Point3d_to_Mat(std::vector<cv::Point3d>& v_point, cv::Mat& mat);
 
+void vector_Vec4f_to_Mat(std::vector<cv::Vec4f>& v_vec, cv::Mat& mat);
+void vector_Vec6f_to_Mat(std::vector<cv::Vec6f>& v_vec, cv::Mat& mat);
+
 void Mat_to_vector_KeyPoint(cv::Mat& mat, std::vector<cv::KeyPoint>& v_kp);
 void vector_KeyPoint_to_Mat(std::vector<cv::KeyPoint>& v_kp, cv::Mat& mat);
 
@@ -57,3 +60,5 @@ void Mat_to_vector_vector_char(cv::Mat& mat, std::vector< std::vector< char > >&
 void vector_vector_char_to_Mat(std::vector< std::vector< char > >& vv_ch, cv::Mat& mat);
 
 void Mat_to_vector_vector_Point(cv::Mat& mat, std::vector< std::vector< cv::Point > >& vv_pt);
+void vector_vector_Point2f_to_Mat(std::vector< std::vector< cv::Point2f > >& vv_pt, cv::Mat& mat);
+

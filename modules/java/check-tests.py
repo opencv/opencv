@@ -65,7 +65,7 @@ class JavaParser:
         if os.path.isfile(path):
             if path.endswith("FeatureDetector.java"):
                 for prefix1 in ("", "Grid", "Pyramid", "Dynamic"):
-                    for prefix2 in ("FAST", "STAR", "MSER", "ORB", "SIFT", "SURF", "GFTT", "HARRIS"):
+                    for prefix2 in ("FAST", "STAR", "MSER", "ORB", "SIFT", "SURF", "GFTT", "HARRIS", "SIMPLEBLOB", "DENSE"):
                         parser.parse_file(path,prefix1+prefix2)
             elif path.endswith("DescriptorExtractor.java"):
                 for prefix1 in ("", "Opponent"):

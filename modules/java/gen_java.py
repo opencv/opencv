@@ -206,11 +206,14 @@ type_dict = {
     "vector_int"      : { "j_type" : "List<Integer>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
     "vector_float"    : { "j_type" : "List<Float>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
     "vector_double"   : { "j_type" : "List<Double>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "Mat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "Mat", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
 
     "vector_vector_KeyPoint": { "j_type" : "List<List<KeyPoint>>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
     "vector_vector_DMatch"  : { "j_type" : "List<List<DMatch>>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
     "vector_vector_char"    : { "j_type" : "List<List<Byte>>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
     "vector_vector_Point"   : { "j_type" : "List<List<Point>>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
+    "vector_vector_Point2f" : { "j_type" : "List<List<Point>>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -1139,7 +1142,8 @@ extern "C" {
                     else:
                         j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
                     if "O" in a.out:
-                        j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
+                        if type_dict[a.ctype]["j_type"] != "Mat":
+                            j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})
                         c_epilogue.append( "%(t)s_to_Mat( %(n)s, %(n)s_mat );" % {"n" : a.name, "t" : a.ctype} )
                 else:
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))

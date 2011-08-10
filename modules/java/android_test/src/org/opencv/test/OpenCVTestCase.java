@@ -15,6 +15,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
@@ -221,6 +222,15 @@ public class OpenCVTestCase extends TestCase {
             assertPointEquals(list1.get(i), list2.get(i), epsilon);
     }
 
+    public static void assertListPoint3Equals(List<Point3> list1, List<Point3> list2, double epsilon) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertPoint3Equals(list1.get(i), list2.get(i), epsilon);
+    }
+
     public static void assertListRectEquals(List<Rect> list1, List<Rect> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -296,6 +306,13 @@ public class OpenCVTestCase extends TestCase {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
         assertEquals(msg, expected.x, actual.x, eps);
         assertEquals(msg, expected.y, actual.y, eps);
+    }
+    
+    public static void assertPoint3Equals(Point3 expected, Point3 actual, double eps) {
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.x, actual.x, eps);
+        assertEquals(msg, expected.y, actual.y, eps);
+        assertEquals(msg, expected.z, actual.z, eps);
     }
 
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
