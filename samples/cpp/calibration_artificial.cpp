@@ -135,8 +135,8 @@ int main()
     cout << "Original camera matrix:\n" << camMat << endl;
     cout << "Original distCoeffs:\n" << distCoeffs << endl;
     cout << "==================================" << endl;
-    cout << "Estiamted camera matrix:\n" << (Mat_<double>&)camMat_est << endl;
-    cout << "Estiamted distCoeffs:\n" << (Mat_<double>&)distCoeffs_est << endl;
+    cout << "Estimated camera matrix:\n" << (Mat_<double>&)camMat_est << endl;
+    cout << "Estimated distCoeffs:\n" << (Mat_<double>&)distCoeffs_est << endl;
         
     return 0;
 }
