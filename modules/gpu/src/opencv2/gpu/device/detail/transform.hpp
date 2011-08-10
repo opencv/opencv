@@ -52,15 +52,13 @@ namespace cv { namespace gpu { namespace device
     {
         //! Mask accessor
 
-        class MaskReader
+        struct MaskReader
         {
-        public:
             explicit MaskReader(const PtrStep& mask_): mask(mask_) {}
 
             __device__ __forceinline__ bool operator()(int y, int x) const { return mask.ptr(y)[x]; }
 
-        private:
-            PtrStep mask;
+            const PtrStep mask;
         };
 
         struct NoMask 
@@ -159,7 +157,7 @@ namespace cv { namespace gpu { namespace device
         template <> struct OpUnroller<3>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+            static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, const UnOp& op, int x_shifted, int y)
             {
                 if (mask(y, x_shifted))
                     dst.x = op(src.x);
@@ -170,7 +168,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+            static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, const BinOp& op, int x_shifted, int y)
             {
                 if (mask(y, x_shifted))
                     dst.x = op(src1.x, src2.x);
@@ -183,7 +181,7 @@ namespace cv { namespace gpu { namespace device
         template <> struct OpUnroller<4>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, UnOp& op, int x_shifted, int y)
+            static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, const UnOp& op, int x_shifted, int y)
             {
                 if (mask(y, x_shifted))
                     dst.x = op(src.x);
@@ -196,7 +194,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, BinOp& op, int x_shifted, int y)
+            static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, const BinOp& op, int x_shifted, int y)
             {
                 if (mask(y, x_shifted))
                     dst.x = op(src1.x, src2.x);
@@ -210,7 +208,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep_<D> dst_, const Mask mask, UnOp op)
+        __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep_<D> dst_, const Mask mask, const UnOp op)
         {
             typedef typename UnReadWriteTraits<T, D>::read_type read_type;
             typedef typename UnReadWriteTraits<T, D>::write_type write_type;
@@ -227,7 +225,7 @@ namespace cv { namespace gpu { namespace device
 
                 if (x_shifted + shift - 1 < src_.cols)
                 {
-                    read_type src_n_el = ((const read_type*)src)[x];
+                    const read_type src_n_el = ((const read_type*)src)[x];
                     write_type dst_n_el;
 
                     OpUnroller<shift>::unroll(src_n_el, dst_n_el, mask, op, x_shifted, y);
@@ -246,7 +244,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __global__ void transformSimple(const DevMem2D_<T> src, PtrStep_<D> dst, const Mask mask, UnOp op)
+        static __global__ void transformSimple(const DevMem2D_<T> src, PtrStep_<D> dst, const Mask mask, const UnOp op)
         {
 		    const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		    const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -259,7 +257,7 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
         __global__ static void transformSmart(const DevMem2D_<T1> src1_, const PtrStep_<T2> src2_, PtrStep_<D> dst_, 
-            const Mask mask, BinOp op)
+            const Mask mask, const BinOp op)
         {
             typedef typename BinReadWriteTraits<T1, T2, D>::read_type1 read_type1;
             typedef typename BinReadWriteTraits<T1, T2, D>::read_type2 read_type2;
@@ -278,8 +276,8 @@ namespace cv { namespace gpu { namespace device
 
                 if (x_shifted + shift - 1 < src1_.cols)
                 {
-                    read_type1 src1_n_el = ((const read_type1*)src1)[x];
-                    read_type2 src2_n_el = ((const read_type2*)src2)[x];
+                    const read_type1 src1_n_el = ((const read_type1*)src1)[x];
+                    const read_type2 src2_n_el = ((const read_type2*)src2)[x];
                     write_type dst_n_el;
                     
                     OpUnroller<shift>::unroll(src1_n_el, src2_n_el, dst_n_el, mask, op, x_shifted, y);
@@ -299,15 +297,15 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
         static __global__ void transformSimple(const DevMem2D_<T1> src1, const PtrStep_<T2> src2, PtrStep_<D> dst, 
-            const Mask mask, BinOp op)
+            const Mask mask, const BinOp op)
         {
 		    const int x = blockDim.x * blockIdx.x + threadIdx.x;
 		    const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
             if (x < src1.cols && y < src1.rows && mask(y, x))
             {
-                T1 src1_data = src1.ptr(y)[x];
-                T2 src2_data = src2.ptr(y)[x];
+                const T1 src1_data = src1.ptr(y)[x];
+                const T2 src2_data = src2.ptr(y)[x];
                 dst.ptr(y)[x] = op(src1_data, src2_data);
             }
         }        
@@ -316,7 +314,7 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<false>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, cudaStream_t stream)
+            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
             {
                 dim3 threads(16, 16, 1);
                 dim3 grid(1, 1, 1);
@@ -332,7 +330,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, BinOp op, const Mask& mask, cudaStream_t stream)
+            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
             {
                 dim3 threads(16, 16, 1);
                 dim3 grid(1, 1, 1);
@@ -350,7 +348,7 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<true>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, cudaStream_t stream)
+            static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
             {
                 const int shift = UnReadWriteTraits<T, D>::shift;
 
@@ -368,7 +366,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, BinOp op, const Mask& mask, cudaStream_t stream)
+            static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
             {
                 const int shift = BinReadWriteTraits<T1, T2, D>::shift;
 
@@ -413,13 +411,13 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, UnOp op, const Mask& mask, cudaStream_t stream)
+        static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
         {
             TransformDispatcher< UseSmartUn<T, D>::value >::call(src, dst, op, mask, stream);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, BinOp op, const Mask& mask, cudaStream_t stream)
+        static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
         {
             TransformDispatcher< UseSmartBin<T1, T2, D>::value >::call(src1, src2, dst, op, mask, stream);
         }

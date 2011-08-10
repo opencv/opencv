@@ -107,9 +107,9 @@ namespace
             maxCandidates = min(static_cast<int>(1.5 * maxFeatures), 65535);
 
             CV_Assert(maxFeatures > 0);
-            
-            cudaSafeCall( cudaMalloc((void**)&d_counters, (nOctaves + 1) * sizeof(unsigned int)) );
-            cudaSafeCall( cudaMemset(d_counters, 0, (nOctaves + 1) * sizeof(unsigned int)) );
+
+            counters.create(1, nOctaves + 1, CV_32SC1);
+            counters.setTo(Scalar::all(0));
 
             uploadConstant("cv::gpu::surf::c_max_candidates",    maxCandidates);
             uploadConstant("cv::gpu::surf::c_max_features",      maxFeatures);
@@ -118,28 +118,18 @@ namespace
             uploadConstant("cv::gpu::surf::c_nOctaveLayers",     nOctaveLayers);
             uploadConstant("cv::gpu::surf::c_hessianThreshold",  static_cast<float>(hessianThreshold));
 
-            bindTexture("cv::gpu::surf::imgTex", (DevMem2D)img);
+            imgTex.bind("cv::gpu::surf::imgTex", (DevMem2D)img);
 
             integralBuffered(img, sum, intBuffer);
-            bindTexture("cv::gpu::surf::sumTex", (DevMem2D_<unsigned int>)sum);
+            sumTex.bind("cv::gpu::surf::sumTex", (DevMem2D_<unsigned int>)sum);
 
             if (use_mask)
             {
                 min(mask, 1.0, mask1);
                 integralBuffered(mask1, maskSum, intBuffer);
 
-                bindTexture("cv::gpu::surf::maskSumTex", (DevMem2D_<unsigned int>)maskSum);
+                maskSumTex.bind("cv::gpu::surf::maskSumTex", (DevMem2D_<unsigned int>)maskSum);
             }
-        }
-
-        ~SURF_GPU_Invoker()
-        {
-            cudaSafeCall( cudaFree(d_counters) );
-
-            unbindTexture("cv::gpu::surf::imgTex");
-            unbindTexture("cv::gpu::surf::sumTex");
-            if (use_mask)
-                unbindTexture("cv::gpu::surf::maskSumTex");
         }
 
         void detectKeypoints(GpuMat& keypoints)
@@ -162,11 +152,11 @@ namespace
 
                 icvCalcLayerDetAndTrace_gpu(det, trace, img_rows, img_cols, octave, nOctaveLayers);
 
-                icvFindMaximaInLayer_gpu(det, trace, maxPosBuffer.ptr<int4>(), d_counters + 1 + octave,
+                icvFindMaximaInLayer_gpu(det, trace, maxPosBuffer.ptr<int4>(), counters.ptr<unsigned int>() + 1 + octave,
                     img_rows, img_cols, octave, use_mask, nOctaveLayers);
 
                 unsigned int maxCounter;
-                cudaSafeCall( cudaMemcpy(&maxCounter, d_counters + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+                cudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
                 maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
 
                 if (maxCounter > 0)
@@ -174,11 +164,11 @@ namespace
                     icvInterpolateKeypoint_gpu(det, maxPosBuffer.ptr<int4>(), maxCounter, 
                         keypoints.ptr<float>(SURF_GPU::SF_X), keypoints.ptr<float>(SURF_GPU::SF_Y),
                         keypoints.ptr<int>(SURF_GPU::SF_LAPLACIAN), keypoints.ptr<float>(SURF_GPU::SF_SIZE),
-                        keypoints.ptr<float>(SURF_GPU::SF_HESSIAN), d_counters);
+                        keypoints.ptr<float>(SURF_GPU::SF_HESSIAN), counters.ptr<unsigned int>());
                 }
             }
             unsigned int featureCounter;
-            cudaSafeCall( cudaMemcpy(&featureCounter, d_counters, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            cudaSafeCall( cudaMemcpy(&featureCounter, counters.ptr<unsigned int>(), sizeof(unsigned int), cudaMemcpyDeviceToHost) );
             featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
 
             keypoints.cols = featureCounter;
@@ -226,7 +216,9 @@ namespace
         int maxCandidates;
         int maxFeatures;
 
-        unsigned int* d_counters;
+        GpuMat counters;
+
+        TextureBinder imgTex, sumTex, maskSumTex;
     };
 }
 

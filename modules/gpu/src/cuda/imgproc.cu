@@ -49,7 +49,7 @@ using namespace cv::gpu::device;
 /////////////////////////////////// Remap ///////////////////////////////////////////////
 namespace cv { namespace gpu { namespace imgproc
 {
-    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap;
+    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap(0, cudaFilterModeLinear, cudaAddressModeWrap);
 
     __global__ void remap_1c(const float* mapx, const float* mapy, size_t map_step, uchar* out, size_t out_step, int width, int height)
     {    
@@ -131,16 +131,12 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(dst.cols, threads.x);
         grid.y = divUp(dst.rows, threads.y);
 
-        tex_remap.filterMode = cudaFilterModeLinear;
-        tex_remap.addressMode[0] = tex_remap.addressMode[1] = cudaAddressModeWrap;
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, tex_remap, src.data, desc, src.cols, src.rows, src.step) );
+        TextureBinder tex_remap(&tex_remap, src);
 
         remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
-        cudaSafeCall( cudaUnbindTexture(tex_remap) );
     }
     
     void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
@@ -151,8 +147,8 @@ namespace cv { namespace gpu { namespace imgproc
         grid.y = divUp(dst.rows, threads.y);
 
         remap_3c<<<grid, threads>>>(src.data, src.step, xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
-
         cudaSafeCall( cudaGetLastError() );
+
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 

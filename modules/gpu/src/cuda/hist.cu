@@ -105,7 +105,7 @@ namespace cv { namespace gpu { namespace histograms
         if (x + 3 < cols) addByte(s_WarpHist, (data >> 24) & 0xFFU, tag);
     }
 
-    __global__ void histogram256(PtrStep_<uint> d_Data, uint* d_PartialHistograms, uint dataCount, uint cols)
+    __global__ void histogram256(const PtrStep_<uint> d_Data, uint* d_PartialHistograms, uint dataCount, uint cols)
     {
         //Per-warp subhistogram storage
         __shared__ uint s_Hist[HISTOGRAM256_THREADBLOCK_MEMORY];
@@ -189,21 +189,18 @@ namespace cv { namespace gpu { namespace histograms
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    __global__ void equalizeHist(DevMem2D src, PtrStep dst, const int* lut)
+    __constant__ int c_lut[256];
+
+    __global__ void equalizeHist(const DevMem2D src, PtrStep dst)
     {
-        __shared__ int s_lut[256];
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-
-        s_lut[tid] = lut[tid];
-        __syncthreads();
-
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
         if (x < src.cols && y < src.rows)
         {
-            dst.ptr(y)[x] = __float2int_rn(255.0f * s_lut[src.ptr(y)[x]] / (src.cols * src.rows));
+            const uchar val = src.ptr(y)[x];
+            const int lut = c_lut[val];
+            dst.ptr(y)[x] = __float2int_rn(255.0f / (src.cols * src.rows) * lut);
         }
     }
 
@@ -212,7 +209,9 @@ namespace cv { namespace gpu { namespace histograms
         dim3 block(16, 16);
         dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        equalizeHist<<<grid, block, 0, stream>>>(src, dst, lut);
+        cudaSafeCall( cudaMemcpyToSymbol(cv::gpu::histograms::c_lut, lut, 256 * sizeof(int), 0, cudaMemcpyDeviceToDevice) );
+
+        equalizeHist<<<grid, block, 0, stream>>>(src, dst);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)

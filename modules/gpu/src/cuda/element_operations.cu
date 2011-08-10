@@ -56,10 +56,9 @@ namespace cv { namespace gpu { namespace mathfunc
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
 
-    template <typename T1, typename T2>
-    struct NotEqual
+    template <typename T1, typename T2> struct NotEqual : binary_function<T1, T2, uchar>
     {
-        __device__ __forceinline__ uchar operator()(const T1& src1, const T2& src2)
+        __device__ __forceinline__ uchar operator()(const T1& src1, const T2& src2) const
         {
             return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
         }
@@ -467,8 +466,7 @@ namespace cv { namespace gpu { namespace mathfunc
     //////////////////////////////////////////////////////////////////////////
     // pow
     
-    template<typename T, bool Signed = device::numeric_limits<T>::is_signed>
-    struct PowOp
+    template<typename T, bool Signed = device::numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
     {    
         float power;
         PowOp(float power_) : power(power_) {}
@@ -479,13 +477,12 @@ namespace cv { namespace gpu { namespace mathfunc
         }      
     };
 
-    template<typename T>
-    struct PowOp<T, true>
+    template<typename T> struct PowOp<T, true> : unary_function<T, T>
     {
         float power;
         PowOp(float power_) : power(power_) {}
 
-        __device__ __forceinline__ float operator()(const T& e)
+        __device__ __forceinline__ float operator()(const T& e) const
         {
             T res = saturate_cast<T>(__powf((float)e, power));            
             
@@ -495,13 +492,12 @@ namespace cv { namespace gpu { namespace mathfunc
         }
     };
 
-    template<>
-    struct PowOp<float>
+    template<> struct PowOp<float> : unary_function<float, float>
     {
         float power;
         PowOp(float power_) : power(power_) {}
 
-        __device__ __forceinline__ float operator()(const float& e)
+        __device__ __forceinline__ float operator()(const float& e) const
         {
             return __powf(fabs(e), power);
         }

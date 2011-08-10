@@ -43,6 +43,7 @@
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/transform.hpp"
+#include "opencv2/gpu/device/functional.hpp"
 
 using namespace cv::gpu::device;
 
@@ -62,7 +63,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
 ///////////////////////////////////////////////////////////////////////////
 
     template<typename T>
-    __global__ void copy_to_with_mask(T * mat_src, T * mat_dst, const unsigned char * mask, int cols, int rows, size_t step_mat, size_t step_mask, int channels)
+    __global__ void copy_to_with_mask(const T* mat_src, T* mat_dst, const uchar* mask, int cols, int rows, size_t step_mat, size_t step_mask, int channels)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -162,7 +163,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     }
 
     template<typename T>
-    __global__ void set_to_without_mask(T * mat, int cols, int rows, size_t step, int channels)
+    __global__ void set_to_without_mask(T* mat, int cols, int rows, size_t step, int channels)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -175,7 +176,7 @@ namespace cv { namespace gpu { namespace matrix_operations {
     }
 
     template<typename T>
-    __global__ void set_to_with_mask(T * mat, const unsigned char * mask, int cols, int rows, size_t step, int channels, size_t step_mask)
+    __global__ void set_to_with_mask(T* mat, const uchar* mask, int cols, int rows, size_t step, int channels, size_t step_mask)
     {
         size_t x = blockIdx.x * blockDim.x + threadIdx.x;
         size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -237,19 +238,16 @@ namespace cv { namespace gpu { namespace matrix_operations {
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-    template <typename T, typename D>
-    class Convertor
+    template <typename T, typename D> struct Convertor : unary_function<T, D>
     {
-    public:
         Convertor(double alpha_, double beta_) : alpha(alpha_), beta(beta_) {}
 
-        __device__ __forceinline__ D operator()(const T& src)
+        __device__ __forceinline__ D operator()(const T& src) const
         {
             return saturate_cast<D>(alpha * src + beta);
         }
 
-    private:
-        double alpha, beta;
+        const double alpha, beta;
     };
     
     template<typename T, typename D>

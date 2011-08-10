@@ -77,7 +77,6 @@ namespace cv
         // Returns true if the GPU analogue exists, false otherwise.
         bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
 
-
         static inline int divUp(int total, int grain) { return (total + grain - 1) / grain; }
 
         template<class T> static inline void uploadConstant(const char* name, const T& value) 
@@ -116,6 +115,49 @@ namespace cv
             cudaSafeCall( cudaGetTextureReference(&tex, name) ); 
             cudaSafeCall( cudaUnbindTexture(tex) );
         }
+
+        class TextureBinder
+        {
+        public:
+            TextureBinder() : tex_(0) {}
+            template <typename T> TextureBinder(const textureReference* tex, const DevMem2D_<T>& img) : tex_(0)
+            {
+                bind(tex, img);
+            }
+            template <typename T> TextureBinder(const char* tex_name, const DevMem2D_<T>& img) : tex_(0)
+            {
+                bind(tex_name, img);
+            }
+            ~TextureBinder() { unbind(); }
+
+            template <typename T> void bind(const textureReference* tex, const DevMem2D_<T>& img)
+            {
+                unbind();
+
+                cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
+                cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );
+
+                tex_ = tex;
+            }
+            template <typename T> void bind(const char* tex_name, const DevMem2D_<T>& img)
+            {
+                const textureReference* tex; 
+                cudaSafeCall( cudaGetTextureReference(&tex, tex_name) ); 
+                bind(tex, img);
+            }
+
+            void unbind()
+            {
+                if (tex_)
+                {
+                    cudaUnbindTexture(tex_);
+                    tex_ = 0;
+                }
+            }
+
+        private:
+            const textureReference* tex_;
+        };
 
         class NppStreamHandler
         {

@@ -73,7 +73,7 @@ namespace cv { namespace gpu { namespace device
     using thrust::bit_and;
     using thrust::bit_or;
     using thrust::bit_xor;
-    template <typename T> struct bit_not : public unary_function<T, T>
+    template <typename T> struct bit_not : unary_function<T, T>
     {
         __forceinline__ __device__ T operator ()(const T& v) const {return ~v;}
     };
@@ -81,12 +81,12 @@ namespace cv { namespace gpu { namespace device
     using thrust::identity;
 
 #define OPENCV_GPU_IMPLEMENT_MINMAX(name, type, op) \
-    template <> struct name<type> : public binary_function<type, type, type> \
+    template <> struct name<type> : binary_function<type, type, type> \
     { \
         __forceinline__ __device__ type operator()(type lhs, type rhs) const {return op(lhs, rhs);} \
     };
 
-    template <typename T> struct maximum : public binary_function<T, T, T>
+    template <typename T> struct maximum : binary_function<T, T, T>
     {
         __forceinline__ __device__ T operator()(const T& lhs, const T& rhs) const {return lhs < rhs ? rhs : lhs;}
     };
@@ -100,7 +100,7 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_MINMAX(maximum, float, fmax)
     OPENCV_GPU_IMPLEMENT_MINMAX(maximum, double, fmax)
 
-    template <typename T> struct minimum : public binary_function<T, T, T>
+    template <typename T> struct minimum : binary_function<T, T, T>
     {
         __forceinline__ __device__ T operator()(const T &lhs, const T &rhs) const {return lhs < rhs ? lhs : rhs;}
     };
@@ -126,31 +126,31 @@ namespace cv { namespace gpu { namespace device
     using thrust::not2;
 
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(func) \
-    template <typename T> struct func ## _func : public unary_function<T, float> \
+    template <typename T> struct func ## _func : unary_function<T, float> \
     { \
-        __forceinline__ __device__ float operator ()(const T& v) \
+        __forceinline__ __device__ float operator ()(const T& v) const \
         { \
             return func ## f(v); \
         } \
     }; \
-    template <> struct func ## _func<double> : public unary_function<double, double> \
+    template <> struct func ## _func<double> : unary_function<double, double> \
     { \
-        __forceinline__ __device__ double operator ()(double v) \
+        __forceinline__ __device__ double operator ()(double v) const \
         { \
             return func(v); \
         } \
     };
 #define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(func) \
-    template <typename T> struct func ## _func : public binary_function<T, T, float> \
+    template <typename T> struct func ## _func : binary_function<T, T, float> \
     { \
-        __forceinline__ __device__ float operator ()(const T& v1, const T& v2) \
+        __forceinline__ __device__ float operator ()(const T& v1, const T& v2) const \
         { \
             return func ## f(v1, v2); \
         } \
     }; \
-    template <> struct func ## _func<double> : public binary_function<double, double, double> \
+    template <> struct func ## _func<double> : binary_function<double, double, double> \
     { \
-        __forceinline__ __device__ double operator ()(double v1, double v2) \
+        __forceinline__ __device__ double operator ()(double v1, double v2) const \
         { \
             return func(v1, v2); \
         } \
@@ -184,7 +184,7 @@ namespace cv { namespace gpu { namespace device
 #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR
 #undef OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR
 
-    template<typename T> struct hypot_sqr_func : public binary_function<T, T, float> 
+    template<typename T> struct hypot_sqr_func : binary_function<T, T, float> 
     {
         __forceinline__ __device__ T operator ()(T src1, T src2) const
         {
@@ -192,15 +192,15 @@ namespace cv { namespace gpu { namespace device
         }
     };
 
-    template <typename T, typename D> struct saturate_cast_func : public unary_function<T, D>
+    template <typename T, typename D> struct saturate_cast_func : unary_function<T, D>
     {
-        __forceinline__ __device__ D operator ()(const T& v)
+        __forceinline__ __device__ D operator ()(const T& v) const
         {
             return saturate_cast<D>(v);
         }
     };
 
-    template <typename T> struct thresh_binary_func : public unary_function<T, T>
+    template <typename T> struct thresh_binary_func : unary_function<T, T>
     {
         __forceinline__ __host__ __device__ thresh_binary_func(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
 
@@ -209,10 +209,10 @@ namespace cv { namespace gpu { namespace device
             return src > thresh ? maxVal : 0;
         }
 
-        T thresh;
-        T maxVal;
+        const T thresh;
+        const T maxVal;
     };
-    template <typename T> struct thresh_binary_inv_func : public unary_function<T, T>
+    template <typename T> struct thresh_binary_inv_func : unary_function<T, T>
     {
         __forceinline__ __host__ __device__ thresh_binary_inv_func(T thresh_, T maxVal_) : thresh(thresh_), maxVal(maxVal_) {}
 
@@ -221,10 +221,10 @@ namespace cv { namespace gpu { namespace device
             return src > thresh ? 0 : maxVal;
         }
 
-        T thresh;
-        T maxVal;
+        const T thresh;
+        const T maxVal;
     };
-    template <typename T> struct thresh_trunc_func : public unary_function<T, T>
+    template <typename T> struct thresh_trunc_func : unary_function<T, T>
     {
         explicit __forceinline__ __host__ __device__ thresh_trunc_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
 
@@ -233,11 +233,10 @@ namespace cv { namespace gpu { namespace device
             return minimum<T>()(src, thresh);
         }
 
-        T thresh;
+        const T thresh;
     };
-    template <typename T> struct thresh_to_zero_func : public unary_function<T, T>
+    template <typename T> struct thresh_to_zero_func : unary_function<T, T>
     {
-    public:
         explicit __forceinline__ __host__ __device__ thresh_to_zero_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
 
         __forceinline__ __device__ T operator()(const T& src) const
@@ -245,11 +244,10 @@ namespace cv { namespace gpu { namespace device
             return src > thresh ? src : 0;
         }
 
-        T thresh;
+        const T thresh;
     };
-    template <typename T> struct thresh_to_zero_inv_func : public unary_function<T, T>
+    template <typename T> struct thresh_to_zero_inv_func : unary_function<T, T>
     {
-    public:
         explicit __forceinline__ __host__ __device__ thresh_to_zero_inv_func(T thresh_, T maxVal_ = 0) : thresh(thresh_) {}
 
         __forceinline__ __device__ T operator()(const T& src) const
@@ -257,36 +255,36 @@ namespace cv { namespace gpu { namespace device
             return src > thresh ? 0 : src;
         }
 
-        T thresh;
+        const T thresh;
     };
 
-    template <typename Op> struct binder1st : public unary_function<typename Op::second_argument_type, typename Op::result_type> 
+    template <typename Op> struct binder1st : unary_function<typename Op::second_argument_type, typename Op::result_type> 
     {
         __forceinline__ __host__ __device__ binder1st(const Op& op_, const typename Op::first_argument_type& arg1_) : op(op_), arg1(arg1_) {}
 
-        __forceinline__ __device__ typename Op::result_type operator ()(const typename Op::second_argument_type& a)
+        __forceinline__ __device__ typename Op::result_type operator ()(const typename Op::second_argument_type& a) const
         {
             return op(arg1, a);
         }
 
-        Op op;
-        typename Op::first_argument_type arg1;
+        const Op op;
+        const typename Op::first_argument_type arg1;
     };
     template <typename Op, typename T> static __forceinline__ __host__ __device__ binder1st<Op> bind1st(const Op& op, const T& x)
     {
         return binder1st<Op>(op, typename Op::first_argument_type(x));
     }
-    template <typename Op> struct binder2nd : public unary_function<typename Op::first_argument_type, typename Op::result_type> 
+    template <typename Op> struct binder2nd : unary_function<typename Op::first_argument_type, typename Op::result_type> 
     {
         __forceinline__ __host__ __device__ binder2nd(const Op& op_, const typename Op::second_argument_type& arg2_) : op(op_), arg2(arg2_) {}
 
-        __forceinline__ __device__ typename Op::result_type operator ()(const typename Op::first_argument_type& a)
+        __forceinline__ __device__ typename Op::result_type operator ()(const typename Op::first_argument_type& a) const
         {
             return op(a, arg2);
         }
 
-        Op op;
-        typename Op::second_argument_type arg2;
+        const Op op;
+        const typename Op::second_argument_type arg2;
     };
     template <typename Op, typename T> static __forceinline__ __host__ __device__ binder2nd<Op> bind2nd(const Op& op, const T& x)
     {

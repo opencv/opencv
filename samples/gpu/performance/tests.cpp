@@ -318,7 +318,7 @@ TEST(BruteForceMatcher)
     GPU_OFF;
 
     SUBTEST << "knnMatch";
-    int knn = 10;
+    int knn = 2;
 
     CPU_ON;
     matcher.knnMatch(query, train, matches, knn);

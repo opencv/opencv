@@ -225,7 +225,7 @@ namespace cv { namespace gpu { namespace surf
     };
 
     template <typename Mask>
-    __global__ void icvFindMaximaInLayer(PtrStepf det, PtrStepf trace, int4* maxPosBuffer, unsigned int* maxCounter)
+    __global__ void icvFindMaximaInLayer(const PtrStepf det, const PtrStepf trace, int4* maxPosBuffer, unsigned int* maxCounter)
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 
@@ -346,7 +346,7 @@ namespace cv { namespace gpu { namespace surf
     ////////////////////////////////////////////////////////////////////////
     // INTERPOLATION
     
-    __global__ void icvInterpolateKeypoint(PtrStepf det, const int4* maxPosBuffer,
+    __global__ void icvInterpolateKeypoint(const PtrStepf det, const int4* maxPosBuffer,
         float* featureX, float* featureY, int* featureLaplacian, float* featureSize, float* featureHessian,
         unsigned int* featureCounter)
     {

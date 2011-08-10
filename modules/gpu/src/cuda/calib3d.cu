@@ -42,6 +42,7 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/transform.hpp"
+#include "opencv2/gpu/device/functional.hpp"
 
 #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
@@ -56,9 +57,9 @@ namespace cv { namespace gpu
         __constant__ float3 crot2;
         __constant__ float3 ctransl;
 
-        struct TransformOp
+        struct TransformOp : unary_function<float3, float3>
         {
-            __device__ __forceinline__ float3 operator()(float3 p) const
+            __device__ __forceinline__ float3 operator()(const float3& p) const
             {
                 return make_float3(
                         crot0.x * p.x + crot0.y * p.y + crot0.z * p.z + ctransl.x,
@@ -89,9 +90,9 @@ namespace cv { namespace gpu
         __constant__ float3 cproj0;
         __constant__ float3 cproj1;
 
-        struct ProjectOp
+        struct ProjectOp : unary_function<float3, float3>
         {
-            __device__ __forceinline__ float2 operator()(float3 p) const
+            __device__ __forceinline__ float2 operator()(const float3& p) const
             {
                 // Rotate and translate in 3D
                 float3 t = make_float3(

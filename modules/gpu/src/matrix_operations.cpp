@@ -45,13 +45,10 @@
 using namespace cv;
 using namespace cv::gpu;
 
-////////////////////////////////////////////////////////////////////////
-//////////////////////////////// GpuMat ////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-
 #if !defined (HAVE_CUDA)
 
+void cv::gpu::registerPageLocked(Mat&) { throw_nogpu(); }
+void cv::gpu::unregisterPageLocked(Mat&) { throw_nogpu(); }
 void cv::gpu::CudaMem::create(int /*_rows*/, int /*_cols*/, int /*_type*/, int /*type_alloc*/) { throw_nogpu(); }
 bool cv::gpu::CudaMem::canMapHostMemory() { throw_nogpu(); return false; }
 void cv::gpu::CudaMem::release() { throw_nogpu(); }
@@ -59,9 +56,15 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader () const { throw_nogpu(); return Gpu
 
 #else /* !defined (HAVE_CUDA) */
 
-///////////////////////////////////////////////////////////////////////
-//////////////////////////////// CudaMem //////////////////////////////
-///////////////////////////////////////////////////////////////////////
+void registerPageLocked(Mat& m)
+{
+    cudaSafeCall( cudaHostRegister(m.ptr(), m.step * m.rows, cudaHostRegisterPortable) );
+}
+
+void unregisterPageLocked(Mat& m)
+{
+    cudaSafeCall( cudaHostUnregister(m.ptr()) );
+}
 
 bool cv::gpu::CudaMem::canMapHostMemory()
 {

@@ -49,7 +49,7 @@ using namespace cv::gpu::device;
 
 namespace cv { namespace gpu { namespace canny
 {
-    __global__ void calcSobelRowPass(PtrStep src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
+    __global__ void calcSobelRowPass(const PtrStep src, PtrStepi dx_buf, PtrStepi dy_buf, int rows, int cols)
     {
         __shared__ int smem[16][18];
 
@@ -100,7 +100,8 @@ namespace cv { namespace gpu { namespace canny
         }
     };
 
-    template <typename Norm> __global__ void calcMagnitude(PtrStepi dx_buf, PtrStepi dy_buf, PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols)
+    template <typename Norm> __global__ void calcMagnitude(const PtrStepi dx_buf, const PtrStepi dy_buf, 
+        PtrStepi dx, PtrStepi dy, PtrStepf mag, int rows, int cols)
     {
         __shared__ int sdx[18][16];
         __shared__ int sdy[18][16];
@@ -179,7 +180,7 @@ namespace cv { namespace gpu { namespace canny
 #define CANNY_SHIFT 15
 #define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
 
-    __global__ void calcMap(PtrStepi dx, PtrStepi dy, PtrStepf mag, PtrStepi map, int rows, int cols, float low_thresh, float high_thresh)
+    __global__ void calcMap(const PtrStepi dx, const PtrStepi dy, const PtrStepf mag, PtrStepi map, int rows, int cols, float low_thresh, float high_thresh)
     {
         __shared__ float smem[18][18];
 
