@@ -1,9 +1,5 @@
 package org.opencv.test.utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -12,8 +8,10 @@ import org.opencv.core.Rect;
 import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 import org.opencv.utils.Converters;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConvertersTest extends OpenCVTestCase {
 
@@ -481,17 +479,6 @@ public class ConvertersTest extends OpenCVTestCase {
 
     public void testVector_vector_char_to_Mat() {
         fail("Not yet implemented");
-        List<List<Byte>> llb = new ArrayList<List<Byte>>();
-        byte value1 = 1;
-        byte value2 = 2;
-        byte value3 = 3;
-        byte value4 = 4;
-        llb.add(Arrays.asList(new Byte(value1), new Byte(value2), new Byte(value3), new Byte(value4)));
-
-        dst = Converters.vector_vector_char_to_Mat(llb);
-
-        OpenCVTestRunner.Log(dst.toString());
-        OpenCVTestRunner.Log(dst.dump());
     }
 
     public void testVector_vector_DMatch_to_Mat() {
@@ -503,13 +490,6 @@ public class ConvertersTest extends OpenCVTestCase {
     }
 
     public void testVector_vector_Point_to_Mat() {
-        List<List<Point>> points = new ArrayList<List<Point>>();
-        points.add(Arrays.asList(new Point(1, 1), new Point(7, 1), new Point(7, 6), new Point(1, 6),
-                new Point(5, 5), new Point(8, 9)));
-
-        dst = Converters.vector_vector_Point_to_Mat(points);
-        // TODO: returns random dst matrix
-        // assertMatEqual();
         fail("Not yet implemented");
 
     }

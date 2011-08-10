@@ -469,12 +469,11 @@ public class Converters {
         }
     }
 	
-	// vector_vector_Point
-    public static Mat vector_vector_Point_to_Mat(List<List<Point>> pts) {
+    // vector_vector_Point
+    public static Mat vector_vector_Point_to_Mat(List<List<Point>> pts, List<Mat> mats) {
         Mat res;
         int lCount = (pts != null) ? pts.size() : 0;
         if (lCount > 0) {
-            List<Mat> mats = new ArrayList<Mat>(lCount);
             for (List<Point> lpt : pts)
                 mats.add(vector_Point_to_Mat(lpt));
             res = vector_Mat_to_Mat(mats);
@@ -484,12 +483,28 @@ public class Converters {
         return res;
     }
 
+    // vector_vector_Point2f
+    public static void Mat_to_vector_vector_Point2f(Mat m, List<List<Point>> pts) {
+        if (pts == null)
+            throw new java.lang.IllegalArgumentException("Output List can't be null");
+
+        if (m == null)
+            throw new java.lang.IllegalArgumentException("Input Mat can't be null");
+
+        List<Mat> mats = new ArrayList<Mat>(m.rows());
+        Mat_to_vector_Mat(m, mats);
+        List<Point> pt = new ArrayList<Point>();
+        for (Mat mi : mats) {
+            Mat_to_vector_Point2f(mi, pt);
+            pts.add(pt);
+        }
+    }
+
     // vector_vector_KeyPoint
-    public static Mat vector_vector_KeyPoint_to_Mat(List<List<KeyPoint>> kps) {
+    public static Mat vector_vector_KeyPoint_to_Mat(List<List<KeyPoint>> kps, List<Mat> mats) {
         Mat res;
         int lCount = (kps != null) ? kps.size() : 0;
         if (lCount > 0) {
-            List<Mat> mats = new ArrayList<Mat>(lCount);
             for (List<KeyPoint> lkp : kps)
                 mats.add(vector_KeyPoint_to_Mat(lkp));
             res = vector_Mat_to_Mat(mats);
@@ -569,11 +584,10 @@ public class Converters {
     }
 
     // vector_vector_DMatch
-    public static Mat vector_vector_DMatch_to_Mat(List<List<DMatch>> lldm) {
+    public static Mat vector_vector_DMatch_to_Mat(List<List<DMatch>> lldm, List<Mat> mats) {
         Mat res;
         int lCount = (lldm != null) ? lldm.size() : 0;
         if (lCount > 0) {
-            List<Mat> mats = new ArrayList<Mat>(lCount);
             for (List<DMatch> ldm : lldm)
                 mats.add(vector_DMatch_to_Mat(ldm));
             res = vector_Mat_to_Mat(mats);
@@ -600,11 +614,10 @@ public class Converters {
     }
 
     // vector_vector_char
-    public static Mat vector_vector_char_to_Mat(List<List<Byte>> llb) {
+    public static Mat vector_vector_char_to_Mat(List<List<Byte>> llb, List<Mat> mats) {
         Mat res;
         int lCount = (llb != null) ? llb.size() : 0;
         if (lCount > 0) {
-            List<Mat> mats = new ArrayList<Mat>(lCount);
             for (List<Byte> lb : llb)
                 mats.add(vector_char_to_Mat(lb));
             res = vector_Mat_to_Mat(mats);

@@ -1,6 +1,7 @@
 package org.opencv.test.core;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Range;
@@ -175,11 +176,19 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testDiagMat() {
-        dst = Mat.diag(gray255);
+        Mat diagVector = new Mat(matSize, 1, CvType.CV_32F, new Scalar(1));
 
-        truth = new Mat(1, matSize, CvType.CV_8U, new Scalar(255));
+        dst = Mat.diag(diagVector);
 
-        assertMatEqual(truth, dst);
+        assertMatEqual(grayE_32f, dst, EPS);
+    }
+
+    public void testDiagMat_sqrMatrix() {
+        try {
+            dst = Mat.diag(gray255);
+        } catch (CvException e) {
+            // expected
+        }
     }
 
     public void testDot() {

@@ -1137,7 +1137,12 @@ extern "C" {
                     c_prologue.append( type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";" )
                     c_prologue.append( "Mat& %(n)s_mat = *((Mat*)%(n)s_mat_nativeObj)" % {"n" : a.name} + ";" )
                     if "I" in a.out or not a.out:
-                        j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
+                        if a.ctype.startswith("vector_vector_"):
+                            self.classes[fi.classname or self.Module].imports.add("java.util.ArrayList")
+                            j_prologue.append( "List<Mat> %(n)s_tmplm = new ArrayList<Mat>((%(n)s != null) ? %(n)s.size() : 0);" % {"n" : a.name } )
+                            j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s, %(n)s_tmplm);" % {"n" : a.name, "t" : a.ctype} )
+                        else:
+                            j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
                         c_prologue.append( "Mat_to_%(t)s( %(n)s_mat, %(n)s );" % {"n" : a.name, "t" : a.ctype} )
                     else:
                         j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
@@ -1246,8 +1251,8 @@ extern "C" {
                     ret = ret, \
                     ret_val = ret_val, \
                     tail = tail, \
-                    prologue = "  ".join(j_prologue), \
-                    epilogue = "  ".join(j_epilogue), \
+                    prologue = "\n        ".join(j_prologue), \
+                    epilogue = "\n        ".join(j_epilogue), \
                     static=static, \
                     j_type=type_dict[fi.ctype]["j_type"], \
                     j_name=fi.jname, \
