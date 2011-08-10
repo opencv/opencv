@@ -131,7 +131,7 @@ endif()
 if(ANDROID)
     set(OPENCV_LIB_INSTALL_PATH libs/${ARMEABI_NDK_NAME})
 else()
-    set(OPENCV_LIB_INSTALL_PATH lib)
+    set(OPENCV_LIB_INSTALL_PATH lib${LIB_SUFFIX})
 endif()
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
@@ -1445,7 +1445,7 @@ endif(ANDROID)
 # -------------------------------------------------------------------------------------------
 set(prefix      ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "\${prefix}")
-set(libdir      "\${exec_prefix}/lib")
+set(libdir      "\${exec_prefix}/lib${LIB_SUFFIX}")
 set(includedir  "\${prefix}/${OPENCV_INCLUDE_PREFIX}")
 set(VERSION     ${OPENCV_VERSION})
 
