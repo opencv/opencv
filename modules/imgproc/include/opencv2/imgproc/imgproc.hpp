@@ -1017,6 +1017,98 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
         
+
+class CV_EXPORTS_W Subdiv2D
+{
+public:
+    enum
+    {
+        PTLOC_ERROR = -2,
+        PTLOC_OUTSIDE_RECT = -1,
+        PTLOC_INSIDE = 0,
+        PTLOC_VERTEX = 1,
+        PTLOC_ON_EDGE = 2
+    };
+    
+    enum
+    {
+        NEXT_AROUND_ORG   = 0x00,
+        NEXT_AROUND_DST   = 0x22,
+        PREV_AROUND_ORG   = 0x11,
+        PREV_AROUND_DST   = 0x33,
+        NEXT_AROUND_LEFT  = 0x13,
+        NEXT_AROUND_RIGHT = 0x31,
+        PREV_AROUND_LEFT  = 0x20,
+        PREV_AROUND_RIGHT = 0x02
+    };
+    
+    CV_WRAP Subdiv2D();
+    CV_WRAP Subdiv2D(Rect rect);
+    CV_WRAP void initDelaunay(Rect rect);
+    
+    CV_WRAP int insert(Point2f pt);
+    CV_WRAP void insert(const vector<Point2f>& ptvec);
+    CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
+    
+    CV_WRAP int findNearest(Point2f pt, CV_OUT Point2f* nearestPt=0);
+    CV_WRAP void getEdgeList(CV_OUT vector<Vec4f>& edgeList) const;
+    CV_WRAP void getTriangleList(CV_OUT vector<Vec6f>& triangleList) const;
+    CV_WRAP void getVoronoiFacetList(const vector<int>& idx, CV_OUT vector<vector<Point2f> >& facetList,
+                                     CV_OUT vector<Point2f>& facetCenters);
+    
+    CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge=0) const;
+    
+    CV_WRAP int getEdge( int edge, int nextEdgeType ) const;
+    CV_WRAP int nextEdge(int edge) const;
+    CV_WRAP int rotateEdge(int edge, int rotate) const;
+    CV_WRAP int symEdge(int edge) const;
+    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt=0) const;
+    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt=0) const;
+    
+protected:
+    int newEdge();
+    void deleteEdge(int edge);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge=0);
+    void deletePoint(int vtx);
+    void setEdgePoints( int edge, int orgPt, int dstPt );
+    void splice( int edgeA, int edgeB );
+    int connectEdges( int edgeA, int edgeB );
+    void swapEdges( int edge );
+    int isRightOf(Point2f pt, int edge) const;
+    void calcVoronoi();
+    void clearVoronoi();
+    void check() const;
+    
+    struct CV_EXPORTS Vertex
+    {
+        Vertex();
+        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0);
+        bool isvirtual() const;
+        bool isfree() const;
+        int firstEdge;
+        int type;
+        Point2f pt;
+    };
+    struct CV_EXPORTS QuadEdge
+    {
+        QuadEdge();
+        QuadEdge(int edgeidx);
+        bool isfree() const;
+        int next[4];
+        int pt[4];
+    };
+    
+    vector<Vertex> vtx;
+    vector<QuadEdge> qedges;
+    int freeQEdge;
+    int freePoint;
+    bool validGeometry;
+    
+    int recentEdge;
+    Point2f topLeft;
+    Point2f bottomRight;
+};
+
 }
 
 // 2009-01-12, Xavier Delacour <xavier.delacour@gmail.com>

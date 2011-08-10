@@ -566,7 +566,7 @@ class FuncInfo(object):
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", "0"))
                 all_cargs.append(amapping)
 
-            if v.args:
+            if v.args and v.py_arglist:
                 # form the format spec for PyArg_ParseTupleAndKeywords
                 fmtspec = "".join([all_cargs[argno][0][1] for aname, argno in v.py_arglist])
                 if v.py_noptargs > 0:

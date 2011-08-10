@@ -58,6 +58,8 @@ typedef vector<Point> vector_Point;
 typedef vector<Point2f> vector_Point2f;
 typedef vector<Vec2f> vector_Vec2f;
 typedef vector<Vec3f> vector_Vec3f;
+typedef vector<Vec4f> vector_Vec4f;
+typedef vector<Vec6f> vector_Vec6f;
 typedef vector<Vec4i> vector_Vec4i;
 typedef vector<Rect> vector_Rect;
 typedef vector<KeyPoint> vector_KeyPoint;
