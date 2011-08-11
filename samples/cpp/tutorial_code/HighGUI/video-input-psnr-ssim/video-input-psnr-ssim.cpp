@@ -1,4 +1,3 @@
-// Video Image PSNR and SSIM
 #include <iostream>	// for standard I/O
 #include <string>   // for strings
 #include <iomanip>  // for controlling float print precision
@@ -38,14 +37,14 @@ int main(int argc, char *argv[], char *window_name)
 
     const string sourceReference = argv[1],sourceCompareWith = argv[2];
     int psnrTriggerValue, delay;
-    conv << argv[3] << argv[4];		  // put in the strings
+    conv << argv[3] << endl << argv[4];		  // put in the strings
     conv >> psnrTriggerValue >> delay;// take out the numbers
 
     char c;
     int frameNum = -1;			// Frame counter
 
     VideoCapture captRefrnc(sourceReference),
-                 captUndTst(sourceCompareWith);
+        captUndTst(sourceCompareWith);
 
     if ( !captRefrnc.isOpened())
     {
@@ -60,9 +59,9 @@ int main(int argc, char *argv[], char *window_name)
     }
 
     Size refS = Size((int) captRefrnc.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
-         uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
+        (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
+        uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
+        (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
 
     if (refS != uTSi)
     {
@@ -74,16 +73,16 @@ int main(int argc, char *argv[], char *window_name)
     const char* WIN_RF = "Reference";
 
     // Windows
-            namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE );
-            namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE );
-            cvMoveWindow(WIN_RF, 400       ,            0);		 //750,  2 (bernat =0)
-            cvMoveWindow(WIN_UT, refS.width,            0);		 //1500, 2
+    namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE );
+    namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE );
+    cvMoveWindow(WIN_RF, 400       ,            0);		 //750,  2 (bernat =0)
+    cvMoveWindow(WIN_UT, refS.width,            0);		 //1500, 2
 
-    cout << "Frame resolution: Width=" << refS.width << "  Height=" << refS.height
-         << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+    cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << refS.height
+        << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
 
     cout << "PSNR trigger value " <<
-          setiosflags(ios::fixed) << setprecision(3) << psnrTriggerValue << endl;
+        setiosflags(ios::fixed) << setprecision(3) << psnrTriggerValue << endl;
 
     Mat frameReference, frameUnderTest;
     double psnrV;
@@ -101,24 +100,24 @@ int main(int argc, char *argv[], char *window_name)
         }
 
         ++frameNum;
-        cout <<"Frame:" << frameNum;
+        cout <<"Frame:" << frameNum <<"# ";
 
         ///////////////////////////////// PSNR ////////////////////////////////////////////////////
         psnrV = getPSNR(frameReference,frameUnderTest);					//get PSNR
         cout << setiosflags(ios::fixed) << setprecision(3) << psnrV << "dB";
 
         //////////////////////////////////// MSSIM /////////////////////////////////////////////////
-        if (psnrV < psnrTriggerValue)
+        if (psnrV < psnrTriggerValue && psnrV)
         {
             mssimV = getMSSIM(frameReference,frameUnderTest);
 
             cout << " MSSIM: "
-                 << "R" << setiosflags(ios::fixed) << setprecision(3) << mssimV.val[2] * 100
-                 << "G" << setiosflags(ios::fixed) << setprecision(3) << mssimV.val[1] * 100
-                 << "B" << setiosflags(ios::fixed) << setprecision(3) << mssimV.val[0] * 100;
+                << " R " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[2] * 100 << "%"
+                << " G " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[1] * 100 << "%"
+                << " B " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[0] * 100 << "%";
         }
 
-       cout << endl;
+        cout << endl;
 
         ////////////////////////////////// Show Image /////////////////////////////////////////////
         imshow( WIN_RF, frameReference);
