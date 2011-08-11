@@ -99,6 +99,10 @@ function(set_ipp_old_libraries)
     if (CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
         set(IPP_ARCH "em64t")
     endif()
+    
+    if (CMAKE_CL_64)
+        set(IPP_ARCH "em64t")
+    endif()
 
     if(WIN32)
         set(IPP_SUFFIX "l")
