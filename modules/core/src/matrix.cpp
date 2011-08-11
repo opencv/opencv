@@ -2205,7 +2205,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 {
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = _data.ptr<float>(0);
-    int step = (int)(_data.step/sizeof(data[0]));
+    size_t step = _data.step/sizeof(data[0]);
     vector<int> _centers(K);
     int* centers = &_centers[0];
     vector<float> _dist(N*3);

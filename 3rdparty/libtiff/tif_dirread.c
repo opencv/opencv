@@ -1450,14 +1450,14 @@ TIFFFetchShortPair(TIFF* tif, TIFFDirEntry* dir)
 		case TIFF_BYTE:
 		case TIFF_SBYTE:
 			{
-			uint8 v[4];
+            uint8 v[4]={0,0,0,0};
 			return TIFFFetchByteArray(tif, dir, v)
 				&& TIFFSetField(tif, dir->tdir_tag, v[0], v[1]);
 			}
 		case TIFF_SHORT:
 		case TIFF_SSHORT:
 			{
-			uint16 v[2];
+            uint16 v[2]={0,0};
 			return TIFFFetchShortArray(tif, dir, v)
 				&& TIFFSetField(tif, dir->tdir_tag, v[0], v[1]);
 			}
