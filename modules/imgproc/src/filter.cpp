@@ -437,6 +437,9 @@ void FilterEngine::apply(const Mat& src, Mat& dst,
     Rect srcRoi = _srcRoi;
     if( srcRoi == Rect(0,0,-1,-1) )
         srcRoi = Rect(0,0,src.cols,src.rows);
+    
+    if( srcRoi.area() == 0 )
+        return;
 
     CV_Assert( dstOfs.x >= 0 && dstOfs.y >= 0 &&
         dstOfs.x + srcRoi.width <= dst.cols &&
