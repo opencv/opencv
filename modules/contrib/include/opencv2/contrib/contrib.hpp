@@ -607,6 +607,7 @@ namespace cv
     CV_EXPORTS void polyfit(const Mat& srcx, const Mat& srcy, Mat& dst, int order);
 }
 
+#include "opencv2/contrib/retina.hpp"
 
 #endif
 
