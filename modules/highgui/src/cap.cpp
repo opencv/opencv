@@ -133,6 +133,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_ANDROID_NATIVE_CAMERA
         CV_CAP_ANDROID,
 #endif
+#ifdef HAVE_XIMEA
+        CV_CAP_XIAPI,
+#endif
         -1
     };
 
@@ -238,36 +241,43 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
         #ifdef HAVE_UNICAP
         case CV_CAP_UNICAP:
-        capture = cvCreateCameraCapture_Unicap (index);
-        if (capture)
-            return capture;
+            capture = cvCreateCameraCapture_Unicap (index);
+            if (capture)
+                return capture;
         break;
         #endif
         
         #ifdef HAVE_PVAPI
         case CV_CAP_PVAPI:
-        capture = cvCreateCameraCapture_PvAPI (index);
-        if (capture)
-            return capture;
+            capture = cvCreateCameraCapture_PvAPI (index);
+            if (capture)
+                return capture;
         break;
         #endif
 
         #ifdef HAVE_OPENNI
         case CV_CAP_OPENNI:
-        capture = cvCreateCameraCapture_OpenNI (index);
-        if (capture)
-            return capture;
+            capture = cvCreateCameraCapture_OpenNI (index);
+            if (capture)
+                return capture;
         break;
         #endif
 
-		#ifdef HAVE_ANDROID_NATIVE_CAMERA
+        #ifdef HAVE_ANDROID_NATIVE_CAMERA
         case CV_CAP_ANDROID:
-          capture = cvCreateCameraCapture_Android (index);
-        if (capture)
-            return capture;
+            capture = cvCreateCameraCapture_Android (index);
+            if (capture)
+                return capture;
         break;
         #endif
-
+        
+        #ifdef HAVE_XIMEA
+        case CV_CAP_XIAPI:
+            capture = cvCreateCameraCapture_Ximea (index);
+            if (capture)
+                return capture;
+        break;
+        #endif
         }
     }
 

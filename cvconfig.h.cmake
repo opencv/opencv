@@ -184,3 +184,5 @@
 /* VideoInput library */
 #cmakedefine HAVE_VIDEOINPUT
 
+/* XIMEA camera support */
+#cmakedefine HAVE_XIMEA

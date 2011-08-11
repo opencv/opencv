@@ -287,7 +287,9 @@ enum
 
     CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
 
-    CV_CAP_ANDROID  =1000   // Android
+    CV_CAP_ANDROID  =1000,  // Android
+    
+    CV_CAP_XIAPI    =1100   // XIMEA Camera API
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -372,7 +374,30 @@ enum
     
     // Properties of cameras available through GStreamer interface
     CV_CAP_GSTREAMER_QUEUE_LENGTH   = 200, // default is 1
-    CV_CAP_PROP_PVAPI_MULTICASTIP   = 300  // ip for anable multicast master mode. 0 for disable multicast
+    CV_CAP_PROP_PVAPI_MULTICASTIP   = 300, // ip for anable multicast master mode. 0 for disable multicast
+    
+    // Properties of cameras available through XIMEA SDK interface
+    CV_CAP_PROP_XI_DOWNSAMPLING  = 400,      // Change image resolution by binning or skipping.  
+    CV_CAP_PROP_XI_DATA_FORMAT   = 401,       // Output data format.
+    CV_CAP_PROP_XI_OFFSET_X      = 402,      // Horizontal offset from the origin to the area of interest (in pixels).
+    CV_CAP_PROP_XI_OFFSET_Y      = 403,      // Vertical offset from the origin to the area of interest (in pixels).
+    CV_CAP_PROP_XI_TRG_SOURCE    = 404,      // Defines source of trigger.
+    CV_CAP_PROP_XI_TRG_SOFTWARE  = 405,      // Generates an internal trigger. PRM_TRG_SOURCE must be set to TRG_SOFTWARE.
+    CV_CAP_PROP_XI_GPI_SELECTOR  = 406,      // Selects general purpose input 
+    CV_CAP_PROP_XI_GPI_MODE      = 407,      // Set general purpose input mode
+    CV_CAP_PROP_XI_GPI_LEVEL     = 408,      // Get general purpose level
+    CV_CAP_PROP_XI_GPO_SELECTOR  = 409,      // Selects general purpose output 
+    CV_CAP_PROP_XI_GPO_MODE      = 410,      // Set general purpose output mode
+    CV_CAP_PROP_XI_LED_SELECTOR  = 411,      // Selects camera signalling LED 
+    CV_CAP_PROP_XI_LED_MODE      = 412,      // Define camera signalling LED functionality
+    CV_CAP_PROP_XI_MANUAL_WB     = 413,      // Calculates White Balance(must be called during acquisition)
+    CV_CAP_PROP_XI_AUTO_WB       = 414,      // Automatic white balance
+    CV_CAP_PROP_XI_AEAG          = 415,      // Automatic exposure/gain
+    CV_CAP_PROP_XI_EXP_PRIORITY  = 416,      // Exposure priority (0.5 - exposure 50%, gain 50%).
+    CV_CAP_PROP_XI_AE_MAX_LIMIT  = 417,      // Maximum limit of exposure in AEAG procedure
+    CV_CAP_PROP_XI_AG_MAX_LIMIT  = 418,      // Maximum limit of gain in AEAG procedure
+    CV_CAP_PROP_XI_AEAG_LEVEL    = 419,       // Average intensity of output signal AEAG should achieve(in %)
+    CV_CAP_PROP_XI_TIMEOUT       = 420       // Image capture timeout in milliseconds
 };
 
 enum

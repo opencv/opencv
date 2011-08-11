@@ -204,69 +204,68 @@ typedef struct CvGaussBGModel2
     CvGaussBGStatModel2Params params;
     CvGaussBGStatModel2Data   data;
     int                       countFrames;
-}
-CvGaussBGModel2;
+} CvGaussBGModel2;
 
 CVAPI(CvBGStatModel*) cvCreateGaussianBGModel2( IplImage* first_frame,
                                                 CvGaussBGStatModel2Params* params CV_DEFAULT(NULL) );
 //shadow detection performed per pixel
 // should work for rgb data, could be usefull for gray scale and depth data as well
-//	See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+//  See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
 CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
-								unsigned char nModes, 
-								CvPBGMMGaussian* pGMM,
-								float m_fTb,
-								float m_fTB,	
-								float m_fTau)
+                                unsigned char nModes, 
+                                CvPBGMMGaussian* pGMM,
+                                float m_fTb,
+                                float m_fTB,    
+                                float m_fTau)
 {
-	float tWeight = 0;
-	float numerator, denominator;
-	// check all the components  marked as background:
-	for (int iModes=0;iModes<nModes;iModes++)
-	{
+    float tWeight = 0;
+    float numerator, denominator;
+    // check all the components  marked as background:
+    for (int iModes=0;iModes<nModes;iModes++)
+    {
 
-		CvPBGMMGaussian g=pGMM[iModes];
+        CvPBGMMGaussian g=pGMM[iModes];
 
-		numerator = 0.0f;
-		denominator = 0.0f;
-		for (int iD=0;iD<nD;iD++)
-		{
-				numerator   += data[iD]  * g.mean[iD];
-				denominator += g.mean[iD]* g.mean[iD];
-		}
+        numerator = 0.0f;
+        denominator = 0.0f;
+        for (int iD=0;iD<nD;iD++)
+        {
+                numerator   += data[iD]  * g.mean[iD];
+                denominator += g.mean[iD]* g.mean[iD];
+        }
 
-		// no division by zero allowed
-		if (denominator == 0)
-		{
-				return 0;
-		};
-		float a = numerator / denominator;
+        // no division by zero allowed
+        if (denominator == 0)
+        {
+                return 0;
+        };
+        float a = numerator / denominator;
 
-		// if tau < a < 1 then also check the color distortion
-		if ((a <= 1) && (a >= m_fTau))
-		{
+        // if tau < a < 1 then also check the color distortion
+        if ((a <= 1) && (a >= m_fTau))
+        {
 
-			float dist2a=0.0f;
-			
-			for (int iD=0;iD<nD;iD++)
-			{
-				float dD= a*g.mean[iD] - data[iD];
-				dist2a += (dD*dD);
-			}
+            float dist2a=0.0f;
+            
+            for (int iD=0;iD<nD;iD++)
+            {
+                float dD= a*g.mean[iD] - data[iD];
+                dist2a += (dD*dD);
+            }
 
-			if (dist2a<m_fTb*g.variance*a*a)
-			{
-				return 2;
-			}
-		};
+            if (dist2a<m_fTb*g.variance*a*a)
+            {
+                return 2;
+            }
+        };
 
-		tWeight += g.weight;
-		if (tWeight > m_fTB)
-		{
-				return 0;
-		};
-	};
-	return 0;
+        tWeight += g.weight;
+        if (tWeight > m_fTB)
+        {
+                return 0;
+        };
+    };
+    return 0;
 }
 
 //update GMM - the base update function performed per pixel
@@ -284,402 +283,402 @@ CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
 CV_INLINE int _icvUpdateGMM(float* data, int nD,
-								unsigned char* pModesUsed, 
-								CvPBGMMGaussian* pGMM,
-								int m_nM,
-								float m_fAlphaT,
-								float m_fTb,
-								float m_fTB,	
-								float m_fTg,
-								float m_fVarInit,
-								float m_fVarMax,
-								float m_fVarMin,
-								float m_fPrune)
+                                unsigned char* pModesUsed, 
+                                CvPBGMMGaussian* pGMM,
+                                int m_nM,
+                                float m_fAlphaT,
+                                float m_fTb,
+                                float m_fTB,    
+                                float m_fTg,
+                                float m_fVarInit,
+                                float m_fVarMax,
+                                float m_fVarMin,
+                                float m_fPrune)
 {
-	//calculate distances to the modes (+ sort)
-	//here we need to go in descending order!!!	
-	bool bBackground=0;//return value -> true - the pixel classified as background
+    //calculate distances to the modes (+ sort)
+    //here we need to go in descending order!!! 
+    bool bBackground=0;//return value -> true - the pixel classified as background
 
-	//internal:
-	bool bFitsPDF=0;//if it remains zero a new GMM mode will be added	
-	float m_fOneMinAlpha=1-m_fAlphaT;
-	unsigned char nModes=*pModesUsed;//current number of modes in GMM
-	float totalWeight=0.0f;
+    //internal:
+    bool bFitsPDF=0;//if it remains zero a new GMM mode will be added   
+    float m_fOneMinAlpha=1-m_fAlphaT;
+    unsigned char nModes=*pModesUsed;//current number of modes in GMM
+    float totalWeight=0.0f;
 
-	//////
-	//go through all modes
-	int iMode=0;
-	CvPBGMMGaussian* pGauss=pGMM;
-	for (;iMode<nModes;iMode++,pGauss++)
-	{
-		float weight = pGauss->weight;//need only weight if fit is found
-		weight=m_fOneMinAlpha*weight+m_fPrune;
+    //////
+    //go through all modes
+    int iMode=0;
+    CvPBGMMGaussian* pGauss=pGMM;
+    for (;iMode<nModes;iMode++,pGauss++)
+    {
+        float weight = pGauss->weight;//need only weight if fit is found
+        weight=m_fOneMinAlpha*weight+m_fPrune;
 
-		////
-		//fit not found yet
-		if (!bFitsPDF)
-		{
-			//check if it belongs to some of the remaining modes
-			float var=pGauss->variance;
+        ////
+        //fit not found yet
+        if (!bFitsPDF)
+        {
+            //check if it belongs to some of the remaining modes
+            float var=pGauss->variance;
 
-			//calculate difference and distance
-			float dist2=0.0f;
+            //calculate difference and distance
+            float dist2=0.0f;
 #if (CV_BGFG_MOG2_NDMAX==1)
-			float dData=pGauss->mean[0]-data[0];
-			dist2=dData*dData;
-#else			
-			float dData[CV_BGFG_MOG2_NDMAX];
+            float dData=pGauss->mean[0]-data[0];
+            dist2=dData*dData;
+#else           
+            float dData[CV_BGFG_MOG2_NDMAX];
 
-			for (int iD=0;iD<nD;iD++)
-			{
-				dData[iD]=pGauss->mean[iD]-data[iD];
-				dist2+=dData[iD]*dData[iD];
-			}
-#endif		
-			//background? - m_fTb - usually larger than m_fTg
-			if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
-					bBackground=1;
+            for (int iD=0;iD<nD;iD++)
+            {
+                dData[iD]=pGauss->mean[iD]-data[iD];
+                dist2+=dData[iD]*dData[iD];
+            }
+#endif      
+            //background? - m_fTb - usually larger than m_fTg
+            if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
+                    bBackground=1;
 
-			//check fit
-			if (dist2<m_fTg*var)
-			{
-				/////
-				//belongs to the mode - bFitsPDF becomes 1
-				bFitsPDF=1;
+            //check fit
+            if (dist2<m_fTg*var)
+            {
+                /////
+                //belongs to the mode - bFitsPDF becomes 1
+                bFitsPDF=1;
 
-				//update distribution				
-				
-				//update weight
-				weight+=m_fAlphaT;
+                //update distribution               
+                
+                //update weight
+                weight+=m_fAlphaT;
 
-				float k = m_fAlphaT/weight;
+                float k = m_fAlphaT/weight;
 
-				//update mean
+                //update mean
 #if (CV_BGFG_MOG2_NDMAX==1)
-				pGauss->mean[0]-=k*dData;
-#else				
-				for (int iD=0;iD<nD;iD++)
-				{
-					pGauss->mean[iD]-=k*dData[iD];
-				}
+                pGauss->mean[0]-=k*dData;
+#else               
+                for (int iD=0;iD<nD;iD++)
+                {
+                    pGauss->mean[iD]-=k*dData[iD];
+                }
 #endif
 
-				//update variance
-				float varnew = var + k*(dist2-var);
-				//limit the variance				
-				pGauss->variance = MIN(m_fVarMax,MAX(varnew,m_fVarMin));
+                //update variance
+                float varnew = var + k*(dist2-var);
+                //limit the variance                
+                pGauss->variance = MIN(m_fVarMax,MAX(varnew,m_fVarMin));
 
-				//sort
-				//all other weights are at the same place and 
-				//only the matched (iModes) is higher -> just find the new place for it				
-				for (int iLocal = iMode;iLocal>0;iLocal--)
-				{
-					//check one up
-					if (weight < (pGMM[iLocal-1].weight))
-					{
-						break;
-					}
-					else
-					{
-						//swap one up
-						CvPBGMMGaussian temp = pGMM[iLocal];
-						pGMM[iLocal] = pGMM[iLocal-1];
-						pGMM[iLocal-1] = temp;
-						pGauss--;
-					}
-				}
-				//belongs to the mode - bFitsPDF becomes 1
-				/////
-			}
-		}//!bFitsPDF)
+                //sort
+                //all other weights are at the same place and 
+                //only the matched (iModes) is higher -> just find the new place for it             
+                for (int iLocal = iMode;iLocal>0;iLocal--)
+                {
+                    //check one up
+                    if (weight < (pGMM[iLocal-1].weight))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        //swap one up
+                        CvPBGMMGaussian temp = pGMM[iLocal];
+                        pGMM[iLocal] = pGMM[iLocal-1];
+                        pGMM[iLocal-1] = temp;
+                        pGauss--;
+                    }
+                }
+                //belongs to the mode - bFitsPDF becomes 1
+                /////
+            }
+        }//!bFitsPDF)
 
-		//check prune
-		if (weight<-m_fPrune)
-		{
-			weight=0.0;
-			nModes--;
-		}
+        //check prune
+        if (weight<-m_fPrune)
+        {
+            weight=0.0;
+            nModes--;
+        }
 
-		pGauss->weight=weight;//update weight by the calculated value
-		totalWeight+=weight;
-	}
-	//go through all modes
-	//////
+        pGauss->weight=weight;//update weight by the calculated value
+        totalWeight+=weight;
+    }
+    //go through all modes
+    //////
 
-	//renormalize weights
-	for (iMode = 0; iMode < nModes; iMode++)
-	{
-		pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
-	}
-	
-	//make new mode if needed and exit
-	if (!bFitsPDF)
-	{
-		if (nModes==m_nM)
-		{
+    //renormalize weights
+    for (iMode = 0; iMode < nModes; iMode++)
+    {
+        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
+    }
+    
+    //make new mode if needed and exit
+    if (!bFitsPDF)
+    {
+        if (nModes==m_nM)
+        {
            //replace the weakest
-			pGauss=pGMM+m_nM-1;
-		}
-		else
-		{
+            pGauss=pGMM+m_nM-1;
+        }
+        else
+        {
            //add a new one
-			pGauss=pGMM+nModes;
-			nModes++;
-		}
+            pGauss=pGMM+nModes;
+            nModes++;
+        }
 
-      	if (nModes==1)
-		{
-			pGauss->weight=1;
-		}
-		else
-		{
-			pGauss->weight=m_fAlphaT;
+        if (nModes==1)
+        {
+            pGauss->weight=1;
+        }
+        else
+        {
+            pGauss->weight=m_fAlphaT;
 
-			//renormalize all weights
-			for (iMode = 0; iMode < nModes-1; iMode++)
-			{
-				pGMM[iMode].weight *=m_fOneMinAlpha;
-			}
-		}
+            //renormalize all weights
+            for (iMode = 0; iMode < nModes-1; iMode++)
+            {
+                pGMM[iMode].weight *=m_fOneMinAlpha;
+            }
+        }
 
-		//init 
-		memcpy(pGauss->mean,data,nD*sizeof(float));
-		pGauss->variance=m_fVarInit;
+        //init 
+        memcpy(pGauss->mean,data,nD*sizeof(float));
+        pGauss->variance=m_fVarInit;
 
-		//sort
-		//find the new place for it
-		for (int iLocal = nModes-1;iLocal>0;iLocal--)
-		{
-					//check one up
-					if (m_fAlphaT < (pGMM[iLocal-1].weight))
-					{
-						break;
-					}
-					else
-					{
-						//swap one up
-						CvPBGMMGaussian temp = pGMM[iLocal];
-						pGMM[iLocal] = pGMM[iLocal-1];
-						pGMM[iLocal-1] = temp;
-					}
-		}
-	}
+        //sort
+        //find the new place for it
+        for (int iLocal = nModes-1;iLocal>0;iLocal--)
+        {
+                    //check one up
+                    if (m_fAlphaT < (pGMM[iLocal-1].weight))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        //swap one up
+                        CvPBGMMGaussian temp = pGMM[iLocal];
+                        pGMM[iLocal] = pGMM[iLocal-1];
+                        pGMM[iLocal-1] = temp;
+                    }
+        }
+    }
 
-	//set the number of modes
-	*pModesUsed=nModes;
+    //set the number of modes
+    *pModesUsed=nModes;
 
     return bBackground;
 }
 
 // a bit more efficient implementation for common case of 3 channel (rgb) images
 CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
-								unsigned char* pModesUsed, 
-								CvPBGMMGaussian* pGMM,
-								int m_nM,
-								float m_fAlphaT,
-								float m_fTb,
-								float m_fTB,	
-								float m_fTg,
-								float m_fVarInit,
-								float m_fVarMax,
-								float m_fVarMin,
-								float m_fPrune)
+                                unsigned char* pModesUsed, 
+                                CvPBGMMGaussian* pGMM,
+                                int m_nM,
+                                float m_fAlphaT,
+                                float m_fTb,
+                                float m_fTB,    
+                                float m_fTg,
+                                float m_fVarInit,
+                                float m_fVarMax,
+                                float m_fVarMin,
+                                float m_fPrune)
 {
-	//calculate distances to the modes (+ sort)
-	//here we need to go in descending order!!!	
-	bool bBackground=0;//return value -> true - the pixel classified as background
+    //calculate distances to the modes (+ sort)
+    //here we need to go in descending order!!! 
+    bool bBackground=0;//return value -> true - the pixel classified as background
 
-	//internal:
-	bool bFitsPDF=0;//if it remains zero a new GMM mode will be added	
-	float m_fOneMinAlpha=1-m_fAlphaT;
-	unsigned char nModes=*pModesUsed;//current number of modes in GMM
-	float totalWeight=0.0f;
+    //internal:
+    bool bFitsPDF=0;//if it remains zero a new GMM mode will be added   
+    float m_fOneMinAlpha=1-m_fAlphaT;
+    unsigned char nModes=*pModesUsed;//current number of modes in GMM
+    float totalWeight=0.0f;
 
-	//////
-	//go through all modes
-	int iMode=0;
-	CvPBGMMGaussian* pGauss=pGMM;
-	for (;iMode<nModes;iMode++,pGauss++)
-	{
-		float weight = pGauss->weight;//need only weight if fit is found
-		weight=m_fOneMinAlpha*weight+m_fPrune;
+    //////
+    //go through all modes
+    int iMode=0;
+    CvPBGMMGaussian* pGauss=pGMM;
+    for (;iMode<nModes;iMode++,pGauss++)
+    {
+        float weight = pGauss->weight;//need only weight if fit is found
+        weight=m_fOneMinAlpha*weight+m_fPrune;
 
-		////
-		//fit not found yet
-		if (!bFitsPDF)
-		{
-			//check if it belongs to some of the remaining modes
-			float var=pGauss->variance;
+        ////
+        //fit not found yet
+        if (!bFitsPDF)
+        {
+            //check if it belongs to some of the remaining modes
+            float var=pGauss->variance;
 
-			//calculate difference and distance
-			float muR = pGauss->mean[0];
-			float muG = pGauss->mean[1];
-			float muB = pGauss->mean[2];
-		
-			float dR=muR - r;
-			float dG=muG - g;
-			float dB=muB - b;
+            //calculate difference and distance
+            float muR = pGauss->mean[0];
+            float muG = pGauss->mean[1];
+            float muB = pGauss->mean[2];
+        
+            float dR=muR - r;
+            float dG=muG - g;
+            float dB=muB - b;
 
-			float dist2=(dR*dR+dG*dG+dB*dB);		
-			
-			//background? - m_fTb - usually larger than m_fTg
-			if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
-					bBackground=1;
+            float dist2=(dR*dR+dG*dG+dB*dB);        
+            
+            //background? - m_fTb - usually larger than m_fTg
+            if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
+                    bBackground=1;
 
-			//check fit
-			if (dist2<m_fTg*var)
-			{
-				/////
-				//belongs to the mode - bFitsPDF becomes 1
-				bFitsPDF=1;
+            //check fit
+            if (dist2<m_fTg*var)
+            {
+                /////
+                //belongs to the mode - bFitsPDF becomes 1
+                bFitsPDF=1;
 
-				//update distribution				
-				
-				//update weight
-				weight+=m_fAlphaT;
-				
-				float k = m_fAlphaT/weight;
+                //update distribution               
+                
+                //update weight
+                weight+=m_fAlphaT;
+                
+                float k = m_fAlphaT/weight;
 
-				//update mean
-				pGauss->mean[0] = muR - k*(dR);
-				pGauss->mean[1] = muG - k*(dG);
-				pGauss->mean[2] = muB - k*(dB);
+                //update mean
+                pGauss->mean[0] = muR - k*(dR);
+                pGauss->mean[1] = muG - k*(dG);
+                pGauss->mean[2] = muB - k*(dB);
 
-				//update variance
-				float varnew = var + k*(dist2-var);
-				//limit the variance				
-				pGauss->variance = MIN(m_fVarMax,MAX(varnew,m_fVarMin));
+                //update variance
+                float varnew = var + k*(dist2-var);
+                //limit the variance                
+                pGauss->variance = MIN(m_fVarMax,MAX(varnew,m_fVarMin));
 
-				//sort
-				//all other weights are at the same place and 
-				//only the matched (iModes) is higher -> just find the new place for it				
-				for (int iLocal = iMode;iLocal>0;iLocal--)
-				{
-					//check one up
-					if (weight < (pGMM[iLocal-1].weight))
-					{
-						break;
-					}
-					else
-					{
-						//swap one up
-						CvPBGMMGaussian temp = pGMM[iLocal];
-						pGMM[iLocal] = pGMM[iLocal-1];
-						pGMM[iLocal-1] = temp;
-						pGauss--;
-					}
-				}
-				//belongs to the mode - bFitsPDF becomes 1
-				/////
-			}	
+                //sort
+                //all other weights are at the same place and 
+                //only the matched (iModes) is higher -> just find the new place for it             
+                for (int iLocal = iMode;iLocal>0;iLocal--)
+                {
+                    //check one up
+                    if (weight < (pGMM[iLocal-1].weight))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        //swap one up
+                        CvPBGMMGaussian temp = pGMM[iLocal];
+                        pGMM[iLocal] = pGMM[iLocal-1];
+                        pGMM[iLocal-1] = temp;
+                        pGauss--;
+                    }
+                }
+                //belongs to the mode - bFitsPDF becomes 1
+                /////
+            }   
 
-		}//!bFitsPDF)
-		
-		//check prunning
-		if (weight<-m_fPrune)
-		{
-					weight=0.0;
-					nModes--;
-		}
+        }//!bFitsPDF)
+        
+        //check prunning
+        if (weight<-m_fPrune)
+        {
+                    weight=0.0;
+                    nModes--;
+        }
 
-		pGauss->weight=weight;
-		totalWeight+=weight;
-	}
-	//go through all modes
-	//////
+        pGauss->weight=weight;
+        totalWeight+=weight;
+    }
+    //go through all modes
+    //////
 
-	//renormalize weights
-	for (iMode = 0; iMode < nModes; iMode++)
-	{
-		pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
-	}
-	
-	//make new mode if needed and exit
-	if (!bFitsPDF)
-	{
-		if (nModes==m_nM)
-		{
+    //renormalize weights
+    for (iMode = 0; iMode < nModes; iMode++)
+    {
+        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
+    }
+    
+    //make new mode if needed and exit
+    if (!bFitsPDF)
+    {
+        if (nModes==m_nM)
+        {
            //replace the weakest
-			pGauss=pGMM+m_nM-1;
-		}
-		else
-		{
+            pGauss=pGMM+m_nM-1;
+        }
+        else
+        {
            //add a new one
-			pGauss=pGMM+nModes;
-			nModes++;
-		}
+            pGauss=pGMM+nModes;
+            nModes++;
+        }
 
-      	if (nModes==1)
-		{
-			pGauss->weight=1;
-		}
-		else
-		{
-			pGauss->weight=m_fAlphaT;
+        if (nModes==1)
+        {
+            pGauss->weight=1;
+        }
+        else
+        {
+            pGauss->weight=m_fAlphaT;
 
-			//renormalize all weights
-			for (iMode = 0; iMode < nModes-1; iMode++)
-			{
-				pGMM[iMode].weight *=m_fOneMinAlpha;
-			}
-		}
+            //renormalize all weights
+            for (iMode = 0; iMode < nModes-1; iMode++)
+            {
+                pGMM[iMode].weight *=m_fOneMinAlpha;
+            }
+        }
 
-		//init 
-		pGauss->mean[0]=r;
-		pGauss->mean[1]=g;
-		pGauss->mean[2]=b;
+        //init 
+        pGauss->mean[0]=r;
+        pGauss->mean[1]=g;
+        pGauss->mean[2]=b;
 
-		pGauss->variance=m_fVarInit;
+        pGauss->variance=m_fVarInit;
 
-		//sort
-		//find the new place for it
-		for (int iLocal = nModes-1;iLocal>0;iLocal--)
-		{
-					//check one up
-					if (m_fAlphaT < (pGMM[iLocal-1].weight))
-					{
-						break;
-					}
-					else
-					{
-						//swap one up
-						CvPBGMMGaussian temp = pGMM[iLocal];
-						pGMM[iLocal] = pGMM[iLocal-1];
-						pGMM[iLocal-1] = temp;
-					}
-		}
-	}
+        //sort
+        //find the new place for it
+        for (int iLocal = nModes-1;iLocal>0;iLocal--)
+        {
+                    //check one up
+                    if (m_fAlphaT < (pGMM[iLocal-1].weight))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        //swap one up
+                        CvPBGMMGaussian temp = pGMM[iLocal];
+                        pGMM[iLocal] = pGMM[iLocal-1];
+                        pGMM[iLocal-1] = temp;
+                    }
+        }
+    }
 
-	//set the number of modes
-	*pModesUsed=nModes;
+    //set the number of modes
+    *pModesUsed=nModes;
 
     return bBackground;
 }
 
 //the main function to update the background model
 void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
-										 CvPBGMMGaussian *pGMM,
-										 unsigned char *pUsedModes,
-										 //CvGaussBGStatModel2Params* pGMMPar,
-										 int nM,
-										 float fTb, 
-										 float fTB, 
-										 float fTg, 
-										 float fVarInit,
-										 float fVarMax,
-										 float fVarMin,
-										 float fCT,
-										 float fTau,
-										 bool bShadowDetection,
-										 unsigned char  nShadowDetection,
-										 float alpha)
+                                         CvPBGMMGaussian *pGMM,
+                                         unsigned char *pUsedModes,
+                                         //CvGaussBGStatModel2Params* pGMMPar,
+                                         int nM,
+                                         float fTb, 
+                                         float fTB, 
+                                         float fTg, 
+                                         float fVarInit,
+                                         float fVarMax,
+                                         float fVarMin,
+                                         float fCT,
+                                         float fTau,
+                                         bool bShadowDetection,
+                                         unsigned char  nShadowDetection,
+                                         float alpha)
 {
-	CvMat sstub, *src = cvGetMat(srcarr, &sstub);
+    CvMat sstub, *src = cvGetMat(srcarr, &sstub);
     CvMat dstub, *dst = cvGetMat(dstarr, &dstub);
     CvSize size = cvGetMatSize(src);
-	int nD=CV_MAT_CN(src->type);
+    int nD=CV_MAT_CN(src->type);
 
-	//reshape if possible
+    //reshape if possible
     if( CV_IS_MAT_CONT(src->type & dst->type) )
     {
         size.width *= size.height;
@@ -687,258 +686,258 @@ void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
     }
 
     int x, y;
-	float data[CV_BGFG_MOG2_NDMAX];
-	float prune=-alpha*fCT;
+    float data[CV_BGFG_MOG2_NDMAX];
+    float prune=-alpha*fCT;
 
-	//general nD
+    //general nD
 
-	if (nD!=3)
-	{
-	switch (CV_MAT_DEPTH(src->type))
-	{
-	case CV_8U:
-		for( y = 0; y < size.height; y++ )
-		{
-			uchar* sptr = src->data.ptr + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
-				//update GMM model
-				int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_16S:
-		for( y = 0; y < size.height; y++ )
-		{
-			short* sptr = src->data.s + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
-				//update GMM model
-				int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_16U:
-		for( y = 0; y < size.height; y++ )
-		{
-			unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
-				//update GMM model
-				int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_32S:
-		for( y = 0; y < size.height; y++ )
-		{
-			int* sptr = src->data.i + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
-				//update GMM model
-				int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_32F:
-		for( y = 0; y < size.height; y++ )
-		{
-			float* sptr = src->data.fl + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//update GMM model
-				int result = _icvUpdateGMM(sptr,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_64F:
-		for( y = 0; y < size.height; y++ )
-		{
-			double* sptr = src->data.db + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
-				//update GMM model
-				int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	}
-	}else ///if (nD==3) - a bit faster
-	{
-	switch (CV_MAT_DEPTH(src->type))
-	{
-	case CV_8U:
-		for( y = 0; y < size.height; y++ )
-		{
-			uchar* sptr = src->data.ptr + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
-				//update GMM model
-				int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_16S:
-		for( y = 0; y < size.height; y++ )
-		{
-			short* sptr = src->data.s + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
-				//update GMM model
-				int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_16U:
-		for( y = 0; y < size.height; y++ )
-		{
-			unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
-				//update GMM model
-				int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_32S:
-		for( y = 0; y < size.height; y++ )
-		{
-			int* sptr = src->data.i + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
-				//update GMM model
-				int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_32F:
-		for( y = 0; y < size.height; y++ )
-		{
-			float* sptr = src->data.fl + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//update GMM model
-				int result = _icvUpdateGMM_C3(sptr[0],sptr[1],sptr[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	case CV_64F:
-		for( y = 0; y < size.height; y++ )
-		{
-			double* sptr = src->data.db + src->step*y;
-			uchar* pDataOutput = dst->data.ptr + dst->step*y;
-			for( x = 0; x < size.width; x++,
-				pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
-			{
-				//convert data
-				data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
-				//update GMM model
-				int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
-				//detect shadows in the foreground
-				if (bShadowDetection)
-					if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
-				//generate output
-				(* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
-			}
-		}
-		break;
-	}
-	}//a bit faster for nD=3; 
+    if (nD!=3)
+    {
+    switch (CV_MAT_DEPTH(src->type))
+    {
+    case CV_8U:
+        for( y = 0; y < size.height; y++ )
+        {
+            uchar* sptr = src->data.ptr + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
+                //update GMM model
+                int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_16S:
+        for( y = 0; y < size.height; y++ )
+        {
+            short* sptr = src->data.s + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
+                //update GMM model
+                int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_16U:
+        for( y = 0; y < size.height; y++ )
+        {
+            unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
+                //update GMM model
+                int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_32S:
+        for( y = 0; y < size.height; y++ )
+        {
+            int* sptr = src->data.i + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
+                //update GMM model
+                int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_32F:
+        for( y = 0; y < size.height; y++ )
+        {
+            float* sptr = src->data.fl + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //update GMM model
+                int result = _icvUpdateGMM(sptr,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_64F:
+        for( y = 0; y < size.height; y++ )
+        {
+            double* sptr = src->data.db + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                for (int iD=0;iD<nD;iD++) data[iD]=float(sptr[iD]);
+                //update GMM model
+                int result = _icvUpdateGMM(data,nD,pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    }
+    }else ///if (nD==3) - a bit faster
+    {
+    switch (CV_MAT_DEPTH(src->type))
+    {
+    case CV_8U:
+        for( y = 0; y < size.height; y++ )
+        {
+            uchar* sptr = src->data.ptr + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                //update GMM model
+                int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_16S:
+        for( y = 0; y < size.height; y++ )
+        {
+            short* sptr = src->data.s + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                //update GMM model
+                int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_16U:
+        for( y = 0; y < size.height; y++ )
+        {
+            unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                //update GMM model
+                int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_32S:
+        for( y = 0; y < size.height; y++ )
+        {
+            int* sptr = src->data.i + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                //update GMM model
+                int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_32F:
+        for( y = 0; y < size.height; y++ )
+        {
+            float* sptr = src->data.fl + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //update GMM model
+                int result = _icvUpdateGMM_C3(sptr[0],sptr[1],sptr[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    case CV_64F:
+        for( y = 0; y < size.height; y++ )
+        {
+            double* sptr = src->data.db + src->step*y;
+            uchar* pDataOutput = dst->data.ptr + dst->step*y;
+            for( x = 0; x < size.width; x++,
+                pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
+            {
+                //convert data
+                data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                //update GMM model
+                int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
+                //detect shadows in the foreground
+                if (bShadowDetection)
+                    if (result==0) result= _icvRemoveShadowGMM(data,nD,(*pUsedModes),pGMM,fTb,fTB,fTau);
+                //generate output
+                (* pDataOutput)= (result==1) ? 0 : (result==2) ? (nShadowDetection) : 255; 
+            }
+        }
+        break;
+    }
+    }//a bit faster for nD=3; 
 }
 
 
@@ -953,93 +952,95 @@ CV_IMPL CvBGStatModel*
 cvCreateGaussianBGModel2( IplImage* first_frame, CvGaussBGStatModel2Params* parameters )
 {
     CvGaussBGModel2* bg_model = 0;
-	int w,h;
+    int w,h;
     
     CV_FUNCNAME( "cvCreateGaussianBGModel2" );
     
     __BEGIN__;
 
-	CvGaussBGStatModel2Params params;
+    CvGaussBGStatModel2Params params;
     
     if( !CV_IS_IMAGE(first_frame) )
         CV_ERROR( CV_StsBadArg, "Invalid or NULL first_frame parameter" );
 
-	if( first_frame->nChannels>CV_BGFG_MOG2_NDMAX )
+    if( first_frame->nChannels>CV_BGFG_MOG2_NDMAX )
         CV_ERROR( CV_StsBadArg, "Maxumum number of channels in the image is excedded (change CV_BGFG_MOG2_MAXBANDS constant)!" );
 
 
-	CV_CALL( bg_model = (CvGaussBGModel2*)cvAlloc( sizeof(*bg_model) ));
+    CV_CALL( bg_model = (CvGaussBGModel2*)cvAlloc( sizeof(*bg_model) ));
     memset( bg_model, 0, sizeof(*bg_model) );
     bg_model->type    = CV_BG_MODEL_MOG2;
     bg_model->release = (CvReleaseBGStatModel) icvReleaseGaussianBGModel2;
     bg_model->update  = (CvUpdateBGStatModel)  icvUpdateGaussianBGModel2;
 
-    //init parameters	
+    //init parameters   
     if( parameters == NULL )
-      {                        
-		/* These constants are defined in cvaux/include/cvaux.h: */
-		params.bShadowDetection = 1;
-		params.bPostFiltering=0;
-		params.minArea=CV_BGFG_MOG2_MINAREA;
+    {                        
+        memset(&params, 0, sizeof(params));
+        
+        /* These constants are defined in cvaux/include/cvaux.h: */
+        params.bShadowDetection = 1;
+        params.bPostFiltering=0;
+        params.minArea=CV_BGFG_MOG2_MINAREA;
 
-		//set parameters
-		// K - max number of Gaussians per pixel
-		params.nM = CV_BGFG_MOG2_NGAUSSIANS;//4;			
-		// Tb - the threshold - n var
-		//pGMM->fTb = 4*4;
-		params.fTb = CV_BGFG_MOG2_STD_THRESHOLD*CV_BGFG_MOG2_STD_THRESHOLD;
-		// Tbf - the threshold
-		//pGMM->fTB = 0.9f;//1-cf from the paper 
-		params.fTB = CV_BGFG_MOG2_BACKGROUND_THRESHOLD;
-		// Tgenerate - the threshold
-		params.fTg = CV_BGFG_MOG2_STD_THRESHOLD_GENERATE*CV_BGFG_MOG2_STD_THRESHOLD_GENERATE;//update the mode or generate new
-		//pGMM->fSigma= 11.0f;//sigma for the new mode
-		params.fVarInit = CV_BGFG_MOG2_VAR_INIT;
-		params.fVarMax = CV_BGFG_MOG2_VAR_MAX;
-		params.fVarMin = CV_BGFG_MOG2_VAR_MIN;
-		// alpha - the learning factor
-		params.fAlphaT = 1.0f/CV_BGFG_MOG2_WINDOW_SIZE;//0.003f;
-		// complexity reduction prior constant
-		params.fCT = CV_BGFG_MOG2_CT;//0.05f;
+        //set parameters
+        // K - max number of Gaussians per pixel
+        params.nM = CV_BGFG_MOG2_NGAUSSIANS;//4;            
+        // Tb - the threshold - n var
+        //pGMM->fTb = 4*4;
+        params.fTb = CV_BGFG_MOG2_STD_THRESHOLD*CV_BGFG_MOG2_STD_THRESHOLD;
+        // Tbf - the threshold
+        //pGMM->fTB = 0.9f;//1-cf from the paper 
+        params.fTB = CV_BGFG_MOG2_BACKGROUND_THRESHOLD;
+        // Tgenerate - the threshold
+        params.fTg = CV_BGFG_MOG2_STD_THRESHOLD_GENERATE*CV_BGFG_MOG2_STD_THRESHOLD_GENERATE;//update the mode or generate new
+        //pGMM->fSigma= 11.0f;//sigma for the new mode
+        params.fVarInit = CV_BGFG_MOG2_VAR_INIT;
+        params.fVarMax = CV_BGFG_MOG2_VAR_MAX;
+        params.fVarMin = CV_BGFG_MOG2_VAR_MIN;
+        // alpha - the learning factor
+        params.fAlphaT = 1.0f/CV_BGFG_MOG2_WINDOW_SIZE;//0.003f;
+        // complexity reduction prior constant
+        params.fCT = CV_BGFG_MOG2_CT;//0.05f;
 
-		//shadow
-		// Shadow detection
-		params.nShadowDetection = (unsigned char)CV_BGFG_MOG2_SHADOW_VALUE;//value 0 to turn off
-		params.fTau = CV_BGFG_MOG2_SHADOW_TAU;//0.5f;// Tau - shadow threshold
+        //shadow
+        // Shadow detection
+        params.nShadowDetection = (unsigned char)CV_BGFG_MOG2_SHADOW_VALUE;//value 0 to turn off
+        params.fTau = CV_BGFG_MOG2_SHADOW_TAU;//0.5f;// Tau - shadow threshold
     }
     else
     {
         params = *parameters;
     }
 
-	bg_model->params = params;
+    bg_model->params = params;
 
-	//image data 
-	w = first_frame->width;
-	h = first_frame->height;
+    //image data 
+    w = first_frame->width;
+    h = first_frame->height;
 
-	bg_model->params.nWidth = w;
-	bg_model->params.nHeight = h;
+    bg_model->params.nWidth = w;
+    bg_model->params.nHeight = h;
 
-	bg_model->params.nND = first_frame->nChannels;
+    bg_model->params.nND = first_frame->nChannels;
 
 
-	//allocate GMM data
+    //allocate GMM data
 
-	//GMM for each pixel
-	bg_model->data.rGMM = (CvPBGMMGaussian*) malloc(w*h * params.nM * sizeof(CvPBGMMGaussian));
-	//used modes per pixel
-	bg_model->data.rnUsedModes = (unsigned char* ) malloc(w*h);
-	memset(bg_model->data.rnUsedModes,0,w*h);//no modes used
+    //GMM for each pixel
+    bg_model->data.rGMM = (CvPBGMMGaussian*) malloc(w*h * params.nM * sizeof(CvPBGMMGaussian));
+    //used modes per pixel
+    bg_model->data.rnUsedModes = (unsigned char* ) malloc(w*h);
+    memset(bg_model->data.rnUsedModes,0,w*h);//no modes used
   
     //prepare storages    
     CV_CALL( bg_model->background = cvCreateImage(cvSize(w,h), IPL_DEPTH_8U, first_frame->nChannels));
     CV_CALL( bg_model->foreground = cvCreateImage(cvSize(w,h), IPL_DEPTH_8U, 1));
     
-	//for eventual filtering
+    //for eventual filtering
     CV_CALL( bg_model->storage = cvCreateMemStorage());
-	
-	bg_model->countFrames = 0;
+    
+    bg_model->countFrames = 0;
 
     __END__;
     
@@ -1072,8 +1073,8 @@ icvReleaseGaussianBGModel2( CvGaussBGModel2** _bg_model )
     {
         CvGaussBGModel2* bg_model = *_bg_model;
 
-		free (bg_model->data.rGMM);
-		free (bg_model->data.rnUsedModes);
+        free (bg_model->data.rGMM);
+        free (bg_model->data.rnUsedModes);
 
         cvReleaseImage( &bg_model->background );
         cvReleaseImage( &bg_model->foreground );
@@ -1089,87 +1090,87 @@ icvReleaseGaussianBGModel2( CvGaussBGModel2** _bg_model )
 static int CV_CDECL
 icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model )
 { 
-	//checks	
-	if ((curr_frame->height!=bg_model->params.nHeight)||(curr_frame->width!=bg_model->params.nWidth)||(curr_frame->nChannels!=bg_model->params.nND))
-		CV_Error( CV_StsBadSize, "the image not the same size as the reserved GMM background model");
+    //checks    
+    if ((curr_frame->height!=bg_model->params.nHeight)||(curr_frame->width!=bg_model->params.nWidth)||(curr_frame->nChannels!=bg_model->params.nND))
+        CV_Error( CV_StsBadSize, "the image not the same size as the reserved GMM background model");
 
-	float alpha=bg_model->params.fAlphaT;
-	bg_model->countFrames++;
-	
-	//faster initial updates - increase value of alpha
-	if (bg_model->params.bInit){
-		float alphaInit=(1.0f/(2*bg_model->countFrames+1));
-		if (alphaInit>alpha)
-		{
-			alpha = alphaInit;
-		}
-		else
-		{
-			bg_model->params.bInit = 0;
-		}
-	}
+    float alpha=bg_model->params.fAlphaT;
+    bg_model->countFrames++;
+    
+    //faster initial updates - increase value of alpha
+    if (bg_model->params.bInit){
+        float alphaInit=(1.0f/(2*bg_model->countFrames+1));
+        if (alphaInit>alpha)
+        {
+            alpha = alphaInit;
+        }
+        else
+        {
+            bg_model->params.bInit = 0;
+        }
+    }
 
-	//update background
-	//icvUpdatePixelBackgroundGMM2( curr_frame, bg_model->foreground, bg_model->data.rGMM,bg_model->data.rnUsedModes,&(bg_model->params),alpha);
-	icvUpdatePixelBackgroundGMM2( curr_frame, bg_model->foreground, bg_model->data.rGMM,bg_model->data.rnUsedModes,
-		bg_model->params.nM,
-		bg_model->params.fTb,
-		bg_model->params.fTB,
-		bg_model->params.fTg,
-		bg_model->params.fVarInit,
-		bg_model->params.fVarMax,
-		bg_model->params.fVarMin,
-		bg_model->params.fCT,
-		bg_model->params.fTau,
-		bg_model->params.bShadowDetection,
-		bg_model->params.nShadowDetection,
-		alpha);
+    //update background
+    //icvUpdatePixelBackgroundGMM2( curr_frame, bg_model->foreground, bg_model->data.rGMM,bg_model->data.rnUsedModes,&(bg_model->params),alpha);
+    icvUpdatePixelBackgroundGMM2( curr_frame, bg_model->foreground, bg_model->data.rGMM,bg_model->data.rnUsedModes,
+        bg_model->params.nM,
+        bg_model->params.fTb,
+        bg_model->params.fTB,
+        bg_model->params.fTg,
+        bg_model->params.fVarInit,
+        bg_model->params.fVarMax,
+        bg_model->params.fVarMin,
+        bg_model->params.fCT,
+        bg_model->params.fTau,
+        bg_model->params.bShadowDetection,
+        bg_model->params.nShadowDetection,
+        alpha);
 
-	//foreground filtering
-	if (bg_model->params.bPostFiltering==1)
-	{
-		int region_count = 0;
-		CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;
+    //foreground filtering
+    if (bg_model->params.bPostFiltering==1)
+    {
+        int region_count = 0;
+        CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;
 
 
-		//filter small regions
-		cvClearMemStorage(bg_model->storage);
+        //filter small regions
+        cvClearMemStorage(bg_model->storage);
 
-		cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_OPEN, 1 );
-		cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_CLOSE, 1 );
+        cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_OPEN, 1 );
+        cvMorphologyEx( bg_model->foreground, bg_model->foreground, 0, 0, CV_MOP_CLOSE, 1 );
 
-		cvFindContours( bg_model->foreground, bg_model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
-		for( seq = first_seq; seq; seq = seq->h_next )
-		{
-			CvContour* cnt = (CvContour*)seq;
-			if( cnt->rect.width * cnt->rect.height < bg_model->params.minArea )
-			{
-				//delete small contour
-				prev_seq = seq->h_prev;
-				if( prev_seq )
-				{
-					prev_seq->h_next = seq->h_next;
-					if( seq->h_next ) seq->h_next->h_prev = prev_seq;
-				}
-				else
-				{
-					first_seq = seq->h_next;
-					if( seq->h_next ) seq->h_next->h_prev = NULL;
-				}
-			}
-			else
-			{
-				region_count++;
-			}
-		}
-		bg_model->foreground_regions = first_seq;
-		cvZero(bg_model->foreground);
-		cvDrawContours(bg_model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
+        cvFindContours( bg_model->foreground, bg_model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
+        for( seq = first_seq; seq; seq = seq->h_next )
+        {
+            CvContour* cnt = (CvContour*)seq;
+            if( cnt->rect.width * cnt->rect.height < bg_model->params.minArea )
+            {
+                //delete small contour
+                prev_seq = seq->h_prev;
+                if( prev_seq )
+                {
+                    prev_seq->h_next = seq->h_next;
+                    if( seq->h_next ) seq->h_next->h_prev = prev_seq;
+                }
+                else
+                {
+                    first_seq = seq->h_next;
+                    if( seq->h_next ) seq->h_next->h_prev = NULL;
+                }
+            }
+            else
+            {
+                region_count++;
+            }
+        }
+        bg_model->foreground_regions = first_seq;
+        cvZero(bg_model->foreground);
+        cvDrawContours(bg_model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
 
-		return region_count; 
-	}
+        return region_count; 
+    }
 
-	return 1;
+    return 1;
 }
 
 
@@ -1196,19 +1197,19 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
     
     nframes = 0;
     history = defaultHistory2;
-	varThreshold = defaultVarThreshold2;
-	bShadowDetection = 1;
+    varThreshold = defaultVarThreshold2;
+    bShadowDetection = 1;
 
-	nmixtures = defaultNMixtures2;   
-	backgroundRatio = defaultBackgroundRatio2;
-	fVarInit = defaultVarInit2;
-	fVarMax  = defaultVarMax2;
-	fVarMin = defaultVarMin2;
+    nmixtures = defaultNMixtures2;   
+    backgroundRatio = defaultBackgroundRatio2;
+    fVarInit = defaultVarInit2;
+    fVarMax  = defaultVarMax2;
+    fVarMin = defaultVarMin2;
 
-	varThresholdGen = defaultVarThresholdGen2;
-	fCT = defaultfCT2;
-	nShadowDetection =  defaultnShadowDetection2;
-	fTau = defaultfTau;
+    varThresholdGen = defaultVarThresholdGen2;
+    fCT = defaultfCT2;
+    nShadowDetection =  defaultnShadowDetection2;
+    fTau = defaultfTau;
 }
     
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int _history,  float _varThreshold, bool _bShadowDetection)
@@ -1218,19 +1219,19 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int _history,  float _varThre
     
     nframes = 0;
     history = _history > 0 ? _history : defaultHistory2;
-	varThreshold = (_varThreshold>0)? _varThreshold : defaultVarThreshold2;
-	bShadowDetection = _bShadowDetection;
+    varThreshold = (_varThreshold>0)? _varThreshold : defaultVarThreshold2;
+    bShadowDetection = _bShadowDetection;
 
-	nmixtures = defaultNMixtures2;   
-	backgroundRatio = defaultBackgroundRatio2;
-	fVarInit = defaultVarInit2;
-	fVarMax  = defaultVarMax2;
-	fVarMin = defaultVarMin2;
+    nmixtures = defaultNMixtures2;   
+    backgroundRatio = defaultBackgroundRatio2;
+    fVarInit = defaultVarInit2;
+    fVarMax  = defaultVarMax2;
+    fVarMin = defaultVarMin2;
 
-	varThresholdGen = defaultVarThresholdGen2;
-	fCT = defaultfCT2;
-	nShadowDetection =  defaultnShadowDetection2;
-	fTau = defaultfTau;
+    varThresholdGen = defaultVarThresholdGen2;
+    fCT = defaultfCT2;
+    nShadowDetection =  defaultnShadowDetection2;
+    fTau = defaultfTau;
 }
     
 BackgroundSubtractorMOG2::~BackgroundSubtractorMOG2()
@@ -1245,15 +1246,15 @@ void BackgroundSubtractorMOG2::initialize(Size _frameSize, int _frameType)
     nframes = 0;
     
     int nchannels = CV_MAT_CN(frameType);
-	CV_Assert( nchannels <= CV_BGFG_MOG2_NDMAX );
+    CV_Assert( nchannels <= CV_BGFG_MOG2_NDMAX );
     
     // for each gaussian mixture of each pixel bg model we store ...
     // the mixture weight (w),
     // the mean (nchannels values) and
     // the covariance
     bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + CV_BGFG_MOG2_NDMAX), CV_32F );
-	//make the array for keeping track of the used modes per pixel - all zeros at start
-	bgmodelUsedModes.create(frameSize,CV_8U);
+    //make the array for keeping track of the used modes per pixel - all zeros at start
+    bgmodelUsedModes.create(frameSize,CV_8U);
     bgmodelUsedModes = Scalar::all(0);
 }
 
@@ -1273,22 +1274,22 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
     CV_Assert(learningRate >= 0);
     CvMat _cimage = image, _cfgmask = fgmask;
     
-	if (learningRate > 0) 
-		icvUpdatePixelBackgroundGMM2( &_cimage, &_cfgmask, 
-		(CvPBGMMGaussian*) bgmodel.data,
-		bgmodelUsedModes.data,
-		nmixtures,//nM
-		varThreshold,//fTb
-		backgroundRatio,//fTB
-		varThresholdGen,//fTg,
-		fVarInit,
-		fVarMax,
-		fVarMin,
-		fCT,
-		fTau,
-		bShadowDetection,
-		nShadowDetection,
-		float(learningRate));
+    if (learningRate > 0) 
+        icvUpdatePixelBackgroundGMM2( &_cimage, &_cfgmask, 
+        (CvPBGMMGaussian*) bgmodel.data,
+        bgmodelUsedModes.data,
+        nmixtures,//nM
+        varThreshold,//fTb
+        backgroundRatio,//fTB
+        varThresholdGen,//fTg,
+        fVarInit,
+        fVarMax,
+        fVarMin,
+        fCT,
+        fTau,
+        bShadowDetection,
+        nShadowDetection,
+        float(learningRate));
 }
 
 void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const

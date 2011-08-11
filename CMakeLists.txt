@@ -428,6 +428,7 @@ set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
 set(WITH_CUDA ON CACHE BOOL "Include NVidia Cuda Runtime support")
 
 set(WITH_OPENNI OFF CACHE BOOL "Include OpenNI support")
+set(WITH_XIMEA OFF CACHE BOOL "Include XIMEA cameras support")
 
 # ===================================================
 # Macros that checks if module have been installed.
@@ -1023,6 +1024,17 @@ set(HAVE_OPENNI_PRIME_SENSOR_MODULE FALSE)
 
 if(WITH_OPENNI)
     include(OpenCVFindOpenNI.cmake)
+endif()
+
+############################### XIMEA ################################
+set(HAVE_XIMEA FALSE)
+ 
+if(WITH_XIMEA)
+    include(OpenCVFindXimea.cmake)
+endif()
+
+if(XIMEA_FOUND)
+    set(HAVE_XIMEA TRUE)
 endif()
 
 ############################## Eigen ##############################
@@ -1632,6 +1644,7 @@ status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN YES             
 status("    OpenNI:"    HAVE_OPENNI                        THEN YES             ELSE NO)
 status("    OpenNI PrimeSensor Modules:"
                         HAVE_OPENNI_PRIME_SENSOR_MODULE    THEN YES             ELSE NO)
+status("    XIMEA:"     HAVE_XIMEA  THEN YES ELSE NO)
 
 # video
 status("")
