@@ -1,19 +1,10 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#include <iostream>
+#include <stdio.h>
 
 using namespace cv;
 using namespace std;
-
-void help()
-{
-	cout <<
-			"\nDemonstrate Canny edge detection\n"
-			"Call:\n"
-			"/.edge [image_name -- Default is fruits.jpg]\n" << endl;
-
-}
 
 int edgeThresh = 1;
 Mat image, gray, edge, cedge;
@@ -31,17 +22,32 @@ void onTrackbar(int, void*)
     imshow("Edge map", cedge);
 }
 
-int main( int argc, char** argv )
+void help()
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"fruits.jpg";
+	printf("\nThis sample demonstrates Canny edge detection\n"
+		   "Call:\n"
+		   "	/.edge [image_name -- Default is fruits.jpg]\n\n");
+}
+
+const char* keys = 
+{
+	"{1| |fruits.jpg|input image name}"
+};
+
+int main( int argc, const char** argv )
+{
+    help();
+
+	CommandLineParser parser(argc, argv, keys);
+	string filename = parser.get<string>("1");
 
     image = imread(filename, 1);
     if(image.empty())
     {
-    	help();
+		printf("Cannot read image file: %s\n", filename.c_str());
+		help();
         return -1;
     }
-    help();
     cedge.create(image.size(), image.type());
     cvtColor(image, gray, CV_BGR2GRAY);
 

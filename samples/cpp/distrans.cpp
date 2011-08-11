@@ -5,24 +5,6 @@
 
 using namespace cv;
 
-void help()
-{
-	printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
-			"Usage:\n"
-			"./distrans [image_name -- default image is stuff.jpg]\n"
-			);
-    printf( "\nHot keys: \n"
-        "\tESC - quit the program\n"
-        "\tC - use C/Inf metric\n"
-        "\tL1 - use L1 metric\n"
-        "\tL2 - use L2 metric\n"
-        "\t3 - use 3x3 mask\n"
-        "\t5 - use 5x5 mask\n"
-        "\t0 - use precise distance transform\n"
-        "\tv - switch Voronoi diagram mode on/off\n"
-        "\tSPACE - loop through all the modes\n" );
-}
-
 int maskSize0 = CV_DIST_MASK_5;
 bool buildVoronoi = false;
 int edgeThresh = 100;
@@ -101,17 +83,41 @@ void onTrackbar( int, void* )
     imshow("Distance Map", dist8u );
 }
 
-int main( int argc, char** argv )
+void help()
 {
-    char* filename = argc == 2 ? argv[1] : (char*)"stuff.jpg";
-    gray = imread(filename, 0);
+	printf("\nProgram to demonstrate the use of the distance transform function between edge images.\n"
+			"Usage:\n"
+			"./distrans [image_name -- default image is stuff.jpg]\n"
+			"\nHot keys: \n"
+			"\tESC - quit the program\n"
+			"\tC - use C/Inf metric\n"
+			"\tL1 - use L1 metric\n"
+			"\tL2 - use L2 metric\n"
+			"\t3 - use 3x3 mask\n"
+			"\t5 - use 5x5 mask\n"
+			"\t0 - use precise distance transform\n"
+			"\tv - switch Voronoi diagram mode on/off\n"
+			"\tSPACE - loop through all the modes\n\n");
+}
+
+const char* keys = 
+{
+	"{1| |stuff.jpg|input image file}"
+};
+
+int main( int argc, const char** argv )
+{
+    help();
+	CommandLineParser parser(argc, argv, keys);
+	string filename = parser.get<string>("1");
+	gray = imread(filename.c_str(), 0);
     if(gray.empty())
     {
-    	help();
+		printf("Cannot read image file: %s\n", filename.c_str());
+		help();
     	return -1;
     }
 
-    help();
     namedWindow("Distance Map", 1);
     createTrackbar("Brightness Threshold", "Distance Map", &edgeThresh, 255, onTrackbar, 0);
 
