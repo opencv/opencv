@@ -167,9 +167,18 @@ bool  PngDecoder::readHeader()
 
                     if( bit_depth <= 8 || bit_depth == 16 )
                     {
-                        m_type = color_type == PNG_COLOR_TYPE_RGB ||
-                             color_type == PNG_COLOR_TYPE_RGB_ALPHA ||
-                             color_type == PNG_COLOR_TYPE_PALETTE ? CV_8UC3 : CV_8UC1;
+                        switch(color_type) 
+                        {
+                           case PNG_COLOR_TYPE_RGB:
+                           case PNG_COLOR_TYPE_PALETTE:
+                               m_type = CV_8UC3;
+                               break;
+                          case PNG_COLOR_TYPE_RGB_ALPHA:
+                               m_type = CV_8UC4;
+                               break;
+                          default:
+                               m_type = CV_8UC1;
+                        }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
                         result = true;
@@ -210,15 +219,18 @@ bool  PngDecoder::readData( Mat& img )
             else if( !isBigEndian() )
                 png_set_swap( png_ptr );
 
-            /* observation: png_read_image() writes 400 bytes beyond
-             * end of data when reading a 400x118 color png
-             * "mpplus_sand.png".  OpenCV crashes even with demo
-             * programs.  Looking at the loaded image I'd say we get 4
-             * bytes per pixel instead of 3 bytes per pixel.  Test
-             * indicate that it is a good idea to always ask for
-             * stripping alpha..  18.11.2004 Axel Walthelm
-             */
-            png_set_strip_alpha( png_ptr );
+            if(img.channels() < 4) 
+            {
+                /* observation: png_read_image() writes 400 bytes beyond
+                 * end of data when reading a 400x118 color png
+                 * "mpplus_sand.png".  OpenCV crashes even with demo
+                 * programs.  Looking at the loaded image I'd say we get 4
+                 * bytes per pixel instead of 3 bytes per pixel.  Test
+                 * indicate that it is a good idea to always ask for
+                 * stripping alpha..  18.11.2004 Axel Walthelm
+                 */
+                 png_set_strip_alpha( png_ptr );
+            }
 
             if( m_color_type == PNG_COLOR_TYPE_PALETTE )
                 png_set_palette_to_rgb( png_ptr );
