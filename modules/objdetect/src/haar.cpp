@@ -1037,12 +1037,6 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
 
-    if( maxSize.height == 0 || maxSize.width == 0 )
-    {
-        maxSize.height = img->rows;
-        maxSize.width = img->cols;
-    }
-
     if( !CV_IS_HAAR_CLASSIFIER(cascade) )
         CV_Error( !cascade ? CV_StsNullPtr : CV_StsBadArg, "Invalid classifier cascade" );
 
@@ -1061,6 +1055,12 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
     if( findBiggestObject )
         flags &= ~CV_HAAR_SCALE_IMAGE;
+    
+    if( maxSize.height == 0 || maxSize.width == 0 )
+    {
+        maxSize.height = img->rows;
+        maxSize.width = img->cols;
+    }
 
     temp = cvCreateMat( img->rows, img->cols, CV_8UC1 );
     sum = cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 );
