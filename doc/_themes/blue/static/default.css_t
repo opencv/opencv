@@ -80,6 +80,7 @@ div.related a {
 }
 
 div.sphinxsidebar {
+    word-wrap: break-word;
     {%- if theme_stickysidebar|tobool %}
     top: 30px;
     margin: 0;
@@ -140,7 +141,7 @@ div.sphinxsidebar p.topless {
 }
 
 div.sphinxsidebar ul {
-    margin: 10px;
+    margin: 10px 0 10px 10px;
     padding: 0;
     color: {{ theme_sidebartextcolor }};
 }
