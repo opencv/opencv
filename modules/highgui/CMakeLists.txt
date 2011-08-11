@@ -218,6 +218,15 @@ if(WITH_ANDROID_CAMERA)
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} opencv_androidcamera)
 endif()
 
+#XIMEA API
+if(HAVE_XIMEA AND XIMEA_FOUND)
+   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
+   include_directories(${XIMEA_PATH})
+   link_directories(${XIMEA_LIBRARY_DIR})
+   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} m3api)
+   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
+endif()
+
 if(COMMAND get_module_external_sources)
     set( lib_srcs "${highgui_srcs}" )
     set( lib_int_hdrs "${highgui_hdrs}" )
