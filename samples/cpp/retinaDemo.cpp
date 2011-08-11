@@ -9,8 +9,7 @@
 #include <iostream>
 #include <cstring>
 
-#include "HVStools/retina.hpp" // for retina processing
-#include <opencv/highgui.h>  // image IO
+#include "opencv2/opencv.hpp"
 
 void help(std::string errorMessage)
 {
