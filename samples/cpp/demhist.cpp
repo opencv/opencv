@@ -56,9 +56,8 @@ void updateBrightnessContrast( int /*arg*/, void* )
 }
 void help()
 {
-	printf("\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
-			"Usage: \n"
-			"demhist [image_name -- Defaults to baboon.jpg]\n");
+	std::cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
+	          << "Usage: \n" << "demhist [image_name -- Defaults to baboon.jpg]" << std::endl;
 }
 
 const char* keys = 
@@ -77,7 +76,7 @@ int main( int argc, const char** argv )
 	image = imread( inputImage, 0 );
 	if(image.empty())
 	{
-		printf("Cannot read image file: %s\n", inputImage.c_str());
+		std::cerr << "Cannot read image file: " << inputImage << std::endl;
 		return -1;
 	}
 
