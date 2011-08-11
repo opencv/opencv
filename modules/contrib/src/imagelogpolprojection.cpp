@@ -362,7 +362,7 @@ bool ImageLogPolProjection::_initLogPolarCortexSampling(const double reductionFa
 
 	//std::cout<<"ImageLogPolProjection::Starting cortex projection"<<std::endl;
 	// compute transformation, get theta and Radius in reagrd of the output sampled pixel
-	double diagonalLenght=sqrt(_outputNBcolumns*_outputNBcolumns+_outputNBrows*_outputNBrows);
+	double diagonalLenght=sqrt((double)(_outputNBcolumns*_outputNBcolumns+_outputNBrows*_outputNBrows));
 	for (unsigned int radiusIndex=0;radiusIndex<_outputNBcolumns;++radiusIndex)
 		for(unsigned int orientationIndex=0;orientationIndex<_outputNBrows;++orientationIndex)
 		{
