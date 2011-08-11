@@ -9,7 +9,7 @@ OPENCV_LIBS_DIR:=@CMAKE_LIBS_DIR_CONFIGCMAKE@
 OPENCV_BASEDIR:=@CMAKE_BASE_INCLUDE_DIR_CONFIGCMAKE@
 OPENCV_LOCAL_C_INCLUDES:=@CMAKE_INCLUDE_DIRS_CONFIGCMAKE@
 
-OPENCV_MODULES := contrib calib3d objdetect features2d imgproc video  highgui ml legacy flann core
+OPENCV_MODULES := contrib calib3d objdetect features2d video imgproc highgui ml legacy flann core
 
 ifeq (${OPENCV_CAMERA_MODULES},off)
 	OPENCV_CAMERA_MODULES:=
