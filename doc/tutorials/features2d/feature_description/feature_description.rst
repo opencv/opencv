@@ -13,6 +13,7 @@ In this tutorial you will learn how to:
    * Use the :descriptor_extractor:`DescriptorExtractor<>` interface in order to find the feature vector correspondent to the keypoints. Specifically:
 
      * Use :surf_descriptor_extractor:`SurfDescriptorExtractor<>` and its function :descriptor_extractor:`compute<>` to perform the required calculations.
+     * Use a :brute_force_matcher:`BruteForceMatcher<>`	to match the features vector
      * Use the function :draw_matches:`drawMatches<>` to draw the detected matches.
      
 
