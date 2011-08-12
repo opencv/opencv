@@ -3,7 +3,7 @@
 *feature2d* module. 2D Features framework
 -----------------------------------------------------------
 
-Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.
+Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.ddddddd
 
 .. include:: ../../definitions/tocDefinitions.rst 
 
@@ -72,7 +72,7 @@ Learn about how to use the feature points  detectors, descriptors and matching f
   .. cssclass:: toctableopencv
 
   ===================== ==============================================
-   |Subpixel|             **Title:** :ref:`corner_subpixeles`
+   |Subpixel|           **Title:** :ref:`corner_subpixeles`
   
                         *Compatibility:* > OpenCV 2.0
                         
@@ -85,6 +85,84 @@ Learn about how to use the feature points  detectors, descriptors and matching f
   .. |Subpixel| image:: images/trackingmotion/Corner_Subpixeles_Cover.jpg
                      :height: 90pt
                      :width:  90pt
+
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |FeatureDetect|      **Title:** :ref:`feature_detection`
+  
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+                        
+                        In this tutorial, you will use *features2d* to detect interest points.
+  
+  ===================== ==============================================
+  
+  .. |FeatureDetect| image:: images/Feature_Detection_Tutorial_Cover.jpg
+                     :height: 90pt
+                     :width:  90pt
+
+
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |FeatureDescript|    **Title:** :ref:`feature_description`
+  
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+                        
+                        In this tutorial, you will use *features2d* to calculate feature vectors.
+  
+  ===================== ==============================================
+  
+  .. |FeatureDescript| image:: images/Feature_Description_Tutorial_Cover.jpg
+                       :height: 90pt
+                       :width:  90pt
+
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |FeatureFlann|       **Title:** :ref:`feature_flann_matcher`
+  
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+                        
+                        In this tutorial, you will use *features2d* to detect interest points.
+  
+  ===================== ==============================================
+  
+  .. |FeatureFlann| image:: images/Feature_Detection_Tutorial_Cover.jpg
+                    :height: 90pt
+                    :width:  90pt
+
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |FeatureHomo|        **Title:** :ref:`feature_homography`
+  
+                        *Compatibility:* > OpenCV 2.0
+                        
+                        *Author:* |Author_AnaH|
+                        
+                        In this tutorial, you will use *features2d* to detect interest points.
+  
+  ===================== ==============================================
+  
+  .. |FeatureHomo| image:: images/Feature_Detection_Tutorial_Cover.jpg
+                   :height: 90pt
+                   :width:  90pt
+
 
 + 
   .. tabularcolumns:: m{100pt} m{300pt}

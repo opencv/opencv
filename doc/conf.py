@@ -358,7 +358,15 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'xmlymlpers':('http://opencv.itseez.com/modules/core/doc/xml_yaml_persistence.html#%s', None),
 			'huivideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
             'filtering':('http://opencv.itseez.com/modules/imgproc/doc/filtering.html#%s', None),
-            'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None)
+            'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None),
+            'feature_detector' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#featuredetector%s', None),
+	    'feature_detector_detect' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#cv-featuredetector-detect%s', None ),
+	    'surf_feature_detector' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#surffeaturedetector%s', None ),
+	    'draw_keypoints' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawkeypoints%s', None ),
+	    'descriptor_extractor': ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#descriptorextractor%s', None ),
+	    'descriptor_extractor_compute' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#cv-descriptorextractor-compute%s', None ),
+	    'surf_descriptor_extractor' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#surfdescriptorextractor%s', None ),
+	    'draw_matches' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawmatches%s', None )		 		 
            }
 
 
