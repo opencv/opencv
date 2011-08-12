@@ -51,13 +51,13 @@ The class ``BaseColumnFilter`` is a base class for filtering data using single-c
 
 where
 :math:`F` is a filtering function but, as it is represented as a class, it can produce any side effects, memorize previously processed data, and so on. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:ocv:class:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
 
-   :ocv:func:`BaseRowFilter`,
-   :ocv:func:`BaseFilter`,
-   :ocv:func:`FilterEngine`,
+   :ocv:class:`BaseRowFilter`,
+   :ocv:class:`BaseFilter`,
+   :ocv:class:`FilterEngine`,
    :ocv:func:`getColumnSumFilter`,
    :ocv:func:`getLinearColumnFilter`,
    :ocv:func:`getMorphologyColumnFilter`
@@ -101,13 +101,13 @@ The class ``BaseFilter`` is a base class for filtering data using 2D kernels. Fi
 
 where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:ocv:class:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
 
-    :ocv:func:`BaseColumnFilter`,
-    :ocv:func:`BaseRowFilter`,
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`BaseColumnFilter`,
+    :ocv:class:`BaseRowFilter`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`getLinearFilter`,
     :ocv:func:`getMorphologyFilter`
 
@@ -143,13 +143,13 @@ The class ``BaseRowFilter`` is a base class for filtering data using single-row 
 
 where
 :math:`F` is a filtering function. The class only defines an interface and is not used directly. Instead, there are several functions in OpenCV (and you can add more) that return pointers to the derived classes that implement specific filtering operations. Those pointers are then passed to the
-:ocv:func:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
+:ocv:class:`FilterEngine` constructor. While the filtering operation interface uses the ``uchar`` type, a particular implementation is not limited to 8-bit data.
 
 .. seealso::
 
-    :ocv:func:`BaseColumnFilter`,
+    :ocv:class:`BaseColumnFilter`,
     :ocv:func:`Filter`,
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`getLinearRowFilter`,
     :ocv:func:`getMorphologyRowFilter`,
     :ocv:func:`getRowSumFilter`
@@ -347,7 +347,7 @@ Unlike the earlier versions of OpenCV, now the filtering operations fully suppor
 
 
 Explore the data types. As it was mentioned in the
-:ocv:func:`BaseFilter` description, the specific filters can process data of any type, despite that ``Base*Filter::operator()`` only takes ``uchar`` pointers and no information about the actual types. To make it all work, the following rules are used:
+:ocv:class:`BaseFilter` description, the specific filters can process data of any type, despite that ``Base*Filter::operator()`` only takes ``uchar`` pointers and no information about the actual types. To make it all work, the following rules are used:
 
 *
     In case of separable filtering, ``FilterEngine::rowFilter``   is  applied first. It transforms the input image data (of type ``srcType``  ) to the intermediate results stored in the internal buffers (of type ``bufType``   ). Then, these intermediate results are processed as
@@ -359,9 +359,9 @@ Explore the data types. As it was mentioned in the
 
 .. seealso::
 
-   :ocv:func:`BaseColumnFilter`,
-   :ocv:func:`BaseFilter`,
-   :ocv:func:`BaseRowFilter`,
+   :ocv:class:`BaseColumnFilter`,
+   :ocv:class:`BaseFilter`,
+   :ocv:class:`BaseRowFilter`,
    :ocv:func:`createBoxFilter`,
    :ocv:func:`createDerivFilter`,
    :ocv:func:`createGaussianFilter`,
@@ -457,12 +457,12 @@ The function computes and returns the coordinate of a donor pixel corresponding 
 
 
 Normally, the function is not called directly. It is used inside
-:ocv:func:`FilterEngine` and
+:ocv:class:`FilterEngine` and
 :ocv:func:`copyMakeBorder` to compute tables for quick extrapolation.
 
 .. seealso::
 
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`copyMakeBorder`
 
 
@@ -558,7 +558,7 @@ Forms a border around an image.
     :param value: Border value if  ``borderType==BORDER_CONSTANT`` .
     
 The function copies the source image into the middle of the destination image. The areas to the left, to the right, above and below the copied source image will be filled with extrapolated pixels. This is not what
-:ocv:func:`FilterEngine` or filtering functions based on it do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
+:ocv:class:`FilterEngine` or filtering functions based on it do (they extrapolate pixels on-fly), but what other more complex functions, including your own, may do to simplify image boundary handling.
 
 The function supports the mode when ``src`` is already in the middle of ``dst`` . In this case, the function does not copy ``src`` itself but simply constructs the border, for example: ::
 
@@ -611,7 +611,7 @@ Returns a box filter engine.
 The function is a convenience function that retrieves the horizontal sum primitive filter with
 :ocv:func:`getRowSumFilter` , vertical sum filter with
 :ocv:func:`getColumnSumFilter` , constructs new
-:ocv:func:`FilterEngine` , and passes both of the primitive filters there. The constructed filter engine can be used for image filtering with normalized or unnormalized box filter.
+:ocv:class:`FilterEngine` , and passes both of the primitive filters there. The constructed filter engine can be used for image filtering with normalized or unnormalized box filter.
 
 The function itself is used by
 :ocv:func:`blur` and
@@ -619,7 +619,7 @@ The function itself is used by
 
 .. seealso::
 
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`blur`,
     :ocv:func:`boxFilter` 
 
@@ -714,12 +714,12 @@ Creates a non-separable linear filter engine.
     :param borderValue: Border vaule used in case of a constant border.
 
 The function returns a pointer to a 2D linear filter for the specified kernel, the source array type, and the destination array type. The function is a higher-level function that calls ``getLinearFilter`` and passes the retrieved 2D filter to the
-:ocv:func:`FilterEngine` constructor.
+:ocv:class:`FilterEngine` constructor.
 
 .. seealso::
 
     :ocv:func:`createSeparableLinearFilter`,
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`filter2D`
 
 
@@ -766,7 +766,7 @@ Note that
     :ocv:func:`erode`,
     :ocv:func:`dilate`,
     :ocv:func:`morphologyEx`,
-    :ocv:func:`FilterEngine`
+    :ocv:class:`FilterEngine`
 
 
 createSeparableLinearFilter
@@ -807,13 +807,13 @@ The functions construct primitive separable linear filtering operations or a fil
 :ocv:func:`createSeparableLinearFilter` or even higher-level
 :ocv:func:`sepFilter2D` . The function
 :ocv:func:`createMorphologyFilter` is smart enough to figure out the ``symmetryType`` for each of the two kernels, the intermediate ``bufType``  and, if filtering can be done in integer arithmetics, the number of ``bits`` to encode the filter coefficients. If it does not work for you, it is possible to call ``getLinearColumnFilter``,``getLinearRowFilter`` directly and then pass them to the
-:ocv:func:`FilterEngine` constructor.
+:ocv:class:`FilterEngine` constructor.
 
 .. seealso::
 
     :ocv:func:`sepFilter2D`,
     :ocv:func:`createLinearFilter`,
-    :ocv:func:`FilterEngine`,
+    :ocv:class:`FilterEngine`,
     :ocv:func:`getKernelType`
 
 

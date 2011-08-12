@@ -1149,6 +1149,8 @@ class OCVObject(ObjectDescription):
                 #(self.env.docname, self.objtype, theid))
             self.env.domaindata['ocv']['objects'].setdefault(theid,
                 (self.env.docname, self.objtype, theid))
+            self.env.domaindata['ocv']['objects2'].setdefault(name,
+                (self.env.docname, self.objtype, theid))
 
         indextext = self.get_index_text(name)
         if indextext:
@@ -1192,33 +1194,32 @@ class OCVObject(ObjectDescription):
 
 
 class OCVClassObject(OCVObject):
+    object_annotation = "class "
+    object_long_name = "class"
+
+    def attach_modifiers(self, node, obj):
+        if obj.visibility != 'public':
+            node += addnodes.desc_annotation(obj.visibility,
+                                             obj.visibility)
+            node += nodes.Text(' ')
+        if obj.static:
+            node += addnodes.desc_annotation('static', 'static')
+            node += nodes.Text(' ')
 
     def get_index_text(self, name):
-        return _('%s (C++ class)') % name
+        return _('%s (C++ %s)') % (name, self.__class__.object_long_name)
 
     def parse_definition(self, parser):
         return parser.parse_class()
 
     def describe_signature(self, signode, cls):
-        #self.attach_modifiers(signode, cls)
-        #signode += addnodes.desc_annotation('class ', 'class ')
-        #self.attach_name(signode, cls.name)
-        pass
+        self.attach_modifiers(signode, cls)
+        signode += addnodes.desc_annotation(self.__class__.object_annotation, self.__class__.object_annotation)
+        self.attach_name(signode, cls.name)
 
-class OCVStructObject(OCVObject):
-
-    def get_index_text(self, name):
-        return _('%s (C structure)') % name
-
-    def parse_definition(self, parser):
-        return parser.parse_class()
-
-    def describe_signature(self, signode, cls):
-        #self.attach_modifiers(signode, cls)
-        #signode += addnodes.desc_annotation('class ', 'class ')
-        #self.attach_name(signode, cls.name)
-        pass
-
+class OCVStructObject(OCVClassObject):
+    object_annotation = "struct "
+    object_long_name = "structure"
 
 class OCVTypeObject(OCVObject):
 
@@ -1238,9 +1239,7 @@ class OCVTypeObject(OCVObject):
             signode += nodes.Text(' ')
         self.attach_name(signode, obj.name)
 
-
 class OCVMemberObject(OCVObject):
-
     ismember = True
 
     def get_index_text(self, name):
@@ -1258,7 +1257,6 @@ class OCVMemberObject(OCVObject):
         self.attach_name(signode, obj.name)
         if obj.value is not None:
             signode += nodes.Text(u' = ' + obj.value)
-
 
 class OCVFunctionObject(OCVObject):
 
@@ -1417,6 +1415,10 @@ class OCVDomain(Domain):
     initial_data = {
         'objects': {},  # fullname -> docname, objtype
     }
+    
+    def __init__(self, env):
+        Domain.__init__(self, env)
+        self.data['objects2'] = {}
 
     def clear_doc(self, docname):
         for fullname, (fn, _, _) in self.data['objects'].items():
@@ -1427,9 +1429,19 @@ class OCVDomain(Domain):
                      typ, target, node, contnode):
         def _create_refnode(expr):
             name = unicode(expr)
-            if name not in self.data['objects']:
+            if "type" in self.objtypes_for_role(typ):
                 return None
-            obj = self.data['objects'][name]
+            if "cfunction" in self.objtypes_for_role(typ):
+                if not name.lower().startswith(u'cv'):
+                    name = u'cv' + name
+            dict = self.data['objects']
+            if name not in dict:
+                dict = self.data['objects2']
+            if name not in dict:
+                refdoc = node.get('refdoc', fromdocname)
+                env.warn(refdoc, 'unresolved reference: %r - %r' % (target, typ), node.line)
+                return None
+            obj = dict[name]
             if obj[1] not in self.objtypes_for_role(typ):
                 return None
             return make_refnode(builder, fromdocname, obj[0], obj[2],
@@ -1443,7 +1455,7 @@ class OCVDomain(Domain):
                 raise DefinitionError('')
         except DefinitionError:
             refdoc = node.get('refdoc', fromdocname)
-            env.warn(refdoc, 'unparseable1 C++ definition: %r' % target,
+            env.warn(refdoc, 'unparseable C++ definition: %r' % target,
                      node.line)
             return None
 
