@@ -181,6 +181,14 @@ public class HOGDescriptorTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    public void testGetDaimlerPeopleDetector() {
+        fail("Not yet implemented");
+    }
+
+    public void testGetDefaultPeopleDetector() {
+        fail("Not yet implemented");
+    }
+
     public void testGetDescriptorSize() {
         fail("Not yet implemented");
     }
