@@ -1,4 +1,4 @@
-/* $Id: tif_ojpeg.c,v 1.24.2.6 2010-06-08 23:29:51 bfriesen Exp $ */
+/* $Id: tif_ojpeg.c,v 1.24.2.8 2010-12-11 21:25:04 faxguy Exp $ */
 
 /* WARNING: The type of JPEG encapsulation defined by the TIFF Version 6.0
    specification is now totally obsolete and deprecated for new applications and
@@ -1537,7 +1537,6 @@ OJPEGReadHeaderInfoSecStreamSof(TIFF* tif, uint8 marker_id)
 		OJPEGReadSkip(sp,4);
 	else
 	{
-		/* TODO: probably best to also add check on allowed upper bound, especially x, may cause buffer overflow otherwise i think */
 		/* Y: Number of lines */
 		if (OJPEGReadWord(sp,&p)==0)
 			return(0);
@@ -1553,6 +1552,11 @@ OJPEGReadHeaderInfoSecStreamSof(TIFF* tif, uint8 marker_id)
 		if ((p<sp->image_width) && (p<sp->strile_width))
 		{
 			TIFFErrorExt(tif->tif_clientdata,module,"JPEG compressed data indicates unexpected width");
+			return(0);
+		}
+		if ((uint32)p>sp->strile_width)
+		{
+			TIFFErrorExt(tif->tif_clientdata,module,"JPEG compressed data image width exceeds expected image width");
 			return(0);
 		}
 		sp->sof_x=p;
@@ -1918,8 +1922,14 @@ OJPEGReadBufferFill(OJPEGState* sp)
 					{
 						if (sp->in_buffer_file_pos>=sp->file_size)
 							sp->in_buffer_file_pos=0;
+						else if (sp->tif->tif_dir.td_stripbytecount==NULL)
+							sp->in_buffer_file_togo=sp->file_size-sp->in_buffer_file_pos;
 						else
 						{
+							if (sp->tif->tif_dir.td_stripbytecount == 0) {
+								TIFFErrorExt(sp->tif->tif_clientdata,sp->tif->tif_name,"Strip byte counts are missing");
+								return(0);
+							}
 							sp->in_buffer_file_togo=sp->tif->tif_dir.td_stripbytecount[sp->in_buffer_next_strile];  
 							if (sp->in_buffer_file_togo==0)
 								sp->in_buffer_file_pos=0;

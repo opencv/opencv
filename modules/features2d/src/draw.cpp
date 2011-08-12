@@ -54,6 +54,7 @@ namespace cv
  */
 static inline void _drawKeypoint( Mat& img, const KeyPoint& p, const Scalar& color, int flags )
 {
+    CV_Assert( !img.empty() );
     Point center( cvRound(p.pt.x * draw_multiplier), cvRound(p.pt.y * draw_multiplier) );
 
     if( flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS )
@@ -111,10 +112,13 @@ void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& ou
     RNG& rng=theRNG();
     bool isRandColor = _color == Scalar::all(-1);
 
-    for( vector<KeyPoint>::const_iterator i = keypoints.begin(), ie = keypoints.end(); i != ie; ++i )
+    CV_Assert( !outImage.empty() );
+    vector<KeyPoint>::const_iterator it = keypoints.begin(),
+                                     end = keypoints.end();
+    for( ; it != end; ++it )
     {
         Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
-        _drawKeypoint( outImage, *i, color, flags );
+        _drawKeypoint( outImage, *it, color, flags );
     }
 }
 

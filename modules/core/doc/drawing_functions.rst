@@ -68,7 +68,7 @@ Clips the line against the image rectangle.
 
     :param imgSize: Image size. The image rectangle is  ``Rect(0, 0, imgSize.width, imgSize.height)`` .     
 
-    :param imgSize: Image rectangle.?? why do you list the same para twice??
+    :param imgRect: Image rectangle.
 
     :param pt1: First line point.
 
@@ -137,9 +137,9 @@ Approximates an elliptic arc with a polyline.
     :param center: Center of the arc.
 
     :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.   
-	
+    
     :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.   
-	
+    
     :param startAngle: Starting angle of the elliptic arc in degrees.
 
     :param endAngle: Ending angle of the elliptic arc in degrees.
@@ -315,6 +315,7 @@ The function initializes the font structure that can be passed to text rendering
 
 .. seealso:: :ocv:cfunc:`PutText`
 
+.. _Line: 
 
 line
 --------

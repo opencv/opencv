@@ -127,7 +127,8 @@ static void writeMat(std::ostream& out, const Mat& m, char rowsep, char elembrac
     {
         if(orowbrace)
             out << orowbrace;
-        writeElems(out, m.ptr(i), m.cols, type, elembrace);
+        if( m.data )
+            writeElems(out, m.ptr(i), m.cols, type, elembrace);
         if(orowbrace)
             out << crowbrace << (i+1 < m.rows ? ", " : "");
         if(i+1 < m.rows)

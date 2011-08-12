@@ -3,20 +3,6 @@
 # run cmake with:
 # cmake -C 
 ########################
-#Build all examples
-set(BUILD_EXAMPLES OFF CACHE BOOL "" )
-
-#Build Reference Manual
-set(BUILD_REFMAN OFF CACHE BOOL "" )
-
-#Build LaTeX OpenCV Documentation
-#set(BUILD_LATEX_DOCS OFF CACHE BOOL "" )
-
-#Build with Python support
-set(BUILD_NEW_PYTHON_SUPPORT OFF CACHE BOOL "" )
-
-#Build a installer with the SDK
-set(BUILD_PACKAGE OFF CACHE BOOL "" )
 
 #Build shared libraries (.dll/.so CACHE BOOL "" ) instead of static ones (.lib/.a CACHE BOOL "" )
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
@@ -24,8 +10,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" )
 #Build 3rd party libraries
 set(OPENCV_BUILD_3RDPARTY_LIBS ON CACHE BOOL "" )
 
-#Choose the type of build, options are: None Debug Release RelWithDebInfo
-# MinSizeRel.
+#Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel.
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" )
 
 #Include IEEE1394 support
@@ -88,6 +73,9 @@ set(WITH_V4L OFF CACHE BOOL "" )
 #Include Xine support (GPL CACHE BOOL "" )
 set(WITH_XINE OFF CACHE BOOL "" )
 
+#no python available on Android
+set(BUILD_NEW_PYTHON_SUPPORT OFF CACHE INTERNAL "" FORCE)
+
 #Enable SSE instructions
 SET( ENABLE_SSE OFF CACHE INTERNAL "" FORCE )
 
@@ -106,5 +94,5 @@ SET( ENABLE_SSE42 OFF CACHE INTERNAL "" FORCE )
 #Enable SSSE3 instructions
 SET( ENABLE_SSSE3 OFF CACHE INTERNAL "" FORCE )
 
-#Set output folder to "libs" instead of "lib" for better compatibility with java projects
-SET( LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/libs CACHE PATH "path for android libs" )
+#Set output folder to ${CMAKE_BINARY_DIR}
+set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )

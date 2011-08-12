@@ -544,13 +544,13 @@ Converts one array to another with optional linear transformation.
 .. ocv:pyoldfunction:: cv.ConvertScale(src, dst, scale=1.0, shift=0.0)-> None
 .. ocv:pyoldfunction:: cv.Convert(src, dst)-> None
 
-::
+    ::
     
-    #define cvCvtScale cvConvertScale
-    #define cvScale  cvConvertScale
-    #define cvConvert(src, dst )  cvConvertScale((src), (dst), 1, 0 )
+        #define cvCvtScale cvConvertScale
+        #define cvScale  cvConvertScale
+        #define cvConvert(src, dst )  cvConvertScale((src), (dst), 1, 0 )
 
-..
+    ..
     
     :param src: Source array 
     
@@ -1729,7 +1729,7 @@ For example, `NumPy <http://numpy.scipy.org/>`_ arrays support the array interfa
 
 .. code-block::python
     
-    >>> import cv, numpy
+    >>> import cv2.cv as cv, numpy
     >>> a = numpy.ones((480, 640))
     >>> mat = cv.fromarray(a)
     >>> print cv.GetDims(mat), cv.CV_MAT_CN(cv.GetElemType(mat))

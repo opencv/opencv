@@ -3,8 +3,10 @@ if(ANDROID)
   if(ANDROID_API_LEVEL LESS 8)
     ADD_DEFINITIONS(-DGTEST_HAS_CLONE=0)
   endif()
-
-  add_subdirectory(androidcamera)
+  
+  IF(WITH_ANDROID_CAMERA)
+      add_subdirectory(androidcamera)
+  endif()
 endif()
 
 add_subdirectory(calib3d)
@@ -22,8 +24,12 @@ add_subdirectory(contrib)
 add_subdirectory(ml)
 add_subdirectory(objdetect)
 
-if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT)
+if(PYTHONLIBS_FOUND AND BUILD_NEW_PYTHON_SUPPORT AND PYTHON_USE_NUMPY)
   add_subdirectory(python)
+endif()
+
+if(BUILD_JAVA_SUPPORT)
+  add_subdirectory(java)
 endif()
 
 add_subdirectory(video)

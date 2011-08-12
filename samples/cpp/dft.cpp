@@ -2,31 +2,37 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#include <iostream>
+#include <stdio.h>
+
 using namespace cv;
 using namespace std;
 
 void help()
 {
-	cout << "\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
-			"The dft of an image is taken and it's power spectrum is displayed.\n"
-			"Call:\n"
-			"./dft [image_name -- default lena.jpg]\n" << endl;
+	printf("\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
+		   "The dft of an image is taken and it's power spectrum is displayed.\n"
+		   "Usage:\n"
+			"./dft [image_name -- default lena.jpg]\n");
 }
 
-
-
-int main(int argc, char ** argv)
+const char* keys = 
 {
-    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
+	"{1| |lena.jpg|input image file}"
+};
 
-    Mat img = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+int main(int argc, const char ** argv)
+{
+    help();
+	CommandLineParser parser(argc, argv, keys);
+	string filename = parser.get<string>("1");
+
+	Mat img = imread(filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
     if( img.empty() )
     {
         help();
+		printf("Cannot read image file: %s\n", filename.c_str());
         return -1;
     }
-    help();
     int M = getOptimalDFTSize( img.rows );
     int N = getOptimalDFTSize( img.cols );
     Mat padded;

@@ -49,7 +49,7 @@ The OpenCV GPU module follows the CUDA Runtime API conventions regarding the mul
 It is also possible to create the context explicitly using the CUDA Driver API, attach, and set the "current" context for all necessary threads. The CUDA Runtime API (and OpenCV functions, respectively) picks it up.
 
 Utilizing Multiple GPUs
----------
+-----------------------
 
 In the current version, each of the OpenCV GPU algorithms can use only a single GPU. So, to utilize multiple GPUs, you have to manually distribute the work between GPUs. Consider the following ways of utilizing multiple GPUs:
 
@@ -74,5 +74,5 @@ While developing algorithms for multiple GPUs, note a data passing overhead. For
 With this algorithm, a dual GPU gave a 180
 %
 performance increase comparing to the single Fermi GPU. For a source code example, see
-https://code.ros.org/svn/opencv/trunk/opencv/examples/gpu/.
+https://code.ros.org/svn/opencv/trunk/opencv/samples/gpu/.
 

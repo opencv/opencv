@@ -222,7 +222,7 @@ Determines strong corners on an image.
 
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
-.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eigImage, CvArr* tempImage CvPoint2D32f* corners, int* cornerCount, double qualityLevel, double minDistance, const CvArr* mask=NULL, int blockSize=3, int useHarris=0, double k=0.04 )
+.. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eigImage, CvArr* tempImage, CvPoint2D32f* corners, int* cornerCount, double qualityLevel, double minDistance, const CvArr* mask=NULL, int blockSize=3, int useHarris=0, double k=0.04 )
 
 .. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04)-> corners
 
@@ -285,11 +285,15 @@ Finds circles in a grayscale image using the Hough transform.
 
 .. ocv:function:: void HoughCircles( InputArray image, OutputArray circles, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
 
+.. ocv:cfunction:: CvSeq* cvHoughCircles( CvArr* image, CvMemStorage* circleStorage, int method, double dp, double minDist, double param1=100, double param2=100, int minRadius=0, int maxRadius=0 )
+
 .. ocv:pyfunction:: cv2.HoughCircles(image, method, dp, minDist[, circles[, param1[, param2[, minRadius[, maxRadius]]]]]) -> circles
 
     :param image: 8-bit, single-channel, grayscale input image.
 
     :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
+    
+    :param circleStorage: In C function this is a memory storage that will contain the output sequence of found circles.
     
     :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 

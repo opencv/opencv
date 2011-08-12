@@ -41,7 +41,7 @@
 //M*/
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -84,8 +84,8 @@ __global__ void matchTemplateNaiveKernel_CCORR(
         int w, int h, const PtrStep image, const PtrStep templ, 
         DevMem2Df result)
 {
-    typedef typename TypeVec<T, cn>::vec_t Type;
-    typedef typename TypeVec<float, cn>::vec_t Typef;
+    typedef typename TypeVec<T, cn>::vec_type Type;
+    typedef typename TypeVec<float, cn>::vec_type Typef;
 
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -174,8 +174,8 @@ __global__ void matchTemplateNaiveKernel_SQDIFF(
         int w, int h, const PtrStep image, const PtrStep templ, 
         DevMem2Df result)
 {
-    typedef typename TypeVec<T, cn>::vec_t Type;
-    typedef typename TypeVec<float, cn>::vec_t Typef;
+    typedef typename TypeVec<T, cn>::vec_type Type;
+    typedef typename TypeVec<float, cn>::vec_type Typef;
 
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -884,7 +884,7 @@ void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
 template <int cn>
 __global__ void extractFirstChannel_32F(const PtrStep image, DevMem2Df result)
 {
-    typedef typename TypeVec<float, cn>::vec_t Typef;
+    typedef typename TypeVec<float, cn>::vec_type Typef;
 
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;

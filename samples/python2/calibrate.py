@@ -1,5 +1,5 @@
 import numpy as np
-import cv2, cv
+import cv2
 import os
 from common import splitfn
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
             term = ( cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 30, 0.1 )
             cv2.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
         if debug_dir:
-            vis = cv2.cvtColor(img, cv.CV_GRAY2BGR)
+            vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
             cv2.drawChessboardCorners(vis, pattern_size, corners, found)
             path, name, ext = splitfn(fn)
             cv2.imwrite('%s/%s_chess.bmp' % (debug_dir, name), vis)
@@ -50,10 +50,7 @@ if __name__ == '__main__':
         
         print 'ok'
 
-    camera_matrix = np.zeros((3, 3))
-    dist_coefs = np.zeros(4)
-    img_n = len(img_points)
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), camera_matrix, dist_coefs)
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h))
     print "RMS:", rms
     print "camera matrix:\n", camera_matrix
     print "distortion coefficients: ", dist_coefs.ravel()

@@ -1663,12 +1663,56 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         // filter points by subMask and convert the points coordinates from subImage size to image size
         KeyPointsFilter::runByPixelsMask( keypoints, subMask );
         int dx = brect.x, dy = brect.y;
-        for( vector<KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it )
+        vector<KeyPoint>::iterator it = keypoints.begin(),
+                                   end = keypoints.end();
+        for( ; it != end; ++it )
         {
             it->pt.x += dx;
             it->pt.y += dy;
         }
     }
+}
+
+void release_features_data( CvSeq* featuresSeq )
+{
+    for( int i = 0; i < featuresSeq->total; i++ )
+    {
+        feature * ft = CV_GET_SEQ_ELEM( feature, featuresSeq, i );
+        free( ft->feature_data );
+    }
+}
+
+// Calculate orientation of features.
+// Note: calc_feature_oris() duplicates the points with several dominant orientations.
+// So if keypoints was detected by Sift feature detector then some points will be
+// duplicated twice.
+void recalculateAngles( vector<KeyPoint>& keypoints, IplImage*** gauss_pyr,
+                        int nOctaves, int nOctaveLayers )
+{
+    CvMemStorage* storage = cvCreateMemStorage( 0 );
+    CvSeq* featuresSeq = cvCreateSeq( 0, sizeof(CvSeq), sizeof(struct feature), storage );
+
+    for( size_t i = 0; i < keypoints.size(); i++ )
+    {
+        feature ft;
+        keyPointToFeature( keypoints[i], ft, SiftParams( nOctaves, nOctaveLayers ) );
+        cvSeqPush( featuresSeq, &ft );
+    }
+
+    calc_feature_oris( featuresSeq, gauss_pyr );
+
+    keypoints.resize( featuresSeq->total );
+    for( int i = 0; i < featuresSeq->total; i++ )
+    {
+        feature * ft = CV_GET_SEQ_ELEM( feature, featuresSeq, i );
+        keypoints[i] = featureToKeyPoint( *ft );
+    }
+
+    // Remove duplicated keypoints.
+    KeyPointsFilter::removeDuplicated( keypoints );
+
+    release_features_data( featuresSeq );
+    cvReleaseMemStorage( &storage );
 }
 
 // descriptors
@@ -1694,42 +1738,17 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
     IplImage img = fimg;
     ImagePyrData pyrImages( &img, commParams.nOctaves, commParams.nOctaveLayers, SIFT_SIGMA, SIFT_IMG_DBL );
 
-    // Calculate orientation of features.
-    // Note: calc_feature_oris() duplicates the points with several dominant orientations.
-    // So if keypoints was detected by Sift feature detector then some points will be
-    // duplicated twice.
+    if( descriptorParams.recalculateAngles )
+        recalculateAngles( keypoints, pyrImages.gauss_pyr, commParams.nOctaves, commParams.nOctaveLayers );
+
     CvMemStorage* storage = cvCreateMemStorage( 0 );
     CvSeq* featuresSeq = cvCreateSeq( 0, sizeof(CvSeq), sizeof(struct feature), storage );
 
-    if( descriptorParams.recalculateAngles )
-    {
-        for( size_t i = 0; i < keypoints.size(); i++ )
-        {
-            feature* ft = (feature*) calloc( 1, sizeof( struct feature ) );
-            keyPointToFeature( keypoints[i], *ft, SiftParams( commParams.nOctaves, commParams.nOctaveLayers ) );
-            cvSeqPush( featuresSeq, ft );
-        }
-        calc_feature_oris( featuresSeq, pyrImages.gauss_pyr );
-
-        keypoints.resize( featuresSeq->total );
-        for( int i = 0; i < featuresSeq->total; i++ )
-        {
-            feature * ft = CV_GET_SEQ_ELEM( feature, featuresSeq, i );
-            keypoints[i] = featureToKeyPoint( *ft );
-        }
-
-        // Remove duplicated keypoints.
-        KeyPointsFilter::removeDuplicated( keypoints );
-
-        // Compute descriptors.
-        cvSeqRemoveSlice( featuresSeq, cvSlice(0, featuresSeq->total) );
-    }
-
     for( size_t i = 0; i < keypoints.size(); i++ )
     {
-        feature* ft = (feature*) calloc( 1, sizeof( struct feature ) );
-        keyPointToFeature( keypoints[i], *ft, SiftParams( commParams.nOctaves, commParams.nOctaveLayers ) );
-        cvSeqPush( featuresSeq, ft );
+        feature ft;
+        keyPointToFeature( keypoints[i], ft, SiftParams( commParams.nOctaves, commParams.nOctaveLayers ) );
+        cvSeqPush( featuresSeq, &ft );
     }
     compute_descriptors( featuresSeq, pyrImages.gauss_pyr, SIFT_DESCR_WIDTH, SIFT_DESCR_HIST_BINS );
     CV_DbgAssert( (int)keypoints.size() == featuresSeq->total );
@@ -1748,5 +1767,6 @@ void SIFT::operator()(const Mat& image, const Mat& mask,
         }
     }
 
+    release_features_data( featuresSeq );
     cvReleaseMemStorage( &storage );
 }

@@ -46,7 +46,7 @@ public:
         for (i = 0; i < kLevels; i++)
         {
             level = procLevels[i];
-            partsLevel = level - H->lambda;
+            partsLevel = level - LAMBDA;//H->lambda;
             res = thresholdFunctionalScoreFixedLevel(
                 filters, n, H, level, b,
                 maxXBorder, maxYBorder, scoreThreshold, &(score[partsLevel]), 

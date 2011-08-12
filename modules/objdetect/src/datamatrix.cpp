@@ -191,6 +191,7 @@ CvMat *Sampler::extract()
   return r;
 }
 
+#if CV_SSE2
 static void apron(CvMat *v)
 {
   int r = v->rows;
@@ -331,11 +332,12 @@ static deque<CvPoint> trailto(CvMat *v, int x, int y, CvMat *terminal)
     y += yd;
   }
 
-  int l = r.size() * 9 / 10;
+  int l = (int)(r.size() * 9 / 10);
   while (l--)
     r.pop_front();
   return r;
 }
+#endif
 
 deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
 {
@@ -455,7 +457,7 @@ deque <CvDataMatrixCode> cvFindDataMatrix(CvMat *im)
           }
         }
         if (codes.size() > 0) {
-          printf("searching for more\n");
+          //printf("searching for more\n");
         }
         if (decode(sa, cc)) {
           codes.push_back(cc);
@@ -502,7 +504,7 @@ namespace
     DataMatrixCode operator()(CvDataMatrixCode& cvdm)
     {
       DataMatrixCode dm;
-      std::memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
+      memcpy(dm.msg,cvdm.msg,sizeof(cvdm.msg));
       dm.original = cv::Mat(cvdm.original,true);
       cvReleaseMat(&cvdm.original);
       cv::Mat c(cvdm.corners,true);

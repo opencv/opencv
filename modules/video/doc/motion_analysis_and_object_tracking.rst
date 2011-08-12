@@ -33,8 +33,8 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
     :param maxLevel: 0-based maximal pyramid level number. If set to 0, pyramids are not used (single level). If set to 1, two levels are used, and so on.
 
     :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
-	
-    :param derivLambda: Relative weight of the spatial image derivatives impact to the optical flow estimation. If  ``derivLambda=0`` , only the image intensity is used. If  ``derivLambda=1`` , only derivatives are used. Any other values between 0 and 1 mean that both derivatives and the image intensity are used (in the corresponding proportions).
+    
+    :param derivLambda: Not used.
 
     :param flags: Operation flags:
 
@@ -51,7 +51,9 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
 .. ocv:function:: void calcOpticalFlowFarneback( InputArray prevImg, InputArray nextImg,                               InputOutputArray flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
 
-.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
+.. ocv:cfunction:: void cvCalcOpticalFlowFarneback( const CvArr* prevImg, const CvArr* nextImg, CvArr* flow, double pyrScale, int levels, int winsize, int iterations, int polyN, double polySigma, int flags )
+
+.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prevImg, nextImg, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
 
     :param prevImg: First 8-bit single-channel input image.
 
@@ -70,7 +72,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
     :param polyN: Size of the pixel neighborhood used to find polynomial expansion in each pixel. Larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically,  ``polyN`` =5 or 7.
 
     :param polySigma: Standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion. For  ``polyN=5`` ,  you can set  ``polySigma=1.1`` . For  ``polyN=7`` , a good value would be  ``polySigma=1.5`` .
-	
+    
     :param flags: Operation flags that can be a combination of the following:
 
             * **OPTFLOW_USE_INITIAL_FLOW** Use the input  ``flow``  as an initial flow approximation.
@@ -322,7 +324,7 @@ Splits a motion history image into a few parts corresponding to separate indepen
 
 .. ocv:function:: void segmentMotion(InputArray mhi, OutputArray segmask, vector<Rect>& boundingRects, double timestamp, double segThresh)
 
-.. ocv:pyfunction:: cv2.segmentMotion(mhi, boundingRects, timestamp, segThresh[, segmask]) -> segmask
+.. ocv:pyfunction:: cv2.segmentMotion(mhi, timestamp, segThresh[, segmask]) -> segmask, boundingRects
 
 .. ocv:cfunction:: CvSeq* cvSegmentMotion( const CvArr* mhi, CvArr* segMask, CvMemStorage* storage, double timestamp, double segThresh )
 .. ocv:pyoldfunction:: cv.SegmentMotion(mhi, segMask, storage, timestamp, segThresh)-> None
@@ -382,7 +384,7 @@ Finds an object on a back projection image.
 .. ocv:pyoldfunction:: cv.MeanShift(probImage, window, criteria)-> comp
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` for details.
-	
+    
     :param window: Initial search window.
 
     :param criteria: Stop criteria for the iterative search algorithm.
@@ -480,7 +482,7 @@ Updates the predicted state from the measurement.
 BackgroundSubtractor
 --------------------
 
-.. ocv:class: BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractor
 
 Base class for background/foreground segmentation. ::
 
@@ -522,7 +524,7 @@ Computes a background image.
 BackgroundSubtractorMOG
 -----------------------
 
-.. ocv:class: BackgroundSubtractorMOG : public BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractorMOG : public BackgroundSubtractor
 
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
@@ -567,7 +569,7 @@ BackgroundSubtractorMOG2
 ------------------------
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
 
-.. ocv:class: BackgroundSubtractorMOG2 : public BackgroundSubtractor
+.. ocv:class:: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
     Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import urllib2
 import sys
-import cv
+import cv2.cv as cv
 import numpy
 
 if __name__ == "__main__":

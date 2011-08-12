@@ -188,7 +188,7 @@ CascadeClassifier::detectMultiScale
 ---------------------------------------
 Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
-.. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image,                            vector<Rect>& objects,                            double scaleFactor=1.1,                            int minNeighbors=3, int flags=0,                            Size minSize=Size())
+.. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image, rejectLevels, levelWeights[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects
@@ -210,6 +210,8 @@ Detects objects of different sizes in the input image. The detected objects are 
     :param flags: Parameter with the same meaning for an old cascade as in the function ``cvHaarDetectObjects``. It is not used for a new cascade.
 
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
+
+    :param maxSize: Maximum possible object size. Objects larger than that are ignored.
 
 
 

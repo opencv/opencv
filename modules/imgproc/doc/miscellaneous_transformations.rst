@@ -24,7 +24,7 @@ Applies an adaptive threshold to an array.
     :param adaptiveMethod: Adaptive thresholding algorithm to use, ``ADAPTIVE_THRESH_MEAN_C``  or  ``ADAPTIVE_THRESH_GAUSSIAN_C`` . See the details below.
 
     :param thresholdType: Thresholding type that must be either  ``THRESH_BINARY``  or  ``THRESH_BINARY_INV`` .
-	
+    
     :param blockSize: Size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on.
 
     :param C: Constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
@@ -607,9 +607,9 @@ Restores the selected region in an image using the region neighborhood.
 
     :param flags: Inpainting method that could be one of the following:
 
-            * **INPAINT_NS** 	Navier-Stokes based method.
+            * **INPAINT_NS**     Navier-Stokes based method.
 
-            * **INPAINT_TELEA** 	Method by Alexandru Telea  [Telea04]_.
+            * **INPAINT_TELEA**     Method by Alexandru Telea  [Telea04]_.
 
 The function reconstructs the selected image area from the pixel near the area boundary. The function may be used to remove dust and scratches from a scanned photo, or to remove undesirable objects from still images or video. See
 http://en.wikipedia.org/wiki/Inpainting
@@ -758,33 +758,23 @@ Performs a marker-based image segmentation using the watershed algrorithm.
 
 .. ocv:function:: void watershed( InputArray image, InputOutputArray markers )
 
+.. ocv:cfunction:: void cvWatershed( const CvArr* image, CvArr* markers )
+
 .. ocv:pyfunction:: cv2.watershed(image, markers) -> None
 
     :param image: Input 8-bit 3-channel image.
 
     :param markers: Input/output 32-bit single-channel image (map) of markers. It should have the same size as  ``image`` .
 
-The function implements one of the variants
-of watershed, non-parametric marker-based segmentation algorithm,
-described in [Meyer92]_. Before passing the image to the
-function, you have to roughly outline the desired regions in the image ``markers`` with positive (
-:math:`>0` ) indices. So, every region is
-represented as one or more connected components with the pixel values
-1, 2, 3, and so on. Such markers can be retrieved from a binary mask
-using
-:ocv:func:`findContours` and
-:ocv:func:`drawContours` (see the ``watershed.cpp`` demo).
-The markers are "seeds" of the future image
-regions. All the other pixels in ``markers`` , whose relation to the
-outlined regions is not known and should be defined by the algorithm,
-should be set to 0's. In the function output, each pixel in
-markers is set to a value of the "seed" components or to -1 at
-boundaries between the regions.
+The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer92]_.
 
-.. note:: Every two neighbor connected components are not necessarily separated by a watershed boundary (-1's pixels); for example, when such tangent components exist in the initial marker image. Visual demonstration and usage example of the function can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
+Before passing the image to the function, you have to roughly outline the desired regions in the image ``markers`` with positive (``>0``) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using :ocv:func:`findContours` and :ocv:func:`drawContours` (see the ``watershed.cpp`` demo). The markers are "seeds" of the future image regions. All the other pixels in ``markers`` , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0's. In the function output, each pixel in markers is set to a value of the "seed" components or to -1 at boundaries between the regions.
+
+Visual demonstration and usage example of the function can be found in the OpenCV samples directory (see the ``watershed.cpp`` demo).
+
+.. note:: Any two neighbor connected components are not necessarily separated by a watershed boundary (-1's pixels); for example, they can touch each other in the initial marker image passed to the function.
 
 .. seealso:: :ocv:func:`findContours`
-
 
 grabCut
 -------
@@ -816,11 +806,11 @@ Runs the GrabCut algorithm.
     
     :param mode: Operation mode that could be one of the following:
 
-        * **GC_INIT_WITH_RECT** 	The function initializes the state and the mask using the provided rectangle. After that it runs  ``iterCount``  iterations of the algorithm.
+        * **GC_INIT_WITH_RECT**     The function initializes the state and the mask using the provided rectangle. After that it runs  ``iterCount``  iterations of the algorithm.
 
-        * **GC_INIT_WITH_MASK** 	The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined. Then, all the pixels outside of the ROI are automatically initialized with  ``GC_BGD`` .
+        * **GC_INIT_WITH_MASK**     The function initializes the state using the provided mask. Note that  ``GC_INIT_WITH_RECT``  and  ``GC_INIT_WITH_MASK``  can be combined. Then, all the pixels outside of the ROI are automatically initialized with  ``GC_BGD`` .
 
-        * **GC_EVAL** 	The value means that the algorithm should just resume.
+        * **GC_EVAL**     The value means that the algorithm should just resume.
 
 The function implements the `GrabCut image segmentation algorithm <http://en.wikipedia.org/wiki/GrabCut>`_.
 See the sample ``grabcut.cpp`` to learn how to use the function.

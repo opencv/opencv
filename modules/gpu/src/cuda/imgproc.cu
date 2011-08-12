@@ -49,7 +49,7 @@ using namespace cv::gpu::device;
 /////////////////////////////////// Remap ///////////////////////////////////////////////
 namespace cv { namespace gpu { namespace imgproc
 {
-    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap;
+    texture<unsigned char, 2, cudaReadModeNormalizedFloat> tex_remap(0, cudaFilterModeLinear, cudaAddressModeWrap);
 
     __global__ void remap_1c(const float* mapx, const float* mapy, size_t map_step, uchar* out, size_t out_step, int width, int height)
     {    
@@ -66,8 +66,8 @@ namespace cv { namespace gpu { namespace imgproc
         }
     }
 
-    __global__ void remap_3c(const uchar* src, size_t src_step, const float* mapx, const float* mapy, size_t map_step, 
-                             uchar* dst, size_t dst_step, int width, int height)
+    __global__ void remap_3c(const uchar* src, size_t src_step, const float* mapx, const float* mapy,
+                             size_t map_step, uchar* dst, size_t dst_step, int width, int height)
     {    
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -131,16 +131,12 @@ namespace cv { namespace gpu { namespace imgproc
         grid.x = divUp(dst.cols, threads.x);
         grid.y = divUp(dst.rows, threads.y);
 
-        tex_remap.filterMode = cudaFilterModeLinear;	    
-        tex_remap.addressMode[0] = tex_remap.addressMode[1] = cudaAddressModeWrap;
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
-        cudaSafeCall( cudaBindTexture2D(0, tex_remap, src.data, desc, src.cols, src.rows, src.step) );
+        TextureBinder tex(&tex_remap, src);
 
         remap_1c<<<grid, threads>>>(xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() );  
-        cudaSafeCall( cudaUnbindTexture(tex_remap) );
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
     
     void remap_gpu_3c(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, DevMem2D dst)
@@ -153,7 +149,7 @@ namespace cv { namespace gpu { namespace imgproc
         remap_3c<<<grid, threads>>>(src.data, src.step, xmap.data, ymap.data, xmap.step, dst.data, dst.step, dst.cols, dst.rows);
         cudaSafeCall( cudaGetLastError() );
 
-        cudaSafeCall( cudaDeviceSynchronize() ); 
+        cudaSafeCall( cudaDeviceSynchronize() );
     }
 
 /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
@@ -161,7 +157,7 @@ namespace cv { namespace gpu { namespace imgproc
     texture<uchar4, 2> tex_meanshift;
 
     __device__ short2 do_mean_shift(int x0, int y0, unsigned char* out, 
-                                    int out_step, int cols, int rows, 
+                                    size_t out_step, int cols, int rows, 
                                     int sp, int sr, int maxIter, float eps)
     {
         int isr2 = sr*sr;
@@ -225,7 +221,7 @@ namespace cv { namespace gpu { namespace imgproc
         return make_short2((short)x0, (short)y0);
     }
 
-    extern "C" __global__ void meanshift_kernel( unsigned char* out, int out_step, int cols, int rows, 
+    extern "C" __global__ void meanshift_kernel( unsigned char* out, size_t out_step, int cols, int rows, 
                                                  int sp, int sr, int maxIter, float eps )
     {
         int x0 = blockIdx.x * blockDim.x + threadIdx.x;
@@ -235,8 +231,8 @@ namespace cv { namespace gpu { namespace imgproc
             do_mean_shift(x0, y0, out, out_step, cols, rows, sp, sr, maxIter, eps);
     }
 
-    extern "C" __global__ void meanshiftproc_kernel( unsigned char* outr, int outrstep, 
-                                                 unsigned char* outsp, int outspstep, 
+    extern "C" __global__ void meanshiftproc_kernel( unsigned char* outr, size_t outrstep, 
+                                                 unsigned char* outsp, size_t outspstep, 
                                                  int cols, int rows, 
                                                  int sp, int sr, int maxIter, float eps )
     {
@@ -251,9 +247,9 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
     extern "C" void meanShiftFiltering_gpu(const DevMem2D& src, DevMem2D dst, int sp, int sr, int maxIter, float eps)
-    {                        
+    {
         dim3 grid(1, 1, 1);
-        dim3 threads(32, 16, 1);
+        dim3 threads(32, 8, 1);
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
@@ -269,7 +265,7 @@ namespace cv { namespace gpu { namespace imgproc
     extern "C" void meanShiftProc_gpu(const DevMem2D& src, DevMem2D dstr, DevMem2D dstsp, int sp, int sr, int maxIter, float eps) 
     {
         dim3 grid(1, 1, 1);
-        dim3 threads(32, 16, 1);
+        dim3 threads(32, 8, 1);
         grid.x = divUp(src.cols, threads.x);
         grid.y = divUp(src.rows, threads.y);
 
@@ -768,6 +764,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 
+
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums
 
@@ -795,6 +792,7 @@ namespace cv { namespace gpu { namespace imgproc
 
         cudaSafeCall( cudaDeviceSynchronize() );
     }
+
 
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums_CONJ
@@ -824,6 +822,7 @@ namespace cv { namespace gpu { namespace imgproc
 
         cudaSafeCall( cudaDeviceSynchronize() );
     }
+
 
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums
@@ -855,6 +854,7 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 
+
     //////////////////////////////////////////////////////////////////////////
     // mulAndScaleSpectrums_CONJ
 
@@ -885,34 +885,272 @@ namespace cv { namespace gpu { namespace imgproc
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 
+
     /////////////////////////////////////////////////////////////////////////
     // downsample
 
-    template <typename T>
-    __global__ void downsampleKernel(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst)
+    template <typename T, int cn>
+    __global__ void downsampleKernel(const PtrStep_<T> src, DevMem2D_<T> dst)
     {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (x < cols && y < rows)
-            dst.ptr(y)[x] = src.ptr(y * k)[x * k];
+        if (x < dst.cols && y < dst.rows)
+        {
+            int ch_x = x / cn;
+            dst.ptr(y)[x] = src.ptr(y*2)[ch_x*2*cn + x - ch_x*cn];
+        }
     }
 
 
-    template <typename T>
-    void downsampleCaller(const PtrStep_<T> src, int rows, int cols, int k, PtrStep_<T> dst)
+    template <typename T, int cn>
+    void downsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream)
     {
-        dim3 threads(16, 16);
+        dim3 threads(32, 8);
+        dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
+
+        downsampleKernel<T,cn><<<grid, threads, 0, stream>>>(DevMem2D_<T>(src), DevMem2D_<T>(dst));
+        cudaSafeCall(cudaGetLastError());
+        
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    template void downsampleCaller<uchar,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<uchar,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<uchar,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<uchar,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<short,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<short,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<short,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<short,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<float,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<float,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<float,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void downsampleCaller<float,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // upsample
+
+    template <typename T, int cn>
+    __global__ void upsampleKernel(const PtrStep_<T> src, DevMem2D_<T> dst)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < dst.cols && y < dst.rows)
+        {
+            int ch_x = x / cn;
+            T val = ((ch_x & 1) || (y & 1)) ? 0 : src.ptr(y/2)[ch_x/2*cn + x - ch_x*cn];
+            dst.ptr(y)[x] = val;
+        }
+    }
+
+
+    template <typename T, int cn>
+    void upsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream)
+    {
+        dim3 threads(32, 8);
+        dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
+
+        upsampleKernel<T,cn><<<grid, threads, 0, stream>>>(DevMem2D_<T>(src), DevMem2D_<T>(dst));
+        cudaSafeCall(cudaGetLastError());
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    template void upsampleCaller<uchar,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<uchar,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<uchar,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<uchar,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<short,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<short,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<short,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<short,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<float,1>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<float,2>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<float,3>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+    template void upsampleCaller<float,4>(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // buildWarpMaps
+
+    namespace build_warp_maps
+    {
+        __constant__ float cr[9];
+        __constant__ float crinv[9];
+        __constant__ float cf, cs;
+        __constant__ float chalf_w, chalf_h;
+        __constant__ float cdist;
+    }
+
+
+    class PlaneMapper
+    {
+    public:
+        static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+        {
+            using namespace build_warp_maps;
+
+            float x_ = u / cs;
+            float y_ = v / cs;
+
+            float z;
+            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*cdist;
+            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*cdist;
+            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*cdist;
+
+            x = cf*x/z + chalf_w;
+            y = cf*y/z + chalf_h;
+        }
+    };
+
+
+    class CylindricalMapper
+    {
+    public:
+        static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+        {
+            using namespace build_warp_maps;
+
+            u /= cs;
+            float x_ = sinf(u);
+            float y_ = v / cs;
+            float z_ = cosf(u);
+
+            float z;
+            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*z_;
+            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*z_;
+            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*z_;
+
+            x = cf*x/z + chalf_w;
+            y = cf*y/z + chalf_h;
+        }
+    };
+
+
+    class SphericalMapper
+    {
+    public:
+        static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+        {
+            using namespace build_warp_maps;
+
+            v /= cs;
+            u /= cs;
+
+            float sinv = sinf(v);
+            float x_ = sinv * sinf(u);
+            float y_ = -cosf(v);
+            float z_ = sinv * cosf(u);
+
+            float z;
+            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*z_;
+            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*z_;
+            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*z_;
+
+            x = cf*x/z + chalf_w;
+            y = cf*y/z + chalf_h;
+        }
+    };
+
+
+    template <typename Mapper>
+    __global__ void buildWarpMapsKernel(int tl_u, int tl_v, int cols, int rows,
+                                        PtrStepf map_x, PtrStepf map_y)
+    {
+        int du = blockIdx.x * blockDim.x + threadIdx.x;
+        int dv = blockIdx.y * blockDim.y + threadIdx.y;
+        if (du < cols && dv < rows)
+        {
+            float u = tl_u + du;
+            float v = tl_v + dv;
+            float x, y;
+            Mapper::mapBackward(u, v, x, y);
+            map_x.ptr(dv)[du] = x;
+            map_y.ptr(dv)[du] = y;
+        }
+    }
+
+
+    void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                            const float r[9], const float rinv[9], float f, float s, float dist,
+                            float half_w, float half_h, cudaStream_t stream)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cdist, &dist, sizeof(float)));
+
+        int cols = map_x.cols;
+        int rows = map_x.rows;
+
+        dim3 threads(32, 8);
         dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-        downsampleKernel<<<grid, threads>>>(src, rows, cols, k, dst);
-        cudaSafeCall( cudaGetLastError() );
-
-        cudaSafeCall( cudaDeviceSynchronize() );
+        buildWarpMapsKernel<PlaneMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+        cudaSafeCall(cudaGetLastError());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
     }
 
-    template void downsampleCaller(const PtrStep src, int rows, int cols, int k, PtrStep dst);
-    template void downsampleCaller(const PtrStepf src, int rows, int cols, int k, PtrStepf dst);
+
+    void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                                  const float r[9], const float rinv[9], float f, float s,
+                                  float half_w, float half_h, cudaStream_t stream)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+
+        int cols = map_x.cols;
+        int rows = map_x.rows;
+
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        buildWarpMapsKernel<CylindricalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+        cudaSafeCall(cudaGetLastError());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+                                const float r[9], const float rinv[9], float f, float s,
+                                float half_w, float half_h, cudaStream_t stream)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+
+        int cols = map_x.cols;
+        int rows = map_x.rows;
+
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        buildWarpMapsKernel<SphericalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+        cudaSafeCall(cudaGetLastError());
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
 
 }}}
+
 

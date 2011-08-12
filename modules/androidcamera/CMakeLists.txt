@@ -32,13 +32,13 @@ SET_TARGET_PROPERTIES(${the_target} PROPERTIES
 IF (NOT BUILD_SHARED_LIBS)
   install(TARGETS ${the_target}
     RUNTIME DESTINATION bin COMPONENT main
-    ARCHIVE DESTINATION lib COMPONENT main
-    LIBRARY DESTINATION lib COMPONENT main
+    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
     )
 ENDIF()
 
-if (ARMEABI_V7A AND NOT BUILD_ANDROID_CAMERA_WRAPPER)
-  file(GLOB camera_wrappers "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib/libnative_camera_r*.so")
+if (NOT BUILD_ANDROID_CAMERA_WRAPPER)
+  file(GLOB camera_wrappers "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/lib/${ARMEABI_NDK_NAME}/libnative_camera_r*.so")
 
   foreach(wrapper ${camera_wrappers})
     ADD_CUSTOM_COMMAND(
@@ -48,7 +48,7 @@ if (ARMEABI_V7A AND NOT BUILD_ANDROID_CAMERA_WRAPPER)
     )
     get_filename_component(wrapper_name "${wrapper}" NAME)
     install(FILES "${LIBRARY_OUTPUT_PATH}/${wrapper_name}"
-          DESTINATION lib
+          DESTINATION ${OPENCV_LIB_INSTALL_PATH}
           COMPONENT main)
   endforeach()
 endif()

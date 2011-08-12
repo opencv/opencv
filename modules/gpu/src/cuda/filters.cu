@@ -40,14 +40,11 @@
 //
 //M*/
 
-#include "opencv2/gpu/devmem2d.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
-#include "opencv2/gpu/device/border_interpolate.hpp"
-
-#include "safe_call.hpp"
 #include "internal_shared.hpp"
+#include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
+#include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/gpu/device/border_interpolate.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -76,7 +73,7 @@ namespace filter_krnls
 {
     template <typename T, size_t size> struct SmemType_
     {
-        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t smem_t;
+        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type smem_t;
     };
     template <typename T> struct SmemType_<T, 4>
     {
@@ -111,7 +108,7 @@ namespace filter_krnls
 
             if (x < src.cols)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t sum_t;
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
                 sDataRow += threadIdx.x + BLOCK_DIM_X - anchor;
@@ -224,6 +221,7 @@ namespace cv { namespace gpu { namespace filters
     template void linearRowFilter_gpu<uchar4, float4>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearRowFilter_gpu<short , float >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearRowFilter_gpu<short2, float2>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearRowFilter_gpu<short3, float3>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearRowFilter_gpu<int   , float >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearRowFilter_gpu<float , float >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
 }}}
@@ -252,7 +250,7 @@ namespace filter_krnls
 
             if (y < src.rows)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_t sum_t;
+                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
                 sDataColumn += (threadIdx.y + BLOCK_DIM_Y - anchor) * BLOCK_DIM_X;
@@ -275,7 +273,7 @@ namespace cv { namespace gpu { namespace filters
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
         dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
 
-        B<T> b(src.rows, src.step / src.elemSize());
+        B<T> b(src.rows, src.step);
 
         if (!b.is_range_safe(-BLOCK_DIM_Y, (grid.y + 1) * BLOCK_DIM_Y - 1))
         {
@@ -364,6 +362,7 @@ namespace cv { namespace gpu { namespace filters
     template void linearColumnFilter_gpu<float4, uchar4>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearColumnFilter_gpu<float , short >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearColumnFilter_gpu<float2, short2>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
+    template void linearColumnFilter_gpu<float3, short3>(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearColumnFilter_gpu<float , int   >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
     template void linearColumnFilter_gpu<float , float >(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream);
 }}}
@@ -473,7 +472,7 @@ namespace bf_krnls
                     }
                 }
 
-                float minimum = numeric_limits_gpu<float>::max();
+                float minimum = numeric_limits<float>::max();
                 int id = 0;
 
                 if (cost[0] < minimum)

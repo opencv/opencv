@@ -1,4 +1,4 @@
-import cv2, cv
+import cv2
 import video
 import sys
 
@@ -15,10 +15,10 @@ cv2.createTrackbar('thrs2', 'edge', 4000, 5000, nothing)
 cap = video.create_capture(fn)
 while True:
     flag, img = cap.read()
-    gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     thrs1 = cv2.getTrackbarPos('thrs1', 'edge')
     thrs2 = cv2.getTrackbarPos('thrs2', 'edge')
-    edge = cv2.canny(gray, thrs1, thrs2, apertureSize=5)
+    edge = cv2.Canny(gray, thrs1, thrs2, apertureSize=5)
     vis = img.copy()
     vis /= 2
     vis[edge != 0] = (0, 255, 0)

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.opencv.test"
+      android:versionCode="1"
+      android:versionName="1.0">
+      
+    <uses-sdk android:minSdkVersion="8" />
+    <instrumentation android:targetPackage="org.opencv.test" android:name="OpenCVTestRunner"></instrumentation>
+    
+    <application android:icon="@drawable/icon" android:label="@string/app_name">
+        <uses-library android:name="android.test.runner" />
+    </application>
+    
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+</manifest>

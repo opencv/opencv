@@ -3187,6 +3187,22 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         CV_Error( CV_StsUnsupportedFormat, "" );
 }    
 
+
+cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
+    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+}
+
+cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 3 && dst.checkVector(2, CV_32F) == 3);
+    return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+}
+
+
 CV_IMPL void
 cvResize( const CvArr* srcarr, CvArr* dstarr, int method )
 {

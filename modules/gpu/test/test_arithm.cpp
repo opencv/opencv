@@ -39,1026 +39,1677 @@
 //
 //M*/
 
-#include <iostream>
-#include <cmath>
-#include <limits>
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-using namespace gpu;
+#ifdef HAVE_CUDA
 
-#define CHECK(pred, err) if (!(pred)) { \
-    ts->printf(cvtest::TS::CONSOLE, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
-    ts->set_failed_test_info(err); \
-    return; }
-
-class CV_GpuArithmTest : public cvtest::BaseTest
+struct ArithmTest : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-public:
-    CV_GpuArithmTest(const char* /*test_name*/, const char* /*test_funcs*/){}
-    virtual ~CV_GpuArithmTest() {}
+    cv::gpu::DeviceInfo devInfo;
+    int type;
 
-protected:
-    void run(int);
+    cv::Size size;
+    cv::Mat mat1, mat2;
+        
+    virtual void SetUp()
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
 
-    int test(int type);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-    virtual int test(const Mat& mat1, const Mat& mat2) = 0;
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-    int CheckNorm(const Mat& m1, const Mat& m2, double eps = 1e-5);
-    int CheckNorm(const Scalar& s1, const Scalar& s2, double eps = 1e-5);
-    int CheckNorm(double d1, double d2, double eps = 1e-5);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat1 = cvtest::randomMat(rng, size, type, 1, 16, false);
+        mat2 = cvtest::randomMat(rng, size, type, 1, 16, false);
+    }
 };
 
-int CV_GpuArithmTest::test(int type)
+////////////////////////////////////////////////////////////////////////////////
+// add
+
+struct AddArray : ArithmTest {};
+
+TEST_P(AddArray, Accuracy) 
 {
-    cv::Size sz(200, 200);
-    cv::Mat mat1(sz, type), mat2(sz, type);
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
     
-    cv::RNG& rng = ts->get_rng();
+    cv::Mat dst_gold;
+    cv::add(mat1, mat2, dst_gold);
 
-    if (type != CV_32FC1)
-    {
-        rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
-        rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(1), cv::Scalar::all(20));
-    }
-    else
-    {
-        rng.fill(mat1, cv::RNG::UNIFORM, cv::Scalar::all(0.1), cv::Scalar::all(1.0));
-        rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(0.1), cv::Scalar::all(1.0));
-    }
+    cv::Mat dst;
 
-    return test(mat1, mat2);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::add(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-int CV_GpuArithmTest::CheckNorm(const Mat& m1, const Mat& m2, double eps)
+INSTANTIATE_TEST_CASE_P(Arithm, AddArray, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+
+struct AddScalar : ArithmTest {};
+
+TEST_P(AddScalar, Accuracy) 
 {
-    double ret = norm(m1, m2, NORM_INF);
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
 
-    if (ret < eps)
-        return cvtest::TS::OK;
+    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-    ts->printf(cvtest::TS::LOG, "\nNorm: %f\n", ret);
-    return cvtest::TS::FAIL_GENERIC;
+    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
+
+    PRINT_PARAM(val);
+    
+    cv::Mat dst_gold;
+    cv::add(mat1, val, dst_gold);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::add(cv::gpu::GpuMat(mat1), val, gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-int CV_GpuArithmTest::CheckNorm(const Scalar& s1, const Scalar& s2, double eps)
-{
-    int ret0 = CheckNorm(s1[0], s2[0], eps), 
-        ret1 = CheckNorm(s1[1], s2[1], eps), 
-        ret2 = CheckNorm(s1[2], s2[2], eps), 
-        ret3 = CheckNorm(s1[3], s2[3], eps);
-
-    return (ret0 == cvtest::TS::OK && ret1 == cvtest::TS::OK && ret2 == cvtest::TS::OK && ret3 == cvtest::TS::OK) ? cvtest::TS::OK : cvtest::TS::FAIL_GENERIC;
-}
-
-int CV_GpuArithmTest::CheckNorm(double d1, double d2, double eps)
-{
-    double ret = ::fabs(d1 - d2);
-
-    if (ret < eps)
-        return cvtest::TS::OK;
-
-    ts->printf(cvtest::TS::LOG, "\nNorm: %f\n", ret);
-    return cvtest::TS::FAIL_GENERIC;
-}
-
-void CV_GpuArithmTest::run( int )
-{
-    int testResult = cvtest::TS::OK;
-
-    const int types[] = {CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1};
-    const char* type_names[] = {"CV_8UC1 ", "CV_8UC3 ", "CV_8UC4 ", "CV_32FC1"};
-    const int type_count = sizeof(types)/sizeof(types[0]);
-
-    //run tests
-    for (int t = 0; t < type_count; ++t)
-    {
-        ts->printf(cvtest::TS::LOG, "Start testing %s", type_names[t]);
-
-        if (cvtest::TS::OK == test(types[t]))
-            ts->printf(cvtest::TS::LOG, "SUCCESS\n");
-        else
-        {
-            ts->printf(cvtest::TS::LOG, "FAIL\n");
-            testResult = cvtest::TS::FAIL_MISMATCH;
-        }
-    }
-
-    ts->set_failed_test_info(testResult);
-}
+INSTANTIATE_TEST_CASE_P(Arithm, AddScalar, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1, CV_32FC2)));
 
 ////////////////////////////////////////////////////////////////////////////////
-// Add
+// subtract
 
-struct CV_GpuNppImageAddTest : public CV_GpuArithmTest
+struct SubtractArray : ArithmTest {};
+
+TEST_P(SubtractArray, Accuracy) 
 {
-    CV_GpuNppImageAddTest() : CV_GpuArithmTest( "GPU-NppImageAdd", "add" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    
+    cv::Mat dst_gold;
+    cv::subtract(mat1, mat2, dst_gold);
 
-        virtual int test(const Mat& mat1, const Mat& mat2)
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::Mat dst;
 
-        cv::Mat cpuRes;
-        cv::add(mat1, mat2, cpuRes);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuRes;
-        cv::gpu::add(gpu1, gpu2, gpuRes);
+        cv::gpu::subtract(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
 
-        return CheckNorm(cpuRes, gpuRes);
-    }
-};
+        gpuRes.download(dst);
+    );
 
-////////////////////////////////////////////////////////////////////////////////
-// Sub
-struct CV_GpuNppImageSubtractTest : public CV_GpuArithmTest
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SubtractArray, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+
+struct SubtractScalar : ArithmTest {};
+
+TEST_P(SubtractScalar, Accuracy) 
 {
-    CV_GpuNppImageSubtractTest() : CV_GpuArithmTest( "GPU-NppImageSubtract", "subtract" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
 
-    int test( const Mat& mat1, const Mat& mat2 )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        cv::Mat cpuRes;
-        cv::subtract(mat1, mat2, cpuRes);
+    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuRes;
-        cv::gpu::subtract(gpu1, gpu2, gpuRes);
+    PRINT_PARAM(val);
+    
+    cv::Mat dst_gold;
+    cv::subtract(mat1, val, dst_gold);
 
-        return CheckNorm(cpuRes, gpuRes);
-    }
-};
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::subtract(cv::gpu::GpuMat(mat1), val, gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_LE(checkNorm(dst_gold, dst), 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SubtractScalar, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1, CV_32FC2)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // multiply
-struct CV_GpuNppImageMultiplyTest : public CV_GpuArithmTest
+
+struct MultiplyArray : ArithmTest {};
+
+TEST_P(MultiplyArray, Accuracy) 
 {
-    CV_GpuNppImageMultiplyTest() : CV_GpuArithmTest( "GPU-NppImageMultiply", "multiply" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    
+    cv::Mat dst_gold;
+    cv::multiply(mat1, mat2, dst_gold);
 
-    int test( const Mat& mat1, const Mat& mat2 )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::Mat dst;
 
-	    cv::Mat cpuRes;
-	    cv::multiply(mat1, mat2, cpuRes);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
 
-	    GpuMat gpu1(mat1);
-	    GpuMat gpu2(mat2);
-	    GpuMat gpuRes;
-	    cv::gpu::multiply(gpu1, gpu2, gpuRes);
+        cv::gpu::multiply(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
 
-            return CheckNorm(cpuRes, gpuRes);
-    }
-};
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MultiplyArray, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+
+struct MultiplyScalar : ArithmTest {};
+
+TEST_P(MultiplyScalar, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+
+    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
+
+    PRINT_PARAM(val);
+    
+    cv::Mat dst_gold;
+    cv::multiply(mat1, val, dst_gold);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::multiply(cv::gpu::GpuMat(mat1), val, gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MultiplyScalar, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // divide
-struct CV_GpuNppImageDivideTest : public CV_GpuArithmTest
+
+struct DivideArray : ArithmTest {};
+
+TEST_P(DivideArray, Accuracy) 
 {
-    CV_GpuNppImageDivideTest() : CV_GpuArithmTest( "GPU-NppImageDivide", "divide" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    
+    cv::Mat dst_gold;
+    cv::divide(mat1, mat2, dst_gold);
 
-    int test( const Mat& mat1, const Mat& mat2 )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::Mat dst;
 
-	    cv::Mat cpuRes;
-	    cv::divide(mat1, mat2, cpuRes);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
 
-	    GpuMat gpu1(mat1);
-	    GpuMat gpu2(mat2);
-	    GpuMat gpuRes;
-	    cv::gpu::divide(gpu1, gpu2, gpuRes);
+        cv::gpu::divide(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
 
-        return CheckNorm(cpuRes, gpuRes, 1.01f);
-    }
-};
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, DivideArray, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+
+struct DivideScalar : ArithmTest {};
+
+TEST_P(DivideScalar, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+
+    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
+
+    PRINT_PARAM(val);
+    
+    cv::Mat dst_gold;
+    cv::divide(mat1, val, dst_gold);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::divide(cv::gpu::GpuMat(mat1), val, gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, DivideScalar, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // transpose
-struct CV_GpuNppImageTransposeTest : public CV_GpuArithmTest
+
+struct Transpose : ArithmTest {};
+
+TEST_P(Transpose, Accuracy) 
 {
-    CV_GpuNppImageTransposeTest() : CV_GpuArithmTest( "GPU-NppImageTranspose", "transpose" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
 
-    int test( const Mat& mat1, const Mat& )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::Mat dst_gold;
+    cv::transpose(mat1, dst_gold);
 
-        cv::Mat cpuRes;
-        cv::transpose(mat1, cpuRes);
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
 
-        GpuMat gpu1(mat1);
-        GpuMat gpuRes;
-        cv::gpu::transpose(gpu1, gpuRes);
+        cv::gpu::transpose(cv::gpu::GpuMat(mat1), gpuRes);
 
-        return CheckNorm(cpuRes, gpuRes);
-    }
-};
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Transpose, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_8SC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_32FC1, CV_32FC2, CV_64FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // absdiff
-struct CV_GpuNppImageAbsdiffTest : public CV_GpuArithmTest
+
+struct AbsdiffArray : ArithmTest {};
+
+TEST_P(AbsdiffArray, Accuracy) 
 {
-    CV_GpuNppImageAbsdiffTest() : CV_GpuArithmTest( "GPU-NppImageAbsdiff", "absdiff" ) {}
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    
+    cv::Mat dst_gold;
+    cv::absdiff(mat1, mat2, dst_gold);
 
-    int test( const Mat& mat1, const Mat& mat2 )
-    {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+    cv::Mat dst;
 
-        cv::Mat cpuRes;
-        cv::absdiff(mat1, mat2, cpuRes);
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuRes;
-        cv::gpu::absdiff(gpu1, gpu2, gpuRes);
+        cv::gpu::absdiff(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes);
 
-        return CheckNorm(cpuRes, gpuRes);
-    }
-};
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffArray, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+
+struct AbsdiffScalar : ArithmTest {};
+
+TEST_P(AbsdiffScalar, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+
+    cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+    cv::Scalar val(rng.uniform(0.1, 3.0), rng.uniform(0.1, 3.0));
+
+    PRINT_PARAM(val);
+    
+    cv::Mat dst_gold;
+    cv::absdiff(mat1, val, dst_gold);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::absdiff(cv::gpu::GpuMat(mat1), val, gpuRes);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffScalar, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // compare
-struct CV_GpuNppImageCompareTest : public CV_GpuArithmTest
+
+struct Compare : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> > 
 {
-    CV_GpuNppImageCompareTest() : CV_GpuArithmTest( "GPU-NppImageCompare", "compare" ) {}
+    cv::gpu::DeviceInfo devInfo;
+    int cmp_code;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mat1, mat2;
+
+    cv::Mat dst_gold;
+        
+    virtual void SetUp()
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = std::tr1::get<0>(GetParam());
+        cmp_code = std::tr1::get<1>(GetParam());
 
-        int cmp_codes[] = {CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE};
-        const char* cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
-        int cmp_num = sizeof(cmp_codes) / sizeof(int);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        int test_res = cvtest::TS::OK;
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        for (int i = 0; i < cmp_num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "\nCompare operation: %s\n", cmp_str[i]);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 1, 16, false);
+        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 1, 16, false);
 
-            cv::Mat cpuRes;
-            cv::compare(mat1, mat2, cpuRes, cmp_codes[i]);
-
-            GpuMat gpu1(mat1);
-            GpuMat gpu2(mat2);
-            GpuMat gpuRes;
-            cv::gpu::compare(gpu1, gpu2, gpuRes, cmp_codes[i]);
-
-            if (CheckNorm(cpuRes, gpuRes) != cvtest::TS::OK)
-                test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        cv::compare(mat1, mat2, dst_gold, cmp_code);
     }
 };
+
+TEST_P(Compare, Accuracy) 
+{
+    static const char* cmp_codes[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
+    const char* cmpCodeStr = cmp_codes[cmp_code];
+
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+    PRINT_PARAM(cmpCodeStr);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::compare(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuRes, cmp_code);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Compare, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values((int)cv::CMP_EQ, (int)cv::CMP_GT, (int)cv::CMP_GE, (int)cv::CMP_LT, (int)cv::CMP_LE, (int)cv::CMP_NE)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // meanStdDev
-struct CV_GpuNppImageMeanStdDevTest : public CV_GpuArithmTest
+
+struct MeanStdDev : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImageMeanStdDevTest() : CV_GpuArithmTest( "GPU-NppImageMeanStdDev", "meanStdDev" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& )
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Scalar mean_gold;
+    cv::Scalar stddev_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_8UC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        Scalar cpumean;
-        Scalar cpustddev;
-        cv::meanStdDev(mat1, cpumean, cpustddev);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        Scalar gpumean;
-        Scalar gpustddev;
-        cv::gpu::meanStdDev(gpu1, gpumean, gpustddev);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        int test_res = cvtest::TS::OK;
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
 
-        if (CheckNorm(cpumean, gpumean) != cvtest::TS::OK)
-        {
-            ts->printf(cvtest::TS::LOG, "\nMean FAILED\n");
-            test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        if (CheckNorm(cpustddev, gpustddev) != cvtest::TS::OK)
-        {
-            ts->printf(cvtest::TS::LOG, "\nStdDev FAILED\n");
-            test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        cv::meanStdDev(mat, mean_gold, stddev_gold);
     }
 };
+
+TEST_P(MeanStdDev, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Scalar mean;
+    cv::Scalar stddev;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::meanStdDev(cv::gpu::GpuMat(mat), mean, stddev);
+    );
+
+    EXPECT_NEAR(mean_gold[0], mean[0], 1e-5);
+    EXPECT_NEAR(mean_gold[1], mean[1], 1e-5);
+    EXPECT_NEAR(mean_gold[2], mean[2], 1e-5);
+    EXPECT_NEAR(mean_gold[3], mean[3], 1e-5);
+
+    EXPECT_NEAR(stddev_gold[0], stddev[0], 1e-5);
+    EXPECT_NEAR(stddev_gold[1], stddev[1], 1e-5);
+    EXPECT_NEAR(stddev_gold[2], stddev[2], 1e-5);
+    EXPECT_NEAR(stddev_gold[3], stddev[3], 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, testing::ValuesIn(devices()));
 
 ////////////////////////////////////////////////////////////////////////////////
-// norm
-struct CV_GpuNppImageNormTest : public CV_GpuArithmTest
+// normDiff
+
+static const int norms[] = {cv::NORM_INF, cv::NORM_L1, cv::NORM_L2};
+static const char* norms_str[] = {"NORM_INF", "NORM_L1", "NORM_L2"};
+
+struct NormDiff : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    CV_GpuNppImageNormTest() : CV_GpuArithmTest( "GPU-NppImageNorm", "norm" ) {}
+    cv::gpu::DeviceInfo devInfo;
+    int normIdx;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mat1, mat2;
+
+    double norm_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_8UC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = std::tr1::get<0>(GetParam());
+        normIdx = std::tr1::get<1>(GetParam());
 
-        int norms[] = {NORM_INF, NORM_L1, NORM_L2};
-        const char* norms_str[] = {"NORM_INF", "NORM_L1", "NORM_L2"};
-        int norms_num = sizeof(norms) / sizeof(int);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        int test_res = cvtest::TS::OK;
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        for (int i = 0; i < norms_num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "\nNorm type: %s\n", norms_str[i]);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat1 = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
+        mat2 = cvtest::randomMat(rng, size, CV_8UC1, 1, 255, false);
 
-            double cpu_norm = cv::norm(mat1, mat2, norms[i]);
-
-            GpuMat gpu1(mat1);
-            GpuMat gpu2(mat2);
-            double gpu_norm = cv::gpu::norm(gpu1, gpu2, norms[i]);
-
-            if (CheckNorm(cpu_norm, gpu_norm) != cvtest::TS::OK)
-                test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        norm_gold = cv::norm(mat1, mat2, norms[normIdx]);
     }
 };
+
+TEST_P(NormDiff, Accuracy) 
+{
+    const char* normStr = norms_str[normIdx];
+
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+    PRINT_PARAM(normStr);
+    
+    double norm;
+    
+    ASSERT_NO_THROW(
+        norm = cv::gpu::norm(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), norms[normIdx]);
+    );
+
+    EXPECT_NEAR(norm_gold, norm, 1e-6);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, NormDiff, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Range(0, 3)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // flip
-struct CV_GpuNppImageFlipTest : public CV_GpuArithmTest
+
+struct Flip : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
-    CV_GpuNppImageFlipTest() : CV_GpuArithmTest( "GPU-NppImageFlip", "flip" ) {}
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+    int flip_code;
 
-    int test( const Mat& mat1, const Mat& )
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+        flip_code = std::tr1::get<2>(GetParam());
 
-        int flip_codes[] = {0, 1, -1};
-        const char* flip_axis[] = {"X", "Y", "Both"};
-        int flip_codes_num = sizeof(flip_codes) / sizeof(int);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        int test_res = cvtest::TS::OK;
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        for (int i = 0; i < flip_codes_num; ++i)
-        {
-            ts->printf(cvtest::TS::LOG, "\nFlip Axis: %s\n", flip_axis[i]);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat = cvtest::randomMat(rng, size, type, 1, 255, false);
 
-            Mat cpu_res;
-            cv::flip(mat1, cpu_res, flip_codes[i]);
-
-            GpuMat gpu1(mat1);
-            GpuMat gpu_res;
-            cv::gpu::flip(gpu1, gpu_res, flip_codes[i]);
-
-            if (CheckNorm(cpu_res, gpu_res) != cvtest::TS::OK)
-                test_res = cvtest::TS::FAIL_GENERIC;
-        }
-
-        return test_res;
+        cv::flip(mat, dst_gold, flip_code);
     }
 };
+
+TEST_P(Flip, Accuracy) 
+{
+    static const char* flip_axis[] = {"Both", "X", "Y"};
+    const char* flipAxisStr = flip_axis[flip_code + 1];
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    PRINT_PARAM(flipAxisStr);
+    
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::flip(cv::gpu::GpuMat(mat), gpu_res, flip_code);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Flip, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC4),
+                        testing::Values(0, 1, -1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // LUT
-struct CV_GpuNppImageLUTTest : public CV_GpuArithmTest
+
+struct LUT : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    CV_GpuNppImageLUTTest() : CV_GpuArithmTest( "GPU-NppImageLUT", "LUT" ) {}
+    cv::gpu::DeviceInfo devInfo;
+    int type;
 
-    int test( const Mat& mat1, const Mat& )
+    cv::Size size;
+    cv::Mat mat;
+    cv::Mat lut;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_8UC1 && mat1.type() != CV_8UC3)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
 
-        cv::Mat lut(1, 256, CV_8UC1);
-        cv::RNG& rng = ts->get_rng();
-        rng.fill(lut, cv::RNG::UNIFORM, cv::Scalar::all(100), cv::Scalar::all(200));
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        cv::Mat cpuRes;
-        cv::LUT(mat1, lut, cpuRes);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        cv::gpu::GpuMat gpuRes;
-        cv::gpu::LUT(GpuMat(mat1), lut, gpuRes);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        
+        mat = cvtest::randomMat(rng, size, type, 1, 255, false);
+        lut = cvtest::randomMat(rng, cv::Size(256, 1), CV_8UC1, 100, 200, false);
 
-        return CheckNorm(cpuRes, gpuRes);
+        cv::LUT(mat, lut, dst_gold);
     }
 };
+
+TEST_P(LUT, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::LUT(cv::gpu::GpuMat(mat), lut, gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, LUT, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC3)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // exp
-struct CV_GpuNppImageExpTest : public CV_GpuArithmTest
+
+struct Exp : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImageExpTest() : CV_GpuArithmTest( "GPU-NppImageExp", "exp" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& )
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuRes;
-        cv::exp(mat1, cpuRes);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpuRes;
-        cv::gpu::exp(gpu1, gpuRes);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        return CheckNorm(cpuRes, gpuRes);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, CV_32FC1, -10.0, 2.0, false);        
+
+        cv::exp(mat, dst_gold);
     }
 };
+
+TEST_P(Exp, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::exp(cv::gpu::GpuMat(mat), gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Exp, testing::ValuesIn(devices()));
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// pow
+
+struct Pow : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    double power;
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {        
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());        
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+        //size = cv::Size(2, 2);
+
+        mat = cvtest::randomMat(rng, size, type, 0.0, 100.0, false);        
+
+        if (mat.depth() == CV_32F)
+            power = rng.uniform(1.2f, 3.f);
+        else
+        {
+            int ipower = rng.uniform(2, 8);
+            power = (float)ipower;
+        }
+        cv::pow(mat, power, dst_gold);
+    }
+};
+
+TEST_P(Pow, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
+    PRINT_PARAM(power);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::pow(cv::gpu::GpuMat(mat), power, gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    /*std::cout  << mat << std::endl << std::endl;
+    std::cout  << dst << std::endl << std::endl;
+    std::cout  << dst_gold << std::endl;*/
+    EXPECT_MAT_NEAR(dst_gold, dst, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_32F, CV_32FC3)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // log
-struct CV_GpuNppImageLogTest : public CV_GpuArithmTest
+
+struct Log : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImageLogTest() : CV_GpuArithmTest( "GPU-NppImageLog", "log" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& )
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuRes;
-        cv::log(mat1, cpuRes);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpuRes;
-        cv::gpu::log(gpu1, gpuRes);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        return CheckNorm(cpuRes, gpuRes);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);        
+
+        cv::log(mat, dst_gold);
     }
 };
+
+TEST_P(Log, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::log(cv::gpu::GpuMat(mat), gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Log, testing::ValuesIn(devices()));
 
 ////////////////////////////////////////////////////////////////////////////////
 // magnitude
-struct CV_GpuNppImageMagnitudeTest : public CV_GpuArithmTest
+
+struct Magnitude : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImageMagnitudeTest() : CV_GpuArithmTest( "GPU-NppImageMagnitude", "magnitude" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mat1, mat2;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuRes;
-        cv::magnitude(mat1, mat2, cpuRes);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuRes;
-        cv::gpu::magnitude(gpu1, gpu2, gpuRes);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        return CheckNorm(cpuRes, gpuRes);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
+        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
+
+        cv::magnitude(mat1, mat2, dst_gold);
     }
 };
+
+TEST_P(Magnitude, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::magnitude(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, testing::ValuesIn(devices()));
 
 ////////////////////////////////////////////////////////////////////////////////
 // phase
-struct CV_GpuNppImagePhaseTest : public CV_GpuArithmTest
+
+struct Phase : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImagePhaseTest() : CV_GpuArithmTest( "GPU-NppImagePhase", "phase" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mat1, mat2;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuRes;
-        cv::phase(mat1, mat2, cpuRes, true);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuRes;
-        cv::gpu::phase(gpu1, gpu2, gpuRes, true);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        return CheckNorm(cpuRes, gpuRes, 0.3f);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat1 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);
+        mat2 = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 100.0, false);       
+
+        cv::phase(mat1, mat2, dst_gold);
     }
 };
+
+TEST_P(Phase, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpu_res;
+
+        cv::gpu::phase(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpu_res);
+
+        gpu_res.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, testing::ValuesIn(devices()));
 
 ////////////////////////////////////////////////////////////////////////////////
 // cartToPolar
-struct CV_GpuNppImageCartToPolarTest : public CV_GpuArithmTest
+
+struct CartToPolar : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImageCartToPolarTest() : CV_GpuArithmTest( "GPU-NppImageCartToPolar", "cartToPolar" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mat1, mat2;
+
+    cv::Mat mag_gold;
+    cv::Mat angle_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuMag, cpuAngle;
-        cv::cartToPolar(mat1, mat2, cpuMag, cpuAngle);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuMag, gpuAngle;
-        cv::gpu::cartToPolar(gpu1, gpu2, gpuMag, gpuAngle);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        int magRes = CheckNorm(cpuMag, gpuMag);
-        int angleRes = CheckNorm(cpuAngle, gpuAngle, 0.005f);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        return magRes == cvtest::TS::OK && angleRes == cvtest::TS::OK ? cvtest::TS::OK : cvtest::TS::FAIL_GENERIC;
+        mat1 = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
+        mat2 = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);       
+
+        cv::cartToPolar(mat1, mat2, mag_gold, angle_gold);
     }
 };
+
+TEST_P(CartToPolar, Accuracy) 
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
+
+    cv::Mat mag, angle;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuMag;
+        cv::gpu::GpuMat gpuAngle;
+
+        cv::gpu::cartToPolar(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), gpuMag, gpuAngle);
+
+        gpuMag.download(mag);
+        gpuAngle.download(angle);
+    );
+
+    EXPECT_MAT_NEAR(mag_gold, mag, 1e-4);
+    EXPECT_MAT_NEAR(angle_gold, angle, 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, testing::ValuesIn(devices()));
 
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
-struct CV_GpuNppImagePolarToCartTest : public CV_GpuArithmTest
+
+struct PolarToCart : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuNppImagePolarToCartTest() : CV_GpuArithmTest( "GPU-NppImagePolarToCart", "polarToCart" ) {}
+    cv::gpu::DeviceInfo devInfo;
 
-    int test( const Mat& mat1, const Mat& mat2 )
+    cv::Size size;
+    cv::Mat mag;
+    cv::Mat angle;
+
+    cv::Mat x_gold;
+    cv::Mat y_gold;
+
+    virtual void SetUp() 
     {
-        if (mat1.type() != CV_32FC1)
-        {
-            ts->printf(cvtest::TS::LOG, "\tUnsupported type\t");
-            return cvtest::TS::OK;
-        }
+        devInfo = GetParam();
 
-        cv::Mat cpuX, cpuY;
-        cv::polarToCart(mat1, mat2, cpuX, cpuY);
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        GpuMat gpu1(mat1);
-        GpuMat gpu2(mat2);
-        GpuMat gpuX, gpuY;
-        cv::gpu::polarToCart(gpu1, gpu2, gpuX, gpuY);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        int xRes = CheckNorm(cpuX, gpuX);
-        int yRes = CheckNorm(cpuY, gpuY);
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        return xRes == cvtest::TS::OK && yRes == cvtest::TS::OK ? cvtest::TS::OK : cvtest::TS::FAIL_GENERIC;
+        mag = cvtest::randomMat(rng, size, CV_32FC1, -100.0, 100.0, false);
+        angle = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 2.0 * CV_PI, false);       
+
+        cv::polarToCart(mag, angle, x_gold, y_gold);
     }
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// Min max
-
-struct CV_GpuMinMaxTest: public cvtest::BaseTest
+TEST_P(PolarToCart, Accuracy) 
 {
-    CV_GpuMinMaxTest() {}
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(size);
 
-    cv::gpu::GpuMat buf;
+    cv::Mat x, y;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuX;
+        cv::gpu::GpuMat gpuY;
 
-    void run(int)
+        cv::gpu::polarToCart(cv::gpu::GpuMat(mag), cv::gpu::GpuMat(angle), gpuX, gpuY);
+
+        gpuX.download(x);
+        gpuY.download(y);
+    );
+
+    EXPECT_MAT_NEAR(x_gold, x, 1e-4);
+    EXPECT_MAT_NEAR(y_gold, y, 1e-4);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, testing::ValuesIn(devices()));
+
+////////////////////////////////////////////////////////////////////////////////
+// minMax
+
+struct MinMax : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+    cv::Mat mask;
+
+    double minVal_gold;
+    double maxVal_gold;
+
+    virtual void SetUp() 
     {
-        bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) &&
-                         gpu::DeviceInfo().supports(gpu::NATIVE_DOUBLE);
-        int depth_end = double_ok ? CV_64F : CV_32F;
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
 
-        for (int depth = CV_8U; depth <= depth_end; ++depth)
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, false);
+
+        if (type != CV_8S)
         {
-            for (int i = 0; i < 3; ++i)
-            {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, 1, depth);
-                test_masked(rows, cols, 1, depth);
-            }
-        }
-    }
-
-    void test(int rows, int cols, int cn, int depth)
-    {
-        cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
-        cv::RNG& rng = ts->get_rng();
-        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
-
-        double minVal, maxVal;
-        cv::Point minLoc, maxLoc;
-
-        if (depth != CV_8S)
-        {
-            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
-        }
-        else 
-        {
-            minVal = std::numeric_limits<double>::max();
-            maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src.rows; ++i)
-                for (int j = 0; j < src.cols; ++j)
-                {
-                    signed char val = src.at<signed char>(i, j);
-                    if (val < minVal) minVal = val;
-                    if (val > maxVal) maxVal = val;
-                }
-        }
-
-        double minVal_, maxVal_;
-        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, cv::gpu::GpuMat(), buf);
-       
-        if (abs(minVal - minVal_) > 1e-3f)
-        {
-            ts->printf(cvtest::TS::CONSOLE, "\nfail: minVal=%f minVal_=%f rows=%d cols=%d depth=%d cn=%d\n", minVal, minVal_, rows, cols, depth, cn);
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        }
-        if (abs(maxVal - maxVal_) > 1e-3f)
-        {
-            ts->printf(cvtest::TS::CONSOLE, "\nfail: maxVal=%f maxVal_=%f rows=%d cols=%d depth=%d cn=%d\n", maxVal, maxVal_, rows, cols, depth, cn);
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        }
-    }  
-
-    void test_masked(int rows, int cols, int cn, int depth)
-    {
-        cv::Mat src(rows, cols, CV_MAKE_TYPE(depth, cn));
-        cv::RNG& rng = ts->get_rng();
-        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
-
-        cv::Mat mask(src.size(), CV_8U);
-        rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
-
-        double minVal, maxVal;
-        cv::Point minLoc, maxLoc;
-
-        Mat src_ = src.reshape(1);
-        if (depth != CV_8S)
-        {
-            cv::minMaxLoc(src_, &minVal, &maxVal, &minLoc, &maxLoc, mask);
+            cv::minMaxLoc(mat, &minVal_gold, &maxVal_gold, 0, 0, mask);
         }
         else 
         {
             // OpenCV's minMaxLoc doesn't support CV_8S type 
-            minVal = std::numeric_limits<double>::max();
-            maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src_.rows; ++i)
-                for (int j = 0; j < src_.cols; ++j)
-                {
-                    char val = src_.at<char>(i, j);
-                    if (mask.at<unsigned char>(i, j)) { if (val < minVal) minVal = val; }
-                    if (mask.at<unsigned char>(i, j)) { if (val > maxVal) maxVal = val; }
-                }
-        }
-
-        double minVal_, maxVal_;
-        cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMax(cv::gpu::GpuMat(src), &minVal_, &maxVal_, cv::gpu::GpuMat(mask), buf);
-       
-        if (abs(minVal - minVal_) > 1e-3f)
-        {
-            ts->printf(cvtest::TS::CONSOLE, "\nfail: minVal=%f minVal_=%f rows=%d cols=%d depth=%d cn=%d\n", minVal, minVal_, rows, cols, depth, cn);
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        }
-        if (abs(maxVal - maxVal_) > 1e-3f)
-        {
-            ts->printf(cvtest::TS::CONSOLE, "\nfail: maxVal=%f maxVal_=%f rows=%d cols=%d depth=%d cn=%d\n", maxVal, maxVal_, rows, cols, depth, cn);
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-        }
-    }  
-};
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Min max loc
-
-struct CV_GpuMinMaxLocTest: public cvtest::BaseTest
-{
-    CV_GpuMinMaxLocTest() {}
-
-    GpuMat valbuf, locbuf;
-
-    void run(int)
-    {
-        bool double_ok = gpu::TargetArchs::builtWith(gpu::NATIVE_DOUBLE) &&
-                         gpu::DeviceInfo().supports(gpu::NATIVE_DOUBLE);
-        int depth_end = double_ok ? CV_64F : CV_32F;
-
-        for (int depth = CV_8U; depth <= depth_end; ++depth)
-        {
-            int rows = 1, cols = 3;
-            test(rows, cols, depth);
-            for (int i = 0; i < 4; ++i)
+            minVal_gold = std::numeric_limits<double>::max();
+            maxVal_gold = -std::numeric_limits<double>::max();
+            for (int i = 0; i < mat.rows; ++i)
             {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, depth);
-            }
-        }
-    }
-
-    void test(int rows, int cols, int depth)
-    {
-        cv::Mat src(rows, cols, depth);
-        cv::RNG& rng = ts->get_rng();
-        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(255));
-
-        cv::Mat mask(src.size(), CV_8U);
-        rng.fill(mask, RNG::UNIFORM, Scalar(0), Scalar(2));
-
-        // At least one of the mask elements must be non zero as OpenCV returns 0
-        // in such case, when our implementation returns maximum or minimum value
-        mask.at<unsigned char>(0, 0) = 1;
-
-        double minVal, maxVal;
-        cv::Point minLoc, maxLoc;
-
-        if (depth != CV_8S)       
-            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, mask);
-        else 
-        {
-            // OpenCV's minMaxLoc doesn't support CV_8S type 
-            minVal = std::numeric_limits<double>::max();
-            maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < src.rows; ++i)
-                for (int j = 0; j < src.cols; ++j)
+                const signed char* mat_row = mat.ptr<signed char>(i);
+                const unsigned char* mask_row = mask.ptr<unsigned char>(i);
+                for (int j = 0; j < mat.cols; ++j)
                 {
-                    char val = src.at<char>(i, j);
-                    if (mask.at<unsigned char>(i, j))
-                    {
-                        if (val < minVal) { minVal = val; minLoc = cv::Point(j, i); }
-                        if (val > maxVal) { maxVal = val; maxLoc = cv::Point(j, i); }
+                    if (mask_row[j]) 
+                    { 
+                        signed char val = mat_row[j];
+                        if (val < minVal_gold) minVal_gold = val;
+                        if (val > maxVal_gold) maxVal_gold = val; 
                     }
                 }
+            }
         }
-
-        double minVal_, maxVal_;
-        cv::Point minLoc_, maxLoc_;        
-        cv::gpu::minMaxLoc(cv::gpu::GpuMat(src), &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::gpu::GpuMat(mask), valbuf, locbuf);
-
-        CHECK(minVal == minVal_, cvtest::TS::FAIL_INVALID_OUTPUT);
-        CHECK(maxVal == maxVal_, cvtest::TS::FAIL_INVALID_OUTPUT);
-        CHECK(0 == memcmp(src.ptr(minLoc.y) + minLoc.x * src.elemSize(), src.ptr(minLoc_.y) + minLoc_.x * src.elemSize(), src.elemSize()),  
-              cvtest::TS::FAIL_INVALID_OUTPUT);
-        CHECK(0 == memcmp(src.ptr(maxLoc.y) + maxLoc.x * src.elemSize(), src.ptr(maxLoc_.y) + maxLoc_.x * src.elemSize(), src.elemSize()),  
-              cvtest::TS::FAIL_INVALID_OUTPUT);
-    }  
+    }
 };
+
+TEST_P(MinMax, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    double minVal, maxVal;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::minMax(cv::gpu::GpuMat(mat), &minVal, &maxVal, cv::gpu::GpuMat(mask));
+    );
+
+    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MinMax, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+////////////////////////////////////////////////////////////////////////////////
+// minMaxLoc
+
+struct MinMaxLoc : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+    cv::Mat mask;
+
+    double minVal_gold;
+    double maxVal_gold;
+    cv::Point minLoc_gold;
+    cv::Point maxLoc_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, false);
+
+        if (type != CV_8S)
+        {
+            cv::minMaxLoc(mat, &minVal_gold, &maxVal_gold, &minLoc_gold, &maxLoc_gold, mask);
+        }
+        else 
+        {
+            // OpenCV's minMaxLoc doesn't support CV_8S type 
+            minVal_gold = std::numeric_limits<double>::max();
+            maxVal_gold = -std::numeric_limits<double>::max();
+            for (int i = 0; i < mat.rows; ++i)
+            {
+                const signed char* mat_row = mat.ptr<signed char>(i);
+                const unsigned char* mask_row = mask.ptr<unsigned char>(i);
+                for (int j = 0; j < mat.cols; ++j)
+                {
+                    if (mask_row[j]) 
+                    { 
+                        signed char val = mat_row[j];
+                        if (val < minVal_gold) { minVal_gold = val; minLoc_gold = cv::Point(j, i); }
+                        if (val > maxVal_gold) { maxVal_gold = val; maxLoc_gold = cv::Point(j, i); }
+                    }
+                }
+            }
+        }
+    }
+};
+
+TEST_P(MinMaxLoc, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    double minVal, maxVal;
+    cv::Point minLoc, maxLoc;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::minMaxLoc(cv::gpu::GpuMat(mat), &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(mask));
+    );
+
+    EXPECT_DOUBLE_EQ(minVal_gold, minVal);
+    EXPECT_DOUBLE_EQ(maxVal_gold, maxVal);
+
+    int cmpMinVals = memcmp(mat.data + minLoc_gold.y * mat.step + minLoc_gold.x * mat.elemSize(), 
+                            mat.data + minLoc.y * mat.step + minLoc.x * mat.elemSize(), 
+                            mat.elemSize());
+    int cmpMaxVals = memcmp(mat.data + maxLoc_gold.y * mat.step + maxLoc_gold.x * mat.elemSize(), 
+                            mat.data + maxLoc.y * mat.step + maxLoc.x * mat.elemSize(), 
+                            mat.elemSize());
+
+    EXPECT_EQ(0, cmpMinVals);
+    EXPECT_EQ(0, cmpMaxVals);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
 
 ////////////////////////////////////////////////////////////////////////////
-// Count non zero
-struct CV_GpuCountNonZeroTest: cvtest::BaseTest 
+// countNonZero
+
+struct CountNonZero : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    CV_GpuCountNonZeroTest(){}
+    cv::gpu::DeviceInfo devInfo;
+    int type;
 
-    void run(int) 
+    cv::Size size;
+    cv::Mat mat;
+
+    int n_gold;
+
+    virtual void SetUp() 
     {
-        int depth_end;
-        if (cv::gpu::DeviceInfo().supports(cv::gpu::NATIVE_DOUBLE))
-            depth_end = CV_64F;
-        else
-            depth_end = CV_32F;
-        for (int depth = CV_8U; depth <= CV_32F; ++depth)
-        {
-            for (int i = 0; i < 4; ++i)
-            {
-                int rows = 1 + rand() % 1000;
-                int cols = 1 + rand() % 1000;
-                test(rows, cols, depth);
-            }
-        }
-    }
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
 
-    void test(int rows, int cols, int depth)
-    {
-        cv::Mat src(rows, cols, depth);
-        cv::RNG rng;
-        if (depth == 5)
-            rng.fill(src, RNG::UNIFORM, Scalar(-1000.f), Scalar(1000.f));
-        else if (depth == 6)
-            rng.fill(src, RNG::UNIFORM, Scalar(-1000.), Scalar(1000.));
-        else
-            for (int i = 0; i < src.rows; ++i)
-            { 
-                Mat row(1, src.cols * src.elemSize(), CV_8U, src.ptr(i));
-                rng.fill(row, RNG::UNIFORM, Scalar(0), Scalar(256));
-            }
+        cv::gpu::setDevice(devInfo.deviceID());
 
-        int n_gold = cv::countNonZero(src);
-        int n = cv::gpu::countNonZero(cv::gpu::GpuMat(src));
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        if (n != n_gold)
-        {
-            ts->printf(cvtest::TS::LOG, "%d %d %d %d %d\n", n, n_gold, depth, cols, rows);
-            n_gold = cv::countNonZero(src);
-        }
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        CHECK(n == n_gold, cvtest::TS::FAIL_INVALID_OUTPUT);
+        cv::Mat matBase = cvtest::randomMat(rng, size, CV_8U, 0.0, 1.0, false);
+        matBase.convertTo(mat, type);
+
+        n_gold = cv::countNonZero(mat);
     }
 };
 
+TEST_P(CountNonZero, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    int n;
+    
+    ASSERT_NO_THROW(
+        n = cv::gpu::countNonZero(cv::gpu::GpuMat(mat));
+    );
+
+    ASSERT_EQ(n_gold, n);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
 
 //////////////////////////////////////////////////////////////////////////////
 // sum
 
-struct CV_GpuSumTest: cvtest::BaseTest 
+struct Sum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    CV_GpuSumTest() {}
+    cv::gpu::DeviceInfo devInfo;
+    int type;
 
-    void run(int) 
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Scalar sum_gold;
+
+    virtual void SetUp() 
     {
-        Mat src;
-        Scalar a, b;
-        double max_err = 1e-5;
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
 
-        int typemax = CV_32F;
-        for (int type = CV_8U; type <= typemax; ++type)
-        {
-            //
-            // sum
-            //
+        cv::gpu::setDevice(devInfo.deviceID());
 
-            gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 1), src);
-            a = sum(src);
-            b = sum(GpuMat(src));
-            if (abs(a[0] - b[0]) > src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "1 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-            gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 2), src);
-            a = sum(src);
-            b = sum(GpuMat(src));
-            if (abs(a[0] - b[0]) + abs(a[1] - b[1]) > src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "2 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[1], b[1]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-            gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 3), src);
-            a = sum(src);
-            b = sum(GpuMat(src));
-            if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])> src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "3 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[2], b[2]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
+        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
 
-            gen(1 + rand() % 500, 1 + rand() % 500, CV_MAKETYPE(type, 4), src);
-            a = sum(src);
-            b = sum(GpuMat(src));
-            if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])> src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "4 cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[3], b[3]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
-
-            gen(1 + rand() % 500, 1 + rand() % 500, type, src);
-            a = sum(src);
-            b = sum(GpuMat(src));
-            if (abs(a[0] - b[0]) > src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "cols: %d, rows: %d, expected: %f, actual: %f\n", src.cols, src.rows, a[0], b[0]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
-
-            //
-            // absSum
-            //
-
-            gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 1), src);
-            b = absSum(GpuMat(src));
-            a = norm(src, NORM_L1);
-            if (abs(a[0] - b[0]) > src.size().area() * max_err)
-            {
-                ts->printf(cvtest::TS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
-                ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                return;
-            }
-
-            //
-            // sqrSum
-            //
-
-            if (type != CV_8S)
-            {
-                gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 1), src);
-                b = sqrSum(GpuMat(src));
-                Mat sqrsrc;
-                multiply(src, src, sqrsrc);
-                a = sum(sqrsrc);
-                if (abs(a[0] - b[0]) > src.size().area() * max_err)
-                {
-                    ts->printf(cvtest::TS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
-                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                    return;
-                }
-                gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 2), src);
-                b = sqrSum(GpuMat(src));
-                multiply(src, src, sqrsrc);
-                a = sum(sqrsrc);
-                if (abs(a[0] - b[0]) + abs(a[1] - b[1])> src.size().area() * max_err * 2)
-                {
-                    ts->printf(cvtest::TS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
-                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                    return;
-                }
-                gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 3), src);
-                b = sqrSum(GpuMat(src));
-                multiply(src, src, sqrsrc);
-                a = sum(sqrsrc);
-                if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])> src.size().area() * max_err * 3)
-                {
-                    ts->printf(cvtest::TS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
-                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                    return;
-                }
-                gen(1 + rand() % 200, 1 + rand() % 200, CV_MAKETYPE(type, 4), src);
-                b = sqrSum(GpuMat(src));
-                multiply(src, src, sqrsrc);
-                a = sum(sqrsrc);
-                if (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3])> src.size().area() * max_err * 4)
-                {
-                    ts->printf(cvtest::TS::CONSOLE, "type: %d, cols: %d, rows: %d, expected: %f, actual: %f\n", type, src.cols, src.rows, a[0], b[0]);
-                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
-                    return;
-                }
-            }
-        }
-    }
-
-    void gen(int cols, int rows, int type, Mat& m)
-    {
-        m.create(rows, cols, type);
-        RNG rng;
-        rng.fill(m, RNG::UNIFORM, Scalar::all(0), Scalar::all(16));
-
+        sum_gold = cv::sum(mat);
     }
 };
 
-TEST(add, accuracy) { CV_GpuNppImageAddTest test; test.safe_run(); }
-TEST(subtract, accuracy) { CV_GpuNppImageSubtractTest test; test.safe_run(); }
-TEST(multiply, accuracy) { CV_GpuNppImageMultiplyTest test; test.safe_run(); }
-TEST(divide, accuracy) { CV_GpuNppImageDivideTest test; test.safe_run(); }
-TEST(transpose, accuracy) { CV_GpuNppImageTransposeTest test; test.safe_run(); }
-TEST(absdiff, accuracy) { CV_GpuNppImageAbsdiffTest test; test.safe_run(); }
-TEST(compare, accuracy) { CV_GpuNppImageCompareTest test; test.safe_run(); }
-TEST(meanStdDev, accuracy) { CV_GpuNppImageMeanStdDevTest test; test.safe_run(); }
-TEST(normDiff, accuracy) { CV_GpuNppImageNormTest test; test.safe_run(); }
-TEST(flip, accuracy) { CV_GpuNppImageFlipTest test; test.safe_run(); }
-TEST(LUT, accuracy) { CV_GpuNppImageLUTTest test; test.safe_run(); }
-TEST(exp, accuracy) { CV_GpuNppImageExpTest test; test.safe_run(); }
-TEST(log, accuracy) { CV_GpuNppImageLogTest test; test.safe_run(); }
-TEST(magnitude, accuracy) { CV_GpuNppImageMagnitudeTest test; test.safe_run(); }
-TEST(phase, accuracy) { CV_GpuNppImagePhaseTest test; test.safe_run(); }
-TEST(cartToPolar, accuracy) { CV_GpuNppImageCartToPolarTest test; test.safe_run(); }
-TEST(polarToCart, accuracy) { CV_GpuNppImagePolarToCartTest test; test.safe_run(); }
-TEST(minMax, accuracy) { CV_GpuMinMaxTest test; test.safe_run(); }
-TEST(minMaxLoc, accuracy) { CV_GpuMinMaxLocTest test; test.safe_run(); }
-TEST(countNonZero, accuracy) { CV_GpuCountNonZeroTest test; test.safe_run(); }
-TEST(sum, accuracy) { CV_GpuSumTest test; test.safe_run(); }
+TEST_P(Sum, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Scalar sum;
+    
+    ASSERT_NO_THROW(
+        sum = cv::gpu::sum(cv::gpu::GpuMat(mat));
+    );
+
+    EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[2], sum_gold[2], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Sum, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+struct AbsSum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Scalar sum_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
+
+        sum_gold = cv::norm(mat, cv::NORM_L1);
+    }
+};
+
+TEST_P(AbsSum, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Scalar sum;
+    
+    ASSERT_NO_THROW(
+        sum = cv::gpu::absSum(cv::gpu::GpuMat(mat));
+    );
+
+    EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[2], sum_gold[2], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+struct SqrSum : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Scalar sum_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat = cvtest::randomMat(rng, size, CV_8U, 0.0, 10.0, false);
+ 
+        cv::Mat sqrmat;
+        cv::multiply(mat, mat, sqrmat);
+        sum_gold = cv::sum(sqrmat);
+    }
+};
+
+TEST_P(SqrSum, Accuracy) 
+{
+    if (type == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Scalar sum;
+    
+    ASSERT_NO_THROW(
+        sum = cv::gpu::sqrSum(cv::gpu::GpuMat(mat));
+    );
+
+    EXPECT_NEAR(sum[0], sum_gold[0], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[1], sum_gold[1], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[2], sum_gold[2], mat.size().area() * 1e-5);
+    EXPECT_NEAR(sum[3], sum_gold[3], mat.size().area() * 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+//////////////////////////////////////////////////////////////////////////////
+// bitwise
+
+struct BitwiseNot : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat.create(size, type);
+        
+        for (int i = 0; i < mat.rows; ++i)
+        {
+            cv::Mat row(1, static_cast<int>(mat.cols * mat.elemSize()), CV_8U, (void*)mat.ptr(i));
+            rng.fill(row, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+        }
+
+        dst_gold = ~mat;
+    }
+};
+
+TEST_P(BitwiseNot, Accuracy) 
+{
+    if (mat.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::bitwise_not(cv::gpu::GpuMat(mat), dev_dst);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseNot, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::ValuesIn(all_types())));
+
+struct BitwiseOr : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat1;
+    cv::Mat mat2;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat1.create(size, type);
+        mat2.create(size, type);
+        
+        for (int i = 0; i < mat1.rows; ++i)
+        {
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
+            rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
+            rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+        }
+
+        dst_gold = mat1 | mat2;
+    }
+};
+
+TEST_P(BitwiseOr, Accuracy) 
+{
+    if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::bitwise_or(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseOr, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::ValuesIn(all_types())));
+
+struct BitwiseAnd : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat1;
+    cv::Mat mat2;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat1.create(size, type);
+        mat2.create(size, type);
+        
+        for (int i = 0; i < mat1.rows; ++i)
+        {
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
+            rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
+            rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+        }
+
+        dst_gold = mat1 & mat2;
+    }
+};
+
+TEST_P(BitwiseAnd, Accuracy) 
+{
+    if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::bitwise_and(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseAnd, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::ValuesIn(all_types())));
+
+struct BitwiseXor : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+
+    cv::Size size;
+    cv::Mat mat1;
+    cv::Mat mat2;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        mat1.create(size, type);
+        mat2.create(size, type);
+        
+        for (int i = 0; i < mat1.rows; ++i)
+        {
+            cv::Mat row1(1, static_cast<int>(mat1.cols * mat1.elemSize()), CV_8U, (void*)mat1.ptr(i));
+            rng.fill(row1, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+
+            cv::Mat row2(1, static_cast<int>(mat2.cols * mat2.elemSize()), CV_8U, (void*)mat2.ptr(i));
+            rng.fill(row2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(255));
+        }
+
+        dst_gold = mat1 ^ mat2;
+    }
+};
+
+TEST_P(BitwiseXor, Accuracy) 
+{
+    if (mat1.depth() == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type)
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::bitwise_xor(cv::gpu::GpuMat(mat1), cv::gpu::GpuMat(mat2), dev_dst);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, BitwiseXor, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::ValuesIn(all_types())));
+
+#endif // HAVE_CUDA

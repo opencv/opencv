@@ -30,9 +30,8 @@ How does it work?
    b. In the **Polar coordinate system:** Parameters: :math:`(r,\theta)`
 
    .. image:: images/Hough_Lines_Tutorial_Theory_0.jpg
-      	   :alt: Line variables
-	   :height: 200pt
-   	   :align: center 
+      :alt: Line variables
+      :align: center 
 
    For Hough Transforms, we will express lines in the *Polar system*. Hence, a line equation can be written as: 
 
@@ -53,18 +52,17 @@ How does it work?
 #. If for a given :math:`(x_{0}, y_{0})` we plot the family of lines that goes through it, we get a sinusoid. For instance, for :math:`x_{0} = 8` and :math:`y_{0} = 6` we get the following plot (in a plane :math:`\theta` - :math:`r`):
 
    .. image:: images/Hough_Lines_Tutorial_Theory_1.jpg
-      	   :alt: Polar plot of a the family of lines of a point
-	   :height: 200pt
-   	   :align: center 
+      :alt: Polar plot of a the family of lines of a point
+      :align: center 
 
    We consider only points such that :math:`r > 0` and :math:`0< \theta < 2 \pi`. 
 
 #. We can do the same operation above for all the points in an image. If the curves of two different points intersect in the plane :math:`\theta` - :math:`r`, that means that both points belong to a same line. For instance, following with the example above and drawing the plot for two more points: :math:`x_{1} = 9`, :math:`y_{1} = 4` and :math:`x_{2} = 12`, :math:`y_{2} = 3`, we get:
 
    .. image:: images/Hough_Lines_Tutorial_Theory_2.jpg
-      	   :alt: Polar plot of the family of lines for three points
-	   :height: 200pt
-   	   :align: center 
+      :alt: Polar plot of the family of lines for three points
+      :align: center 
+
    The three plots intersect in one single point :math:`(0.925, 9.6)`, these coordinates are the parameters (:math:`\theta, r`) or the line in which :math:`(x_{0}, y_{0})`, :math:`(x_{1}, y_{1})` and :math:`(x_{2}, y_{2})` lay. 
 
 #. What does all the stuff above mean? It means that in general, a line can be *detected* by finding the number of intersections between curves.The more curves intersecting means that the line represented by that intersection have more points. In general, we can define a *threshold* of the minimum number of intersections needed to *detect* a line.
@@ -90,13 +88,19 @@ b. **The Probabilistic Hough Line Transform**
 Code
 ======
 
+.. |TutorialHoughLinesSimpleDownload| replace:: here
+.. _TutorialHoughLinesSimpleDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp
+.. |TutorialHoughLinesFancyDownload| replace:: here
+.. _TutorialHoughLinesFancyDownload: https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
+
+
 #. **What does this program do?**
  
    * Loads an image
    * Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*. 
    * Display the original image and the detected line in two windows.
 
-#. The sample code that we will explain can be downloaded from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp>`_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found  `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp>`_
+#. The sample code that we will explain can be downloaded from  |TutorialHoughLinesSimpleDownload|_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found  |TutorialHoughLinesFancyDownload|_.
 
 .. code-block:: cpp 
 
@@ -112,12 +116,12 @@ Code
    {
     cout << "\nThis program demonstrates line finding with the Hough transform.\n"
             "Usage:\n"
-            "./houghlines <image_name>, Default is pic1.png\n" << endl;
+            "./houghlines <image_name>, Default is pic1.jpg\n" << endl;
    }
 
    int main(int argc, char** argv)
    {
-    const char* filename = argc >= 2 ? argv[1] : "pic1.png";
+    const char* filename = argc >= 2 ? argv[1] : "pic1.jpg";
 
     Mat src = imread(filename, 0);
     if(src.empty())
@@ -276,14 +280,14 @@ Result
 Using an input image such as:
 
 .. image:: images/Hough_Lines_Tutorial_Original_Image.jpg
-        :alt: Result of detecting lines with Hough Transform
-        :align: center 
+   :alt: Result of detecting lines with Hough Transform
+   :align: center 
  
 We get the following result by using the Probabilistic Hough Line Transform:
 
 .. image:: images/Hough_Lines_Tutorial_Result.jpg
-        :alt: Result of detecting lines with Hough Transform
-        :align: center 
+   :alt: Result of detecting lines with Hough Transform
+   :align: center 
 
 You may observe that the number of lines detected vary while you change the *threshold*. The explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected (since you will need more points to declare a line detected). 
 

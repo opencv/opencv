@@ -53,410 +53,1376 @@ void cv::gpu::cvtColor(const GpuMat&, GpuMat&, int, int, Stream&) { throw_nogpu(
 
 namespace cv { namespace gpu {  namespace color  
 {
-    void RGB2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-    void RGB2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-    void RGB2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
+    #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name) \
+        void name(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
 
-    void RGB5x52RGB_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-    void RGB2RGB5x5_gpu(const DevMem2D& src, int srccn, const DevMem2D& dst, int green_bits, int bidx, cudaStream_t stream);
+    #define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _16u) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _32f)
 
-    void Gray2RGB_gpu_8u(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
-    void Gray2RGB_gpu_16u(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
-    void Gray2RGB_gpu_32f(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
-    void Gray2RGB5x5_gpu(const DevMem2D& src, const DevMem2D& dst, int green_bits, cudaStream_t stream);
+    #define OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(name) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _32f) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _full_8u) \
+        OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _full_32f)
 
-    void RGB2Gray_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
-    void RGB2Gray_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
-    void RGB2Gray_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
-    void RGB5x52Gray_gpu(const DevMem2D& src, int green_bits, const DevMem2D& dst, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_rgba)
 
-    void RGB2YCrCb_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
-    void RGB2YCrCb_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
-    void RGB2YCrCb_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr_to_bgr555)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr_to_bgr565)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(rgb_to_bgr555)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(rgb_to_bgr565)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgra_to_bgr555)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgra_to_bgr565)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(rgba_to_bgr555)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(rgba_to_bgr565)
 
-    void YCrCb2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
-    void YCrCb2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
-    void YCrCb2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, const void* coeffs, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr555_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr565_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr555_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr565_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr555_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr565_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr555_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr565_to_bgra)
 
-    void RGB2XYZ_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
-    void RGB2XYZ_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
-    void RGB2XYZ_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(gray_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(gray_to_bgra)
 
-    void XYZ2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
-    void XYZ2RGB_gpu_16u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
-    void XYZ2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(gray_to_bgr555)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(gray_to_bgr565)
 
-    void RGB2HSV_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
-    void RGB2HSV_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr555_to_gray)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ONE(bgr565_to_gray)
 
-    void HSV2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
-    void HSV2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_gray)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_gray)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_gray)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_gray)
 
-    void RGB2HLS_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
-    void RGB2HLS_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_yuv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_yuv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_yuv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_yuv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_yuv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_yuv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_yuv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_yuv4)
 
-    void HLS2RGB_gpu_8u(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
-    void HLS2RGB_gpu_32f(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, int hrange, cudaStream_t stream);
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv4_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv4_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv4_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(yuv4_to_bgra)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_YCrCb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_YCrCb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_YCrCb4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_YCrCb4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_YCrCb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_YCrCb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_YCrCb4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_YCrCb4)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb4_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb4_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb4_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(YCrCb4_to_bgra)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_xyz)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_xyz)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgb_to_xyz4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(rgba_to_xyz4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_xyz)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_xyz)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgr_to_xyz4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(bgra_to_xyz4)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz4_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz4_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz4_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_ALL(xyz4_to_bgra)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hsv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hsv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hsv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hsv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgr_to_hsv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgra_to_hsv)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgr_to_hsv4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgra_to_hsv4)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv4_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv4_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv4_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hsv4_to_bgra)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hls)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hls)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgb_to_hls4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(rgba_to_hls4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgr_to_hls)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgra_to_hls)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgr_to_hls4)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(bgra_to_hls4)
+
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls4_to_rgb)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls4_to_rgba)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls_to_bgra)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls4_to_bgr)
+    OPENCV_GPU_DECLARE_CVTCOLOR_8U32F(hls4_to_bgra)
+
+    #undef OPENCV_GPU_DECLARE_CVTCOLOR_ONE
+    #undef OPENCV_GPU_DECLARE_CVTCOLOR_ALL
+    #undef OPENCV_GPU_DECLARE_CVTCOLOR_8U32F
 }}}
 
 namespace
 {
-    #undef R2Y
-    #undef G2Y
-    #undef B2Y
-    
-    enum
-    {
-        yuv_shift  = 14,
-        xyz_shift  = 12,
-        R2Y        = 4899,
-        G2Y        = 9617,
-        B2Y        = 1868,
-        BLOCK_SIZE = 256
-    };
-}
+    typedef void (*gpu_func_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
 
-namespace
-{
-    void cvtColor_caller(const GpuMat& src, GpuMat& dst, int code, int dcn, const cudaStream_t& stream) 
+    void bgr_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
-        Size sz = src.size();
-        int scn = src.channels(), depth = src.depth(), bidx;
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgr_to_rgb_8u, 0, bgr_to_rgb_16u, 0, 0, bgr_to_rgb_32f};
         
-        CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_32F);
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3);
 
-        switch (code)
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgr_to_bgra_8u, 0, bgr_to_bgra_16u, 0, 0, bgr_to_bgra_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgr_to_rgba_8u, 0, bgr_to_rgba_16u, 0, 0, bgr_to_rgba_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgra_to_bgr_8u, 0, bgra_to_bgr_16u, 0, 0, bgra_to_bgr_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgra_to_rgb_8u, 0, bgra_to_rgb_16u, 0, 0, bgra_to_rgb_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgra_to_rgba_8u, 0, bgra_to_rgba_16u, 0, 0, bgra_to_rgba_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::bgr_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::bgr_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgb_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::rgb_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgb_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::rgb_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::bgra_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::bgra_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgba_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::rgba_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgba_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::rgba_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr555_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC3);        
+
+        color::bgr555_to_rgb(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr565_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC3);        
+
+        color::bgr565_to_rgb(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr555_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC3);        
+
+        color::bgr555_to_bgr(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr565_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC3);        
+
+        color::bgr565_to_bgr(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr555_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC4);        
+
+        color::bgr555_to_rgba(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr565_to_rgba(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC4);        
+
+        color::bgr565_to_rgba(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr555_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC4);        
+
+        color::bgr555_to_bgra(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr565_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC4);        
+
+        color::bgr565_to_bgra(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void gray_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {gray_to_bgr_8u, 0, gray_to_bgr_16u, 0, 0, gray_to_bgr_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 1);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void gray_to_bgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {gray_to_bgra_8u, 0, gray_to_bgra_16u, 0, 0, gray_to_bgra_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 1);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 4));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void gray_to_bgr555(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 1);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::gray_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void gray_to_bgr565(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 1);
+
+        dst.create(src.size(), CV_8UC2);        
+
+        color::gray_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr555_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC1);        
+
+        color::bgr555_to_gray(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr565_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {        
+        CV_Assert(src.depth() == CV_8U);
+        CV_Assert(src.channels() == 2);
+
+        dst.create(src.size(), CV_8UC1);        
+
+        color::bgr565_to_gray(src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgb_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {rgb_to_gray_8u, 0, rgb_to_gray_16u, 0, 0, rgb_to_gray_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgr_to_gray_8u, 0, bgr_to_gray_16u, 0, 0, bgr_to_gray_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void rgba_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {rgba_to_gray_8u, 0, rgba_to_gray_16u, 0, 0, rgba_to_gray_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgra_to_gray(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[] = {bgra_to_gray_8u, 0, bgra_to_gray_16u, 0, 0, bgra_to_gray_32f};
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 1));        
+
+        funcs[src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+    
+    void rgb_to_yuv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
         {
-            case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
-            case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:                
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, cudaStream_t stream);
-                    static const func_t funcs[] = {color::RGB2RGB_gpu_8u, 0, color::RGB2RGB_gpu_16u, 0, 0, color::RGB2RGB_gpu_32f};
+            {
+                {rgb_to_yuv_8u, 0, rgb_to_yuv_16u, 0, 0, rgb_to_yuv_32f},
+                {rgba_to_yuv_8u, 0, rgba_to_yuv_16u, 0, 0, rgba_to_yuv_32f}
+            },
+            {
+                {rgb_to_yuv4_8u, 0, rgb_to_yuv4_16u, 0, 0, rgb_to_yuv4_32f},
+                {rgba_to_yuv4_8u, 0, rgba_to_yuv4_16u, 0, 0, rgba_to_yuv4_32f}
+            }
+        };
 
-                    CV_Assert(scn == 3 || scn == 4);
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
-                    bidx = code == CV_BGR2BGRA || code == CV_BGRA2BGR ? 0 : 2;
-                    
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    funcs[depth](src, scn, dst, dcn, bidx, stream);
-                    break;
-                }
-                
-            case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
-            case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
-                {
-                    CV_Assert((scn == 3 || scn == 4) && depth == CV_8U);
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    int green_bits = code == CV_BGR2BGR565 || code == CV_RGB2BGR565 
-                        || code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5;
-                    bidx = code == CV_BGR2BGR565 || code == CV_BGR2BGR555 
-                        || code == CV_BGRA2BGR565 || code == CV_BGRA2BGR555 ? 0 : 2;
+    void bgr_to_yuv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_yuv_8u, 0, bgr_to_yuv_16u, 0, 0, bgr_to_yuv_32f},
+                {bgra_to_yuv_8u, 0, bgra_to_yuv_16u, 0, 0, bgra_to_yuv_32f}
+            },
+            {
+                {bgr_to_yuv4_8u, 0, bgr_to_yuv4_16u, 0, 0, bgr_to_yuv4_32f},
+                {bgra_to_yuv4_8u, 0, bgra_to_yuv4_16u, 0, 0, bgra_to_yuv4_32f}
+            }
+        };
 
-                    dst.create(sz, CV_8UC2);
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    color::RGB2RGB5x5_gpu(src, scn, dst, green_bits, bidx, stream);
-                    break;
-                }
-            
-            case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
-            case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-                {
-                    if (dcn <= 0) dcn = 3;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    CV_Assert((dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U);
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    int green_bits = code == CV_BGR5652BGR || code == CV_BGR5652RGB 
-                        || code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5;
-                    bidx = code == CV_BGR5652BGR || code == CV_BGR5552BGR 
-                        || code == CV_BGR5652BGRA || code == CV_BGR5552BGRA ? 0 : 2;
+    void yuv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {yuv_to_rgb_8u, 0, yuv_to_rgb_16u, 0, 0, yuv_to_rgb_32f},
+                {yuv4_to_rgb_8u, 0, yuv4_to_rgb_16u, 0, 0, yuv4_to_rgb_32f}
+            },
+            {
+                {yuv_to_rgba_8u, 0, yuv_to_rgba_16u, 0, 0, yuv_to_rgba_32f},
+                {yuv4_to_rgba_8u, 0, yuv4_to_rgba_16u, 0, 0, yuv4_to_rgba_32f}
+            }
+        };
 
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    color::RGB5x52RGB_gpu(src, green_bits, dst, dcn, bidx, stream);
-                    break;
-                }
-                        
-            case CV_BGR2GRAY: case CV_BGRA2GRAY: case CV_RGB2GRAY: case CV_RGBA2GRAY:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int bidx, cudaStream_t stream);
-                    static const func_t funcs[] = {color::RGB2Gray_gpu_8u, 0, color::RGB2Gray_gpu_16u, 0, 0, color::RGB2Gray_gpu_32f};
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    CV_Assert(scn == 3 || scn == 4);
-                    
-                    bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    dst.create(sz, CV_MAKETYPE(depth, 1));
+    void yuv_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {yuv_to_bgr_8u, 0, yuv_to_bgr_16u, 0, 0, yuv_to_bgr_32f},
+                {yuv4_to_bgr_8u, 0, yuv4_to_bgr_16u, 0, 0, yuv4_to_bgr_32f}
+            },
+            {
+                {yuv_to_bgra_8u, 0, yuv_to_bgra_16u, 0, 0, yuv_to_bgra_32f},
+                {yuv4_to_bgra_8u, 0, yuv4_to_bgra_16u, 0, 0, yuv4_to_bgra_32f}
+            }
+        };
 
-                    funcs[depth](src, scn, dst, bidx, stream);
-                    break;
-                }
-            
-            case CV_BGR5652GRAY: case CV_BGR5552GRAY:
-                {
-                    CV_Assert(scn == 2 && depth == CV_8U);
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    int green_bits = code == CV_BGR5652GRAY ? 6 : 5;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    dst.create(sz, CV_8UC1);
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+    
+    void rgb_to_YCrCb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_YCrCb_8u, 0, rgb_to_YCrCb_16u, 0, 0, rgb_to_YCrCb_32f},
+                {rgba_to_YCrCb_8u, 0, rgba_to_YCrCb_16u, 0, 0, rgba_to_YCrCb_32f}
+            },
+            {
+                {rgb_to_YCrCb4_8u, 0, rgb_to_YCrCb4_16u, 0, 0, rgb_to_YCrCb4_32f},
+                {rgba_to_YCrCb4_8u, 0, rgba_to_YCrCb4_16u, 0, 0, rgba_to_YCrCb4_32f}
+            }
+        };
 
-                    color::RGB5x52Gray_gpu(src, green_bits, dst, stream);
-                    break;
-                }
-            
-            case CV_GRAY2BGR: case CV_GRAY2BGRA:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, int dstcn, cudaStream_t stream);
-                    static const func_t funcs[] = {color::Gray2RGB_gpu_8u, 0, color::Gray2RGB_gpu_16u, 0, 0, color::Gray2RGB_gpu_32f};
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    if (dcn <= 0) dcn = 3;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    CV_Assert(scn == 1 && (dcn == 3 || dcn == 4));
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+    void bgr_to_YCrCb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_YCrCb_8u, 0, bgr_to_YCrCb_16u, 0, 0, bgr_to_YCrCb_32f},
+                {bgra_to_YCrCb_8u, 0, bgra_to_YCrCb_16u, 0, 0, bgra_to_YCrCb_32f}
+            },
+            {
+                {bgr_to_YCrCb4_8u, 0, bgr_to_YCrCb4_16u, 0, 0, bgr_to_YCrCb4_32f},
+                {bgra_to_YCrCb4_8u, 0, bgra_to_YCrCb4_16u, 0, 0, bgra_to_YCrCb4_32f}
+            }
+        };
 
-                    funcs[depth](src, dst, dcn, stream);
-                    break;
-                }
-                
-            case CV_GRAY2BGR565: case CV_GRAY2BGR555:
-                {
-                    CV_Assert(scn == 1 && depth == CV_8U);
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    int green_bits =  code == CV_GRAY2BGR565 ? 6 : 5;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    dst.create(sz, CV_8UC2);
-                    
-                    color::Gray2RGB5x5_gpu(src, dst, green_bits, stream);
-                    break;
-                }
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-            case CV_BGR2YCrCb: case CV_RGB2YCrCb:
-            case CV_BGR2YUV: case CV_RGB2YUV:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
-                        const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {color::RGB2YCrCb_gpu_8u, 0, color::RGB2YCrCb_gpu_16u, 0, 0, color::RGB2YCrCb_gpu_32f};
+    void YCrCb_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {YCrCb_to_rgb_8u, 0, YCrCb_to_rgb_16u, 0, 0, YCrCb_to_rgb_32f},
+                {YCrCb4_to_rgb_8u, 0, YCrCb4_to_rgb_16u, 0, 0, YCrCb4_to_rgb_32f}
+            },
+            {
+                {YCrCb_to_rgba_8u, 0, YCrCb_to_rgba_16u, 0, 0, YCrCb_to_rgba_32f},
+                {YCrCb4_to_rgba_8u, 0, YCrCb4_to_rgba_16u, 0, 0, YCrCb4_to_rgba_32f}
+            }
+        };
 
-                    if (dcn <= 0) dcn = 3;
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    bidx = code == CV_BGR2YCrCb || code == CV_RGB2YUV ? 0 : 2;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-                    static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    static const float YCrCb_f[] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-                    static const int YCrCb_i[] = {R2Y, G2Y, B2Y, 11682, 9241};
+    void YCrCb_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {YCrCb_to_bgr_8u, 0, YCrCb_to_bgr_16u, 0, 0, YCrCb_to_bgr_32f},
+                {YCrCb4_to_bgr_8u, 0, YCrCb4_to_bgr_16u, 0, 0, YCrCb4_to_bgr_32f}
+            },
+            {
+                {YCrCb_to_bgra_8u, 0, YCrCb_to_bgra_16u, 0, 0, YCrCb_to_bgra_32f},
+                {YCrCb4_to_bgra_8u, 0, YCrCb4_to_bgra_16u, 0, 0, YCrCb4_to_bgra_32f}
+            }
+        };
 
-                    float coeffs_f[5];
-                    int coeffs_i[5];
-                    ::memcpy(coeffs_f, code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? YCrCb_f : yuv_f, sizeof(yuv_f));
-                    ::memcpy(coeffs_i, code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? YCrCb_i : yuv_i, sizeof(yuv_i));
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    if (bidx == 0) 
-                    {
-                        std::swap(coeffs_f[0], coeffs_f[2]);
-                        std::swap(coeffs_i[0], coeffs_i[2]);
-                    }
-                        
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    funcs[depth](src, scn, dst, dcn, bidx, coeffs, stream);
-                    break;
-                }
-                
-            case CV_YCrCb2BGR: case CV_YCrCb2RGB:
-            case CV_YUV2BGR: case CV_YUV2RGB:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
-                        const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {color::YCrCb2RGB_gpu_8u, 0, color::YCrCb2RGB_gpu_16u, 0, 0, color::YCrCb2RGB_gpu_32f};
+    void rgb_to_xyz(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_xyz_8u, 0, rgb_to_xyz_16u, 0, 0, rgb_to_xyz_32f},
+                {rgba_to_xyz_8u, 0, rgba_to_xyz_16u, 0, 0, rgba_to_xyz_32f}
+            },
+            {
+                {rgb_to_xyz4_8u, 0, rgb_to_xyz4_16u, 0, 0, rgb_to_xyz4_32f},
+                {rgba_to_xyz4_8u, 0, rgba_to_xyz4_16u, 0, 0, rgba_to_xyz4_32f}
+            }
+        };
 
-                    if (dcn <= 0) dcn = 3;
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    bidx = code == CV_YCrCb2BGR || code == CV_YUV2RGB ? 0 : 2;
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    static const float yuv_f[] = { 2.032f, -0.395f, -0.581f, 1.140f };
-                    static const int yuv_i[] = { 33292, -6472, -9519, 18678 }; 
+    void bgr_to_xyz(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_xyz_8u, 0, bgr_to_xyz_16u, 0, 0, bgr_to_xyz_32f},
+                {bgra_to_xyz_8u, 0, bgra_to_xyz_16u, 0, 0, bgra_to_xyz_32f}
+            },
+            {
+                {bgr_to_xyz4_8u, 0, bgr_to_xyz4_16u, 0, 0, bgr_to_xyz4_32f},
+                {bgra_to_xyz4_8u, 0, bgra_to_xyz4_16u, 0, 0, bgra_to_xyz4_32f}
+            }
+        };
 
-                    static const float YCrCb_f[] = {1.403f, -0.714f, -0.344f, 1.773f};
-                    static const int YCrCb_i[] = {22987, -11698, -5636, 29049};
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    const float* coeffs_f = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? YCrCb_f : yuv_f;
-                    const int* coeffs_i = code == CV_YCrCb2BGR || code == CV_YCrCb2RGB ? YCrCb_i : yuv_i;
-                    
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
-                    
-                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    funcs[depth](src, scn, dst, dcn, bidx, coeffs, stream);
-                    break;
-                }
-            
-            case CV_BGR2XYZ: case CV_RGB2XYZ:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, 
-                        const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {color::RGB2XYZ_gpu_8u, 0, color::RGB2XYZ_gpu_16u, 0, 0, color::RGB2XYZ_gpu_32f};
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    if (dcn <= 0) dcn = 3;
+    void xyz_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {xyz_to_rgb_8u, 0, xyz_to_rgb_16u, 0, 0, xyz_to_rgb_32f},
+                {xyz4_to_rgb_8u, 0, xyz4_to_rgb_16u, 0, 0, xyz4_to_rgb_32f}
+            },
+            {
+                {xyz_to_rgba_8u, 0, xyz_to_rgba_16u, 0, 0, xyz_to_rgba_32f},
+                {xyz4_to_rgba_8u, 0, xyz4_to_rgba_16u, 0, 0, xyz4_to_rgba_32f}
+            }
+        };
 
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    bidx = code == CV_BGR2XYZ ? 0 : 2;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    static const float RGB2XYZ_D65f[] =
-                    {
-                        0.412453f, 0.357580f, 0.180423f,
-                        0.212671f, 0.715160f, 0.072169f,
-                        0.019334f, 0.119193f, 0.950227f
-                    };
-                    static const int RGB2XYZ_D65i[] =
-                    {
-                        1689,    1465,    739,
-                        871,     2929,    296,
-                        79,      488,     3892
-                    };
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    float coeffs_f[9];
-                    int coeffs_i[9];
-                    ::memcpy(coeffs_f, RGB2XYZ_D65f, sizeof(RGB2XYZ_D65f));
-                    ::memcpy(coeffs_i, RGB2XYZ_D65i, sizeof(RGB2XYZ_D65i));
+    void xyz_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {xyz_to_bgr_8u, 0, xyz_to_bgr_16u, 0, 0, xyz_to_bgr_32f},
+                {xyz4_to_bgr_8u, 0, xyz4_to_bgr_16u, 0, 0, xyz4_to_bgr_32f}
+            },
+            {
+                {xyz_to_bgra_8u, 0, xyz_to_bgra_16u, 0, 0, xyz_to_bgra_32f},
+                {xyz4_to_bgra_8u, 0, xyz4_to_bgra_16u, 0, 0, xyz4_to_bgra_32f}
+            }
+        };
 
-                    if (bidx == 0) 
-                    {
-                        std::swap(coeffs_f[0], coeffs_f[2]);
-                        std::swap(coeffs_f[3], coeffs_f[5]);
-                        std::swap(coeffs_f[6], coeffs_f[8]);
-                        
-                        std::swap(coeffs_i[0], coeffs_i[2]);
-                        std::swap(coeffs_i[3], coeffs_i[5]);
-                        std::swap(coeffs_i[6], coeffs_i[8]);
-                    }
-                        
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
-                    
-                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
-                    
-                    funcs[depth](src, scn, dst, dcn, coeffs, stream);
-                    break;
-                }
-            
-            case CV_XYZ2BGR: case CV_XYZ2RGB:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, const void* coeffs, cudaStream_t stream);
-                    static const func_t funcs[] = {color::XYZ2RGB_gpu_8u, 0, color::XYZ2RGB_gpu_16u, 0, 0, color::XYZ2RGB_gpu_32f};
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    if (dcn <= 0) dcn = 3;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4));
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    bidx = code == CV_XYZ2BGR ? 0 : 2;
+    void rgb_to_hsv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_hsv_8u, 0, 0, 0, 0, rgb_to_hsv_32f},
+                {rgba_to_hsv_8u, 0, 0, 0, 0, rgba_to_hsv_32f},
+            },
+            {
+                {rgb_to_hsv4_8u, 0, 0, 0, 0, rgb_to_hsv4_32f},
+                {rgba_to_hsv4_8u, 0, 0, 0, 0, rgba_to_hsv4_32f},
+            }
+        };
 
-                    static const float XYZ2sRGB_D65f[] =
-                    {
-                        3.240479f, -1.53715f, -0.498535f,
-                        -0.969256f, 1.875991f, 0.041556f,
-                        0.055648f, -0.204043f, 1.057311f
-                    };
-                    static const int XYZ2sRGB_D65i[] =
-                    {
-                        13273,  -6296,  -2042,
-                        -3970,   7684,    170,
-                          228,   -836,   4331
-                    };
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    float coeffs_f[9];
-                    int coeffs_i[9];
-                    ::memcpy(coeffs_f, XYZ2sRGB_D65f, sizeof(XYZ2sRGB_D65f));
-                    ::memcpy(coeffs_i, XYZ2sRGB_D65i, sizeof(XYZ2sRGB_D65i));
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    if (bidx == 0) 
-                    {
-                        std::swap(coeffs_f[0], coeffs_f[6]);
-                        std::swap(coeffs_f[1], coeffs_f[7]);
-                        std::swap(coeffs_f[2], coeffs_f[8]);
-                        
-                        std::swap(coeffs_i[0], coeffs_i[6]);
-                        std::swap(coeffs_i[1], coeffs_i[7]);
-                        std::swap(coeffs_i[2], coeffs_i[8]);
-                    }
-                        
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
-                    
-                    const void* coeffs = depth == CV_32F ? (void*)coeffs_f : (void*)coeffs_i;
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    funcs[depth](src, scn, dst, dcn, coeffs, stream);
-                    break;
-                }
+    void bgr_to_hsv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_hsv_8u, 0, 0, 0, 0, bgr_to_hsv_32f},
+                {bgra_to_hsv_8u, 0, 0, 0, 0, bgra_to_hsv_32f}
+            },
+            {
+                {bgr_to_hsv4_8u, 0, 0, 0, 0, bgr_to_hsv4_32f},
+                {bgra_to_hsv4_8u, 0, 0, 0, 0, bgra_to_hsv4_32f}
+            }
+        };
 
-            case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
-            case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
-                        int hrange, cudaStream_t stream);
-                    static const func_t funcs_hsv[] = {color::RGB2HSV_gpu_8u, 0, 0, 0, 0, color::RGB2HSV_gpu_32f};
-                    static const func_t funcs_hls[] = {color::RGB2HLS_gpu_8u, 0, 0, 0, 0, color::RGB2HLS_gpu_32f};
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    if (dcn <= 0) dcn = 3;
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
-                        code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
-                    int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
-                        code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
-                
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+    void hsv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hsv_to_rgb_8u, 0, 0, 0, 0, hsv_to_rgb_32f},
+                {hsv4_to_rgb_8u, 0, 0, 0, 0, hsv4_to_rgb_32f}
+            },
+            {
+                {hsv_to_rgba_8u, 0, 0, 0, 0, hsv_to_rgba_32f},
+                {hsv4_to_rgba_8u, 0, 0, 0, 0, hsv4_to_rgba_32f}
+            }
+        };
 
-                    if (code == CV_BGR2HSV || code == CV_RGB2HSV || code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL) 
-                        funcs_hsv[depth](src, scn, dst, dcn, bidx, hrange, stream);
-                    else
-                        funcs_hls[depth](src, scn, dst, dcn, bidx, hrange, stream);
-                    break;
-                }
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-            case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
-            case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
-                {
-                    typedef void (*func_t)(const DevMem2D& src, int srccn, const DevMem2D& dst, int dstcn, int bidx, 
-                        int hrange, cudaStream_t stream);
-                    static const func_t funcs_hsv[] = {color::HSV2RGB_gpu_8u, 0, 0, 0, 0, color::HSV2RGB_gpu_32f};
-                    static const func_t funcs_hls[] = {color::HLS2RGB_gpu_8u, 0, 0, 0, 0, color::HLS2RGB_gpu_32f};
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-                    if (dcn <= 0) dcn = 3;
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
 
-                    CV_Assert((scn == 3 || scn == 4) && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+    void hsv_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hsv_to_bgr_8u, 0, 0, 0, 0, hsv_to_bgr_32f},
+                {hsv4_to_bgr_8u, 0, 0, 0, 0, hsv4_to_bgr_32f}
+            },
+            {
+                {hsv_to_bgra_8u, 0, 0, 0, 0, hsv_to_bgra_32f},
+                {hsv4_to_bgra_8u, 0, 0, 0, 0, hsv4_to_bgra_32f}
+            }
+        };
 
-                    bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
-                        code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
-                    int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
-                        code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
-                    
-                    dst.create(sz, CV_MAKETYPE(depth, dcn));
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
 
-                    if (code == CV_HSV2BGR || code == CV_HSV2RGB || code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL)
-                        funcs_hsv[depth](src, scn, dst, dcn, bidx, hrange, stream);
-                    else
-                        funcs_hls[depth](src, scn, dst, dcn, bidx, hrange, stream);
-                    break;
-                }
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
 
-            default:
-                CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
-        }
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }    
+
+    void rgb_to_hls(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_hls_8u, 0, 0, 0, 0, rgb_to_hls_32f},
+                {rgba_to_hls_8u, 0, 0, 0, 0, rgba_to_hls_32f},
+            },
+            {
+                {rgb_to_hls4_8u, 0, 0, 0, 0, rgb_to_hls4_32f},
+                {rgba_to_hls4_8u, 0, 0, 0, 0, rgba_to_hls4_32f},
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_hls(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_hls_8u, 0, 0, 0, 0, bgr_to_hls_32f},
+                {bgra_to_hls_8u, 0, 0, 0, 0, bgra_to_hls_32f}
+            },
+            {
+                {bgr_to_hls4_8u, 0, 0, 0, 0, bgr_to_hls4_32f},
+                {bgra_to_hls4_8u, 0, 0, 0, 0, bgra_to_hls4_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hls_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hls_to_rgb_8u, 0, 0, 0, 0, hls_to_rgb_32f},
+                {hls4_to_rgb_8u, 0, 0, 0, 0, hls4_to_rgb_32f}
+            },
+            {
+                {hls_to_rgba_8u, 0, 0, 0, 0, hls_to_rgba_32f},
+                {hls4_to_rgba_8u, 0, 0, 0, 0, hls4_to_rgba_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hls_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hls_to_bgr_8u, 0, 0, 0, 0, hls_to_bgr_32f},
+                {hls4_to_bgr_8u, 0, 0, 0, 0, hls4_to_bgr_32f}
+            },
+            {
+                {hls_to_bgra_8u, 0, 0, 0, 0, hls_to_bgra_32f},
+                {hls4_to_bgra_8u, 0, 0, 0, 0, hls4_to_bgra_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }   
+
+    void rgb_to_hsv_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_hsv_full_8u, 0, 0, 0, 0, rgb_to_hsv_full_32f},
+                {rgba_to_hsv_full_8u, 0, 0, 0, 0, rgba_to_hsv_full_32f},
+            },
+            {
+                {rgb_to_hsv4_full_8u, 0, 0, 0, 0, rgb_to_hsv4_full_32f},
+                {rgba_to_hsv4_full_8u, 0, 0, 0, 0, rgba_to_hsv4_full_32f},
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_hsv_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_hsv_full_8u, 0, 0, 0, 0, bgr_to_hsv_full_32f},
+                {bgra_to_hsv_full_8u, 0, 0, 0, 0, bgra_to_hsv_full_32f}
+            },
+            {
+                {bgr_to_hsv4_full_8u, 0, 0, 0, 0, bgr_to_hsv4_full_32f},
+                {bgra_to_hsv4_full_8u, 0, 0, 0, 0, bgra_to_hsv4_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hsv_to_rgb_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hsv_to_rgb_full_8u, 0, 0, 0, 0, hsv_to_rgb_full_32f},
+                {hsv4_to_rgb_full_8u, 0, 0, 0, 0, hsv4_to_rgb_full_32f}
+            },
+            {
+                {hsv_to_rgba_full_8u, 0, 0, 0, 0, hsv_to_rgba_full_32f},
+                {hsv4_to_rgba_full_8u, 0, 0, 0, 0, hsv4_to_rgba_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hsv_to_bgr_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hsv_to_bgr_full_8u, 0, 0, 0, 0, hsv_to_bgr_full_32f},
+                {hsv4_to_bgr_full_8u, 0, 0, 0, 0, hsv4_to_bgr_full_32f}
+            },
+            {
+                {hsv_to_bgra_full_8u, 0, 0, 0, 0, hsv_to_bgra_full_32f},
+                {hsv4_to_bgra_full_8u, 0, 0, 0, 0, hsv4_to_bgra_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }    
+
+    void rgb_to_hls_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {rgb_to_hls_full_8u, 0, 0, 0, 0, rgb_to_hls_full_32f},
+                {rgba_to_hls_full_8u, 0, 0, 0, 0, rgba_to_hls_full_32f},
+            },
+            {
+                {rgb_to_hls4_full_8u, 0, 0, 0, 0, rgb_to_hls4_full_32f},
+                {rgba_to_hls4_full_8u, 0, 0, 0, 0, rgba_to_hls4_full_32f},
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void bgr_to_hls_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {bgr_to_hls_full_8u, 0, 0, 0, 0, bgr_to_hls_full_32f},
+                {bgra_to_hls_full_8u, 0, 0, 0, 0, bgra_to_hls_full_32f}
+            },
+            {
+                {bgr_to_hls4_full_8u, 0, 0, 0, 0, bgr_to_hls4_full_32f},
+                {bgra_to_hls4_full_8u, 0, 0, 0, 0, bgra_to_hls4_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hls_to_rgb_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hls_to_rgb_full_8u, 0, 0, 0, 0, hls_to_rgb_full_32f},
+                {hls4_to_rgb_full_8u, 0, 0, 0, 0, hls4_to_rgb_full_32f}
+            },
+            {
+                {hls_to_rgba_full_8u, 0, 0, 0, 0, hls_to_rgba_full_32f},
+                {hls4_to_rgba_full_8u, 0, 0, 0, 0, hls4_to_rgba_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
+    }
+
+    void hls_to_bgr_full(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        using namespace cv::gpu::color;
+        static const gpu_func_t funcs[2][2][6] = 
+        {
+            {
+                {hls_to_bgr_full_8u, 0, 0, 0, 0, hls_to_bgr_full_32f},
+                {hls4_to_bgr_full_8u, 0, 0, 0, 0, hls4_to_bgr_full_32f}
+            },
+            {
+                {hls_to_bgra_full_8u, 0, 0, 0, 0, hls_to_bgra_full_32f},
+                {hls4_to_bgra_full_8u, 0, 0, 0, 0, hls4_to_bgra_full_32f}
+            }
+        };
+
+        if (dcn <= 0) dcn = 3;
+        
+        CV_Assert(src.depth() == CV_8U || src.depth() == CV_32F);
+        CV_Assert(src.channels() == 3 || src.channels() == 4);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));        
+
+        funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
 }
 
 void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
 {
-    cvtColor_caller(src, dst, code, dcn, StreamAccessor::getStream(stream));
+    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream);
+    static const func_t funcs[] = 
+    {
+        bgr_to_bgra,            // CV_BGR2BGRA    =0
+        bgra_to_bgr,            // CV_BGRA2BGR    =1
+        bgr_to_rgba,            // CV_BGR2RGBA    =2
+        bgra_to_rgb,            // CV_RGBA2BGR    =3
+        bgr_to_rgb,             // CV_BGR2RGB     =4
+        bgra_to_rgba,           // CV_BGRA2RGBA   =5
+
+        bgr_to_gray,            // CV_BGR2GRAY    =6
+        rgb_to_gray,            // CV_RGB2GRAY    =7
+        gray_to_bgr,            // CV_GRAY2BGR    =8
+        gray_to_bgra,           // CV_GRAY2BGRA   =9
+        bgra_to_gray,           // CV_BGRA2GRAY   =10
+        rgba_to_gray,           // CV_RGBA2GRAY   =11
+
+        bgr_to_bgr565,          // CV_BGR2BGR565  =12
+        rgb_to_bgr565,          // CV_RGB2BGR565  =13
+        bgr565_to_bgr,          // CV_BGR5652BGR  =14
+        bgr565_to_rgb,          // CV_BGR5652RGB  =15
+        bgra_to_bgr565,         // CV_BGRA2BGR565 =16
+        rgba_to_bgr565,         // CV_RGBA2BGR565 =17
+        bgr565_to_bgra,         // CV_BGR5652BGRA =18
+        bgr565_to_rgba,         // CV_BGR5652RGBA =19
+
+        gray_to_bgr565,         // CV_GRAY2BGR565 =20
+        bgr565_to_gray,         // CV_BGR5652GRAY =21
+
+        bgr_to_bgr555,          // CV_BGR2BGR555  =22
+        rgb_to_bgr555,          // CV_RGB2BGR555  =23
+        bgr555_to_bgr,          // CV_BGR5552BGR  =24
+        bgr555_to_rgb,          // CV_BGR5552RGB  =25
+        bgra_to_bgr555,         // CV_BGRA2BGR555 =26
+        rgba_to_bgr555,         // CV_RGBA2BGR555 =27
+        bgr555_to_bgra,         // CV_BGR5552BGRA =28
+        bgr555_to_rgba,         // CV_BGR5552RGBA =29
+
+        gray_to_bgr555,         // CV_GRAY2BGR555 =30
+        bgr555_to_gray,         // CV_BGR5552GRAY =31
+
+        bgr_to_xyz,             // CV_BGR2XYZ     =32
+        rgb_to_xyz,             // CV_RGB2XYZ     =33
+        xyz_to_bgr,             // CV_XYZ2BGR     =34
+        xyz_to_rgb,             // CV_XYZ2RGB     =35
+
+        bgr_to_YCrCb,           // CV_BGR2YCrCb   =36
+        rgb_to_YCrCb,           // CV_RGB2YCrCb   =37
+        YCrCb_to_bgr,           // CV_YCrCb2BGR   =38
+        YCrCb_to_rgb,           // CV_YCrCb2RGB   =39
+
+        bgr_to_hsv,             // CV_BGR2HSV     =40
+        rgb_to_hsv,             // CV_RGB2HSV     =41
+
+        0,                      //                =42
+        0,                      //                =43
+
+        0,                      // CV_BGR2Lab     =44 
+        0,                      // CV_RGB2Lab     =45
+
+        0,                      // CV_BayerBG2BGR =46
+        0,                      // CV_BayerGB2BGR =47
+        0,                      // CV_BayerRG2BGR =48
+        0,                      // CV_BayerGR2BGR =49
+
+        0,                      // CV_BGR2Luv     =50
+        0,                      // CV_RGB2Luv     =51
+
+        bgr_to_hls,             // CV_BGR2HLS     =52
+        rgb_to_hls,             // CV_RGB2HLS     =53
+
+        hsv_to_bgr,             // CV_HSV2BGR     =54
+        bgr_to_rgb,             // CV_HSV2RGB     =55
+
+        0,                      // CV_Lab2BGR     =56
+        0,                      // CV_Lab2RGB     =57
+        0,                      // CV_Luv2BGR     =58
+        0,                      // CV_Luv2RGB     =59
+        
+        hls_to_bgr,             // CV_HLS2BGR     =60
+        hls_to_rgb,             // CV_HLS2RGB     =61
+
+        0,                      // CV_BayerBG2BGR_VNG =62
+        0,                      // CV_BayerGB2BGR_VNG =63
+        0,                      // CV_BayerRG2BGR_VNG =64
+        0,                      // CV_BayerGR2BGR_VNG =65
+
+        bgr_to_hsv_full,        // CV_BGR2HSV_FULL = 66
+        rgb_to_hsv_full,        // CV_RGB2HSV_FULL = 67
+        bgr_to_hls_full,        // CV_BGR2HLS_FULL = 68
+        rgb_to_hls_full,        // CV_RGB2HLS_FULL = 69
+
+        hsv_to_bgr_full,        // CV_HSV2BGR_FULL = 70
+        hsv_to_rgb_full,        // CV_HSV2RGB_FULL = 71
+        hls_to_bgr_full,        // CV_HLS2BGR_FULL = 72
+        hls_to_rgb_full,        // CV_HLS2RGB_FULL = 73
+
+        0,                      // CV_LBGR2Lab     = 74
+        0,                      // CV_LRGB2Lab     = 75
+        0,                      // CV_LBGR2Luv     = 76
+        0,                      // CV_LRGB2Luv     = 77
+
+        0,                      // CV_Lab2LBGR     = 78
+        0,                      // CV_Lab2LRGB     = 79
+        0,                      // CV_Luv2LBGR     = 80
+        0,                      // CV_Luv2LRGB     = 81
+
+        bgr_to_yuv,             // CV_BGR2YUV      = 82
+        rgb_to_yuv,             // CV_RGB2YUV      = 83
+        yuv_to_bgr,             // CV_YUV2BGR      = 84
+        yuv_to_rgb,             // CV_YUV2RGB      = 85
+
+        0,                      // CV_BayerBG2GRAY = 86
+        0,                      // CV_BayerGB2GRAY = 87
+        0,                      // CV_BayerRG2GRAY = 88
+        0,                      // CV_BayerGR2GRAY = 89
+
+        0,                      // CV_YUV420i2RGB  = 90
+        0,                      // CV_YUV420i2BGR  = 91
+        0,                      // CV_YUV420sp2RGB = 92
+        0                       // CV_YUV420sp2BGR = 93
+    };
+
+    CV_Assert(code < 94);
+
+    func_t func = funcs[code];
+
+    if (func == 0)
+        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+
+    func(src, dst, dcn, stream);
 }
 
 #endif /* !defined (HAVE_CUDA) */

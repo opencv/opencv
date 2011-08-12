@@ -497,7 +497,7 @@ static void v4l2_scan_controls_enumerate_menu(CvCaptureCAM_V4L* capture)
     if (0 == xioctl (capture->deviceHandle, VIDIOC_QUERYMENU,
                      &capture->querymenu))
     {
-      printf (" %s\n", capture->querymenu.name);
+      //printf (" %s\n", capture->querymenu.name);
     } else {
         perror ("VIDIOC_QUERYMENU");
     }

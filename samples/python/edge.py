@@ -4,7 +4,7 @@ print "OpenCV Python version of edge"
 
 import sys
 import urllib2
-import cv
+import cv2.cv as cv
 
 # some definitions
 win_name = "Edge"

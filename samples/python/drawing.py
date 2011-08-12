@@ -4,7 +4,7 @@ import colorsys
 
 print "OpenCV Python version of drawing"
 
-import cv
+import cv2.cv as cv
 
 def random_color(random):
     """

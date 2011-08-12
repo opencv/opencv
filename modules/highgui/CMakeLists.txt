@@ -211,11 +211,20 @@ if(APPLE)
     endif()
 endif(APPLE)
 
-if(ANDROID)
+if(WITH_ANDROID_CAMERA)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
   set(highgui_srcs ${highgui_srcs} src/cap_android.cpp)
   add_definitions(-DHAVE_ANDROID_NATIVE_CAMERA)
   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} opencv_androidcamera)
+endif()
+
+#XIMEA API
+if(HAVE_XIMEA AND XIMEA_FOUND)
+   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
+   include_directories(${XIMEA_PATH})
+   link_directories(${XIMEA_LIBRARY_DIR})
+   set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES} m3api)
+   set(highgui_srcs ${highgui_srcs} src/cap_ximea.cpp)
 endif()
 
 if(COMMAND get_module_external_sources)
@@ -263,21 +272,11 @@ if (BUILD_SHARED_LIBS)
 	if(MSVC)
 		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
 	else()
-		add_definitions(-DCVAPI_EXPORTS) 		
+		add_definitions(-DCVAPI_EXPORTS)
 	endif()
 endif()
 
-if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-    set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
-    if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-        if(${CMAKE_GENERATOR} MATCHES "Visual*")
-            set(${the_target}_pch "src/precomp.cpp")
-        endif()            
-        add_native_precompiled_header(${the_target} ${pch_header})
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-        add_precompiled_header(${the_target} ${pch_header})
-    endif()
-endif()
+add_opencv_precompiled_headers(${the_target})
 
 # For dynamic link numbering convenions
 if(NOT ANDROID)
@@ -288,7 +287,7 @@ if(NOT ANDROID)
         )
 endif()
 
-set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )	
+set_target_properties(${the_target} PROPERTIES OUTPUT_NAME "${the_target}${OPENCV_DLLVERSION}" )
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
@@ -333,7 +332,7 @@ if(NOT ZLIB_FOUND)
     add_dependencies(${the_target} zlib)
 endif()
 
-if(ANDROID)
+if(WITH_ANDROID_CAMERA)
     add_dependencies(${the_target} opencv_androidcamera)
 endif()
 
@@ -362,11 +361,11 @@ endif()
 
 install(TARGETS ${the_target}
     RUNTIME DESTINATION bin COMPONENT main
-    LIBRARY DESTINATION lib COMPONENT main
-    ARCHIVE DESTINATION lib COMPONENT main)
+    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 install(FILES ${highgui_ext_hdrs}
-        DESTINATION include/opencv2/highgui
+        DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/highgui
         COMPONENT main)
 
 
@@ -377,7 +376,7 @@ if(BUILD_TESTS)
                       "${CMAKE_CURRENT_BINARY_DIR}")
 
   set(test_deps opencv_ts opencv_highgui opencv_imgproc)
-  if(ANDROID)
+  if(WITH_ANDROID_CAMERA)
     set(test_deps ${test_deps} opencv_androidcamera)
   endif()
 
@@ -398,27 +397,17 @@ if(BUILD_TESTS)
 
   add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
-  if(PCHSupport_FOUND AND USE_PRECOMPILED_HEADERS)
-      set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
-      if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-          if(${CMAKE_GENERATOR} MATCHES "Visual*")
-              set(${the_target}_pch "test/test_precomp.cpp")
-          endif()            
-          add_native_precompiled_header(${the_target} ${pch_header})
-      elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-          add_precompiled_header(${the_target} ${pch_header})
-      endif()
-  endif()
+  add_opencv_precompiled_headers(${the_target})
 
   # Additional target properties
   set_target_properties(${the_target} PROPERTIES
       DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
       RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
       )
-	
+
   if(ENABLE_SOLUTION_FOLDERS)
-	  set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-  endif()	
+    set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+  endif()
 
   add_dependencies(${the_target} ${test_deps})
 

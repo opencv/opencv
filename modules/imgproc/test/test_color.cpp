@@ -388,7 +388,7 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
     else
     {
         int i, j, k;
-        int elem_size = src.elemSize(), elem_size1 = src.elemSize1();
+        int elem_size = (int)src.elemSize(), elem_size1 = (int)src.elemSize1();
         int width_n = src.cols*elem_size;
 
         for( i = 0; i < src.rows; i++ )

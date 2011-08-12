@@ -124,9 +124,9 @@ Calculates the back projection of a histogram.
     :param hist: Input histogram that can be dense or sparse.
 
     :param backProject: Destination back projection aray that is a single-channel array of the same size and depth as  ``arrays[0]`` .
-	
+    
     :param ranges: Array of arrays of the histogram bin boundaries in each dimension. See  :ocv:func:`calcHist` .
-	
+    
     :param scale: Optional scale factor for the output back projection.
 
     :param uniform: Flag indicating whether the histogram is uniform or not (see above).
@@ -146,7 +146,7 @@ This is an approximate algorithm of the
 :ocv:func:`CAMShift` color object tracker.
 
 .. seealso:: :ocv:func:`calcHist`
-
+.. _compareHist:
 
 compareHist
 -----------
@@ -164,16 +164,16 @@ Compares two histograms.
     :param H1: First compared histogram.
 
     :param H2: Second compared histogram of the same size as  ``H1`` .
-	
+    
     :param method: Comparison method that could be one of the following:
 
-            * **CV_COMP_CORREL** 	Correlation
+            * **CV_COMP_CORREL**     Correlation
 
-            * **CV_COMP_CHISQR** 	Chi-Square
+            * **CV_COMP_CHISQR**     Chi-Square
 
-            * **CV_COMP_INTERSECT** 	Intersection
+            * **CV_COMP_INTERSECT**     Intersection
 
-            * **CV_COMP_BHATTACHARYYA** 	Bhattacharyya distance
+            * **CV_COMP_BHATTACHARYYA**     Bhattacharyya distance
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:
 
@@ -367,6 +367,7 @@ Copies a histogram.
     
 The function makes a copy of the histogram. If the second histogram pointer ``*dst`` is NULL, a new histogram of the same size as  ``src`` is created. Otherwise, both histograms must have equal types and sizes. Then the function copies the bin values of the source histogram to the destination histogram and sets the same bin value ranges as in ``src``.
 
+.. _createhist:
 
 CreateHist
 ----------

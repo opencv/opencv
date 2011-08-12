@@ -44,14 +44,15 @@
 using namespace std;
 using namespace cv;
 
-Ptr<Warper> Warper::createByCameraFocal(float focal, int type)
+Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
 {
+    bool can_use_gpu = try_gpu && gpu::getCudaEnabledDeviceCount();
     if (type == PLANE)
-        return new PlaneWarper(focal);
+        return !can_use_gpu ? new PlaneWarper(focal) : new PlaneWarperGpu(focal);
     if (type == CYLINDRICAL)
-        return new CylindricalWarper(focal);
+        return !can_use_gpu ? new CylindricalWarper(focal) : new CylindricalWarperGpu(focal);
     if (type == SPHERICAL)
-        return new SphericalWarper(focal);
+        return !can_use_gpu ? new SphericalWarper(focal) : new SphericalWarperGpu(focal);
     CV_Error(CV_StsBadArg, "unsupported warping type");
     return NULL;
 }
@@ -104,6 +105,26 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 }
 
 
+Point PlaneWarperGpu::warp(const Mat &src, float focal, const cv::Mat &R, cv::Mat &dst, int interp_mode, int border_mode)
+{
+    src_size_ = src.size();
+    projector_.size = src.size();
+    projector_.focal = focal;
+    projector_.setTransformation(R);
+
+    cv::Point dst_tl, dst_br;
+    detectResultRoi(dst_tl, dst_br);
+
+    gpu::buildWarpPlaneMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
+                            R, focal, projector_.scale, projector_.plane_dist, d_xmap_, d_ymap_);
+
+    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
+    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+
+    return dst_tl;
+}
+
+
 void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 {
     detectResultRoiByBorder(dst_tl, dst_br);
@@ -145,4 +166,46 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     dst_tl.y = static_cast<int>(tl_vf);
     dst_br.x = static_cast<int>(br_uf);
     dst_br.y = static_cast<int>(br_vf);
+}
+
+
+Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+                               int interp_mode, int border_mode)
+{
+    src_size_ = src.size();
+    projector_.size = src.size();
+    projector_.focal = focal;
+    projector_.setTransformation(R);
+
+    cv::Point dst_tl, dst_br;
+    detectResultRoi(dst_tl, dst_br);
+
+    gpu::buildWarpSphericalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
+                                R, focal, projector_.scale, d_xmap_, d_ymap_);
+
+    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
+    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+
+    return dst_tl;
+}
+
+
+Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+                                 int interp_mode, int border_mode)
+{
+    src_size_ = src.size();
+    projector_.size = src.size();
+    projector_.focal = focal;
+    projector_.setTransformation(R);
+
+    cv::Point dst_tl, dst_br;
+    detectResultRoi(dst_tl, dst_br);
+
+    gpu::buildWarpCylindricalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
+                                  R, focal, projector_.scale, d_xmap_, d_ymap_);
+
+    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
+    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+
+    return dst_tl;
 }

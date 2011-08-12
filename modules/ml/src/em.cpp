@@ -68,6 +68,18 @@
    Symbol ' means transposition.
  */
 
+CvEMParams::CvEMParams() : nclusters(10), cov_mat_type(1/*CvEM::COV_MAT_DIAGONAL*/),
+    start_step(0/*CvEM::START_AUTO_STEP*/), probs(0), weights(0), means(0), covs(0)
+{
+    term_crit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, FLT_EPSILON );
+}
+
+CvEMParams::CvEMParams( int _nclusters, int _cov_mat_type, int _start_step,
+                        CvTermCriteria _term_crit, const CvMat* _probs,
+                        const CvMat* _weights, const CvMat* _means, const CvMat** _covs ) :
+                        nclusters(_nclusters), cov_mat_type(_cov_mat_type), start_step(_start_step),
+                        probs(_probs), weights(_weights), means(_means), covs(_covs), term_crit(_term_crit)
+{}
 
 CvEM::CvEM()
 {

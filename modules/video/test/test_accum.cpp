@@ -73,7 +73,7 @@ void CV_AccumBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 3, cn = cvtest::randInt(rng) & 1 ? 3 : 1;
     int accdepth = std::max((int)(cvtest::randInt(rng) % 2 + 1), depth);
-    int i, input_count = test_array[INPUT].size();
+    int i, input_count = (int)test_array[INPUT].size();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_32F : CV_64F;
     accdepth = accdepth == 1 ? CV_32F : CV_64F;

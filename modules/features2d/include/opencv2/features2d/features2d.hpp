@@ -44,7 +44,7 @@
 #define __OPENCV_FEATURES_2D_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/flann/flann.hpp"
+#include "opencv2/flann/miniflann.hpp"
 
 #ifdef __cplusplus
 #include <limits>
@@ -1583,9 +1583,15 @@ public:
 
       bool filterByConvexity;
       float minConvexity, maxConvexity;
+
+      void read( const FileNode& fn );
+      void write( FileStorage& fs ) const;
   };
 
   SimpleBlobDetector(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+  virtual void read( const FileNode& fn );
+  virtual void write( FileStorage& fs ) const;
 
 protected:
   struct CV_EXPORTS Center
@@ -1618,11 +1624,15 @@ public:
 
         bool varyXyStepWithScale;
         bool varyImgBoundWithScale;
+
+        void read( const FileNode& fn );
+        void write( FileStorage& fs ) const;
     };
 
     DenseFeatureDetector( const DenseFeatureDetector::Params& params=DenseFeatureDetector::Params() );
     
-	// TODO implement read/write
+    virtual void read( const FileNode& fn );
+    virtual void write( FileStorage& fs ) const;
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
@@ -1919,7 +1929,7 @@ protected:
  * - if you know the integral image, use setIntegralImage so that it is not recomputed. This calls
  * setStepSize automatically
  */
-class OrbDescriptorExtractor : public cv::DescriptorExtractor
+class CV_EXPORTS OrbDescriptorExtractor : public cv::DescriptorExtractor
 {
 public:
   /** default constructor
@@ -2052,6 +2062,9 @@ public:
     // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
     BriefDescriptorExtractor( int bytes = 32 );
 
+    virtual void read( const FileNode& );
+    virtual void write( FileStorage& ) const;
+
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
 
@@ -2082,6 +2095,27 @@ template<> struct Accumulator<short>  { typedef float Type; };
 
 /*
  * Squared Euclidean distance functor
+ */
+template<class T>
+struct CV_EXPORTS SL2
+{
+    typedef T ValueType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    ResultType operator()( const T* a, const T* b, int size ) const
+    {
+        ResultType result = ResultType();
+        for( int i = 0; i < size; i++ )
+        {
+            ResultType diff = (ResultType)(a[i] - b[i]);
+            result += diff*diff;
+        }
+        return result;
+    }
+};
+
+/*
+ * Euclidean distance functor
  */
 template<class T>
 struct CV_EXPORTS L2
@@ -2367,6 +2401,7 @@ Ptr<DescriptorMatcher> BruteForceMatcher<Distance>::clone( bool emptyTrainData )
     BruteForceMatcher* matcher = new BruteForceMatcher(distance);
     if( !emptyTrainData )
     {
+        matcher->trainDescCollection.resize(trainDescCollection.size());
         std::transform( trainDescCollection.begin(), trainDescCollection.end(),
                         matcher->trainDescCollection.begin(), clone_op );
     }
@@ -2391,77 +2426,77 @@ template<class Distance>
 inline void BruteForceMatcher<Distance>::commonKnnMatchImpl( BruteForceMatcher<Distance>& matcher,
                           const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                           const vector<Mat>& masks, bool compactResult )
- {
-     typedef typename Distance::ValueType ValueType;
-     typedef typename Distance::ResultType DistanceType;
-	 CV_DbgAssert( !queryDescriptors.empty() );
-     CV_Assert( DataType<ValueType>::type == queryDescriptors.type() );
+{
+    typedef typename Distance::ValueType ValueType;
+    typedef typename Distance::ResultType DistanceType;
+    CV_DbgAssert( !queryDescriptors.empty() );
+    CV_Assert( DataType<ValueType>::type == queryDescriptors.type() );
      
-     int dimension = queryDescriptors.cols;
-     matches.reserve(queryDescriptors.rows);
+    int dimension = queryDescriptors.cols;
+    matches.reserve(queryDescriptors.rows);
 
-     size_t imgCount = matcher.trainDescCollection.size();
-     vector<Mat> allDists( imgCount ); // distances between one query descriptor and all train descriptors
-     for( size_t i = 0; i < imgCount; i++ )
+    size_t imgCount = matcher.trainDescCollection.size();
+    vector<Mat> allDists( imgCount ); // distances between one query descriptor and all train descriptors
+    for( size_t i = 0; i < imgCount; i++ )
         allDists[i] = Mat( 1, matcher.trainDescCollection[i].rows, DataType<DistanceType>::type );
 
-     for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
-     {
-         if( matcher.isMaskedOut( masks, qIdx ) )
-         {
-             if( !compactResult ) // push empty vector
-                 matches.push_back( vector<DMatch>() );
-         }
-         else
-         {
-             // 1. compute distances between i-th query descriptor and all train descriptors
-             for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-             {
-                 CV_Assert( DataType<ValueType>::type == matcher.trainDescCollection[iIdx].type() ||  matcher.trainDescCollection[iIdx].empty() );
-				 CV_Assert( queryDescriptors.cols == matcher.trainDescCollection[iIdx].cols || 
-				            matcher.trainDescCollection[iIdx].empty() );
+    for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
+    {
+        if( matcher.isMaskedOut( masks, qIdx ) )
+        {
+            if( !compactResult ) // push empty vector
+                matches.push_back( vector<DMatch>() );
+        }
+        else
+        {
+            // 1. compute distances between i-th query descriptor and all train descriptors
+            for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
+            {
+                CV_Assert( DataType<ValueType>::type == matcher.trainDescCollection[iIdx].type() ||  matcher.trainDescCollection[iIdx].empty() );
+                CV_Assert( queryDescriptors.cols == matcher.trainDescCollection[iIdx].cols ||
+                           matcher.trainDescCollection[iIdx].empty() );
 
-                 const ValueType* d1 = (const ValueType*)(queryDescriptors.data + queryDescriptors.step*qIdx);
-                 allDists[iIdx].setTo( Scalar::all(std::numeric_limits<DistanceType>::max()) );
-                 for( int tIdx = 0; tIdx < matcher.trainDescCollection[iIdx].rows; tIdx++ )
-                 {
-                     if( masks.empty() || matcher.isPossibleMatch(masks[iIdx], qIdx, tIdx) )
-                     {
-                         const ValueType* d2 = (const ValueType*)(matcher.trainDescCollection[iIdx].data +
-                                                                  matcher.trainDescCollection[iIdx].step*tIdx);
-                         allDists[iIdx].at<DistanceType>(0, tIdx) = matcher.distance(d1, d2, dimension);
-                     }
-                 }
-             }
+                const ValueType* d1 = (const ValueType*)(queryDescriptors.data + queryDescriptors.step*qIdx);
+                allDists[iIdx].setTo( Scalar::all(std::numeric_limits<DistanceType>::max()) );
+                for( int tIdx = 0; tIdx < matcher.trainDescCollection[iIdx].rows; tIdx++ )
+                {
+                    if( masks.empty() || matcher.isPossibleMatch(masks[iIdx], qIdx, tIdx) )
+                    {
+                        const ValueType* d2 = (const ValueType*)(matcher.trainDescCollection[iIdx].data +
+                                                                 matcher.trainDescCollection[iIdx].step*tIdx);
+                        allDists[iIdx].at<DistanceType>(0, tIdx) = matcher.distance(d1, d2, dimension);
+                    }
+                }
+            }
 
-             // 2. choose k nearest matches for query[i]
-             matches.push_back( vector<DMatch>() );
-             vector<vector<DMatch> >::reverse_iterator curMatches = matches.rbegin();
-             for( int k = 0; k < knn; k++ )
-             {
-                 DMatch bestMatch;
-                 bestMatch.distance = std::numeric_limits<float>::max();
-                 for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
-                 {
-                     if( !allDists[iIdx].empty() )
-                     {
-                         double minVal;
-                         Point minLoc;
-                         minMaxLoc( allDists[iIdx], &minVal, 0, &minLoc, 0 );
-                         if( minVal < bestMatch.distance )
-                                 bestMatch = DMatch( qIdx, minLoc.x, (int)iIdx, (float)minVal );
-                     }
-                 }
-                 if( bestMatch.trainIdx == -1 )
-                     break;
+            // 2. choose k nearest matches for query[i]
+            matches.push_back( vector<DMatch>() );
+            vector<vector<DMatch> >::reverse_iterator curMatches = matches.rbegin();
+            for( int k = 0; k < knn; k++ )
+            {
+                DMatch bestMatch;
+                bestMatch.distance = std::numeric_limits<float>::max();
+                for( size_t iIdx = 0; iIdx < imgCount; iIdx++ )
+                {
+                    if( !allDists[iIdx].empty() )
+                    {
+                        double minVal;
+                        Point minLoc;
+                        minMaxLoc( allDists[iIdx], &minVal, 0, &minLoc, 0 );
+                        if( minVal < bestMatch.distance )
+                            bestMatch = DMatch( qIdx, minLoc.x, (int)iIdx, (float)minVal );
+                    }
+                }
+                if( bestMatch.trainIdx == -1 )
+                    break;
 
-                 allDists[bestMatch.imgIdx].at<DistanceType>(0, bestMatch.trainIdx) = std::numeric_limits<DistanceType>::max();
-                 curMatches->push_back( bestMatch );
-             }
-             //TODO should already be sorted at this point?
-             std::sort( curMatches->begin(), curMatches->end() );
-         }
-     }
+                allDists[bestMatch.imgIdx].at<DistanceType>(0, bestMatch.trainIdx) = std::numeric_limits<DistanceType>::max();
+                curMatches->push_back( bestMatch );
+            }
+            //TODO should already be sorted at this point?
+            std::sort( curMatches->begin(), curMatches->end() );
+        }
+    }
 }
 
 template<class Distance>
@@ -2535,6 +2570,11 @@ public:
 
     virtual void add( const vector<Mat>& descriptors );
     virtual void clear();
+
+    // Reads matcher object from a file node
+    virtual void read( const FileNode& );
+    // Writes matcher object to a file storage
+    virtual void write( FileStorage& ) const;
 
     virtual void train();
     virtual bool isMaskSupported() const;

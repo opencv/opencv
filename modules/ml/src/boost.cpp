@@ -1439,7 +1439,7 @@ CvBoost::trim_weights()
     for( i = 0; i < count; i++ )
     {
         double w = weak_eval->data.db[i];
-        if( sum > w )
+        if( sum <= 0 )
             break;
         sum -= w;
     }

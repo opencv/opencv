@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import cv
+import cv2.cv as cv
 
 cap = cv.CreateFileCapture("../c/tree.avi")
 img = cv.QueryFrame(cap)

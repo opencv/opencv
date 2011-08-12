@@ -1,14 +1,16 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <iterator>
-
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <stdio.h>
+
 using namespace cv;
 using namespace std;
+
 void help()
 {
     printf( "\nThis code generates an artificial camera and artificial chessboard images,\n"
@@ -133,8 +135,8 @@ int main()
     cout << "Original camera matrix:\n" << camMat << endl;
     cout << "Original distCoeffs:\n" << distCoeffs << endl;
     cout << "==================================" << endl;
-    cout << "Estiamted camera matrix:\n" << (Mat_<double>&)camMat_est << endl;
-    cout << "Estiamted distCoeffs:\n" << (Mat_<double>&)distCoeffs_est << endl;
+    cout << "Estimated camera matrix:\n" << (Mat_<double>&)camMat_est << endl;
+    cout << "Estimated distCoeffs:\n" << (Mat_<double>&)distCoeffs_est << endl;
         
     return 0;
 }

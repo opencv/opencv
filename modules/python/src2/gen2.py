@@ -164,6 +164,9 @@ simple_argtype_mapping = {
     "c_string": ("char*", "s", '(char*)""')
 }
 
+def normalize_class_name(name):
+    return re.sub(r"^cv\.", "", name).replace(".", "_")
+
 class ClassProp(object):
     def __init__(self, decl):
         self.tp = decl[0].replace("*", "_ptr")
@@ -175,7 +178,7 @@ class ClassProp(object):
 class ClassInfo(object):
     def __init__(self, name, decl=None):
         self.cname = name.replace(".", "::")
-        self.name = self.wname = re.sub(r"^cv\.", "", name)
+        self.name = self.wname = normalize_class_name(name)
         self.ismap = False
         self.issimple = False
         self.methods = {}
@@ -275,10 +278,12 @@ class ArgInfo(object):
         self.arraycvt = None
         self.inputarg = True
         self.outputarg = False
+        self.returnarg = False
         for m in arg_tuple[3]:
             if m == "/O":
                 self.inputarg = False
                 self.outputarg = True
+                self.returnarg = True
             elif m == "/IO":
                 self.inputarg = True
                 self.outputarg = True
@@ -300,8 +305,12 @@ class FuncVariant(object):
         self.classname = classname
         self.name = self.wname = name
         self.isconstructor = isconstructor
-        if self.isconstructor and self.wname.startswith("Cv"):
-            self.wname = self.wname[2:]
+        if self.isconstructor:
+            if self.wname.startswith("Cv"):
+                self.wname = self.wname[2:]
+            else:
+                self.wname = self.classname
+            
         self.rettype = decl[1]
         if self.rettype == "void":
             self.rettype = ""
@@ -346,9 +355,9 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
-            if a.outputarg:
+            if a.returnarg:
                 outlist.append((a.name, argno))
-            if not a.inputarg:
+            if not a.inputarg or a.returnarg:
                 if a.isbig():
                     outarr_list.append((a.name, argno))
                 continue
@@ -446,7 +455,7 @@ class FuncInfo(object):
             s = self.variants[idx].py_docstring
             p1 = s.find("(")
             p2 = s.rfind(")")
-            docstring_list = [s[:p1+1] + "[" + s[p1+2:p2] + "]" + s[p2:]]
+            docstring_list = [s[:p1+1] + "[" + s[p1+1:p2] + "]" + s[p2:]]
             
         return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_KEYWORDS, "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
@@ -557,7 +566,7 @@ class FuncInfo(object):
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", "0"))
                 all_cargs.append(amapping)
 
-            if v.args:
+            if v.args and v.py_arglist:
                 # form the format spec for PyArg_ParseTupleAndKeywords
                 fmtspec = "".join([all_cargs[argno][0][1] for aname, argno in v.py_arglist])
                 if v.py_noptargs > 0:
@@ -643,15 +652,19 @@ class PythonWrapperGenerator(object):
         self.consts[constinfo.name] = constinfo
 
     def add_func(self, decl):
-        classname = ""
+        classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
         if dpos >= 0 and name[:dpos] != "cv":
-            classname = re.sub(r"^cv\.", "", name[:dpos])
+            classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
+            dpos = classname.rfind(".")
+            if dpos >= 0:
+                bareclassname = classname[dpos+1:]
+                classname = classname.replace(".", "_")
         cname = name
         name = re.sub(r"^cv\.", "", name)
-        isconstructor = cname == classname
+        isconstructor = cname == bareclassname
         cname = cname.replace(".", "::")
         isclassmethod = False
         customname = False

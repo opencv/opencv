@@ -59,6 +59,8 @@ public:
     virtual ~FeaturesFinder() {}
     void operator ()(const cv::Mat &image, ImageFeatures &features);
 
+    virtual void releaseMemory() {}
+
 protected:
     virtual void find(const cv::Mat &image, ImageFeatures &features) = 0;
 };
@@ -70,6 +72,8 @@ public:
     SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 300.0, 
                        int num_octaves = 3, int num_layers = 4, 
                        int num_octaves_descr = 4, int num_layers_descr = 2);
+
+    void releaseMemory();
 
 protected:
     void find(const cv::Mat &image, ImageFeatures &features);
@@ -104,6 +108,8 @@ public:
 
     bool isThreadSafe() const { return is_thread_safe_; }
 
+    virtual void releaseMemory() {}
+
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
 
@@ -119,6 +125,8 @@ class BestOf2NearestMatcher : public FeaturesMatcher
 public:
     BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, 
                           int num_matches_thresh2 = 6);
+
+    void releaseMemory();
 
 protected:
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);

@@ -673,7 +673,7 @@ public:
 
 
 	//------------------------------------------------
-    STDMETHODIMP QueryInterface(REFIID riid, void **ppvObject){
+    STDMETHODIMP QueryInterface(REFIID, void **ppvObject){
         *ppvObject = static_cast<ISampleGrabberCB*>(this);
         return S_OK;
     }
@@ -681,7 +681,7 @@ public:
     
     //This method is meant to have less overhead
 	//------------------------------------------------
-    STDMETHODIMP SampleCB(double Time, IMediaSample *pSample){
+    STDMETHODIMP SampleCB(double, IMediaSample *pSample){
     	if(WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0) return S_OK;
  
     	HRESULT hr = pSample->GetPointer(&ptrBuffer);  
@@ -705,7 +705,7 @@ public:
     
     
     //This method is meant to have more overhead
-    STDMETHODIMP BufferCB(double Time, BYTE *pBuffer, long BufferLen){
+    STDMETHODIMP BufferCB(double, BYTE *, long){
     	return E_NOTIMPL;
     }
 
@@ -847,7 +847,7 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
 // ---------------------------------------------------------------------- 
 
 void videoDevice::destroyGraph(){
-	HRESULT hr = NULL;
+	HRESULT hr = NOERROR;
  	//int FuncRetval=0;
  	//int NumFilters=0;
 
@@ -865,7 +865,8 @@ void videoDevice::destroyGraph(){
 		IBaseFilter * pFilter = NULL;
 		if (pEnum->Next(1, &pFilter, &cFetched) == S_OK)
 		{
-			FILTER_INFO FilterInfo={0};
+			FILTER_INFO FilterInfo;
+            memset(&FilterInfo, 0, sizeof(FilterInfo));
 			hr = pFilter->QueryFilterInfo(&FilterInfo);
 			FilterInfo.pGraph->Release();
 
@@ -875,7 +876,7 @@ void videoDevice::destroyGraph(){
 						
 			while( FilterInfo.achName[count] != 0x00 ) 
 			{
-				buffer[count] = FilterInfo.achName[count];
+				buffer[count] = (char)FilterInfo.achName[count];
 				count++;
 			}
 			
@@ -914,7 +915,7 @@ videoDevice::~videoDevice(){
 		return;
 	}
 		
-	HRESULT HR = NULL;
+	HRESULT HR = NOERROR;
 	
 	//Stop the callback and free it
     if( (sgCallback) && (pGrabber) )
@@ -1345,7 +1346,7 @@ int videoInput::listDevices(bool silent){
 					int count = 0;
 					int maxLen = sizeof(deviceNames[0])/sizeof(deviceNames[0][0]) - 2;
 					while( varName.bstrVal[count] != 0x00 && count < maxLen) {
-						deviceNames[deviceCounter][count] = varName.bstrVal[count];
+						deviceNames[deviceCounter][count] = (char)varName.bstrVal[count];
 						count++;
 					}
 					deviceNames[deviceCounter][count] = 0;
@@ -1664,7 +1665,7 @@ bool videoInput::setVideoSettingFilterPct(int deviceID, long Property, float pct
 		float halfStep 	= (float)stepAmnt * 0.5f;
 		if( mod < halfStep ) rasterValue -= mod;
 		else rasterValue += stepAmnt - mod;	
-		printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue); 
+		printf("RASTER - pctValue is %f - value is %ld - step is %ld - mod is %ld - rasterValue is %ld\n", pctValue, value, stepAmnt, mod, rasterValue); 
 	}
 		
 	return setVideoSettingFilter(deviceID, Property, rasterValue, Flags, false);
@@ -1751,7 +1752,7 @@ bool videoInput::setVideoSettingCameraPct(int deviceID, long Property, float pct
 		float halfStep 	= (float)stepAmnt * 0.5f;
 		if( mod < halfStep ) rasterValue -= mod;
 		else rasterValue += stepAmnt - mod;	
-		printf("RASTER - pctValue is %f - value is %i - step is %i - mod is %i - rasterValue is %i\n", pctValue, value, stepAmnt, mod, rasterValue); 
+		printf("RASTER - pctValue is %f - value is %ld - step is %ld - mod is %ld - rasterValue is %ld\n", pctValue, value, stepAmnt, mod, rasterValue); 
 	}
 	
 	return setVideoSettingCamera(deviceID, Property, rasterValue, Flags, false);
@@ -1866,7 +1867,7 @@ bool videoInput::restartDevice(int id){
 		int nReconnect	= VDList[id]->nFramesForReconnect;
 		bool bReconnect = VDList[id]->autoReconnect;
 
-		unsigned long avgFrameTime = VDList[id]->requestedFrameTime;
+		long avgFrameTime = VDList[id]->requestedFrameTime;
 	
 		stopDevice(id);
 
@@ -1914,7 +1915,7 @@ videoInput::~videoInput(){
 // ---------------------------------------------------------------------- 
 
 bool videoInput::comInit(){
-	HRESULT hr = NULL;
+	HRESULT hr = NOERROR;
 
 	//no need for us to start com more than once
 	if(comInitCount == 0 ){
@@ -2273,7 +2274,7 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
 
 int videoInput::start(int deviceID, videoDevice *VD){
 
-	HRESULT hr 			= NULL;
+	HRESULT hr 			= NOERROR;
 	VD->myID 			= deviceID;
 	VD->setupStarted	= true;
     CAPTURE_MODE   		= PIN_CATEGORY_CAPTURE; //Don't worry - it ends up being preview (which is faster)

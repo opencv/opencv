@@ -1132,7 +1132,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
 {
     CvConnectedComp ccomp;
     CvMat c_image = _image.getMat(), c_mask = _mask.getMat();
-    cvFloodFill(&c_image, seedPoint, newVal, loDiff, upDiff, &ccomp, flags, &c_mask);
+    cvFloodFill(&c_image, seedPoint, newVal, loDiff, upDiff, &ccomp, flags, c_mask.data.ptr ? &c_mask : 0);
     if( rect )
         *rect = ccomp.rect;
     return cvRound(ccomp.area);

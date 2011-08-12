@@ -3,8 +3,6 @@ Camera Calibration and 3D Reconstruction
 
 .. highlight:: cpp
 
-.. index:: gpu::StereoBM_GPU
-
 gpu::StereoBM_GPU
 -----------------
 .. ocv:class:: gpu::StereoBM_GPU
@@ -87,15 +85,11 @@ gpu::StereoBM_GPU::operator ()
 
     :param stream: Stream for the asynchronous version.
 
-.. index:: gpu::StereoBM_GPU::checkIfGpuCallReasonable
-
 gpu::StereoBM_GPU::checkIfGpuCallReasonable
 -----------------------------------------------
 .. ocv:function:: bool gpu::StereoBM_GPU::checkIfGpuCallReasonable()
 
     Uses a heuristic method to estimate whether the current GPU is faster than the CPU in this algorithm. It queries the currently active device.
-
-.. index:: gpu::StereoBeliefPropagation
 
 gpu::StereoBeliefPropagation
 ----------------------------
@@ -163,8 +157,6 @@ The class implements algorithm described in [Felzenszwalb2006]_ . It can compute
     ``width_step`` is the number of bytes in a line including padding.
 
 
-.. index:: gpu::StereoBeliefPropagation::StereoBeliefPropagation
-
 gpu::StereoBeliefPropagation::StereoBeliefPropagation
 ---------------------------------------------------------
 .. ocv:function:: gpu::StereoBeliefPropagation::StereoBeliefPropagation( int ndisp = DEFAULT_NDISP, int iters = DEFAULT_ITERS, int levels = DEFAULT_LEVELS, int msg_type = CV_32F)
@@ -207,8 +199,6 @@ By default, :ocv:class:`StereoBeliefPropagation` uses floating-point arithmetics
 
     10  \cdot 2^{levels-1}  \cdot max \_ data \_ term < SHRT \_ MAX
 
-.. index:: gpu::StereoBeliefPropagation::estimateRecommendedParams
-
 gpu::StereoBeliefPropagation::estimateRecommendedParams
 -----------------------------------------------------------
 
@@ -216,13 +206,15 @@ gpu::StereoBeliefPropagation::estimateRecommendedParams
 
     Uses a heuristic method to compute the recommended parameters (``ndisp``, ``iters`` and ``levels``) for the specified image size (``width`` and ``height``).
 
-.. index:: gpu::StereoBeliefPropagation::operator ()
-
 gpu::StereoBeliefPropagation::operator ()
 ---------------------------------------------
 .. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& left, const GpuMat& right, GpuMat& disparity)
 
 .. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream)
+
+.. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& data, GpuMat& disparity)
+
+.. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& data, GpuMat& disparity, Stream& stream)
 
     Enables the stereo correspondence operator that finds the disparity for the specified rectified stereo pair or data cost.
 
@@ -230,21 +222,11 @@ gpu::StereoBeliefPropagation::operator ()
 
     :param right: Right image with the same size and the same type as the left one.
 
-    :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the output type is  ``disparity.type()`` .
-
-    :param stream: Stream for the asynchronous version.
-
-.. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& data, GpuMat& disparity)
-
-.. ocv:function:: void gpu::StereoBeliefPropagation::operator()( const GpuMat& data, GpuMat& disparity, Stream& stream)
-
     :param data: User-specified data cost, a matrix of ``msg_type`` type and ``Size(<image columns>*ndisp, <image rows>)`` size.
 
-    :param disparity: Output disparity map. If the matrix is empty, it is created as the ``CV_16SC1`` matrix. Otherwise, the type is retained.
+    :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the type is retained.
 
     :param stream: Stream for the asynchronous version.
-
-.. index:: gpu::StereoConstantSpaceBP
 
 gpu::StereoConstantSpaceBP
 --------------------------
@@ -303,8 +285,6 @@ Class computing stereo correspondence using the constant space belief propagatio
 
 The class implements algorithm described in [Yang2010]_. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algortihms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false``.
 
-.. index:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
-
 gpu::StereoConstantSpaceBP::StereoConstantSpaceBP
 -----------------------------------------------------
 .. ocv:function:: gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp = DEFAULT_NDISP, int iters = DEFAULT_ITERS, int levels = DEFAULT_LEVELS, int nr_plane = DEFAULT_NR_PLANE, int msg_type = CV_32F)
@@ -351,16 +331,12 @@ By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``
 
     10  \cdot 2^{levels-1}  \cdot max \_ data \_ term < SHRT \_ MAX
 
-.. index:: gpu::StereoConstantSpaceBP::estimateRecommendedParams
-
 gpu::StereoConstantSpaceBP::estimateRecommendedParams
 ---------------------------------------------------------
 
 .. ocv:function:: void gpu::StereoConstantSpaceBP::estimateRecommendedParams( int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
 
     Uses a heuristic method to compute parameters (ndisp, iters, levelsand nrplane) for the specified image size (widthand height).
-
-.. index:: gpu::StereoConstantSpaceBP::operator ()
 
 gpu::StereoConstantSpaceBP::operator ()
 -------------------------------------------
@@ -377,10 +353,6 @@ gpu::StereoConstantSpaceBP::operator ()
     :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the output type is  ``disparity.type()`` .
 
     :param stream: Stream for the asynchronous version.
-
-.. index:: gpu::DisparityBilateralFilter
-
-.. _gpu::DisparityBilateralFilter:
 
 gpu::DisparityBilateralFilter
 -----------------------------
@@ -413,8 +385,6 @@ Class refinining a disparity map using joint bilateral filtering. ::
 
 The class implements [Yang2010]_ algorithm.
 
-.. index:: gpu::DisparityBilateralFilter::DisparityBilateralFilter
-
 gpu::DisparityBilateralFilter::DisparityBilateralFilter
 -----------------------------------------------------------
 .. ocv:function:: gpu::DisparityBilateralFilter::DisparityBilateralFilter( int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS, int iters = DEFAULT_ITERS)
@@ -435,8 +405,6 @@ gpu::DisparityBilateralFilter::DisparityBilateralFilter
 
     :param sigma_range: Filter range.
 
-.. index:: gpu::DisparityBilateralFilter::operator ()
-
 gpu::DisparityBilateralFilter::operator ()
 ----------------------------------------------
 .. ocv:function:: void gpu::DisparityBilateralFilter::operator()( const GpuMat& disparity, const GpuMat& image, GpuMat& dst)
@@ -452,8 +420,6 @@ gpu::DisparityBilateralFilter::operator ()
     :param dst: Destination disparity map. It has the same size and type as  ``disparity`` .
 
     :param stream: Stream for the asynchronous version.
-
-.. index:: gpu::drawColorDisp
 
 gpu::drawColorDisp
 ----------------------
@@ -473,8 +439,6 @@ gpu::drawColorDisp
 
 This function draws a colored disparity map by converting disparity values from ``[0..ndisp)`` interval first to ``HSV`` color space (where different disparity values correspond to different hues) and then converting the pixels to ``RGB`` for visualization.
 
-.. index:: gpu::reprojectImageTo3D
-
 gpu::reprojectImageTo3D
 ---------------------------
 .. ocv:function:: void gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q)
@@ -490,10 +454,6 @@ gpu::reprojectImageTo3D
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained via  :ocv:func:`stereoRectify` .
 
     :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`reprojectImageTo3D` .
-
-.. index:: gpu::solvePnPRansac
 
 gpu::solvePnPRansac
 -------------------

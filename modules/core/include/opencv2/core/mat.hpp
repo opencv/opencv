@@ -338,6 +338,7 @@ inline Mat Mat::colRange(const Range& r) const
 
 inline Mat Mat::diag(const Mat& d)
 {
+    CV_Assert( d.cols == 1 );
     Mat m(d.rows, d.rows, d.type(), Scalar(0)), md = m.diag();
     d.copyTo(md);
     return m;
@@ -675,7 +676,12 @@ template<typename _Tp, int m, int n> inline Mat::operator Matx<_Tp, m, n>() cons
 
 template<typename _Tp> inline void Mat::push_back(const _Tp& elem)
 {
-    CV_Assert(DataType<_Tp>::type == type() && cols == 1
+    if( !data )
+	{
+		*this = Mat(1, 1, DataType<_Tp>::type, (void*)&elem).clone();
+		return;
+	}
+	CV_Assert(DataType<_Tp>::type == type() && cols == 1
               /* && dims == 2 (cols == 1 implies dims == 2) */);
     uchar* tmp = dataend + step[0];
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
@@ -1098,18 +1104,21 @@ process( const Mat_<T1>& m1, const Mat_<T2>& m2, Mat_<T3>& m3, Op op )
     
 /////////////////////////////// Input/Output Arrays /////////////////////////////////
     
-template<typename _Tp> _InputArray::_InputArray(const vector<_Tp>& vec)
+template<typename _Tp> inline _InputArray::_InputArray(const vector<_Tp>& vec)
     : flags(STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp> _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
+template<typename _Tp> inline _InputArray::_InputArray(const vector<vector<_Tp> >& vec)
     : flags(STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec) {}
 
-template<typename _Tp, int m, int n> _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
+template<typename _Tp, int m, int n> inline _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
     : flags(MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m) {}
 
-template<typename _Tp> _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
-template<typename _Tp> _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
-template<typename _Tp, int m, int n> _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
+inline _InputArray::_InputArray(const Scalar& s)
+    : flags(MATX + CV_64F), obj((void*)&s), sz(1, 4) {} 
+    
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<_Tp>& vec) : _InputArray(vec) {}
+template<typename _Tp> inline _OutputArray::_OutputArray(vector<vector<_Tp> >& vec) : _InputArray(vec) {}
+template<typename _Tp, int m, int n> inline _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx) : _InputArray(mtx) {}
     
 //////////////////////////////////// Matrix Expressions /////////////////////////////////////////
 
@@ -1303,6 +1312,37 @@ template<typename _Tp> static inline MatExpr max(double s, const Mat_<_Tp>& a)
 {
     return cv::max((const Mat&)a, s);
 }        
+
+template<typename _Tp> static inline void min(const Mat_<_Tp>& a, const Mat_<_Tp>& b, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, (const Mat&)b, (Mat&)c);
+}
+
+template<typename _Tp> static inline void min(const Mat_<_Tp>& a, double s, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, s, (Mat&)c);
+}
+
+template<typename _Tp> static inline void min(double s, const Mat_<_Tp>& a, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, s, (Mat&)c);
+}
+
+template<typename _Tp> static inline void max(const Mat_<_Tp>& a, const Mat_<_Tp>& b, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, (const Mat&)b, (Mat&)c);
+}
+
+template<typename _Tp> static inline void max(const Mat_<_Tp>& a, double s, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, s, (Mat&)c);
+}
+
+template<typename _Tp> static inline void max(double s, const Mat_<_Tp>& a, Mat_<_Tp>& c)
+{
+    cv::min((const Mat&)a, s, (Mat&)c);
+}
+
     
 CV_EXPORTS MatExpr operator & (const Mat& a, const Mat& b);
 CV_EXPORTS MatExpr operator & (const Mat& a, const Scalar& s);

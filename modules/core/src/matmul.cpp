@@ -2713,7 +2713,7 @@ double Mat::dot(InputArray _mat) const
     {
         size_t len = total()*cn;
         if( len == (size_t)(int)len )
-            return func(data, mat.data, len);
+            return func(data, mat.data, (int)len);
     }
 
     const Mat* arrays[] = {this, &mat, 0};
@@ -2883,6 +2883,34 @@ Mat PCA::backProject(InputArray data) const
 }
 
 }
+
+void cv::PCACompute(InputArray data, InputOutputArray mean,
+                    OutputArray eigenvectors, int maxComponents)
+{
+    PCA pca;
+    pca(data, mean, 0, maxComponents);
+    pca.mean.copyTo(mean);
+    pca.eigenvectors.copyTo(eigenvectors);
+}
+    
+void cv::PCAProject(InputArray data, InputArray mean,
+                    InputArray eigenvectors, OutputArray result)
+{
+    PCA pca;
+    pca.mean = mean.getMat();
+    pca.eigenvectors = eigenvectors.getMat();
+    pca.project(data, result);
+}
+
+void cv::PCABackProject(InputArray data, InputArray mean,
+                    InputArray eigenvectors, OutputArray result)
+{
+    PCA pca;
+    pca.mean = mean.getMat();
+    pca.eigenvectors = eigenvectors.getMat();
+    pca.backProject(data, result);
+}
+
 
 /****************************************************************************************\
 *                                    Earlier API                                         *

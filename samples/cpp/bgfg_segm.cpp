@@ -1,7 +1,9 @@
+#include "opencv2/core/core.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdio.h>
 
+using namespace std;
 using namespace cv;
 
 void help()
@@ -9,22 +11,33 @@ void help()
  printf("\nDo background segmentation, especially demonstrating the use of cvUpdateBGStatModel().\n"
 "Learns the background at the start and then segments.\n"
 "Learning is togged by the space key. Will read from file or camera\n"
-"Call:\n"
-"./  bgfg_segm [file name -- if no name, read from camera]\n\n");
+"Usage: \n"
+"			./bgfg_segm [--camera]=<use camera, if this key is present>, [--file_name]=<path to movie file> \n\n");
 }
 
-//this is a sample for foreground detection functions
-int main(int argc, char** argv)
+const char* keys = 
 {
+	"{c |camera   |false    | use camera or not}"
+	"{fn|file_name|tree.avi | movie file             }"
+};
+
+//this is a sample for foreground detection functions
+int main(int argc, const char** argv)
+{
+	help();
+
+	CommandLineParser parser(argc, argv, keys);
+	bool useCamera = parser.get<bool>("camera");
+	string file = parser.get<string>("file_name");
     VideoCapture cap;
     bool update_bg_model = true;
 
-    if( argc < 2 )
+    if( useCamera )
         cap.open(0);
     else
-        cap.open(argv[1]);
-    help();
-    
+		cap.open(file.c_str());
+	parser.printParams();
+
     if( !cap.isOpened() )
     {
         printf("can not open camera or video file\n");

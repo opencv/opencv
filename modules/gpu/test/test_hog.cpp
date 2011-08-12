@@ -40,32 +40,24 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <fstream>
 
-using namespace std;
+#ifdef HAVE_CUDA
 
 //#define DUMP
 
-#define CHECK(pred, err) if (!(pred)) { \
-    ts->printf(cvtest::TS::CONSOLE, "Fail: \"%s\" at line: %d\n", #pred, __LINE__); \
-    ts->set_failed_test_info(err); \
-    return; }
-
-struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
+struct CV_GpuHogDetectTestRunner : cv::gpu::HOGDescriptor
 {
-    CV_GpuHogDetectTestRunner(cvtest::TS* ts_): ts(ts_) {}
-
-    void run(int) 
+    void run() 
     {       
-        cv::Mat img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/road.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        cv::Mat img_rgb = readImage("hog/road.png");
+        ASSERT_FALSE(img_rgb.empty());
 
 #ifdef DUMP
-        f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-        CHECK(f.is_open(), cvtest::TS::FAIL_GENERIC);
+        f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+        ASSERT_TRUE(f.is_open());
 #else
-        f.open((std::string(ts->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-        CHECK(f.is_open(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+        ASSERT_TRUE(f.is_open());
 #endif
 
         // Test on color image
@@ -78,7 +70,6 @@ struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
         test(img);
 
         f.close();
-
     }
 
 #ifdef DUMP
@@ -107,24 +98,24 @@ struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
 
         f.read((char*)&rows, sizeof(rows));
         f.read((char*)&cols, sizeof(cols));
-        CHECK(rows == block_hists.rows, cvtest::TS::FAIL_INVALID_OUTPUT);
-        CHECK(cols == block_hists.cols, cvtest::TS::FAIL_INVALID_OUTPUT);
+        ASSERT_EQ(rows, block_hists.rows);
+        ASSERT_EQ(cols, block_hists.cols);
         for (int i = 0; i < block_hists.rows; ++i)
         {
             for (int j = 0; j < block_hists.cols; ++j)
             {
                 float val;
                 f.read((char*)&val, sizeof(val));
-                CHECK(fabs(val - block_hists.at<float>(i, j)) < 1e-3f, cvtest::TS::FAIL_INVALID_OUTPUT);
+                ASSERT_NEAR(val, block_hists.at<float>(i, j), 1e-3);
             }
         }
         f.read((char*)&nlocations, sizeof(nlocations));
-        CHECK(nlocations == static_cast<int>(locations.size()), cvtest::TS::FAIL_INVALID_OUTPUT);
+        ASSERT_EQ(nlocations, static_cast<int>(locations.size()));
         for (int i = 0; i < nlocations; ++i)
         {
             cv::Point location;
             f.read((char*)&location, sizeof(location));
-            CHECK(location == locations[i], cvtest::TS::FAIL_INVALID_OUTPUT);
+            ASSERT_EQ(location, locations[i]);
         }
     }
 #endif
@@ -176,39 +167,47 @@ struct CV_GpuHogDetectTestRunner: cv::gpu::HOGDescriptor
 #else
     std::ifstream f;
 #endif
-
-    cvtest::TS* ts;
 };
 
-
-struct CV_GpuHogDetectTest: cvtest::BaseTest 
+struct HogDetect : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuHogDetectTest() {}
-
-    void run(int i)
+    cv::gpu::DeviceInfo devInfo;
+    
+    virtual void SetUp()
     {
-        CV_GpuHogDetectTestRunner runner(ts);
-        runner.run(i);
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
     }
 };
 
-TEST(HOG, detect_accuracy) { CV_GpuHogDetectTest test; test.safe_run(); }
-
-struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
+TEST_P(HogDetect, Accuracy)
 {
-    CV_GpuHogGetDescriptorsTestRunner(cvtest::TS* ts_): HOGDescriptor(cv::Size(64, 128)), ts(ts_) {}
+    PRINT_PARAM(devInfo);
 
-    void run(int)
+    ASSERT_NO_THROW(
+        CV_GpuHogDetectTestRunner runner;
+        runner.run();
+    );
+}
+
+INSTANTIATE_TEST_CASE_P(HOG, HogDetect, testing::ValuesIn(devices()));
+
+struct CV_GpuHogGetDescriptorsTestRunner : cv::gpu::HOGDescriptor
+{
+    CV_GpuHogGetDescriptorsTestRunner(): cv::gpu::HOGDescriptor(cv::Size(64, 128)) {}
+
+    void run()
     {
         // Load image (e.g. train data, composed from windows)
-        cv::Mat img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/train_data.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        cv::Mat img_rgb = readImage("hog/train_data.png");
+        ASSERT_FALSE(img_rgb.empty());
 
         // Convert to C4
         cv::Mat img;
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-        cv::gpu::GpuMat d_img(img);
 
+        cv::gpu::GpuMat d_img(img);
 
         // Convert train images into feature vectors (train table)
         cv::gpu::GpuMat descriptors, descriptors_by_cols;
@@ -223,7 +222,7 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
         block_hist_size = 36;
         cv::Size descr_size_expected = cv::Size(blocks_per_win_x * blocks_per_win_y * block_hist_size,
                                                 wins_per_img_x * wins_per_img_y);
-        CHECK(descriptors.size() == descr_size_expected, cvtest::TS::FAIL_INVALID_OUTPUT);
+        ASSERT_EQ(descr_size_expected, descriptors.size());
 
         // Check both formats of output descriptors are handled correctly
         cv::Mat dr(descriptors);
@@ -235,8 +234,8 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
             for (int y = 0; y < blocks_per_win_y; ++y)
                 for (int x = 0; x < blocks_per_win_x; ++x)
                     for (int k = 0; k < block_hist_size; ++k)
-                        CHECK(l[(y * blocks_per_win_x + x) * block_hist_size + k] ==
-                              r[(x * blocks_per_win_y + y) * block_hist_size + k], cvtest::TS::FAIL_INVALID_OUTPUT);
+                        ASSERT_EQ(l[(y * blocks_per_win_x + x) * block_hist_size + k],
+                                  r[(x * blocks_per_win_y + y) * block_hist_size + k]);
         }
 
         /* Now we want to extract the same feature vectors, but from single images. NOTE: results will
@@ -244,39 +243,39 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
         wont't call getDescriptors and will use computeBlockHistograms instead of. computeBlockHistograms
         works good, it can be checked in the gpu_hog sample */
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive1.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/positive1.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         // Everything is fine with interpolation for left top subimage
-        CHECK(cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)) == 0.f, cvtest::TS::FAIL_INVALID_OUTPUT);
+        ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive2.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/positive2.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         compare_inner_parts(block_hists, descriptors.rowRange(1, 2));
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative1.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/negative1.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         compare_inner_parts(block_hists, descriptors.rowRange(2, 3));
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative2.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/negative2.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         compare_inner_parts(block_hists, descriptors.rowRange(3, 4));
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/positive3.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/positive3.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         compare_inner_parts(block_hists, descriptors.rowRange(4, 5));
 
-        img_rgb = cv::imread(std::string(ts->get_data_path()) + "hog/negative3.png");
-        CHECK(!img_rgb.empty(), cvtest::TS::FAIL_MISSING_TEST_DATA);
+        img_rgb = readImage("hog/negative3.png");
+        ASSERT_TRUE(!img_rgb.empty());
         cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
         computeBlockHistograms(cv::gpu::GpuMat(img));
         compare_inner_parts(block_hists, descriptors.rowRange(5, 6));
@@ -291,7 +290,7 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
                 {
                     float a = d1.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
                     float b = d2.at<float>(0, (i * blocks_per_win_x + j) * block_hist_size);
-                    CHECK(a == b, cvtest::TS::FAIL_INVALID_OUTPUT)
+                    ASSERT_FLOAT_EQ(a, b);
                 }
     }
 
@@ -300,20 +299,30 @@ struct CV_GpuHogGetDescriptorsTestRunner: cv::gpu::HOGDescriptor
     int blocks_per_win_x;
     int blocks_per_win_y;
     int block_hist_size;
-
-    cvtest::TS* ts;
 };
 
-
-struct CV_GpuHogGetDescriptorsTest: cvtest::BaseTest 
+struct HogGetDescriptors : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    CV_GpuHogGetDescriptorsTest() {}
-
-    void run(int i)
+    cv::gpu::DeviceInfo devInfo;
+    
+    virtual void SetUp()
     {
-        CV_GpuHogGetDescriptorsTestRunner runner(ts);
-        runner.run(i);
+        devInfo = GetParam();
+
+        cv::gpu::setDevice(devInfo.deviceID());
     }
 };
 
-TEST(HOG, descriptors_accuracy) { CV_GpuHogGetDescriptorsTest test; test.safe_run(); }
+TEST_P(HogGetDescriptors, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+
+    ASSERT_NO_THROW(
+        CV_GpuHogGetDescriptorsTestRunner runner;
+        runner.run();
+    );
+}
+
+INSTANTIATE_TEST_CASE_P(HOG, HogGetDescriptors, testing::ValuesIn(devices()));
+
+#endif // HAVE_CUDA

@@ -28,9 +28,8 @@ What is Thresholding?
 
 * Once we have separated properly the important pixels, we can set them with a determined value to identify them (i.e. we can assign them a value of :math:`0` (black), :math:`255` (white) or any value  that suits your needs).
 
-  .. image:: images/Threshold_Tutorial_Theory_Example.png
+  .. image:: images/Threshold_Tutorial_Theory_Example.jpg
      :alt: Threshold simple example
-     :height: 150pt
      :align: center 
 
 Types of Thresholding
@@ -44,7 +43,6 @@ Types of Thresholding
 
   .. image:: images/Threshold_Tutorial_Theory_Base_Figure.png
      :alt: Threshold Binary
-     :height: 100pt
      :align: center 
 
 Threshold Binary
@@ -60,7 +58,6 @@ Threshold Binary
 
   .. image:: images/Threshold_Tutorial_Theory_Binary.png
      :alt: Threshold Binary
-     :height: 100pt
      :align: center 
 
 
@@ -77,7 +74,6 @@ Threshold Binary, Inverted
         
   .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.png
      :alt: Threshold Binary Inverted
-     :height: 100pt
      :align: center 
 
 Truncate
@@ -93,7 +89,6 @@ Truncate
  
   .. image:: images/Threshold_Tutorial_Theory_Truncate.png
      :alt: Threshold Truncate
-     :height: 100pt
      :align: center 
         
 
@@ -111,7 +106,6 @@ Threshold to Zero
 
   .. image:: images/Threshold_Tutorial_Theory_Zero.png
      :alt: Threshold Zero
-     :height: 100pt
      :align: center 
 
 
@@ -128,7 +122,6 @@ Threshold to Zero, Inverted
 
   .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.png
      :alt: Threshold Zero Inverted
-     :height: 100pt
      :align: center 
 
 
@@ -296,25 +289,20 @@ Results
 #. After compiling this program, run it giving a path to an image as argument. For instance, for an input image as:
 
 
-   .. image:: images/Threshold_Tutorial_Original_Image.png
+   .. image:: images/Threshold_Tutorial_Original_Image.jpg
       :alt: Threshold Original Image
-      :height: 200pt
       :align: center 
 
 #. First, we try to threshold our image with a *binary threhold inverted*. We expect that the pixels brighter than the :math:`thresh` will turn dark, which is what actually happens, as we can see in the snapshot below (notice from the original image, that the doggie's tongue and eyes are particularly bright in comparison with the image, this is reflected in the output image).
 
 
-   .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.png
+   .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.jpg
       :alt: Threshold Result Binary Inverted
-      :height: 200pt
       :align: center 
 
 
 #. Now we try with the *threshold to zero*. With this, we expect that the darkest pixels (below the threshold) will become completely black, whereas the pixels with value greater than the threshold will keep its original value. This is verified by the following snapshot of the output image:
 
-   .. image:: images/Threshold_Tutorial_Result_Zero.png
+   .. image:: images/Threshold_Tutorial_Result_Zero.jpg
       :alt: Threshold Result Zero
-      :height: 200pt
       :align: center 
-
- 

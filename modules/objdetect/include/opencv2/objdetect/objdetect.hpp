@@ -160,9 +160,9 @@ CVAPI(int) cvRunHaarClassifierCascade( const CvHaarClassifierCascade* cascade,
 // (x, y) - coordinate in level l
 typedef struct
 {
-    unsigned int x;
-    unsigned int y;
-    unsigned int l;
+    int x;
+    int y;
+    int l;
 } CvLSVMFilterPosition;
 
 // DataType: STRUCT filterObject
@@ -179,16 +179,12 @@ typedef struct
 //                   used formula H[(j * sizeX + i) * p + k], where
 //                   k - component of feature vector in cell (i, j)
 // END OF FILTER DESCRIPTION
-// xp              - auxillary parameter for internal use
-//                   size of row in feature vectors 
-//                   (yp = (int) (p / xp); p = xp * yp)
 typedef struct{
     CvLSVMFilterPosition V;
     float fineFunction[4];
-    unsigned int sizeX;
-    unsigned int sizeY;
-    unsigned int p;
-    unsigned int xp;
+    int sizeX;
+    int sizeY;
+    int numFeatures;
     float *H;
 } CvLSVMFilterObject;
 
@@ -290,8 +286,8 @@ namespace cv
 	
 ///////////////////////////// Object Detection ////////////////////////////
 
-CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS_W void groupRectangles(vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels, 
                                 vector<double>& levelWeights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 
@@ -318,7 +314,15 @@ public:
 };
 
 template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
-   
+
+enum
+{
+	CASCADE_DO_CANNY_PRUNING=1,
+	CASCADE_SCALE_IMAGE=2,
+	CASCADE_FIND_BIGGEST_OBJECT=4,
+	CASCADE_DO_ROUGH_SEARCH=8
+};
+
 class CV_EXPORTS_W CascadeClassifier
 {
 public:
@@ -507,8 +511,8 @@ public:
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
     
-    static vector<float> getDefaultPeopleDetector();
-	static vector<float> getDaimlerPeopleDetector();
+    CV_WRAP static vector<float> getDefaultPeopleDetector();
+	CV_WRAP static vector<float> getDaimlerPeopleDetector();
     
     CV_PROP Size winSize;
     CV_PROP Size blockSize;

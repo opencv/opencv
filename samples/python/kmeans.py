@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import urllib2
-import cv
+import cv2.cv as cv
 from random import randint
 MAX_CLUSTERS = 5
 

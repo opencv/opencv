@@ -1,14 +1,13 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include <iostream>
+#include <stdio.h>
 using namespace cv;
 
 void help()
 {
-	std::cout
-	<< "\nThis program demonstrates OpenCV drawing and text output functions.\n"
-	"Call:\n"
-	"./drawing\n" << std::endl;
+	printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
+	"Usage:\n"
+	"	./drawing\n");
 }
 static Scalar randomColor(RNG& rng)
 {
@@ -16,9 +15,10 @@ static Scalar randomColor(RNG& rng)
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main( int, char** )
+int main()
 {
-    char wndname[] = "Drawing Demo";
+    help();
+	char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;
     int lineType = CV_AA; // change it to 8 to see non-antialiased graphics

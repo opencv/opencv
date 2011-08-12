@@ -38,7 +38,7 @@ endif()
 set_target_properties(${the_target}
 	PROPERTIES OUTPUT_NAME "${the_target}"
 	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/lib"
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/3rdparty/${OPENCV_LIB_INSTALL_PATH}"
 	)
 	
 if(ENABLE_SOLUTION_FOLDERS)
@@ -47,5 +47,5 @@ endif()
     
 if(NOT BUILD_SHARED_LIBS)
     install(TARGETS ${the_target}
-	    ARCHIVE DESTINATION share/opencv/3rdparty/lib COMPONENT main)
+	    ARCHIVE DESTINATION share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 endif()

@@ -20,25 +20,29 @@
      Or: http://oreilly.com/catalog/9780596516130/
      ISBN-10: 0596516134 or: ISBN-13: 978-0596516130    
 ************************************************** */
+#include "opencv2/core/core.hpp"
+#include "opencv2/video/background_segm.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "opencv2/video/background_segm.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/highgui/highgui.hpp"
+using namespace std;
+using namespace cv;
 
 //VARIABLES for CODEBOOK METHOD:
 CvBGCodeBookModel* model = 0;
 const int NCHANNELS = 3;
 bool ch[NCHANNELS]={true,true,true}; // This sets what channels should be adjusted for background bounds
 
-void help(void)
+void help()
 {
     printf("\nLearn background and find foreground using simple average and average difference learning method:\n"
     		"Originally from the book: Learning OpenCV by O'Reilly press\n"
-        "\nUSAGE:\nbgfg_codebook [--nframes=300] [movie filename, else from camera]\n"
+        "\nUSAGE:\n"
+        "   bgfg_codebook [--nframes(-nf)=300] [--movie_filename(-mf)=tree.avi] [--camera(-c), use camera or not]\n"
         "***Keep the focus on the video windows, NOT the consol***\n\n"
         "INTERACTIVE PARAMETERS:\n"
         "\tESC,q,Q  - quit the program\n"
@@ -65,15 +69,25 @@ void help(void)
 //USAGE:  ch9_background startFrameCollection# endFrameCollection# [movie filename, else from camera]
 //If from AVI, then optionally add HighAvg, LowAvg, HighCB_Y LowCB_Y HighCB_U LowCB_U HighCB_V LowCB_V
 //
-int main(int argc, char** argv)
+const char *keys =
 {
-    const char* filename = 0;
+    "{nf|nframes   |300        |frames number}"
+    "{c |camera    |false      |use the camera or not}"
+    "{mf|movie_file|tree.avi   |used movie video file}"
+};
+int main(int argc, const char** argv)
+{
+    help();
+
+    CommandLineParser parser(argc, argv, keys);
+    int nframesToLearnBG = parser.get<int>("nf");
+    bool useCamera = parser.get<bool>("c");
+    string filename = parser.get<string>("mf");
     IplImage* rawImage = 0, *yuvImage = 0; //yuvImage is for codebook method
     IplImage *ImaskCodeBook = 0,*ImaskCodeBookCC = 0;
     CvCapture* capture = 0;
 
     int c, n, nframes = 0;
-    int nframesToLearnBG = 300;
 
     model = cvCreateBGCodeBookModel();
     
@@ -87,30 +101,15 @@ int main(int argc, char** argv)
     bool pause = false;
     bool singlestep = false;
 
-    for( n = 1; n < argc; n++ )
-    {
-        static const char* nframesOpt = "--nframes=";
-        if( strncmp(argv[n], nframesOpt, strlen(nframesOpt))==0 )
-        {
-            if( sscanf(argv[n] + strlen(nframesOpt), "%d", &nframesToLearnBG) == 0 )
-            {
-                help();
-                return -1;
-            }
-        }
-        else
-            filename = argv[n];
-    }
-
-    if( !filename )
+    if( useCamera )
     {
         printf("Capture from camera\n");
         capture = cvCaptureFromCAM( 0 );
     }
     else
     {
-        printf("Capture from file %s\n",filename);
-        capture = cvCreateFileCapture( filename );
+        printf("Capture from file %s\n",filename.c_str());
+        capture = cvCreateFileCapture( filename.c_str() );
     }
 
     if( !capture )

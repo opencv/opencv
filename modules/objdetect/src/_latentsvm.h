@@ -37,10 +37,7 @@
 // RESULT
 // Error status
 */
-int getFeaturePyramid(IplImage * image, 
-                      const int lambda, const int k, 
-                      const int startX, const int startY, 
-                      const int W, const int H, CvLSVMFeaturePyramid **maps);
+int getFeaturePyramid(IplImage * image, CvLSVMFeaturePyramid **maps);
 
 /*
 // Getting feature map for the selected subimage  
@@ -55,7 +52,7 @@ int getFeaturePyramid(IplImage * image,
 // RESULT
 // Error status
 */
-int getFeatureMaps_dp(const IplImage * image, const int k, CvLSVMFeatureMap **map);
+int getFeatureMaps(const IplImage * image, const int k, CvLSVMFeatureMap **map);
 
 
 /*
@@ -71,7 +68,7 @@ int getFeatureMaps_dp(const IplImage * image, const int k, CvLSVMFeatureMap **ma
 // RESULT
 // Error status
 */
-int normalizationAndTruncationFeatureMaps(CvLSVMFeatureMap *map, const float alfa);
+int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa);
 
 /*
 // Feature map reduction

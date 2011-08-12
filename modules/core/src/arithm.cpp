@@ -68,7 +68,9 @@ struct NOP {};
 template<typename T, class Op, class Op8>
 void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op8 op8;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -117,7 +119,9 @@ template<typename T, class Op, class Op16>
 void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op16 op16;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -168,7 +172,9 @@ template<class Op, class Op32>
 void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
                int* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op32 op32;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -223,7 +229,9 @@ template<class Op, class Op32>
 void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                float* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op32 op32;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -276,7 +284,9 @@ template<class Op, class Op64>
 void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step2,
                double* dst, size_t step, Size sz)
 {
+#if CV_SSE2
     Op64 op64;
+#endif
     Op op;
 
     for( ; sz.height--; src1 += step1/sizeof(src1[0]),
@@ -1064,7 +1074,7 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
 
                 func( ptrs[0], 0, ptrs[1], 0, haveMask ? maskbuf : ptrs[2], 0, Size(bsz*c, 1), 0 );
                 if( haveMask )
@@ -1096,7 +1106,7 @@ void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
 
                 func( ptrs[0], 0, scbuf, 0, haveMask ? maskbuf : ptrs[1], 0, Size(bsz*c, 1), 0 );
                 if( haveMask )
@@ -1128,25 +1138,41 @@ static BinaryFunc minTab[] =
 
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = and8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		and8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = or8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		or8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = xor8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		xor8u;
     binary_op(a, b, c, mask, &f, true);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
-    BinaryFunc f = not8u;
+    BinaryFunc f = 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+		(BinaryFunc)tegra::
+#endif
+		not8u;
     binary_op(a, a, c, mask, &f, true);
 }
 
@@ -1291,7 +1317,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     uchar *buf, *maskbuf = 0, *buf1 = 0, *buf2 = 0, *wbuf = 0;
     size_t bufesz = (cvtsrc1 ? wsz : 0) + (cvtsrc2 || haveScalar ? wsz : 0) + (cvtdst ? wsz : 0) + (haveMask ? dsz : 0);
 
-    _dst.create(src1.dims, src1.size, src1.type());
+    _dst.create(src1.dims, src1.size, dtype);
     Mat dst = _dst.getMat();
     BinaryFunc func = tab[CV_MAT_DEPTH(wtype)];
 
@@ -1322,7 +1348,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
                 uchar* dptr = ptrs[2];
@@ -1387,7 +1413,7 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0];
                 const uchar* sptr2 = buf2;
@@ -1427,6 +1453,20 @@ void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 }
 
+#ifdef HAVE_TEGRA_OPTIMIZATION  
+static BinaryFunc addTab[] =
+{
+    (BinaryFunc)tegra::add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
+    (BinaryFunc)add32s, (BinaryFunc)add32f, (BinaryFunc)add64f, 0
+};
+
+static BinaryFunc subTab[] =
+{
+    (BinaryFunc)tegra::sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
+    (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
+};
+
+#else
 static BinaryFunc addTab[] =
 {
     (BinaryFunc)add8u, (BinaryFunc)add8s, (BinaryFunc)add16u, (BinaryFunc)add16s,
@@ -1438,6 +1478,7 @@ static BinaryFunc subTab[] =
     (BinaryFunc)sub8u, (BinaryFunc)sub8s, (BinaryFunc)sub16u, (BinaryFunc)sub16s,
     (BinaryFunc)sub32s, (BinaryFunc)sub32f, (BinaryFunc)sub64f, 0
 };
+#endif
 
 static BinaryFunc absdiffTab[] =
 {
@@ -2083,8 +2124,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
-        CV_Assert(src1.channels() == 1);
-        _dst.create(src1.size(), CV_8UC1);
+        int cn = src1.channels();
+        _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
         cmpTab[src1.depth()](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
@@ -2110,15 +2151,15 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         haveScalar = true;
     }
 
+    
     int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
-    if( cn != 1 )
-        CV_Error( CV_StsUnsupportedFormat, "compare() can only process single-channel arrays" );
 
+    _dst.create(src1.dims, src1.size, CV_8UC(cn));
+    src1 = src1.reshape(1); src2 = src2.reshape(1);
+    Mat dst = _dst.getMat().reshape(1);
+    
     size_t esz = src1.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
-
-    _dst.create(src1.dims, src1.size, CV_8U);
-    Mat dst = _dst.getMat();
     BinaryFunc func = cmpTab[depth1];
 
     if( !haveScalar )
@@ -2181,7 +2222,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         {
             for( size_t j = 0; j < total; j += blocksize )
             {
-                int bsz = (int)std::min(total - j, blocksize);
+                int bsz = (int)MIN(total - j, blocksize);
                 func( ptrs[0], 0, buf, 0, ptrs[1], 0, Size(bsz, 1), &op);
                 ptrs[0] += bsz*esz;
                 ptrs[1] += bsz;
@@ -2387,7 +2428,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     {
         for( size_t j = 0; j < total; j += blocksize )
         {
-            int bsz = (int)std::min(total - j, blocksize);
+            int bsz = (int)MIN(total - j, blocksize);
             size_t delta = bsz*esz;
             uchar *lptr = lbuf, *uptr = ubuf;
             if( !lbScalar )

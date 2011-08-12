@@ -658,8 +658,7 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                 if(tagVal == EMODEL){
                     //printf("</Model>\n");
                     for(ii = 0; ii <= *last; ii++){
-                        (*model)[ii]->p = p;
-                        (*model)[ii]->xp = 9;
+                        (*model)[ii]->numFeatures = p;
                     }
                     * count = N_comp;
                     return;
@@ -672,11 +671,11 @@ void parserModel(FILE * xmlf, CvLSVMFilterObject *** model, int *last, int *max,
                         * b    = bb;
                         * count = N_comp + 1; 
                     } else {
-                        cmp = (int    *)malloc(sizeof(int)    * (N_comp + 1));
+                        cmp = (int   *)malloc(sizeof(int)   * (N_comp + 1));
                         bb  = (float *)malloc(sizeof(float) * (N_comp + 1));
                         for(ii = 0; ii < N_comp; ii++){
-                            cmp[i] = (* comp)[ii];
-                            bb [i] = (* b   )[ii];
+                            cmp[ii] = (* comp)[ii];
+                            bb [ii] = (* b   )[ii];
                         }
                         free(* comp);
                         free(* b   );

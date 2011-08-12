@@ -568,7 +568,7 @@ namespace cv
     {
     public:
         // Flags	
-        enum {USE_INITIAL_DISPARITY = 1, USE_EQUALIZE_HIST = 2, USE_SMART_ID = 4, USE_MEDIAN_FILTERING = 8};
+        enum {USE_INITIAL_DISPARITY = 1, USE_EQUALIZE_HIST = 2, USE_SMART_ID = 4, USE_AUTO_PARAMS = 8, USE_MEDIAN_FILTERING = 16};
         enum {CYCLE_O, CYCLE_V};
         enum {PENALIZATION_TICHONOV, PENALIZATION_CHARBONNIER, PENALIZATION_PERONA_MALIK};
         
@@ -598,7 +598,8 @@ namespace cv
         CV_PROP_RW int		flags;
         
     private:
-        void FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level);
+        void autoParams();
+		void FMG(Mat &I1, Mat &I2, Mat &I2x, Mat &u, int level);
         void VCycle_MyFAS(Mat &I1_h, Mat &I2_h, Mat &I2x_h, Mat &u_h, int level);
         void VariationalSolver(Mat &I1_h, Mat &I2_h, Mat &I2x_h, Mat &u_h, int level);
     };
@@ -606,6 +607,7 @@ namespace cv
     CV_EXPORTS void polyfit(const Mat& srcx, const Mat& srcy, Mat& dst, int order);
 }
 
+#include "opencv2/contrib/retina.hpp"
 
 #endif
 

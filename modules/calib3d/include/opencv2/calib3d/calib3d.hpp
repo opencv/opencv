@@ -120,7 +120,8 @@ CVAPI(void) cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix,
                                          CvSize image_size, double alpha,
                                          CvMat* new_camera_matrix,
                                          CvSize new_imag_size CV_DEFAULT(cvSize(0,0)),
-                                         CvRect* valid_pixel_ROI CV_DEFAULT(0) );
+                                         CvRect* valid_pixel_ROI CV_DEFAULT(0),
+                                         int center_principal_point CV_DEFAULT(0));
 
 /* Converts rotation vector to rotation matrix or vice versa */
 CVAPI(int) cvRodrigues2( const CvMat* src, CvMat* dst,
@@ -535,6 +536,9 @@ CV_EXPORTS bool findCirclesGrid( InputArray image, Size patternSize,
                                  OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID,
                                  const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector());
 
+CV_EXPORTS_W bool findCirclesGridDefault( InputArray image, Size patternSize,
+                                          OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID );
+
 enum
 {
     CALIB_USE_INTRINSIC_GUESS = CV_CALIB_USE_INTRINSIC_GUESS,
@@ -560,8 +564,8 @@ enum
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints,
                                      Size imageSize,
-                                     CV_IN_OUT InputOutputArray cameraMatrix,
-                                     CV_IN_OUT InputOutputArray distCoeffs,
+                                     CV_OUT InputOutputArray cameraMatrix,
+                                     CV_OUT InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags=0 );
 
@@ -580,10 +584,10 @@ CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix,
 CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1,
                                      InputArrayOfArrays imagePoints2,
-                                     CV_IN_OUT InputOutputArray cameraMatrix1,
-                                     CV_IN_OUT InputOutputArray distCoeffs1,
-                                     CV_IN_OUT InputOutputArray cameraMatrix2,
-                                     CV_IN_OUT InputOutputArray distCoeffs2,
+                                     CV_OUT InputOutputArray cameraMatrix1,
+                                     CV_OUT InputOutputArray distCoeffs1,
+                                     CV_OUT InputOutputArray cameraMatrix2,
+                                     CV_OUT InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,
                                      OutputArray T, OutputArray E, OutputArray F,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+
@@ -622,7 +626,7 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 //! returns the optimal new camera matrix
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize=Size(),
-                                            CV_OUT Rect* validPixROI=0);
+                                            CV_OUT Rect* validPixROI=0, bool centerPrincipalPoint=false);
 
 //! converts point coordinates from normal pixel coordinates to homogeneous coordinates ((x,y)->(x,y,1))
 CV_EXPORTS_W void convertPointsToHomogeneous( InputArray src, OutputArray dst );

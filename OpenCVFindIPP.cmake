@@ -43,6 +43,14 @@ set(IPPCV      "cv")   # computer vision
 set(IPPVM      "vm")   # vector math
 
 
+set(IPP_X64 0)
+if (CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+    set(IPP_X64 1)
+endif()
+if (CMAKE_CL_64)
+    set(IPP_X64 1)
+endif()
+
 # ------------------------------------------------------------------------
 # This function detect IPP version by analyzing ippversion.h file
 # Note, ippversion.h file was inroduced since IPP 5.3
@@ -96,7 +104,7 @@ function(set_ipp_old_libraries)
     set(IPPCV      "cv")       # computer vision
     set(IPPVM      "vm")       # vector math
     
-    if (CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+    if (IPP_X64)
         set(IPP_ARCH "em64t")
     endif()
 
@@ -167,7 +175,7 @@ function(set_ipp_variables _LATEST_VERSION)
         set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include PARENT_SCOPE)
         set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib     PARENT_SCOPE)
 
-        if (CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+        if (IPP_X64)
             if(NOT EXISTS ${IPP_ROOT_DIR}/../em64t)
                 message(SEND_ERROR "IPP EM64T libraries not found")
             endif()
@@ -188,7 +196,7 @@ function(set_ipp_variables _LATEST_VERSION)
         # set INCLUDE and LIB folders
         set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include PARENT_SCOPE)
 
-        if (CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+        if (IPP_X64)
             if(NOT EXISTS ${IPP_ROOT_DIR}/lib/intel64)
                 message(SEND_ERROR "IPP EM64T libraries not found")
             endif()

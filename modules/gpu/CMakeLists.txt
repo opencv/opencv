@@ -6,8 +6,8 @@ project(${the_target})
 set(DEPS "opencv_core" "opencv_imgproc" "opencv_objdetect" "opencv_features2d" "opencv_flann" "opencv_calib3d") #"opencv_features2d" "opencv_flann" "opencv_objdetect" - only headers needed 
 set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} opencv_gpu)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"                    
-					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"                    
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
+					"${CMAKE_CURRENT_SOURCE_DIR}/src/cuda"
 					"${CMAKE_CURRENT_SOURCE_DIR}/src"
 					"${CMAKE_CURRENT_BINARY_DIR}")
 
@@ -23,7 +23,9 @@ source_group("Include" FILES ${lib_hdrs})
 
 #file(GLOB lib_device_hdrs "include/opencv2/${name}/device/*.h*")
 file(GLOB lib_device_hdrs "src/opencv2/gpu/device/*.h*")
+file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.h*")
 source_group("Device" FILES ${lib_device_hdrs})
+source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if (HAVE_CUDA)
     file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")	
@@ -83,19 +85,7 @@ foreach(d ${DEPS})
 	endif()
 endforeach()
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
-
-if(PCHSupport_FOUND)
-	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)
-	if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-		if(${CMAKE_GENERATOR} MATCHES "Visual*")
-			set(${the_target}_pch "src/precomp.cpp")
-		endif()
-		add_native_precompiled_header(${the_target} ${pch_header})
-	elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-		add_precompiled_header(${the_target} ${pch_header})
-	endif()
-endif()
+add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_int_hdrs} ${lib_cuda} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda} ${cuda_objs})
 
 # For dynamic link numbering convenions
 set_target_properties(${the_target} PROPERTIES
@@ -112,36 +102,38 @@ if (BUILD_SHARED_LIBS)
 	if (MSVC)
 		set_target_properties(${the_target} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
 	else()
-		add_definitions(-DCVAPI_EXPORTS)	   
-	endif()	
+		add_definitions(-DCVAPI_EXPORTS)
+	endif()
 endif()
+
+add_opencv_precompiled_headers(${the_target})
 
 # Additional target properties
 set_target_properties(${the_target} PROPERTIES
-	DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     INSTALL_NAME_DIR lib
-	)
+    )
 
 # Add the required libraries for linking:
 target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${DEPS} )
 
 if (HAVE_CUDA)
-	target_link_libraries(${the_target} ${CUDA_LIBRARIES})    
+    target_link_libraries(${the_target} ${CUDA_LIBRARIES})    
     CUDA_ADD_CUFFT_TO_TARGET(${the_target})
-	
-	unset(CUDA_npp_LIBRARY CACHE)
-	find_cuda_helper_libs(npp)
-	target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})    		
+
+    unset(CUDA_npp_LIBRARY CACHE)
+    find_cuda_helper_libs(npp)
+    target_link_libraries(${the_target} ${CUDA_npp_LIBRARY})
 endif()
 
 if(MSVC)
-	if(CMAKE_CROSSCOMPILING)
-		set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:secchk")
-	endif()
-    
-	set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc")
+    if(CMAKE_CROSSCOMPILING)
+        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:secchk")
+    endif()
+
+    set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc")
 endif()
 
 # Dependencies of this target:
@@ -149,19 +141,19 @@ add_dependencies(${the_target} ${DEPS})
 
 install(TARGETS ${the_target}
 	RUNTIME DESTINATION bin COMPONENT main
-	LIBRARY DESTINATION lib COMPONENT main
-	ARCHIVE DESTINATION lib COMPONENT main)
+	LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+	ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 install(FILES ${lib_hdrs}
-	DESTINATION include/opencv2/${name}
+	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
 	COMPONENT main)
 
 install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
-	DESTINATION include/opencv2/${name}
+	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
 	COMPONENT main)
 
 #install(FILES ${lib_device_hdrs}
-#	DESTINATION include/opencv2/${name}/device
+#	DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}/device
 #	COMPONENT main)
 
 
@@ -181,11 +173,8 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     set(test_deps opencv_${name} opencv_ts opencv_highgui opencv_calib3d ${DEPS})
     foreach(d ${test_deps})
         if(${d} MATCHES "opencv_")
-            if(${d} MATCHES "opencv_lapack")
-            else()
-                string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-                include_directories("${d_dir}/include")
-            endif()
+            string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
+            include_directories("${d_dir}/include")
         endif()
     endforeach()
     
@@ -203,17 +192,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     
     add_executable(${the_test_target} ${test_srcs} ${test_hdrs} ${nvidia})
     
-    if(PCHSupport_FOUND)
-        set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/test/test_precomp.hpp)
-        if(${CMAKE_GENERATOR} MATCHES "Visual*" OR ${CMAKE_GENERATOR} MATCHES "Xcode*")
-            if(${CMAKE_GENERATOR} MATCHES "Visual*")
-                set(${the_test_target}_pch "test/test_precomp.cpp")
-            endif()            
-            add_native_precompiled_header(${the_test_target} ${pch_header})
-        elseif(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_GENERATOR} MATCHES ".*Makefiles")
-            add_precompiled_header(${the_test_target} ${pch_header})
-        endif()
-    endif()
+    add_opencv_precompiled_headers(${the_test_target})
     
     # Additional target properties
     set_target_properties(${the_test_target} PROPERTIES
@@ -223,7 +202,7 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
 	
 	if(ENABLE_SOLUTION_FOLDERS)
 		set_target_properties(${the_test_target} PROPERTIES FOLDER "tests")
-	endif()			
+	endif()
     
     add_dependencies(${the_test_target} ${test_deps})
     

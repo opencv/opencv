@@ -318,7 +318,7 @@ TEST(BruteForceMatcher)
     GPU_OFF;
 
     SUBTEST << "knnMatch";
-    int knn = 10;
+    int knn = 2;
 
     CPU_ON;
     matcher.knnMatch(query, train, matches, knn);
@@ -823,4 +823,139 @@ TEST(solvePnPRansac)
                             max_dist, int(num_points * 0.05), &inliers_gpu);
         GPU_OFF;
     }
+}
+
+
+TEST(GaussianBlur)
+{
+    for (int size = 1000; size < 10000; size += 3000)
+    {
+        SUBTEST << "16SC3, size " << size;
+
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        GaussianBlur(src, dst, Size(5,5), 0);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size < 10000; size += 3000)
+    {
+        SUBTEST << "8UC4, size " << size;
+
+        Mat src; gen(src, size, size, CV_8UC4, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        GaussianBlur(src, dst, Size(5,5), 0);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        GPU_OFF;
+    }
+}
+
+TEST(pyrDown)
+{
+    gpu::PyrDownBuf buf(Size(4000, 4000), CV_16SC3);
+
+    for (int size = 4000; size >= 1000; size -= 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
+        Mat dst(Size(src.cols / 2, src.rows / 2), src.type());
+
+        CPU_ON;
+        pyrDown(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(Size(src.cols / 2, src.rows / 2), src.type());
+
+        GPU_ON;
+        gpu::pyrDown(d_src, d_dst, buf);
+        GPU_OFF;
+    }
+}
+
+TEST(pyrUp)
+{
+    gpu::PyrUpBuf buf(Size(4000, 4000), CV_16SC3);
+
+    for (int size = 4000; size >= 1000; size -= 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
+        Mat dst(Size(src.cols * 2, src.rows * 2), src.type());
+
+        CPU_ON;
+        pyrUp(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(Size(src.cols * 2, src.rows * 2), src.type());
+
+        GPU_ON;
+        gpu::pyrUp(d_src, d_dst, buf);
+        GPU_OFF;
+    }
+}
+
+
+TEST(equalizeHist)
+{
+    for (int size = 1000; size < 4000; size += 1000)
+    {
+        SUBTEST << "size " << size;
+
+        Mat src; gen(src, size, size, CV_8UC1, 0, 256);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        equalizeHist(src, dst);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+
+        GPU_ON;
+        gpu::equalizeHist(d_src, d_dst);
+        GPU_OFF;
+    }
+}
+
+
+TEST(Canny)
+{
+    Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
+
+    if (img.empty()) throw runtime_error("can't open aloeL.jpg");
+
+    Mat edges(img.size(), CV_8UC1);
+
+    CPU_ON;
+    Canny(img, edges, 50.0, 100.0);
+    CPU_OFF;
+    
+    gpu::GpuMat d_img(img);
+    gpu::GpuMat d_edges(img.size(), CV_8UC1);
+    gpu::CannyBuf d_buf(img.size());
+
+    GPU_ON;
+    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    GPU_OFF;
 }

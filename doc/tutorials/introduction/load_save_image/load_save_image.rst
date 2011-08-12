@@ -1,22 +1,22 @@
 .. _Load_Save_Image:
 
-Load and Save an Image
-***********************
+Load, Modify, and Save an Image
+*******************************
 
 .. note::
 
-   We assume that by now you know:
-
-   * Load an image using :imread:`imread <>`
-   * Display an image in an OpenCV window (using :imshow:`imshow <>`)
+   We assume that by now you know how to load an image using :imread:`imread <>` and to display it in a window (using :imshow:`imshow <>`). Read the :ref:`Display_Image` tutorial otherwise. 
  
 Goals
 ======
 
 In this tutorial you will learn how to:
 
-* Transform an image from RGB to Grayscale format by using :cvt_color:`cvtColor <>`
-* Save your transformed image in a file on disk (using :imwrite:`imwrite <>`)
+.. container:: enumeratevisibleitemswithsquare
+
+   * Load an image using :imread:`imread <>`
+   * Transform an image from RGB to Grayscale format by using :cvt_color:`cvtColor <>`
+   * Save your transformed image in a file on disk (using :imwrite:`imwrite <>`)
 
 Code
 ======
@@ -47,7 +47,7 @@ Here it is:
     Mat gray_image;
     cvtColor( image, gray_image, CV_RGB2GRAY );
 
-    imwrite( "../../images/Gray_Image.png", gray_image );
+    imwrite( "../../images/Gray_Image.jpg", gray_image );
 
     namedWindow( imageName, CV_WINDOW_AUTOSIZE );
     namedWindow( "Gray image", CV_WINDOW_AUTOSIZE );
@@ -76,20 +76,21 @@ Explanation
 
    As you can see, :cvt_color:`cvtColor <>` takes as arguments:
 
-   * a source image (*image*) 
-   * a destination image (*gray_image*), in which we will save the converted image.
+   .. container:: enumeratevisibleitemswithsquare
 
-   And an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_RGB2GRAY** (self-explanatory).
+      * a source image (*image*) 
+      * a destination image (*gray_image*), in which we will save the converted image.
+      * an additional parameter that indicates what kind of transformation will be performed. In this case we use **CV_RGB2GRAY** (self-explanatory).
 
 #. So now we have our new *gray_image* and want to save it on disk (otherwise it will get lost after the program ends). To save it, we will use a function analagous to :imread:`imread <>`: :imwrite:`imwrite <>`
 
    .. code-block:: cpp
 
-      imwrite( "../../images/Gray_Image.png", gray_image );   
+      imwrite( "../../images/Gray_Image.jpg", gray_image );   
 
-   Which will save our *gray_image* as *Gray_Image.png* in the folder *images* located two levels up of my current location.
+   Which will save our *gray_image* as *Gray_Image.jpg* in the folder *images* located two levels up of my current location.
 
-#. Finally, let's check out the images. We create 02 windows and use them to show the original image as well as the new one:
+#. Finally, let's check out the images. We create two windows and use them to show the original image as well as the new one:
 
    .. code-block:: cpp
 
@@ -99,7 +100,7 @@ Explanation
       imshow( imageName, image );
       imshow( "Gray image", gray_image );
 
-#. Add the usual *waitKey(0)* for the program to wait forever until the user presses a key.
+#. Add add the *waitKey(0)* function call for the program to wait forever for an user key press.
 
 
 Result
@@ -107,16 +108,14 @@ Result
 
 When you run your program you should get something like this:
 
- .. image:: images/Load_Save_Image_Result_1.png
+ .. image:: images/Load_Save_Image_Result_1.jpg
     :alt: Load Save Image Result 1
-    :height: 400px
     :align: center
 
-And if you check in your folder (in my case *images*), you should have a newly .png file named *Gray_Image.png*:
+And if you check in your folder (in my case *images*), you should have a newly .jpg file named *Gray_Image.jpg*:
 
- .. image:: images/Load_Save_Image_Result_2.png
+ .. image:: images/Load_Save_Image_Result_2.jpg
     :alt: Load Save Image Result 2
-    :height: 250px
     :align: center
 
-Congratulations, you are done with this tutorial! 
+Congratulations, you are done with this tutorial!

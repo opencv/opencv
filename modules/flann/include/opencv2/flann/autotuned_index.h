@@ -27,216 +27,204 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
+#ifndef OPENCV_FLANN_AUTOTUNED_INDEX_H_
+#define OPENCV_FLANN_AUTOTUNED_INDEX_H_
 
-#ifndef _OPENCV_AUTOTUNEDINDEX_H_
-#define _OPENCV_AUTOTUNEDINDEX_H_
-
-#include "opencv2/flann/general.h"
-#include "opencv2/flann/nn_index.h"
-#include "opencv2/flann/ground_truth.h"
-#include "opencv2/flann/index_testing.h"
-#include "opencv2/flann/sampling.h"
-#include "opencv2/flann/all_indices.h"
+#include "general.h"
+#include "nn_index.h"
+#include "ground_truth.h"
+#include "index_testing.h"
+#include "sampling.h"
+#include "kdtree_index.h"
+#include "kdtree_single_index.h"
+#include "kmeans_index.h"
+#include "composite_index.h"
+#include "linear_index.h"
+#include "logger.h"
 
 namespace cvflann
 {
 
-struct AutotunedIndexParams : public IndexParams {
-	AutotunedIndexParams( float target_precision_ = 0.8, float build_weight_ = 0.01,
-			float memory_weight_ = 0, float sample_fraction_ = 0.1) :
-		IndexParams(FLANN_INDEX_AUTOTUNED),
-		target_precision(target_precision_),
-		build_weight(build_weight_),
-		memory_weight(memory_weight_),
-		sample_fraction(sample_fraction_) {};
+template<typename Distance>
+NNIndex<Distance>* create_index_by_type(const Matrix<typename Distance::ElementType>& dataset, const IndexParams& params, const Distance& distance);
 
-	float target_precision;    // precision desired (used for autotuning, -1 otherwise)
-	float build_weight;        // build tree time weighting factor
-	float memory_weight;       // index memory weighting factor
-    float sample_fraction;     // what fraction of the dataset to use for autotuning
 
-	void print() const
-	{
-		logger().info("Index type: %d\n",(int)algorithm);
-		logger().info("logger(). precision: %g\n", target_precision);
-		logger().info("Build weight: %g\n", build_weight);
-		logger().info("Memory weight: %g\n", memory_weight);
-		logger().info("Sample fraction: %g\n", sample_fraction);
-	}
+struct AutotunedIndexParams : public IndexParams
+{
+    AutotunedIndexParams(float target_precision = 0.8, float build_weight = 0.01, float memory_weight = 0, float sample_fraction = 0.1)
+    {
+        (*this)["algorithm"] = FLANN_INDEX_AUTOTUNED;
+        // precision desired (used for autotuning, -1 otherwise)
+        (*this)["target_precision"] = target_precision;
+        // build tree time weighting factor
+        (*this)["build_weight"] = build_weight;
+        // index memory weighting factor
+        (*this)["memory_weight"] = memory_weight;
+        // what fraction of the dataset to use for autotuning
+        (*this)["sample_fraction"] = sample_fraction;
+    }
 };
 
 
-template <typename ELEM_TYPE, typename DIST_TYPE = typename DistType<ELEM_TYPE>::type >
-class AutotunedIndex : public NNIndex<ELEM_TYPE>
+template <typename Distance>
+class AutotunedIndex : public NNIndex<Distance>
 {
-	NNIndex<ELEM_TYPE>* bestIndex;
-
-	IndexParams* bestParams;
-	SearchParams bestSearchParams;
-
-    Matrix<ELEM_TYPE> sampledDataset;
-    Matrix<ELEM_TYPE> testDataset;
-    Matrix<int> gt_matches;
-
-    float speedup;
-
-	/**
-	 * The dataset used by this index
-	 */
-    const Matrix<ELEM_TYPE> dataset;
-
-    /**
-     * Index parameters
-     */
-    const AutotunedIndexParams& index_params;
-
-	AutotunedIndex& operator=(const AutotunedIndex&);
-	AutotunedIndex(const AutotunedIndex&);
-
 public:
+    typedef typename Distance::ElementType ElementType;
+    typedef typename Distance::ResultType DistanceType;
 
-    AutotunedIndex(const Matrix<ELEM_TYPE>& inputData, const AutotunedIndexParams& params = AutotunedIndexParams() ) :
-    	dataset(inputData), index_params(params)
-	{
-        bestIndex = NULL;
-        bestParams = NULL;
-	}
+    AutotunedIndex(const Matrix<ElementType>& inputData, const IndexParams& params = AutotunedIndexParams(), Distance d = Distance()) :
+        dataset_(inputData), distance_(d)
+    {
+        target_precision_ = get_param(params, "target_precision",0.8f);
+        build_weight_ =  get_param(params,"build_weight", 0.01f);
+        memory_weight_ = get_param(params, "memory_weight", 0.0f);
+        sample_fraction_ = get_param(params,"sample_fraction", 0.1f);
+        bestIndex_ = NULL;
+    }
+
+    AutotunedIndex(const AutotunedIndex&);
+    AutotunedIndex& operator=(const AutotunedIndex&);
 
     virtual ~AutotunedIndex()
     {
-    	if (bestIndex!=NULL) {
-    		delete bestIndex;
-    	}
-    	if (bestParams!=NULL) {
-    		delete bestParams;
-    	}
-    };
+        if (bestIndex_ != NULL) {
+            delete bestIndex_;
+            bestIndex_ = NULL;
+        }
+    }
 
     /**
-		Method responsible with building the index.
-	*/
-	virtual void buildIndex()
-	{
-		bestParams = estimateBuildParams();
-		logger().info("----------------------------------------------------\n");
-		logger().info("Autotuned parameters:\n");
-		bestParams->print();
-		logger().info("----------------------------------------------------\n");
-    	flann_algorithm_t index_type = bestParams->getIndexType();
-    	switch (index_type) {
-    	case FLANN_INDEX_LINEAR:
-    		bestIndex = new LinearIndex<ELEM_TYPE>(dataset, (const LinearIndexParams&)*bestParams);
-    		break;
-    	case FLANN_INDEX_KDTREE:
-    		bestIndex = new KDTreeIndex<ELEM_TYPE>(dataset, (const KDTreeIndexParams&)*bestParams);
-    		break;
-    	case FLANN_INDEX_KMEANS:
-    		bestIndex = new KMeansIndex<ELEM_TYPE>(dataset, (const KMeansIndexParams&)*bestParams);
-    		break;
-    	default:
-    		throw FLANNException("Unknown algorithm choosen by the autotuning, most likely a bug.");
-    	}
-		bestIndex->buildIndex();
-		speedup = estimateSearchParams(bestSearchParams);
-	}
+     *          Method responsible with building the index.
+     */
+    virtual void buildIndex()
+    {
+        bestParams_ = estimateBuildParams();
+        Logger::info("----------------------------------------------------\n");
+        Logger::info("Autotuned parameters:\n");
+        print_params(bestParams_);
+        Logger::info("----------------------------------------------------\n");
+
+        bestIndex_ = create_index_by_type(dataset_, bestParams_, distance_);
+        bestIndex_->buildIndex();
+        speedup_ = estimateSearchParams(bestSearchParams_);
+        Logger::info("----------------------------------------------------\n");
+        Logger::info("Search parameters:\n");
+        print_params(bestSearchParams_);
+        Logger::info("----------------------------------------------------\n");
+    }
 
     /**
-        Saves the index to a stream
-    */
+     *  Saves the index to a stream
+     */
     virtual void saveIndex(FILE* stream)
     {
-    	save_value(stream, (int)bestIndex->getType());
-    	bestIndex->saveIndex(stream);
-    	save_value(stream, bestSearchParams);
+        save_value(stream, (int)bestIndex_->getType());
+        bestIndex_->saveIndex(stream);
+        save_value(stream, get_param<int>(bestSearchParams_, "checks"));
     }
 
     /**
-        Loads the index from a stream
-    */
+     *  Loads the index from a stream
+     */
     virtual void loadIndex(FILE* stream)
     {
-    	int index_type;
-    	load_value(stream,index_type);
-    	IndexParams* params = ParamsFactory_instance().create((flann_algorithm_t)index_type);
-    	bestIndex = create_index_by_type(dataset, *params);
-    	bestIndex->loadIndex(stream);
-    	load_value(stream, bestSearchParams);
+        int index_type;
+
+        load_value(stream, index_type);
+        IndexParams params;
+        params["algorithm"] = (flann_algorithm_t)index_type;
+        bestIndex_ = create_index_by_type<Distance>(dataset_, params, distance_);
+        bestIndex_->loadIndex(stream);
+        int checks;
+        load_value(stream, checks);
+        bestSearchParams_["checks"] = checks;
     }
 
-	/**
-		Method that searches for nearest-neighbors
-	*/
-	virtual void findNeighbors(ResultSet<ELEM_TYPE>& result, const ELEM_TYPE* vec, const SearchParams& searchParams)
-	{
-		if (searchParams.checks==-2) {
-			bestIndex->findNeighbors(result, vec, bestSearchParams);
-		}
-		else {
-			bestIndex->findNeighbors(result, vec, searchParams);
-		}
-	}
+    /**
+     *      Method that searches for nearest-neighbors
+     */
+    virtual void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    {
+        int checks = get_param<int>(searchParams,"checks",FLANN_CHECKS_AUTOTUNED);
+        if (checks == FLANN_CHECKS_AUTOTUNED) {
+            bestIndex_->findNeighbors(result, vec, bestSearchParams_);
+        }
+        else {
+            bestIndex_->findNeighbors(result, vec, searchParams);
+        }
+    }
 
 
-	const IndexParams* getParameters() const
-	{
-		return bestIndex->getParameters();
-	}
+    IndexParams getParameters() const
+    {
+        return bestIndex_->getParameters();
+    }
 
+    SearchParams getSearchParameters() const
+    {
+        return bestSearchParams_;
+    }
 
-	/**
-		Number of features in this index.
-	*/
-	virtual size_t size() const
-	{
-		return bestIndex->size();
-	}
+    float getSpeedup() const
+    {
+        return speedup_;
+    }
 
-	/**
-		The length of each vector in this index.
-	*/
-	virtual size_t veclen() const
-	{
-		return bestIndex->veclen();
-	}
-
-	/**
-	 The amount of memory (in bytes) this index uses.
-	*/
- 	virtual int usedMemory() const
- 	{
- 		return bestIndex->usedMemory();
- 	}
 
     /**
-    * Algorithm name
-    */
+     *      Number of features in this index.
+     */
+    virtual size_t size() const
+    {
+        return bestIndex_->size();
+    }
+
+    /**
+     *  The length of each vector in this index.
+     */
+    virtual size_t veclen() const
+    {
+        return bestIndex_->veclen();
+    }
+
+    /**
+     * The amount of memory (in bytes) this index uses.
+     */
+    virtual int usedMemory() const
+    {
+        return bestIndex_->usedMemory();
+    }
+
+    /**
+     * Algorithm name
+     */
     virtual flann_algorithm_t getType() const
     {
-    	return FLANN_INDEX_AUTOTUNED;
+        return FLANN_INDEX_AUTOTUNED;
     }
 
 private:
 
-    struct CostData {
+    struct CostData
+    {
         float searchTimeCost;
         float buildTimeCost;
-        float timeCost;
         float memoryCost;
         float totalCost;
+        IndexParams params;
     };
 
-    typedef std::pair<CostData, KDTreeIndexParams> KDTreeCostData;
-    typedef std::pair<CostData, KMeansIndexParams> KMeansCostData;
-
-
-    void evaluate_kmeans(CostData& cost, const KMeansIndexParams& kmeans_params)
+    void evaluate_kmeans(CostData& cost)
     {
         StartStopTimer t;
         int checks;
         const int nn = 1;
 
-        logger().info("KMeansTree using params: max_iterations=%d, branching=%d\n", kmeans_params.iterations, kmeans_params.branching);
-        KMeansIndex<ELEM_TYPE> kmeans(sampledDataset, kmeans_params);
+        Logger::info("KMeansTree using params: max_iterations=%d, branching=%d\n",
+                     get_param<int>(cost.params,"iterations"),
+                     get_param<int>(cost.params,"branching"));
+        KMeansIndex<Distance> kmeans(sampledDataset_, cost.params, distance_);
         // measure index build time
         t.start();
         kmeans.buildIndex();
@@ -244,25 +232,24 @@ private:
         float buildTime = (float)t.value;
 
         // measure search time
-        float searchTime = test_index_precision(kmeans, sampledDataset, testDataset, gt_matches, index_params.target_precision, checks, nn);;
+        float searchTime = test_index_precision(kmeans, sampledDataset_, testDataset_, gt_matches_, target_precision_, checks, distance_, nn);
 
-        float datasetMemory = (float)(sampledDataset.rows*sampledDataset.cols*sizeof(float));
-        cost.memoryCost = (kmeans.usedMemory()+datasetMemory)/datasetMemory;
+        float datasetMemory = float(sampledDataset_.rows * sampledDataset_.cols * sizeof(float));
+        cost.memoryCost = (kmeans.usedMemory() + datasetMemory) / datasetMemory;
         cost.searchTimeCost = searchTime;
         cost.buildTimeCost = buildTime;
-        cost.timeCost = (buildTime*index_params.build_weight+searchTime);
-        logger().info("KMeansTree buildTime=%g, searchTime=%g, timeCost=%g, buildTimeFactor=%g\n",buildTime, searchTime, cost.timeCost, index_params.build_weight);
+        Logger::info("KMeansTree buildTime=%g, searchTime=%g, build_weight=%g\n", buildTime, searchTime, build_weight_);
     }
 
 
-     void evaluate_kdtree(CostData& cost, const KDTreeIndexParams& kdtree_params)
+    void evaluate_kdtree(CostData& cost)
     {
         StartStopTimer t;
         int checks;
         const int nn = 1;
 
-        logger().info("KDTree using params: trees=%d\n",kdtree_params.trees);
-        KDTreeIndex<ELEM_TYPE> kdtree(sampledDataset, kdtree_params);
+        Logger::info("KDTree using params: trees=%d\n", get_param<int>(cost.params,"trees"));
+        KDTreeIndex<Distance> kdtree(sampledDataset_, cost.params, distance_);
 
         t.start();
         kdtree.buildIndex();
@@ -270,267 +257,220 @@ private:
         float buildTime = (float)t.value;
 
         //measure search time
-        float searchTime = test_index_precision(kdtree, sampledDataset, testDataset, gt_matches, index_params.target_precision, checks, nn);
+        float searchTime = test_index_precision(kdtree, sampledDataset_, testDataset_, gt_matches_, target_precision_, checks, distance_, nn);
 
-        float datasetMemory = (float)(sampledDataset.rows*sampledDataset.cols*sizeof(float));
-        cost.memoryCost = (kdtree.usedMemory()+datasetMemory)/datasetMemory;
+        float datasetMemory = float(sampledDataset_.rows * sampledDataset_.cols * sizeof(float));
+        cost.memoryCost = (kdtree.usedMemory() + datasetMemory) / datasetMemory;
         cost.searchTimeCost = searchTime;
         cost.buildTimeCost = buildTime;
-        cost.timeCost = (buildTime*index_params.build_weight+searchTime);
-        logger().info("KDTree buildTime=%g, searchTime=%g, timeCost=%g\n",buildTime, searchTime, cost.timeCost);
+        Logger::info("KDTree buildTime=%g, searchTime=%g\n", buildTime, searchTime);
     }
 
 
-//    struct KMeansSimpleDownhillFunctor {
-//
-//        Autotune& autotuner;
-//        KMeansSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
-//
-//        float operator()(int* params) {
-//
-//            float maxFloat = numeric_limits<float>::max();
-//
-//            if (params[0]<2) return maxFloat;
-//            if (params[1]<0) return maxFloat;
-//
-//            CostData c;
-//            c.params["algorithm"] = KMEANS;
-//            c.params["centers-init"] = CENTERS_RANDOM;
-//            c.params["branching"] = params[0];
-//            c.params["max-iterations"] = params[1];
-//
-//            autotuner.evaluate_kmeans(c);
-//
-//            return c.timeCost;
-//
-//        }
-//    };
-//
-//    struct KDTreeSimpleDownhillFunctor {
-//
-//        Autotune& autotuner;
-//        KDTreeSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
-//
-//        float operator()(int* params) {
-//            float maxFloat = numeric_limits<float>::max();
-//
-//            if (params[0]<1) return maxFloat;
-//
-//            CostData c;
-//            c.params["algorithm"] = KDTREE;
-//            c.params["trees"] = params[0];
-//
-//            autotuner.evaluate_kdtree(c);
-//
-//            return c.timeCost;
-//
-//        }
-//    };
+    //    struct KMeansSimpleDownhillFunctor {
+    //
+    //        Autotune& autotuner;
+    //        KMeansSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
+    //
+    //        float operator()(int* params) {
+    //
+    //            float maxFloat = numeric_limits<float>::max();
+    //
+    //            if (params[0]<2) return maxFloat;
+    //            if (params[1]<0) return maxFloat;
+    //
+    //            CostData c;
+    //            c.params["algorithm"] = KMEANS;
+    //            c.params["centers-init"] = CENTERS_RANDOM;
+    //            c.params["branching"] = params[0];
+    //            c.params["max-iterations"] = params[1];
+    //
+    //            autotuner.evaluate_kmeans(c);
+    //
+    //            return c.timeCost;
+    //
+    //        }
+    //    };
+    //
+    //    struct KDTreeSimpleDownhillFunctor {
+    //
+    //        Autotune& autotuner;
+    //        KDTreeSimpleDownhillFunctor(Autotune& autotuner_) : autotuner(autotuner_) {};
+    //
+    //        float operator()(int* params) {
+    //            float maxFloat = numeric_limits<float>::max();
+    //
+    //            if (params[0]<1) return maxFloat;
+    //
+    //            CostData c;
+    //            c.params["algorithm"] = KDTREE;
+    //            c.params["trees"] = params[0];
+    //
+    //            autotuner.evaluate_kdtree(c);
+    //
+    //            return c.timeCost;
+    //
+    //        }
+    //    };
 
 
 
-    KMeansCostData optimizeKMeans()
+    void optimizeKMeans(std::vector<CostData>& costs)
     {
-        logger().info("KMEANS, Step 1: Exploring parameter space\n");
+        Logger::info("KMEANS, Step 1: Exploring parameter space\n");
 
         // explore kmeans parameters space using combinations of the parameters below
         int maxIterations[] = { 1, 5, 10, 15 };
         int branchingFactors[] = { 16, 32, 64, 128, 256 };
 
-        int kmeansParamSpaceSize = ARRAY_LEN(maxIterations)*ARRAY_LEN(branchingFactors);
-
-        std::vector<KMeansCostData> kmeansCosts(kmeansParamSpaceSize);
-
-//        CostData* kmeansCosts = new CostData[kmeansParamSpaceSize];
+        int kmeansParamSpaceSize = FLANN_ARRAY_LEN(maxIterations) * FLANN_ARRAY_LEN(branchingFactors);
+        costs.reserve(costs.size() + kmeansParamSpaceSize);
 
         // evaluate kmeans for all parameter combinations
-        int cnt = 0;
-        for (size_t i=0; i<ARRAY_LEN(maxIterations); ++i) {
-            for (size_t j=0; j<ARRAY_LEN(branchingFactors); ++j) {
+        for (size_t i = 0; i < FLANN_ARRAY_LEN(maxIterations); ++i) {
+            for (size_t j = 0; j < FLANN_ARRAY_LEN(branchingFactors); ++j) {
+                CostData cost;
+                cost.params["algorithm"] = FLANN_INDEX_KMEANS;
+                cost.params["centers_init"] = FLANN_CENTERS_RANDOM;
+                cost.params["iterations"] = maxIterations[i];
+                cost.params["branching"] = branchingFactors[j];
 
-            	kmeansCosts[cnt].second.centers_init = FLANN_CENTERS_RANDOM;
-            	kmeansCosts[cnt].second.iterations = maxIterations[i];
-            	kmeansCosts[cnt].second.branching = branchingFactors[j];
-
-                evaluate_kmeans(kmeansCosts[cnt].first, kmeansCosts[cnt].second);
-
-                int k = cnt;
-                // order by time cost
-                while (k>0 && kmeansCosts[k].first.timeCost < kmeansCosts[k-1].first.timeCost) {
-                    swap(kmeansCosts[k],kmeansCosts[k-1]);
-                    --k;
-                }
-                ++cnt;
+                evaluate_kmeans(cost);
+                costs.push_back(cost);
             }
         }
 
-//         logger().info("KMEANS, Step 2: simplex-downhill optimization\n");
-//
-//         const int n = 2;
-//         // choose initial simplex points as the best parameters so far
-//         int kmeansNMPoints[n*(n+1)];
-//         float kmeansVals[n+1];
-//         for (int i=0;i<n+1;++i) {
-//             kmeansNMPoints[i*n] = (int)kmeansCosts[i].params["branching"];
-//             kmeansNMPoints[i*n+1] = (int)kmeansCosts[i].params["max-iterations"];
-//             kmeansVals[i] = kmeansCosts[i].timeCost;
-//         }
-//         KMeansSimpleDownhillFunctor kmeans_cost_func(*this);
-//         // run optimization
-//         optimizeSimplexDownhill(kmeansNMPoints,n,kmeans_cost_func,kmeansVals);
-//         // store results
-//         for (int i=0;i<n+1;++i) {
-//             kmeansCosts[i].params["branching"] = kmeansNMPoints[i*2];
-//             kmeansCosts[i].params["max-iterations"] = kmeansNMPoints[i*2+1];
-//             kmeansCosts[i].timeCost = kmeansVals[i];
-//         }
-
-        float optTimeCost = kmeansCosts[0].first.timeCost;
-        // recompute total costs factoring in the memory costs
-        for (int i=0;i<kmeansParamSpaceSize;++i) {
-            kmeansCosts[i].first.totalCost = (kmeansCosts[i].first.timeCost/optTimeCost + index_params.memory_weight * kmeansCosts[i].first.memoryCost);
-
-            int k = i;
-            while (k>0 && kmeansCosts[k].first.totalCost < kmeansCosts[k-1].first.totalCost) {
-                swap(kmeansCosts[k],kmeansCosts[k-1]);
-                k--;
-            }
-        }
-        // display the costs obtained
-        for (int i=0;i<kmeansParamSpaceSize;++i) {
-            logger().info("KMeans, branching=%d, iterations=%d, time_cost=%g[%g] (build=%g, search=%g), memory_cost=%g, cost=%g\n",
-                kmeansCosts[i].second.branching, kmeansCosts[i].second.iterations,
-            kmeansCosts[i].first.timeCost,kmeansCosts[i].first.timeCost/optTimeCost,
-            kmeansCosts[i].first.buildTimeCost, kmeansCosts[i].first.searchTimeCost,
-            kmeansCosts[i].first.memoryCost,kmeansCosts[i].first.totalCost);
-        }
-
-        return kmeansCosts[0];
+        //         Logger::info("KMEANS, Step 2: simplex-downhill optimization\n");
+        //
+        //         const int n = 2;
+        //         // choose initial simplex points as the best parameters so far
+        //         int kmeansNMPoints[n*(n+1)];
+        //         float kmeansVals[n+1];
+        //         for (int i=0;i<n+1;++i) {
+        //             kmeansNMPoints[i*n] = (int)kmeansCosts[i].params["branching"];
+        //             kmeansNMPoints[i*n+1] = (int)kmeansCosts[i].params["max-iterations"];
+        //             kmeansVals[i] = kmeansCosts[i].timeCost;
+        //         }
+        //         KMeansSimpleDownhillFunctor kmeans_cost_func(*this);
+        //         // run optimization
+        //         optimizeSimplexDownhill(kmeansNMPoints,n,kmeans_cost_func,kmeansVals);
+        //         // store results
+        //         for (int i=0;i<n+1;++i) {
+        //             kmeansCosts[i].params["branching"] = kmeansNMPoints[i*2];
+        //             kmeansCosts[i].params["max-iterations"] = kmeansNMPoints[i*2+1];
+        //             kmeansCosts[i].timeCost = kmeansVals[i];
+        //         }
     }
 
 
-    KDTreeCostData optimizeKDTree()
+    void optimizeKDTree(std::vector<CostData>& costs)
     {
-
-        logger().info("KD-TREE, Step 1: Exploring parameter space\n");
+        Logger::info("KD-TREE, Step 1: Exploring parameter space\n");
 
         // explore kd-tree parameters space using the parameters below
         int testTrees[] = { 1, 4, 8, 16, 32 };
 
-        size_t kdtreeParamSpaceSize = ARRAY_LEN(testTrees);
-        std::vector<KDTreeCostData> kdtreeCosts(kdtreeParamSpaceSize);
-
         // evaluate kdtree for all parameter combinations
-        int cnt = 0;
-        for (size_t i=0; i<ARRAY_LEN(testTrees); ++i) {
-        	kdtreeCosts[cnt].second.trees = testTrees[i];
+        for (size_t i = 0; i < FLANN_ARRAY_LEN(testTrees); ++i) {
+            CostData cost;
+            cost.params["trees"] = testTrees[i];
 
-            evaluate_kdtree(kdtreeCosts[cnt].first, kdtreeCosts[cnt].second);
-
-            int k = cnt;
-            // order by time cost
-            while (k>0 && kdtreeCosts[k].first.timeCost < kdtreeCosts[k-1].first.timeCost) {
-                swap(kdtreeCosts[k],kdtreeCosts[k-1]);
-                --k;
-            }
-            ++cnt;
+            evaluate_kdtree(cost);
+            costs.push_back(cost);
         }
 
-//         logger().info("KD-TREE, Step 2: simplex-downhill optimization\n");
-//
-//         const int n = 1;
-//         // choose initial simplex points as the best parameters so far
-//         int kdtreeNMPoints[n*(n+1)];
-//         float kdtreeVals[n+1];
-//         for (int i=0;i<n+1;++i) {
-//             kdtreeNMPoints[i] = (int)kdtreeCosts[i].params["trees"];
-//             kdtreeVals[i] = kdtreeCosts[i].timeCost;
-//         }
-//         KDTreeSimpleDownhillFunctor kdtree_cost_func(*this);
-//         // run optimization
-//         optimizeSimplexDownhill(kdtreeNMPoints,n,kdtree_cost_func,kdtreeVals);
-//         // store results
-//         for (int i=0;i<n+1;++i) {
-//             kdtreeCosts[i].params["trees"] = kdtreeNMPoints[i];
-//             kdtreeCosts[i].timeCost = kdtreeVals[i];
-//         }
-
-        float optTimeCost = kdtreeCosts[0].first.timeCost;
-        // recompute costs for kd-tree factoring in memory cost
-        for (size_t i=0;i<kdtreeParamSpaceSize;++i) {
-            kdtreeCosts[i].first.totalCost = (kdtreeCosts[i].first.timeCost/optTimeCost + index_params.memory_weight * kdtreeCosts[i].first.memoryCost);
-
-            int k = (int)i;
-            while (k>0 && kdtreeCosts[k].first.totalCost < kdtreeCosts[k-1].first.totalCost) {
-                swap(kdtreeCosts[k],kdtreeCosts[k-1]);
-                k--;
-            }
-        }
-        // display costs obtained
-        for (size_t i=0;i<kdtreeParamSpaceSize;++i) {
-            logger().info("kd-tree, trees=%d, time_cost=%g[%g] (build=%g, search=%g), memory_cost=%g, cost=%g\n",
-            kdtreeCosts[i].second.trees,kdtreeCosts[i].first.timeCost,kdtreeCosts[i].first.timeCost/optTimeCost,
-            kdtreeCosts[i].first.buildTimeCost, kdtreeCosts[i].first.searchTimeCost,
-            kdtreeCosts[i].first.memoryCost,kdtreeCosts[i].first.totalCost);
-        }
-
-        return kdtreeCosts[0];
+        //         Logger::info("KD-TREE, Step 2: simplex-downhill optimization\n");
+        //
+        //         const int n = 1;
+        //         // choose initial simplex points as the best parameters so far
+        //         int kdtreeNMPoints[n*(n+1)];
+        //         float kdtreeVals[n+1];
+        //         for (int i=0;i<n+1;++i) {
+        //             kdtreeNMPoints[i] = (int)kdtreeCosts[i].params["trees"];
+        //             kdtreeVals[i] = kdtreeCosts[i].timeCost;
+        //         }
+        //         KDTreeSimpleDownhillFunctor kdtree_cost_func(*this);
+        //         // run optimization
+        //         optimizeSimplexDownhill(kdtreeNMPoints,n,kdtree_cost_func,kdtreeVals);
+        //         // store results
+        //         for (int i=0;i<n+1;++i) {
+        //             kdtreeCosts[i].params["trees"] = kdtreeNMPoints[i];
+        //             kdtreeCosts[i].timeCost = kdtreeVals[i];
+        //         }
     }
 
     /**
-        Chooses the best nearest-neighbor algorithm and estimates the optimal
-        parameters to use when building the index (for a given precision).
-        Returns a dictionary with the optimal parameters.
-    */
-    IndexParams* estimateBuildParams()
+     *  Chooses the best nearest-neighbor algorithm and estimates the optimal
+     *  parameters to use when building the index (for a given precision).
+     *  Returns a dictionary with the optimal parameters.
+     */
+    IndexParams estimateBuildParams()
     {
-        int sampleSize = int(index_params.sample_fraction*dataset.rows);
-        int testSampleSize = std::min(sampleSize/10, 1000);
+        std::vector<CostData> costs;
 
-        logger().info("Entering autotuning, dataset size: %d, sampleSize: %d, testSampleSize: %d\n",dataset.rows, sampleSize, testSampleSize);
+        int sampleSize = int(sample_fraction_ * dataset_.rows);
+        int testSampleSize = std::min(sampleSize / 10, 1000);
+
+        Logger::info("Entering autotuning, dataset size: %d, sampleSize: %d, testSampleSize: %d, target precision: %g\n", dataset_.rows, sampleSize, testSampleSize, target_precision_);
 
         // For a very small dataset, it makes no sense to build any fancy index, just
         // use linear search
-        if (testSampleSize<10) {
-            logger().info("Choosing linear, dataset too small\n");
-            return new LinearIndexParams();
+        if (testSampleSize < 10) {
+            Logger::info("Choosing linear, dataset too small\n");
+            return LinearIndexParams();
         }
 
         // We use a fraction of the original dataset to speedup the autotune algorithm
-        sampledDataset = random_sample(dataset,sampleSize);
+        sampledDataset_ = random_sample(dataset_, sampleSize);
         // We use a cross-validation approach, first we sample a testset from the dataset
-        testDataset = random_sample(sampledDataset,testSampleSize,true);
+        testDataset_ = random_sample(sampledDataset_, testSampleSize, true);
 
         // We compute the ground truth using linear search
-        logger().info("Computing ground truth... \n");
-        gt_matches = Matrix<int>(new int[testDataset.rows],(long)testDataset.rows, 1);
+        Logger::info("Computing ground truth... \n");
+        gt_matches_ = Matrix<int>(new int[testDataset_.rows], testDataset_.rows, 1);
         StartStopTimer t;
         t.start();
-        compute_ground_truth(sampledDataset, testDataset, gt_matches, 0);
+        compute_ground_truth<Distance>(sampledDataset_, testDataset_, gt_matches_, 0, distance_);
         t.stop();
-        float bestCost = (float)t.value;
-        IndexParams* bestParams = new LinearIndexParams();
+
+        CostData linear_cost;
+        linear_cost.searchTimeCost = (float)t.value;
+        linear_cost.buildTimeCost = 0;
+        linear_cost.memoryCost = 0;
+        linear_cost.params["algorithm"] = FLANN_INDEX_LINEAR;
+
+        costs.push_back(linear_cost);
 
         // Start parameter autotune process
-        logger().info("Autotuning parameters...\n");
+        Logger::info("Autotuning parameters...\n");
 
+        optimizeKMeans(costs);
+        optimizeKDTree(costs);
 
-        KMeansCostData kmeansCost = optimizeKMeans();
-        if (kmeansCost.first.totalCost<bestCost) {
-            bestParams = new KMeansIndexParams(kmeansCost.second);
-            bestCost = kmeansCost.first.totalCost;
+        float bestTimeCost = costs[0].searchTimeCost;
+        for (size_t i = 0; i < costs.size(); ++i) {
+            float timeCost = costs[i].buildTimeCost * build_weight_ + costs[i].searchTimeCost;
+            if (timeCost < bestTimeCost) {
+                bestTimeCost = timeCost;
+            }
         }
 
-        KDTreeCostData kdtreeCost = optimizeKDTree();
-
-        if (kdtreeCost.first.totalCost<bestCost) {
-            bestParams = new KDTreeIndexParams(kdtreeCost.second);
-            bestCost = kdtreeCost.first.totalCost;
+        float bestCost = costs[0].searchTimeCost / bestTimeCost;
+        IndexParams bestParams = costs[0].params;
+        if (bestTimeCost > 0) {
+            for (size_t i = 0; i < costs.size(); ++i) {
+                float crtCost = (costs[i].buildTimeCost * build_weight_ + costs[i].searchTimeCost) / bestTimeCost +
+                                memory_weight_ * costs[i].memoryCost;
+                if (crtCost < bestCost) {
+                    bestCost = crtCost;
+                    bestParams = costs[i].params;
+                }
+            }
         }
 
-        gt_matches.release();
-        sampledDataset.release();
-        testDataset.release();
+        delete[] gt_matches_.data;
+        delete[] testDataset_.data;
+        delete[] sampledDataset_.data;
 
         return bestParams;
     }
@@ -538,48 +478,48 @@ private:
 
 
     /**
-        Estimates the search time parameters needed to get the desired precision.
-        Precondition: the index is built
-        Postcondition: the searchParams will have the optimum params set, also the speedup obtained over linear search.
-    */
+     *  Estimates the search time parameters needed to get the desired precision.
+     *  Precondition: the index is built
+     *  Postcondition: the searchParams will have the optimum params set, also the speedup obtained over linear search.
+     */
     float estimateSearchParams(SearchParams& searchParams)
     {
         const int nn = 1;
         const size_t SAMPLE_COUNT = 1000;
 
-        assert(bestIndex!=NULL);   // must have a valid index
+        assert(bestIndex_ != NULL); // must have a valid index
 
         float speedup = 0;
 
-        int samples = (int)std::min(dataset.rows/10, SAMPLE_COUNT);
-        if (samples>0) {
-            Matrix<ELEM_TYPE> testDataset = random_sample(dataset,samples);
+        int samples = (int)std::min(dataset_.rows / 10, SAMPLE_COUNT);
+        if (samples > 0) {
+            Matrix<ElementType> testDataset = random_sample(dataset_, samples);
 
-            logger().info("Computing ground truth\n");
+            Logger::info("Computing ground truth\n");
 
             // we need to compute the ground truth first
-            Matrix<int> gt_matches(new int[testDataset.rows],(long)testDataset.rows,1);
+            Matrix<int> gt_matches(new int[testDataset.rows], testDataset.rows, 1);
             StartStopTimer t;
             t.start();
-            compute_ground_truth(dataset, testDataset, gt_matches,1);
+            compute_ground_truth<Distance>(dataset_, testDataset, gt_matches, 1, distance_);
             t.stop();
             float linear = (float)t.value;
 
             int checks;
-            logger().info("Estimating number of checks\n");
+            Logger::info("Estimating number of checks\n");
 
             float searchTime;
             float cb_index;
-            if (bestIndex->getType() == FLANN_INDEX_KMEANS) {
-                logger().info("KMeans algorithm, estimating cluster border factor\n");
-                KMeansIndex<ELEM_TYPE>* kmeans = (KMeansIndex<ELEM_TYPE>*)bestIndex;
+            if (bestIndex_->getType() == FLANN_INDEX_KMEANS) {
+                Logger::info("KMeans algorithm, estimating cluster border factor\n");
+                KMeansIndex<Distance>* kmeans = (KMeansIndex<Distance>*)bestIndex_;
                 float bestSearchTime = -1;
                 float best_cb_index = -1;
                 int best_checks = -1;
-                for (cb_index = 0;cb_index<1.1f; cb_index+=0.2f) {
+                for (cb_index = 0; cb_index < 1.1f; cb_index += 0.2f) {
                     kmeans->set_cb_index(cb_index);
-                    searchTime = test_index_precision(*kmeans, dataset, testDataset, gt_matches, index_params.target_precision, checks, nn, 1);
-                    if (searchTime<bestSearchTime || bestSearchTime == -1) {
+                    searchTime = test_index_precision(*kmeans, dataset_, testDataset, gt_matches, target_precision_, checks, distance_, nn, 1);
+                    if ((searchTime < bestSearchTime) || (bestSearchTime == -1)) {
                         bestSearchTime = searchTime;
                         best_cb_index = cb_index;
                         best_checks = checks;
@@ -590,26 +530,54 @@ private:
                 checks = best_checks;
 
                 kmeans->set_cb_index(best_cb_index);
-                logger().info("Optimum cb_index: %g\n",cb_index);
-                ((KMeansIndexParams*)bestParams)->cb_index = cb_index;
+                Logger::info("Optimum cb_index: %g\n", cb_index);
+                bestParams_["cb_index"] = cb_index;
             }
             else {
-                searchTime = test_index_precision(*bestIndex, dataset, testDataset, gt_matches, index_params.target_precision, checks, nn, 1);
+                searchTime = test_index_precision(*bestIndex_, dataset_, testDataset, gt_matches, target_precision_, checks, distance_, nn, 1);
             }
 
-            logger().info("Required number of checks: %d \n",checks);;
-            searchParams.checks = checks;
+            Logger::info("Required number of checks: %d \n", checks);
+            searchParams["checks"] = checks;
 
-            speedup = linear/searchTime;
+            speedup = linear / searchTime;
 
-            gt_matches.release();
+            delete[] gt_matches.data;
+            delete[] testDataset.data;
         }
 
         return speedup;
     }
 
+private:
+    NNIndex<Distance>* bestIndex_;
+
+    IndexParams bestParams_;
+    SearchParams bestSearchParams_;
+
+    Matrix<ElementType> sampledDataset_;
+    Matrix<ElementType> testDataset_;
+    Matrix<int> gt_matches_;
+
+    float speedup_;
+
+    /**
+     * The dataset used by this index
+     */
+    const Matrix<ElementType> dataset_;
+
+    /**
+     * Index parameters
+     */
+    float target_precision_;
+    float build_weight_;
+    float memory_weight_;
+    float sample_fraction_;
+
+    Distance distance_;
+
+
 };
+}
 
-} // namespace cvflann
-
-#endif /* _OPENCV_AUTOTUNEDINDEX_H_ */
+#endif /* OPENCV_FLANN_AUTOTUNED_INDEX_H_ */

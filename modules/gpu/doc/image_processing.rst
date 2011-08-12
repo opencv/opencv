@@ -44,7 +44,6 @@ gpu::meanShiftProc
 .. seealso:: :ocv:func:`gpu::meanShiftFiltering` 
 
 
-
 gpu::meanShiftSegmentation
 ------------------------------
 .. ocv:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
@@ -128,7 +127,6 @@ gpu::cornerHarris
 .. seealso:: :ocv:func:`cornerHarris` 
 
 
-
 gpu::cornerMinEigenVal
 --------------------------
 .. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
@@ -170,7 +168,6 @@ gpu::mulSpectrums
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 .. seealso:: :ocv:func:`mulSpectrums` 
-
 
 
 gpu::mulAndScaleSpectrums
@@ -321,7 +318,6 @@ gpu::matchTemplate
 .. seealso:: :ocv:func:`matchTemplate` 
 
 
-
 gpu::remap
 --------------
 .. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
@@ -345,7 +341,6 @@ The function transforms the source image using the specified map:
 Values of pixels with non-integer coordinates are computed using the bilinear interpolation.
 
 .. seealso:: :ocv:func:`remap` 
-
 
 
 gpu::cvtColor
@@ -516,7 +511,6 @@ gpu::copyMakeBorder
     :param value: Border value.
 
 .. seealso:: :ocv:func:`copyMakeBorder`
-
 
 
 gpu::rectStdDev

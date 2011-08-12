@@ -41,7 +41,7 @@
 //M*/
 
 #include "internal_shared.hpp"
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/datamov_utils.hpp"
 
 using namespace cv::gpu;
@@ -56,9 +56,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Mask strategy
 
-    class SingleMask
+    struct SingleMask
     {
-    public:
         explicit SingleMask(const PtrStep& mask_) : mask(mask_) {}
         
         __device__ __forceinline__ bool operator()(int queryIdx, int trainIdx) const
@@ -66,13 +65,11 @@ namespace cv { namespace gpu { namespace bfmatcher
             return mask.ptr(queryIdx)[trainIdx] != 0;
         }
 
-    private:
-        PtrStep mask;
+        const PtrStep mask;
     };
 
-    class MaskCollection
+    struct MaskCollection
     {
-    public:
         explicit MaskCollection(PtrStep* maskCollection_) : maskCollection(maskCollection_) {}
 
         __device__ __forceinline__ void nextMask()
@@ -86,15 +83,14 @@ namespace cv { namespace gpu { namespace bfmatcher
             return curMask.data == 0 || (ForceGlob<uchar>::Load(curMask.ptr(queryIdx), trainIdx, val), (val != 0));
         }
 
-    private:
-        PtrStep* maskCollection;
+        const PtrStep* maskCollection;
         PtrStep curMask;
     };
 
     class WithOutMask
     {
     public:
-        __device__ __forceinline__ void nextMask()
+        __device__ __forceinline__ void nextMask() const
         {
         }
         __device__ __forceinline__ bool operator()(int queryIdx, int trainIdx) const
@@ -128,9 +124,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Distance
 
-    template <typename T> class L1Dist
+    template <typename T> struct L1Dist
     {
-    public:
         typedef int ResultType;
         typedef int ValueType;
 
@@ -151,12 +146,10 @@ namespace cv { namespace gpu { namespace bfmatcher
             return mySum;
         }
 
-    private:
         int mySum;
     };
-    template <> class L1Dist<float>
+    template <> struct L1Dist<float>
     {
-    public:
         typedef float ResultType;
         typedef float ValueType;
 
@@ -177,13 +170,11 @@ namespace cv { namespace gpu { namespace bfmatcher
             return mySum;
         }
 
-    private:
         float mySum;
     };
 
-    class L2Dist
+    struct L2Dist
     {
-    public:
         typedef float ResultType;
         typedef float ValueType;
 
@@ -205,13 +196,11 @@ namespace cv { namespace gpu { namespace bfmatcher
             return sqrtf(mySum);
         }
 
-    private:
         float mySum;
     };
 
-    class HammingDist
+    struct HammingDist
     {
-    public:
         typedef int ResultType;
         typedef int ValueType;
 
@@ -232,7 +221,6 @@ namespace cv { namespace gpu { namespace bfmatcher
             return mySum;
         }
 
-    private:
         int mySum;
     };
     
@@ -425,10 +413,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // ReduceDescCalculator
 
-    template <int BLOCK_DIM_X, typename T>
-    class ReduceDescCalculatorSimple
+    template <int BLOCK_DIM_X, typename T> struct ReduceDescCalculatorSimple
     {
-    public:
         __device__ __forceinline__ void prepare(const T* queryDescs_, int, void*)
         {
             queryDescs = queryDescs_;
@@ -440,14 +426,12 @@ namespace cv { namespace gpu { namespace bfmatcher
             reduceDescDiff<BLOCK_DIM_X>(queryDescs, trainDescs, desc_len, dist, sdiff_row);
         }
 
-    private:
         const T* queryDescs;
     };
 
     template <int BLOCK_DIM_X, int MAX_DESCRIPTORS_LEN, bool DESC_LEN_EQ_MAX_LEN, typename T, typename U>
-    class ReduceDescCalculatorCached
+    struct ReduceDescCalculatorCached
     {
-    public:
         __device__ __forceinline__ void prepare(const T* queryDescs, int desc_len, U* smem)
         {
             loadDescsVals<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN>(queryDescs, desc_len, queryVals, smem);
@@ -459,7 +443,6 @@ namespace cv { namespace gpu { namespace bfmatcher
             reduceDescDiffCached<BLOCK_DIM_X, MAX_DESCRIPTORS_LEN, DESC_LEN_EQ_MAX_LEN>(queryVals, trainDescs, desc_len, dist, sdiff_row);
         }
 
-    private:
         U queryVals[MAX_DESCRIPTORS_LEN / BLOCK_DIM_X];
     };
     
@@ -497,10 +480,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // Train collection loop strategy
 
-    template <typename T>
-    class SingleTrain
+    template <typename T> struct SingleTrain
     {
-    public:
         explicit SingleTrain(const DevMem2D_<T>& trainDescs_) : trainDescs(trainDescs_)
         {
         }
@@ -517,14 +498,11 @@ namespace cv { namespace gpu { namespace bfmatcher
             return trainDescs.cols;
         }
 
-    private:
-        DevMem2D_<T> trainDescs;
+        const DevMem2D_<T> trainDescs;
     };
 
-    template <typename T>
-    class TrainCollection
+    template <typename T> struct TrainCollection
     {
-    public:
         TrainCollection(const DevMem2D_<T>* trainCollection_, int nImg_, int desclen_) : 
             trainCollection(trainCollection_), nImg(nImg_), desclen(desclen_)
         {
@@ -536,7 +514,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             for (int imgIdx = 0; imgIdx < nImg; ++imgIdx)
             {
-                DevMem2D_<T> trainDescs = trainCollection[imgIdx];
+                const DevMem2D_<T> trainDescs = trainCollection[imgIdx];
                 m.nextMask();
                 matchDescs<Dist>(queryIdx, imgIdx, trainDescs, m, reduceDescCalc, myMin, myBestTrainIdx, myBestImgIdx, sdiff_row);
             }
@@ -547,7 +525,6 @@ namespace cv { namespace gpu { namespace bfmatcher
             return desclen;
         }
 
-    private:
         const DevMem2D_<T>* trainCollection;
         int nImg;
         int desclen;
@@ -565,7 +542,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         
         int myBestTrainIdx = -1;
         int myBestImgIdx = -1;
-        typename Dist::ResultType myMin = numeric_limits_gpu<typename Dist::ResultType>::max();
+        typename Dist::ResultType myMin = numeric_limits<typename Dist::ResultType>::max();
 
         {
             typename Dist::ResultType* sdiff_row = smem + BLOCK_DIM_X * threadIdx.y;
@@ -646,9 +623,9 @@ namespace cv { namespace gpu { namespace bfmatcher
             matchCached_caller<16, 16, 64, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
         else if (queryDescs.cols < 128)
             matchCached_caller<16, 16, 128, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
-        else if (queryDescs.cols == 128)
+        else if (queryDescs.cols == 128 && cc_12)
             matchCached_caller<16, 16, 128, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
-        else if (queryDescs.cols < 256)
+        else if (queryDescs.cols < 256 && cc_12)
             matchCached_caller<16, 16, 256, false, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
         else if (queryDescs.cols == 256 && cc_12)
             matchCached_caller<16, 16, 256, true, Dist>(queryDescs, train, mask, trainIdx, imgIdx, distance, stream);
@@ -806,7 +783,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     // Calc distance kernel
 
     template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    __global__ void calcDistance(PtrStep_<T> queryDescs_, DevMem2D_<T> trainDescs_, Mask mask, PtrStepf distance)
+    __global__ void calcDistance(const PtrStep_<T> queryDescs_, const DevMem2D_<T> trainDescs_, const Mask mask, PtrStepf distance)
     {
         __shared__ typename Dist::ResultType sdiff[BLOCK_DIM_X * BLOCK_DIM_Y];
 
@@ -821,7 +798,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         {
             const T* trainDescs = trainDescs_.ptr(trainIdx);
 
-            typename Dist::ResultType myDist = numeric_limits_gpu<typename Dist::ResultType>::max();
+            typename Dist::ResultType myDist = numeric_limits<typename Dist::ResultType>::max();
 
             if (mask(queryIdx, trainIdx))
             {
@@ -932,7 +909,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     {
         const int tid = threadIdx.x;
         
-        T myMin = numeric_limits_gpu<T>::max();
+        T myMin = numeric_limits<T>::max();
         int myMinIdx = -1;
 
         for (int i = tid; i < n; i += BLOCK_SIZE)
@@ -989,8 +966,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     ///////////////////////////////////////////////////////////////////////////////
     // find knn match kernel
 
-    template <int BLOCK_SIZE>
-    __global__ void findBestMatch(DevMem2Df allDist_, int i, PtrStepi trainIdx_, PtrStepf distance_)
+    template <int BLOCK_SIZE> __global__ void findBestMatch(DevMem2Df allDist_, int i, PtrStepi trainIdx_, PtrStepf distance_)
     {
         const int SMEM_SIZE = BLOCK_SIZE > 64 ? BLOCK_SIZE : 64;
         __shared__ float sdist[SMEM_SIZE];
@@ -1007,10 +983,10 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (threadIdx.x == 0)
         {
             float dist = sdist[0];
-            if (dist < numeric_limits_gpu<float>::max())
+            if (dist < numeric_limits<float>::max())
             {
                 int bestIdx = strainIdx[0];
-                allDist[bestIdx] = numeric_limits_gpu<float>::max();
+                allDist[bestIdx] = numeric_limits<float>::max();
                 trainIdx[i] = bestIdx;
                 distance[i] = dist;
             }
@@ -1130,8 +1106,8 @@ namespace cv { namespace gpu { namespace bfmatcher
     // Radius Match kernel
 
     template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    __global__ void radiusMatch(PtrStep_<T> queryDescs_, DevMem2D_<T> trainDescs_, 
-        float maxDistance, Mask mask, DevMem2Di trainIdx_, unsigned int* nMatches, PtrStepf distance)
+    __global__ void radiusMatch(const PtrStep_<T> queryDescs_, const DevMem2D_<T> trainDescs_, 
+        float maxDistance, const Mask mask, DevMem2Di trainIdx_, unsigned int* nMatches, PtrStepf distance)
     {
         #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
 

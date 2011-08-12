@@ -227,8 +227,6 @@ inline int dist2(const cv::Vec2s& lhs, const cv::Vec2s& rhs)
 
 void cv::gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria)
 {
-    CV_Assert(TargetArchs::builtWith(FEATURE_SET_COMPUTE_12) && DeviceInfo().supports(FEATURE_SET_COMPUTE_12));
-
     CV_Assert(src.type() == CV_8UC4);
     const int nrows = src.rows;
     const int ncols = src.cols;

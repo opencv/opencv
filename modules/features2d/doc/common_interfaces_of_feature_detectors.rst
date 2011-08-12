@@ -100,19 +100,17 @@ Detects keypoints in an image (first variant) or image set (second variant).
 
 .. ocv:function:: void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
 
+.. ocv:function:: void FeatureDetector::detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const
+
     :param image: Image.
-
-    :param keypoints: Detected keypoints.
-
-    :param mask: Mask specifying where to look for keypoints (optional). It must be a char matrix with non-zero values in the region of interest.
-
-.. ocv:function:: void FeatureDetector::detect( const vector<Mat>& images,                                                            vector<vector<KeyPoint> >& keypoints,                                                             const vector<Mat>& masks=vector<Mat>() ) const
 
     :param images: Image set.
 
-    :param keypoints: Collection of keypoints detected in input images. ``keypoints[i]`` is a set of keypoints detected in ``images[i]`` .
+    :param keypoints: The detected keypoints. In the second variant of the method ``keypoints[i]`` is a set of keypoints detected in ``images[i]`` .
 
-    :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]`` .                     Each element of the ``masks``  vector must be a char matrix with non-zero values in the region of interest.
+    :param mask: Mask specifying where to look for keypoints (optional). It must be a 8-bit integer matrix with non-zero values in the region of interest.
+
+    :param masks: Masks for each input image specifying where to look for keypoints (optional). ``masks[i]`` is a mask for ``images[i]``.
 
 FeatureDetector::read
 -------------------------

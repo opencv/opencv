@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import cv
+import cv2.cv as cv
 
 def is_rect_nonzero(r):
     (_,_,w,h) = r

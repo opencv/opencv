@@ -230,9 +230,9 @@ createOpenGLCallback
 ------------------------
 Creates a callback function called to draw OpenGL on top the the image display by ``windowname``.
 
-.. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata CV_DEFAULT(NULL), double angle CV_DEFAULT(-1), double zmin CV_DEFAULT(-1), double zmax CV_DEFAULT(-1)
+.. ocv:function:: void createOpenGLCallback( const string& window_name, OpenGLCallback callbackOpenGL, void* userdata =NULL, double angle=-1, double zmin=-1, double zmax=-1)
 
-.. ocv:cfunction:: void cvCreateOpenGLCallback( const char* windowName, CvOpenGLCallback callbackOpenGL, void* userdata=NULL, double angle=-1, double zmin=-1, double zmax=-1
+.. ocv:cfunction:: void cvCreateOpenGLCallback( const char* windowName, CvOpenGLCallback callbackOpenGL, void* userdata=NULL, double angle=-1, double zmin=-1, double zmax=-1 )
 
     :param window_name: Name of the window.
 
@@ -308,9 +308,9 @@ createButton
 ----------------
 Attaches a button to the control panel.
 
-.. ocv:function:: createButton( const string& button_name CV_DEFAULT(NULL),ButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL), int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0))
+.. ocv:function:: createButton( const string& button_name=NULL, ButtonCallback on_change=NULL, void* userdata=NULL, int button_type=CV_PUSH_BUTTON, int initial_button_state=0 )
 
-.. ocv:cfunction:: cvCreateButton( const char* buttonName=NULL, CvButtonCallback onChange=NULL, void* userdata=NULL, int buttonType=CV_PUSH_BUTTON, int initialButtonState=0
+.. ocv:cfunction:: cvCreateButton( const char* buttonName=NULL, CvButtonCallback onChange=NULL, void* userdata=NULL, int buttonType=CV_PUSH_BUTTON, int initialButtonState=0 )
 
     :param  button_name: Name of the button.
 

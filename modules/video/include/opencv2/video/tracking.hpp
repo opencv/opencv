@@ -259,15 +259,15 @@ CV_EXPORTS_W double calcGlobalOrientation( InputArray orientation, InputArray ma
                                            double duration );
 
 CV_EXPORTS_W void segmentMotion(InputArray mhi, OutputArray segmask,
-                                vector<Rect>& boundingRects,
+                                CV_OUT vector<Rect>& boundingRects,
                                 double timestamp, double segThresh);
 
 //! updates the object tracking window using CAMSHIFT algorithm
-CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_OUT CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
 
 //! updates the object tracking window using meanshift algorithm
-CV_EXPORTS_W int meanShift( InputArray probImage, CV_IN_OUT Rect& window,
+CV_EXPORTS_W int meanShift( InputArray probImage, CV_OUT CV_IN_OUT Rect& window,
                             TermCriteria criteria );
 
 /*!
@@ -318,12 +318,13 @@ enum { OPTFLOW_USE_INITIAL_FLOW=4, OPTFLOW_FARNEBACK_GAUSSIAN=256 };
 CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                            InputArray prevPts, CV_OUT InputOutputArray nextPts,
                            OutputArray status, OutputArray err,
-                           Size winSize=Size(15,15), int maxLevel=3,
+                           Size winSize=Size(21,21), int maxLevel=3,
                            TermCriteria criteria=TermCriteria(
                             TermCriteria::COUNT+TermCriteria::EPS,
                             30, 0.01),
                            double derivLambda=0.5,
-                           int flags=0 );
+                           int flags=0,
+                           double minEigThreshold=1e-4);
 
 //! computes dense optical flow using Farneback algorithm
 CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,

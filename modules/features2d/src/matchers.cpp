@@ -328,6 +328,10 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     {
         dm = new BruteForceMatcher<L2<float> >();
     }
+    else if( !descriptorMatcherType.compare( "BruteForce-SL2" ) ) // Squared L2
+    {
+        dm = new BruteForceMatcher<SL2<float> >();
+    }
     else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
         dm = new BruteForceMatcher<L1<float> >();
@@ -345,10 +349,10 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
 }
 
 /*
- * BruteForce L2 specialization
+ * BruteForce SL2 and L2 specialization
  */
 template<>
-void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
+void BruteForceMatcher<SL2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
                                               const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN
@@ -427,7 +431,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
                     break;
 
                 e_allDists[bestImgIdx](bestTrainIdx) = -std::numeric_limits<float>::max();
-                curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, sqrt((-2)*totalMaxCoeff + queryNorm2)) );
+                curMatches->push_back( DMatch(qIdx, bestTrainIdx, bestImgIdx, (-2)*totalMaxCoeff + queryNorm2) );
             }
             std::sort( curMatches->begin(), curMatches->end() );
         }
@@ -436,7 +440,7 @@ void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, v
 }
 
 template<>
-void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+void BruteForceMatcher<SL2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                                                      const vector<Mat>& masks, bool compactResult )
 {
 #ifndef HAVE_EIGEN
@@ -492,7 +496,7 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
                 {
                     if( masks.empty() || isPossibleMatch(masks[iIdx], qIdx, tIdx) )
                     {
-                        float d =  sqrt((-2)*e_allDists[iIdx](tIdx) + queryNorm2);
+                        float d =  (-2)*e_allDists[iIdx](tIdx) + queryNorm2;
                         if( d < maxDistance )
                             curMatches->push_back( DMatch( qIdx, tIdx, iIdx, d ) );
                     }
@@ -502,6 +506,40 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
         }
     }
 #endif
+}
+
+inline void sqrtDistance( vector<vector<DMatch> >& matches )
+{
+    for( size_t imgIdx = 0; imgIdx < matches.size(); imgIdx++ )
+    {
+        for( size_t matchIdx = 0; matchIdx < matches[imgIdx].size(); matchIdx++ )
+        {
+            matches[imgIdx][matchIdx].distance = std::sqrt( matches[imgIdx][matchIdx].distance );
+        }
+    }
+}
+
+template<>
+void BruteForceMatcher<L2<float> >::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
+                                              const vector<Mat>& masks, bool compactResult )
+{
+    BruteForceMatcher<SL2<float> > matcherSL2;
+    matcherSL2.add( getTrainDescriptors() );
+    matcherSL2.knnMatch( queryDescriptors, matches, knn, masks, compactResult );
+
+    sqrtDistance( matches );
+}
+
+template<>
+void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+                                                     const vector<Mat>& masks, bool compactResult )
+{
+    const float maxDistance2 = maxDistance * maxDistance;
+    BruteForceMatcher<SL2<float> > matcherSL2;
+    matcherSL2.add( getTrainDescriptors() );
+    matcherSL2.radiusMatch( queryDescriptors, matches, maxDistance2, masks, compactResult );
+
+    sqrtDistance( matches );
 }
 
 /*
@@ -540,6 +578,195 @@ void FlannBasedMatcher::train()
         mergedDescriptors.set( trainDescCollection );
         flannIndex = new flann::Index( mergedDescriptors.getDescriptors(), *indexParams );
     }
+}
+
+void FlannBasedMatcher::read( const FileNode& fn)
+{
+     if (indexParams == 0)
+         indexParams = new flann::IndexParams();
+
+     FileNode ip = fn["indexParams"];
+     CV_Assert(ip.type() == FileNode::SEQ);
+
+     for(size_t i = 0; i < ip.size(); ++i)
+     {
+        CV_Assert(ip[i].type() == FileNode::MAP);
+        std::string name =  (std::string)ip[i]["name"];
+        int type =  (int)ip[i]["type"];
+
+        switch(type)
+        {
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
+            indexParams->setInt(name, (int) ip[i]["value"]);
+            break;
+        case CV_32F:
+            indexParams->setFloat(name, (float) ip[i]["value"]);
+            break;
+        case CV_64F:
+            indexParams->setDouble(name, (double) ip[i]["value"]);
+            break;
+        case CV_USRTYPE1:
+            indexParams->setString(name, (std::string) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,2):
+            indexParams->setBool(name, (int) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,3):
+            indexParams->setAlgorithm(name, (int) ip[i]["value"]);
+            break;
+        };
+     }
+
+     if (searchParams == 0)
+         searchParams = new flann::SearchParams();
+
+     FileNode sp = fn["searchParams"];
+     CV_Assert(sp.type() == FileNode::SEQ);
+
+     for(size_t i = 0; i < sp.size(); ++i)
+     {
+        CV_Assert(sp[i].type() == FileNode::MAP);
+        std::string name =  (std::string)sp[i]["name"];
+        int type =  (int)sp[i]["type"];
+
+        switch(type)
+        {
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
+            searchParams->setInt(name, (int) sp[i]["value"]);
+            break;
+        case CV_32F:
+            searchParams->setFloat(name, (float) ip[i]["value"]);
+            break;
+        case CV_64F:
+            searchParams->setDouble(name, (double) ip[i]["value"]);
+            break;
+        case CV_USRTYPE1:
+            searchParams->setString(name, (std::string) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,2):
+            searchParams->setBool(name, (int) ip[i]["value"]);
+            break;
+        case CV_MAKETYPE(CV_USRTYPE1,3):
+            searchParams->setAlgorithm(name, (int) ip[i]["value"]);
+            break;
+        };
+     }
+
+    flannIndex.release();
+}
+
+void FlannBasedMatcher::write( FileStorage& fs) const
+{
+     fs << "indexParams" << "[";
+
+     if (indexParams != 0)
+     {
+         std::vector<std::string> names;
+         std::vector<int> types;
+         std::vector<std::string> strValues;
+         std::vector<double> numValues;
+
+         indexParams->getAll(names, types, strValues, numValues);
+
+         for(size_t i = 0; i < names.size(); ++i)
+         {
+             fs << "{" << "name" << names[i] << "type" << types[i] << "value";
+             switch(types[i])
+             {
+             case CV_8U:
+                 fs << (uchar)numValues[i];
+                 break;
+             case CV_8S:
+                 fs << (char)numValues[i];
+                 break;
+             case CV_16U:
+                 fs << (ushort)numValues[i];
+                 break;
+             case CV_16S:
+                 fs << (short)numValues[i];
+                 break;
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
+                 fs << (int)numValues[i];
+                 break;
+             case CV_32F:
+                 fs << (float)numValues[i];
+                 break;
+             case CV_64F:
+                 fs << (double)numValues[i];
+                 break;
+             case CV_USRTYPE1:
+                 fs << strValues[i];
+                 break;
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
+             }
+             fs << "}";
+         }
+     }
+
+     fs << "]" << "searchParams" << "[";
+
+     if (searchParams != 0)
+     {
+         std::vector<std::string> names;
+         std::vector<int> types;
+         std::vector<std::string> strValues;
+         std::vector<double> numValues;
+
+         searchParams->getAll(names, types, strValues, numValues);
+
+         for(size_t i = 0; i < names.size(); ++i)
+         {
+             fs << "{" << "name" << names[i] << "type" << types[i] << "value";
+             switch(types[i])
+             {
+             case CV_8U:
+                 fs << (uchar)numValues[i];
+                 break;
+             case CV_8S:
+                 fs << (char)numValues[i];
+                 break;
+             case CV_16U:
+                 fs << (ushort)numValues[i];
+                 break;
+             case CV_16S:
+                 fs << (short)numValues[i];
+                 break;
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
+                 fs << (int)numValues[i];
+                 break;
+             case CV_32F:
+                 fs << (float)numValues[i];
+                 break;
+             case CV_64F:
+                 fs << (double)numValues[i];
+                 break;
+             case CV_USRTYPE1:
+                 fs << strValues[i];
+                 break;
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
+             }
+             fs << "}";
+         }
+     }
+     fs << "]";
 }
 
 bool FlannBasedMatcher::isMaskSupported() const
@@ -603,7 +830,7 @@ void FlannBasedMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vec
         Mat queryDescriptorsRow = queryDescriptors.row(qIdx);
         Mat indicesRow = indices.row(qIdx);
         Mat distsRow = dists.row(qIdx);
-        flannIndex->radiusSearch( queryDescriptorsRow, indicesRow, distsRow, maxDistance*maxDistance, *searchParams );
+        flannIndex->radiusSearch( queryDescriptorsRow, indicesRow, distsRow, maxDistance*maxDistance, count, *searchParams );
     }
 
     convertToDMatches( mergedDescriptors, indices, dists, matches );

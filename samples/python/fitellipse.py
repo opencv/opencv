@@ -13,7 +13,7 @@ Python implementation by: Roman Stanchak, James Bowman
 import sys
 import urllib2
 import random
-import cv
+import cv2.cv as cv
 
 def contour_iterator(contour):
     while contour:

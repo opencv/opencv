@@ -5,6 +5,7 @@ Geometric Image Transformations
 The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel
 :math:`(x, y)` of the destination image, the functions compute coordinates of the corresponding "donor" pixel in the source image and copy the pixel value:
 
+The functions in this section perform various geometrical transformations of 2D images. They do not change the image content but deform the pixel grid and map this deformed grid to the destination image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from destination to the source. That is, for each pixel :math:`(x, y)` of the destination image, the functions compute    coordinates of the corresponding "donor" pixel in the source image and copy the pixel value:
 .. math::
 
     \texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))
@@ -485,7 +486,7 @@ Applies a perspective transformation to an image.
 
     :param dst: Destination image that has the size  ``dsize``  and the same type as  ``src`` .
     
-	:param M: :math:`3\times 3`  transformation matrix.
+    :param M: :math:`3\times 3`  transformation matrix.
 
     :param dsize: Size of the destination image.
 

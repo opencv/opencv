@@ -169,7 +169,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
             CvRect r = ((CvContour*)contour)->rect;
             if( pt.x < r.x || pt.y < r.y ||
                 pt.x >= r.x + r.width || pt.y >= r.y + r.height )
-                return -100;
+                return -1;
         }
     }
     else if( CV_IS_SEQ_CHAIN(contour) )
@@ -214,7 +214,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
             counter += dist > 0;
         }
 
-        result = counter % 2 == 0 ? -100 : 100;
+        result = counter % 2 == 0 ? -1 : 1;
     }
     else
     {
@@ -265,7 +265,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
                 counter += dist > 0;
             }
 
-            result = counter % 2 == 0 ? -100 : 100;
+            result = counter % 2 == 0 ? -1 : 1;
         }
         else
         {

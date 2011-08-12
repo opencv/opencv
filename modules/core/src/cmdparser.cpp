@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include "iostream"
 
 using namespace std;
 using namespace cv;
@@ -6,27 +7,44 @@ using namespace cv;
 void helpParser()
 {
     printf("\nThe CommandLineParser class is designed for command line arguments parsing\n"
+           "Keys map: \n"
+           "Before you start to work with CommandLineParser you have to create a map for keys.\n"
+           "    It will look like this\n"
+           "    const char* keys =\n"
+           "    {\n"
+           "        {    s|  string|  123asd |string parameter}\n"
+           "        {    d|  digit |  100    |digit parameter }\n"
+           "        {    c|noCamera|false    |without camera  }\n"
+           "        {    1|        |some text|help            }\n"
+           "        {    2|        |333      |another help    }\n"
+           "    };\n"
+           "Usage syntax: \n"
+           "    \"{\" - start of parameter string.\n"
+           "    \"}\" - end of parameter string\n"
+           "    \"|\" - separator between short name, full name, default value and help\n"
            "Supported syntax: \n"
-           "    --key1=arg1 or --key3 <The keys with '--' can have argument.\n"
-                                     "If it has argument, you should assign it through '=' sign> \n"
-           "    -key2=arg2 or -key2  <The keys witn '-' can have argument \n"
-                                    "If it has argument, you should assign it through '=' sign> \n"
+           "    --key1=arg1  <If a key with '--' must has an argument\n"
+           "                  you have to assign it through '=' sign.> \n"
+           "<If the key with '--' doesn't have any argument, it means that it is a bool key>\n"
+           "    -key2=arg2   <If a key with '-' must has an argument \n"
+           "                  you have to assign it through '=' sign.> \n"
+           "If the key with '-' doesn't have any argument, it means that it is a bool key\n"
            "    key3                 <This key can't has any parameter> \n"
            "Usage: \n"
            "      Imagine that the input parameters are next:\n"
-           "                -k=10 --key --db=-10.11 -key1 argument --inputFile=lena.jpg\n"
-           "parser.get<int>(\"k\")<If you need to take k value.\n"
-           "                    It also works with 'unsigned int', 'double', 'float' and 'string' types>\n"
-           "parser.get<double>(\"db\", 99.99)<If you need to take db value.\n"
-           "                                If its value is empty, you will get default value 99.99>\n"
-           "                                It also works with 'int', 'unsigned int', 'float' and 'string' types\n"
-           "parser.get<bool>(\"key\")<The method return 'true', if 'key' was defined in command line\n"
-           "                          and it will return 'false' otherwise.>\n"
-           "parser.get<bool>(\"key1\")<The method return 'true', if 'key' was defined in command line\n"
-           "                          and it will return 'false' otherwise.>\n"
-           "parser.get<stirng>(\"0\")<If you need to take argument. It's the first parameter without '-' or '--' increment \n"
-           "                          and without value. It has index 0. The second parameter of this type will have index 1>\n"
-           "                          It also works with 'int', 'unsigned int', 'double' and 'float' types\n\n"
+           "                -s=string_value --digit=250 --noCamera lena.jpg 10000\n"
+           "    CommandLineParser parser(argc, argv, keys) - create a parser object\n"
+           "    parser.get<string>(\"s\" or \"string\") will return you first parameter value\n"
+           "    parser.get<string>(\"s\", false or \"string\", false) will return you first parameter value\n"
+           "                                                                without spaces in end and begin\n"
+           "    parser.get<int>(\"d\" or \"digit\") will return you second parameter value.\n"
+           "                    It also works with 'unsigned int', 'double', and 'float' types>\n"
+           "    parser.get<bool>(\"c\" or \"noCamera\") will return you true .\n"
+           "                                If you enter this key in commandline>\n"
+           "                                It return you false otherwise.\n"
+           "    parser.get<string>(\"1\") will return you the first argument without parameter (lena.jpg) \n"
+           "    parser.get<int>(\"2\") will return you the second argument without parameter (10000)\n"
+           "                          It also works with 'unsigned int', 'double', and 'float' types \n"
            );
 }
 
@@ -37,166 +55,179 @@ vector<string> split_string(const string& str, const string& delimiters)
     string::size_type pos     = str.find_first_of(delimiters, lastPos);
     while (string::npos != pos || string::npos != lastPos)
     {
+
         res.push_back(str.substr(lastPos, pos - lastPos));
         lastPos = str.find_first_not_of(delimiters, pos);
+        if (str[pos + 1] == '|' && str[pos] == '|')
+        {
+            res.push_back("");
+            if(str[pos + 2] == '|')
+                res.push_back("");
+        }
+        if (str[pos + 1] == '\0')
+            res.push_back("");
         pos = str.find_first_of(delimiters, lastPos);
     }
 
     return res;
 }
 
-CommandLineParser::CommandLineParser(int argc, const char* argv[])
+CommandLineParser::CommandLineParser(int argc, const char* argv[], const char* keys)
 {
-    std::string cur_name;
+
+    std::string keys_buffer;
+    std::string values_buffer;
     std::string buffer;
-    std::stringstream str_buff(std::stringstream::in | std::stringstream::out);
-    std::map<std::string, std::string >::iterator it;
-    int find_symbol;
-    int index = 0;
+    std::string curName;
+    std::vector<string> keysVector;
+    std::vector<string> paramVector;
+    std::map<std::string, std::vector<std::string> >::iterator it;
+    size_t flagPosition;
+    int currentIndex = 1;
+    bool isFound = false;
+    bool withNoKey = false;
+    bool hasValueThroughEq = false;
 
-
-    for(int i = 1; i < argc; i++)
+    keys_buffer = keys;
+    while (!keys_buffer.empty())
     {
 
-        if(!argv[i])
-            break;
-        cur_name = argv[i];
-        if((cur_name.find('-') == 0) && ((int)cur_name.find('=') != -1) &&
-           (cur_name.find('=') != (cur_name.length() - 1)))
-        {
-            while (cur_name.find('-') == 0)
-                cur_name.erase(0,1);
+        flagPosition = keys_buffer.find_first_of('}');
+        flagPosition++;
+        buffer = keys_buffer.substr(0, flagPosition);
+        keys_buffer.erase(0, flagPosition);
 
-            buffer = cur_name;
-            find_symbol = (int)cur_name.find('=');
-            cur_name.erase(find_symbol);
-            buffer.erase(0, find_symbol + 1);
-            if (data.find(cur_name) != data.end())
+        flagPosition = buffer.find('{');
+        if (flagPosition != buffer.npos)
+            buffer.erase(flagPosition, (flagPosition + 1));
+
+        flagPosition = buffer.find('}');
+        if (flagPosition != buffer.npos)
+            buffer.erase(flagPosition);
+
+        paramVector = split_string(buffer, "|");
+        buffer = paramVector[0];
+        if (atoi(buffer.c_str()) == 0)
+            buffer = buffer + '|' + paramVector[1];
+
+        paramVector.erase(paramVector.begin(), paramVector.begin() + 2);
+        data[buffer] = paramVector;
+    }
+
+    buffer.clear();
+    keys_buffer.clear();
+    paramVector.clear();
+    for (int i = 1; i < argc; i++)
+    {
+        if (!argv[i])
+            break;
+        curName = argv[i];
+        if (curName.find('-') == 0 && ((curName[1] < '0') || (curName[1] > '9')))
+        {
+            while (curName.find('-') == 0)
+                curName.erase(curName.begin(), (curName.begin() + 1));
+        }
+            else
+                withNoKey = true;
+        if (curName.find('=') != curName.npos)
+        {
+            hasValueThroughEq = true;
+            buffer = curName;
+            curName.erase(curName.find('='));
+            buffer.erase(0, (buffer.find('=') + 1));
+        }
+
+        for(it = data.begin(); it != data.end(); it++)
+        {
+            keys_buffer = it->first;
+            keysVector = split_string(keys_buffer, "| ");
+            if (keysVector.size() == 1)
+                keysVector.push_back("");
+            values_buffer = it->second[0];
+            if (((curName == keysVector[0]) || (curName == keysVector[1])) && hasValueThroughEq)
             {
-                printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
-                       , cur_name.c_str());
-                printf("Constructor will not continue its work since this moment.\n"
-                       "Please enter parameters without dublicates\n");
-                helpParser();
-                data.clear();
+                it->second[0] = buffer;
+                isFound = true;
                 break;
             }
-                else
-                    data[cur_name] = buffer;
+
+            if (!hasValueThroughEq && (values_buffer.find("false") == values_buffer.npos) &&
+                ((curName == keysVector[0]) || (curName == keysVector[1])))
+
+            {
+                it->second[0] = argv[++i];
+                isFound = true;
+                break;
+            }
+
+            if (!hasValueThroughEq &&  (values_buffer.find("false") != values_buffer.npos)
+                && ((curName == keysVector[0]) || (curName == keysVector[1])))
+
+            {
+                it->second[0] = "true";
+                isFound = true;
+                break;
+            }
+
+            if (withNoKey)
+            {
+                std::string noKeyStr = it->first;
+                if(atoi(noKeyStr.c_str()) == currentIndex)
+                {
+                    it->second[0] = curName;
+                    currentIndex++;
+                    isFound = true;
+                    break;
+                }
+            }
         }
-            else if (cur_name.find('=') == 0)
-                {
-                    printf("The next key is wrong: key= %s\n", cur_name.c_str());
-                    printf("Constructor will not continue its work since this moment.\n"
-                           "Please enter parameters without any mistakes\n");
-                    helpParser();
-                    data.clear();
-                    break;
-                }
-            else if(((int)cur_name.find('-') == -1) && ((int)cur_name.find('=') != -1))
-                {
-                    printf("The next key must be defined with '--' or '-' increment: key= %s\n", cur_name.c_str());
-                    printf("Constructor will not continue its work since this moment.\n"
-                           "Please enter parameters without any mistakes\n");
-                    helpParser();
-                    data.clear();
-                    break;
-                }
-            else if (cur_name.find('=') == (cur_name.length() - 1))
-                {
-                    printf("The next key must have argument after '=': key= %s\n", cur_name.c_str());
-                    printf("Constructor will not continue its work since this moment.\n"
-                           "Please enter parameters without any mistakes\n");
-                    helpParser();
-                    data.clear();
-                    break;
-                }
-            else if ((cur_name.find('-') == 0) && ((cur_name[1] < '0') || (cur_name[1] > '9')) )
-                {
-                    while (cur_name.find('-') == 0)
-                    cur_name.erase(0,1);
 
-                    for(it = data.begin(); it != data.end(); it++)
-                    {
-                        if (it->first == cur_name)
-                        {
-                            printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
-                                   , cur_name.c_str());
-                            printf("Constructor will not continue its work since this moment.\n"
-                                   "Please enter parameters without dublicates\n");
-                            helpParser();
-                            data.clear();
-                            break;
-                        }
-                    }
-                    data[cur_name] = "true";
-                }
-            else
-                {
-                    str_buff << index;
-                    for(it = data.begin(); it != data.end(); it++)
-                    {
-                        if (it->second == cur_name)
-                        {
-                            printf("CommandLineParser constructor found dublicating parameters for name=%s\n"
-                                   , cur_name.c_str());
-                            printf("Constructor will not continue its work since this moment.\n"
-                                   "Please enter parameters without dublicates\n");
-                            helpParser();
-                            data.clear();
-                            break;
-                        }
-                    }
-                    data[str_buff.str()] = cur_name;
-                    str_buff.seekp(0);
-                    index++;
-                }
-
+        withNoKey = false;
+        hasValueThroughEq = false;
+        if(!isFound)
+            printf("The current parameter is not defined: %s\n", curName.c_str());
+        isFound = false;
     }
+
+
 }
 
-bool CommandLineParser::has(const std::string& keys) const
+bool CommandLineParser::has(const std::string& keys)
 {
-    vector<string> names=split_string(keys, " |");
-    for(size_t j=0; j < names.size(); j++) {
-        if (data.find(names[j])!=data.end())
+    std::map<std::string, std::vector<std::string> >::iterator it;
+    std::vector<string> keysVector;
+    for(it = data.begin(); it != data.end(); it++)
+    {
+        keysVector = split_string(it->first, "| ");
+        if (keysVector.size() == 1)
+            keysVector.push_back("");
+        if ((keys == keysVector[0]) || (keys == keysVector[1]))
             return true;
     }
     return false;
 }
 
-std::string CommandLineParser::getString(const std::string& keys) const
+std::string CommandLineParser::getString(const std::string& keys)
 {
-    vector<string> names=split_string(keys, " |");
+    std::map<std::string, std::vector<std::string> >::iterator it;
+    std::vector<string> valueVector;
 
-    int found_index=-1;
-    for(size_t j=0; j < names.size(); j++) {
-        const string& cur_name=names[j];
-        bool is_cur_found=has(cur_name);
-
-        if (is_cur_found && (found_index >= 0)) {
-            string str_exception="dublicating parameters for "
-                "name='" + names[found_index] + "' and name='"+cur_name+"'";
-            CV_Error(CV_StsParseError, str_exception);
-        }
-
-        if (is_cur_found)
-            found_index=j;
+    for(it = data.begin(); it != data.end(); it++)
+    {
+        valueVector = split_string(it->first, "| ");
+        if (valueVector.size() == 1)
+            valueVector.push_back("");
+        if ((keys == valueVector[0]) || (keys == valueVector[1]))
+            return it->second[0];
     }
-
-    if (found_index<0)
-        return string();
-    return data.find(names[found_index])->second;
+    return string();
 }
 
 template<typename _Tp>
- _Tp CommandLineParser::fromStringNumber(const std::string& str) //the default conversion function for numbers
+ _Tp CommandLineParser::fromStringNumber(const std::string& str)//the default conversion function for numbers
 {
-    if (str.empty())
-        CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
-
     const char* c_str=str.c_str();
-    if((!isdigit(c_str[0]))
+    if ((!isdigit(c_str[0]))
         &&
         (
             (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
@@ -204,71 +235,77 @@ template<typename _Tp>
     )
 
     {
-        CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
+        printf("This string cannot be converted to a number. Zero will be returned %s\n ", str.c_str());
+        return _Tp();
     }
 
     return  getData<_Tp>(str);
 }
 
-template<typename _Tp>
-static _Tp getData(const std::string& str)
-{
-    _Tp res;
-    std::stringstream s1(str);
-    s1 >> res;
-    return res;
-}
-
-template<typename _Tp>
-static _Tp fromStringNumber(const std::string& str)//the default conversion function for numbers
-{
-    
-    if (str.empty())
-        CV_Error(CV_StsParseError, "Empty string cannot be converted to a number");
-    
-    const char* c_str=str.c_str();
-    if( !isdigit(c_str[0]) &&
-       (c_str[0] != '-' || strlen(c_str) <= 1 || !isdigit(c_str[1]) ))
-        CV_Error(CV_StsParseError, "The string '"+ str +"' cannot be converted to a number");
-    
-    return  getData<_Tp>(str);
-}
+ void CommandLineParser::printParams()
+ {
+     std::map<std::string, std::vector<std::string> >::iterator it;
+     std::vector<string> keysVector;
+     for(it = data.begin(); it != data.end(); it++)
+     {
+         keysVector = split_string(it->first, "| ");
+         if (keysVector.size() == 1)
+             keysVector.push_back("");
+         printf("\t%s [%8s] (%12s - by default) - %s\n", keysVector[0].c_str(),
+                keysVector[1].c_str(), it->second[0].c_str(), it->second[1].c_str());
+     }
+ }
 
 template<>
-bool CommandLineParser::get<bool>(const std::string& name, const bool& /*default_value*/)
+bool CommandLineParser::get<bool>(const std::string& name, bool space_delete)
 {
-    if (!has(name))
+    std::string str_buf = getString(name);
+    if (space_delete)
+    {
+        while (str_buf.find_first_of(' ') == 0)
+            str_buf.erase(0, 1);
+        while (str_buf.find_last_of(' ') == (str_buf.length() - 1))
+            str_buf.erase(str_buf.end() - 1, str_buf.end());
+    }
+    if (str_buf == "false")
         return false;
     return true;
 }
-
 template<>
-std::string CommandLineParser::analyzeValue<std::string>(const std::string& str)
+std::string CommandLineParser::analizeValue<std::string>(const std::string& str, bool space_delete)
 {
+    if (space_delete)
+    {
+        std::string str_buf = str;
+        while (str_buf.find_first_of(' ') == 0)
+            str_buf.erase(0, 1);
+        while (str_buf.find_last_of('-') == (str.length() - 1))
+            str_buf.erase(str_buf.end() - 1, str_buf.end());
+        return str_buf;
+    }
     return str;
 }
 
 template<>
-int CommandLineParser::analyzeValue<int>(const std::string& str)
+int CommandLineParser::analizeValue<int>(const std::string& str, bool space_delete)
 {
     return fromStringNumber<int>(str);
 }
 
 template<>
-unsigned int CommandLineParser::analyzeValue<unsigned int>(const std::string& str)
+unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str, bool space_delete)
 {
     return fromStringNumber<unsigned int>(str);
 }
 
 template<>
-float CommandLineParser::analyzeValue<float>(const std::string& str)
+float CommandLineParser::analizeValue<float>(const std::string& str, bool space_delete)
 {
     return fromStringNumber<float>(str);
 }
 
 template<>
-double CommandLineParser::analyzeValue<double>(const std::string& str)
+double CommandLineParser::analizeValue<double>(const std::string& str, bool space_delete)
 {
     return fromStringNumber<double>(str);
 }
-

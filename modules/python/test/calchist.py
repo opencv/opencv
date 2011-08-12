@@ -1,7 +1,7 @@
 # Calculating and displaying 2D Hue-Saturation histogram of a color image
 
 import sys
-import cv
+import cv2.cv as cv
 
 def hs_histogram(src):
     # Convert to HSV

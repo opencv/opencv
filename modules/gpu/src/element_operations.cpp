@@ -68,6 +68,8 @@ void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(
 void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
 
+void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&)  { throw_nogpu(); }
+
 #else
 
 ////////////////////////////////////////////////////////////////////////
@@ -96,16 +98,20 @@ namespace
         switch (src1.type())
         {
         case CV_8UC1:
-            nppSafeCall( npp_func_8uc1(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz, 0) );
+            nppSafeCall( npp_func_8uc1(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 0) );
             break;
         case CV_8UC4:
-            nppSafeCall( npp_func_8uc4(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz, 0) );
+            nppSafeCall( npp_func_8uc4(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, 0) );
             break;
         case CV_32SC1:
-            nppSafeCall( npp_func_32sc1(src1.ptr<Npp32s>(), src1.step, src2.ptr<Npp32s>(), src2.step, dst.ptr<Npp32s>(), dst.step, sz) );
+            nppSafeCall( npp_func_32sc1(src1.ptr<Npp32s>(), static_cast<int>(src1.step), src2.ptr<Npp32s>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp32s>(), static_cast<int>(dst.step), sz) );
             break;
         case CV_32FC1:
-            nppSafeCall( npp_func_32fc1(src1.ptr<Npp32f>(), src1.step, src2.ptr<Npp32f>(), src2.step, dst.ptr<Npp32f>(), dst.step, sz) );
+            nppSafeCall( npp_func_32fc1(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
+                dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
             break;
         default:
             CV_Assert(!"Unsupported source type");
@@ -139,7 +145,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp32f>(), src.step, (Npp32f)sc[0], dst.ptr<Npp32f>(), dst.step, sz) );
+            nppSafeCall( func(src.ptr<Npp32f>(), static_cast<int>(src.step), (Npp32f)sc[0], dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -161,7 +167,7 @@ namespace
 
             NppStreamHandler h(stream);
 
-            nppSafeCall( func(src.ptr<Npp32fc>(), src.step, nValue, dst.ptr<Npp32fc>(), dst.step, sz) );
+            nppSafeCall( func(src.ptr<Npp32fc>(), static_cast<int>(src.step), nValue, dst.ptr<Npp32fc>(), static_cast<int>(dst.step), sz) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -174,9 +180,22 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
 }
 
+namespace cv { namespace gpu { namespace mathfunc
+{
+    template <typename T>
+    void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
+}}}
+
 void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
+    if (src1.depth() == CV_16S && src2.depth() == CV_16S)
+    {
+        CV_Assert(src1.size() == src2.size());
+        dst.create(src1.size(), src1.type());
+        mathfunc::subtractCaller<short>(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+    }
+    else
+        nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
@@ -211,22 +230,42 @@ void cv::gpu::subtract(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream&
 
 void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
-    static const caller_t callers[] = {0, NppArithmScalar<1, nppiMulC_32f_C1R>::calc, NppArithmScalar<2, nppiMulC_32fc_C1R>::calc};
+    CV_Assert(src.type() == CV_32FC1);
 
-    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+    dst.create(src.size(), src.type());
 
-    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    cudaStream_t cudaStream = StreamAccessor::getStream(stream);
+
+    NppStreamHandler h(cudaStream);
+
+    nppSafeCall( nppiMulC_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), (Npp32f)sc[0], dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
+
+    if (cudaStream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 void cv::gpu::divide(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)
 {
-    typedef void (*caller_t)(const GpuMat& src, const Scalar& sc, GpuMat& dst, cudaStream_t stream);
-    static const caller_t callers[] = {0, NppArithmScalar<1, nppiDivC_32f_C1R>::calc, NppArithmScalar<2, nppiDivC_32fc_C1R>::calc};
+    CV_Assert(src.type() == CV_32FC1);
 
-    CV_Assert(src.type() == CV_32FC1 || src.type() == CV_32FC2);
+    dst.create(src.size(), src.type());
 
-    callers[src.channels()](src, sc, dst, StreamAccessor::getStream(stream));
+    NppiSize sz;
+    sz.width  = src.cols;
+    sz.height = src.rows;
+
+    cudaStream_t cudaStream = StreamAccessor::getStream(stream);
+
+    NppStreamHandler h(cudaStream);
+
+    nppSafeCall( nppiDivC_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), (Npp32f)sc[0], dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
+
+    if (cudaStream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 
@@ -252,16 +291,20 @@ void cv::gpu::absdiff(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
     switch (src1.type())
     {
     case CV_8UC1:
-        nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_8u_C1R(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
         break;
     case CV_8UC4:
-        nppSafeCall( nppiAbsDiff_8u_C4R(src1.ptr<Npp8u>(), src1.step, src2.ptr<Npp8u>(), src2.step, dst.ptr<Npp8u>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_8u_C4R(src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), 
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
         break;
     case CV_32SC1:
-        nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), src1.step, src2.ptr<Npp32s>(), src2.step, dst.ptr<Npp32s>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_32s_C1R(src1.ptr<Npp32s>(), static_cast<int>(src1.step), src2.ptr<Npp32s>(), static_cast<int>(src2.step), 
+            dst.ptr<Npp32s>(), static_cast<int>(dst.step), sz) );
         break;
     case CV_32FC1:
-        nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), src1.step, src2.ptr<Npp32f>(), src2.step, dst.ptr<Npp32f>(), dst.step, sz) );
+        nppSafeCall( nppiAbsDiff_32f_C1R(src1.ptr<Npp32f>(), static_cast<int>(src1.step), src2.ptr<Npp32f>(), static_cast<int>(src2.step), 
+            dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
         break;
     default:
         CV_Assert(!"Unsupported source type");
@@ -285,7 +328,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Strea
 
     NppStreamHandler h(stream);
 
-    nppSafeCall( nppiAbsDiffC_32f_C1R(src1.ptr<Npp32f>(), src1.step, dst.ptr<Npp32f>(), dst.step, sz, (Npp32f)src2[0]) );
+    nppSafeCall( nppiAbsDiffC_32f_C1R(src1.ptr<Npp32f>(), static_cast<int>(src1.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, (Npp32f)src2[0]) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -323,9 +366,9 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         {
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiCompare_8u_C4R(src1.ptr<Npp8u>(), src1.step,
-                src2.ptr<Npp8u>(), src2.step,
-                dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
+            nppSafeCall( nppiCompare_8u_C4R(src1.ptr<Npp8u>(), static_cast<int>(src1.step),
+                src2.ptr<Npp8u>(), static_cast<int>(src2.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppCmpOp[cmpop]) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -341,9 +384,9 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         {
             NppStreamHandler h(stream);
 
-            nppSafeCall( nppiCompare_32f_C1R(src1.ptr<Npp32f>(), src1.step,
-                src2.ptr<Npp32f>(), src2.step,
-                dst.ptr<Npp8u>(), dst.step, sz, nppCmpOp[cmpop]) );
+            nppSafeCall( nppiCompare_32f_C1R(src1.ptr<Npp32f>(), static_cast<int>(src1.step),
+                src2.ptr<Npp32f>(), static_cast<int>(src2.step),
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppCmpOp[cmpop]) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -361,7 +404,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
 
 namespace cv { namespace gpu { namespace mathfunc
 {
-    void bitwiseNotCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src, PtrStep dst, cudaStream_t stream);
+    void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src, PtrStep dst, cudaStream_t stream);
 
     template <typename T>
     void bitwiseMaskNotCaller(int rows, int cols, int cn, const PtrStep src, const PtrStep mask, PtrStep dst, cudaStream_t stream);
@@ -415,17 +458,17 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 
 namespace cv { namespace gpu { namespace mathfunc
 {
-    void bitwiseOrCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+    void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
 
     template <typename T>
     void bitwiseMaskOrCaller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
 
-    void bitwiseAndCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+    void bitwiseAndCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
 
     template <typename T>
     void bitwiseMaskAndCaller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
 
-    void bitwiseXorCaller(int rows, int cols, int elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
+    void bitwiseXorCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
 
     template <typename T>
     void bitwiseMaskXorCaller(int rows, int cols, int cn, const PtrStep src1, const PtrStep src2, const PtrStep mask, PtrStep dst, cudaStream_t stream);
@@ -697,8 +740,8 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), src.step,
-            dst.ptr<Npp32f>(), dst.step, sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
+        nppSafeCall( nppiThreshold_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step),
+            dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz, static_cast<Npp32f>(thresh), NPP_CMP_GREATER) );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -733,6 +776,38 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
     }
 
     return thresh;
+}
+
+////////////////////////////////////////////////////////////////////////
+// pow
+
+namespace cv
+{
+    namespace gpu
+    {
+        namespace mathfunc
+        {
+            template<typename T>
+            void pow_caller(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+        }
+    }
+}
+
+void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
+{    
+    CV_Assert( src.depth() != CV_64F );
+    dst.create(src.size(), src.type());
+
+    typedef void (*caller_t)(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+
+    static const caller_t callers[] = 
+    {
+        mathfunc::pow_caller<unsigned char>,  mathfunc::pow_caller<signed char>, 
+        mathfunc::pow_caller<unsigned short>, mathfunc::pow_caller<short>, 
+        mathfunc::pow_caller<int>, mathfunc::pow_caller<float>
+    };
+
+    callers[src.depth()](src.reshape(1), (float)power, dst.reshape(1), StreamAccessor::getStream(stream));    
 }
 
 #endif

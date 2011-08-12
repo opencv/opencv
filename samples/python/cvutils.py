@@ -1,4 +1,4 @@
-import cv
+import cv2.cv as cv
 import urllib2
 from sys import argv
 

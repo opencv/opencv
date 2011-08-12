@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import cv
+import cv2.cv as cv
 
 class PyrSegmentation:
     def __init__(self, img0):

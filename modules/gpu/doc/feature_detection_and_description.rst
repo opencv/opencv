@@ -3,7 +3,7 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
-.. index:: gpu::SURF_GPU
+
 
 gpu::SURF_GPU
 -------------
@@ -97,9 +97,9 @@ The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descripto
 The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
 
 .. seealso:: 
-:ocv:class:`SURF`
+   :ocv:class:`SURF`
 
-.. index:: gpu::BruteForceMatcher_GPU
+
 
 gpu::BruteForceMatcher_GPU
 --------------------------
@@ -193,10 +193,10 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
 The class ``BruteForceMatcher_GPU`` has an interface similar to the class :ocv:class:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative to save results either to the GPU memory or to the CPU memory. The ``Distance`` template parameter is kept for CPU/GPU interfaces similarity. ``BruteForceMatcher_GPU`` supports only the ``L1<float>``, ``L2<float>``, and ``Hamming`` distance types.
 
 .. seealso:: 
-:ocv:class:`DescriptorMatcher`, 
-:ocv:class:`BruteForceMatcher`
+  :ocv:class:`DescriptorMatcher`, 
+  :ocv:class:`BruteForceMatcher`
 
-.. index:: gpu::BruteForceMatcher_GPU::match
+
 
 gpu::BruteForceMatcher_GPU::match
 -------------------------------------
@@ -207,9 +207,9 @@ gpu::BruteForceMatcher_GPU::match
     Finds the best match for each descriptor from a query set with train descriptors.
 
 .. seealso::
-:ocv:func:`DescriptorMatcher::match` 
+   :ocv:func:`DescriptorMatcher::match` 
 
-.. index:: gpu::BruteForceMatcher_GPU::matchSingle
+
 
 gpu::BruteForceMatcher_GPU::matchSingle
 -------------------------------------------
@@ -227,13 +227,13 @@ gpu::BruteForceMatcher_GPU::matchSingle
 
     :param mask: Mask specifying permissible matches between the input query and train matrices of descriptors.
 
-.. index:: gpu::BruteForceMatcher_GPU::matchCollection
+
 
 gpu::BruteForceMatcher_GPU::matchCollection
 -----------------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::matchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection)
 
-	Finds the best match for each query descriptor from train collection. Results are stored in the GPU memory.
+    Finds the best match for each query descriptor from train collection. Results are stored in the GPU memory.
 
    :param queryDescs: Query set of descriptors.
     
@@ -247,16 +247,16 @@ gpu::BruteForceMatcher_GPU::matchCollection
 
    :param maskCollection: ``GpuMat``  containing a set of masks. It can be obtained from  ``std::vector<GpuMat>``  by  :ocv:func:`gpu::BruteForceMatcher_GPU::makeGpuCollection` or it may contain  a user-defined mask set. This is an empty matrix or one-row matrix where each element is a  ``PtrStep``  that points to one mask.
 
-.. index:: gpu::BruteForceMatcher_GPU::makeGpuCollection
+
 
 gpu::BruteForceMatcher_GPU::makeGpuCollection
 -------------------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>&masks = std::vector<GpuMat>())
 
-	Performs a GPU collection of train descriptors and masks in a suitable format for the 
-	:ocv:func:`gpu::BruteForceMatcher_GPU::matchCollection` function.
+    Performs a GPU collection of train descriptors and masks in a suitable format for the 
+    :ocv:func:`gpu::BruteForceMatcher_GPU::matchCollection` function.
 
-.. index:: gpu::BruteForceMatcher_GPU::matchDownload
+
 
 gpu::BruteForceMatcher_GPU::matchDownload
 ---------------------------------------------
@@ -264,30 +264,21 @@ gpu::BruteForceMatcher_GPU::matchDownload
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::matchDownload(const GpuMat& trainIdx, GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>&matches)
 
-	Downloads ``trainIdx``, ``imgIdx``, and ``distance`` matrices obtained via 
-	:ocv:func:`gpu::BruteForceMatcher_GPU::matchSingle` or 
-	:ocv:func:`gpu::BruteForceMatcher_GPU::matchCollection` to CPU vector with :ocv:class:`DMatch`.
+    Downloads ``trainIdx``, ``imgIdx``, and ``distance`` matrices obtained via 
+    :ocv:func:`gpu::BruteForceMatcher_GPU::matchSingle` or 
+    :ocv:func:`gpu::BruteForceMatcher_GPU::matchCollection` to CPU vector with :ocv:class:`DMatch`.
 
-.. index:: gpu::BruteForceMatcher_GPU::knnMatch
+
 
 gpu::BruteForceMatcher_GPU::knnMatch
 ----------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-    Finds the k best matches for each descriptor from a query set with train descriptors. The function returns detected k (or less if not possible) matches in the increasing order by distance.
+.. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
 
-.. ocv:function:: void knnMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
-
-.. seealso::
-:ocv:func:`DescriptorMatcher::knnMatch` 
-
-.. index:: gpu::BruteForceMatcher_GPU::knnMatch
-
-gpu::BruteForceMatcher_GPU::knnMatch
-----------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat())
 
-    Finds the k best matches for each descriptor from a query set with train descriptors. The function returns detected k (or less if not possible) matches in the increasing order by distance. Results are stored in the GPU memory.
+    Finds the k best matches for each descriptor from a query set with train descriptors. The function returns detected k (or less if not possible) matches in the increasing order by distance.
 
     :param queryDescs: Query set of descriptors.
     :param trainDescs: Training set of descriptors. It is not be added to train descriptors collection stored in the class object.
@@ -299,7 +290,11 @@ gpu::BruteForceMatcher_GPU::knnMatch
 
     :param mask: Mask specifying permissible matches between the input query and train matrices of descriptors.
 
-.. index:: gpu::BruteForceMatcher_GPU::knnMatchDownload
+The third variant of the method stores the results in GPU memory.
+
+.. seealso::
+   :ocv:func:`DescriptorMatcher::knnMatch` 
+
 
 gpu::BruteForceMatcher_GPU::knnMatchDownload
 ------------------------------------------------
@@ -307,28 +302,17 @@ gpu::BruteForceMatcher_GPU::knnMatchDownload
 
     Downloads ``trainIdx`` and ``distance`` matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch` to CPU vector with :ocv:class:`DMatch`. If ``compactResult`` is true, the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
-.. index:: gpu::BruteForceMatcher_GPU::radiusMatch
+
 
 gpu::BruteForceMatcher_GPU::radiusMatch
 -------------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-    For each query descriptor, finds the best matches with a distance less than a given threshold. The function returns detected matches in the increasing order by distance.
-
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >&matches, float maxDistance, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false)
 
-This function works only on devices with the compute capability  :math:`>=` 1.1.
-
-.. seealso::
-:ocv:func:`DescriptorMatcher::radiusMatch` 
-
-.. index:: gpu::BruteForceMatcher_GPU::radiusMatch
-
-gpu::BruteForceMatcher_GPU::radiusMatch
--------------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs, GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance, const GpuMat& mask = GpuMat())
 
-    For each query descriptor, finds the best matches with a distance less than a given threshold (``maxDistance``). The results are stored in the GPU memory.
+    For each query descriptor, finds the best matches with a distance less than a given threshold. The function returns detected matches in the increasing order by distance.
 
     :param queryDescs: Query set of descriptors.
     
@@ -344,13 +328,16 @@ gpu::BruteForceMatcher_GPU::radiusMatch
 
     :param mask: Mask specifying permissible matches between the input query and train matrices of descriptors.
 
-    In contrast to :ocv:func:`gpu::BruteForceMatcher_GPU::knnMatch`, here the results are not sorted by the distance. This function works only on devices with the compute capability >= 1.1.
+The methods work only on devices with the compute capability  :math:`>=` 1.1.
+The third variant of the method stores the results in GPU memory and does not store the points by the distance.
 
-.. index:: gpu::BruteForceMatcher_GPU::radiusMatchDownload
+.. seealso::
+   :ocv:func:`DescriptorMatcher::radiusMatch` 
+
 
 gpu::BruteForceMatcher_GPU::radiusMatchDownload
 ---------------------------------------------------
 .. ocv:function:: void gpu::BruteForceMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
 
-	Downloads ``trainIdx``, ``nMatches`` and ``distance`` matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatch` to CPU vector with :ocv:class:`DMatch`. If ``compactResult`` is true, the ``matches`` vector does not contain matches for fully masked-out query descriptors.
+    Downloads ``trainIdx``, ``nMatches`` and ``distance`` matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU::radiusMatch` to CPU vector with :ocv:class:`DMatch`. If ``compactResult`` is true, the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 

@@ -41,4 +41,6 @@ endif()
 
 target_link_libraries(${the_target} ${traincascade_libs})
 
-install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+if(NOT ANDROID)
+    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+endif()

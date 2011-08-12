@@ -156,7 +156,7 @@ Moves window to the specified position
 
 
 ResizeWindow
-----------
+------------
 Resizes window to the specified size
 
 .. ocv:cfunction:: void cvResizeWindow( const char* name, int width, int height )

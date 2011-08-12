@@ -22,7 +22,7 @@ gpu::add
     :param dst: Destination matrix with the same size and type as ``src1``.
 
 .. seealso:: 
-:ocv:func:`add`
+   :ocv:func:`add`
 
 .. index:: gpu::subtract
 
@@ -41,7 +41,7 @@ gpu::subtract
     :param dst: Destination matrix with the same size and type as ``src1``.
 
 .. seealso:: 
-:ocv:func:`subtract`
+   :ocv:func:`subtract`
 
 
 
@@ -62,7 +62,7 @@ gpu::multiply
     :param dst: Destination matrix with the same size and type as ``src1``.
 
 .. seealso:: 
-:ocv:func:`multiply`
+   :ocv:func:`multiply`
 
 
 .. index:: gpu::divide
@@ -84,7 +84,7 @@ gpu::divide
 This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mode.
 
 .. seealso:: 
-:ocv:func:`divide`
+   :ocv:func:`divide`
 
 
 
@@ -101,7 +101,7 @@ gpu::exp
     :param dst: Destination matrix with the same size and type as ``src``.
 
 .. seealso:: 
-:ocv:func:`exp`
+   :ocv:func:`exp`
 
 
 
@@ -138,7 +138,7 @@ gpu::absdiff
     :param dst: Destination matrix with the same size and type as ``src1``.
 
 .. seealso:: 
-:ocv:func:`absdiff`
+   :ocv:func:`absdiff`
 
 .. index:: gpu::compare
 
@@ -164,7 +164,7 @@ gpu::compare
             * **CMP_NE:** ``src1(.) != src2(.)``
 
 .. seealso:: 
-:ocv:func:`compare`
+  :ocv:func:`compare`
 
 
 .. index:: gpu::bitwise_not
@@ -276,7 +276,7 @@ gpu::min
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: 
-:ocv:func:`min`
+   :ocv:func:`min`
 
 
 
@@ -303,4 +303,4 @@ gpu::max
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: 
-:ocv:func:`max`
+   :ocv:func:`max`

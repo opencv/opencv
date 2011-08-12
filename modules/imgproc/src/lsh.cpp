@@ -117,14 +117,14 @@ public:
       free_nodes.pop_back();
     }
     node& n = nodes[ii];
-    int h1 = h.h1 % bins.size();
+    int h1 = (int)(h.h1 % bins.size());
     n.i = i;
     n.h2 = h.h2;
     n.next = bins[h1];
     bins[h1] = ii;
   }
   virtual void hash_remove(lsh_hash h, int /*l*/, int i) {
-    int h1 = h.h1 % bins.size();
+    int h1 = (int)(h.h1 % bins.size());
     for (int ii = bins[h1], iin, iip = -1; ii != -1; iip = ii, ii = iin) {
       iin = nodes[ii].next;
       if (nodes[ii].h2 == h.h2 && nodes[ii].i == i) {
@@ -137,7 +137,7 @@ public:
     }
   }
   virtual int hash_lookup(lsh_hash h, int /*l*/, int* ret_i, int ret_i_max) {
-    int h1 = h.h1 % bins.size();
+    int h1 = (int)(h.h1 % bins.size());
     int k = 0;
     for (int ii = bins[h1]; ii != -1 && k < ret_i_max; ii = nodes[ii].next)
       if (nodes[ii].h2 == h.h2)

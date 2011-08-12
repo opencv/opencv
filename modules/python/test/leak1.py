@@ -1,4 +1,4 @@
-import cv
+import cv2.cv as cv
 import numpy as np
 cv.NamedWindow('Leak')
 while 1:

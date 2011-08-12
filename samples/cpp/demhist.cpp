@@ -56,22 +56,30 @@ void updateBrightnessContrast( int /*arg*/, void* )
 }
 void help()
 {
-	cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
-			"Call:\n"
-			"demhist [image_name -- Defaults to baboon.jpg]\n" << endl;
+	std::cout << "\nThis program demonstrates the use of calcHist() -- histogram creation.\n"
+	          << "Usage: \n" << "demhist [image_name -- Defaults to baboon.jpg]" << std::endl;
 }
 
-int main( int argc, char** argv )
+const char* keys = 
 {
-    // Load the source image. HighGUI use.
-    image = imread( argc == 2 ? argv[1] : "baboon.jpg", 0 );
+	"{1| |baboon.jpg|input image file}"
+};
 
-    if( image.empty() )
-    {
-        help();
-        return -1;
-    }
-    help();
+int main( int argc, const char** argv )
+{
+	help();
+
+	CommandLineParser parser(argc, argv, keys);
+	string inputImage = parser.get<string>("1");
+
+	// Load the source image. HighGUI use.
+	image = imread( inputImage, 0 );
+	if(image.empty())
+	{
+		std::cerr << "Cannot read image file: " << inputImage << std::endl;
+		return -1;
+	}
+
     namedWindow("image", 0);
     namedWindow("histogram", 0);
 

@@ -40,9 +40,9 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/limits_gpu.hpp"
+#include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vecmath.hpp"
+#include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "internal_shared.hpp"
 
@@ -82,7 +82,9 @@ namespace cv { namespace gpu { namespace mathfunc
     {
         static __device__ __forceinline__ void calc(int x, int y, float x_data, float y_data, float* dst, size_t dst_step, float scale)
         {
-            dst[y * dst_step + x] = scale * atan2f(y_data, x_data);
+            float angle = atan2f(y_data, x_data);
+            angle += (angle < 0) * 2.0 * CV_PI;
+            dst[y * dst_step + x] = scale * angle;
         }
     };
     template <typename Mag, typename Angle>

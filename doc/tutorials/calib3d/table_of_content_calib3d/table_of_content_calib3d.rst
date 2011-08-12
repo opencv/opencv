@@ -5,4 +5,32 @@
 
 Although we got most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out from the 2D images information about the 3D world. 
 
-.. include:: ../../definitions/noContent.rst
+.. include:: ../../definitions/tocDefinitions.rst 
+
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |CameraCalSqChess|   **Title:** :ref:`CameraCalibrationSquareChessBoardTutorial`
+
+                        *Compatibility:* > OpenCV 2.0
+
+                        *Author:* |Author_VictorE|
+
+                        You will use some chessboard images to calibrate your camera.
+
+  ===================== ==============================================
+
+  .. |CameraCalSqChess| image:: images/camera_calibration_square_chess.jpg
+     :height: 90pt
+     :width:  90pt
+
+.. raw:: latex
+
+   \pagebreak
+
+.. toctree::
+   :hidden:
+
+   ../camera_calibration_square_chess/camera_calibration_square_chess

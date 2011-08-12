@@ -261,6 +261,7 @@ void OrbDescriptorExtractor::computeImpl(const cv::Mat& image, std::vector<cv::K
 void OrbDescriptorExtractor::read(const cv::FileNode& fn)
 {
   params_.read(fn);
+  orb_ = ORB(0, params_);
 }
 void OrbDescriptorExtractor::write(cv::FileStorage& fs) const
 {

@@ -1,4 +1,4 @@
-import cv
+import cv2.cv as cv
 import time
 from pydmtx import DataMatrix
 import numpy

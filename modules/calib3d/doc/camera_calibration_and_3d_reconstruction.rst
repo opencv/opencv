@@ -35,6 +35,7 @@ where:
    * :math:`(cx, cy)` is a principal point that is usually at the image center
    * :math:`fx, fy` are the focal lengths expressed in pixel-related units
    
+
 Thus, if an image from the camera is
 scaled by a factor, all of these parameters should
 be scaled (multiplied/divided, respectively) by the same factor. The
@@ -110,9 +111,9 @@ calibrateCamera
 ---------------
 Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
-.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArray rvecs, OutputArray tvecs, int flags=0 )
+.. ocv:function:: double calibrateCamera( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, Size imageSize, InputOutputArray cameraMatrix, InputOutputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags=0 )
 
-.. ocv:pyfunction:: cv2.calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs[, rvecs[, tvecs[, flags]]]) -> retval, cameraMatrix, distCoeffs, rvecs, tvecs
+.. ocv:pyfunction:: cv2.calibrateCamera(objectPoints, imagePoints, imageSize[, cameraMatrix[, distCoeffs[, rvecs[, tvecs[, flags]]]]]) -> retval, cameraMatrix, distCoeffs, rvecs, tvecs
 
 .. ocv:cfunction:: double cvCalibrateCamera2( const CvMat* objectPoints, const CvMat* imagePoints, const CvMat* pointCounts, CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs, CvMat* rvecs=NULL, CvMat* tvecs=NULL, int flags=0 )
 
@@ -136,7 +137,7 @@ Finds the camera intrinsic and extrinsic parameters from several views of a cali
 
     :param rvecs: Output  vector  of rotation vectors (see  :ocv:func:`Rodrigues` ) estimated for each pattern view. That is, each k-th rotation vector together with the corresponding k-th translation vector (see the next output parameter description) brings the calibration pattern from the model coordinate space (in which object points are specified) to the world coordinate space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 
-    :param tvecs: Output  vector  of translation vectors estimated for each pattern view.
+    :param tvecs: Output vector of translation vectors estimated for each pattern view.
 
     :param flags: Different flags that may be zero or a combination of the following values:
 
@@ -179,7 +180,7 @@ The function returns the final re-projection error.
 
 .. note::
 
-    If you use a non-square (=non-NxN) grid and	:ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns bad values (zero distortion coefficients, an image center very far from ``(w/2-0.5,h/2-0.5)``, and/or large differences between :math:`f_x` and :math:`f_y` (ratios of 10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in :ocv:func:`findChessboardCorners` .
+    If you use a non-square (=non-NxN) grid and    :ocv:func:`findChessboardCorners` for calibration, and ``calibrateCamera`` returns bad values (zero distortion coefficients, an image center very far from ``(w/2-0.5,h/2-0.5)``, and/or large differences between :math:`f_x` and :math:`f_y` (ratios of 10:1 or more)), then you have probably used ``patternSize=cvSize(rows,cols)`` instead of using ``patternSize=cvSize(cols,rows)`` in :ocv:func:`findChessboardCorners` .
 
 .. seealso::
 
@@ -534,7 +535,7 @@ Finds an object pose from 3D-2D point correspondences.
     :param imagePoints: Array of corresponding image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, where N is the number of points.  ``vector<Point2f>``  can be also passed here.
 
     :param cameraMatrix: Input camera matrix  :math:`A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}` .
-	
+    
     :param distCoeffs: Input vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 
     :param rvec: Output rotation vector (see  :ocv:func:`Rodrigues` ) that, together with  ``tvec`` , brings points from the model coordinate system to the camera coordinate system.
@@ -597,7 +598,7 @@ Calculates a fundamental matrix from the corresponding points in two images.
     :param points1: Array of  ``N``  points from the first image. The point coordinates should be floating-point (single or double precision).
 
     :param points2: Array of the second image points of the same size and format as  ``points1`` .
-	
+    
     :param method: Method for computing a fundamental matrix.
 
             * **CV_FM_7POINT** for a 7-point algorithm.  :math:`N = 7`
@@ -605,7 +606,7 @@ Calculates a fundamental matrix from the corresponding points in two images.
             * **CV_FM_RANSAC** for the RANSAC algorithm.  :math:`N \ge 8`
             * **CV_FM_LMEDS** for the LMedS algorithm.  :math:`N \ge 8`
     
-	:param param1: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
+    :param param1: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
 
     :param param2: Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of confidence (probability) that the estimated matrix is correct.
 
@@ -779,11 +780,12 @@ getOptimalNewCameraMatrix
 -----------------------------
 Returns the new camera matrix based on the free scaling parameter.
 
-.. ocv:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0)
+.. ocv:function:: Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs, Size imageSize, double alpha, Size newImageSize=Size(), Rect* validPixROI=0, bool centerPrincipalPoint=false)
 
-.. ocv:pyfunction:: cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha[, newImgSize]) -> retval, validPixROI
+.. ocv:pyfunction:: cv2.getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha[, newImgSize[, centerPrincipalPoint]]) -> retval, validPixROI
 
-.. ocv:cfunction:: void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCoeffs, CvSize imageSize, double alpha, CvMat* newCameraMatrix, CvSize newImageSize=cvSize(0, 0), CvRect* validPixROI=0 )
+.. ocv:cfunction:: void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCoeffs, CvSize imageSize, double alpha, CvMat* newCameraMatrix, CvSize newImageSize=cvSize(0, 0), CvRect* validPixROI=0, int centerPrincipalPoint=0)
+
 .. ocv:pyoldfunction:: cv.GetOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, alpha, newCameraMatrix, newImageSize=(0, 0), validPixROI=0) -> None
 
     :param cameraMatrix: Input camera matrix.
@@ -799,6 +801,8 @@ Returns the new camera matrix based on the free scaling parameter.
     :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
 
     :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`StereoRectify` .
+
+    :param centerPrincipalPoint: Optional flag that indicates whether in the new camera matrix the principal point should be at the image center or not. By default, the principal point is chosen to best fit a subset of the source image (determined by ``alpha``) to the corrected image.
     
 The function computes and returns
 the optimal new camera matrix based on the free scaling parameter. By varying  this parameter, you may retrieve only sensible pixels ``alpha=0`` , keep all the original image pixels if there is valuable information in the corners ``alpha=1`` , or get something in between. When ``alpha>0`` , the undistortion result is likely to have some black pixels corresponding to "virtual" pixels outside of the captured distorted image. The original camera matrix, distortion coefficients, the computed new camera matrix, and ``newImageSize`` should be passed to
@@ -848,7 +852,7 @@ Computes partial derivatives of the matrix product for each multiplied matrix.
 
     :param dABdA: First output derivative matrix  ``d(A*B)/dA``  of size  :math:`\texttt{A.rows*B.cols} \times {A.rows*A.cols}` .
     
-    :param dABdA: Second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
+    :param dABdB: Second output derivative matrix  ``d(A*B)/dB``  of size  :math:`\texttt{A.rows*B.cols} \times {B.rows*B.cols}` .
 
 The function computes partial derivatives of the elements of the matrix product
 :math:`A*B` with regard to the elements of each of the two input matrices. The function is used to compute the Jacobian matrices in
@@ -911,7 +915,7 @@ Reprojects a disparity image to 3D space.
 .. ocv:cfunction:: void cvReprojectImageTo3D( const CvArr* disparity, CvArr* _3dImage, const CvMat* Q, int handleMissingValues=0)
 .. ocv:pyoldfunction:: cv.ReprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues=0) -> None
 
-    :param disparity: Input single-channel 16-bit signed or 32-bit floating-point disparity image.
+    :param disparity: Input single-channel 8-bit unsigned, 16-bit signed, 32-bit signed or 32-bit floating-point disparity image.
 
     :param _3dImage: Output 3-channel floating-point image of the same size as  ``disparity`` . Each element of  ``_3dImage(x,y)``  contains 3D coordinates of the point  ``(x,y)``  computed from the disparity map.
 
@@ -1196,11 +1200,11 @@ The method executes the SGBM algorithm on a rectified stereo pair. See ``stereo_
 
 stereoCalibrate
 -------------------
+Calibrates the stereo camera.
+
 .. ocv:function:: double stereoCalibrate( InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2, InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1, InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2, Size imageSize, OutputArray R, OutputArray T, OutputArray E, OutputArray F, TermCriteria term_crit = TermCriteria(TermCriteria::COUNT+                         TermCriteria::EPS, 30, 1e-6), int flags=CALIB_FIX_INTRINSIC )
 
-    Calibrates the stereo camera.
-
-.. ocv:pyfunction:: cv2.stereoCalibrate(objectPoints, imagePoints1, imagePoints2, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize[, R[, T[, E[, F[, criteria[, flags]]]]]]) -> retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F
+.. ocv:pyfunction:: cv2.stereoCalibrate(objectPoints, imagePoints1, imagePoints2, imageSize[, cameraMatrix1[, distCoeffs1[, cameraMatrix2[, distCoeffs2[, R[, T[, E[, F[, criteria[, flags]]]]]]) -> retval, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R, T, E, F
 
 .. ocv:cfunction:: double cvStereoCalibrate( const CvMat* objectPoints, const CvMat* imagePoints1, const CvMat* imagePoints2, const CvMat* pointCounts, CvMat* cameraMatrix1, CvMat* distCoeffs1, CvMat* cameraMatrix2, CvMat* distCoeffs2, CvSize imageSize, CvMat* R, CvMat* T, CvMat* E=0, CvMat* F=0, CvTermCriteria termCrit=cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 30, 1e-6), int flags=CV_CALIB_FIX_INTRINSIC )
 .. ocv:pyoldfunction:: cv.StereoCalibrate( objectPoints, imagePoints1, imagePoints2, pointCounts, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, E=None, F=None, termCrit=(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 30, 1e-6), flags=CV_CALIB_FIX_INTRINSIC)-> None
@@ -1211,8 +1215,7 @@ stereoCalibrate
 
     :param imagePoints2: Vector of vectors of the projections of the calibration pattern points, observed by the second camera.
 
-    :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , 
-	:math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
+    :param cameraMatrix1: Input/output first camera matrix:  :math:`\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}` , :math:`j = 0,\, 1` . If any of  ``CV_CALIB_USE_INTRINSIC_GUESS`` , ``CV_CALIB_FIX_ASPECT_RATIO`` , ``CV_CALIB_FIX_INTRINSIC`` , or  ``CV_CALIB_FIX_FOCAL_LENGTH``  are specified, some or all of the matrix components must be initialized. See the flags description for details.
 
     :param distCoeffs1: Input/output vector of distortion coefficients  :math:`(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6]])`  of 4, 5, or 8 elements. The output vector length depends on the flags.
 
@@ -1245,7 +1248,7 @@ stereoCalibrate
             * **CV_CALIB_FIX_ASPECT_RATIO** Optimize :math:`f^{(j)}_y` . Fix the ratio  :math:`f^{(j)}_x/f^{(j)}_y` .
 
             * **CV_CALIB_SAME_FOCAL_LENGTH** Enforce  :math:`f^{(0)}_x=f^{(1)}_x`  and  :math:`f^{(0)}_y=f^{(1)}_y` .
-			
+            
             * **CV_CALIB_ZERO_TANGENT_DIST** Set tangential distortion coefficients for each camera to zeros and fix there.
 
             * **CV_CALIB_FIX_K1,...,CV_CALIB_FIX_K6** Do not change the corresponding radial distortion coefficient during the optimization. If  ``CV_CALIB_USE_INTRINSIC_GUESS``  is set, the coefficient from the supplied  ``distCoeffs``  matrix is used. Otherwise, it is set to 0.
@@ -1287,10 +1290,9 @@ Similarly to :ocv:func:`calibrateCamera` , the function minimizes the total re-p
 
 stereoRectify
 -----------------
+Computes rectification transforms for each head of a calibrated stereo camera.
 
 .. ocv:function:: void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1, InputArray cameraMatrix2, InputArray distCoeffs2, Size imageSize, InputArray R, InputArray T, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags=CALIB_ZERO_DISPARITY, double alpha, Size newImageSize=Size(), Rect* roi1=0, Rect* roi2=0 )
-
-    Computes rectification transforms for each head of a calibrated stereo camera.
 
 .. ocv:cfunction:: void cvStereoRectify( const CvMat* cameraMatrix1, const CvMat* cameraMatrix2, const CvMat* distCoeffs1, const CvMat* distCoeffs2, CvSize imageSize, const CvMat* R, const CvMat* T, CvMat* R1, CvMat* R2, CvMat* P1, CvMat* P2, CvMat* Q=0, int flags=CV_CALIB_ZERO_DISPARITY, double alpha=-1, CvSize newImageSize=cvSize(0, 0), CvRect* roi1=0, CvRect* roi2=0)
 .. ocv:pyoldfunction:: cv.StereoRectify( cameraMatrix1, cameraMatrix2, distCoeffs1, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q=None, flags=CV_CALIB_ZERO_DISPARITY, alpha=-1, newImageSize=(0, 0))-> (roi1, roi2)
@@ -1374,13 +1376,14 @@ See below the screenshot from the ``stereo_calib.cpp`` sample. Some red horizont
 
 stereoRectifyUncalibrated
 -----------------------------
-.. ocv:function:: bool stereoRectifyUncalibrated( InputArray points1, InputArray points2, InputArray F, Size imgSize, OutputArray H1, OutputArray H2, double threshold=5 )
+Computes a rectification transform for an uncalibrated stereo camera.
 
-    Computes a rectification transform for an uncalibrated stereo camera.
+.. ocv:function:: bool stereoRectifyUncalibrated( InputArray points1, InputArray points2, InputArray F, Size imgSize, OutputArray H1, OutputArray H2, double threshold=5 )
 
 .. ocv:pyfunction:: cv2.stereoRectifyUncalibrated(points1, points2, F, imgSize[, H1[, H2[, threshold]]]) -> retval, H1, H2
 
 .. ocv:cfunction:: void cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* points2, const CvMat* F, CvSize imageSize, CvMat* H1, CvMat* H2, double threshold=5 )
+
 .. ocv:pyoldfunction:: cv.StereoRectifyUncalibrated(points1, points2, F, imageSize, H1, H2, threshold=5)-> None
 
     :param points1: Array of feature points in the first image.
@@ -1407,6 +1410,6 @@ The function computes the rectification transformations without knowing intrinsi
 
 .. [BouguetMCT] J.Y.Bouguet. MATLAB calibration tool. http://www.vision.caltech.edu/bouguetj/calib_doc/
 
-.. [Hartley99] Hartley, R.I., “Theory and Practice of Projective Rectification”. IJCV 35 2, pp 115-127 (1999)
+.. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.

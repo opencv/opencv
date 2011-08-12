@@ -54,3 +54,64 @@ def mtx2rvec(R):
     axis = np.cross(vt[0], vt[1])
     return axis * np.arctan2(s, c)
 
+def draw_str(dst, (x, y), s):
+    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, linetype=cv2.CV_AA)
+    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), linetype=cv2.CV_AA)
+
+class Sketcher:
+    def __init__(self, windowname, dests, colors_func):
+        self.prev_pt = None
+        self.windowname = windowname
+        self.dests = dests
+        self.colors_func = colors_func
+        self.dirty = False
+        self.show()
+        cv2.setMouseCallback(self.windowname, self.on_mouse)
+
+    def show(self):
+        cv2.imshow(self.windowname, self.dests[0])
+
+    def on_mouse(self, event, x, y, flags, param):
+        pt = (x, y)
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.prev_pt = pt
+        if self.prev_pt and flags & cv2.EVENT_FLAG_LBUTTON:
+            for dst, color in zip(self.dests, self.colors_func()):
+                cv2.line(dst, self.prev_pt, pt, color, 5)
+            self.dirty = True
+            self.prev_pt = pt
+            self.show()
+        else:
+            self.prev_pt = None
+
+
+# palette data from matplotlib/_cm.py
+_jet_data =   {'red':   ((0., 0, 0), (0.35, 0, 0), (0.66, 1, 1), (0.89,1, 1),
+                         (1, 0.5, 0.5)),
+               'green': ((0., 0, 0), (0.125,0, 0), (0.375,1, 1), (0.64,1, 1),
+                         (0.91,0,0), (1, 0, 0)),
+               'blue':  ((0., 0.5, 0.5), (0.11, 1, 1), (0.34, 1, 1), (0.65,0, 0),
+                         (1, 0, 0))}
+
+cmap_data = { 'jet' : _jet_data }
+
+def make_cmap(name, n=256):
+    data = cmap_data[name]
+    xs = np.linspace(0.0, 1.0, n)
+    channels = []
+    eps = 1e-6
+    for ch_name in ['blue', 'green', 'red']:
+        ch_data = data[ch_name]
+        xp, yp = [], []
+        for x, y1, y2 in ch_data:
+            xp += [x, x+eps]
+            yp += [y1, y2]
+        ch = np.interp(xs, xp, yp)
+        channels.append(ch)
+    return np.uint8(np.array(channels).T*255)
+
+def nothing(*arg, **kw):
+    pass
+
+def clock():
+    return cv2.getTickCount() / cv2.getTickFrequency()

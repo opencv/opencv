@@ -1,4 +1,4 @@
-.. _copyMakeBorder:
+.. _copyMakeBorderTutorial:
 
 Adding borders to your images
 ******************************

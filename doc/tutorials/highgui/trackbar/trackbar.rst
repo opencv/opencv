@@ -145,15 +145,14 @@ Result
 
 * Our program produces the following output:
 
-  .. image:: images/Adding_Trackbars_Tutorial_Result_0.png
+  .. image:: images/Adding_Trackbars_Tutorial_Result_0.jpg
      :alt: Adding Trackbars - Windows Linux
      :align: center 
 
 * As a manner of practice, you can also add 02 trackbars for the program made in :ref:`Basic_Linear_Transform`. One trackbar to set :math:`\alpha` and another for :math:`\beta`. The output might look like:
 
-  .. image:: images/Adding_Trackbars_Tutorial_Result_1.png
+  .. image:: images/Adding_Trackbars_Tutorial_Result_1.jpg
      :alt: Adding Trackbars - Lena
-     :height: 500px
      :align: center 
 
 

@@ -2,7 +2,6 @@ import numpy as np
 from numpy import random
 import cv2
 
-
 def make_gaussians(cluster_n, img_size):
     points = []
     ref_distrs = []
@@ -20,7 +19,7 @@ def make_gaussians(cluster_n, img_size):
 def draw_gaussain(img, mean, cov, color):
     x, y = np.int32(mean)
     w, u, vt = cv2.SVDecomp(cov)
-    ang = np.rad2deg( np.arctan2(u[1, 0], u[0, 0]) )
+    ang = np.arctan2(u[1, 0], u[0, 0])*(180/np.pi)
     s1, s2 = np.sqrt(w)*3.0
     cv2.ellipse(img, (x, y), (s1, s2), ang, 0, 360, color, 1, cv2.CV_AA)
 

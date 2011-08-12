@@ -35,7 +35,7 @@ public:
 
         //Ncv32u maxWpitch = alignUp(maxWidth * sizeof(T), devProp.textureAlignment);
 
-        allocatorCPU.reset(new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, devProp.textureAlignment));
+        allocatorCPU.reset(new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, static_cast<Ncv32u>(devProp.textureAlignment)));
         data.reset(new NCVMatrixAlloc<T>(*this->allocatorCPU.get(), maxWidth, maxHeight));
         ncvAssertPrintReturn(data.get()->isMemAllocated(), "NCVTestSourceProvider ctor:: Matrix not allocated", );
 
@@ -70,7 +70,7 @@ public:
         ncvAssertPrintReturn(cudaSuccess == cudaGetDevice(&devId), "Error returned from cudaGetDevice", );
         ncvAssertPrintReturn(cudaSuccess == cudaGetDeviceProperties(&devProp, devId), "Error returned from cudaGetDeviceProperties", );
 
-        allocatorCPU.reset(new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, devProp.textureAlignment));
+        allocatorCPU.reset(new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, static_cast<Ncv32u>(devProp.textureAlignment)));
         data.reset(new NCVMatrixAlloc<T>(*this->allocatorCPU.get(), image.cols, image.rows));
         ncvAssertPrintReturn(data.get()->isMemAllocated(), "NCVTestSourceProvider ctor:: Matrix not allocated", );
 

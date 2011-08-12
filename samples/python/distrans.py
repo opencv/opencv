@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys
-import cv
+import cv2.cv as cv
 import urllib2
 
 wndname = "Distance transform"

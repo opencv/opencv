@@ -7,7 +7,7 @@ Matrix Reductions
 
 gpu::meanStdDev
 -------------------
-.. cpp:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+.. ocv:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
 
     Computes a mean value and a standard deviation of matrix elements.
 
@@ -18,7 +18,7 @@ gpu::meanStdDev
     :param stddev: Standard deviation value.
 
 .. seealso:: 
-:ocv:func:`meanStdDev` 
+   :ocv:func:`meanStdDev` 
 
 .. index:: gpu::norm
 
@@ -39,7 +39,7 @@ gpu::norm
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. seealso:: 
-:ocv:func:`norm`
+   :ocv:func:`norm`
 
 .. index:: gpu::sum
 
@@ -56,7 +56,7 @@ gpu::sum
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 .. seealso:: 
-:ocv:func:`sum` 
+   :ocv:func:`sum` 
 
 .. index:: gpu::absSum
 
@@ -107,9 +107,9 @@ gpu::minMax
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
-	
+    
 .. seealso:: 
-:ocv:func:`minMaxLoc` 
+   :ocv:func:`minMaxLoc` 
 
 .. index:: gpu::minMaxLoc
 
@@ -137,10 +137,10 @@ gpu::minMaxLoc
 
     :param locbuf: Optional locations buffer to avoid extra memory allocations. It is resized automatically.
 
-	The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
+    The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
 .. seealso:: 
-:ocv:func:`minMaxLoc` 
+   :ocv:func:`minMaxLoc` 
 
 .. index:: gpu::countNonZero
 
@@ -157,6 +157,6 @@ gpu::countNonZero
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
-	
+    
 .. seealso:: 
-:ocv:func:`countNonZero` 
+   :ocv:func:`countNonZero` 

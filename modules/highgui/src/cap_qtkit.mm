@@ -733,7 +733,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 		image->height = height; 
 		image->nChannels = 4; 
 		image->depth = IPL_DEPTH_8U; 
-		image->widthStep = width*4; 
+		image->widthStep = rowBytes; 
 		image->imageData = imagedata; 
 		image->imageSize = currSize; 
 		
@@ -746,7 +746,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
 		bgr_image->height = height; 
 		bgr_image->nChannels = 3; 
 		bgr_image->depth = IPL_DEPTH_8U; 
-		bgr_image->widthStep = width*4; 
+		bgr_image->widthStep = rowBytes; 
 		bgr_image->imageData = bgr_imagedata; 
 		bgr_image->imageSize = currSize; 
 		

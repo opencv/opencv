@@ -1,5 +1,5 @@
 import sys
-import cv
+import cv2.cv as cv
 
 def findstereocorrespondence(image_left, image_right):
     # image_left and image_right are the input 8-bit single-channel images

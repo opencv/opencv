@@ -114,6 +114,6 @@ Explanation
 Result
 =======
 
-.. image:: images/Adding_Images_Tutorial_Result_0.png
+.. image:: images/Adding_Images_Tutorial_Result_0.jpg
    :alt: Blending Images Tutorial - Final Result
    :align: center 

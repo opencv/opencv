@@ -59,9 +59,9 @@ To reduce computation time for boosted models without substantially losing accur
 **all**
 training examples are recomputed at each training iteration. Examples deleted at a particular iteration may be used again for learning some of the weak classifiers further [FHT98]_.
 
-.. [HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction*. Springer Series in Statistics. 2001.
+.. [HTF01] Hastie, T., Tibshirani, R., Friedman, J. H. *The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Springer Series in Statistics*. 2001.
 
-.. [FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. *Additive Logistic Regression: a Statistical View of Boosting*. Technical Report, Dept. of Statistics, Stanford University, 1998.
+.. [FHT98] Friedman, J. H., Hastie, T. and Tibshirani, R. Additive Logistic Regression: a Statistical View of Boosting. Technical Report, Dept. of Statistics*, Stanford University, 1998.
 
 CvBoostParams
 -------------

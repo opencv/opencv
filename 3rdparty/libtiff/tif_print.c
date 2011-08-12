@@ -1,4 +1,4 @@
-/* $Id: tif_print.c,v 1.36.2.4 2010-06-08 18:50:42 bfriesen Exp $ */
+/* $Id: tif_print.c,v 1.36.2.5 2010-07-06 14:05:30 dron Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -115,8 +115,6 @@ static int
 _TIFFPrettyPrintField(TIFF* tif, FILE* fd, ttag_t tag,
 		      uint32 value_count, void *raw_data)
 {
-	//TIFFDirectory *td = &tif->tif_dir;
-
 	switch (tag)
 	{
 		case TIFFTAG_INKSET:
@@ -131,10 +129,6 @@ _TIFFPrettyPrintField(TIFF* tif, FILE* fd, ttag_t tag,
 						*((uint16*)raw_data));
 					break;
 			}
-			return 1;
-		case TIFFTAG_DOTRANGE:
-			fprintf(fd, "  Dot Range: %u-%u\n",
-				((uint16*)raw_data)[0], ((uint16*)raw_data)[1]);
 			return 1;
 		case TIFFTAG_WHITEPOINT:
 			fprintf(fd, "  White Point: %g-%g\n",

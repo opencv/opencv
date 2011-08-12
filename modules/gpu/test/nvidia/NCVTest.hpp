@@ -124,8 +124,8 @@ private:
 
     bool initMemory(NCVTestReport &report)
     {
-        this->allocatorGPU.reset(new NCVMemStackAllocator(devProp.textureAlignment));
-        this->allocatorCPU.reset(new NCVMemStackAllocator(devProp.textureAlignment));
+        this->allocatorGPU.reset(new NCVMemStackAllocator(static_cast<Ncv32u>(devProp.textureAlignment)));
+        this->allocatorCPU.reset(new NCVMemStackAllocator(static_cast<Ncv32u>(devProp.textureAlignment)));
 
         if (!this->allocatorGPU.get()->isInitialized() ||
             !this->allocatorCPU.get()->isInitialized())
@@ -146,9 +146,9 @@ private:
         report.statsNums["MemGPU"] = maxGPUsize;
         report.statsNums["MemCPU"] = maxCPUsize;
 
-        this->allocatorGPU.reset(new NCVMemStackAllocator(NCVMemoryTypeDevice, maxGPUsize, devProp.textureAlignment));
+        this->allocatorGPU.reset(new NCVMemStackAllocator(NCVMemoryTypeDevice, maxGPUsize, static_cast<Ncv32u>(devProp.textureAlignment)));
 
-        this->allocatorCPU.reset(new NCVMemStackAllocator(NCVMemoryTypeHostPinned, maxCPUsize, devProp.textureAlignment));
+        this->allocatorCPU.reset(new NCVMemStackAllocator(NCVMemoryTypeHostPinned, maxCPUsize, static_cast<Ncv32u>(devProp.textureAlignment)));
 
         if (!this->allocatorGPU.get()->isInitialized() ||
             !this->allocatorCPU.get()->isInitialized())

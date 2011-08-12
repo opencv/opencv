@@ -558,6 +558,9 @@ CV_EXPORTS Mat getAffineTransform( const Point2f src[], const Point2f dst[] );
 //! computes 2x3 affine transformation matrix that is inverse to the specified 2x3 affine transformation.
 CV_EXPORTS_W void invertAffineTransform( InputArray M, OutputArray iM );
 
+CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
+
 //! extracts rectangle from the image at sub-pixel location
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType=-1 );
@@ -574,16 +577,16 @@ CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         int sdepth=-1 );
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
-CV_EXPORTS_W void accumulate( InputArray src, CV_IN_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
                               InputArray mask=noArray() );
 //! adds squared src image to the accumulator (dst += src*src).
-CV_EXPORTS_W void accumulateSquare( InputArray src, CV_IN_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulateSquare( InputArray src, InputOutputArray dst,
                                     InputArray mask=noArray() );
 //! adds product of the 2 images to the accumulator (dst += src1*src2).
 CV_EXPORTS_W void accumulateProduct( InputArray src1, InputArray src2,
-                                     CV_IN_OUT InputOutputArray dst, InputArray mask=noArray() );
+                                     InputOutputArray dst, InputArray mask=noArray() );
 //! updates the running average (dst = dst*(1-alpha) + src*alpha)
-CV_EXPORTS_W void accumulateWeighted( InputArray src, CV_IN_OUT InputOutputArray dst,
+CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask=noArray() );
     
 //! type of the threshold operation
@@ -660,6 +663,13 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           SparseMat& hist, int dims,
                           const int* histSize, const float** ranges,
                           bool uniform=true, bool accumulate=false );
+                          
+CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
+                            const vector<int>& channels,
+                            InputArray mask, OutputArray hist,
+                            const vector<int>& histSize,
+                            const vector<float>& ranges,
+                            bool accumulate=false );
 
 //! computes back projection for the set of images
 CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
@@ -672,6 +682,11 @@ CV_EXPORTS void calcBackProject( const Mat* images, int nimages,
                                  const int* channels, const SparseMat& hist, 
                                  OutputArray backProject, const float** ranges,
                                  double scale=1, bool uniform=true );
+
+CV_EXPORTS_W void calcBackProject( InputArrayOfArrays images, const vector<int>& channels,
+                                   InputArray hist, OutputArray dst,
+                                   const vector<float>& ranges,
+                                   double scale );
 
 //! compares two histograms stored in dense arrays
 CV_EXPORTS_W double compareHist( InputArray H1, InputArray H2, int method );
@@ -750,6 +765,150 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff=Scalar(), Scalar upDiff=Scalar(),
                             int flags=4 );
 
+    
+enum
+{
+    COLOR_BGR2BGRA    =0,
+    COLOR_RGB2RGBA    =COLOR_BGR2BGRA,
+    
+    COLOR_BGRA2BGR    =1,
+    COLOR_RGBA2RGB    =COLOR_BGRA2BGR,
+    
+    COLOR_BGR2RGBA    =2,
+    COLOR_RGB2BGRA    =COLOR_BGR2RGBA,
+    
+    COLOR_RGBA2BGR    =3,
+    COLOR_BGRA2RGB    =COLOR_RGBA2BGR,
+    
+    COLOR_BGR2RGB     =4,
+    COLOR_RGB2BGR     =COLOR_BGR2RGB,
+    
+    COLOR_BGRA2RGBA   =5,
+    COLOR_RGBA2BGRA   =COLOR_BGRA2RGBA,
+    
+    COLOR_BGR2GRAY    =6,
+    COLOR_RGB2GRAY    =7,
+    COLOR_GRAY2BGR    =8,
+    COLOR_GRAY2RGB    =COLOR_GRAY2BGR,
+    COLOR_GRAY2BGRA   =9,
+    COLOR_GRAY2RGBA   =COLOR_GRAY2BGRA,
+    COLOR_BGRA2GRAY   =10,
+    COLOR_RGBA2GRAY   =11,
+    
+    COLOR_BGR2BGR565  =12,
+    COLOR_RGB2BGR565  =13,
+    COLOR_BGR5652BGR  =14,
+    COLOR_BGR5652RGB  =15,
+    COLOR_BGRA2BGR565 =16,
+    COLOR_RGBA2BGR565 =17,
+    COLOR_BGR5652BGRA =18,
+    COLOR_BGR5652RGBA =19,
+    
+    COLOR_GRAY2BGR565 =20,
+    COLOR_BGR5652GRAY =21,
+    
+    COLOR_BGR2BGR555  =22,
+    COLOR_RGB2BGR555  =23,
+    COLOR_BGR5552BGR  =24,
+    COLOR_BGR5552RGB  =25,
+    COLOR_BGRA2BGR555 =26,
+    COLOR_RGBA2BGR555 =27,
+    COLOR_BGR5552BGRA =28,
+    COLOR_BGR5552RGBA =29,
+    
+    COLOR_GRAY2BGR555 =30,
+    COLOR_BGR5552GRAY =31,
+    
+    COLOR_BGR2XYZ     =32,
+    COLOR_RGB2XYZ     =33,
+    COLOR_XYZ2BGR     =34,
+    COLOR_XYZ2RGB     =35,
+    
+    COLOR_BGR2YCrCb   =36,
+    COLOR_RGB2YCrCb   =37,
+    COLOR_YCrCb2BGR   =38,
+    COLOR_YCrCb2RGB   =39,
+    
+    COLOR_BGR2HSV     =40,
+    COLOR_RGB2HSV     =41,
+    
+    COLOR_BGR2Lab     =44,
+    COLOR_RGB2Lab     =45,
+    
+    COLOR_BayerBG2BGR =46,
+    COLOR_BayerGB2BGR =47,
+    COLOR_BayerRG2BGR =48,
+    COLOR_BayerGR2BGR =49,
+    
+    COLOR_BayerBG2RGB =COLOR_BayerRG2BGR,
+    COLOR_BayerGB2RGB =COLOR_BayerGR2BGR,
+    COLOR_BayerRG2RGB =COLOR_BayerBG2BGR,
+    COLOR_BayerGR2RGB =COLOR_BayerGB2BGR,
+    
+    COLOR_BGR2Luv     =50,
+    COLOR_RGB2Luv     =51,
+    COLOR_BGR2HLS     =52,
+    COLOR_RGB2HLS     =53,
+    
+    COLOR_HSV2BGR     =54,
+    COLOR_HSV2RGB     =55,
+    
+    COLOR_Lab2BGR     =56,
+    COLOR_Lab2RGB     =57,
+    COLOR_Luv2BGR     =58,
+    COLOR_Luv2RGB     =59,
+    COLOR_HLS2BGR     =60,
+    COLOR_HLS2RGB     =61,
+    
+    COLOR_BayerBG2BGR_VNG =62,
+    COLOR_BayerGB2BGR_VNG =63,
+    COLOR_BayerRG2BGR_VNG =64,
+    COLOR_BayerGR2BGR_VNG =65,
+    
+    COLOR_BayerBG2RGB_VNG =COLOR_BayerRG2BGR_VNG,
+    COLOR_BayerGB2RGB_VNG =COLOR_BayerGR2BGR_VNG,
+    COLOR_BayerRG2RGB_VNG =COLOR_BayerBG2BGR_VNG,
+    COLOR_BayerGR2RGB_VNG =COLOR_BayerGB2BGR_VNG,
+    
+    COLOR_BGR2HSV_FULL = 66,
+    COLOR_RGB2HSV_FULL = 67,
+    COLOR_BGR2HLS_FULL = 68,
+    COLOR_RGB2HLS_FULL = 69,
+    
+    COLOR_HSV2BGR_FULL = 70,
+    COLOR_HSV2RGB_FULL = 71,
+    COLOR_HLS2BGR_FULL = 72,
+    COLOR_HLS2RGB_FULL = 73,
+    
+    COLOR_LBGR2Lab     = 74,
+    COLOR_LRGB2Lab     = 75,
+    COLOR_LBGR2Luv     = 76,
+    COLOR_LRGB2Luv     = 77,
+    
+    COLOR_Lab2LBGR     = 78,
+    COLOR_Lab2LRGB     = 79,
+    COLOR_Luv2LBGR     = 80,
+    COLOR_Luv2LRGB     = 81,
+    
+    COLOR_BGR2YUV      = 82,
+    COLOR_RGB2YUV      = 83,
+    COLOR_YUV2BGR      = 84,
+    COLOR_YUV2RGB      = 85,
+    
+    COLOR_BayerBG2GRAY = 86,
+    COLOR_BayerGB2GRAY = 87,
+    COLOR_BayerRG2GRAY = 88,
+    COLOR_BayerGR2GRAY = 89,
+    
+    COLOR_YUV420i2RGB  = 90,
+    COLOR_YUV420i2BGR  = 91,
+    COLOR_YUV420sp2RGB = 92,
+    COLOR_YUV420sp2BGR = 93,
+    
+    COLOR_COLORCVT_MAX  =100
+};
+    
+    
 //! converts image from one color space to another
 CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 );
 
@@ -780,6 +939,7 @@ CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage=false );
 
 //! computes 7 Hu invariants from the moments
 CV_EXPORTS void HuMoments( const Moments& moments, double hu[7] );
+CV_EXPORTS_W void HuMoments( const Moments& m, CV_OUT OutputArray hu );
 
 //! type of the template matching operation
 enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF=4, TM_CCOEFF_NORMED=5 };
@@ -837,7 +997,7 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented=false );
 CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 //! computes the minimal enclosing circle for a set of points
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
-                                      Point2f& center, float& radius );    
+                                      CV_OUT Point2f& center, CV_OUT float& radius );    
 //! matches two contours using one of the available algorithms
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
@@ -857,6 +1017,98 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
         
+
+class CV_EXPORTS_W Subdiv2D
+{
+public:
+    enum
+    {
+        PTLOC_ERROR = -2,
+        PTLOC_OUTSIDE_RECT = -1,
+        PTLOC_INSIDE = 0,
+        PTLOC_VERTEX = 1,
+        PTLOC_ON_EDGE = 2
+    };
+    
+    enum
+    {
+        NEXT_AROUND_ORG   = 0x00,
+        NEXT_AROUND_DST   = 0x22,
+        PREV_AROUND_ORG   = 0x11,
+        PREV_AROUND_DST   = 0x33,
+        NEXT_AROUND_LEFT  = 0x13,
+        NEXT_AROUND_RIGHT = 0x31,
+        PREV_AROUND_LEFT  = 0x20,
+        PREV_AROUND_RIGHT = 0x02
+    };
+    
+    CV_WRAP Subdiv2D();
+    CV_WRAP Subdiv2D(Rect rect);
+    CV_WRAP void initDelaunay(Rect rect);
+    
+    CV_WRAP int insert(Point2f pt);
+    CV_WRAP void insert(const vector<Point2f>& ptvec);
+    CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
+    
+    CV_WRAP int findNearest(Point2f pt, CV_OUT Point2f* nearestPt=0);
+    CV_WRAP void getEdgeList(CV_OUT vector<Vec4f>& edgeList) const;
+    CV_WRAP void getTriangleList(CV_OUT vector<Vec6f>& triangleList) const;
+    CV_WRAP void getVoronoiFacetList(const vector<int>& idx, CV_OUT vector<vector<Point2f> >& facetList,
+                                     CV_OUT vector<Point2f>& facetCenters);
+    
+    CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge=0) const;
+    
+    CV_WRAP int getEdge( int edge, int nextEdgeType ) const;
+    CV_WRAP int nextEdge(int edge) const;
+    CV_WRAP int rotateEdge(int edge, int rotate) const;
+    CV_WRAP int symEdge(int edge) const;
+    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt=0) const;
+    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt=0) const;
+    
+protected:
+    int newEdge();
+    void deleteEdge(int edge);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge=0);
+    void deletePoint(int vtx);
+    void setEdgePoints( int edge, int orgPt, int dstPt );
+    void splice( int edgeA, int edgeB );
+    int connectEdges( int edgeA, int edgeB );
+    void swapEdges( int edge );
+    int isRightOf(Point2f pt, int edge) const;
+    void calcVoronoi();
+    void clearVoronoi();
+    void check() const;
+    
+    struct CV_EXPORTS Vertex
+    {
+        Vertex();
+        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0);
+        bool isvirtual() const;
+        bool isfree() const;
+        int firstEdge;
+        int type;
+        Point2f pt;
+    };
+    struct CV_EXPORTS QuadEdge
+    {
+        QuadEdge();
+        QuadEdge(int edgeidx);
+        bool isfree() const;
+        int next[4];
+        int pt[4];
+    };
+    
+    vector<Vertex> vtx;
+    vector<QuadEdge> qedges;
+    int freeQEdge;
+    int freePoint;
+    bool validGeometry;
+    
+    int recentEdge;
+    Point2f topLeft;
+    Point2f bottomRight;
+};
+
 }
 
 // 2009-01-12, Xavier Delacour <xavier.delacour@gmail.com>

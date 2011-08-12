@@ -14,4 +14,5 @@ OpenCV API Reference
    features2d/doc/features2d.rst
    objdetect/doc/objdetect.rst
    ml/doc/ml.rst
+   flann/doc/flann.rst
    gpu/doc/gpu.rst

@@ -228,6 +228,8 @@ enum
 
     CV_YUV420i2RGB  = 90,
     CV_YUV420i2BGR  = 91,
+    CV_YUV420sp2RGB = 92,
+    CV_YUV420sp2BGR = 93,
     
     CV_COLORCVT_MAX  =100
 };

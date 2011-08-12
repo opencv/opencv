@@ -585,6 +585,11 @@ void Mat::push_back(const Mat& elems)
         push_back(tmp);
         return;
     }
+	if( !data )
+	{
+		*this = elems.clone();
+		return;
+	}
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
@@ -928,7 +933,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == MAT )
     {
         const Mat& m = *(const Mat*)obj;
-        size_t i, n = m.size[0];
+        int i, n = (int)m.size[0];
         mv.resize(n);
         
         for( i = 0; i < n; i++ )
@@ -940,7 +945,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == EXPR )
     {
         Mat m = *(const MatExpr*)obj;
-        size_t i, n = m.size[0];
+        int i, n = m.size[0];
         mv.resize(n);
         
         for( i = 0; i < n; i++ )
@@ -980,7 +985,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
     if( k == STD_VECTOR_VECTOR )
     {
         const vector<vector<uchar> >& vv = *(const vector<vector<uchar> >*)obj;
-        size_t i, n = vv.size();
+        int i, n = (int)vv.size();
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
         
@@ -2200,7 +2205,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 {
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = _data.ptr<float>(0);
-    int step = (int)(_data.step/sizeof(data[0]));
+    size_t step = _data.step/sizeof(data[0]);
     vector<int> _centers(K);
     int* centers = &_centers[0];
     vector<float> _dist(N*3);
@@ -2795,7 +2800,7 @@ NAryMatIterator& NAryMatIterator::operator ++()
             const Mat& A = *arrays[i];
             if( !A.data )
                 continue;
-            int _idx = idx;
+            int _idx = (int)idx;
             uchar* data = A.data;
             for( int j = iterdepth-1; j >= 0 && _idx > 0; j-- )
             {

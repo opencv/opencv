@@ -113,7 +113,7 @@ Rect\_
 ------
 .. ocv:class:: Rect_
 
-Template class for 2D rectangles, described by the following parameters::
+Template class for 2D rectangles, described by the following parameters:
 
 * Coordinates of the top-left corner. This is a default interpretation of ``Rect_::x`` and ``Rect_::y`` in OpenCV. Though, in your algorithms you may count ``x`` and ``y`` from the bottom-left corner. 
 * Rectangle width and height.
@@ -215,7 +215,7 @@ If you need a more flexible type, use :ocv:class:`Mat` . The elements of the mat
               7, 8, 9);
     cout << sum(Mat(m*m.t())) << endl;
 
-	
+    
 Vec
 ---
 .. ocv:class:: Vec
@@ -302,6 +302,8 @@ The static method ``Range::all()`` returns a special variable that means "the wh
         }
     }
 
+
+.. _Ptr: 
 
 Ptr
 ---
@@ -652,49 +654,85 @@ Matrix Expressions
 ------------------
 
 This is a list of implemented matrix operations that can be combined in arbitrary complex expressions
-(here
-*A*,*B*
-stand for matrices ( ``Mat`` ),
-*s*
-for a scalar ( ``Scalar`` ),
-:math:`\alpha` for a real-valued scalar ( ``double`` )):
+(here ``A``, ``B`` stand for matrices ( ``Mat`` ), ``s`` for a scalar ( ``Scalar`` ),
+``alpha`` for a real-valued scalar ( ``double`` )):
 
 *
     Addition, subtraction, negation:
-    :math:`A \pm B,\;A \pm s,\;s \pm A,\;-A` *
-    scaling:
-    :math:`A*\alpha`,    :math:`A*\alpha` *
-    per-element multiplication and division:
-    :math:`A.mul(B), A/B, \alpha/A` *
-    matrix multiplication:
-    :math:`A*B` *
-    transposition:
-    :math:`A.t() \sim A^t` *
-    matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
+    ``A+B, A-B, A+s, A-s, s+A, s-A, -A``
+    
+*   
+    Scaling:
+    ``A*alpha``
+    
+*
+    Per-element multiplication and division:
+    ``A.mul(B), A/B, alpha/A``
+    
+*
+    Matrix multiplication:
+    ``A*B``
+    
+*
+    Transposition:
+    ``A.t()`` (means ``A``\ :sup:`T`)
+    
+*
+    Matrix inversion and pseudo-inversion, solving linear systems and least-squares problems:
 
-    :math:`A.inv([method]) \sim A^{-1}, A.inv([method])*B \sim X:\,AX=B`
+    ``A.inv([method])`` (~ ``A``\ :sup:`-1`) ``,   A.inv([method])*B`` (~ ``X: AX=B``)
     
 *
     Comparison:
-    :math:`A\gtreqqless B,\;A \ne B,\;A \gtreqqless \alpha,\;A \ne \alpha`. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
+    ``A cmpop B, A cmpop alpha, alpha cmpop A``, where ``cmpop`` is one of ``:  >, >=, ==, !=, <=, <``. The result of comparison is an 8-bit single channel mask whose elements are set to 255 (if the particular element or pair of elements satisfy the condition) or 0.
 
 *
-    Bitwise logical operations: ``A & B, A & s, A | B, A | s, A textasciicircum B, A textasciicircum s, ~ A`` *
-    element-wise minimum and maximum:
-    :math:`min(A, B), min(A, \alpha), max(A, B), max(A, \alpha)` *
-    element-wise absolute value:
-    :math:`abs(A)` *
-    cross-product, dot-product:
-    :math:`A.cross(B), A.dot(B)` *
-    any function of matrix or matrices and scalars that returns a matrix or a scalar, such as ``norm``, ``mean``, ``sum``, ``countNonZero``, ``trace``, ``determinant``, ``repeat``, and others.
+    Bitwise logical operations: ``A logicop B, A logicop s, s logicop A, ~A``, where ``logicop`` is one of ``:  &, |, ^``.
+    
+*
+    Element-wise minimum and maximum:
+    ``min(A, B), min(A, alpha), max(A, B), max(A, alpha)``
+    
+*
+    Element-wise absolute value:
+    ``abs(A)``
+    
+*
+    Cross-product, dot-product:
+    ``A.cross(B)``
+    ``A.dot(B)``
+    
+*
+    Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as ``norm``, ``mean``, ``sum``, ``countNonZero``, ``trace``, ``determinant``, ``repeat``, and others.
 
 *
-    Matrix initializers ( ``eye(), zeros(), ones()``     ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ocv:class:`Mat`     description).
+    Matrix initializers ( ``Mat::eye(), Mat::zeros(), Mat::ones()`` ), matrix comma-separated initializers, matrix constructors and operators that extract sub-matrices (see :ocv:class:`Mat` description).
 
 *
     ``Mat_<destination_type>()`` constructors to cast the result to the proper type.
 
 .. note:: Comma-separated initializers and probably some other operations may require additional explicit ``Mat()`` or ``Mat_<T>()`` constuctor calls to resolve a possible ambiguity.
+
+Here are examples of matrix expressions:
+
+::
+
+    // compute pseudo-inverse of A, equivalent to A.inv(DECOMP_SVD)
+    SVD svd(A);
+    Mat pinvA = svd.vt.t()*Mat::diag(1./svd.w)*svd.u.t();
+    
+    // compute the new vector of parameters in the Levenberg-Marquardt algorithm
+    x -= (A.t()*A + lambda*Mat::eye(A.cols,A.cols,A.type())).inv(DECOMP_CHOLESKY)*(A.t()*err);
+    
+    // sharpen image using "unsharp mask" algorithm
+    Mat blurred; double sigma = 1, threshold = 5, amount = 1;
+    GaussianBlur(img, blurred, Size(), sigma, sigma);
+    Mat lowConstrastMask = abs(img - blurred) < threshold;
+    Mat sharpened = img*(1+amount) + blurred*(-amount);
+    img.copyTo(sharpened, lowContrastMask);
+    
+..
+
 
 Below is the formal description of the ``Mat`` methods.
 
@@ -800,7 +838,7 @@ Provides matrix assignment operators.
 
 .. ocv:function:: Mat& Mat::operator = (const MatExpr_Base& expr)
 
-.. ocv:function:: Mat& operator = (const Scalar& s)
+.. ocv:function:: Mat& Mat::operator = (const Scalar& s)
 
     :param m: Assigned, right-hand-side matrix. Matrix assignment is an O(1) operation. This means that no data is copied but the data is shared and the reference counter, if any, is incremented. Before assigning new data, the old data is de-referenced via  :ocv:func:`Mat::release` .
 
@@ -853,7 +891,7 @@ The method makes a new header for the specified matrix row and returns it. This 
         A.row(i) = A.row(j) + 0;
 
         // this is a bit longe, but the recommended method.
-        Mat Ai = A.row(i); M.row(j).copyTo(Ai);
+        A.row(j).copyTo(A.row(i));
 
 Mat::col
 ------------
@@ -875,9 +913,9 @@ Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::rowRange(const Range& r) const
 
-    :param startrow: A 0-based start index of the row span.
+    :param startrow: An inclusive 0-based start index of the row span.
 
-    :param endrow: A 0-based ending index of the row span.
+    :param endrow: An exclusive 0-based ending index of the row span.
 
     :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
 
@@ -893,9 +931,9 @@ Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::colRange(const Range& r) const
 
-    :param startcol: A 0-based start index of the column span.
+    :param startcol: An inclusive 0-based start index of the column span.
 
-    :param endcol: A 0-based ending index of the column span.
+    :param endcol: An exclusive 0-based ending index of the column span.
 
     :param r: :ocv:class:`Range`  structure containing both the start and the end indices.
 
@@ -953,6 +991,8 @@ The method copies the matrix data to another matrix. Before copying the data, th
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
 When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+
+.. _Mat::convertTo:
 
 Mat::convertTo
 ------------------
@@ -1115,7 +1155,7 @@ Returns a zero array of the specified size and type.
     :param cols: Number of columns.
 
     :param size: Alternative to the matrix size specification ``Size(cols, rows)``  .   
-	
+    
     :param sizes: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
@@ -1144,8 +1184,8 @@ Returns an array of all 1's of the specified size and type.
     :param cols: Number of columns.
 
     :param size: Alternative to the matrix size specification  ``Size(cols, rows)``  .   
-	
-	:param sizes: Array of integers specifying the array shape.
+    
+    :param sizes: Array of integers specifying the array shape.
 
     :param type: Created matrix type.
 
@@ -1170,7 +1210,7 @@ Returns an identity matrix of the specified size and type.
     :param cols: Number of columns.
 
     :param size: Alternative matrix size specification as  ``Size(cols, rows)`` .     
-	
+    
     :param type: Created matrix type.
 
 The method returns a Matlab-style identity matrix initializer, similarly to
@@ -1196,7 +1236,7 @@ Allocates new array data if needed.
     :param cols: New number of columns.
 
     :param size: Alternative new matrix size specification:  ``Size(cols, rows)``     
-	
+    
     :param sizes: Array of integers specifying a new array shape.
 
     :param type: New matrix type.
@@ -1206,7 +1246,7 @@ This is one of the key ``Mat`` methods. Most new-style OpenCV functions and meth
 #.
     If the current array shape and the type match the new ones, return immediately. Otherwise, de-reference the previous data by calling
     :ocv:func:`Mat::release`. 
-	
+    
 #.
     Initialize the new header.
 
@@ -1360,9 +1400,9 @@ Extracts a rectangular submatrix.
 
 
     :param rowRange: Start and end row of the extracted submatrix. The upper boundary is not included. To select all the rows, use ``Range::all()``.    
-	
+    
     :param colRange: Start and end column of the extracted submatrix. The upper boundary is not included. To select all the columns, use  ``Range::all()``.    
-	
+    
     :param roi: Extracted submatrix specified as a rectangle.
 
     :param ranges: Array of selected ranges along each array dimension.
@@ -1484,7 +1524,7 @@ Mat::elemSize
 -----------------
 Returns  the matrix element size in bytes.
 
-.. ocv:function:: size_t Mat::elemSize(void) const
+.. ocv:function:: size_t Mat::elemSize() const
 
 The method returns the matrix element size in bytes. For example, if the matrix type is ``CV_16SC3`` , the method returns ``3*sizeof(short)`` or 6.
 
@@ -1493,7 +1533,7 @@ Mat::elemSize1
 ------------------
 Returns the size of each matrix element channel in bytes.
 
-.. ocv:function:: size_t Mat::elemSize() const
+.. ocv:function:: size_t Mat::elemSize1() const
 
 The method returns the matrix element channel size in bytes, that is, it ignores the number of channels. For example, if the matrix type is ``CV_16SC3`` , the method returns ``sizeof(short)`` or 2.
 
@@ -1675,9 +1715,9 @@ Mat::end
 ------------
 Returns the matrix iterator and sets it to the after-last matrix element.
 
-.. ocv:function:: MatIterator_<_Tp> Mat::end()
+.. ocv:function:: template<typename _Tp> MatIterator_<_Tp> Mat::end()
 
-.. ocv:function:: MatConstIterator_<_Tp> Mat::end() const
+.. ocv:function:: template<typename _Tp> MatConstIterator_<_Tp> Mat::end() const
 
 The methods return the matrix read-only or read-write iterators, set to the point following the last matrix element.
 

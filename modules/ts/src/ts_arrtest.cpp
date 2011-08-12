@@ -216,7 +216,7 @@ int ArrayTest::prepare_test_case( int test_case_idx )
             CvArr* arr = test_array[i][j];
             test_mat[i][j] = cv::cvarrToMat(arr);
             if( !test_mat[i][j].empty() )
-                fill_array( test_case_idx, i, j, test_mat[i][j] );
+                fill_array( test_case_idx, (int)i, (int)j, test_mat[i][j] );
         }
     }
 
@@ -304,7 +304,7 @@ int ArrayTest::validate_test_results( int test_case_idx )
             if( !test_array[i1][j] )
                 continue;
 
-            err_level = get_success_error_level( test_case_idx, i0, j );
+            err_level = get_success_error_level( test_case_idx, i0, (int)j );
             code = cmpEps( test_mat[i0][j], test_mat[i1][j], &max_diff, err_level, &idx, element_wise_relative_error );
 
             switch( code )

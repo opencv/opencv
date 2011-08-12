@@ -355,7 +355,7 @@ NCVStatus NCVMemStackAllocator::alloc(NCVMemSegment &seg, size_t size)
     seg.clear();
     ncvAssertReturn(isInitialized(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    size = alignUp(size, this->_alignment);
+    size = alignUp(static_cast<Ncv32u>(size), this->_alignment);
     this->currentSize += size;
     this->_maxSize = std::max(this->_maxSize, this->currentSize);
 
@@ -464,7 +464,7 @@ NCVStatus NCVMemNativeAllocator::alloc(NCVMemSegment &seg, size_t size)
         break;
     }
 
-    this->currentSize += alignUp(size, this->_alignment);
+    this->currentSize += alignUp(static_cast<Ncv32u>(size), this->_alignment);
     this->_maxSize = std::max(this->_maxSize, this->currentSize);
 
     seg.begin.memtype = this->_memType;
@@ -480,8 +480,8 @@ NCVStatus NCVMemNativeAllocator::dealloc(NCVMemSegment &seg)
     ncvAssertReturn(seg.begin.memtype == this->_memType, NCV_ALLOCATOR_BAD_DEALLOC);
     ncvAssertReturn(seg.begin.ptr != NULL, NCV_ALLOCATOR_BAD_DEALLOC);
 
-    ncvAssertReturn(currentSize >= alignUp(seg.size, this->_alignment), NCV_ALLOCATOR_BAD_DEALLOC);
-    currentSize -= alignUp(seg.size, this->_alignment);
+    ncvAssertReturn(currentSize >= alignUp(static_cast<Ncv32u>(seg.size), this->_alignment), NCV_ALLOCATOR_BAD_DEALLOC);
+    currentSize -= alignUp(static_cast<Ncv32u>(seg.size), this->_alignment);
 
     switch (this->_memType)
     {

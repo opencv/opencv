@@ -19,7 +19,7 @@ Required packages
   * pkgconfig
   * libpng, zlib, libjpeg, libtiff, libjasper with development files (e.g. libpjeg-dev)
   * Python 2.3 or later with developer packages (e.g. python-dev)
-  * SWIG 1.3.30 or later
+  * SWIG 1.3.30 or later (only for versions prior to OpenCV 2.3)
   * libavcodec
   * libdc1394 2.x 
 

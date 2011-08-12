@@ -718,7 +718,7 @@ struct FindStereoCorrespInvoker
         uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
         
-        Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1);
+        Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
             return;
         int row0 = roi.y;
@@ -871,7 +871,6 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread    
     double maxStripeSize = min(max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
     int nstripes = cvCeil(height / maxStripeSize);
-    printf("nstripes=%d\n", nstripes);
 #else
     const int nstripes = 1;
 #endif

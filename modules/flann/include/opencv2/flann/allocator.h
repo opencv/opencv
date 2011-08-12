@@ -28,11 +28,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef _OPENCV_ALLOCATOR_H_
-#define _OPENCV_ALLOCATOR_H_
+#ifndef OPENCV_FLANN_ALLOCATOR_H_
+#define OPENCV_FLANN_ALLOCATOR_H_
 
 #include <stdlib.h>
 #include <stdio.h>
+
 
 namespace cvflann
 {
@@ -47,8 +48,8 @@ namespace cvflann
 template <typename T>
 T* allocate(size_t count = 1)
 {
-	T* mem = (T*) ::malloc(sizeof(T)*count);
-	return mem;
+    T* mem = (T*) ::malloc(sizeof(T)*count);
+    return mem;
 }
 
 
@@ -70,118 +71,118 @@ T* allocate(size_t count = 1)
 const size_t     WORDSIZE=16;
 const  size_t     BLOCKSIZE=8192;
 
-class CV_EXPORTS PooledAllocator
+class PooledAllocator
 {
-	/* We maintain memory alignment to word boundaries by requiring that all
-		allocations be in multiples of the machine wordsize.  */
-	  /* Size of machine word in bytes.  Must be power of 2. */
-	/* Minimum number of bytes requested at a time from	the system.  Must be multiple of WORDSIZE. */
+    /* We maintain memory alignment to word boundaries by requiring that all
+        allocations be in multiples of the machine wordsize.  */
+    /* Size of machine word in bytes.  Must be power of 2. */
+    /* Minimum number of bytes requested at a time from	the system.  Must be multiple of WORDSIZE. */
 
 
-	int 	remaining;  /* Number of bytes left in current block of storage. */
-	void*	base;     /* Pointer to base of current block of storage. */
-	void*	loc;      /* Current location in block to next allocate memory. */
-	int 	blocksize;
+    int     remaining;  /* Number of bytes left in current block of storage. */
+    void*   base;     /* Pointer to base of current block of storage. */
+    void*   loc;      /* Current location in block to next allocate memory. */
+    int     blocksize;
 
 
 public:
-	int 	usedMemory;
-	int 	wastedMemory;
+    int     usedMemory;
+    int     wastedMemory;
 
-	/**
-		Default constructor. Initializes a new pool.
-	*/
-	PooledAllocator(int blocksize = BLOCKSIZE)
-	{
-    	this->blocksize = blocksize;
-		remaining = 0;
-		base = NULL;
+    /**
+        Default constructor. Initializes a new pool.
+     */
+    PooledAllocator(int blocksize = BLOCKSIZE)
+    {
+        this->blocksize = blocksize;
+        remaining = 0;
+        base = NULL;
 
-		usedMemory = 0;
-		wastedMemory = 0;
-	}
+        usedMemory = 0;
+        wastedMemory = 0;
+    }
 
-	/**
-	 * Destructor. Frees all the memory allocated in this pool.
-	 */
- 	~PooledAllocator()
-	{
-		void *prev;
+    /**
+     * Destructor. Frees all the memory allocated in this pool.
+     */
+    ~PooledAllocator()
+    {
+        void* prev;
 
-		while (base != NULL) {
-			prev = *((void **) base);  /* Get pointer to prev block. */
-			::free(base);
-			base = prev;
-		}
-	}
+        while (base != NULL) {
+            prev = *((void**) base); /* Get pointer to prev block. */
+            ::free(base);
+            base = prev;
+        }
+    }
 
-	/**
-	 * Returns a pointer to a piece of new memory of the given size in bytes
-	 * allocated from the pool.
-	 */
-	void* allocateBytes(int size)
-	{
-		int blocksize;
+    /**
+     * Returns a pointer to a piece of new memory of the given size in bytes
+     * allocated from the pool.
+     */
+    void* allocateMemory(int size)
+    {
+        int blocksize;
 
-		/* Round size up to a multiple of wordsize.  The following expression
-			only works for WORDSIZE that is a power of 2, by masking last bits of
-			incremented size to zero.
-		*/
-		size = (size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
+        /* Round size up to a multiple of wordsize.  The following expression
+            only works for WORDSIZE that is a power of 2, by masking last bits of
+            incremented size to zero.
+         */
+        size = (size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
 
-		/* Check whether a new block must be allocated.  Note that the first word
-			of a block is reserved for a pointer to the previous block.
-		*/
-		if (size > remaining) {
+        /* Check whether a new block must be allocated.  Note that the first word
+            of a block is reserved for a pointer to the previous block.
+         */
+        if (size > remaining) {
 
-			wastedMemory += remaining;
+            wastedMemory += remaining;
 
-		/* Allocate new storage. */
-			blocksize = (size + sizeof(void*) + (WORDSIZE-1) > BLOCKSIZE) ?
-						size + sizeof(void*) + (WORDSIZE-1) : BLOCKSIZE;
+            /* Allocate new storage. */
+            blocksize = (size + sizeof(void*) + (WORDSIZE-1) > BLOCKSIZE) ?
+                        size + sizeof(void*) + (WORDSIZE-1) : BLOCKSIZE;
 
-			// use the standard C malloc to allocate memory
-			void* m = ::malloc(blocksize);
-			if (!m) {
+            // use the standard C malloc to allocate memory
+            void* m = ::malloc(blocksize);
+            if (!m) {
                 fprintf(stderr,"Failed to allocate memory.\n");
-                exit(1);
-			}
+                return NULL;
+            }
 
-			/* Fill first word of new block with pointer to previous block. */
-			((void **) m)[0] = base;
-			base = m;
+            /* Fill first word of new block with pointer to previous block. */
+            ((void**) m)[0] = base;
+            base = m;
 
-			int shift = 0;
-			//int shift = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
+            int shift = 0;
+            //int shift = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
 
-			remaining = blocksize - sizeof(void*) - shift;
-			loc = ((char*)m + sizeof(void*) + shift);
-		}
-		void* rloc = loc;
-		loc = (char*)loc + size;
-		remaining -= size;
+            remaining = blocksize - sizeof(void*) - shift;
+            loc = ((char*)m + sizeof(void*) + shift);
+        }
+        void* rloc = loc;
+        loc = (char*)loc + size;
+        remaining -= size;
 
-		usedMemory += size;
+        usedMemory += size;
 
-		return rloc;
-	}
+        return rloc;
+    }
 
-	/**
-	 * Allocates (using this pool) a generic type T.
-	 *
-	 * Params:
-	 *     count = number of instances to allocate.
-	 * Returns: pointer (of type T*) to memory buffer
-	 */
+    /**
+     * Allocates (using this pool) a generic type T.
+     *
+     * Params:
+     *     count = number of instances to allocate.
+     * Returns: pointer (of type T*) to memory buffer
+     */
     template <typename T>
-	T* allocate(size_t count = 1)
-	{
-		T* mem = (T*) this->allocateBytes((int)(sizeof(T)*count));
-		return mem;
-	}
+    T* allocate(size_t count = 1)
+    {
+        T* mem = (T*) this->allocateMemory((int)(sizeof(T)*count));
+        return mem;
+    }
 
 };
 
-} // namespace cvflann
+}
 
-#endif //_OPENCV_ALLOCATOR_H_
+#endif //OPENCV_FLANN_ALLOCATOR_H_

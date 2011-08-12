@@ -20,7 +20,7 @@ void print_help()
 {
 	printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
     printf("\nUsage: stereo_match <left_image> <right_image> [--algorithm=bm|sgbm|hh|var] [--blocksize=<block_size>]\n"
-           "[--max-disparity=<max_disparity>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
+           "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i <intrinsic_filename>] [-e <extrinsic_filename>]\n"
            "[--no-display] [-o <disparity_image>] [-p <point_cloud_file>]\n");
 }
 
@@ -40,18 +40,18 @@ void saveXYZ(const char* filename, const Mat& mat)
     fclose(fp);
 }
 
-
 int main(int argc, char** argv)
 {
     const char* algorithm_opt = "--algorithm=";
     const char* maxdisp_opt = "--max-disparity=";
     const char* blocksize_opt = "--blocksize=";
     const char* nodisplay_opt = "--no-display=";
+    const char* scale_opt = "--scale=";
     
     if(argc < 3)
     {
         print_help();
-        return 0;
+		return 0;
     }
     const char* img1_filename = 0;
     const char* img2_filename = 0;
@@ -64,6 +64,7 @@ int main(int argc, char** argv)
     int alg = STEREO_SGBM;
     int SADWindowSize = 0, numberOfDisparities = 0;
     bool no_display = false;
+    float scale = 1.f;
     
     StereoBM bm;
     StereoSGBM sgbm;
@@ -111,6 +112,14 @@ int main(int argc, char** argv)
                 return -1;
             }
         }
+        else if( strncmp(argv[i], scale_opt, strlen(scale_opt)) == 0 )
+        {
+            if( sscanf( argv[i] + strlen(scale_opt), "%f", &scale ) != 1 || scale < 0 )
+            {
+                printf("Command-line parameter error: The scale factor (--scale=<...>) must be a positive floating-point number\n");
+                return -1;
+            }
+        }
         else if( strcmp(argv[i], nodisplay_opt) == 0 )
             no_display = true;
         else if( strcmp(argv[i], "-i" ) == 0 )
@@ -149,6 +158,17 @@ int main(int argc, char** argv)
     int color_mode = alg == STEREO_BM ? 0 : -1;
     Mat img1 = imread(img1_filename, color_mode);
     Mat img2 = imread(img2_filename, color_mode);
+    
+    if( scale != 1.f )
+    {
+        Mat temp1, temp2;
+        int method = scale < 1 ? INTER_AREA : INTER_CUBIC;
+        resize(img1, temp1, Size(), scale, scale, method);
+        img1 = temp1;
+        resize(img2, temp2, Size(), scale, scale, method);
+        img2 = temp2;
+    }
+    
     Size img_size = img1.size();
     
     Rect roi1, roi2;
@@ -224,18 +244,18 @@ int main(int argc, char** argv)
     sgbm.disp12MaxDiff = 1;
     sgbm.fullDP = alg == STEREO_HH;
     
-    var.levels = 6;
-	var.pyrScale = 0.6;
-	var.nIt = 3;
-	var.minDisp = -numberOfDisparities;
+    var.levels = 3;									// ignored with USE_AUTO_PARAMS
+	var.pyrScale = 0.5;								// ignored with USE_AUTO_PARAMS
+	var.nIt = 25;
+	var.minDisp = -numberOfDisparities;	
 	var.maxDisp = 0;
 	var.poly_n = 3;
 	var.poly_sigma = 0.0;
-	var.fi = 5.0f;
-	var.lambda = 0.1;
-	var.penalization = var.PENALIZATION_TICHONOV;
-	var.cycle = var.CYCLE_V;
-	var.flags = var.USE_SMART_ID | var.USE_INITIAL_DISPARITY | 1 * var.USE_MEDIAN_FILTERING ;
+	var.fi = 15.0f;
+	var.lambda = 0.03f;
+	var.penalization = var.PENALIZATION_TICHONOV;	// ignored with USE_AUTO_PARAMS
+	var.cycle = var.CYCLE_V;						// ignored with USE_AUTO_PARAMS
+	var.flags = var.USE_SMART_ID | var.USE_AUTO_PARAMS | var.USE_INITIAL_DISPARITY | var.USE_MEDIAN_FILTERING ;
     
     Mat disp, disp8;
     //Mat img1p, img2p, dispp;
@@ -245,8 +265,9 @@ int main(int argc, char** argv)
     int64 t = getTickCount();
     if( alg == STEREO_BM )
         bm(img1, img2, disp);
-    else if( alg == STEREO_VAR )
+    else if( alg == STEREO_VAR ) {
         var(img1, img2, disp);
+	}
     else if( alg == STEREO_SGBM || alg == STEREO_HH )
         sgbm(img1, img2, disp);
     t = getTickCount() - t;

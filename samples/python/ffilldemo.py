@@ -2,7 +2,7 @@
 import sys
 import random
 import urllib2
-import cv
+import cv2.cv as cv
 
 im=None;
 mask=None;

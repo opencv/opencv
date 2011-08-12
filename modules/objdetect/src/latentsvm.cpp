@@ -127,8 +127,7 @@ CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
     CvLSVMFeaturePyramid *H;
 
     // Obtaining feature pyramid
-    opResult = getFeaturePyramid(image, LAMBDA, SIDE_LENGTH, 0, 0, 
-                                 image->width, image->height, &H);
+    opResult = getFeaturePyramid(image, &H);
 
     if (opResult != LATENT_SVM_OK)
     {
@@ -139,7 +138,7 @@ CvLSVMFeaturePyramid* createFeaturePyramidWithBorder(IplImage *image,
     // Addition nullable border for each feature map
     // the size of the border for root filters
     computeBorderSize(maxXBorder, maxYBorder, &bx, &by);
-    for (level = 0; level < H->countLevel; level++)
+    for (level = 0; level < H->numLevels; level++)
     {
         addNullableBorder(H->pyramid[level], bx, by);
     }
@@ -196,7 +195,7 @@ int searchObject(const CvLSVMFeaturePyramid *H, const CvLSVMFilterObject **all_F
     // Transformation filter displacement from the block space 
     // to the space of pixels at the initial image
     // that settles at the level number LAMBDA
-    convertPoints(H->countLevel, H->lambda, LAMBDA, (*points), 
+    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points), 
                   (*levels), (*partsDisplacement), (*kPoints), n, 
                   maxXBorder, maxYBorder);
 
@@ -305,7 +304,7 @@ int searchObjectThreshold(const CvLSVMFeaturePyramid *H,
     // Transformation filter displacement from the block space 
     // to the space of pixels at the initial image
     // that settles at the level number LAMBDA
-    convertPoints(H->countLevel, H->lambda, LAMBDA, (*points), 
+    convertPoints(H->numLevels, LAMBDA, LAMBDA, (*points), 
                   (*levels), (*partsDisplacement), (*kPoints), n, 
                   maxXBorder, maxYBorder);
 
@@ -509,11 +508,11 @@ int getMaxFilterDims(const CvLSVMFilterObject **filters, int kComponents,
     componentIndex = kPartFilters[0] + 1;
     for (i = 1; i < kComponents; i++)
     {
-        if (filters[componentIndex]->sizeX > *maxXBorder)
+        if ((unsigned)filters[componentIndex]->sizeX > *maxXBorder)
         {
             *maxXBorder = filters[componentIndex]->sizeX;
         }
-        if (filters[componentIndex]->sizeY > *maxYBorder)
+        if ((unsigned)filters[componentIndex]->sizeY > *maxYBorder)
         {
             *maxYBorder = filters[componentIndex]->sizeY;
         }

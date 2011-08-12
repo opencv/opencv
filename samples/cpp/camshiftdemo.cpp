@@ -8,24 +8,6 @@
 using namespace cv;
 using namespace std;
 
-void help()
-{
-	cout << "\nThis is a demo that shows mean-shift based tracking\n"
-		 <<   "You select a color objects such as your face and it tracks it.\n"
-		 <<   "This reads from video camera (0 by default, or the camera number the user enters\n"
-		 << "Call:\n"
-		 << "\n./camshiftdemo [camera number]"
-		 << "\n" << endl;
-
-	cout << "\n\nHot keys: \n"
-        "\tESC - quit the program\n"
-        "\tc - stop the tracking\n"
-        "\tb - switch to/from backprojection view\n"
-        "\th - show/hide object histogram\n"
-        "\tp - pause video\n"
-        "To initialize tracking, select the object with mouse\n" << endl;
-}
-
 Mat image;
 
 bool backprojMode = false;
@@ -63,30 +45,51 @@ void onMouse( int event, int x, int y, int, void* )
     }
 }
 
-
-
-int main( int argc, char** argv )
+void help()
 {
+    cout << "\nThis is a demo that shows mean-shift based tracking\n"
+			"You select a color objects such as your face and it tracks it.\n"
+			"This reads from video camera (0 by default, or the camera number the user enters\n"
+			"Usage: \n"
+            "	./camshiftdemo [camera number]\n";
+
+    cout << "\n\nHot keys: \n"
+			"\tESC - quit the program\n"
+			"\tc - stop the tracking\n"
+			"\tb - switch to/from backprojection view\n"
+			"\th - show/hide object histogram\n"
+			"\tp - pause video\n"
+            "To initialize tracking, select the object with mouse\n";
+}
+
+const char* keys = 
+{
+	"{1|  | 0 | camera number}"
+};
+
+int main( int argc, const char** argv )
+{
+	help();
+
     VideoCapture cap;
     Rect trackWindow;
     RotatedRect trackBox;
     int hsize = 16;
     float hranges[] = {0,180};
     const float* phranges = hranges;
-
-    if( argc == 1 || (argc == 2 && strlen(argv[1]) == 1 && isdigit(argv[1][0])))
-        cap.open(argc == 2 ? argv[1][0] - '0' : 0);
-    else if( argc == 2 )
-        cap.open(argv[1]);
+	CommandLineParser parser(argc, argv, keys);
+	int camNum = parser.get<int>("1");     
+	
+	cap.open(camNum);
 
     if( !cap.isOpened() )
     {
     	help();
         cout << "***Could not initialize capturing...***\n";
-        return 0;
+        cout << "Current parameter's value: \n";
+		parser.printParams();
+        return -1;
     }
-
-    help();
 
     namedWindow( "Histogram", 0 );
     namedWindow( "CamShift Demo", 0 );

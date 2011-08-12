@@ -9,6 +9,7 @@
 #include "numpy/ndarrayobject.h"
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/ml/ml.hpp"
@@ -17,7 +18,9 @@
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv_extra_api.hpp"
+
+using cv::flann::IndexParams;
+using cv::flann::SearchParams;
 
 static PyObject* opencv_error = 0;
 
@@ -55,6 +58,8 @@ typedef vector<Point> vector_Point;
 typedef vector<Point2f> vector_Point2f;
 typedef vector<Vec2f> vector_Vec2f;
 typedef vector<Vec3f> vector_Vec3f;
+typedef vector<Vec4f> vector_Vec4f;
+typedef vector<Vec6f> vector_Vec6f;
 typedef vector<Vec4i> vector_Vec4i;
 typedef vector<Rect> vector_Rect;
 typedef vector<KeyPoint> vector_KeyPoint;
@@ -263,7 +268,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const char *name = "<unknown>")
         for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fi); i++) {
             PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
             if (PyFloat_Check(item) || PyInt_Check(item)) {
-                s[i] = PyFloat_AsDouble(item);
+                s[(int)i] = PyFloat_AsDouble(item);
             } else {
                 failmsg("Scalar value for argument '%s' is not numeric", name);
                 return false;
@@ -350,6 +355,11 @@ static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknow
     else
         value = (float)PyFloat_AsDouble(obj);
     return !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(int64 value)
+{
+    return PyFloat_FromDouble((double)value);
 }
 
 static PyObject* pyopencv_from(const string& value)
@@ -735,6 +745,46 @@ static inline PyObject* pyopencv_from(const CvDTreeNode* node)
     return value == ivalue ? PyInt_FromLong(ivalue) : PyFloat_FromDouble(value);
 }
 
+static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name="<unknown>")
+{
+    bool ok = false;
+    PyObject* keys = PyObject_CallMethod(o,(char*)"keys",0);
+    PyObject* values = PyObject_CallMethod(o,(char*)"values",0);
+    
+    if( keys && values )
+    {
+        int i, n = (int)PyList_GET_SIZE(keys);
+        for( i = 0; i < n; i++ )
+        {
+            PyObject* key = PyList_GET_ITEM(keys, i);
+            PyObject* item = PyList_GET_ITEM(values, i);
+            if( !PyString_Check(key) )
+                break;
+            std::string k = PyString_AsString(key);
+            if( PyString_Check(item) )
+                p.setString(k, PyString_AsString(item));
+            else if( PyInt_Check(item) )
+                p.setInt(k, PyInt_AsLong(item));
+            else if( PyFloat_Check(item) )
+                p.setDouble(k, PyFloat_AsDouble(item));
+            else
+                break;
+        }
+        ok = i == n && !PyErr_Occurred();
+    }
+    
+    Py_XDECREF(keys);
+    Py_XDECREF(values);
+    return ok;
+}
+
+static bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name="<unknown>")
+{
+    int d = 0;
+    bool ok = pyopencv_to(o, d, name);
+    dist = (cvflann::flann_distance_t)d;
+    return ok;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -833,6 +883,8 @@ static int to_ok(PyTypeObject *to)
   return (PyType_Ready(to) == 0);
 }
 
+#include "cv2.cv.hpp"
+
 extern "C"
 #if defined WIN32 || defined _WIN32
 __declspec(dllexport)
@@ -848,16 +900,17 @@ void initcv2()
 #include "pyopencv_generated_type_reg.h"
 #endif
 
-  PyObject* m = Py_InitModule(MODULESTR"", methods);
+  PyObject* m = Py_InitModule(MODULESTR, methods);
   PyObject* d = PyModule_GetDict(m);
 
   PyDict_SetItemString(d, "__version__", PyString_FromString("$Rev: 4557 $"));
 
   opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
   PyDict_SetItemString(d, "error", opencv_error);
+  
+  PyObject* cv_m = init_cv();
 
-  // AFAIK the only floating-point constant
-  PyDict_SetItemString(d, "CV_PI", PyFloat_FromDouble(CV_PI));
+  PyDict_SetItemString(d, "cv", cv_m);  
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
 #define PUBLISHU(I) PyDict_SetItemString(d, #I, PyLong_FromUnsignedLong(I))
@@ -941,7 +994,6 @@ void initcv2()
   PUBLISH(CV_VAR_CATEGORICAL);
 
   PUBLISH(CV_AA);
-
 
 #include "pyopencv_generated_const_reg.h"
 }

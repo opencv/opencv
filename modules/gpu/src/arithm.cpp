@@ -82,7 +82,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz) );		
+        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );		
     }
     else if (src.elemSize() == 4)
     {
@@ -92,8 +93,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), src.step, 
-            dst.ptr<Ncv32u>(), dst.step, sz) );
+        nppSafeCall( nppiStTranspose_32u_C1R(const_cast<Ncv32u*>(src.ptr<Ncv32u>()), static_cast<int>(src.step), 
+            dst.ptr<Ncv32u>(), static_cast<int>(dst.step), sz) );
     }
     else // if (src.elemSize() == 8)
     {
@@ -103,8 +104,8 @@ void cv::gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& s)
         sz.width  = src.cols;
         sz.height = src.rows;
 
-        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), src.step, 
-            dst.ptr<Ncv64u>(), dst.step, sz) );		
+        nppSafeCall( nppiStTranspose_64u_C1R(const_cast<Ncv64u*>(src.ptr<Ncv64u>()), static_cast<int>(src.step), 
+            dst.ptr<Ncv64u>(), static_cast<int>(dst.step), sz) );		
     }
 
     if (stream == 0)
@@ -130,14 +131,14 @@ void cv::gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& s)
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiMirror_8u_C1R(src.ptr<Npp8u>(), src.step,
-            dst.ptr<Npp8u>(), dst.step, sz,
+        nppSafeCall( nppiMirror_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
             (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
     }
     else
     {
-        nppSafeCall( nppiMirror_8u_C4R(src.ptr<Npp8u>(), src.step,
-            dst.ptr<Npp8u>(), dst.step, sz,
+        nppSafeCall( nppiMirror_8u_C4R(src.ptr<Npp8u>(), static_cast<int>(src.step),
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz,
             (flipCode == 0 ? NPP_HORIZONTAL_AXIS : (flipCode > 0 ? NPP_VERTICAL_AXIS : NPP_BOTH_AXIS))) );
     }
 
@@ -187,7 +188,8 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
 
     if (src.type() == CV_8UC1)
     {
-        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
+        nppSafeCall( nppiLUT_Linear_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, nppLut.ptr<Npp32s>(), lvls.pLevels, 256) );
     }
     else
     {
@@ -202,7 +204,8 @@ void cv::gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& s)
             pValues3[1] = nppLut3[1].ptr<Npp32s>();
             pValues3[2] = nppLut3[2].ptr<Npp32s>();
         }
-        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), src.step, dst.ptr<Npp8u>(), dst.step, sz, pValues3, lvls.pLevels3, lvls.nValues3) );
+        nppSafeCall( nppiLUT_Linear_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), 
+            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz, pValues3, lvls.pLevels3, lvls.nValues3) );
     }
 
     if (stream == 0)
@@ -226,7 +229,7 @@ void cv::gpu::exp(const GpuMat& src, GpuMat& dst, Stream& s)
 
     NppStreamHandler h(stream);
 
-    nppSafeCall( nppiExp_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+    nppSafeCall( nppiExp_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -249,7 +252,7 @@ void cv::gpu::log(const GpuMat& src, GpuMat& dst, Stream& s)
 
     NppStreamHandler h(stream);
 
-    nppSafeCall( nppiLn_32f_C1R(src.ptr<Npp32f>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+    nppSafeCall( nppiLn_32f_C1R(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
     if (stream == 0)
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -274,7 +277,7 @@ namespace
 
         NppStreamHandler h(stream);
 
-        nppSafeCall( func(src.ptr<Npp32fc>(), src.step, dst.ptr<Npp32f>(), dst.step, sz) );
+        nppSafeCall( func(src.ptr<Npp32fc>(), static_cast<int>(src.step), dst.ptr<Npp32f>(), static_cast<int>(dst.step), sz) );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );

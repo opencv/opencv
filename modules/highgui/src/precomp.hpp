@@ -133,6 +133,7 @@ CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
 CvCapture* cvCreateCameraCapture_DShow( int index );
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
 CvCapture* cvCreateCameraCapture_Android( int index );
+CvCapture* cvCreateCameraCapture_XIMEA( int index );
 
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);

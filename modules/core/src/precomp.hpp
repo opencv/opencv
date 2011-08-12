@@ -65,6 +65,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/core/core_tegra.hpp"
+#endif
+
 namespace cv
 {
 

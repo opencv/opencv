@@ -7,7 +7,7 @@ file(GLOB FILES_DOC_VS vidsurv/*.doc)
 file(GLOB FILES_TEX *.tex *.sty *.bib)
 file(GLOB FILES_TEX_PICS pics/*.png pics/*.jpg)
 
-if(BUILD_DOCS AND PDFLATEX_COMPILER AND HAVE_SPHINX)
+if(BUILD_DOCS AND HAVE_SPHINX)
 
 project(opencv_docs)
 
@@ -20,6 +20,7 @@ file(GLOB_RECURSE OPENCV_FILES_TUT_PICT tutorials/*.png tutorials/*.jpg)
 set(OPENCV_DOC_DEPS conf.py ${OPENCV_FILES_REF} ${OPENCV_FILES_REF_PICT}
           ${OPENCV_FILES_UG} ${OPENCV_FILES_TUT} ${OPENCV_FILES_TUT_PICT})
 
+if (PDFLATEX_COMPILER)
 add_custom_target(docs
                   ${SPHINX_BUILD}
                     -b latex -c ${CMAKE_CURRENT_SOURCE_DIR}
@@ -28,6 +29,7 @@ add_custom_target(docs
                     ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
+                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
                   COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
@@ -37,6 +39,8 @@ add_custom_target(docs
                   DEPENDS ${OPENCV_DOC_DEPS}
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                   COMMENT "Generating the PDF Manuals")
+                  
+endif()
 
 add_custom_target(html_docs
                 ${SPHINX_BUILD}

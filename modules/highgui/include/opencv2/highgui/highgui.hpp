@@ -101,6 +101,30 @@ CV_EXPORTS int createTrackbar( const string& trackbarname, const string& winname
 CV_EXPORTS_W int getTrackbarPos( const string& trackbarname, const string& winname );
 CV_EXPORTS_W void setTrackbarPos( const string& trackbarname, const string& winname, int pos );
 
+enum
+{
+    EVENT_MOUSEMOVE      =0,
+    EVENT_LBUTTONDOWN    =1,
+    EVENT_RBUTTONDOWN    =2,
+    EVENT_MBUTTONDOWN    =3,
+    EVENT_LBUTTONUP      =4,
+    EVENT_RBUTTONUP      =5,
+    EVENT_MBUTTONUP      =6,
+    EVENT_LBUTTONDBLCLK  =7,
+    EVENT_RBUTTONDBLCLK  =8,
+    EVENT_MBUTTONDBLCLK  =9
+};
+
+enum
+{
+    EVENT_FLAG_LBUTTON   =1,
+    EVENT_FLAG_RBUTTON   =2,
+    EVENT_FLAG_MBUTTON   =4,
+    EVENT_FLAG_CTRLKEY   =8,
+    EVENT_FLAG_SHIFTKEY  =16,
+    EVENT_FLAG_ALTKEY    =32
+};
+        
 typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
 
 //! assigns callback for mouse events

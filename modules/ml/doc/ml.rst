@@ -17,6 +17,7 @@ Most of the classification and regression algorithms are implemented as C++ clas
     boosting
     gradient_boosted_trees
     random_trees
+    ertrees
     expectation_maximization
     neural_networks
     mldata

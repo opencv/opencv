@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    
-    <string name="app_name">CVCamera</string>
-<string name="app_description">app to demo using android camera and passing data to opencv layer.</string>
-<string name="Changes">Release 0.0.1 - first demo of using the OpenCV library with camera data</string>
-</resources>

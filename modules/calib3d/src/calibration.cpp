@@ -2529,46 +2529,81 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
 void cvGetOptimalNewCameraMatrix( const CvMat* cameraMatrix, const CvMat* distCoeffs,
                                   CvSize imgSize, double alpha,
                                   CvMat* newCameraMatrix, CvSize newImgSize,
-                                  CvRect* validPixROI )
+                                  CvRect* validPixROI, int centerPrincipalPoint )
 {
     cv::Rect_<float> inner, outer;
-    icvGetRectangles( cameraMatrix, distCoeffs, 0, cameraMatrix, imgSize, inner, outer );
-
     newImgSize = newImgSize.width*newImgSize.height != 0 ? newImgSize : imgSize;
 
     double M[3][3];
     CvMat matM = cvMat(3, 3, CV_64F, M);
     cvConvert(cameraMatrix, &matM);
 
-    double cx0 = M[0][2];
-    double cy0 = M[1][2];
-    double cx = (newImgSize.width-1)*0.5;
-    double cy = (newImgSize.height-1)*0.5;
-
-    double s0 = std::max(std::max(std::max((double)cx/(cx0 - inner.x), (double)cy/(cy0 - inner.y)),
-                        (double)cx/(inner.x + inner.width - cx0)),
-                    (double)cy/(inner.y + inner.height - cy0));
-    double s1 = std::min(std::min(std::min((double)cx/(cx0 - outer.x), (double)cy/(cy0 - outer.y)),
-                        (double)cx/(outer.x + outer.width - cx0)),
-                    (double)cy/(outer.y + outer.height - cy0));
-    double s = s0*(1 - alpha) + s1*alpha;
-
-    M[0][0] *= s;
-    M[1][1] *= s;
-    M[0][2] = cx;
-    M[1][2] = cy;
-    cvConvert(&matM, newCameraMatrix);
-
-    if( validPixROI )
+    if( centerPrincipalPoint )
     {
-        inner = cv::Rect_<float>((float)((inner.x - cx0)*s + cx),
-                             (float)((inner.y - cy0)*s + cy),
-                             (float)(inner.width*s),
-                             (float)(inner.height*s));
-        cv::Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
-        r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
-        *validPixROI = r;
+        double cx0 = M[0][2];
+        double cy0 = M[1][2];
+        double cx = (newImgSize.width-1)*0.5;
+        double cy = (newImgSize.height-1)*0.5;
+
+        icvGetRectangles( cameraMatrix, distCoeffs, 0, cameraMatrix, imgSize, inner, outer );
+        double s0 = std::max(std::max(std::max((double)cx/(cx0 - inner.x), (double)cy/(cy0 - inner.y)),
+                                      (double)cx/(inner.x + inner.width - cx0)),
+                             (double)cy/(inner.y + inner.height - cy0));
+        double s1 = std::min(std::min(std::min((double)cx/(cx0 - outer.x), (double)cy/(cy0 - outer.y)),
+                                      (double)cx/(outer.x + outer.width - cx0)),
+                             (double)cy/(outer.y + outer.height - cy0));
+        double s = s0*(1 - alpha) + s1*alpha;
+
+        M[0][0] *= s;
+        M[1][1] *= s;
+        M[0][2] = cx;
+        M[1][2] = cy;
+
+        if( validPixROI )
+        {
+            inner = cv::Rect_<float>((float)((inner.x - cx0)*s + cx),
+                                     (float)((inner.y - cy0)*s + cy),
+                                     (float)(inner.width*s),
+                                     (float)(inner.height*s));
+            cv::Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
+            r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
+            *validPixROI = r;
+        }
     }
+    else
+    {
+        // Get inscribed and circumscribed rectangles in normalized
+        // (independent of camera matrix) coordinates
+        icvGetRectangles( cameraMatrix, distCoeffs, 0, 0, imgSize, inner, outer );
+
+        // Projection mapping inner rectangle to viewport
+        double fx0 = (newImgSize.width  - 1) / inner.width;
+        double fy0 = (newImgSize.height - 1) / inner.height;
+        double cx0 = -fx0 * inner.x;
+        double cy0 = -fy0 * inner.y;
+
+        // Projection mapping outer rectangle to viewport
+        double fx1 = (newImgSize.width  - 1) / outer.width;
+        double fy1 = (newImgSize.height - 1) / outer.height;
+        double cx1 = -fx1 * outer.x;
+        double cy1 = -fy1 * outer.y;
+
+        // Interpolate between the two optimal projections
+        M[0][0] = fx0*(1 - alpha) + fx1*alpha;
+        M[1][1] = fy0*(1 - alpha) + fy1*alpha;
+        M[0][2] = cx0*(1 - alpha) + cx1*alpha;
+        M[1][2] = cy0*(1 - alpha) + cy1*alpha;
+
+        if( validPixROI )
+        {
+            icvGetRectangles( cameraMatrix, distCoeffs, 0, newCameraMatrix, imgSize, inner, outer );
+            cv::Rect r = inner;
+            r &= cv::Rect(0, 0, newImgSize.width, newImgSize.height);
+            *validPixROI = r;
+        }
+    }
+
+    cvConvert(&matM, newCameraMatrix);
 }
 
 
@@ -3374,16 +3409,28 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     double reprojErr = cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs, &c_rvecM,
                                           &c_tvecM, flags );
-    _rvecs.create((int)nimages, 1, CV_64FC3);
-    _tvecs.create((int)nimages, 1, CV_64FC3);
+    
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+    
+    if( rvecs_needed )
+        _rvecs.create((int)nimages, 1, CV_64FC3);
+    if( tvecs_needed )
+        _tvecs.create((int)nimages, 1, CV_64FC3);
 
     for( i = 0; i < (int)nimages; i++ )
     {
-        _rvecs.create(3, 1, CV_64F, i, true);
-        _tvecs.create(3, 1, CV_64F, i, true);
-        Mat rv = _rvecs.getMat(i), tv = _tvecs.getMat(i);
-        memcpy(rv.data, rvecM.ptr<double>(i), 3*sizeof(double));
-        memcpy(tv.data, tvecM.ptr<double>(i), 3*sizeof(double));
+        if( rvecs_needed )
+        {
+            _rvecs.create(3, 1, CV_64F, i, true);
+            Mat rv = _rvecs.getMat(i);
+            memcpy(rv.data, rvecM.ptr<double>(i), 3*sizeof(double));
+        }
+        if( tvecs_needed )
+        {
+            _tvecs.create(3, 1, CV_64F, i, true);
+            Mat tv = _tvecs.getMat(i);
+            memcpy(tv.data, tvecM.ptr<double>(i), 3*sizeof(double));
+        }
     }
     cameraMatrix.copyTo(_cameraMatrix);
     distCoeffs.copyTo(_distCoeffs);
@@ -3520,7 +3567,7 @@ bool cv::stereoRectifyUncalibrated( InputArray _points1, InputArray _points2,
 cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
                                        InputArray _distCoeffs,
                                        Size imgSize, double alpha, Size newImgSize,
-                                       Rect* validPixROI )
+                                       Rect* validPixROI, bool centerPrincipalPoint )
 {
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
@@ -3530,7 +3577,7 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
     
     cvGetOptimalNewCameraMatrix(&c_cameraMatrix, &c_distCoeffs, imgSize,
                                 alpha, &c_newCameraMatrix,
-                                newImgSize, (CvRect*)validPixROI);
+                                newImgSize, (CvRect*)validPixROI, (int)centerPrincipalPoint);
     return newCameraMatrix;
 }
 

@@ -96,11 +96,17 @@ namespace
             num_layers_descr_ = num_layers_descr;
         }
 
+        void releaseMemory();
+
     protected:
         void find(const Mat &image, ImageFeatures &features);
 
     private:
+        GpuMat image_;
+        GpuMat gray_image_;
         SURF_GPU surf_;
+        GpuMat keypoints_;
+        GpuMat descriptors_;
         int num_octaves_, num_layers_;
         int num_octaves_descr_, num_layers_descr_;
     };
@@ -118,22 +124,34 @@ namespace
 
     void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
-        GpuMat gray_image;
         CV_Assert(image.depth() == CV_8U);
-        cvtColor(GpuMat(image), gray_image, CV_BGR2GRAY);
 
-        GpuMat d_keypoints;
-        GpuMat d_descriptors;
+        ensureSizeIsEnough(image.size(), image.type(), image_);
+        image_.upload(image);
+
+        ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
+        cvtColor(image_, gray_image_, CV_BGR2GRAY);
+
         surf_.nOctaves = num_octaves_;
         surf_.nOctaveLayers = num_layers_;
-        surf_(gray_image, GpuMat(), d_keypoints);
+        surf_(gray_image_, GpuMat(), keypoints_);
 
         surf_.nOctaves = num_octaves_descr_;
         surf_.nOctaveLayers = num_layers_descr_;
-        surf_(gray_image, GpuMat(), d_keypoints, d_descriptors, true);
-        surf_.downloadKeypoints(d_keypoints, features.keypoints);
+        surf_.upright = true;
+        surf_(gray_image_, GpuMat(), keypoints_, descriptors_, true);
+        surf_.downloadKeypoints(keypoints_, features.keypoints);
 
-        d_descriptors.download(features.descriptors);
+        descriptors_.download(features.descriptors);
+    }
+
+    void GpuSurfFeaturesFinder::releaseMemory()
+    {
+        surf_.releaseMemory();
+        image_.release();
+        gray_image_.release();
+        keypoints_.release();
+        descriptors_.release();
     }
 } // anonymous namespace
 
@@ -151,6 +169,11 @@ SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     (*impl_)(image, features);
+}
+
+void SurfFeaturesFinder::releaseMemory()
+{
+    impl_->releaseMemory();
 }
 
 
@@ -257,15 +280,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 namespace 
 {
-    class PairLess
-    {
-    public:
-        bool operator()(const pair<int,int>& l, const pair<int,int>& r) const
-        {
-            return l.first < r.first || (l.first == r.first && l.second < r.second);
-        }
-    };
-    typedef set<pair<int,int>,PairLess> MatchesSet;
+    typedef set<pair<int,int> > MatchesSet;
 
     // These two classes are aimed to find features matches only, not to 
     // estimate homography
@@ -287,10 +302,13 @@ namespace
         GpuMatcher(float match_conf) : match_conf_(match_conf) {}
         void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
+        void releaseMemory();
+
     private:
         float match_conf_;
         GpuMat descriptors1_, descriptors2_;
         GpuMat train_idx_, distance_, all_dist_;
+        vector< vector<DMatch> > pair_matches;
     };
 
 
@@ -334,14 +352,19 @@ namespace
 
     void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
     {
-        matches_info.matches.clear();       
+        matches_info.matches.clear(); 
+
+        ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
+        ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
+
         descriptors1_.upload(features1.descriptors);
         descriptors2_.upload(features2.descriptors);
+
         BruteForceMatcher_GPU< L2<float> > matcher;
-        vector< vector<DMatch> > pair_matches;
         MatchesSet matches;
 
         // Find 1->2 matches
+        pair_matches.clear();
         matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
         matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
         for (size_t i = 0; i < pair_matches.size(); ++i)
@@ -373,12 +396,30 @@ namespace
         }
     }
 
+    void GpuMatcher::releaseMemory()
+    {
+        descriptors1_.release();
+        descriptors2_.release();
+        train_idx_.release();
+        distance_.release();
+        all_dist_.release();
+        vector< vector<DMatch> >().swap(pair_matches);
+    }
+
 } // anonymous namespace
 
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
+    bool use_gpu = false;
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
+    {
+        DeviceInfo info;
+        if (info.majorVersion() >= 2 && cv::getNumberOfCPUs() < 4)
+            use_gpu = true;
+    }
+
+    if (use_gpu)
         impl_ = new GpuMatcher(match_conf);
     else
         impl_ = new CpuMatcher(match_conf);
@@ -405,8 +446,8 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         return;
 
     // Construct point-point correspondences for homography estimation
-    Mat src_points(1, matches_info.matches.size(), CV_32FC2);
-    Mat dst_points(1, matches_info.matches.size(), CV_32FC2);
+    Mat src_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
+    Mat dst_points(1, static_cast<int>(matches_info.matches.size()), CV_32FC2);
     for (size_t i = 0; i < matches_info.matches.size(); ++i)
     {
         const DMatch& m = matches_info.matches[i];
@@ -414,12 +455,12 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         Point2f p = features1.keypoints[m.queryIdx].pt;
         p.x -= features1.img_size.width * 0.5f;
         p.y -= features1.img_size.height * 0.5f;
-        src_points.at<Point2f>(0, i) = p;
+        src_points.at<Point2f>(0, static_cast<int>(i)) = p;
 
         p = features2.keypoints[m.trainIdx].pt;
         p.x -= features2.img_size.width * 0.5f;
         p.y -= features2.img_size.height * 0.5f;
-        dst_points.at<Point2f>(0, i) = p;
+        dst_points.at<Point2f>(0, static_cast<int>(i)) = p;
     }
 
     // Find pair-wise motion
@@ -463,4 +504,9 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 
     // Rerun motion estimation on inliers only
     matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
+}
+
+void BestOf2NearestMatcher::releaseMemory()
+{
+    impl_->releaseMemory();
 }

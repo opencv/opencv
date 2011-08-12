@@ -47,8 +47,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/gpu/devmem2d.hpp"
 #include "opencv2/features2d/features2d.hpp"
+#include "opencv2/gpu/gpumat.hpp"
 
 namespace cv
 {
@@ -124,6 +124,8 @@ namespace cv
             // Checks whether the GPU module can be run on the given device
             bool isCompatible() const;
 
+            int deviceID() const { return device_id_; }
+
         private:
             void query();
             void queryMemory(size_t& free_memory, size_t& total_memory) const;
@@ -141,187 +143,16 @@ namespace cv
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
         CV_EXPORTS void nppError( int err, const char *file, const int line, const char *func);
 
-        //////////////////////////////// GpuMat ////////////////////////////////
-        class Stream;
-        class CudaMem;
-
-        //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
-        class CV_EXPORTS GpuMat
-        {
-        public:
-            //! default constructor
-            GpuMat();
-            //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-            GpuMat(int rows, int cols, int type);
-            GpuMat(Size size, int type);
-            //! constucts GpuMatrix and fills it with the specified value _s.
-            GpuMat(int rows, int cols, int type, const Scalar& s);
-            GpuMat(Size size, int type, const Scalar& s);
-            //! copy constructor
-            GpuMat(const GpuMat& m);
-
-            //! constructor for GpuMatrix headers pointing to user-allocated data
-            GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
-            GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
-
-            //! creates a matrix header for a part of the bigger matrix
-            GpuMat(const GpuMat& m, const Range& rowRange, const Range& colRange);
-            GpuMat(const GpuMat& m, const Rect& roi);
-
-            //! builds GpuMat from Mat. Perfom blocking upload to device.
-            explicit GpuMat (const Mat& m);
-
-            //! destructor - calls release()
-            ~GpuMat();
-
-            //! assignment operators
-            GpuMat& operator = (const GpuMat& m);
-            //! assignment operator. Perfom blocking upload to device.
-            GpuMat& operator = (const Mat& m);
-
-            //! returns lightweight DevMem2D_ structure for passing to nvcc-compiled code.
-            // Contains just image size, data ptr and step.
-            template <class T> operator DevMem2D_<T>() const;
-            template <class T> operator PtrStep_<T>() const;
-
-            //! pefroms blocking upload data to GpuMat.
-            void upload(const cv::Mat& m);
-
-            //! upload async
-            void upload(const CudaMem& m, Stream& stream);
-
-            //! downloads data from device to host memory. Blocking calls.
-            operator Mat() const;
-            void download(cv::Mat& m) const;
-
-            //! download async
-            void download(CudaMem& m, Stream& stream) const;
-
-            //! returns a new GpuMatrix header for the specified row
-            GpuMat row(int y) const;
-            //! returns a new GpuMatrix header for the specified column
-            GpuMat col(int x) const;
-            //! ... for the specified row span
-            GpuMat rowRange(int startrow, int endrow) const;
-            GpuMat rowRange(const Range& r) const;
-            //! ... for the specified column span
-            GpuMat colRange(int startcol, int endcol) const;
-            GpuMat colRange(const Range& r) const;
-
-            //! returns deep copy of the GpuMatrix, i.e. the data is copied
-            GpuMat clone() const;
-            //! copies the GpuMatrix content to "m".
-            // It calls m.create(this->size(), this->type()).
-            void copyTo( GpuMat& m ) const;
-            //! copies those GpuMatrix elements to "m" that are marked with non-zero mask elements.
-            void copyTo( GpuMat& m, const GpuMat& mask ) const;
-            //! converts GpuMatrix to another datatype with optional scalng. See cvConvertScale.
-            void convertTo( GpuMat& m, int rtype, double alpha=1, double beta=0 ) const;
-
-            void assignTo( GpuMat& m, int type=-1 ) const;
-
-            //! sets every GpuMatrix element to s
-            GpuMat& operator = (const Scalar& s);
-            //! sets some of the GpuMatrix elements to s, according to the mask
-            GpuMat& setTo(const Scalar& s, const GpuMat& mask = GpuMat());
-            //! creates alternative GpuMatrix header for the same data, with different
-            // number of channels and/or different number of rows. see cvReshape.
-            GpuMat reshape(int cn, int rows = 0) const;
-
-            //! allocates new GpuMatrix data unless the GpuMatrix already has specified size and type.
-            // previous data is unreferenced if needed.
-            void create(int rows, int cols, int type);
-            void create(Size size, int type);
-            //! decreases reference counter;
-            // deallocate the data when reference counter reaches 0.
-            void release();
-
-            //! swaps with other smart pointer
-            void swap(GpuMat& mat);
-
-            //! locates GpuMatrix header within a parent GpuMatrix. See below
-            void locateROI( Size& wholeSize, Point& ofs ) const;
-            //! moves/resizes the current GpuMatrix ROI inside the parent GpuMatrix.
-            GpuMat& adjustROI( int dtop, int dbottom, int dleft, int dright );
-            //! extracts a rectangular sub-GpuMatrix
-            // (this is a generalized form of row, rowRange etc.)
-            GpuMat operator()( Range rowRange, Range colRange ) const;
-            GpuMat operator()( const Rect& roi ) const;
-
-            //! returns true iff the GpuMatrix data is continuous
-            // (i.e. when there are no gaps between successive rows).
-            // similar to CV_IS_GpuMat_CONT(cvGpuMat->type)
-            bool isContinuous() const;
-            //! returns element size in bytes,
-            // similar to CV_ELEM_SIZE(cvMat->type)
-            size_t elemSize() const;
-            //! returns the size of element channel in bytes.
-            size_t elemSize1() const;
-            //! returns element type, similar to CV_MAT_TYPE(cvMat->type)
-            int type() const;
-            //! returns element type, similar to CV_MAT_DEPTH(cvMat->type)
-            int depth() const;
-            //! returns element type, similar to CV_MAT_CN(cvMat->type)
-            int channels() const;
-            //! returns step/elemSize1()
-            size_t step1() const;
-            //! returns GpuMatrix size:
-            // width == number of columns, height == number of rows
-            Size size() const;
-            //! returns true if GpuMatrix data is NULL
-            bool empty() const;
-
-            //! returns pointer to y-th row
-            uchar* ptr(int y = 0);
-            const uchar* ptr(int y = 0) const;
-
-            //! template version of the above method
-            template<typename _Tp> _Tp* ptr(int y = 0);
-            template<typename _Tp> const _Tp* ptr(int y = 0) const;
-
-            //! matrix transposition
-            GpuMat t() const;
-
-            /*! includes several bit-fields:
-            - the magic signature
-            - continuity flag
-            - depth
-            - number of channels
-            */
-            int flags;
-            //! the number of rows and columns
-            int rows, cols;
-            //! a distance between successive rows in bytes; includes the gap if any
-            size_t step;
-            //! pointer to the data
-            uchar* data;
-
-            //! pointer to the reference counter;
-            // when GpuMatrix points to user-allocated data, the pointer is NULL
-            int* refcount;
-
-            //! helper fields used in locateROI and adjustROI
-            uchar* datastart;
-            uchar* dataend;
-        };
-
-//#define TemplatedGpuMat // experimental now, deprecated to use
-#ifdef TemplatedGpuMat
-    #include "GpuMat_BetaDeprecated.hpp"
-#endif
-
-        //! Creates continuous GPU matrix
-        CV_EXPORTS void createContinuous(int rows, int cols, int type, GpuMat& m);
-
-        //! Ensures that size of the given matrix is not less than (rows, cols) size
-        //! and matrix type is match specified one too
-        CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m);
-
         //////////////////////////////// CudaMem ////////////////////////////////
         // CudaMem is limited cv::Mat with page locked memory allocation.
         // Page locked memory is only needed for async and faster coping to GPU.
         // It is convertable to cv::Mat header without reference counting
         // so you can use it with other opencv functions.
+
+        // Page-locks the matrix m memory and maps it for the device(s)
+        CV_EXPORTS void registerPageLocked(Mat& m);
+        // Unmaps the memory of matrix m, and makes it pageable again.
+        CV_EXPORTS void unregisterPageLocked(Mat& m);
 
         class CV_EXPORTS CudaMem
         {
@@ -439,372 +270,7 @@ namespace cv
             
             explicit Stream(Impl* impl);
         };
-
-
-        ////////////////////////////// Arithmetics ///////////////////////////////////
-
-        //! transposes the matrix
-        //! supports matrix with element size = 1, 4 and 8 bytes (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc)
-        CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! reverses the order of the rows, columns or both in a matrix
-        //! supports CV_8UC1, CV_8UC4 types
-        CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode, Stream& stream = Stream::Null());
-
-        //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
-        //! destination array will have the depth type as lut and the same channels number as source
-        //! supports CV_8UC1, CV_8UC3 types
-        CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! makes multi-channel array out of several single-channel arrays
-        CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! makes multi-channel array out of several single-channel arrays
-        CV_EXPORTS void merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! copies each plane of a multi-channel array to a dedicated array
-        CV_EXPORTS void split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::Null());
-
-        //! copies each plane of a multi-channel array to a dedicated array
-        CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = Stream::Null());
-
-        //! computes magnitude of complex (x(i).re, x(i).im) vector
-        //! supports only CV_32FC2 type
-        CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-        //! computes squared magnitude of complex (x(i).re, x(i).im) vector
-        //! supports only CV_32FC2 type
-        CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-        //! computes magnitude of each (x(i), y(i)) vector
-        //! supports only floating-point source
-        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-        //! computes squared magnitude of each (x(i), y(i)) vector
-        //! supports only floating-point source
-        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
-
-        //! computes angle (angle(i)) of each (x(i), y(i)) vector
-        //! supports only floating-point source
-        CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
-
-        //! converts Cartesian coordinates to polar
-        //! supports only floating-point source
-        CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
-
-        //! converts polar coordinates to Cartesian
-        //! supports only floating-point source
-        CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false, Stream& stream = Stream::Null());
-
-
-        //////////////////////////// Per-element operations ////////////////////////////////////
-
-        //! adds one matrix to another (c = a + b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! adds scalar to a matrix (c = a + s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
-
-        //! subtracts one matrix from another (c = a - b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! subtracts scalar from a matrix (c = a - s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
-
-        //! computes element-wise product of the two arrays (c = a * b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! multiplies matrix to a scalar (c = a * s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
-
-        //! computes element-wise quotient of the two arrays (c = a / b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! computes element-wise quotient of matrix and scalar (c = a / s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
-
-        //! computes exponent of each matrix element (b = e**a)
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void exp(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
-
-        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
-
-        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream = Stream::Null());
-
-        //! compares elements of two arrays (c = a <cmpop> b)
-        //! supports CV_8UC4, CV_32FC1 types
-        CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
-
-        //! performs per-elements bit-wise inversion
-        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-
-        //! calculates per-element bit-wise disjunction of two arrays
-        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-
-        //! calculates per-element bit-wise conjunction of two arrays
-        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-
-        //! calculates per-element bit-wise "exclusive or" operation
-        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
-
-        //! computes per-element minimum of two arrays (dst = min(src1, src2))
-        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! computes per-element minimum of array and scalar (dst = min(src1, src2))
-        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! computes per-element maximum of two arrays (dst = max(src1, src2))
-        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! computes per-element maximum of array and scalar (dst = max(src1, src2))
-        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-
-        ////////////////////////////// Image processing //////////////////////////////
-
-        //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
-        //! supports CV_8UC1, CV_8UC3 source types and CV_32FC1 map type
-        CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
-
-        //! Does mean shift filtering on GPU.
-        CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
-            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
-
-        //! Does mean shift procedure on GPU.
-        CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
-            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
-
-        //! Does mean shift segmentation with elimination of small regions.
-        CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
-            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
-
-        //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
-        //! Supported types of input disparity: CV_8U, CV_16S.
-        //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
-        CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, Stream& stream = Stream::Null());
-
-        //! Reprojects disparity image to 3D space.
-        //! Supports CV_8U and CV_16S types of input disparity.
-        //! The output is a 4-channel floating-point (CV_32FC4) matrix.
-        //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
-        //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-        CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, Stream& stream = Stream::Null());
-
-        //! converts image from one color space to another
-        CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
-
-        //! applies fixed threshold to the image
-        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
-
-        //! resizes the image
-        //! Supports INTER_NEAREST, INTER_LINEAR
-        //! supports CV_8UC1, CV_8UC4 types
-        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
-
-        //! warps the image using affine transformation
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
-
-        //! warps the image using perspective transformation
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
-
-        //! rotate 8bit single or four channel image
-        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-        //! supports CV_8UC1, CV_8UC4 types
-        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
-
-        //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1 and CV_32FC1 types
-        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar(), Stream& stream = Stream::Null());
-
-        //! computes the integral image
-        //! sum will have CV_32S type, but will contain unsigned int values
-        //! supports only CV_8UC1 source type
-        CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
-
-        //! buffered version
-        CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
-
-        //! computes the integral image and integral for the squared image
-        //! sum will have CV_32S type, sqsum - CV32F type
-        //! supports only CV_8UC1 source type
-        CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& stream = Stream::Null());
-
-        //! computes squared integral image
-        //! result matrix will have 64F type, but will contain 64U values
-        //! supports source images of 8UC1 type only
-        CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
-
-        //! computes vertical sum, supports only CV_32FC1 images
-        CV_EXPORTS void columnSum(const GpuMat& src, GpuMat& sum);
-
-        //! computes the standard deviation of integral images
-        //! supports only CV_32SC1 source type and CV_32FC1 sqr type
-        //! output will have CV_32FC1 type
-        CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
-
-        //! computes Harris cornerness criteria at each image pixel
-        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
-
-        //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
-        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
-
-        //! performs per-element multiplication of two full (not packed) Fourier spectrums
-        //! supports 32FC2 matrixes only (interleaved format)
-        CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false);
-
-        //! performs per-element multiplication of two full (not packed) Fourier spectrums
-        //! supports 32FC2 matrixes only (interleaved format)
-        CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, 
-                                             float scale, bool conjB=false);
-
-        //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
-        //! Param dft_size is the size of DFT transform.
-        //! 
-        //! If the source matrix is not continous, then additional copy will be done,
-        //! so to avoid copying ensure the source matrix is continous one. If you want to use
-        //! preallocated output ensure it is continuous too, otherwise it will be reallocated.
-        //!
-        //! Being implemented via CUFFT real-to-complex transform result contains only non-redundant values
-        //! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
-        //!
-        //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
-        CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0);
-
-        //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
-        //! supports source images of 32FC1 type only
-        //! result matrix will have 32FC1 type
-        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
-                                 bool ccorr=false);
-
-        struct CV_EXPORTS ConvolveBuf;
-
-        //! buffered version
-        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
-                                 bool ccorr, ConvolveBuf& buf);
-
-        struct CV_EXPORTS ConvolveBuf
-        {
-            ConvolveBuf() {}
-            ConvolveBuf(Size image_size, Size templ_size) 
-                { create(image_size, templ_size); }
-            void create(Size image_size, Size templ_size);
-
-        private:
-            static Size estimateBlockSize(Size result_size, Size templ_size);
-            friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&);
-
-            Size result_size;
-            Size block_size;
-            Size dft_size;
-            int spect_len;
-
-            GpuMat image_spect, templ_spect, result_spect;
-            GpuMat image_block, templ_block, result_data;
-        };
-
-        //! computes the proximity map for the raster template and the image where the template is searched for
-        CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
-
-        //! downsamples image
-        CV_EXPORTS void downsample(const GpuMat& src, GpuMat& dst, int k=2);
-
-        //! performs linear blending of two images
-        //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
-        CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
-            GpuMat& result, Stream& stream = Stream::Null());
-
-        ////////////////////////////// Matrix reductions //////////////////////////////
-
-        //! computes mean value and standard deviation of all or selected array elements
-        //! supports only CV_8UC1 type
-        CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
-
-        //! computes norm of array
-        //! supports NORM_INF, NORM_L1, NORM_L2
-        //! supports all matrices except 64F
-        CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
-
-        //! computes norm of array
-        //! supports NORM_INF, NORM_L1, NORM_L2
-        //! supports all matrices except 64F
-        CV_EXPORTS double norm(const GpuMat& src1, int normType, GpuMat& buf);
-
-        //! computes norm of the difference between two arrays
-        //! supports NORM_INF, NORM_L1, NORM_L2
-        //! supports only CV_8UC1 type
-        CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
-
-        //! computes sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sum(const GpuMat& src);
-
-        //! computes sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
-
-        //! computes sum of array elements absolute values
-        //! supports only single channel images
-        CV_EXPORTS Scalar absSum(const GpuMat& src);
-
-        //! computes sum of array elements absolute values
-        //! supports only single channel images
-        CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
-
-        //! computes squared sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sqrSum(const GpuMat& src);
-
-        //! computes squared sum of array elements
-        //! supports only single channel images
-        CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
-
-        //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
-
-        //! finds global minimum and maximum array elements and returns their values
-        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
-
-        //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
-                                  const GpuMat& mask=GpuMat());
-
-        //! finds global minimum and maximum array elements and returns their values with locations
-        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                                  const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
-
-        //! counts non-zero array elements
-        CV_EXPORTS int countNonZero(const GpuMat& src);
-
-        //! counts non-zero array elements
-        CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
-
-
-        ///////////////////////////// Calibration 3D //////////////////////////////////
-
-        CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                                        GpuMat& dst, Stream& stream = Stream::Null());
-
-        CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
-                                      const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, 
-                                      Stream& stream = Stream::Null());
-
-        CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
-                                       const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
-                                       int num_iters=100, float max_dist=8.0, int min_inlier_count=100, 
-                                       vector<int>* inliers=NULL);
+        
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 
@@ -990,6 +456,464 @@ namespace cv
         //! supports only ksize = 1 and ksize = 3
         CV_EXPORTS void Laplacian(const GpuMat& src, GpuMat& dst, int ddepth, int ksize = 1, double scale = 1, Stream& stream = Stream::Null());
 
+
+        ////////////////////////////// Arithmetics ///////////////////////////////////
+
+        //! transposes the matrix
+        //! supports matrix with element size = 1, 4 and 8 bytes (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc)
+        CV_EXPORTS void transpose(const GpuMat& src1, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! reverses the order of the rows, columns or both in a matrix
+        //! supports CV_8UC1, CV_8UC4 types
+        CV_EXPORTS void flip(const GpuMat& a, GpuMat& b, int flipCode, Stream& stream = Stream::Null());
+
+        //! transforms 8-bit unsigned integers using lookup table: dst(i)=lut(src(i))
+        //! destination array will have the depth type as lut and the same channels number as source
+        //! supports CV_8UC1, CV_8UC3 types
+        CV_EXPORTS void LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! makes multi-channel array out of several single-channel arrays
+        CV_EXPORTS void merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! makes multi-channel array out of several single-channel arrays
+        CV_EXPORTS void merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! copies each plane of a multi-channel array to a dedicated array
+        CV_EXPORTS void split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::Null());
+
+        //! copies each plane of a multi-channel array to a dedicated array
+        CV_EXPORTS void split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = Stream::Null());
+
+        //! computes magnitude of complex (x(i).re, x(i).im) vector
+        //! supports only CV_32FC2 type
+        CV_EXPORTS void magnitude(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+
+        //! computes squared magnitude of complex (x(i).re, x(i).im) vector
+        //! supports only CV_32FC2 type
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, GpuMat& magnitude, Stream& stream = Stream::Null());
+
+        //! computes magnitude of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
+
+        //! computes squared magnitude of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null());
+
+        //! computes angle (angle(i)) of each (x(i), y(i)) vector
+        //! supports only floating-point source
+        CV_EXPORTS void phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+        //! converts Cartesian coordinates to polar
+        //! supports only floating-point source
+        CV_EXPORTS void cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+        //! converts polar coordinates to Cartesian
+        //! supports only floating-point source
+        CV_EXPORTS void polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees = false, Stream& stream = Stream::Null());
+
+
+        //////////////////////////// Per-element operations ////////////////////////////////////
+
+        //! adds one matrix to another (c = a + b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! adds scalar to a matrix (c = a + s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+
+        //! subtracts one matrix from another (c = a - b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! subtracts scalar from a matrix (c = a - s)
+        //! supports CV_32FC1 and CV_32FC2 type
+        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+
+        //! computes element-wise product of the two arrays (c = a * b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! multiplies matrix to a scalar (c = a * s)
+        //! supports CV_32FC1 type
+        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+
+        //! computes element-wise quotient of the two arrays (c = a / b)
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! computes element-wise quotient of matrix and scalar (c = a / s)
+        //! supports CV_32FC1 type
+        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+
+        //! computes exponent of each matrix element (b = e**a)
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void exp(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
+        
+        //! computes power of each matrix element:
+        //    (dst(i,j) = pow(     src(i,j) , power), if src.type() is integer
+        //    (dst(i,j) = pow(fabs(src(i,j)), power), otherwise
+        //! supports all, except depth == CV_64F
+        CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
+
+        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
+        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
+        //! supports only CV_32FC1 type
+        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream = Stream::Null());
+
+        //! compares elements of two arrays (c = a <cmpop> b)
+        //! supports CV_8UC4, CV_32FC1 types
+        CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
+
+        //! performs per-elements bit-wise inversion
+        CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+
+        //! calculates per-element bit-wise disjunction of two arrays
+        CV_EXPORTS void bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+
+        //! calculates per-element bit-wise conjunction of two arrays
+        CV_EXPORTS void bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+
+        //! calculates per-element bit-wise "exclusive or" operation
+        CV_EXPORTS void bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
+
+        //! computes per-element minimum of two arrays (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! computes per-element minimum of array and scalar (dst = min(src1, src2))
+        CV_EXPORTS void min(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! computes per-element maximum of two arrays (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! computes per-element maximum of array and scalar (dst = max(src1, src2))
+        CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
+
+
+        ////////////////////////////// Image processing //////////////////////////////
+
+        //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
+        //! supports CV_8UC1, CV_8UC3 source types and CV_32FC1 map type
+        CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
+
+        //! Does mean shift filtering on GPU.
+        CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+
+        //! Does mean shift procedure on GPU.
+        CV_EXPORTS void meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr,
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+
+        //! Does mean shift segmentation with elimination of small regions.
+        CV_EXPORTS void meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize,
+            TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1));
+
+        //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
+        //! Supported types of input disparity: CV_8U, CV_16S.
+        //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
+        CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, Stream& stream = Stream::Null());
+
+        //! Reprojects disparity image to 3D space.
+        //! Supports CV_8U and CV_16S types of input disparity.
+        //! The output is a 4-channel floating-point (CV_32FC4) matrix.
+        //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
+        //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
+        CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, Stream& stream = Stream::Null());
+
+        //! converts image from one color space to another
+        CV_EXPORTS void cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null());
+
+        //! applies fixed threshold to the image
+        CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
+
+        //! resizes the image
+        //! Supports INTER_NEAREST, INTER_LINEAR
+        //! supports CV_8UC1, CV_8UC4 types
+        CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
+
+        //! warps the image using affine transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
+
+        //! warps the image using perspective transformation
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
+
+        //! builds plane warping maps
+        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist,
+                                           GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
+        //! builds cylindrical warping maps
+        CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+                                                 GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
+        //! builds spherical warping maps
+        CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+                                               GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+
+        //! rotate 8bit single or four channel image
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
+        //! supports CV_8UC1, CV_8UC4 types
+        CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
+
+        //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
+        //! supports CV_8UC1, CV_8UC4, CV_32SC1 and CV_32FC1 types
+        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar(), Stream& stream = Stream::Null());
+
+        //! computes the integral image
+        //! sum will have CV_32S type, but will contain unsigned int values
+        //! supports only CV_8UC1 source type
+        CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null());
+
+        //! buffered version
+        CV_EXPORTS void integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& stream = Stream::Null());
+
+        //! computes the integral image and integral for the squared image
+        //! sum will have CV_32S type, sqsum - CV32F type
+        //! supports only CV_8UC1 source type
+        CV_EXPORTS void integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& stream = Stream::Null());
+
+        //! computes squared integral image
+        //! result matrix will have 64F type, but will contain 64U values
+        //! supports source images of 8UC1 type only
+        CV_EXPORTS void sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null());
+
+        //! computes vertical sum, supports only CV_32FC1 images
+        CV_EXPORTS void columnSum(const GpuMat& src, GpuMat& sum);
+
+        //! computes the standard deviation of integral images
+        //! supports only CV_32SC1 source type and CV_32FC1 sqr type
+        //! output will have CV_32FC1 type
+        CV_EXPORTS void rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null());
+
+        //! computes Harris cornerness criteria at each image pixel
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101);
+
+        //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
+        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
+        CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType=BORDER_REFLECT101);
+
+        //! performs per-element multiplication of two full (not packed) Fourier spectrums
+        //! supports 32FC2 matrixes only (interleaved format)
+        CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false);
+
+        //! performs per-element multiplication of two full (not packed) Fourier spectrums
+        //! supports 32FC2 matrixes only (interleaved format)
+        CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, 
+                                             float scale, bool conjB=false);
+
+        //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+        //! Param dft_size is the size of DFT transform.
+        //! 
+        //! If the source matrix is not continous, then additional copy will be done,
+        //! so to avoid copying ensure the source matrix is continous one. If you want to use
+        //! preallocated output ensure it is continuous too, otherwise it will be reallocated.
+        //!
+        //! Being implemented via CUFFT real-to-complex transform result contains only non-redundant values
+        //! in CUFFT's format. Result as full complex matrix for such kind of transform cannot be retrieved.
+        //!
+        //! For complex-to-real transform it is assumed that the source matrix is packed in CUFFT's format.
+        CV_EXPORTS void dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0);
+
+        //! computes convolution (or cross-correlation) of two images using discrete Fourier transform
+        //! supports source images of 32FC1 type only
+        //! result matrix will have 32FC1 type
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                                 bool ccorr=false);
+
+        struct CV_EXPORTS ConvolveBuf;
+
+        //! buffered version
+        CV_EXPORTS void convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
+                                 bool ccorr, ConvolveBuf& buf);
+
+        struct CV_EXPORTS ConvolveBuf
+        {
+            ConvolveBuf() {}
+            ConvolveBuf(Size image_size, Size templ_size) 
+                { create(image_size, templ_size); }
+            void create(Size image_size, Size templ_size);
+
+        private:
+            static Size estimateBlockSize(Size result_size, Size templ_size);
+            friend void convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&);
+
+            Size result_size;
+            Size block_size;
+            Size dft_size;
+            int spect_len;
+
+            GpuMat image_spect, templ_spect, result_spect;
+            GpuMat image_block, templ_block, result_data;
+        };
+
+        //! computes the proximity map for the raster template and the image where the template is searched for
+        CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
+
+        //! downsamples image
+        CV_EXPORTS void downsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+
+        //! upsamples image
+        CV_EXPORTS void upsample(const GpuMat& src, GpuMat &dst, Stream& stream = Stream::Null());
+
+        //! smoothes the source image and downsamples it
+        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+        
+        struct CV_EXPORTS PyrDownBuf;
+        
+        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, PyrDownBuf& buf, Stream& stream = Stream::Null());
+        
+        struct CV_EXPORTS PyrDownBuf
+        {
+            PyrDownBuf() : image_type(-1) {}
+            PyrDownBuf(Size image_size, int image_type_) : image_type(-1) { create(image_size, image_type_); }
+            void create(Size image_size, int image_type_);
+
+        private:
+            friend void pyrDown(const GpuMat&, GpuMat&, PyrDownBuf&, Stream& stream);
+
+            static Mat ker;
+            GpuMat buf;
+            Ptr<FilterEngine_GPU> filter;
+            int image_type;
+        };
+
+        //! upsamples the source image and then smoothes it
+        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+
+        struct CV_EXPORTS PyrUpBuf;
+        
+        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, PyrUpBuf& buf, Stream& stream = Stream::Null());
+        
+        struct CV_EXPORTS PyrUpBuf
+        {
+            PyrUpBuf() : image_type(-1) {}
+            PyrUpBuf(Size image_size, int image_type_) : image_type(-1) { create(image_size, image_type_); }
+            void create(Size image_size, int image_type_);
+
+        private:
+            friend void pyrUp(const GpuMat&, GpuMat&, PyrUpBuf&, Stream& stream);
+
+            static Mat ker;
+            GpuMat buf;
+            Ptr<FilterEngine_GPU> filter;
+            int image_type;
+        };
+
+        //! performs linear blending of two images
+        //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
+        CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, 
+            GpuMat& result, Stream& stream = Stream::Null());
+
+        
+        struct CV_EXPORTS CannyBuf;
+        
+        CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
+        CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
+
+        struct CV_EXPORTS CannyBuf
+        {
+            CannyBuf() {}
+            explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
+            CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
+
+            void create(const Size& image_size, int apperture_size = 3);
+            
+            void release();
+
+            GpuMat dx, dy;
+            GpuMat dx_buf, dy_buf;
+            GpuMat edgeBuf;
+            GpuMat trackBuf1, trackBuf2;
+            Ptr<FilterEngine_GPU> filterDX, filterDY;
+        };
+
+        ////////////////////////////// Matrix reductions //////////////////////////////
+
+        //! computes mean value and standard deviation of all or selected array elements
+        //! supports only CV_8UC1 type
+        CV_EXPORTS void meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev);
+
+        //! computes norm of array
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports all matrices except 64F
+        CV_EXPORTS double norm(const GpuMat& src1, int normType=NORM_L2);
+
+        //! computes norm of array
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports all matrices except 64F
+        CV_EXPORTS double norm(const GpuMat& src1, int normType, GpuMat& buf);
+
+        //! computes norm of the difference between two arrays
+        //! supports NORM_INF, NORM_L1, NORM_L2
+        //! supports only CV_8UC1 type
+        CV_EXPORTS double norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2);
+
+        //! computes sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src);
+
+        //! computes sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sum(const GpuMat& src, GpuMat& buf);
+
+        //! computes sum of array elements absolute values
+        //! supports only single channel images
+        CV_EXPORTS Scalar absSum(const GpuMat& src);
+
+        //! computes sum of array elements absolute values
+        //! supports only single channel images
+        CV_EXPORTS Scalar absSum(const GpuMat& src, GpuMat& buf);
+
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src);
+
+        //! computes squared sum of array elements
+        //! supports only single channel images
+        CV_EXPORTS Scalar sqrSum(const GpuMat& src, GpuMat& buf);
+
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat());
+
+        //! finds global minimum and maximum array elements and returns their values
+        CV_EXPORTS void minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf);
+
+        //! finds global minimum and maximum array elements and returns their values with locations
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0,
+                                  const GpuMat& mask=GpuMat());
+
+        //! finds global minimum and maximum array elements and returns their values with locations
+        CV_EXPORTS void minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
+                                  const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf);
+
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src);
+
+        //! counts non-zero array elements
+        CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
+
+
+        ///////////////////////////// Calibration 3D //////////////////////////////////
+
+        CV_EXPORTS void transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                        GpuMat& dst, Stream& stream = Stream::Null());
+
+        CV_EXPORTS void projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec,
+                                      const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, 
+                                      Stream& stream = Stream::Null());
+
+        CV_EXPORTS void solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+                                       const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false,
+                                       int num_iters=100, float max_dist=8.0, int min_inlier_count=100, 
+                                       vector<int>* inliers=NULL);
+
         //////////////////////////////// Image Labeling ////////////////////////////////
 
         //!performs labeling via graph cuts
@@ -1003,22 +927,36 @@ namespace cv
         //! Supports CV_8UC1, CV_16UC1 and CV_16SC1 source types.
         //! Output hist will have one row and histSize cols and CV_32SC1 type.
         CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
         //! Calculates histogram with evenly distributed bins for four-channel source.
         //! All channels of source are processed separately.
         //! Supports CV_8UC4, CV_16UC4 and CV_16SC4 source types.
         //! Output hist[i] will have one row and histSize[i] cols and CV_32SC1 type.
         CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
+        CV_EXPORTS void histEven(const GpuMat& src, GpuMat hist[4], GpuMat& buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
         //! Calculates histogram with bins determined by levels array.
         //! levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
         //! Supports CV_8UC1, CV_16UC1, CV_16SC1 and CV_32FC1 source types.
         //! Output hist will have one row and (levels.cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, Stream& stream = Stream::Null());
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream = Stream::Null());
         //! Calculates histogram with bins determined by levels array.
         //! All levels must have one row and CV_32SC1 type if source has integer type or CV_32FC1 otherwise.
         //! All channels of source are processed separately.
         //! Supports CV_8UC4, CV_16UC4, CV_16SC4 and CV_32FC4 source types.
         //! Output hist[i] will have one row and (levels[i].cols-1) cols and CV_32SC1 type.
         CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
+        CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], GpuMat& buf, Stream& stream = Stream::Null());
+        
+        //! Calculates histogram for 8u one channel image
+        //! Output hist will have one row, 256 cols and CV32SC1 type.
+        CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
+        CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
+        
+        //! normalizes the grayscale image brightness and contrast by normalizing its histogram
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
+        CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
         //////////////////////////////// StereoBM_GPU ////////////////////////////////
 
@@ -1321,8 +1259,10 @@ namespace cv
                 GpuMat& trainIdx, GpuMat& distance,
                 const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-            // Download trainIdx and distance to CPU vector with DMatch
+            // Download trainIdx and distance and convert it to CPU vector with DMatch
             static void matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>& matches);
+            // Convert trainIdx and distance to vector with DMatch
+            static void matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>& matches);
 
             // Find one best match for each query descriptor.
             void match(const GpuMat& queryDescs, const GpuMat& trainDescs, std::vector<DMatch>& matches,
@@ -1340,13 +1280,13 @@ namespace cv
                 GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance,
                 const GpuMat& maskCollection, Stream& stream = Stream::Null());
 
-            // Download trainIdx, imgIdx and distance to CPU vector with DMatch
-            static void matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance,
-                std::vector<DMatch>& matches);
+            // Download trainIdx, imgIdx and distance and convert it to vector with DMatch
+            static void matchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches);
+            // Convert trainIdx, imgIdx and distance to vector with DMatch
+            static void matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>& matches);
 
             // Find one best match from train collection for each query descriptor.
-            void match(const GpuMat& queryDescs, std::vector<DMatch>& matches,
-                const std::vector<GpuMat>& masks = std::vector<GpuMat>());
+            void match(const GpuMat& queryDescs, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>());
 
             // Find k best matches for each query descriptor (in increasing order of distances).
             // trainIdx.at<int>(queryIdx, i) will contain index of i'th best trains (i < k).
@@ -1358,11 +1298,14 @@ namespace cv
             void knnMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
                 GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-            // Download trainIdx and distance to CPU vector with DMatch
+            // Download trainIdx and distance and convert it to vector with DMatch
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
             static void knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+            // Convert trainIdx and distance to vector with DMatch
+            static void knnMatchConvert(const Mat& trainIdx, const Mat& distance,
                 std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
             // Find k best matches for each query descriptor (in increasing order of distances).
@@ -1393,12 +1336,15 @@ namespace cv
                 GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance,
                 const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
-            // Download trainIdx, nMatches and distance to CPU vector with DMatch.
+            // Download trainIdx, nMatches and distance and convert it to vector with DMatch.
             // matches will be sorted in increasing order of distances.
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
             static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, const GpuMat& distance,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+            // Convert trainIdx, nMatches and distance to vector with DMatch.
+            static void radiusMatchConvert(const Mat& trainIdx, const Mat& nMatches, const Mat& distance,
                 std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
             // Find best matches for each query descriptor which have distance less than maxDistance
@@ -1412,9 +1358,9 @@ namespace cv
             void radiusMatch(const GpuMat& queryDescs, std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
-        private:
             DistType distType;
 
+        private:
             std::vector<GpuMat> trainDescCollection;
         };
 
@@ -1528,6 +1474,8 @@ namespace cv
 
             void operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors, 
                 bool useProvidedKeypoints = false);
+
+            void releaseMemory();
 
             //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
             float keypointsRatio;

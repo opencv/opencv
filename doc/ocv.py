@@ -215,7 +215,7 @@ class OCVPyObject(ObjectDescription):
             signode['ids'].append(fullname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
-            objects = self.env.domaindata['py']['objects']
+            objects = self.env.domaindata['ocv']['objects']
             if fullname in objects:
                 self.env.warn(
                     self.env.docname,
@@ -224,7 +224,7 @@ class OCVPyObject(ObjectDescription):
                     self.env.doc2path(objects[fullname][0]) +
                     ', use :noindex: for one of them',
                     self.lineno)
-            objects[fullname] = (self.env.docname, self.objtype)
+            objects.setdefault(fullname, (self.env.docname, self.objtype, name_cls[0]))
 
         indextext = self.get_index_text(modname, name_cls)
         if indextext:
@@ -669,7 +669,7 @@ class FuncDefExpr(NamedDefExpr):
                 u'.'.join(x.get_id() for x in self.signature) or u'',
             self.const and u'C' or u''
         )
-
+    
     def __unicode__(self):
         buf = self.get_modifiers()
         if self.explicit:
@@ -864,6 +864,13 @@ class DefinitionParser(object):
 
     def _parse_type_expr(self):
         typename = self._parse_name()
+        if typename and self.skip_string('['):
+            typename.name += '['
+            if self.match(re.compile(r'\d*')):
+                typename.name += self.last_match.group(0)
+            typename.name += ']'
+            if not self.skip_string(']'):
+                self.fail('expected type')
         self.skip_ws()
         if not self.skip_string('<'):
             return typename
@@ -1126,7 +1133,11 @@ class OCVObject(ObjectDescription):
             node += nodes.Text(' ')
 
     def add_target_and_index(self, sigobj, sig, signode):
-        theid = sigobj.get_id()
+        theid = sig#obj.get_id()
+        theid = re.sub(r" +", " ", theid)
+        theid = re.sub(r"=[^,()]+\([^)]*?\)[^,)]*(,|\))", "\\1", theid)
+        theid = re.sub(r"=[^,)]+(,|\))", "\\1", theid)
+        theid = theid.replace("( ", "(").replace(" )", ")")
         name = unicode(sigobj.name)
         if theid not in self.state.document.ids:
             signode['names'].append(theid)
@@ -1134,7 +1145,9 @@ class OCVObject(ObjectDescription):
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
 
-            self.env.domaindata['ocv']['objects'].setdefault(name,
+            #self.env.domaindata['ocv']['objects'].setdefault(name,
+                #(self.env.docname, self.objtype, theid))
+            self.env.domaindata['ocv']['objects'].setdefault(theid,
                 (self.env.docname, self.objtype, theid))
 
         indextext = self.get_index_text(name)
@@ -1430,7 +1443,7 @@ class OCVDomain(Domain):
                 raise DefinitionError('')
         except DefinitionError:
             refdoc = node.get('refdoc', fromdocname)
-            env.warn(refdoc, 'unparseable C++ definition: %r' % target,
+            env.warn(refdoc, 'unparseable1 C++ definition: %r' % target,
                      node.line)
             return None
 
@@ -1451,6 +1464,26 @@ class OCVDomain(Domain):
     def get_objects(self):
         for refname, (docname, type, theid) in self.data['objects'].iteritems():
             yield (refname, refname, type, docname, refname, 1)
-
+            
+    def get_type_name(self, type, primary=False):
+        """
+        Return full name for given ObjType.
+        """
+        if primary:
+            return type.lname
+            
+        return {
+            'class':         _('C++ class'),
+            'struct':        _('C/C++ struct'),
+            'function':      _('C++ function'),
+            'cfunction':     _('C function'),
+            'jfunction':     _('Java method'),
+            'pyfunction':    _('Python function'),
+            'pyoldfunction': _('Legacy Python function'),
+            'member':        _('C++ member'),
+            'type':          _('C/C++ type'),
+            'namespace':     _('C++ namespace'),
+            }.get(type.lname, _('%s %s') % (self.label, type.lname))
+        
 def setup(app):
     app.add_domain(OCVDomain)

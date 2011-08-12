@@ -110,7 +110,7 @@ namespace
         error_entry( NPP_ODD_ROI_WARNING )
     };
 
-    int error_num = sizeof(npp_errors)/sizeof(npp_errors[0]);
+    const size_t error_num = sizeof(npp_errors) / sizeof(npp_errors[0]);
 
     struct Searcher
     {
@@ -161,7 +161,7 @@ namespace cv
     {
         const string getNppErrorString( int err )
         {
-            int idx = std::find_if(npp_errors, npp_errors + error_num, Searcher(err)) - npp_errors;
+            size_t idx = std::find_if(npp_errors, npp_errors + error_num, Searcher(err)) - npp_errors;
             const string& msg = (idx != error_num) ? npp_errors[idx].str : string("Unknown error code");
 
             std::stringstream interpreter;

@@ -1,7 +1,7 @@
 .. _Drawing_2:
 
-Fancy Drawing!
-****************
+Random generator and text with OpenCV
+*************************************
 
 Goals
 ======
@@ -9,15 +9,15 @@ Goals
 In this tutorial you will learn how to:
 
 * Use the *Random Number generator class* (:rng:`RNG <>`) and how to get a random number from a uniform distribution.
-* Display Text on an OpenCV window by using the function :put_text:`putText <>`
+* Display text on an OpenCV window by using the function :put_text:`putText <>`
 
 Code
 =====
-* In the previous tutorial we drew diverse geometric figures, giving as input parameters such as coordinates (in the form of :point:`Points <>`), color, thickness, etc. You might have noticed that we gave specific values for these arguments.
+* In the previous tutorial (:ref:`Drawing_1`) we drew diverse geometric figures, giving as input parameters such as coordinates (in the form of :point:`Points <>`), color, thickness, etc. You might have noticed that we gave specific values for these arguments.
  
-* In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops*
+* In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops* .
 
-* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Basic/Drawing_2.cpp>`_
+* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Basic/Drawing_2.cpp>`_ .
 
 Explanation
 ============
@@ -81,27 +81,23 @@ Explanation
 
    .. code-block:: cpp
 
-      /**
-       * @function Drawing_Random_Lines
-       */
       int Drawing_Random_Lines( Mat image, char* window_name, RNG rng )
       {
         int lineType = 8;
         Point pt1, pt2;
 
-	for( int i = 0; i < NUMBER; i++ )
-  	{
-    	 pt1.x = rng.uniform( x_1, x_2 );
-    	 pt1.y = rng.uniform( y_1, y_2 );
-    	 pt2.x = rng.uniform( x_1, x_2 );
-    	 pt2.y = rng.uniform( y_1, y_2 );
+        for( int i = 0; i < NUMBER; i++ )
+        {
+         pt1.x = rng.uniform( x_1, x_2 );
+         pt1.y = rng.uniform( y_1, y_2 );
+         pt2.x = rng.uniform( x_1, x_2 );
+         pt2.y = rng.uniform( y_1, y_2 );
 
          line( image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), 8 );
-    	 imshow( window_name, image );
+         imshow( window_name, image );
          if( waitKey( DELAY ) >= 0 )
-      	   { return -1; }
+         { return -1; }
         }
-
         return 0;
       }
 
@@ -122,18 +118,18 @@ Explanation
      * As another observation, we notice that in the :line:`line <>` arguments, for the *color* input we enter:
 
        .. code-block:: cpp
-	   
-	  randomColor(rng)           
-	   
+      
+          randomColor(rng)           
+      
        Let's check the function implementation:
 
        .. code-block:: cpp
 
-	  static Scalar randomColor( RNG& rng )
-          {
+          static Scalar randomColor( RNG& rng )
+            {
             int icolor = (unsigned) rng;
             return Scalar( icolor&255, (icolor>>8)&255, (icolor>>16)&255 );
-	  }
+            }
 
        As we can see, the return value is an *Scalar* with 3 randomly initialized values, which are used as the *R*, *G* and *B* parameters for the line color. Hence, the color of the lines will be random too!
 
@@ -192,21 +188,21 @@ Explanation
       int Displaying_Big_End( Mat image, char* window_name, RNG rng )
       {
         Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
-  	Point org((window_width - textsize.width)/2, (window_height - textsize.height)/2);
-  	int lineType = 8;
+        Point org((window_width - textsize.width)/2, (window_height - textsize.height)/2);
+        int lineType = 8;
     
-	Mat image2;
+        Mat image2;
 
-  	for( int i = 0; i < 255; i += 2 )
-  	{
-    	  image2 = image - Scalar::all(i);
-    	  putText( image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
-          	   Scalar(i, i, 255), 5, lineType );
+        for( int i = 0; i < 255; i += 2 )
+        {
+          image2 = image - Scalar::all(i);
+          putText( image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
+                 Scalar(i, i, 255), 5, lineType );
         
-    	  imshow( window_name, image2 );
-    	  if( waitKey(DELAY) >= 0 )
-       	  { return -1; }
-  	}
+          imshow( window_name, image2 );
+          if( waitKey(DELAY) >= 0 )
+            { return -1; }
+        }
 
         return 0;
       }
@@ -229,57 +225,36 @@ As you just saw in the Code section, the program will sequentially execute diver
 
 #. First a random set of *NUMBER* lines will appear on screen such as it can be seen in this screenshot:
 
-   .. image:: images/Drawing_2_Tutorial_Result_0.png
-      :height: 300px
+   .. image:: images/Drawing_2_Tutorial_Result_0.jpg
       :alt: Drawing Tutorial 2 - Final Result 0
       :align: center 
 
-#. Then, a new set of figures, these time *rectangles* will follow:
-
-   .. image:: images/Drawing_2_Tutorial_Result_1.png
-      :height: 300px
-      :alt: Drawing Tutorial 2 - Final Result 1
-      :align: center 
+#. Then, a new set of figures, these time *rectangles* will follow.
 
 #. Now some ellipses will appear, each of them with random position, size, thickness and arc length:
 
-   .. image:: images/Drawing_2_Tutorial_Result_2.png
-      :height: 300px
+   .. image:: images/Drawing_2_Tutorial_Result_2.jpg
       :alt: Drawing Tutorial 2 - Final Result 2
       :align: center 
 
 #. Now, *polylines* with 03 segments will appear on screen, again in random configurations.
 
-   .. image:: images/Drawing_2_Tutorial_Result_3.png
-      :height: 300px
+   .. image:: images/Drawing_2_Tutorial_Result_3.jpg
       :alt: Drawing Tutorial 2 - Final Result 3
       :align: center 
 
-#. Filled polygons (in this example triangles) will follow:
-
-   .. image:: images/Drawing_2_Tutorial_Result_4.png
-      :height: 300px
-      :alt: Drawing Tutorial 2 - Final Result 4
-      :align: center 
+#. Filled polygons (in this example triangles) will follow.
 
 #. The last geometric figure to appear: circles!
 
-   .. image:: images/Drawing_2_Tutorial_Result_5.png
-      :height: 300px
+   .. image:: images/Drawing_2_Tutorial_Result_5.jpg
       :alt: Drawing Tutorial 2 - Final Result 5
       :align: center 
 
 #. Near the end, the text *"Testing Text Rendering"* will appear in a variety of fonts, sizes, colors and positions.
 
-   .. image:: images/Drawing_2_Tutorial_Result_6.png
-      :height: 300px
-      :alt: Drawing Tutorial 2 - Final Result 6
-      :align: center 
-
 #. And the big end (which by the way expresses a big truth too):
 
-   .. image:: images/Drawing_2_Tutorial_Result_7.png
-      :height: 300px
+   .. image:: images/Drawing_2_Tutorial_Result_7.jpg
       :alt: Drawing Tutorial 2 - Final Result 7
       :align: center 
-

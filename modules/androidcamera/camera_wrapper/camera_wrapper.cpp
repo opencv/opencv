@@ -1,5 +1,3 @@
-#define USE_RECORDING_INSTEAD_PREVIEW 0
-
 #if !defined(ANDROID_r2_2_2) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
 #error unsupported version of Android
 #endif
@@ -9,123 +7,113 @@
 #include "../include/camera_properties.h"
 #include <string>
 
+//undef logging macro from /system/core/libcutils/loghack.h
+#ifdef LOGD
+#undef LOGD
+#endif
+
+#ifdef LOGI
+#undef LOGI
+#endif
+
+#ifdef LOGW
+#undef LOGW
+#endif
+
+#ifdef LOGE
+#undef LOGE
+#endif
+
+
+// LOGGING
+#include <android/log.h>
+#define CAMERA_LOG_TAG "OpenCV_NativeCamera"
+#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, CAMERA_LOG_TAG, __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, CAMERA_LOG_TAG, __VA_ARGS__))
+#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, CAMERA_LOG_TAG, __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, CAMERA_LOG_TAG, __VA_ARGS__))
+
 using namespace android;
 
 void debugShowFPS()
 {
     static int mFrameCount = 0;
     static int mLastFrameCount = 0;
-    static nsecs_t mLastFpsTime = systemTime();;
+    static nsecs_t mLastFpsTime = systemTime();
     static float mFps = 0;
 
     mFrameCount++;
 
-    if ( ( mFrameCount % 30 ) == 0 ) {
-        nsecs_t now = systemTime();
-        nsecs_t diff = now - mLastFpsTime;
-        if (diff==0)
-            return;
+    if (( mFrameCount % 30 ) != 0)
+        return;
 
-        mFps =  ((mFrameCount - mLastFrameCount) * float(s2ns(1))) / diff;
-        mLastFpsTime = now;
-        mLastFrameCount = mFrameCount;
-        LOGI("####### [%d] Frames, %f FPS", mFrameCount, mFps);
-    }
+    nsecs_t now = systemTime();
+    nsecs_t diff = now - mLastFpsTime;
+
+    if (diff==0)
+        return;
+
+    mFps =  ((mFrameCount - mLastFrameCount) * float(s2ns(1))) / diff;
+    mLastFpsTime = now;
+    mLastFrameCount = mFrameCount;
+    LOGI("### Camera FPS ### [%d] Frames, %.2f FPS", mFrameCount, mFps);
 }
 
 class CameraHandler: public CameraListener
 {
 protected:
-    sp<Camera> camera;
-    CameraCallback cameraCallback;
-    CameraParameters params;
-    void* userData;
     int cameraId;
+    sp<Camera> camera;
+    CameraParameters params;
+    CameraCallback cameraCallback;
+    void* userData;
 
-    bool isEmptyCameraCallbackReported;
-    virtual void doCall(void* buffer, size_t bufferSize)
+    int emptyCameraCallbackReported;
+
+    void doCall(void* buffer, size_t bufferSize)
     {
         if (cameraCallback == 0)
         {
-            if (!isEmptyCameraCallbackReported)
-                LOGE("Camera callback is empty!");
+            if (!emptyCameraCallbackReported)
+                LOGE("CameraHandler::doCall(void*, size_t): Camera callback is empty!");
 
-            isEmptyCameraCallbackReported = true;
-            return;
+            emptyCameraCallbackReported++;
         }
+        else
+        {
+            bool res = (*cameraCallback)(buffer, bufferSize, userData);
 
-        bool res = (*cameraCallback)(buffer, bufferSize, userData);
-
-        if(!res) closeCameraConnect();
+            if(!res)
+            {
+                LOGE("CameraHandler::doCall(void*, size_t): cameraCallback returns false (camera connection will be closed)");
+                closeCameraConnect();
+            }
+        }
     }
 
-    virtual void doCall(const sp<IMemory>& dataPtr)
+    void doCall(const sp<IMemory>& dataPtr)
     {
-        LOGI("doCall started");
-
         if (dataPtr == NULL)
         {
-            LOGE("CameraBuffer: dataPtr==NULL");
+            LOGE("CameraHandler::doCall(const sp<IMemory>&): dataPtr==NULL (no frame to handle)");
             return;
         }
 
         size_t size = dataPtr->size();
         if (size <= 0)
         {
-            LOGE("CameraBuffer: IMemory object is of zero size");
+            LOGE("CameraHandler::doCall(const sp<IMemory>&): IMemory object is of zero size");
             return;
         }
 
-        unsigned char* buffer = (unsigned char *)dataPtr->pointer();
+        void* buffer = (void *)dataPtr->pointer();
         if (!buffer)
         {
-            LOGE("CameraBuffer: Buffer pointer is invalid");
+            LOGE("CameraHandler::doCall(const sp<IMemory>&): Buffer pointer is NULL");
             return;
         }
 
         doCall(buffer, size);
-    }
-
-public:
-    CameraHandler(CameraCallback callback = 0, void* _userData = 0):cameraCallback(callback), userData(_userData), cameraId(0),  isEmptyCameraCallbackReported(false) {}
-    virtual ~CameraHandler()
-    {
-	    LOGW("CameraHandler destructor is called!");
-    }
-
-    virtual void notify(int32_t msgType, int32_t ext1, int32_t ext2)
-    {
-        LOGE("Notify cb: %d %d %d\n", msgType, ext1, ext2);
-#if 0
-        if ( msgType & CAMERA_MSG_FOCUS )
-            LOGE("AutoFocus %s in %llu us\n", (ext1) ? "OK" : "FAIL", timevalDelay(&autofocus_start));
-
-        if ( msgType & CAMERA_MSG_SHUTTER )
-            LOGE("Shutter done in %llu us\n", timeval_delay(&picture_start));
-#endif
-    }
-
-    virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr)
-    {
-        debugShowFPS();
-
-        if ( msgType & CAMERA_MSG_PREVIEW_FRAME )
-        {
-            doCall(dataPtr);
-            return;
-        }
-
-        if (msgType != CAMERA_MSG_PREVIEW_FRAME)
-            LOGE("Recieved not CAMERA_MSG_PREVIEW_FRAME message %d", (int) msgType);
-
-        if ( msgType & CAMERA_MSG_RAW_IMAGE )
-            LOGE("Unexpected data format: RAW\n");
-
-        if (msgType & CAMERA_MSG_POSTVIEW_FRAME)
-            LOGE("Unexpected data format: Postview frame\n");
-
-        if (msgType & CAMERA_MSG_COMPRESSED_IMAGE )
-            LOGE("Unexpected data format: JPEG");
     }
 
     virtual void postDataTimestamp(nsecs_t timestamp, int32_t msgType, const sp<IMemory>& dataPtr)
@@ -152,6 +140,56 @@ public:
         camera->releaseRecordingFrame(dataPtr);
     }
 
+public:
+    CameraHandler(CameraCallback callback = 0, void* _userData = 0):
+        cameraId(0),
+        cameraCallback(callback),
+        userData(_userData),
+        emptyCameraCallbackReported(0)
+    {
+        LOGD("Instantiated new CameraHandler (%p, %p)", callback, _userData);
+    }
+
+    virtual ~CameraHandler()
+    {
+            LOGD("CameraHandler destructor is called");
+    }
+
+    virtual void notify(int32_t msgType, int32_t ext1, int32_t ext2)
+    {
+        LOGE("CameraHandler::Notify: msgType=%d ext1=%d ext2=%d\n", msgType, ext1, ext2);
+#if 0
+        if ( msgType & CAMERA_MSG_FOCUS )
+            LOGE("CameraHandler::Notify  AutoFocus %s in %llu us\n", (ext1) ? "OK" : "FAIL", timevalDelay(&autofocus_start));
+
+        if ( msgType & CAMERA_MSG_SHUTTER )
+            LOGE("CameraHandler::Notify  Shutter done in %llu us\n", timeval_delay(&picture_start));
+#endif
+    }
+
+    virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr)
+    {
+        debugShowFPS();
+
+        if ( msgType & CAMERA_MSG_PREVIEW_FRAME )
+        {
+            doCall(dataPtr);
+            return;
+        }
+
+        if (msgType != CAMERA_MSG_PREVIEW_FRAME)
+            LOGE("CameraHandler::postData  Recieved message %d is not equal to CAMERA_MSG_PREVIEW_FRAME (%d)", (int) msgType, CAMERA_MSG_PREVIEW_FRAME);
+
+        if ( msgType & CAMERA_MSG_RAW_IMAGE )
+            LOGE("CameraHandler::postData  Unexpected data format: RAW\n");
+
+        if (msgType & CAMERA_MSG_POSTVIEW_FRAME)
+            LOGE("CameraHandler::postData  Unexpected data format: Postview frame\n");
+
+        if (msgType & CAMERA_MSG_COMPRESSED_IMAGE )
+            LOGE("CameraHandler::postData  Unexpected data format: JPEG");
+    }
+
     static CameraHandler* initCameraConnect(const CameraCallback& callback, int cameraId, void* userData, CameraParameters* prevCameraParameters);
     void closeCameraConnect();
     double getProperty(int propIdx);
@@ -159,16 +197,13 @@ public:
     static void applyProperties(CameraHandler** ppcameraHandler);
 
     std::string cameraPropertySupportedPreviewSizesString;
+    std::string cameraPropertyPreviewFormatString;
 };
 
 
 CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, int cameraId, void* userData, CameraParameters* prevCameraParameters)
 {
-//    if (camera != NULL)
-//    {
-//        LOGE("initCameraConnect: camera have been connected already");
-//        return false;
-//    }
+    LOGD("CameraHandler::initCameraConnect(%p, %d, %p, %p)", callback, cameraId, userData, prevCameraParameters);
 
     sp<Camera> camera = 0;
 
@@ -179,7 +214,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     camera = Camera::connect(cameraId);
 #endif
 
-    if ( NULL == camera.get() )
+    if ( 0 == camera.get() )
     {
         LOGE("initCameraConnect: Unable to connect to CameraService\n");
         return 0;
@@ -189,35 +224,79 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     camera->setListener(handler);
 
     handler->camera = camera;
-    handler->cameraId=cameraId;
-#if 1 
-    //setting paramers from previous camera handler
-    if (prevCameraParameters != NULL) {
-	    camera->setParameters(prevCameraParameters->flatten());
+    handler->cameraId = cameraId;
+
+    if (prevCameraParameters != 0)
+    {
+        LOGI("initCameraConnect: Setting paramers from previous camera handler");
+        camera->setParameters(prevCameraParameters->flatten());
+        handler->params.unflatten(prevCameraParameters->flatten());
     }
-#endif
-    handler->params.unflatten(camera->getParameters());
+    else
+    {
+        android::String8 params_str = camera->getParameters();
+        LOGI("initCameraConnect: [%s]", params_str.string());
+
+        handler->params.unflatten(params_str);
+
+        LOGD("Supported Cameras: %s", handler->params.get("camera-indexes"));
+        LOGD("Supported Picture Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
+        LOGD("Supported Picture Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
+        LOGD("Supported Preview Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
+        LOGD("Supported Preview Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
+        LOGD("Supported Preview Frame Rates: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
+        LOGD("Supported Thumbnail Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
+        LOGD("Supported Whitebalance Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
+        LOGD("Supported Effects: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_EFFECTS));
+        LOGD("Supported Scene Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
+        LOGD("Supported Focus Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
+        LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
+        LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
 
 
-    LOGD("Supported Cameras: %s", handler->params.get("camera-indexes"));
-    LOGD("Supported Picture Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES));
-    LOGD("Supported Picture Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PICTURE_FORMATS));
-    LOGD("Supported Preview Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES));
-    LOGD("Supported Preview Formats: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS));
-    LOGD("Supported Preview Frame Rates: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES));
-    LOGD("Supported Thumbnail Sizes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_JPEG_THUMBNAIL_SIZES));
-    LOGD("Supported Whitebalance Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE));
-    LOGD("Supported Effects: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_EFFECTS));
-    LOGD("Supported Scene Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_SCENE_MODES));
-    LOGD("Supported Focus Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES));
-    LOGD("Supported Antibanding Options: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_ANTIBANDING));
-    LOGD("Supported Flash Modes: %s", handler->params.get(CameraParameters::KEY_SUPPORTED_FLASH_MODES));
+        //check if yuv420sp format available. Set this format as preview format.
+        const char* available_formats = handler->params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS);
+        if (available_formats != 0)
+        {
+            const char* format_to_set = 0;
+            const char* pos = available_formats;
+            const char* ptr = pos;
+            while(true)
+            {
+                while(*ptr != 0 && *ptr != ',') ++ptr;
+                if (ptr != pos)
+                {
+                    if (0 == strncmp(pos, "yuv420sp", ptr - pos))
+                    {
+                        format_to_set = "yuv420sp";
+                        break;
+                    }
+                    if (0 == strncmp(pos, "yuv420i", ptr - pos))
+                        format_to_set = "yuv420i";
+                }
+                if (*ptr == 0)
+                    break;
+                pos = ++ptr;
+            }
 
+            if (0 != format_to_set)
+            {
+                handler->params.setPreviewFormat(format_to_set);
 
-    //TODO: check if yuv420i format available. Set this format as preview format.
+                status_t resParams = handler->camera->setParameters(handler->params.flatten());
 
-#if USE_RECORDING_INSTEAD_PREVIEW
-    status_t err = camera->setPreviewDisplay(sp<ISurface>(NULL /*new DummySurface1*/));
+                if (resParams != 0)
+                    LOGE("initCameraConnect: failed to set preview format to %s", format_to_set);
+                else
+                    LOGD("initCameraConnect: preview format is set to %s", format_to_set);
+            }
+        }
+    }
+
+#ifdef ANDROID_r2_2_2
+    status_t pdstatus = camera->setPreviewDisplay(sp<ISurface>(0 /*new DummySurface*/));
+    if (pdstatus != 0)
+        LOGE("initCameraConnect: failed setPreviewDisplay(0) call; camera migth not work correcttly on some devices");
 #endif
 
     ////ATTENTION: switching between two versions: with and without copying memory inside Android OS
@@ -228,17 +307,15 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     camera->setPreviewCallbackFlags( FRAME_CALLBACK_FLAG_ENABLE_MASK );//without copy
 #endif
 
-#if USE_RECORDING_INSTEAD_PREVIEW
-    status_t resStart = camera->startRecording();
-#else
     status_t resStart = camera->startPreview();
-#endif
 
     if (resStart != 0)
     {
+        LOGE("initCameraConnect: startPreview() fails. Closing camera connection...");
         handler->closeCameraConnect();
         handler = 0;
     }
+
     return handler;
 }
 
@@ -246,17 +323,11 @@ void CameraHandler::closeCameraConnect()
 {
     if (camera == NULL)
     {
-        LOGI("... camera is NULL");
+        LOGI("... camera is already NULL");
         return;
     }
 
-    //TODO: ATTENTION! should we do it ALWAYS???
-#if USE_RECORDING_INSTEAD_PREVIEW
-    camera->stopRecording();
-#else
     camera->stopPreview();
-#endif
-
     camera->disconnect();
     camera.clear();
 
@@ -285,28 +356,50 @@ void CameraHandler::closeCameraConnect()
 
 double CameraHandler::getProperty(int propIdx)
 {
+    LOGD("CameraHandler::getProperty(%d)", propIdx);
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
     {
         int w,h;
-        params.getPreviewSize(&w,&h);
+        params.getPreviewSize(&w, &h);
         return w;
     }
     case ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT:
     {
         int w,h;
-        params.getPreviewSize(&w,&h);
+        params.getPreviewSize(&w, &h);
         return h;
     }
     case ANDROID_CAMERA_PROPERTY_SUPPORTED_PREVIEW_SIZES_STRING:
     {
-	    cameraPropertySupportedPreviewSizesString=params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
-	    double res;
-	    memset(&res, 0, sizeof(res));
-	    (*( (void**)&res ))= (void*)( cameraPropertySupportedPreviewSizesString.c_str() );
-	    
-	    return res;
+        cameraPropertySupportedPreviewSizesString = params.get(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES);
+        union {const char* str;double res;} u;
+        memset(&u.res, 0, sizeof(u.res));
+        u.str = cameraPropertySupportedPreviewSizesString.c_str();
+        return u.res;
+    }
+
+    case ANDROID_CAMERA_PROPERTY_PREVIEW_FORMAT_STRING:
+    {
+        const char* fmt = params.get(CameraParameters::KEY_PREVIEW_FORMAT);
+        if (fmt == CameraParameters::PIXEL_FORMAT_YUV422SP)
+            fmt = "yuv422sp";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_YUV420SP)
+            fmt = "yuv420sp";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_YUV422I)
+            fmt = "yuv422i";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_RGB565)
+            fmt = "rgb565";
+        else if (fmt == CameraParameters::PIXEL_FORMAT_JPEG)
+            fmt = "jpeg";
+        cameraPropertyPreviewFormatString = fmt;
+
+        union {const char* str;double res;} u;
+        memset(&u.res, 0, sizeof(u.res));
+        u.str = cameraPropertyPreviewFormatString.c_str();
+        return u.res;
     }
 
     };
@@ -315,22 +408,24 @@ double CameraHandler::getProperty(int propIdx)
 
 void CameraHandler::setProperty(int propIdx, double value)
 {
+    LOGD("CameraHandler::setProperty(%d, %f)", propIdx, value);
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
     {
         int w,h;
-        params.getPreviewSize(&w,&h);
+        params.getPreviewSize(&w, &h);
         w = (int)value;
-        params.setPreviewSize(w,h);
+        params.setPreviewSize(w, h);
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT:
     {
         int w,h;
-        params.getPreviewSize(&w,&h);
+        params.getPreviewSize(&w, &h);
         h = (int)value;
-        params.setPreviewSize(w,h);
+        params.setPreviewSize(w, h);
     }
     break;
     };
@@ -338,6 +433,20 @@ void CameraHandler::setProperty(int propIdx, double value)
 
 void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 {
+    LOGD("CameraHandler::applyProperties()");
+
+    if (ppcameraHandler == 0)
+    {
+        LOGE("applyProperties: Passed NULL ppcameraHandler");
+        return;
+    }
+
+    if (*ppcameraHandler == 0)
+    {
+        LOGE("applyProperties: Passed null *ppcameraHandler");
+        return;
+    }
+
     LOGD("CameraHandler::applyProperties()");
     CameraHandler* previousCameraHandler=*ppcameraHandler;
     CameraParameters curCameraParameters(previousCameraHandler->params.flatten());
@@ -355,12 +464,12 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
     CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, &curCameraParameters);
     LOGD("CameraHandler::applyProperties(): after initCameraConnect, handler=0x%x", (int)handler);
     if (handler == NULL) {
-	    LOGE("ERROR in applyProperties --- cannot reinit camera");
-	    handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
-	    LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
-	    if (handler == NULL) {
-		    LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
-	    }
+        LOGE("ERROR in applyProperties --- cannot reinit camera");
+        handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
+        LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
+        if (handler == NULL) {
+            LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
+        }
     }
     (*ppcameraHandler)=handler;
 }
@@ -392,7 +501,7 @@ void setCameraPropertyC(void* camera, int propIdx, double value)
 
 void applyCameraPropertiesC(void** camera)
 {
-	CameraHandler::applyProperties((CameraHandler**)camera);
+    CameraHandler::applyProperties((CameraHandler**)camera);
 }
 
 }

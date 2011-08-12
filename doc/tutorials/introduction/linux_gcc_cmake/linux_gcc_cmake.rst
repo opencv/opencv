@@ -78,7 +78,6 @@ By now you should have an executable (called DisplayImage in this case). You jus
 
 You should get a nice window as the one shown below:
 
-.. image:: images/GCC_CMake_Example_Tutorial.png
+.. image:: images/GCC_CMake_Example_Tutorial.jpg
    :alt: Display Image - Lena
    :align: center
-

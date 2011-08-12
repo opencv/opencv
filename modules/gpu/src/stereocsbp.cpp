@@ -107,7 +107,7 @@ void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int he
     levels = (int)::log(static_cast<double>(mm)) * 2 / 3;
     if (levels == 0) levels++;
 
-    nr_plane = (int) ((float) ndisp / pow(2.0, levels + 1));
+    nr_plane = (int) ((float) ndisp / std::pow(2.0, levels + 1));
 }
 
 cv::gpu::StereoConstantSpaceBP::StereoConstantSpaceBP(int ndisp_, int iters_, int levels_, int nr_plane_,
@@ -167,7 +167,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     nr_plane_pyr[0] = rthis.nr_plane;
 
     const int n = 64;
-    step_pyr[0] = alignSize(cols * sizeof(T), n) / sizeof(T);
+    step_pyr[0] = static_cast<int>(alignSize(cols * sizeof(T), n) / sizeof(T));
     for (int i = 1; i < levels; i++)
     {
         cols_pyr[i] = (cols_pyr[i-1] + 1) / 2;
@@ -175,7 +175,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
 
         nr_plane_pyr[i] = nr_plane_pyr[i-1] * 2;
 
-        step_pyr[i] = alignSize(cols_pyr[i] * sizeof(T), n) / sizeof(T);
+        step_pyr[i] = static_cast<int>(alignSize(cols_pyr[i] * sizeof(T), n) / sizeof(T));
     }
 
     Size msg_size(step_pyr[0], rows * nr_plane_pyr[0]);
@@ -197,7 +197,7 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat u[2], GpuMat d[2]
     data_cost.create(data_cost_size, DataType<T>::type);
     data_cost_selected.create(msg_size, DataType<T>::type);
 
-    step_pyr[0] = data_cost.step / sizeof(T);
+    step_pyr[0] = static_cast<int>(data_cost.step / sizeof(T));
 
     Size temp_size = data_cost_size;
     if (data_cost_size.width * data_cost_size.height < step_pyr[levels - 1] * rows_pyr[levels - 1] * rthis.ndisp)

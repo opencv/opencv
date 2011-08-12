@@ -8,13 +8,15 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Access pixel values 
+.. container:: enumeratevisibleitemswithsquare
 
-* Initialize a matrix with zeros
+   + Access pixel values 
 
-* Learn what :saturate_cast:`saturate_cast <>` does and why it is useful
+   + Initialize a matrix with zeros
 
-* Get some cool info about pixel transformations
+   + Learn what :saturate_cast:`saturate_cast <>` does and why it is useful
+
+   + Get some cool info about pixel transformations
 
 Cool Theory
 =================
@@ -92,9 +94,10 @@ Code
        { for( int x = 0; x < image.cols; x++ )
             { for( int c = 0; c < 3; c++ )
                  {
-		  new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+         new_image.at<Vec3b>(y,x)[c] = 
+            saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
                 }
-	    }
+       }
        }
 
     /// Create Windows
@@ -145,8 +148,9 @@ Explanation
       for( int y = 0; y < image.rows; y++ )
          { for( int x = 0; x < image.cols; x++ )
               { for( int c = 0; c < 3; c++ )
-                   { new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta ); }
-	      }
+                   { new_image.at<Vec3b>(y,x)[c] = 
+                               saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta ); }
+         }
          }
  
    Notice the following:
@@ -185,7 +189,7 @@ Result
 
   .. code-block:: bash
 
-     $ ./BasicLinearTransforms lena.png
+     $ ./BasicLinearTransforms lena.jpg
      Basic Linear Transforms
      -------------------------
      * Enter the alpha value [1.0-3.0]: 2.2
@@ -193,7 +197,6 @@ Result
 
 * We get this:
 
-.. image:: images/Basic_Linear_Transform_Tutorial_Result_0.png
-   :height: 400px
+.. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
    :alt: Basic Linear Transform - Final Result
    :align: center 

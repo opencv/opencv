@@ -55,13 +55,12 @@ where
 
 .. seealso::
 
-    :ocv:func:`BaseRowFilter`,
-    :ocv:func:`BaseFilter`,
-    :ocv:func:`FilterEngine`,
-    :ocv:func:`getColumnSumFilter`,
-    :ocv:func:`getLinearColumnFilter`,
-    :ocv:func:`getMorphologyColumnFilter`
-
+   :ocv:func:`BaseRowFilter`,
+   :ocv:func:`BaseFilter`,
+   :ocv:func:`FilterEngine`,
+   :ocv:func:`getColumnSumFilter`,
+   :ocv:func:`getLinearColumnFilter`,
+   :ocv:func:`getMorphologyColumnFilter`
 
 
 BaseFilter
@@ -360,15 +359,15 @@ Explore the data types. As it was mentioned in the
 
 .. seealso::
 
-    :ocv:func:`BaseColumnFilter`,
-    :ocv:func:`BaseFilter`,
-    :ocv:func:`BaseRowFilter`,
-    :ocv:func:`createBoxFilter`,
-    :ocv:func:`createDerivFilter`,
-    :ocv:func:`createGaussianFilter`,
-    :ocv:func:`createLinearFilter`,
-    :ocv:func:`createMorphologyFilter`,
-    :ocv:func:`createSeparableLinearFilter`
+   :ocv:func:`BaseColumnFilter`,
+   :ocv:func:`BaseFilter`,
+   :ocv:func:`BaseRowFilter`,
+   :ocv:func:`createBoxFilter`,
+   :ocv:func:`createDerivFilter`,
+   :ocv:func:`createGaussianFilter`,
+   :ocv:func:`createLinearFilter`,
+   :ocv:func:`createMorphologyFilter`,
+   :ocv:func:`createSeparableLinearFilter`
 
 
 
@@ -431,11 +430,10 @@ The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFil
 
 .. seealso::
 
-    :ocv:func:`boxFilter`,
-    :ocv:func:`bilateralFilter`,
-    :ocv:func:`GaussianBlur`,
-    :ocv:func:`medianBlur` 
-
+   :ocv:func:`boxFilter`,
+   :ocv:func:`bilateralFilter`,
+   :ocv:func:`GaussianBlur`,
+   :ocv:func:`medianBlur` 
 
 
 borderInterpolate
@@ -580,6 +578,7 @@ The function supports the mode when ``src`` is already in the middle of ``dst`` 
 
 
 .. seealso::
+
     :ocv:func:`borderInterpolate`
 
 
@@ -970,12 +969,12 @@ The function convolves the source image with the specified Gaussian kernel. In-p
 
 .. seealso::
 
-    :ocv:func:`sepFilter2D`,
-    :ocv:func:`filter2D`,
-    :ocv:func:`blur`,
-    :ocv:func:`boxFilter`,
-    :ocv:func:`bilateralFilter`,
-    :ocv:func:`medianBlur`
+   :ocv:func:`sepFilter2D`,
+   :ocv:func:`filter2D`,
+   :ocv:func:`blur`,
+   :ocv:func:`boxFilter`,
+   :ocv:func:`bilateralFilter`,
+   :ocv:func:`medianBlur`
 
 
 getDerivKernels
@@ -1041,11 +1040,11 @@ Two of such generated kernels can be passed to
 
 .. seealso::
 
-    :ocv:func:`sepFilter2D`,
-    :ocv:func:`createSeparableLinearFilter`,
-    :ocv:func:`getDerivKernels`,
-    :ocv:func:`getStructuringElement`,
-    :ocv:func:`GaussianBlur` 
+   :ocv:func:`sepFilter2D`,
+   :ocv:func:`createSeparableLinearFilter`,
+   :ocv:func:`getDerivKernels`,
+   :ocv:func:`getStructuringElement`,
+   :ocv:func:`GaussianBlur` 
 
 
 
@@ -1300,7 +1299,7 @@ The function performs the downsampling step of the Gaussian pyramid construction
 
 .. math::
 
-    \frac{1}{16} \begin{bmatrix} 1 & 4 & 6 & 4 & 1  \\ 4 & 16 & 24 & 16 & 4  \\ 6 & 24 & 36 & 24 & 6  \\ 4 & 16 & 24 & 16 & 4  \\ 1 & 4 & 6 & 4 & 1 \end{bmatrix}
+    \frac{1}{256} \begin{bmatrix} 1 & 4 & 6 & 4 & 1  \\ 4 & 16 & 24 & 16 & 4  \\ 6 & 24 & 36 & 24 & 6  \\ 4 & 16 & 24 & 16 & 4  \\ 1 & 4 & 6 & 4 & 1 \end{bmatrix}
 
 Then, it downsamples the image by rejecting even rows and columns.
 
@@ -1333,7 +1332,7 @@ pyrMeanShiftFiltering
 ---------------------
 Performs initial step of meanshift segmentation of an image.
 
-.. ocv:function: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
+.. ocv:function:: void pyrMeanShiftFiltering( InputArray src, OutputArray dst, double sp, double sr, int maxLevel=1, TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5,1) )
 
 .. ocv:pyfunction:: cv2.pyrMeanShiftFiltering(src, sp, sr[, dst[, maxLevel[, termcrit]]]) -> dst
 
@@ -1406,12 +1405,12 @@ The function applies a separable linear filter to the image. That is, first, eve
 
 .. seealso::
 
-    :ocv:func:`createSeparableLinearFilter`,
-    :ocv:func:`filter2D`,
-    :ocv:func:`Sobel`,
-    :ocv:func:`GaussianBlur`,
-    :ocv:func:`boxFilter`,
-    :ocv:func:`blur` 
+   :ocv:func:`createSeparableLinearFilter`,
+   :ocv:func:`filter2D`,
+   :ocv:func:`Sobel`,
+   :ocv:func:`GaussianBlur`,
+   :ocv:func:`boxFilter`,
+   :ocv:func:`blur` 
 
 
 Smooth
@@ -1538,7 +1537,7 @@ The second case corresponds to a kernel of:
 .. seealso::
 
     :ocv:func:`Scharr`,
-    :ocv:func:`Lapacian`,
+    :ocv:func:`Laplacian`,
     :ocv:func:`sepFilter2D`,
     :ocv:func:`filter2D`,
     :ocv:func:`GaussianBlur`

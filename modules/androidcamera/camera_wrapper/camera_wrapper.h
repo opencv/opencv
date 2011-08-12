@@ -1,10 +1,3 @@
-enum CameraWrapperErrorCode {
-    ERROR_NATIVE_CAMERA_WRAPPER_NOERROR = 0,
-    ERROR_NATIVE_CAMERA_WRAPPER_CANNOT_FIND_CLASS = 1,
-    ERROR_NATIVE_CAMERA_WRAPPER_CANNOT_FIND_FIELD = 2,
-    ERROR_NATIVE_CAMERA_WRAPPER_CANNOT_SET_PREVIEW_DISPLAY = 3
-};
-
 typedef bool (*CameraCallback)(void* buffer, size_t bufferSize, void* userData);
 
 typedef void* (*InitCameraConnectC)(void* cameraCallback, int cameraId, void* userData);

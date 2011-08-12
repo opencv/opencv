@@ -42,13 +42,464 @@
 #include <float.h>
 #include <stdio.h>
 
+namespace cv
+{
+
+typedef short deriv_type;
+    
+static void calcSharrDeriv(const Mat& src, Mat& dst)
+{
+    int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn, depth = src.depth();
+    CV_Assert(depth == CV_8U);
+    dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
+    
+    int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
+    AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
+    deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
+    
+#if CV_SSE2
+    __m128i z = _mm_setzero_si128(), c3 = _mm_set1_epi16(3), c10 = _mm_set1_epi16(10);
+#endif
+    
+    for( y = 0; y < rows; y++ )
+    {
+        const uchar* srow0 = src.ptr<uchar>(y > 0 ? y-1 : rows > 1 ? 1 : 0);
+        const uchar* srow1 = src.ptr<uchar>(y);
+        const uchar* srow2 = src.ptr<uchar>(y < rows-1 ? y+1 : rows > 1 ? rows-2 : 0);
+        deriv_type* drow = dst.ptr<deriv_type>(y);
+        
+        // do vertical convolution
+        x = 0;
+#if CV_SSE2
+        for( ; x <= colsn - 8; x += 8 )
+        {
+            __m128i s0 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow0 + x)), z);
+            __m128i s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow1 + x)), z);
+            __m128i s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(srow2 + x)), z);
+            __m128i t0 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s0, s2), c3), _mm_mullo_epi16(s1, c10));
+            __m128i t1 = _mm_sub_epi16(s2, s0);
+            _mm_store_si128((__m128i*)(trow0 + x), t0);
+            _mm_store_si128((__m128i*)(trow1 + x), t1);
+        }
+#endif
+        for( ; x < colsn; x++ )
+        {
+            int t0 = (srow0[x] + srow2[x])*3 + srow1[x]*10;
+            int t1 = srow2[x] - srow0[x];
+            trow0[x] = (deriv_type)t0;
+            trow1[x] = (deriv_type)t1;
+        }
+        
+        // make border
+        int x0 = (cols > 1 ? 1 : 0)*cn, x1 = (cols > 1 ? cols-2 : 0)*cn;
+        for( int k = 0; k < cn; k++ )
+        {
+            trow0[-cn + k] = trow0[x0 + k]; trow0[colsn + k] = trow0[x1 + k];
+            trow1[-cn + k] = trow1[x0 + k]; trow1[colsn + k] = trow1[x1 + k];
+        }
+            
+        // do horizontal convolution, interleave the results and store them to dst
+        x = 0;
+#if CV_SSE2
+        for( ; x <= colsn - 8; x += 8 )
+        {
+            __m128i s0 = _mm_loadu_si128((const __m128i*)(trow0 + x - cn));
+            __m128i s1 = _mm_loadu_si128((const __m128i*)(trow0 + x + cn));
+            __m128i s2 = _mm_loadu_si128((const __m128i*)(trow1 + x - cn));
+            __m128i s3 = _mm_load_si128((const __m128i*)(trow1 + x));
+            __m128i s4 = _mm_loadu_si128((const __m128i*)(trow1 + x + cn));
+            
+            __m128i t0 = _mm_sub_epi16(s1, s0);
+            __m128i t1 = _mm_add_epi16(_mm_mullo_epi16(_mm_add_epi16(s2, s4), c3), _mm_mullo_epi16(s3, c10));
+            __m128i t2 = _mm_unpacklo_epi16(t0, t1);
+            t0 = _mm_unpackhi_epi16(t0, t1);
+            // this can probably be replaced with aligned stores if we aligned dst properly.
+            _mm_storeu_si128((__m128i*)(drow + x*2), t2);
+            _mm_storeu_si128((__m128i*)(drow + x*2 + 8), t0);
+        }
+#endif        
+        for( ; x < colsn; x++ )
+        {
+            deriv_type t0 = (deriv_type)(trow0[x+cn] - trow0[x-cn]);
+            deriv_type t1 = (deriv_type)((trow1[x+cn] + trow1[x-cn])*3 + trow1[x]*10);
+            drow[x*2] = t0; drow[x*2+1] = t1;
+        }
+    }
+}
+
+    
+struct LKTrackerInvoker
+{
+    LKTrackerInvoker( const Mat& _prevImg, const Mat& _prevDeriv, const Mat& _nextImg,
+                      const Point2f* _prevPts, Point2f* _nextPts,
+                      uchar* _status, float* _err,
+                      Size _winSize, TermCriteria _criteria,
+                      int _level, int _maxLevel, int _flags, float _minEigThreshold )
+    {
+        prevImg = &_prevImg;
+        prevDeriv = &_prevDeriv;
+        nextImg = &_nextImg;
+        prevPts = _prevPts;
+        nextPts = _nextPts;
+        status = _status;
+        err = _err;
+        winSize = _winSize;
+        criteria = _criteria;
+        level = _level;
+        maxLevel = _maxLevel;
+        flags = _flags;
+        minEigThreshold = _minEigThreshold;
+    }
+    
+    void operator()(const BlockedRange& range) const
+    {
+        Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
+        const Mat& I = *prevImg;
+        const Mat& J = *nextImg;
+        const Mat& derivI = *prevDeriv;
+        
+        int j, cn = I.channels(), cn2 = cn*2;
+        cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
+        int derivDepth = DataType<deriv_type>::depth;
+        
+        Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
+        Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+        
+        for( int ptidx = range.begin(); ptidx < range.end(); ptidx++ )
+        {
+            Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
+            Point2f nextPt;
+            if( level == maxLevel )
+            {
+                if( flags & OPTFLOW_USE_INITIAL_FLOW )
+                    nextPt = nextPts[ptidx]*(float)(1./(1 << level));
+                else
+                    nextPt = prevPt;
+            }
+            else
+                nextPt = nextPts[ptidx]*2.f;
+            nextPts[ptidx] = nextPt;
+            
+            Point2i iprevPt, inextPt;
+            prevPt -= halfWin;
+            iprevPt.x = cvFloor(prevPt.x);
+            iprevPt.y = cvFloor(prevPt.y);
+            
+            if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
+                iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
+            {
+                if( level == 0 )
+                {
+                    if( status )
+                        status[ptidx] = false;
+                    if( err )
+                        err[ptidx] = 0;
+                }
+                continue;
+            }
+            
+            float a = prevPt.x - iprevPt.x;
+            float b = prevPt.y - iprevPt.y;
+            const int W_BITS = 14, W_BITS1 = 14;
+            const float FLT_SCALE = 1.f/(1 << 20);
+            int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
+            int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
+            int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
+            int iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
+            
+            int dstep = (int)(derivI.step/derivI.elemSize1());
+            int step = (int)(I.step/I.elemSize1());
+            CV_Assert( step == (int)(J.step/J.elemSize1()) );
+            float A11 = 0, A12 = 0, A22 = 0;
+            
+#if CV_SSE2
+            __m128i qw0 = _mm_set1_epi32(iw00 + (iw01 << 16));
+            __m128i qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
+            __m128i z = _mm_setzero_si128();
+            __m128i qdelta_d = _mm_set1_epi32(1 << (W_BITS1-1));
+            __m128i qdelta = _mm_set1_epi32(1 << (W_BITS1-5-1));
+            __m128 qA11 = _mm_setzero_ps(), qA12 = _mm_setzero_ps(), qA22 = _mm_setzero_ps();
+#endif
+            
+            // extract the patch from the first image, compute covariation matrix of derivatives
+            int x, y;
+            for( y = 0; y < winSize.height; y++ )
+            {
+                const uchar* src = (const uchar*)I.data + (y + iprevPt.y)*step + iprevPt.x*cn;
+                const deriv_type* dsrc = (const deriv_type*)derivI.data + (y + iprevPt.y)*dstep + iprevPt.x*cn2;
+                
+                deriv_type* Iptr = (deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                deriv_type* dIptr = (deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                
+                x = 0;
+                
+#if CV_SSE2
+                for( ; x <= winSize.width*cn - 4; x += 4, dsrc += 4*2, dIptr += 4*2 )
+                {
+                    __m128i v00, v01, v10, v11, t0, t1;
+                    
+                    v00 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x)), z);
+                    v01 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + cn)), z);
+                    v10 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + step)), z);
+                    v11 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int*)(src + x + step + cn)), z);
+                    
+                    t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
+                                       _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
+                    t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1-5);
+                    _mm_storel_epi64((__m128i*)(Iptr + x), _mm_packs_epi32(t0,t0));
+                    
+                    v00 = _mm_loadu_si128((const __m128i*)(dsrc));
+                    v01 = _mm_loadu_si128((const __m128i*)(dsrc + cn2));
+                    v10 = _mm_loadu_si128((const __m128i*)(dsrc + dstep));
+                    v11 = _mm_loadu_si128((const __m128i*)(dsrc + dstep + cn2));
+                    
+                    t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
+                                       _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
+                    t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
+                                       _mm_madd_epi16(_mm_unpackhi_epi16(v10, v11), qw1));
+                    t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta_d), W_BITS1);
+                    t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta_d), W_BITS1);
+                    v00 = _mm_packs_epi32(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
+                    
+                    _mm_storeu_si128((__m128i*)dIptr, v00);
+                    t0 = _mm_srai_epi32(v00, 16); // Iy0 Iy1 Iy2 Iy3
+                    t1 = _mm_srai_epi32(_mm_slli_epi32(v00, 16), 16); // Ix0 Ix1 Ix2 Ix3
+                    
+                    __m128 fy = _mm_cvtepi32_ps(t0);
+                    __m128 fx = _mm_cvtepi32_ps(t1);
+                    
+                    qA22 = _mm_add_ps(qA22, _mm_mul_ps(fy, fy));
+                    qA12 = _mm_add_ps(qA12, _mm_mul_ps(fx, fy));
+                    qA11 = _mm_add_ps(qA11, _mm_mul_ps(fx, fx));
+                }
+#endif
+                
+                for( ; x < winSize.width*cn; x++, dsrc += 2, dIptr += 2 )
+                {
+                    int ival = CV_DESCALE(src[x]*iw00 + src[x+cn]*iw01 +
+                                          src[x+step]*iw10 + src[x+step+cn]*iw11, W_BITS1-5);
+                    int ixval = CV_DESCALE(dsrc[0]*iw00 + dsrc[cn2]*iw01 +
+                                           dsrc[dstep]*iw10 + dsrc[dstep+cn2]*iw11, W_BITS1);
+                    int iyval = CV_DESCALE(dsrc[1]*iw00 + dsrc[cn2+1]*iw01 + dsrc[dstep+1]*iw10 +
+                                           dsrc[dstep+cn2+1]*iw11, W_BITS1);
+                    
+                    Iptr[x] = (short)ival;
+                    dIptr[0] = (short)ixval;
+                    dIptr[1] = (short)iyval;
+                    
+                    A11 += (float)(ixval*ixval);
+                    A12 += (float)(ixval*iyval);
+                    A22 += (float)(iyval*iyval);
+                }
+            }
+            
+#if CV_SSE2
+            float CV_DECL_ALIGNED(16) A11buf[4], A12buf[4], A22buf[4];
+            _mm_store_ps(A11buf, qA11);
+            _mm_store_ps(A12buf, qA12);
+            _mm_store_ps(A22buf, qA22);
+            A11 += A11buf[0] + A11buf[1] + A11buf[2] + A11buf[3];
+            A12 += A12buf[0] + A12buf[1] + A12buf[2] + A12buf[3];
+            A22 += A22buf[0] + A22buf[1] + A22buf[2] + A22buf[3];
+#endif
+            
+            A11 *= FLT_SCALE;
+            A12 *= FLT_SCALE;
+            A22 *= FLT_SCALE;
+            
+            float D = A11*A22 - A12*A12;
+            float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
+                            4.f*A12*A12))/(2*winSize.width*winSize.height);
+            
+            if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
+                err[ptidx] = (float)minEig;
+            
+            if( minEig < minEigThreshold || D < FLT_EPSILON )
+            {
+                if( level == 0 && status )
+                    status[ptidx] = false;
+                continue;
+            }
+            
+            D = 1.f/D;
+            
+            nextPt -= halfWin;
+            Point2f prevDelta;
+            
+            for( j = 0; j < criteria.maxCount; j++ )
+            {
+                inextPt.x = cvFloor(nextPt.x);
+                inextPt.y = cvFloor(nextPt.y);
+                
+                if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
+                   inextPt.y < -winSize.height || inextPt.y >= J.rows )
+                {
+                    if( level == 0 && status )
+                        status[ptidx] = false;
+                    break;
+                }
+                
+                a = nextPt.x - inextPt.x;
+                b = nextPt.y - inextPt.y;
+                iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
+                iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
+                iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
+                iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
+                float b1 = 0, b2 = 0;
+#if CV_SSE2
+                qw0 = _mm_set1_epi32(iw00 + (iw01 << 16));
+                qw1 = _mm_set1_epi32(iw10 + (iw11 << 16));
+                __m128 qb0 = _mm_setzero_ps(), qb1 = _mm_setzero_ps();
+#endif
+                
+                for( y = 0; y < winSize.height; y++ )
+                {
+                    const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*step + inextPt.x*cn;
+                    const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                    const deriv_type* dIptr = (const deriv_type*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                    
+                    x = 0;
+                    
+#if CV_SSE2
+                    for( ; x <= winSize.width*cn - 8; x += 8, dIptr += 8*2 )
+                    {
+                        __m128i diff0 = _mm_loadu_si128((const __m128i*)(Iptr + x)), diff1;
+                        __m128i v00 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x)), z);
+                        __m128i v01 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + cn)), z);
+                        __m128i v10 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + step)), z);
+                        __m128i v11 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(Jptr + x + step + cn)), z);
+                        
+                        __m128i t0 = _mm_add_epi32(_mm_madd_epi16(_mm_unpacklo_epi16(v00, v01), qw0),
+                                                   _mm_madd_epi16(_mm_unpacklo_epi16(v10, v11), qw1));
+                        __m128i t1 = _mm_add_epi32(_mm_madd_epi16(_mm_unpackhi_epi16(v00, v01), qw0),
+                                                   _mm_madd_epi16(_mm_unpackhi_epi16(v10, v11), qw1));
+                        t0 = _mm_srai_epi32(_mm_add_epi32(t0, qdelta), W_BITS1-5);
+                        t1 = _mm_srai_epi32(_mm_add_epi32(t1, qdelta), W_BITS1-5);
+                        diff0 = _mm_subs_epi16(_mm_packs_epi32(t0, t1), diff0);
+                        diff1 = _mm_unpackhi_epi16(diff0, diff0);
+                        diff0 = _mm_unpacklo_epi16(diff0, diff0); // It0 It0 It1 It1 ...
+                        v00 = _mm_loadu_si128((const __m128i*)(dIptr)); // Ix0 Iy0 Ix1 Iy1 ... 
+                        v01 = _mm_loadu_si128((const __m128i*)(dIptr + 8));
+                        v10 = _mm_mullo_epi16(v00, diff0);
+                        v11 = _mm_mulhi_epi16(v00, diff0);
+                        v00 = _mm_unpacklo_epi16(v10, v11);
+                        v10 = _mm_unpackhi_epi16(v10, v11);
+                        qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
+                        qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                        v10 = _mm_mullo_epi16(v01, diff1);
+                        v11 = _mm_mulhi_epi16(v01, diff1);
+                        v00 = _mm_unpacklo_epi16(v10, v11);
+                        v10 = _mm_unpackhi_epi16(v10, v11);
+                        qb0 = _mm_add_ps(qb0, _mm_cvtepi32_ps(v00));
+                        qb1 = _mm_add_ps(qb1, _mm_cvtepi32_ps(v10));
+                    }
+#endif
+                    
+                    for( ; x < winSize.width*cn; x++, dIptr += 2 )
+                    {
+                        int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
+                                              Jptr[x+step]*iw10 + Jptr[x+step+cn]*iw11,
+                                              W_BITS1-5) - Iptr[x];
+                        b1 += (float)(diff*dIptr[0]);
+                        b2 += (float)(diff*dIptr[1]);
+                    }
+                }
+                
+#if CV_SSE2
+                float CV_DECL_ALIGNED(16) bbuf[4];
+                _mm_store_ps(bbuf, _mm_add_ps(qb0, qb1));
+                b1 += bbuf[0] + bbuf[2];
+                b2 += bbuf[1] + bbuf[3];
+#endif
+                
+                b1 *= FLT_SCALE;
+                b2 *= FLT_SCALE;
+                
+                Point2f delta( (float)((A12*b2 - A22*b1) * D),
+                              (float)((A12*b1 - A11*b2) * D));
+                //delta = -delta;
+                
+                nextPt += delta;
+                nextPts[ptidx] = nextPt + halfWin;
+                
+                if( delta.ddot(delta) <= criteria.epsilon )
+                    break;
+                
+                if( j > 0 && std::abs(delta.x + prevDelta.x) < 0.01 &&
+                   std::abs(delta.y + prevDelta.y) < 0.01 )
+                {
+                    nextPts[ptidx] -= delta*0.5f;
+                    break;
+                }
+                prevDelta = delta;
+            }
+            
+            if( status[ptidx] && err && level == 0 && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) == 0 )
+            {
+                Point2f nextPt = nextPts[ptidx];
+                Point inextPt;
+                
+                inextPt.x = cvFloor(nextPt.x);
+                inextPt.y = cvFloor(nextPt.y);
+                
+                if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
+                    inextPt.y < -winSize.height || inextPt.y >= J.rows )
+                {
+                    if( status )
+                        status[ptidx] = false;
+                    continue;
+                }
+                
+                float a = nextPt.x - inextPt.x;
+                float b = nextPt.y - inextPt.y;
+                iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
+                iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
+                iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
+                iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
+                float errval = 0.f;
+                
+                for( y = 0; y < winSize.height; y++ )
+                {
+                    const uchar* Jptr = (const uchar*)J.data + (y + inextPt.y)*step + inextPt.x*cn;
+                    const deriv_type* Iptr = (const deriv_type*)(IWinBuf.data + y*IWinBuf.step);
+                    
+                    for( x = 0; x < winSize.width*cn; x++ )
+                    {
+                        int diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
+                                              Jptr[x+step]*iw10 + Jptr[x+step+cn]*iw11,
+                                              W_BITS1-5) - Iptr[x];
+                        errval += std::abs((float)diff);
+                    }
+                }
+                err[ptidx] = errval * 1.f/(32*winSize.width*cn*winSize.height);
+            }
+        }
+    }
+    
+    const Mat* prevImg;
+    const Mat* nextImg;
+    const Mat* prevDeriv;
+    const Point2f* prevPts;
+    Point2f* nextPts;
+    uchar* status;
+    float* err;
+    Size winSize;
+    TermCriteria criteria;
+    int level;
+    int maxLevel;
+    int flags;
+    float minEigThreshold;
+};
+    
+}
+
 void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err,
                            Size winSize, int maxLevel,
                            TermCriteria criteria,
                            double derivLambda,
-                           int flags )
+                           int flags, double minEigThreshold )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, derivLambda, flags))
@@ -56,18 +507,14 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
 #endif
     Mat prevImg = _prevImg.getMat(), nextImg = _nextImg.getMat(), prevPtsMat = _prevPts.getMat();
     derivLambda = std::min(std::max(derivLambda, 0.), 1.);
-    double lambda1 = 1. - derivLambda, lambda2 = derivLambda;
-    const int derivKernelSize = 3;
-    const float deriv1Scale = 0.5f/4.f;
-    const float deriv2Scale = 0.25f/4.f;
-    const int derivDepth = CV_32F;
-    Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
+    const int derivDepth = DataType<deriv_type>::depth;
 
+    CV_Assert( derivLambda >= 0 );
     CV_Assert( maxLevel >= 0 && winSize.width > 2 && winSize.height > 2 );
     CV_Assert( prevImg.size() == nextImg.size() &&
         prevImg.type() == nextImg.type() );
 
-    int npoints;
+    int level=0, i, k, npoints, cn = prevImg.channels(), cn2 = cn*2;
     CV_Assert( (npoints = prevPtsMat.checkVector(2, CV_32F, true)) >= 0 );
     
     if( npoints == 0 )
@@ -93,7 +540,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     uchar* status = statusMat.data;
     float* err = 0;
     
-    for( int i = 0; i < npoints; i++ )
+    for( i = 0; i < npoints; i++ )
         status[i] = true;
     
     if( _err.needed() )
@@ -104,21 +551,43 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         err = (float*)errMat.data;
     }
 
-    vector<Mat> prevPyr, nextPyr;
-
-    int cn = prevImg.channels();
-    buildPyramid( prevImg, prevPyr, maxLevel );
-    buildPyramid( nextImg, nextPyr, maxLevel );
-    // I, dI/dx ~ Ix, dI/dy ~ Iy, d2I/dx2 ~ Ixx, d2I/dxdy ~ Ixy, d2I/dy2 ~ Iyy
+    vector<Mat> prevPyr(maxLevel+1), nextPyr(maxLevel+1);
+    
+    // build the image pyramids.
+    // we pad each level with +/-winSize.{width|height}
+    // pixels to simplify the further patch extraction.
+    // Thanks to the reference counting, "temp" mat (the pyramid layer + border)
+    // will not be deallocated, since {prevPyr|nextPyr}[level] will be a ROI in "temp".
+    for( k = 0; k < 2; k++ )
+    {
+        Size sz = prevImg.size();
+        vector<Mat>& pyr = k == 0 ? prevPyr : nextPyr;
+        Mat& img0 = k == 0 ? prevImg : nextImg;
+        
+        for( level = 0; level <= maxLevel; level++ )
+        {
+            Mat temp(sz.height + winSize.height*2,
+                     sz.width + winSize.width*2,
+                     img0.type());
+            pyr[level] = temp(Rect(winSize.width, winSize.height, sz.width, sz.height));
+            if( level == 0 )
+                img0.copyTo(pyr[level]);
+            else
+                pyrDown(pyr[level-1], pyr[level], pyr[level].size());
+            copyMakeBorder(pyr[level], temp, winSize.height, winSize.height,
+                           winSize.width, winSize.width, BORDER_REFLECT_101);
+            sz = Size((sz.width+1)/2, (sz.height+1)/2);
+            if( sz.width <= winSize.width || sz.height <= winSize.height )
+            {
+                maxLevel = level;
+                break;
+            }
+        }
+    }
+    // dI/dx ~ Ix, dI/dy ~ Iy
     Mat derivIBuf((prevImg.rows + winSize.height*2),
-                  (prevImg.cols + winSize.width*2),
-                  CV_MAKETYPE(derivDepth, cn*6));
-    // J, dJ/dx ~ Jx, dJ/dy ~ Jy
-    Mat derivJBuf((prevImg.rows + winSize.height*2),
-                  (prevImg.cols + winSize.width*2),
-                  CV_MAKETYPE(derivDepth, cn*3));
-    Mat tempDerivBuf(prevImg.size(), CV_MAKETYPE(derivIBuf.type(), cn));
-    Mat derivIWinBuf(winSize, derivIBuf.type());
+             (prevImg.cols + winSize.width*2),
+             CV_MAKETYPE(derivDepth, cn2));
 
     if( (criteria.type & TermCriteria::COUNT) == 0 )
         criteria.maxCount = 30;
@@ -130,258 +599,23 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
     criteria.epsilon *= criteria.epsilon;
 
-    for( int level = maxLevel; level >= 0; level-- )
+    for( level = maxLevel; level >= 0; level-- )
     {
-        int k;
         Size imgSize = prevPyr[level].size();
-        Mat tempDeriv( imgSize, tempDerivBuf.type(), tempDerivBuf.data );
         Mat _derivI( imgSize.height + winSize.height*2,
-            imgSize.width + winSize.width*2,
-            derivIBuf.type(), derivIBuf.data );
-        Mat _derivJ( imgSize.height + winSize.height*2,
-            imgSize.width + winSize.width*2,
-            derivJBuf.type(), derivJBuf.data );
-        Mat derivI(_derivI, Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-        Mat derivJ(_derivJ, Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-        CvMat cvderivI = _derivI;
-        cvZero(&cvderivI);
-        CvMat cvderivJ = _derivJ;
-        cvZero(&cvderivJ);
-
-        vector<int> fromTo(cn*2);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2] = k;
-
-        prevPyr[level].convertTo(tempDeriv, derivDepth);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        // compute spatial derivatives and merge them together
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 1, 0, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 1;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 0, 1, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 2;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 2, 0, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 3;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 1, 1, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 4;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 0, 2, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 5;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        nextPyr[level].convertTo(tempDeriv, derivDepth);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-
-        Sobel(nextPyr[level], tempDeriv, derivDepth, 1, 0, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3 + 1;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-
-        Sobel(nextPyr[level], tempDeriv, derivDepth, 0, 1, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3 + 2;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-
-        /*copyMakeBorder( derivI, _derivI, winSize.height, winSize.height,
-            winSize.width, winSize.width, BORDER_CONSTANT );
-        copyMakeBorder( derivJ, _derivJ, winSize.height, winSize.height,
-            winSize.width, winSize.width, BORDER_CONSTANT );*/
-
-        for( int ptidx = 0; ptidx < npoints; ptidx++ )
-        {
-            Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
-            Point2f nextPt;
-            if( level == maxLevel )
-            {
-                if( flags & OPTFLOW_USE_INITIAL_FLOW )
-                    nextPt = nextPts[ptidx]*(float)(1./(1 << level));
-                else
-                    nextPt = prevPt;
-            }
-            else
-                nextPt = nextPts[ptidx]*2.f;
-            nextPts[ptidx] = nextPt;
-            
-            Point2i iprevPt, inextPt;
-            prevPt -= halfWin;
-            iprevPt.x = cvFloor(prevPt.x);
-            iprevPt.y = cvFloor(prevPt.y);
-
-            if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
-                iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
-            {
-                if( level == 0 )
-                {
-                    status[ptidx] = false;
-                    err[ptidx] = FLT_MAX;
-                }
-                continue;
-            }
-            
-            float a = prevPt.x - iprevPt.x;
-            float b = prevPt.y - iprevPt.y;
-            float w00 = (1.f - a)*(1.f - b), w01 = a*(1.f - b);
-            float w10 = (1.f - a)*b, w11 = a*b;
-            size_t stepI = derivI.step/derivI.elemSize1();
-            size_t stepJ = derivJ.step/derivJ.elemSize1();
-            int cnI = cn*6, cnJ = cn*3;
-            double A11 = 0, A12 = 0, A22 = 0;
-            double iA11 = 0, iA12 = 0, iA22 = 0;
-            
-            // extract the patch from the first image
-            int x, y;
-            for( y = 0; y < winSize.height; y++ )
-            {
-                const float* src = (const float*)(derivI.data +
-                    (y + iprevPt.y)*derivI.step) + iprevPt.x*cnI;
-                float* dst = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
-
-                for( x = 0; x < winSize.width*cnI; x += cnI, src += cnI )
-                {
-                    float I = src[0]*w00 + src[cnI]*w01 + src[stepI]*w10 + src[stepI+cnI]*w11;
-                    dst[x] = I;
-                    
-                    float Ix = src[1]*w00 + src[cnI+1]*w01 + src[stepI+1]*w10 + src[stepI+cnI+1]*w11;
-                    float Iy = src[2]*w00 + src[cnI+2]*w01 + src[stepI+2]*w10 + src[stepI+cnI+2]*w11;
-                    dst[x+1] = Ix; dst[x+2] = Iy;
-                    
-                    float Ixx = src[3]*w00 + src[cnI+3]*w01 + src[stepI+3]*w10 + src[stepI+cnI+3]*w11;
-                    float Ixy = src[4]*w00 + src[cnI+4]*w01 + src[stepI+4]*w10 + src[stepI+cnI+4]*w11;
-                    float Iyy = src[5]*w00 + src[cnI+5]*w01 + src[stepI+5]*w10 + src[stepI+cnI+5]*w11;
-                    dst[x+3] = Ixx; dst[x+4] = Ixy; dst[x+5] = Iyy;
-
-                    iA11 += (double)Ix*Ix;
-                    iA12 += (double)Ix*Iy;
-                    iA22 += (double)Iy*Iy;
-
-                    A11 += (double)Ixx*Ixx + (double)Ixy*Ixy;
-                    A12 += Ixy*((double)Ixx + Iyy);
-                    A22 += (double)Ixy*Ixy + (double)Iyy*Iyy;
-                }
-            }
-
-            A11 = lambda1*iA11 + lambda2*A11;
-            A12 = lambda1*iA12 + lambda2*A12;
-            A22 = lambda1*iA22 + lambda2*A22;
-
-            double D = A11*A22 - A12*A12;
-            double minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
-                4.*A12*A12))/(2*winSize.width*winSize.height);
-            if( err )
-                err[ptidx] = (float)minEig;
-
-            if( D < DBL_EPSILON )
-            {
-                if( level == 0 )
-                    status[ptidx] = false;
-                continue;
-            }
-            
-            D = 1./D;
-
-            nextPt -= halfWin;
-            Point2f prevDelta;
-
-            for( int j = 0; j < criteria.maxCount; j++ )
-            {
-                inextPt.x = cvFloor(nextPt.x);
-                inextPt.y = cvFloor(nextPt.y);
-
-                if( inextPt.x < -winSize.width || inextPt.x >= derivJ.cols ||
-                    inextPt.y < -winSize.height || inextPt.y >= derivJ.rows )
-                {
-                    if( level == 0 )
-                        status[ptidx] = false;
-                    break;
-                }
-
-                a = nextPt.x - inextPt.x;
-                b = nextPt.y - inextPt.y;
-                w00 = (1.f - a)*(1.f - b); w01 = a*(1.f - b);
-                w10 = (1.f - a)*b; w11 = a*b;
-
-                double b1 = 0, b2 = 0, ib1 = 0, ib2 = 0;
-
-                for( y = 0; y < winSize.height; y++ )
-                {
-                    const float* src = (const float*)(derivJ.data +
-                        (y + inextPt.y)*derivJ.step) + inextPt.x*cnJ;
-                    const float* Ibuf = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
-
-                    for( x = 0; x < winSize.width; x++, src += cnJ, Ibuf += cnI )
-                    {
-                        double It = src[0]*w00 + src[cnJ]*w01 + src[stepJ]*w10 +
-                                    src[stepJ+cnJ]*w11 - Ibuf[0];
-                        double Ixt = src[1]*w00 + src[cnJ+1]*w01 + src[stepJ+1]*w10 +
-                                     src[stepJ+cnJ+1]*w11 - Ibuf[1];
-                        double Iyt = src[2]*w00 + src[cnJ+2]*w01 + src[stepJ+2]*w10 +
-                                     src[stepJ+cnJ+2]*w11 - Ibuf[2];
-                        b1 += Ixt*Ibuf[3] + Iyt*Ibuf[4];
-                        b2 += Ixt*Ibuf[4] + Iyt*Ibuf[5];
-                        ib1 += It*Ibuf[1];
-                        ib2 += It*Ibuf[2];
-                    }
-                }
-
-                b1 = lambda1*ib1 + lambda2*b1;
-                b2 = lambda1*ib2 + lambda2*b2;
-                Point2f delta( (float)((A12*b2 - A22*b1) * D),
-                               (float)((A12*b1 - A11*b2) * D));
-                //delta = -delta;
-
-                nextPt += delta;
-                nextPts[ptidx] = nextPt + halfWin;
-
-                if( delta.ddot(delta) <= criteria.epsilon )
-                    break;
-
-                if( j > 0 && std::abs(delta.x + prevDelta.x) < 0.01 &&
-                    std::abs(delta.y + prevDelta.y) < 0.01 )
-                {
-                    nextPts[ptidx] -= delta*0.5f;
-                    break;
-                }
-                prevDelta = delta;
-            }
-        }
+            imgSize.width + winSize.width*2, derivIBuf.type(), derivIBuf.data );
+        Mat derivI = _derivI(Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
+        calcSharrDeriv(prevPyr[level], derivI);
+        copyMakeBorder(derivI, _derivI, winSize.height, winSize.height, winSize.width, winSize.width, BORDER_CONSTANT);
+        
+        Mat I = prevPyr[level], J = nextPyr[level];
+        
+        parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level], derivI,
+                                                                nextPyr[level], prevPts, nextPts,
+                                                                status, err,
+                                                                winSize, criteria, level, maxLevel,
+                                                                flags, (float)minEigThreshold));
     }
-}
-
-static void
-intersect( CvPoint2D32f pt, CvSize win_size, CvSize imgSize,
-           CvPoint* min_pt, CvPoint* max_pt )
-{
-    CvPoint ipt;
-
-    ipt.x = cvFloor( pt.x );
-    ipt.y = cvFloor( pt.y );
-
-    ipt.x -= win_size.width;
-    ipt.y -= win_size.height;
-
-    win_size.width = win_size.width * 2 + 1;
-    win_size.height = win_size.height * 2 + 1;
-
-    min_pt->x = MAX( 0, -ipt.x );
-    min_pt->y = MAX( 0, -ipt.y );
-    max_pt->x = MIN( win_size.width, imgSize.width - ipt.x );
-    max_pt->y = MIN( win_size.height, imgSize.height - ipt.y );
 }
 
 
@@ -815,362 +1049,31 @@ return CV_OK;                                                           \
 
 ICV_DEF_GET_QUADRANGLE_SUB_PIX_FUNC( 8u32f, uchar, float, double, CV_CAST_32F, CV_8TO32F )
 
-namespace cv
-{
-
-struct LKTrackerInvoker
-{
-    LKTrackerInvoker( const CvMat* _imgI, const CvMat* _imgJ,
-                      const CvPoint2D32f* _featuresA,
-                      CvPoint2D32f* _featuresB,
-                      char* _status, float* _error,
-                      CvTermCriteria _criteria,
-                      CvSize _winSize, int _level, int _flags )
-    {
-        imgI = _imgI;
-        imgJ = _imgJ;
-        featuresA = _featuresA;
-        featuresB = _featuresB;
-        status = _status;
-        error = _error;
-        criteria = _criteria;
-        winSize = _winSize;
-        level = _level;
-        flags = _flags;
-    }
-    
-    void operator()(const BlockedRange& range) const
-    {
-        static const float smoothKernel[] = { 0.09375, 0.3125, 0.09375 };  // 3/32, 10/32, 3/32
-        
-        int i, i1 = range.begin(), i2 = range.end();
-        
-        CvSize patchSize = cvSize( winSize.width * 2 + 1, winSize.height * 2 + 1 );
-        int patchLen = patchSize.width * patchSize.height;
-        int srcPatchLen = (patchSize.width + 2)*(patchSize.height + 2);
-        
-        AutoBuffer<float> buf(patchLen*3 + srcPatchLen);
-        float* patchI = buf;
-        float* patchJ = patchI + srcPatchLen;
-        float* Ix = patchJ + patchLen;
-        float* Iy = Ix + patchLen;
-        float scaleL = 1.f/(1 << level);
-        CvSize levelSize = cvGetMatSize(imgI);
-        
-        // find flow for each given point
-        for( i = i1; i < i2; i++ )
-        {
-            CvPoint2D32f v;
-            CvPoint minI, maxI, minJ, maxJ;
-            CvSize isz, jsz;
-            int pt_status;
-            CvPoint2D32f u;
-            CvPoint prev_minJ = { -1, -1 }, prev_maxJ = { -1, -1 };
-            double Gxx = 0, Gxy = 0, Gyy = 0, D = 0, minEig = 0;
-            float prev_mx = 0, prev_my = 0;
-            int j, x, y;
-            
-            v.x = featuresB[i].x*2;
-            v.y = featuresB[i].y*2;
-            
-            pt_status = status[i];
-            if( !pt_status )
-                continue;
-            
-            minI = maxI = minJ = maxJ = cvPoint(0, 0);
-            
-            u.x = featuresA[i].x * scaleL;
-            u.y = featuresA[i].y * scaleL;
-            
-            intersect( u, winSize, levelSize, &minI, &maxI );
-            isz = jsz = cvSize(maxI.x - minI.x + 2, maxI.y - minI.y + 2);
-            u.x += (minI.x - (patchSize.width - maxI.x + 1))*0.5f;
-            u.y += (minI.y - (patchSize.height - maxI.y + 1))*0.5f;
-            
-            if( isz.width < 3 || isz.height < 3 ||
-                icvGetRectSubPix_8u32f_C1R( imgI->data.ptr, imgI->step, levelSize,
-                                            patchI, isz.width*sizeof(patchI[0]), isz, u ) < 0 )
-            {
-                // point is outside the first image. take the next
-                status[i] = 0;
-                continue;
-            }
-            
-            icvCalcIxIy_32f( patchI, isz.width*sizeof(patchI[0]), Ix, Iy,
-                             (isz.width-2)*sizeof(patchI[0]), isz, smoothKernel, patchJ );
-            
-            for( j = 0; j < criteria.max_iter; j++ )
-            {
-                double bx = 0, by = 0;
-                float mx, my;
-                CvPoint2D32f _v;
-                
-                intersect( v, winSize, levelSize, &minJ, &maxJ );
-                
-                minJ.x = MAX( minJ.x, minI.x );
-                minJ.y = MAX( minJ.y, minI.y );
-                
-                maxJ.x = MIN( maxJ.x, maxI.x );
-                maxJ.y = MIN( maxJ.y, maxI.y );
-                
-                jsz = cvSize(maxJ.x - minJ.x, maxJ.y - minJ.y);
-                
-                _v.x = v.x + (minJ.x - (patchSize.width - maxJ.x + 1))*0.5f;
-                _v.y = v.y + (minJ.y - (patchSize.height - maxJ.y + 1))*0.5f;
-                
-                if( jsz.width < 1 || jsz.height < 1 ||
-                    icvGetRectSubPix_8u32f_C1R( imgJ->data.ptr, imgJ->step, levelSize, patchJ,
-                                                jsz.width*sizeof(patchJ[0]), jsz, _v ) < 0 )
-                {
-                    // point is outside of the second image. take the next
-                    pt_status = 0;
-                    break;
-                }
-                
-                if( maxJ.x == prev_maxJ.x && maxJ.y == prev_maxJ.y &&
-                    minJ.x == prev_minJ.x && minJ.y == prev_minJ.y )
-                {
-                    for( y = 0; y < jsz.height; y++ )
-                    {
-                        const float* pi = patchI +
-                        (y + minJ.y - minI.y + 1)*isz.width + minJ.x - minI.x + 1;
-                        const float* pj = patchJ + y*jsz.width;
-                        const float* ix = Ix +
-                        (y + minJ.y - minI.y)*(isz.width-2) + minJ.x - minI.x;
-                        const float* iy = Iy + (ix - Ix);
-                        
-                        for( x = 0; x < jsz.width; x++ )
-                        {
-                            double t0 = pi[x] - pj[x];
-                            bx += t0 * ix[x];
-                            by += t0 * iy[x];
-                        }
-                    }
-                }
-                else
-                {
-                    Gxx = Gyy = Gxy = 0;
-                    for( y = 0; y < jsz.height; y++ )
-                    {
-                        const float* pi = patchI +
-                        (y + minJ.y - minI.y + 1)*isz.width + minJ.x - minI.x + 1;
-                        const float* pj = patchJ + y*jsz.width;
-                        const float* ix = Ix +
-                        (y + minJ.y - minI.y)*(isz.width-2) + minJ.x - minI.x;
-                        const float* iy = Iy + (ix - Ix);
-                        
-                        for( x = 0; x < jsz.width; x++ )
-                        {
-                            double t = pi[x] - pj[x];
-                            bx += (double) (t * ix[x]);
-                            by += (double) (t * iy[x]);
-                            Gxx += ix[x] * ix[x];
-                            Gxy += ix[x] * iy[x];
-                            Gyy += iy[x] * iy[x];
-                        }
-                    }
-                    
-                    D = Gxx * Gyy - Gxy * Gxy;
-                    if( D < DBL_EPSILON )
-                    {
-                        pt_status = 0;
-                        break;
-                    }
-                    
-                    // Adi Shavit - 2008.05
-                    if( flags & CV_LKFLOW_GET_MIN_EIGENVALS )
-                        minEig = (Gyy + Gxx - sqrt((Gxx-Gyy)*(Gxx-Gyy) + 4.*Gxy*Gxy))/(2*jsz.height*jsz.width);
-                        
-                    D = 1. / D;
-                        
-                    prev_minJ = minJ;
-                    prev_maxJ = maxJ;
-                }
-                
-                mx = (float) ((Gyy * bx - Gxy * by) * D);
-                my = (float) ((Gxx * by - Gxy * bx) * D);
-                
-                v.x += mx;
-                v.y += my;
-                
-                if( mx * mx + my * my < criteria.epsilon )
-                    break;
-                
-                if( j > 0 && fabs(mx + prev_mx) < 0.01 && fabs(my + prev_my) < 0.01 )
-                {
-                    v.x -= mx*0.5f;
-                    v.y -= my*0.5f;
-                    break;
-                }
-                prev_mx = mx;
-                prev_my = my;
-            }
-            
-            featuresB[i] = v;
-            status[i] = (char)pt_status;
-            if( level == 0 && error && pt_status )
-            {
-                // calc error
-                double err = 0;
-                if( flags & CV_LKFLOW_GET_MIN_EIGENVALS )
-                    err = minEig;
-                else
-                {
-                    for( y = 0; y < jsz.height; y++ )
-                    {
-                        const float* pi = patchI +
-                        (y + minJ.y - minI.y + 1)*isz.width + minJ.x - minI.x + 1;
-                        const float* pj = patchJ + y*jsz.width;
-                        
-                        for( x = 0; x < jsz.width; x++ )
-                        {
-                            double t = pi[x] - pj[x];
-                            err += t * t;
-                        }
-                    }
-                    err = sqrt(err);
-                }
-                error[i] = (float)err;
-            }
-        } // end of point processing loop (i)
-    }
-    
-    const CvMat* imgI;
-    const CvMat* imgJ;
-    const CvPoint2D32f* featuresA;
-    CvPoint2D32f* featuresB;
-    char* status;
-    float* error;
-    CvTermCriteria criteria;
-    CvSize winSize;
-    int level;
-    int flags;
-};
-    
-    
-}
-
 
 CV_IMPL void
 cvCalcOpticalFlowPyrLK( const void* arrA, const void* arrB,
-                        void* pyrarrA, void* pyrarrB,
+                        void* /*pyrarrA*/, void* /*pyrarrB*/,
                         const CvPoint2D32f * featuresA,
                         CvPoint2D32f * featuresB,
                         int count, CvSize winSize, int level,
                         char *status, float *error,
                         CvTermCriteria criteria, int flags )
 {
-    cv::AutoBuffer<uchar> pyrBuffer;
-    cv::AutoBuffer<uchar> buffer;
-    cv::AutoBuffer<char> _status;
-
-    const int MAX_ITERS = 100;
-
-    CvMat stubA, *imgA = (CvMat*)arrA;
-    CvMat stubB, *imgB = (CvMat*)arrB;
-    CvMat pstubA, *pyrA = (CvMat*)pyrarrA;
-    CvMat pstubB, *pyrB = (CvMat*)pyrarrB;
-    CvSize imgSize;
-    
-    uchar **imgI = 0;
-    uchar **imgJ = 0;
-    int *step = 0;
-    double *scale = 0;
-    CvSize* size = 0;
-
-    int i, l;
-
-    imgA = cvGetMat( imgA, &stubA );
-    imgB = cvGetMat( imgB, &stubB );
-
-    if( CV_MAT_TYPE( imgA->type ) != CV_8UC1 )
-        CV_Error( CV_StsUnsupportedFormat, "" );
-
-    if( !CV_ARE_TYPES_EQ( imgA, imgB ))
-        CV_Error( CV_StsUnmatchedFormats, "" );
-
-    if( !CV_ARE_SIZES_EQ( imgA, imgB ))
-        CV_Error( CV_StsUnmatchedSizes, "" );
-
-    if( imgA->step != imgB->step )
-        CV_Error( CV_StsUnmatchedSizes, "imgA and imgB must have equal steps" );
-
-    imgSize = cvGetMatSize( imgA );
-
-    if( pyrA )
-    {
-        pyrA = cvGetMat( pyrA, &pstubA );
-
-        if( pyrA->step*pyrA->height < icvMinimalPyramidSize( imgSize ) )
-            CV_Error( CV_StsBadArg, "pyramid A has insufficient size" );
-    }
-    else
-    {
-        pyrA = &pstubA;
-        pyrA->data.ptr = 0;
-    }
-
-    if( pyrB )
-    {
-        pyrB = cvGetMat( pyrB, &pstubB );
-
-        if( pyrB->step*pyrB->height < icvMinimalPyramidSize( imgSize ) )
-            CV_Error( CV_StsBadArg, "pyramid B has insufficient size" );
-    }
-    else
-    {
-        pyrB = &pstubB;
-        pyrB->data.ptr = 0;
-    }
-
-    if( count == 0 )
+    if( count <= 0 )
         return;
-
-    if( !featuresA || !featuresB )
-        CV_Error( CV_StsNullPtr, "Some of arrays of point coordinates are missing" );
-
-    if( count < 0 )
-        CV_Error( CV_StsOutOfRange, "The number of tracked points is negative or zero" );
-
-    if( winSize.width <= 1 || winSize.height <= 1 )
-        CV_Error( CV_StsBadSize, "Invalid search window size" );
-
-    icvInitPyramidalAlgorithm( imgA, imgB, pyrA, pyrB,
-        level, &criteria, MAX_ITERS, flags,
-        &imgI, &imgJ, &step, &size, &scale, &pyrBuffer );
-
-    if( !status )
-    {
-        _status.allocate(count);
-        status = _status;
-    }
-
-    memset( status, 1, count );
-    if( error )
-        memset( error, 0, count*sizeof(error[0]) );
-
-    if( !(flags & CV_LKFLOW_INITIAL_GUESSES) )
-        memcpy( featuresB, featuresA, count*sizeof(featuresA[0]));
+    CV_Assert( featuresA && featuresB );
+    cv::Mat A = cv::cvarrToMat(arrA), B = cv::cvarrToMat(arrB);
+    cv::Mat ptA(count, 1, CV_32FC2, (void*)featuresA);
+    cv::Mat ptB(count, 1, CV_32FC2, (void*)featuresB);
+    cv::Mat st, err;
     
-    for( i = 0; i < count; i++ )
-    {
-        featuresB[i].x = (float)(featuresB[i].x * scale[level] * 0.5);
-        featuresB[i].y = (float)(featuresB[i].y * scale[level] * 0.5);
-    }
-
-    /* do processing from top pyramid level (smallest image)
-       to the bottom (original image) */
-    for( l = level; l >= 0; l-- )
-    {
-        CvMat imgI_l, imgJ_l;        
-        cvInitMatHeader(&imgI_l, size[l].height, size[l].width, imgA->type, imgI[l], step[l]);
-        cvInitMatHeader(&imgJ_l, size[l].height, size[l].width, imgB->type, imgJ[l], step[l]);
-        
-        cv::parallel_for(cv::BlockedRange(0, count),
-                         cv::LKTrackerInvoker(&imgI_l, &imgJ_l, featuresA,
-                                              featuresB, status, error,
-                                              criteria, winSize, l, flags));
-    } // end of pyramid levels loop (l)
+    if( status )
+        st = cv::Mat(count, 1, CV_8U, (void*)status);
+    if( error )
+        err = cv::Mat(count, 1, CV_32F, (void*)error);
+    cv::calcOpticalFlowPyrLK( A, B, ptA, ptB, status ? cv::_OutputArray(st) : cv::_OutputArray(),
+                              error ? cv::_OutputArray(err) : cv::_OutputArray(),
+                              winSize, level, criteria, flags);
 }
 
 

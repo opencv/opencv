@@ -116,17 +116,17 @@ By using ``FilterEngine_GPU`` instead of functions you can avoid unnecessary mem
 
 .. seealso:: 
 
-    :ocv:class:`gpu::BaseRowFilter_GPU`, 
-    :ocv:class:`gpu::BaseColumnFilter_GPU`, 
-    :ocv:class:`gpu::BaseFilter_GPU`, 
-    :ocv:func:`gpu::createFilter2D_GPU`, 
-    :ocv:func:`gpu::createSeparableFilter_GPU`, 
-    :ocv:func:`gpu::createBoxFilter_GPU`, 
-    :ocv:func:`gpu::createMorphologyFilter_GPU`, 
-    :ocv:func:`gpu::createLinearFilter_GPU`, 
-    :ocv:func:`gpu::createSeparableLinearFilter_GPU`, 
-    :ocv:func:`gpu::createDerivFilter_GPU`, 
-    :ocv:func:`gpu::createGaussianFilter_GPU`
+   :ocv:class:`gpu::BaseRowFilter_GPU`, 
+   :ocv:class:`gpu::BaseColumnFilter_GPU`, 
+   :ocv:class:`gpu::BaseFilter_GPU`, 
+   :ocv:func:`gpu::createFilter2D_GPU`, 
+   :ocv:func:`gpu::createSeparableFilter_GPU`, 
+   :ocv:func:`gpu::createBoxFilter_GPU`, 
+   :ocv:func:`gpu::createMorphologyFilter_GPU`, 
+   :ocv:func:`gpu::createLinearFilter_GPU`, 
+   :ocv:func:`gpu::createSeparableLinearFilter_GPU`, 
+   :ocv:func:`gpu::createDerivFilter_GPU`, 
+   :ocv:func:`gpu::createGaussianFilter_GPU`
 
 .. index:: gpu::createFilter2D_GPU
 
@@ -240,7 +240,7 @@ gpu::boxFilter
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
- .. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+ .. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`boxFilter`
 
@@ -307,8 +307,8 @@ gpu::erode
     :param iterations: Number of times erosion to be applied.
 
 .. note:: 
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    
+    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`erode`
 
@@ -365,7 +365,7 @@ gpu::morphologyEx
 
     :param iterations: Number of times erosion and dilation to be applied.
 
-.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`morphologyEx` 
 
@@ -410,8 +410,8 @@ gpu::filter2D
     :param kernel: 2D array of filter coefficients. This filter works with integers kernels. If  ``kernel``  has a ``float``  or  ``double``  type, it uses fixed-point arithmetic.
 
     :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel cente
-	
-	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    
+    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`filter2D`
 
@@ -433,7 +433,7 @@ gpu::Laplacian
 
     :param scale: Optional scale factor for the computed Laplacian values. By default, no scaling is applied (see  :ocv:func:`getDerivKernels` ).
 
-.. note::	This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`Laplacian`,:ocv:func:`gpu::filter2D` .
 
@@ -455,7 +455,7 @@ gpu::getLinearRowFilter_GPU
 
     :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate`. For details on limitations, see below.
 
-    There are two versions of the algorithm: NPP and OpenCV.
+There are two versions of the algorithm: NPP and OpenCV.
         
         * NPP version is called when ``srcType == CV_8UC1`` or ``srcType == CV_8UC4`` and ``bufType == srcType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
         
@@ -481,10 +481,10 @@ gpu::getLinearColumnFilter_GPU
 
     :param borderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate` . For details on limitations, see below.
 
-	There are two versions of the algorithm: NPP and OpenCV.
-	* NPP version is called when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
-	* OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``, ``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside image.
-	
+    There are two versions of the algorithm: NPP and OpenCV.
+    * NPP version is called when ``dstType == CV_8UC1`` or ``dstType == CV_8UC4`` and ``bufType == dstType`` . Otherwise, the OpenCV version is called. NPP supports only ``BORDER_CONSTANT`` border type and does not check indices outside the image. 
+    * OpenCV version supports only ``CV_32F`` buffer depth and ``BORDER_REFLECT101``, ``BORDER_REPLICATE``, and ``BORDER_CONSTANT`` border types. It checks indices outside image.
+    
 .. seealso:: :ocv:func:`gpu::getLinearRowFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
 
 .. index:: gpu::createSeparableLinearFilter_GPU
@@ -696,4 +696,4 @@ gpu::getMinFilter_GPU
 
     :param anchor: Anchor point. The default value (-1) means that the anchor is at the kernel center.
 
-	.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    .. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
