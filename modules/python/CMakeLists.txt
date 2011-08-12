@@ -81,14 +81,14 @@ endif()
 set(cvpymodules ${cv2_target})
 
 if(WIN32)
-  install(TARGETS ${cvpymodules}
-          RUNTIME DESTINATION "Python${PYTHON_VERSION_MAJOR_MINOR}/Lib/site-packages" COMPONENT main
-          LIBRARY DESTINATION "Python${PYTHON_VERSION_MAJOR_MINOR}/Lib/site-packages" COMPONENT main
-          ARCHIVE DESTINATION "Python${PYTHON_VERSION_MAJOR_MINOR}/Lib/site-packages" COMPONENT main
-          )
+  set(CVPY_PATH "Python${PYTHON_VERSION_MAJOR_MINOR}/Lib/site-packages")
 else()
-  install(TARGETS ${cvpymodules} 
-          RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-          LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-          ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main)
+  set(CVPY_PATH ${PYTHON_PACKAGES_PATH})
 endif()
+
+install(TARGETS ${cvpymodules}
+      RUNTIME DESTINATION ${CVPY_PATH} COMPONENT main
+      LIBRARY DESTINATION ${CVPY_PATH} COMPONENT main
+      ARCHIVE DESTINATION ${CVPY_PATH} COMPONENT main
+      )
+install(FILES src2/cv.py DESTINATION ${CVPY_PATH} COMPONENT main)
