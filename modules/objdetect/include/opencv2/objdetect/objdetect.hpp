@@ -511,8 +511,8 @@ public:
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL=Size(), Size paddingBR=Size()) const;
     
-    static vector<float> getDefaultPeopleDetector();
-	static vector<float> getDaimlerPeopleDetector();
+    CV_WRAP static vector<float> getDefaultPeopleDetector();
+	CV_WRAP static vector<float> getDaimlerPeopleDetector();
     
     CV_PROP Size winSize;
     CV_PROP Size blockSize;
