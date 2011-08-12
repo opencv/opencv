@@ -140,7 +140,7 @@ Learn about how to use the feature points  detectors, descriptors and matching f
   
   ===================== ==============================================
   
-  .. |FeatureFlann| image:: images/Feature_Detection_Tutorial_Cover.jpg
+  .. |FeatureFlann| image:: images/Feature_Flann_Matcher_Tutorial_Cover.jpg
                     :height: 90pt
                     :width:  90pt
 
@@ -155,11 +155,11 @@ Learn about how to use the feature points  detectors, descriptors and matching f
                         
                         *Author:* |Author_AnaH|
                         
-                        In this tutorial, you will use *features2d* to detect interest points.
+                        In this tutorial, you will use *features2d* and *calib3d* to detect an object in a scene.
   
   ===================== ==============================================
   
-  .. |FeatureHomo| image:: images/Feature_Detection_Tutorial_Cover.jpg
+  .. |FeatureHomo| image:: images/Feature_Homography_Tutorial_Cover.jpg
                    :height: 90pt
                    :width:  90pt
 

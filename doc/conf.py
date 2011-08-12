@@ -366,7 +366,9 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	    'descriptor_extractor': ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#descriptorextractor%s', None ),
 	    'descriptor_extractor_compute' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#cv-descriptorextractor-compute%s', None ),
 	    'surf_descriptor_extractor' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#surfdescriptorextractor%s', None ),
-	    'draw_matches' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawmatches%s', None )		 		 
+	    'draw_matches' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawmatches%s', None ),
+	    'find_homography' : ('http://opencv.willowgarage.com/documentation/cpp/calib3d_camera_calibration_and_3d_reconstruction.html?#findHomography%s', None),
+	    'perspective_transform' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#perspectiveTransform%s', None )			 		 
            }
 
 
