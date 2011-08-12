@@ -625,14 +625,14 @@ Matx<_Tp, m, n> operator * (const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b)
 template<typename _Tp> static inline
 Point_<_Tp> operator * (const Matx<_Tp, 2, 2>& a, const Point_<_Tp>& b)
 {
-    return Point_<_Tp>(a*Vec<_Tp,2>(b));
+    return Point_<_Tp>(a*Vec<_Tp,2>(b.x,b.y));
 }
 
     
 template<typename _Tp> static inline
 Point3_<_Tp> operator * (const Matx<_Tp, 3, 3>& a, const Point3_<_Tp>& b)
 {
-    return Point3_<_Tp>(a*Vec<_Tp,3>(b));
+    return Point3_<_Tp>(a*Vec<_Tp,3>(b.x,b.y,b.z));
 }    
 
 
@@ -653,7 +653,7 @@ Matx<_Tp, 4, 1> operator * (const Matx<_Tp, 4, 4>& a, const Point3_<_Tp>& b)
 template<typename _Tp> static inline
 Scalar operator * (const Matx<_Tp, 4, 4>& a, const Scalar& b)
 {
-    return Scalar(a*Matx<_Tp, 4, 1>(b));
+    return Scalar(a*Matx<_Tp, 4, 1>(b[0],b[1],b[2],b[3]));
 }    
     
 
