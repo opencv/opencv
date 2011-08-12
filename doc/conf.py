@@ -237,6 +237,7 @@ preamble ="""
 \usepackage{mymath}\usepackage{amssymb}\usepackage{amsmath}\usepackage{bbm}\setcounter{secnumdepth}{1}
 \usepackage{colortbl}
 \usepackage{enumitem}
+\setlist{labelsep=1ex}
 """
 
 latex_elements = {'preamble': preamble}
