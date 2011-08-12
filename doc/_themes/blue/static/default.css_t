@@ -359,3 +359,7 @@ margin-top: 0px;
   {
     width: 100% !important;
   }
+  
+div.body ul.search li {
+    text-align: left;
+}
