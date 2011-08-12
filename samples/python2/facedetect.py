@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     while True:
         ret, img = cam.read()
-        gray = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
         
         t = clock()
