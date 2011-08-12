@@ -300,7 +300,7 @@ bool ImageLogPolProjection::_initLogRetinaSampling(const double reductionFactor,
 	return _initOK;
 }
 
-bool ImageLogPolProjection::_initLogPolarCortexSampling(const double reductionFactor, const double samplingStrenght)
+bool ImageLogPolProjection::_initLogPolarCortexSampling(const double reductionFactor, const double)
 {
 	_initOK=false;
 
@@ -399,13 +399,13 @@ std::valarray<double> &ImageLogPolProjection::runProjection(const std::valarray<
 	if (_colorModeCapable&&colorMode)
 	{
 		// progressive filtering and storage of the result in _tempBuffer
-		_spatiotemporalLPfilter_Irregular(&inputFrame[0], &_irregularLPfilteredFrame[0]);
+		_spatiotemporalLPfilter_Irregular(get_data(inputFrame), &_irregularLPfilteredFrame[0]);
 		_spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_tempBuffer[0]); // warning, temporal issue may occur, if the temporal constant is not NULL !!!
 
-		_spatiotemporalLPfilter_Irregular(&inputFrame[0]+_filterOutput.getNBpixels(), &_irregularLPfilteredFrame[0]);
+		_spatiotemporalLPfilter_Irregular(get_data(inputFrame)+_filterOutput.getNBpixels(), &_irregularLPfilteredFrame[0]);
 		_spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_tempBuffer[0]+_filterOutput.getNBpixels());
 
-		_spatiotemporalLPfilter_Irregular(&inputFrame[0]+_filterOutput.getNBpixels()*2, &_irregularLPfilteredFrame[0]);
+		_spatiotemporalLPfilter_Irregular(get_data(inputFrame)+_filterOutput.getNBpixels()*2, &_irregularLPfilteredFrame[0]);
 		_spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_tempBuffer[0]+_filterOutput.getNBpixels()*2);
 
 		// applying image projection/resampling
@@ -426,7 +426,7 @@ std::valarray<double> &ImageLogPolProjection::runProjection(const std::valarray<
 		//normalizeGrayOutput_0_maxOutputValue(_sampledFrame, _outputNBpixels);
 	}else
 	{
-		_spatiotemporalLPfilter_Irregular(&inputFrame[0], &_irregularLPfilteredFrame[0]);
+		_spatiotemporalLPfilter_Irregular(get_data(inputFrame), &_irregularLPfilteredFrame[0]);
 		_spatiotemporalLPfilter_Irregular(&_irregularLPfilteredFrame[0], &_irregularLPfilteredFrame[0]);
 		// applying image projection/resampling
 		register unsigned int *transformTablePTR=&_transformTable[0];

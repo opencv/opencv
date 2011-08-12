@@ -156,7 +156,7 @@ public:
 	* forbiden method inherited from parent std::valarray
 	* prefer not to use this method since the filter matrix become vectors
 	*/
-	void resize(const unsigned int NBpixels){std::cerr<<"error, not accessible method"<<std::endl;};
+	void resize(const unsigned int){std::cerr<<"error, not accessible method"<<std::endl;};
 
 	/**
 	*  low pass filter call and run (models the homogeneous cells network at the retina level, for example horizontal cells or photoreceptors)
@@ -225,7 +225,10 @@ public:
 	* @param outputFrame: the output buffer in which the result is writen
 	* @param filterIndex: the index which specifies the parameter set that should be used for the filtering
 	*/
-	inline void runProgressiveFilter(const std::valarray<double> &inputFrame, std::valarray<double> &outputFrame, const unsigned int filterIndex=0){_spatiotemporalLPfilter_Irregular(&inputFrame[0], &outputFrame[0], filterIndex);};
+	inline void runProgressiveFilter(const std::valarray<double> &inputFrame,
+									 std::valarray<double> &outputFrame,
+									 const unsigned int filterIndex=0)
+	{_spatiotemporalLPfilter_Irregular(get_data(inputFrame), &outputFrame[0], filterIndex);};
 
 	/**
 	* first order spatio-temporal low pass filter setup function
@@ -261,7 +264,7 @@ public:
 	* @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
 	* @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
 	*/
-	void setV0CompressionParameter(const double v0, const double maxInputValue, const double meanLuminance){ _v0=v0*maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=maxInputValue*(1.0-v0); _maxInputValue=maxInputValue;};
+	void setV0CompressionParameter(const double v0, const double maxInputValue, const double){ _v0=v0*maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=maxInputValue*(1.0-v0); _maxInputValue=maxInputValue;};
 
 	/**
 	* update local luminance adaptation setup, initial maxInputValue is kept. This function should be applied for normal local adaptation (not for tone mapping operation)

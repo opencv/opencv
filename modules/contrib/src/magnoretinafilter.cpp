@@ -181,7 +181,7 @@ void MagnoRetinaFilter::_amacrineCellsComputing(const double *OPL_ON, const doub
 const std::valarray<double> &MagnoRetinaFilter::runFilter(const std::valarray<double> &OPL_ON, const std::valarray<double> &OPL_OFF)
 {
 	// Compute the high pass temporal filter
-	_amacrineCellsComputing(&OPL_ON[0], &OPL_OFF[0]);
+	_amacrineCellsComputing(get_data(OPL_ON), get_data(OPL_OFF));
 
 	// apply low pass filtering on ON and OFF ways after temporal high pass filtering
 	_spatiotemporalLPfilter(&_amacrinCellsTempOutput_ON[0], &_magnoXOutputON[0], 0);

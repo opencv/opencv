@@ -58,4 +58,14 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
 
+namespace cv
+{
+
+// special function to get pointer to constant valarray elements, since
+// simple &arr[0] does not compile on VS2005/VS2008.
+template<typename T> inline const T* get_data(const std::valarray<T>& arr)
+{ return &((std::valarray<T>&)arr)[0]; }
+
+}
+
 #endif

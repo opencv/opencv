@@ -372,7 +372,7 @@ void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSiz
 void Retina::_convertValarrayGrayBuffer2cvMat(const std::valarray<double> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
 {
 	// fill output buffer with the valarray buffer
-	const double *valarrayPTR=&grayMatrixToConvert[0];
+	const double *valarrayPTR=get_data(grayMatrixToConvert);
 	if (!colorMode)
 	{
 		outBuffer.create(cv::Size(nbColumns, nbRows), CV_8U);

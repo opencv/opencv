@@ -166,27 +166,27 @@ public:
 	/**
 	* @return the numbers of rows (height) of the images used by the object
 	*/
-	inline unsigned int getNBrows(){return _NBrows;};
+	inline unsigned int getNBrows(){return (unsigned int)_NBrows;};
 
 	/**
 	* @return the numbers of columns (width) of the images used by the object
 	*/
-	inline unsigned int getNBcolumns(){return _NBcolumns;};
+	inline unsigned int getNBcolumns(){return (unsigned int)_NBcolumns;};
 
 	/**
 	* @return the numbers of pixels (width*height) of the images used by the object
 	*/
-	inline unsigned int getNBpixels(){return _NBpixels;};
+	inline unsigned int getNBpixels(){return (unsigned int)_NBpixels;};
 
 	/**
 	* @return the numbers of pixels (width*height) of the images used by the object
 	*/
-	inline unsigned int getDoubleNBpixels(){return _doubleNBpixels;};
+	inline unsigned int getDoubleNBpixels(){return (unsigned int)_doubleNBpixels;};
 
 	/**
 	* @return the numbers of depths (3rd dimension: 1 for gray images, 3 for rgb images) of the images used by the object
 	*/
-	inline unsigned int getDepthSize(){return _NBdepths;};
+	inline unsigned int getDepthSize(){return (unsigned int)_NBdepths;};
 
 	/**
 	* resize the buffer and recompute table index etc.
@@ -260,7 +260,7 @@ public:
 	* @param sensitivity: strenght of the sigmoide
 	* @param maxOutputValue: the maximum output value
 	*/
-	inline void normalizeGrayOutputCentredSigmoide(const type meanValue=(type)0.0, const type sensitivity=(type)2.0, const type maxOutputValue=(type)255.0){normalizeGrayOutputCentredSigmoide(meanValue, sensitivity, 255.0, this->Buffer(), this->Buffer(), this->getNBpixels());};
+	inline void normalizeGrayOutputCentredSigmoide(const type meanValue=(type)0.0, const type sensitivity=(type)2.0, const type maxOutputValue=(type)255.0){normalizeGrayOutputCentredSigmoide(meanValue, sensitivity, 255.0, this->Buffer(), this->Buffer(), this->getNBpixels()), maxOutputValue;};
 
 	/**
 	* sigmoide image normalization function (saturates min and max values), in this function, the sigmoide is centered on low values (high saturation of the medium and high values

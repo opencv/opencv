@@ -240,7 +240,7 @@ void RetinaFilter::setGlobalParameters(const double OPLspatialResponse1, const d
 	_setInitPeriodCount();
 }
 
-const bool RetinaFilter::checkInput(const std::valarray<double> &input, const bool colorMode)
+const bool RetinaFilter::checkInput(const std::valarray<double> &input, const bool)
 {
 
 	BasicRetinaFilter *inputTarget=&_photoreceptorsPrefilter;
@@ -413,7 +413,7 @@ void RetinaFilter::runRGBToneMapping(const std::valarray<double> &RGBimageInput,
 	RGBimageOutput=_colorEngine.getDemultiplexedColorFrame();
 }
 
-void RetinaFilter::runLMSToneMapping(const std::valarray<double> &LMSimageInput, std::valarray<double> &imageOuput, const bool useAdaptiveFiltering, const double PhotoreceptorsCompression, const double ganglionCellsCompression)
+void RetinaFilter::runLMSToneMapping(const std::valarray<double> &, std::valarray<double> &, const bool, const double, const double)
 {
 	std::cerr<<"not working, sorry"<<std::endl;
 
@@ -474,8 +474,8 @@ void RetinaFilter::runLMSToneMapping(const std::valarray<double> &LMSimageInput,
 void RetinaFilter::_processRetinaParvoMagnoMapping()
 {
 	register double *hybridParvoMagnoPTR= &_retinaParvoMagnoMappedFrame[0];
-	register const double *parvoOutputPTR= &(_ParvoRetinaFilter.getOutput()[0]);
-	register const double *magnoXOutputPTR= &(_MagnoRetinaFilter.getOutput()[0]);
+	register const double *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
+	register const double *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
 	register double *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
 
 	for (unsigned int i=0 ; i<_photoreceptorsPrefilter.getNBpixels() ; ++i, hybridParvoMagnoCoefTablePTR+=2)
@@ -495,7 +495,7 @@ const bool RetinaFilter::getParvoFoveaResponse(std::valarray<double> &parvoFovea
 	if (parvoFovealResponse.size() != _ParvoRetinaFilter.getNBpixels())
 		return false;
 
-	register const double *parvoOutputPTR= &(_ParvoRetinaFilter.getOutput()[0]);
+	register const double *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
 	register double *fovealParvoResponsePTR= &parvoFovealResponse[0];
 	register double *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
 
@@ -515,7 +515,7 @@ const bool RetinaFilter::getMagnoParaFoveaResponse(std::valarray<double> &magnoP
 	if (magnoParafovealResponse.size() != _MagnoRetinaFilter.getNBpixels())
 		return false;
 
-	register const double *magnoXOutputPTR= &(_MagnoRetinaFilter.getOutput()[0]);
+	register const double *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
 	register double *parafovealMagnoResponsePTR=&magnoParafovealResponse[0];
 	register double *hybridParvoMagnoCoefTablePTR=&_retinaParvoMagnoMapCoefTable[0]+1;
 

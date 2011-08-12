@@ -295,26 +295,26 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const doubl
 // run local adaptation filter and save result in _filterOutput
 const std::valarray<double> &BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<double> &inputFrame, const std::valarray<double> &localLuminance)
 {
-	_localLuminanceAdaptation(&inputFrame[0], &localLuminance[0], &_filterOutput[0]);
+	_localLuminanceAdaptation(get_data(inputFrame), get_data(localLuminance), &_filterOutput[0]);
 	return _filterOutput;
 }
 // run local adaptation filter at a specific output adress
 void BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<double> &inputFrame, const std::valarray<double> &localLuminance, std::valarray<double> &outputFrame)
 {
-	_localLuminanceAdaptation(&inputFrame[0], &localLuminance[0], &outputFrame[0]);
+	_localLuminanceAdaptation(get_data(inputFrame), get_data(localLuminance), &outputFrame[0]);
 }
 // run local adaptation filter and save result in _filterOutput with autonomous low pass filtering before adaptation
 const std::valarray<double> &BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<double> &inputFrame)
 {
-	_spatiotemporalLPfilter(&inputFrame[0], &_filterOutput[0]);
-	_localLuminanceAdaptation(&inputFrame[0], &_filterOutput[0], &_filterOutput[0]);
+	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0]);
+	_localLuminanceAdaptation(get_data(inputFrame), &_filterOutput[0], &_filterOutput[0]);
 	return _filterOutput;
 }
 // run local adaptation filter at a specific output adress with autonomous low pass filtering before adaptation
 void BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<double> &inputFrame, std::valarray<double> &outputFrame)
 {
-	_spatiotemporalLPfilter(&inputFrame[0], &_filterOutput[0]);
-	_localLuminanceAdaptation(&inputFrame[0], &_filterOutput[0], &outputFrame[0]);
+	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0]);
+	_localLuminanceAdaptation(get_data(inputFrame), &_filterOutput[0], &outputFrame[0]);
 }
 // local luminance adaptation of the input in regard of localLuminance buffer
 void BasicRetinaFilter::_localLuminanceAdaptation(const double *inputFrame, const double *localLuminance, double *outputFrame)
@@ -380,14 +380,14 @@ void BasicRetinaFilter::_localLuminanceAdaptation(double *inputOutputFrame, cons
 // run LP filter and save result in the basic retina element buffer
 const std::valarray<double> &BasicRetinaFilter::runFilter_LPfilter(const std::valarray<double> &inputFrame, const unsigned int filterIndex)
 {
-	_spatiotemporalLPfilter(&inputFrame[0], &_filterOutput[0], filterIndex);
+	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0], filterIndex);
 	return _filterOutput;
 }
 
 // run LP filter for a new frame input and save result at a specific output adress
 void BasicRetinaFilter::runFilter_LPfilter(const std::valarray<double> &inputFrame, std::valarray<double> &outputFrame, const unsigned int filterIndex)
 {
-	_spatiotemporalLPfilter(&inputFrame[0], &outputFrame[0], filterIndex);
+	_spatiotemporalLPfilter(get_data(inputFrame), &outputFrame[0], filterIndex);
 }
 
 // run LP filter on the input data and rewrite it

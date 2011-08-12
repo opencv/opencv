@@ -258,7 +258,7 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<double> &multiplexe
 	_demultiplexedTempBuffer=0;
 	// -> demultiplex process
 	register unsigned int *colorSamplingPRT=&_colorSampling[0];
-	register const double *multiplexedColorFramePTR=&multiplexedColorFrame[0];
+	register const double *multiplexedColorFramePTR=get_data(multiplexedColorFrame);
 	for (unsigned int indexa=0; indexa<_filterOutput.getNBpixels() ; ++indexa)
 		_demultiplexedTempBuffer[*(colorSamplingPRT++)]=*(multiplexedColorFramePTR++);
 
@@ -325,7 +325,7 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<double> &multiplexe
 
 	}else
 	{
-		register const double *multiplexedColorFramePTR= &multiplexedColorFrame[0];
+		register const double *multiplexedColorFramePTR= get_data(multiplexedColorFrame);
 		for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR)
 		{
 			// normalize by photoreceptors density
@@ -723,9 +723,9 @@ const bool RetinaColor::applyLMS2LabTransform(std::valarray<double> &result)
 void RetinaColor::_applyImageColorSpaceConversion(const std::valarray<double> &inputFrameBuffer, std::valarray<double> &outputFrameBuffer, const double *transformTable)
 {
 	// two step methods in order to allow inputFrame and outputFrame to be the same
-	unsigned int nbPixels=inputFrameBuffer.size()/3, dbpixels=2*inputFrameBuffer.size()/3;
+	unsigned int nbPixels=(unsigned int)(inputFrameBuffer.size()/3), dbpixels=(unsigned int)(2*inputFrameBuffer.size()/3);
 
-	const double *inputFrame=&inputFrameBuffer[0];
+	const double *inputFrame=get_data(inputFrameBuffer);
 	double *outputFrame= &outputFrameBuffer[0];
 
 	for (unsigned int dataIndex=0; dataIndex<nbPixels;++dataIndex, ++outputFrame, ++inputFrame)

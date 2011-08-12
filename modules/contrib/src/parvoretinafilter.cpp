@@ -172,7 +172,7 @@ void ParvoRetinaFilter::setOPLandParvoFiltersParameters(const double beta1, cons
 // output return is (*_parvocellularOutputONminusOFF)
 const std::valarray<double> &ParvoRetinaFilter::runFilter(const std::valarray<double> &inputFrame, const bool useParvoOutput)
 {
-	_spatiotemporalLPfilter(&inputFrame[0], &_photoreceptorsOutput[0]);
+	_spatiotemporalLPfilter(get_data(inputFrame), &_photoreceptorsOutput[0]);
 	_spatiotemporalLPfilter(&_photoreceptorsOutput[0], &_horizontalCellsOutput[0], 1);
 	_OPL_OnOffWaysComputing();
 
