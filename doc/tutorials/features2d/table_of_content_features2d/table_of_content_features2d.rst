@@ -3,7 +3,7 @@
 *feature2d* module. 2D Features framework
 -----------------------------------------------------------
 
-Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.ddddddd
+Learn about how to use the feature points  detectors, descriptors and matching framework found inside OpenCV.
 
 .. include:: ../../definitions/tocDefinitions.rst 
 
@@ -190,7 +190,11 @@ Learn about how to use the feature points  detectors, descriptors and matching f
 .. toctree::
    :hidden:
 
+   ../feature_description/feature_description
+   ../feature_detection/feature_detection
    ../trackingmotion/harris_detector/harris_detector
+   ../feature_flann_matcher/feature_flann_matcher
+   ../feature_homography/feature_homography
    ../trackingmotion/good_features_to_track/good_features_to_track.rst
    ../trackingmotion/generic_corner_detector/generic_corner_detector
    ../trackingmotion/corner_subpixeles/corner_subpixeles

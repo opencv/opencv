@@ -18,7 +18,7 @@ The source code
 
 As a test case where to show off these using OpenCV I've created a small program that reads in two video files and performs a similarity check between them. This is something you could use to check just how well a new video compressing algorithms works. Let there be a reference (original) video like :download:`this small Megamind clip <../../../../samples/cpp/tutorial_code/highgui/video-input-psnr-ssim/video/Megamind.avi>` and :download:`a compressed version of it <../../../../samples/cpp/tutorial_code/highgui/video-input-psnr-ssim/video/Megamind_bugy.avi>`. You may also find the source code and these video file in the :file:`samples/cpp/tutorial_code/highgui/video-input-psnr-ssim/` folder of the OpenCV source library.
 
-.. literalinclude:: ../../../../samples/cpp/tutorial_code/HighGUI\video-input-psnr-ssim\video-input-psnr-ssim.cpp
+.. literalinclude:: ../../../../samples/cpp/tutorial_code/HighGUI/video-input-psnr-ssim/video-input-psnr-ssim.cpp
    :language: cpp
    :linenos:
    :tab-width: 4
