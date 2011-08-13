@@ -24,7 +24,7 @@ void help(std::string errorMessage)
 // simple procedure for 1D curve tracing
 void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowerLimit, const int upperLimit)
 {
-	std::cout<<"curve size(h,w) = "<<curve.size().height<<", "<<curve.size().width<<std::endl;
+	//std::cout<<"curve size(h,w) = "<<curve.size().height<<", "<<curve.size().width<<std::endl;
 	cv::Mat displayedCurveImage = cv::Mat::ones(200, curve.size().height, CV_8U);
 
 	cv::Mat windowNormalizedCurve;
@@ -52,9 +52,9 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  {
 
 	 // adjust output matrix wrt the input size but single channel
-	 std::cout<<"Input image rescaling..."<<std::endl;
-	 std::cout<<"=> image size (h,w,channels) = "<<inputMat.size().height<<", "<<inputMat.size().width<<", "<<inputMat.channels()<<std::endl;
-	 std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputMat.elemSize()/inputMat.elemSize1()<<", "<<inputMat.elemSize1()<<std::endl;
+	 std::cout<<"Input image rescaling with histogram edges cutting (in order to eliminate bad pixels created during the HDR image creation) :"<<std::endl;
+	 //std::cout<<"=> image size (h,w,channels) = "<<inputMat.size().height<<", "<<inputMat.size().width<<", "<<inputMat.channels()<<std::endl;
+	 //std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputMat.elemSize()/inputMat.elemSize1()<<", "<<inputMat.elemSize1()<<std::endl;
 
 	 // rescale between 0-255, keeping floating point values
 	 cv::normalize(inputMat, outputMat, 0.0, 255.0, cv::NORM_MINMAX);
@@ -81,7 +81,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 double min_val, max_val;
 	 CvMat histArr(normalizedHist);
 	 cvMinMaxLoc(&histArr, &min_val, &max_val);
-	 std::cout<<"Hist max,min = "<<max_val<<", "<<min_val<<std::endl;
+	 //std::cout<<"Hist max,min = "<<max_val<<", "<<min_val<<std::endl;
 
 	 // compute density probability
 	 cv::Mat denseProb=cv::Mat::zeros(normalizedHist.size(), CV_32F);
@@ -100,9 +100,9 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 float minInputValue = (float)histLowerLimit/histSize*255;
 	 float maxInputValue = (float)histUpperLimit/histSize*255;
 
-	 std::cout<<"Histogram limits "
-			 <<"\n"<<histogramClippingLimit*100<<"% index = "<<histLowerLimit<<" => normalizedHist value = "<<denseProb.at<float>(histLowerLimit)<<" => input gray level = "<<minInputValue
-			 <<"\n"<<(1-histogramClippingLimit)*100<<"% index = "<<histUpperLimit<<" => normalizedHist value = "<<denseProb.at<float>(histUpperLimit)<<" => input gray level = "<<maxInputValue
+	 std::cout<<"=> Histogram limits "
+			 <<"\n\t"<<histogramClippingLimit*100<<"% index = "<<histLowerLimit<<" => normalizedHist value = "<<denseProb.at<float>(histLowerLimit)<<" => input gray level = "<<minInputValue
+			 <<"\n\t"<<(1-histogramClippingLimit)*100<<"% index = "<<histUpperLimit<<" => normalizedHist value = "<<denseProb.at<float>(histUpperLimit)<<" => input gray level = "<<maxInputValue
 			 <<std::endl;
 	 drawPlot(denseProb, "input histogram density probability", histLowerLimit, histUpperLimit);
 	 drawPlot(normalizedHist, "input histogram", histLowerLimit, histUpperLimit);
@@ -147,7 +147,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 std::cout<<"* Retina demonstration for High Dynamic Range compression (tone-mapping) : demonstrates the use of a wrapper class of the Gipsa/Listic Labs retina model."<<std::endl;
 	 std::cout<<"* This retina model allows spatio-temporal image processing (applied on still images, video sequences)."<<std::endl;
 	 std::cout<<"* This demo focuses demonstration of the dynamic compression capabilities of the model"<<std::endl;
-	 std::cout<<"* => the main application is tone mapping of HDR images (i.e. see on a 8bit display a >8bit (up to 16bits) image with details in high and low luminance ranges"<<std::endl;
+	 std::cout<<"* => the main application is tone mapping of HDR images (i.e. see on a 8bit display a more than 8bits coded (up to 16bits) image with details in high and low luminance ranges"<<std::endl;
 	 std::cout<<"* The retina model still have the following properties:"<<std::endl;
 	 std::cout<<"* => It applies a spectral whithening (mid-frequency details enhancement)"<<std::endl;
 	 std::cout<<"* => high frequency spatio-temporal noise reduction"<<std::endl;
@@ -189,8 +189,8 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 normalize(inputImage, inputImage, 0.0, 1.0, cv::NORM_MINMAX);
 	 cv::Mat gammaTransformedImage;
 	 cv::pow(inputImage, 1./5, gammaTransformedImage); // apply gamma curve: img = img ** (1./5)
-	 imshow("EXR image original image, linear rescaling", inputImage);
-	 imshow("EXR image with gamma correction", gammaTransformedImage);
+	 imshow("EXR image original image, 16bits=>8bits linear rescaling ", inputImage);
+	 imshow("EXR image with basic processing : 16bits=>8bits with gamma correction", gammaTransformedImage);
 	 if (inputImage.empty())
 	 {
 		 help("Input image could not be loaded, aborting");
@@ -218,20 +218,20 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 histogramClippingValue=0; // default value... updated with interface slider
 		 //inputRescaleMat = inputImage;
 		 //outputRescaleMat = imageInputRescaled;
-		 cv::namedWindow("Cut histogram edges input image",1);
-		 cv::createTrackbar("histogram edges clipping limit", "Cut histogram edges input image",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
+		 cv::namedWindow("Retina input image (with cut edges histogram for basic pixels error avoidance)",1);
+		 cv::createTrackbar("histogram edges clipping limit", "Retina input image (with cut edges histogram for basic pixels error avoidance)",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
 
-		 cv::namedWindow("Retina Parvo", 1);
+		 cv::namedWindow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", 1);
 		 colorSaturationFactor=2;
-		 cv::createTrackbar("Color saturation", "Retina Parvo", &colorSaturationFactor,100,callback_saturateColors);
+		 cv::createTrackbar("Color saturation", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &colorSaturationFactor,100,callback_saturateColors);
 
 		 retinaHcellsGain=40;
-		 cv::createTrackbar("Retina horizontal cells gain", "Retina Parvo",&retinaHcellsGain,100,callBack_updateRetinaParams);
+		 cv::createTrackbar("Hcells gain", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping",&retinaHcellsGain,100,callBack_updateRetinaParams);
 
 		 localAdaptation_photoreceptors=99;
 		 localAdaptation_Gcells=99;
-		 cv::createTrackbar("Ph sensitivity", "Retina Parvo", &localAdaptation_photoreceptors,99,callBack_updateRetinaParams);
-		 cv::createTrackbar("Gcells sensitivity", "Retina Parvo", &localAdaptation_Gcells,99,callBack_updateRetinaParams);
+		 cv::createTrackbar("Ph sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_photoreceptors,99,callBack_updateRetinaParams);
+		 cv::createTrackbar("Gcells sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_Gcells,99,callBack_updateRetinaParams);
 
 		 /////////////////////////////////////////////
 		 // apply default parameters of user interaction variables
@@ -248,8 +248,8 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 			 // Retrieve and display retina output
 			 retina->getParvo(retinaOutput_parvo);
 			 retina->getMagno(retinaOutput_magno);
-			 cv::imshow("Cut histogram edges input image", imageInputRescaled/255.0);
-			 cv::imshow("Retina Parvo", retinaOutput_parvo);
+			 cv::imshow("Retina input image (with cut edges histogram for basic pixels error avoidance)", imageInputRescaled/255.0);
+			 cv::imshow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", retinaOutput_parvo);
 			 //cv::imshow("Retina Magno", retinaOutput_magno); // not usefull in this demo, uncomment if needed
 			 cv::waitKey(10);
 		 }
