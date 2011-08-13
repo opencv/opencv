@@ -27,11 +27,10 @@ if __name__ == '__main__':
 
     print help_message
 
-    # TODO should use built-in detector data
-    text = "".join(open('people_hog.txt').readlines()[1:])
-    data = np.fromstring(text, sep=',')
     hog = cv2.HOGDescriptor()
-    hog.setSVMDetector(data)
+    data = cv2.HOGDescriptor_getDefaultPeopleDetector()
+    data = np.float64(data.ravel()) # BUG
+    hog.setSVMDetector( data )
 
     for fn in it.chain(*map(glob, sys.argv[1:])):
         print fn, ' - ',

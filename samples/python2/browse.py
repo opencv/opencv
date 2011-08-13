@@ -34,5 +34,5 @@ def onmouse(event, x, y, flags, param):
     cv2.imshow('zoom', zoom)
 
 cv2.imshow('preview', small)
-cv2.setMouseCallback('preview', onmouse, None)
+cv2.setMouseCallback('preview', onmouse)
 cv2.waitKey()
