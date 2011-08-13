@@ -23,7 +23,7 @@ Default and training constructors.
 
 .. ocv:function:: CvNormalBayesClassifier::CvNormalBayesClassifier( const Mat& trainData, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat() )
 
-.. ocv:function::CvNormalBayesClassifier::CvNormalBayesClassifier( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0 )
+.. ocv:function:: CvNormalBayesClassifier::CvNormalBayesClassifier( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0 )
 
 .. ocv:pyfunction:: cv2.NormalBayesClassifier(trainData, responses[, varIdx[, sampleIdx]]) -> <NormalBayesClassifier object>
 
@@ -35,7 +35,7 @@ Trains the model.
 
 .. ocv:function:: bool CvNormalBayesClassifier::train( const Mat& trainData, const Mat& responses, const Mat& varIdx = Mat(), const Mat& sampleIdx=Mat(), bool update=false )
 
-.. ocv:function::bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
+.. ocv:function:: bool CvNormalBayesClassifier::train( const CvMat* trainData, const CvMat* responses, const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false )
 
 .. ocv:pyfunction:: cv2.NormalBayesClassifier.train(trainData, responses[, varIdx[, sampleIdx[, update]]]) -> retval
 
@@ -54,7 +54,7 @@ Predicts the response for sample(s).
 
 .. ocv:function:: float CvNormalBayesClassifier::predict(  const Mat& samples,  Mat* results=0 ) const
 
-.. ocv:function::float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
+.. ocv:function:: float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results=0 ) const
 
 .. ocv:pyfunction:: cv2.NormalBayesClassifier.predict(samples) -> retval, results
 

@@ -148,7 +148,7 @@ where
 .. seealso::
 
     :ocv:class:`BaseColumnFilter`,
-    :ocv:func:`Filter`,
+    :ocv:class:`BaseFilter`,
     :ocv:class:`FilterEngine`,
     :ocv:func:`getLinearRowFilter`,
     :ocv:func:`getMorphologyRowFilter`,
@@ -677,7 +677,7 @@ Returns an engine for smoothing images with the Gaussian filter.
 The function :ocv:func:`createGaussianFilter` computes Gaussian kernel coefficients and then returns a separable linear filter for that kernel. The function is used by
 :ocv:func:`GaussianBlur` . Note that while the function takes just one data type, both for input and output, you can pass this limitation by calling
 :ocv:func:`getGaussianKernel` and then
-:ocv:func:`createSeparableFilter` directly.
+:ocv:func:`createSeparableLinearFilter` directly.
 
 .. seealso::
 
@@ -880,7 +880,7 @@ Erodes an image by using a specific structuring element.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
     
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphoogyFilter` for details.
+    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphologyFilter` for details.
     
 The function erodes the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the minimum is taken:
 
@@ -1183,7 +1183,7 @@ Performs advanced morphological transformations.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
     
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphoogyFilter` for details.
+    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphologyFilter` for details.
 
 The function can perform advanced morphological transformations using an erosion and dilation as basic operations.
 
@@ -1456,7 +1456,7 @@ Smooths the image in one of several ways.
     
 The function smooths an image using one of several methods. Every of the methods has some features and restrictions listed below:
 
- * Blur with no scaling works with single-channel images only and supports accumulation of 8-bit to 16-bit format (similar to :ocv:func:`Sobel` and :ocv:func:`Laplace`) and 32-bit floating point to 32-bit floating-point format.
+ * Blur with no scaling works with single-channel images only and supports accumulation of 8-bit to 16-bit format (similar to :ocv:func:`Sobel` and :ocv:func:`Laplacian`) and 32-bit floating point to 32-bit floating-point format.
 
  * Simple blur and Gaussian blur support 1- or 3-channel, 8-bit and 32-bit floating point images. These two methods can process images in-place.
 

@@ -182,7 +182,7 @@ The constructors.
 
 .. ocv:function:: CvANN_MLP::CvANN_MLP()
 
-.. ocv:function::CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+.. ocv:function:: CvANN_MLP::CvANN_MLP( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
 .. ocv:pyfunction:: cv2.ANN_MLP(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> <ANN_MLP object>
 
@@ -194,7 +194,7 @@ Constructs MLP with the specified topology.
 
 .. ocv:function:: void CvANN_MLP::create( const Mat& layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
-.. ocv:function::void CvANN_MLP::create( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
+.. ocv:function:: void CvANN_MLP::create( const CvMat* layerSizes, int activateFunc=CvANN_MLP::SIGMOID_SYM, double fparam1=0, double fparam2=0 )
 
 .. ocv:pyfunction:: cv2.ANN_MLP.create(layerSizes[, activateFunc[, fparam1[, fparam2]]]) -> None
 
@@ -212,7 +212,7 @@ Trains/updates MLP.
 
 .. ocv:function:: int CvANN_MLP::train( const Mat& inputs, const Mat& outputs, const Mat& sampleWeights, const Mat& sampleIdx=Mat(), CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
-.. ocv:function::int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
+.. ocv:function:: int CvANN_MLP::train( const CvMat* inputs, const CvMat* outputs, const CvMat* sampleWeights, const CvMat* sampleIdx=0, CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(), int flags=0 )
 
 .. ocv:pyfunction:: cv2.ANN_MLP.train(inputs, outputs, sampleWeights[, sampleIdx[, params[, flags]]]) -> niterations
 
@@ -242,7 +242,7 @@ Predicts responses for input samples.
 
 .. ocv:function:: float CvANN_MLP::predict( const Mat& inputs, Mat& outputs ) const
 
-.. ocv:function::float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
+.. ocv:function:: float CvANN_MLP::predict( const CvMat* inputs, CvMat* outputs ) const
 
 .. ocv:pyfunction:: cv2.ANN_MLP.predict(inputs, outputs) -> retval
 
@@ -262,7 +262,7 @@ CvANN_MLP::get_layer_sizes
 --------------------------
 Returns numbers of neurons in each layer of the MLP.
 
-.. ocv:function::const CvMat* CvANN_MLP::get_layer_sizes()
+.. ocv:function:: const CvMat* CvANN_MLP::get_layer_sizes()
 
 The method returns the integer vector specifying the number of neurons in each layer including the input and output layers of the MLP.
 

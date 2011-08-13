@@ -671,7 +671,7 @@ Creates a matrix header but does not allocate the matrix data.
     
     :param type: Type of the matrix elements, see  :ocv:cfunc:`CreateMat` 
     
-The function allocates a new matrix header and returns a pointer to it. The matrix data can then be allocated using :ocv:cfunc:`CreateData` or set explicitly to user-allocated data via :ocv:func:`SetData`.
+The function allocates a new matrix header and returns a pointer to it. The matrix data can then be allocated using :ocv:cfunc:`CreateData` or set explicitly to user-allocated data via :ocv:cfunc:`SetData`.
 
 CreateMatND
 -----------
@@ -719,7 +719,7 @@ Creates sparse array.
     :param type: Type of array elements. The same as for CvMat
 
 The function allocates a multi-dimensional sparse array. Initially the array contain no elements, that is 
-:ocv:cfunc:`GetPtrND` and other related functions will return 0 for every index.
+:ocv:cfunc:`PtrND` and other related functions will return 0 for every index.
 
 
 CrossProduct
@@ -935,7 +935,7 @@ The function returns a matrix header for the input array that can be a matrix - 
 
 The function provides an easy way to handle both types of arrays - ``IplImage`` and  ``CvMat`` using the same code. Input array must have non-zero data pointer, otherwise the function will report an error.
 
-.. seealso:: :ocv:cfunc:`GetImage`, :ocv:cfunc:`GetMatND`, :ocv:func:`cvarrToMat`.
+.. seealso:: :ocv:cfunc:`GetImage`, :ocv:func:`cvarrToMat`.
 
 .. note:: If the input array is ``IplImage`` with planar data layout and COI set, the function returns the pointer to the selected plane and ``COI == 0``. This feature allows user to process ``IplImage`` strctures with planar data layout, even though OpenCV does not support such images.
 
@@ -1250,13 +1250,15 @@ The functions return a pointer to a specific array element. Number of array dime
 The functions can be used for sparse arrays as well - if the requested node does not exist they create it and set it to zero.
 
 All these as well as other functions accessing array elements (
-:ocv:cfunc:`Get`
+:ocv:cfunc:`GetND`
 , 
-:ocv:cfunc:`GetReal`
+:ocv:cfunc:`GetRealND`
 , 
 :ocv:cfunc:`Set`
 , 
-:ocv:cfunc:`SetReal`
+:ocv:cfunc:`SetND`
+, 
+:ocv:cfunc:`SetRealND`
 ) raise an error in case if the element index is out of range.
 
 

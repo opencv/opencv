@@ -43,7 +43,7 @@ The buffer is put in the end of already allocated space in the ``top`` memory bl
 
 If there are no more free blocks, a new block is allocated (or borrowed from the parent, see :ocv:cfunc:`CreateChildMemStorage`) and added to the end of list. Thus, the storage behaves as a stack with ``bottom`` indicating bottom of the stack and the pair (``top``, ``free_space``)
 indicating top of the stack. The stack top may be saved via :ocv:cfunc:`SaveMemStoragePos`, restored via 
-:ocv:cfunc:`RestoreMemStoragePos`, or reset via :ocv:cfunc:`ClearStorage`.
+:ocv:cfunc:`RestoreMemStoragePos`, or reset via :ocv:cfunc:`ClearMemStorage`.
 
 CvMemBlock
 ----------

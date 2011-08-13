@@ -283,7 +283,7 @@ The function calculates a gradient orientation at each pixel
     \texttt{orientation} (x,y)= \arctan{\frac{d\texttt{mhi}/dy}{d\texttt{mhi}/dx}}
 
 In fact,
-:ocv:func:`fastArctan` and
+:ocv:func:`fastAtan2` and
 :ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
 

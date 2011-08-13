@@ -695,18 +695,17 @@ Normally, the function is used to convert an old-style 2D array (
 ``CvMatND`` using an arbitrary element-wise function.
 
 The last parameter, ``coiMode`` , specifies how to deal with an image with COI set. By default, it is 0 and the function reports an error when an image with COI comes in. And ``coiMode=1`` means that no error is signalled. You have to check COI presence and handle it manually. The modern structures, such as
-:ocv:func:`Mat` and
-:ocv:func:`MatND` do not support COI natively. To process an individual channel of a new-style array, you need either to organize a loop over the array (for example, using matrix iterators) where the channel of interest will be processed, or extract the COI using
+:ocv:class:`Mat` and
+``MatND`` do not support COI natively. To process an individual channel of a new-style array, you need either to organize a loop over the array (for example, using matrix iterators) where the channel of interest will be processed, or extract the COI using
 :ocv:func:`mixChannels` (for new-style arrays) or
 :ocv:func:`extractImageCOI` (for old-style arrays), process this individual channel, and insert it back to the destination array if needed (using
-:ocv:func:`mixChannel` or
+:ocv:func:`mixChannels` or
 :ocv:func:`insertImageCOI` , respectively).
 
 .. seealso::
 
-    :c:func:`cvGetImage`,
-    :c:func:`cvGetMat`,
-    :c:func:`cvGetMatND`,
+    :ocv:cfunc:`cvGetImage`,
+    :ocv:cfunc:`cvGetMat`,
     :ocv:func:`extractImageCOI`,
     :ocv:func:`insertImageCOI`,
     :ocv:func:`mixChannels` 
@@ -1606,7 +1605,7 @@ Calculates an average (mean) of array elements.
 .. ocv:cfunction:: CvScalar cvAvg(const CvArr* src, const CvArr* mask=NULL)
 .. ocv:pyoldfunction:: cv.Avg(src, mask=None)-> CvScalar
 
-    :param src: Source array that should have from 1 to 4 channels so that the result can be stored in  :ocv:func:`Scalar` .
+    :param src: Source array that should have from 1 to 4 channels so that the result can be stored in  :ocv:class:`Scalar_` .
 
     :param mask: Optional operation mask.
 
@@ -1638,7 +1637,7 @@ Calculates a mean and standard deviation of array elements.
 .. ocv:cfunction:: void cvAvgSdv(const CvArr* src, CvScalar* mean, CvScalar* stdDev, const CvArr* mask=NULL)
 .. ocv:pyoldfunction:: cv.AvgSdv(src, mask=None)-> (mean, stdDev)
 
-    :param src: Source array that should have from 1 to 4 channels so that the results can be stored in  :ocv:func:`Scalar` 's.
+    :param src: Source array that should have from 1 to 4 channels so that the results can be stored in  :ocv:class:`Scalar_` 's.
 
     :param mean: Output parameter: computed mean value.
 
@@ -1786,11 +1785,11 @@ Finds the global minimum and maximum in a whole array or sub-array.
 
     :param mask: Optional mask used to select a sub-array.
 
-The functions ``ninMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
+The functions ``minMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
 if ``mask`` is not an empty array, in the specified array region.
 
 The functions do not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
-:ocv:func:`reshape` first to reinterpret the array as single-channel. Or you may extract the particular channel using either
+:ocv:func:`Mat::reshape` first to reinterpret the array as single-channel. Or you may extract the particular channel using either
 :ocv:func:`extractImageCOI` , or
 :ocv:func:`mixChannels` , or
 :ocv:func:`split` .
@@ -1806,7 +1805,7 @@ In case of a sparse matrix, the minimum is found among non-zero elements only.
     :ocv:func:`extractImageCOI`,
     :ocv:func:`mixChannels`,
     :ocv:func:`split`,
-    :ocv:func:`reshape` 
+    :ocv:func:`Mat::reshape` 
 
 
 
@@ -1931,7 +1930,7 @@ For a not-per-element matrix product, see
 .. seealso::
 
     :ocv:func:`add`,
-    :ocv:func:`substract`,
+    :ocv:func:`subtract`,
     :ocv:func:`divide`,
     :ref:`MatrixExpressions`,
     :ocv:func:`scaleAdd`,
@@ -2530,7 +2529,7 @@ Fills arrays with random numbers.
 
 .. ocv:function:: void RNG::fill( InputOutputArray mat, int distType, InputArray a, InputArray b )
 
-    :param mat: 2D or N-dimensional matrix. Currently matrices with more than 4 channels are not supported by the methods. Use  :ocv:func:`reshape`  as a possible workaround.
+    :param mat: 2D or N-dimensional matrix. Currently matrices with more than 4 channels are not supported by the methods. Use  :ocv:func:`Mat::reshape`  as a possible workaround.
 
     :param distType: Distribution type, ``RNG::UNIFORM``  or  ``RNG::NORMAL`` .
     

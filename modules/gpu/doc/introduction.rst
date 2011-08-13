@@ -15,7 +15,7 @@ The GPU module depends on the CUDA Toolkit and NVIDIA Performance Primitives lib
 The OpenCV GPU module is designed for ease of use and does not require any knowledge of CUDA. Though, such a knowledge will certainly be useful to handle non-trivial cases or achieve the highest performance. It is helpful to understand the cost of various operations, what the GPU does, what the preferred data formats are, and so on. The GPU module is an effective instrument for quick implementation of GPU-accelerated computer vision algorithms. However, if your algorithm involves many simple operations, then, for the best possible performance, you may still need to write your own kernels to avoid extra write and read operations on the intermediate results.
 
 To enable CUDA support, configure OpenCV using ``CMake`` with ``WITH_CUDA=ON`` . When the flag is set and if CUDA is installed, the full-featured OpenCV GPU module is built. Otherwise, the module is still built but at runtime all functions from the module throw
-:ocv:func:`Exception` with ``CV_GpuNotSupported`` error code, except for
+:ocv:class:`Exception` with ``CV_GpuNotSupported`` error code, except for
 :ocv:func:`gpu::getCudaEnabledDeviceCount()`. The latter function returns zero GPU count in this case. Building OpenCV without CUDA support does not perform device code compilation, so it does not require the CUDA Toolkit installed. Therefore, using the
 :ocv:func:`gpu::getCudaEnabledDeviceCount()` function, you can implement a high-level algorithm that will detect GPU presence at runtime and choose an appropriate implementation (CPU or GPU) accordingly.
 

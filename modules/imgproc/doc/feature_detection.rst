@@ -273,9 +273,9 @@ The function can be used to initialize a point-based tracker of an object.
     :ocv:func:`cornerMinEigenVal`, 
     :ocv:func:`cornerHarris`, 
     :ocv:func:`calcOpticalFlowPyrLK`, 
-    :ocv:func:`estimateRigidMotion`, 
-    :ocv:func:`PlanarObjectDetector`, 
-    :ocv:func:`OneWayDescriptor`
+    :ocv:func:`estimateRigidTransform`,
+    :ocv:class:`PlanarObjectDetector`, 
+    :ocv:class:`OneWayDescriptor`
 
 
 

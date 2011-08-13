@@ -7,7 +7,7 @@ Initalization and Information
 gpu::getCudaEnabledDeviceCount
 ----------------------------------
 
-.. ocv:function:: int getCudaEnabledDeviceCount()
+.. ocv:function:: int gpu::getCudaEnabledDeviceCount()
 
     Returns the number of installed CUDA-enabled devices. Use this function before any other GPU functions calls. If OpenCV is compiled without GPU support, this function returns 0.
 
@@ -15,7 +15,7 @@ gpu::getCudaEnabledDeviceCount
 
 gpu::setDevice
 ------------------
-.. ocv:function:: void setDevice(int device)
+.. ocv:function:: void gpu::setDevice(int device)
 
     Sets a device and initializes it for the current thread. If the call of this function is omitted, a default device is initialized at the fist GPU usage.
 
@@ -25,7 +25,7 @@ gpu::setDevice
 
 gpu::getDevice
 ------------------
-.. ocv:function:: int getDevice()
+.. ocv:function:: int gpu::getDevice()
 
     Returns the current device index set by ``{gpu::getDevice}`` or initialized by default.
 

@@ -681,7 +681,7 @@ Starts writing a new structure.
         following the structure name (see the example in  :ocv:struct:`CvFileStorage` 
         description). Mainly it is used with user objects. When the storage
         is read, the encoded type name is used to determine the object type
-        (see  :ocv:struct:`CvTypeInfo`  and  :ocv:cfunc:`FindTypeInfo` ). 
+        (see  :ocv:struct:`CvTypeInfo`  and  :ocv:cfunc:`FindType` ). 
 
     :param attributes: This parameter is not used in the current implementation 
 

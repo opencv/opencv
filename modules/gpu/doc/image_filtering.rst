@@ -541,7 +541,7 @@ gpu::sepFilter2D
 
 gpu::createDerivFilter_GPU
 ------------------------------
-.. ocv:function:: Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
+.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
     Creates a filter engine for the generalized Sobel operator.
 

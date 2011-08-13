@@ -205,7 +205,7 @@ Open video file or a capturing device for video capturing
 
     :param device: id of the opened video capturing device (i.e. a camera index).
 
-The methods first call :ocv:cfunc:`VideoCapture::release` to close the already opened file or camera. 
+The methods first call :ocv:func:`VideoCapture::release` to close the already opened file or camera. 
 
 
 VideoCapture::isOpened

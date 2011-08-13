@@ -144,8 +144,10 @@ The following detector types are supported:
 * ``"SURF"`` -- :ocv:class:`SurfFeatureDetector`
 * ``"ORB"`` -- :ocv:class:`OrbFeatureDetector`
 * ``"MSER"`` -- :ocv:class:`MserFeatureDetector`
-* ``"GFTT"`` -- :ocv:class:`GfttFeatureDetector`
-* ``"HARRIS"`` -- :ocv:class:`HarrisFeatureDetector`
+* ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
+* ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
+* ``"Dense"`` -- :ocv:class:`DenseFeatureDetector`
+* ``"SimpleBlob"`` -- :ocv:class:`SimpleBlobDetector`
 
 Also a combined format is supported: feature detector adapter name ( ``"Grid"`` --
 :ocv:class:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --

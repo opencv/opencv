@@ -193,7 +193,7 @@ gpu::StereoBeliefPropagation::StereoBeliefPropagation
 
 For more details, see [Felzenszwalb2006]_.
 
-By default, :ocv:class:`StereoBeliefPropagation` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better performance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
+By default, :ocv:class:`gpu::StereoBeliefPropagation` uses floating-point arithmetics and the ``CV_32FC1`` type for messages. But it can also use fixed-point arithmetics and the ``CV_16SC1`` message type for better performance. To avoid an overflow in this case, the parameters must satisfy the following requirement:
 
 .. math::
 

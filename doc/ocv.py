@@ -1432,7 +1432,7 @@ class OCVDomain(Domain):
             if "type" in self.objtypes_for_role(typ):
                 return None
             if "cfunction" in self.objtypes_for_role(typ):
-                if not name.lower().startswith(u'cv'):
+                if not name.startswith(u'cv'):
                     name = u'cv' + name
             dict = self.data['objects']
             if name not in dict:
