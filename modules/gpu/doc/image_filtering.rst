@@ -240,7 +240,7 @@ gpu::boxFilter
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
- .. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`boxFilter`
 

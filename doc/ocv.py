@@ -560,6 +560,18 @@ class ConstDefExpr(WrappingDefExpr):
 
     def __unicode__(self):
         return (self.prefix and u'const %s' or u'%s const') % self.typename
+        
+class ConstTemplateDefExpr(WrappingDefExpr):
+
+    def __init__(self, typename, prefix=False):
+        WrappingDefExpr.__init__(self, typename)
+        self.prefix = prefix
+
+    def get_id(self):
+        return self.typename.get_id() + u'C'
+
+    def __unicode__(self):
+        return (self.prefix and u'const %s' or u'%s const') % self.typename
 
 
 class CastOpDefExpr(PrimaryDefExpr):
@@ -933,9 +945,11 @@ class DefinitionParser(object):
         else:
             rv = PathDefExpr(result)
         is_const = self._peek_const(modifiers)
+        if is_const:
+            rv = ConstDefExpr(rv, prefix=True)
         if modifiers:
             rv = ModifierDefExpr(rv, modifiers)
-        return self._attach_crefptr(rv, is_const)
+        return self._attach_crefptr(rv, False)
 
     def _parse_default_expr(self):
         self.skip_ws()
