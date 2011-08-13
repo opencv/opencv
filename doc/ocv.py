@@ -302,9 +302,10 @@ _visibility_re = re.compile(r'\b(public|private|protected)\b')
 _operator_re = re.compile(r'''(?x)
         \[\s*\]
     |   \(\s*\)
+    |   (<<|>>)=?
     |   [!<>=/*%+|&^-]=?
     |   \+\+ | --
-    |   (<<|>>)=? | ~ | && | \| | \|\|
+    |   ~ | && | \| | \|\|
     |   ->\*? | \,
 ''')
 
@@ -1150,7 +1151,7 @@ class OCVObject(ObjectDescription):
         theid = sig#obj.get_id()
         theid = re.sub(r" +", " ", theid)
         theid = re.sub(r"=[^,()]+\([^)]*?\)[^,)]*(,|\))", "\\1", theid)
-        theid = re.sub(r"=[^,)]+(,|\))", "\\1", theid)
+        theid = re.sub(r"=\w*[^,)(]+(,|\))", "\\1", theid)
         theid = theid.replace("( ", "(").replace(" )", ")")
         name = unicode(sigobj.name)
         if theid not in self.state.document.ids:
@@ -1418,9 +1419,9 @@ class OCVDomain(Domain):
         'func' :  OCVXRefRole(fix_parens=True),
         'funcx' :  OCVXRefRole(),
         'cfunc' :  OCVXRefRole(fix_parens=True),
-        'cfunc' :  OCVXRefRole(),
+        'cfuncx' :  OCVXRefRole(),
         'jfunc' :  OCVXRefRole(fix_parens=True),
-        'jfunc' :  OCVXRefRole(),
+        'jfuncx' :  OCVXRefRole(),
         'pyfunc' :  OCVPyXRefRole(),
         'pyoldfunc' :  OCVPyXRefRole(),
         'member': OCVXRefRole(),
@@ -1458,8 +1459,13 @@ class OCVDomain(Domain):
             obj = dict[name]
             if obj[1] not in self.objtypes_for_role(typ):
                 return None
+            title = obj[2]
+            if "class" in self.objtypes_for_role(typ):
+                title = u"class " + title
+            elif "struct" in self.objtypes_for_role(typ):
+                title = u"struct " + title
             return make_refnode(builder, fromdocname, obj[0], obj[2],
-                                contnode, name)
+                                contnode, title)
 
         parser = DefinitionParser(target)
         try:

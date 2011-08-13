@@ -80,23 +80,21 @@ The structure represents a possible decision tree node split. It has public memb
 
 .. ocv:member:: int[] subset
 
-    Bit array indicating the value subset in case of split on a categorical variable. The rule is:
+    Bit array indicating the value subset in case of split on a categorical variable. The rule is: ::
 
-::
+        if var_value in subset 
+          then next_node <- left 
+          else next_node <- right
 
-    if var_value in subset 
-      then next_node <- left 
-      else next_node <- right
-
-.. ocv:member:: float ord.c 
+.. ocv:member:: float ord::c 
 
     The threshold value in case of split on an ordered variable. The rule is: ::
 
-        if var_value < c 
+        if var_value < ord.c 
           then next_node<-left 
           else next_node<-right
 
-.. ocv:member:: int ord.split_point
+.. ocv:member:: int ord::split_point
 
     Used internally by the training algorithm.
 

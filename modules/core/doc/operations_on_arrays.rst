@@ -2173,7 +2173,7 @@ PCA constructors
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
 The default constructor initializes an empty PCA structure. The second constructor initializes the structure and calls
-:ocv:func:`PCA::operator()` .
+:ocv:funcx:`PCA::operator()` .
 
 
 
@@ -3115,7 +3115,7 @@ The constructors.
         * **SVD::FULL_UV** When the matrix is not square, by default the algorithm produces  ``u``  and  ``vt``  matrices of sufficiently large size for the further  ``A``  reconstruction. If, however, ``FULL_UV``  flag is specified, ``u``  and  ``vt``  will be full-size square orthogonal matrices.
 
 The first constructor initializes an empty ``SVD`` structure. The second constructor initializes an empty ``SVD`` structure and then calls
-:ocv:func:`SVD::operator()` .
+:ocv:funcx:`SVD::operator()` .
 
 
 SVD::operator ()

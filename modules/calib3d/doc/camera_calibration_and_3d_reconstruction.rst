@@ -921,7 +921,7 @@ Reprojects a disparity image to 3D space.
 
     :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`stereoRectify`.
     
-    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:func:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
     :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
     
@@ -1036,7 +1036,7 @@ Class for computing stereo correspondence using the block matching algorithm. ::
         Ptr<CvStereoBMState> state;
     };
 
-The class is a C++ wrapper for the associated functions. In particular, :ocv:func:`StereoBM::operator()` is the wrapper for
+The class is a C++ wrapper for the associated functions. In particular, :ocv:funcx:`StereoBM::operator()` is the wrapper for
 :ocv:cfunc:`cvFindStereoCorrespondenceBM`. 
 
 
@@ -1137,7 +1137,7 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
  * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from BT96 is used. Though, the color images are supported as well.
 
- * Some pre- and post- processing steps from K. Konolige algorithm :ocv:func:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
+ * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
 
 

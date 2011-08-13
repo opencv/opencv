@@ -562,7 +562,7 @@ Updates the background model and returns the foreground mask
 
 .. ocv:function:: void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
 
-Parameters are the same as in ``BackgroundSubtractor::operator()``
+Parameters are the same as in :ocv:funcx:`BackgroundSubtractor::operator()`
 
 
 BackgroundSubtractorMOG2
@@ -639,7 +639,7 @@ Updates the background model and computes the foreground mask
 
 .. ocv:function:: void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
 
-    See :ocv:func:`BackgroundSubtractor::operator()`.
+    See :ocv:funcx:`BackgroundSubtractor::operator()`.
 
 
 BackgroundSubtractorMOG2::getBackgroundImage

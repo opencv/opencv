@@ -71,7 +71,7 @@ so the error on the test set usually starts increasing after the network
 size reaches a limit. Besides, the larger networks are trained much
 longer than the smaller ones, so it is reasonable to pre-process the data,
 using
-:ocv:func:`PCA::operator()` or similar technique, and train a smaller network
+:ocv:funcx:`PCA::operator()` or similar technique, and train a smaller network
 on only essential features.
 
 Another MPL feature is an inability to handle categorical
