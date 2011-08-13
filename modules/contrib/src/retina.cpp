@@ -92,6 +92,11 @@ Retina::~Retina()
     delete _retinaFilter;
 }
 
+void Retina::setColorSaturation(const bool saturateColors, const double colorSaturationValue)
+{
+	_retinaFilter->setColorSaturation(saturateColors, colorSaturationValue);
+}
+
 void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetupOnFailure)
 {
 	// open specified parameters file
@@ -263,47 +268,10 @@ void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const double paras
 
 }
 
-void Retina::run(const cv::Mat &inputImage)
+void Retina::run(const cv::Mat &inputMatToConvert)
 {
-
-	// first check input consistency
-	if (inputImage.empty())
-		throw cv::Exception(-1, "Retina cannot be applied, input buffer is empty", "Retina::run", "Retina.h", 0);
-
-	// retreive color mode from image input
-	bool colorMode = inputImage.channels() >=3;
-
-	// TODO : ensure input color image is CV_BGR coded
-	//if (inputImage.flags!=CV_BGR)
-	//   throw cv::Exception(-1, "Retina color input must be BGR coded", "Retina::run", "Retina.h", 0);
-
 	// first convert input image to the compatible format : std::valarray<double>
-	double *imagePTR=&_inputBuffer[0];
-
-	if (!colorMode)
-	{
-		for (int i=0;i<inputImage.size().height;++i)
-		{
-			const unsigned char *linePTR = inputImage.ptr<unsigned char>(i);
-			for (int j=0;j<inputImage.size().width;++j)
-				*(imagePTR++) =(double)*(linePTR++);
-		}
-	}else
-	{
-		const unsigned int doubleNBpixelsPerLayer=_retinaFilter->getInputNBpixels()*2;
-		for (int i=0;i<inputImage.size().height;++i)
-		{
-			for (int j=0;j<inputImage.size().width;++j,++imagePTR)
-			{
-				cv::Point2d pixel(j,i);
-				cv::Vec3b pixelValue=inputImage.at<cv::Vec3b>(pixel);
-				*(imagePTR) =(double)pixelValue[2];
-				*(imagePTR+_retinaFilter->getInputNBpixels()) =(double)pixelValue[1];
-				*(imagePTR+doubleNBpixelsPerLayer           ) =(double)pixelValue[0];
-			}
-		}
-	}
-
+	const bool colorMode = _convertCvMat2ValarrayBuffer(inputMatToConvert, _inputBuffer);
 	// process the retina
 	if (!_retinaFilter->runFilter(_inputBuffer, colorMode, false, colorMode, false))
 		throw cv::Exception(-1, "Retina cannot be applied, wrong input buffer size", "Retina::run", "Retina.h", 0);
@@ -314,20 +282,21 @@ void Retina::getParvo(cv::Mat &retinaOutput_parvo)
 	if (_retinaFilter->getColorMode())
 	{
 		// reallocate output buffer (if necessary)
-		_convertValarrayGrayBuffer2cvMat(_retinaFilter->getColorOutput(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), true, retinaOutput_parvo);
+		_convertValarrayBuffer2cvMat(_retinaFilter->getColorOutput(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), true, retinaOutput_parvo);
 	}else
 	{
 		// reallocate output buffer (if necessary)
-		_convertValarrayGrayBuffer2cvMat(_retinaFilter->getContours(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, retinaOutput_parvo);
+		_convertValarrayBuffer2cvMat(_retinaFilter->getContours(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, retinaOutput_parvo);
 	}
 	//retinaOutput_parvo/=255.0;
 }
 void Retina::getMagno(cv::Mat &retinaOutput_magno)
 {
 	// reallocate output buffer (if necessary)
-	_convertValarrayGrayBuffer2cvMat(_retinaFilter->getMovingContours(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, retinaOutput_magno);
+	_convertValarrayBuffer2cvMat(_retinaFilter->getMovingContours(), _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, retinaOutput_magno);
 	//retinaOutput_magno/=255.0;
 }
+
 
 // private method called by constructirs
 void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
@@ -369,7 +338,7 @@ void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSiz
 	std::cout<<printSetup()<<std::endl;
 }
 
-void Retina::_convertValarrayGrayBuffer2cvMat(const std::valarray<double> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
+void Retina::_convertValarrayBuffer2cvMat(const std::valarray<double> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
 {
 	// fill output buffer with the valarray buffer
 	const double *valarrayPTR=get_data(grayMatrixToConvert);
@@ -402,6 +371,40 @@ void Retina::_convertValarrayGrayBuffer2cvMat(const std::valarray<double> &grayM
 			}
 		}
 	}
+}
+
+
+const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<double> &outputValarrayMatrix)
+{
+	// first check input consistency
+	if (inputMatToConvert.empty())
+		throw cv::Exception(-1, "Retina cannot be applied, input buffer is empty", "Retina::run", "Retina.h", 0);
+
+	// retreive color mode from image input
+	bool colorMode = inputMatToConvert.channels() >=3;
+
+	// convert to double AND fill the valarray buffer
+	const int dsttype = CV_64F; // output buffer is double format
+
+	if (colorMode)
+	{
+		// create a cv::Mat table (for RGB planes)
+		cv::Mat planes[] =
+		{
+				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
+				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
+				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
+		};
+		// split color cv::Mat in 3 planes... it fills valarray directely
+		cv::split(Mat_<double>(inputMatToConvert), planes);
+
+	}else
+	{
+		// create a cv::Mat header for the valarray
+		cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
+		inputMatToConvert.convertTo(dst, dsttype);
+	}
+	return colorMode;
 }
 
 void Retina::clearBuffers() {_retinaFilter->clearAllBuffers();}
