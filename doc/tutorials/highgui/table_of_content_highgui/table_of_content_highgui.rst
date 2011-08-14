@@ -1,7 +1,7 @@
 .. _Table-Of-Content-HighGui:
 
 *highgui* module. High Level GUI and Media
------------------------------------------------------------
+------------------------------------------
 
 This section contains valuable tutorials about how to read/save your image/video files and how to use the built-in graphical user interface of the library. 
 
@@ -74,3 +74,4 @@ This section contains valuable tutorials about how to read/save your image/video
 
    ../trackbar/trackbar
    ../video-input-psnr-ssim/video-input-psnr-ssim
+   ../video-write/video-write
