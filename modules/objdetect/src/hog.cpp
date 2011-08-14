@@ -83,9 +83,9 @@ bool HOGDescriptor::checkDetectorSize() const
         detectorSize == descriptorSize + 1;
 }
 
-void HOGDescriptor::setSVMDetector(const vector<float>& _svmDetector)
+void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 {
-    svmDetector = _svmDetector;
+    _svmDetector.getMat().convertTo(svmDetector, CV_32F);
     CV_Assert( checkDetectorSize() );
 }
 

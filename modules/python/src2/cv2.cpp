@@ -762,11 +762,25 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
                 break;
             std::string k = PyString_AsString(key);
             if( PyString_Check(item) )
-                p.setString(k, PyString_AsString(item));
+            {
+                const char* value = PyString_AsString(item);
+                p.setString(k, value);
+            }
+            else if( PyBool_Check(item) )
+                p.setBool(k, item == Py_True);
             else if( PyInt_Check(item) )
-                p.setInt(k, PyInt_AsLong(item));
+            {
+                int value = (int)PyInt_AsLong(item);
+                if( strcmp(k.c_str(), "algorithm") == 0 )
+                    p.setAlgorithm(value);
+                else
+                    p.setInt(k, value);
+            }
             else if( PyFloat_Check(item) )
-                p.setDouble(k, PyFloat_AsDouble(item));
+            {
+                double value = PyFloat_AsDouble(item);
+                p.setDouble(k, value);
+            }
             else
                 break;
         }
@@ -780,7 +794,7 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
 
 static bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name="<unknown>")
 {
-    int d = 0;
+    int d = (int)dist;
     bool ok = pyopencv_to(o, d, name);
     dist = (cvflann::flann_distance_t)d;
     return ok;
