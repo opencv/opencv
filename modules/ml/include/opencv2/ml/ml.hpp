@@ -1926,7 +1926,7 @@ public:
                       CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(),
                       int flags=0 );    
     
-    CV_WRAP virtual float predict( const cv::Mat& inputs, cv::Mat& outputs ) const;
+    CV_WRAP virtual float predict( const cv::Mat& inputs, CV_OUT cv::Mat& outputs ) const;
 #endif
     
     CV_WRAP virtual void clear();

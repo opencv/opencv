@@ -90,6 +90,7 @@ class SVM(LetterStatModel):
     def predict(self, samples):
         return np.float32( [self.model.predict(s) for s in samples] )
 
+
 class MLP(LetterStatModel):
     def __init__(self):
         self.model = cv2.ANN_MLP()
@@ -109,10 +110,8 @@ class MLP(LetterStatModel):
         self.model.train(samples, np.float32(new_responses), None, params = params)
 
     def predict(self, samples):
-        pass
-        #return np.float32( [self.model.predict(s) for s in samples] )
-
-
+        ret, resp = self.model.predict(samples)
+        return resp.argmax(-1)
 
 
 if __name__ == '__main__':
