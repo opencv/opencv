@@ -355,6 +355,7 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
             'utilitysystemfunctions':('http://opencv.itseez.com/modules/core/doc/utility_and_system_functions_and_macros.html#%s', None),
             'imgprocfilter':('http://opencv.itseez.com/modules/imgproc/doc/filtering.html#%s', None),
             'svms':('http://opencv.itseez.com/modules/ml/doc/support_vector_machines.html#%s', None),
+			'drawingfunc':('http://opencv.itseez.com/modules/core/doc/drawing_functions.html#%s', None),
             'xmlymlpers':('http://opencv.itseez.com/modules/core/doc/xml_yaml_persistence.html#%s', None),
 			'huivideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
 			'gpuinit' : ('http://opencv.itseez.com/modules/gpu/doc/initalization_and_information.html#%s', None),

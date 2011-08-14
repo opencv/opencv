@@ -26,6 +26,25 @@ Use the powerfull machine learning classes for statistical classification, regre
      :height: 90pt
      :width:  90pt
 
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ============ ==============================================
+  |NonLinSVM|  **Title:** :ref:`nonLinearSvmS`
+
+               *Compatibility:* > OpenCV 2.0
+
+               *Author:* |Author_FernandoI|
+
+               Here you will learn how to define the optimization problem for SVMs when it is not possible to separate linearly the training data.
+
+  ============ ==============================================
+
+  .. |NonLinSVM| image:: images/non_linear_svms.png
+     :height: 90pt
+     :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -34,3 +53,4 @@ Use the powerfull machine learning classes for statistical classification, regre
    :hidden:
    
    ../introduction_to_svm/introduction_to_svm
+   ../non_linear_svms/non_linear_svms

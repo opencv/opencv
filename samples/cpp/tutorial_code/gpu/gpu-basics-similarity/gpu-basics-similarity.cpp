@@ -56,7 +56,7 @@ void help()
 
 int main(int argc, char *argv[])
 {
-	help(); 
+    help(); 
     Mat I1 = imread(argv[1]);           // Read the two images
     Mat I2 = imread(argv[2]);
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
     BufferPSNR bufferPSNR;
     BufferMSSIM bufferMSSIM;
-    
+
     int TIMES; 
     stringstream sstr(argv[3]); 
     sstr >> TIMES;
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     result = getPSNR_GPU_optimized(I1, I2, bufferPSNR);
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
     cout << "Initial call GPU optimized:              " << time  <<" milliseconds."
-         << " With result of: " << result << endl;
+        << " With result of: " << result << endl;
 
     time = (double)getTickCount();    
     for (int i = 0; i < TIMES; ++i)
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     time /= TIMES;
 
     cout << "Time of PSNR GPU OPTIMIZED ( / " << TIMES << " runs): " << time 
-         << " milliseconds." << " With result of: " <<  result << endl << endl; 
+        << " milliseconds." << " With result of: " <<  result << endl << endl; 
 
 
     //------------------------------- SSIM CPU -----------------------------------------------------
@@ -183,31 +183,7 @@ double getPSNR(const Mat& I1, const Mat& I2)
     }
 }
 
-double getPSNR_GPU(const Mat& I1, const Mat& I2)
-{
-    gpu::GpuMat gI1, gI2, gs, t1,t2; 
 
-    gI1.upload(I1);
-    gI2.upload(I2);
-
-    gI1.convertTo(t1, CV_32F);
-    gI2.convertTo(t2, CV_32F);
-
-    gpu::absdiff(t1.reshape(1), t2.reshape(1), gs); 
-    gpu::multiply(gs, gs, gs);
-    
-    Scalar s = gpu::sum(gs);
-    double sse = s.val[0] + s.val[1] + s.val[2];
-
-    if( sse <= 1e-10) // for small values return zero
-        return 0;
-    else
-    {
-        double  mse =sse /(double)(gI1.channels() * I1.total());
-        double psnr = 10.0*log10((255*255)/mse);
-        return psnr;
-    }
-}
 
 double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
 {    
@@ -232,9 +208,36 @@ double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
     }
 }
 
+double getPSNR_GPU(const Mat& I1, const Mat& I2)
+{
+    gpu::GpuMat gI1, gI2, gs, t1,t2; 
+
+    gI1.upload(I1);
+    gI2.upload(I2);
+
+    gI1.convertTo(t1, CV_32F);
+    gI2.convertTo(t2, CV_32F);
+
+    gpu::absdiff(t1.reshape(1), t2.reshape(1), gs); 
+    gpu::multiply(gs, gs, gs);
+
+    Scalar s = gpu::sum(gs);
+    double sse = s.val[0] + s.val[1] + s.val[2];
+
+    if( sse <= 1e-10) // for small values return zero
+        return 0;
+    else
+    {
+        double  mse =sse /(double)(gI1.channels() * I1.total());
+        double psnr = 10.0*log10((255*255)/mse);
+        return psnr;
+    }
+}
+
 Scalar getMSSIM( const Mat& i1, const Mat& i2)
 { 
     const double C1 = 6.5025, C2 = 58.5225;
+    /***************************** INITS **********************************/
     int d     = CV_32F;
 
     Mat I1, I2; 
@@ -244,8 +247,10 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
     Mat I2_2   = I2.mul(I2);        // I2^2
     Mat I1_2   = I1.mul(I1);        // I1^2
     Mat I1_I2  = I1.mul(I2);        // I1 * I2
-	
-    Mat mu1, mu2;  
+
+    /*************************** END INITS **********************************/
+
+    Mat mu1, mu2;   // PRELIMINARY COMPUTING
     GaussianBlur(I1, mu1, Size(11, 11), 1.5);
     GaussianBlur(I2, mu2, Size(11, 11), 1.5);
 
@@ -282,10 +287,79 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
     return mssim; 
 }
 
+Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
+{ 
+    const float C1 = 6.5025f, C2 = 58.5225f;
+    /***************************** INITS **********************************/
+    gpu::GpuMat gI1, gI2, gs1, t1,t2; 
+
+    gI1.upload(i1);
+    gI2.upload(i2);
+
+    gI1.convertTo(t1, CV_MAKE_TYPE(CV_32F, gI1.channels()));
+    gI2.convertTo(t2, CV_MAKE_TYPE(CV_32F, gI2.channels()));
+
+    vector<gpu::GpuMat> vI1, vI2; 
+    gpu::split(t1, vI1);
+    gpu::split(t2, vI2);
+    Scalar mssim;
+
+    for( int i = 0; i < gI1.channels(); ++i )
+    {
+        gpu::GpuMat I2_2, I1_2, I1_I2; 
+
+        gpu::multiply(vI2[i], vI2[i], I2_2);        // I2^2
+        gpu::multiply(vI1[i], vI1[i], I1_2);        // I1^2
+        gpu::multiply(vI1[i], vI2[i], I1_I2);       // I1 * I2
+
+        /*************************** END INITS **********************************/
+        gpu::GpuMat mu1, mu2;   // PRELIMINARY COMPUTING
+        gpu::GaussianBlur(vI1[i], mu1, Size(11, 11), 1.5);
+        gpu::GaussianBlur(vI2[i], mu2, Size(11, 11), 1.5);
+
+        gpu::GpuMat mu1_2, mu2_2, mu1_mu2; 
+        gpu::multiply(mu1, mu1, mu1_2);   
+        gpu::multiply(mu2, mu2, mu2_2);   
+        gpu::multiply(mu1, mu2, mu1_mu2);   
+
+        gpu::GpuMat sigma1_2, sigma2_2, sigma12; 
+
+        gpu::GaussianBlur(I1_2, sigma1_2, Size(11, 11), 1.5);
+        sigma1_2 -= mu1_2;
+
+        gpu::GaussianBlur(I2_2, sigma2_2, Size(11, 11), 1.5);
+        sigma2_2 -= mu2_2;
+
+        gpu::GaussianBlur(I1_I2, sigma12, Size(11, 11), 1.5);
+        sigma12 -= mu1_mu2;
+
+        ///////////////////////////////// FORMULA ////////////////////////////////
+        gpu::GpuMat t1, t2, t3; 
+
+        t1 = 2 * mu1_mu2 + C1; 
+        t2 = 2 * sigma12 + C2; 
+        gpu::multiply(t1, t2, t3);     // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+
+        t1 = mu1_2 + mu2_2 + C1; 
+        t2 = sigma1_2 + sigma2_2 + C2;     
+        gpu::multiply(t1, t2, t1);     // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+
+        gpu::GpuMat ssim_map;
+        gpu::divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
+
+        Scalar s = gpu::sum(ssim_map);    
+        mssim.val[i] = s.val[0] / (ssim_map.rows * ssim_map.cols);
+
+    }
+    return mssim; 
+}
+
 Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 { 
     int cn = i1.channels();
+
     const float C1 = 6.5025f, C2 = 58.5225f;
+    /***************************** INITS **********************************/
 
     b.gI1.upload(i1);
     b.gI2.upload(i2);
