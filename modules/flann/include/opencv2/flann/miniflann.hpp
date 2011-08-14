@@ -53,8 +53,8 @@ namespace cv
  
 namespace flann
 {
-    using namespace cvflann;
 
+using namespace cvflann;
 
 struct CV_EXPORTS IndexParams
 {
@@ -70,7 +70,7 @@ struct CV_EXPORTS IndexParams
     void setDouble(const std::string& key, double value);
     void setFloat(const std::string& key, float value);
     void setBool(const std::string& key, bool value);
-    void setAlgorithm(const std::string& key, int value);
+    void setAlgorithm(int value);
     
     void getAll(std::vector<std::string>& names,
                 std::vector<int>& types,

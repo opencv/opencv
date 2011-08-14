@@ -286,8 +286,9 @@ namespace cv
 	
 ///////////////////////////// Object Detection ////////////////////////////
 
-CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
-CV_EXPORTS_W void groupRectangles(CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
+CV_EXPORTS_W void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
+CV_EXPORTS void groupRectangles( vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights );
 CV_EXPORTS void groupRectangles(vector<Rect>& rectList, vector<int>& rejectLevels, 
                                 vector<double>& levelWeights, int groupThreshold, double eps=0.2);
 CV_EXPORTS void groupRectangles_meanshift(vector<Rect>& rectList, vector<double>& foundWeights, vector<double>& foundScales, 
@@ -430,8 +431,7 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 };
 
-void CV_EXPORTS_W groupRectangles( vector<Rect>& rectList, int groupThreshold, double eps, vector<int>* weights, vector<double>* levelWeights );
-
+    
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 struct CV_EXPORTS_W HOGDescriptor
@@ -473,7 +473,7 @@ public:
     CV_WRAP bool checkDetectorSize() const;
     CV_WRAP double getWinSigma() const;
     
-    CV_WRAP virtual void setSVMDetector(const vector<float>& _svmdetector);
+    CV_WRAP virtual void setSVMDetector(InputArray _svmdetector);
     
     virtual bool read(FileNode& fn);
     virtual void write(FileStorage& fs, const String& objname) const;

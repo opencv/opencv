@@ -81,9 +81,9 @@ void IndexParams::setBool(const std::string& key, bool value)
     setParam(*this, key, value);
 }
 
-void IndexParams::setAlgorithm(const std::string& key, int value)
+void IndexParams::setAlgorithm(int value)
 {
-    setParam(*this, key, (cvflann::flann_algorithm_t)value);
+    setParam(*this, "algorithm", (cvflann::flann_algorithm_t)value);
 }
     
 void IndexParams::getAll(std::vector<std::string>& names,
@@ -293,7 +293,10 @@ template<typename Distance, typename IndexType> void
 buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Distance& dist = Distance())
 {
     typedef typename Distance::ElementType ElementType;
-    CV_Assert(DataType<ElementType>::type == data.type() && data.isContinuous());
+    if(DataType<ElementType>::type != data.type())
+        CV_Error_(CV_StsUnsupportedFormat, ("type=%d\n", data.type()));
+    if(!data.isContinuous())
+        CV_Error(CV_StsBadArg, "Only continuous arrays are supported");
     
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);

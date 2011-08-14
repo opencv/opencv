@@ -616,7 +616,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setBool(name, (int) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
-            indexParams->setAlgorithm(name, (int) ip[i]["value"]);
+            indexParams->setAlgorithm((int) ip[i]["value"]);
             break;
         };
      }
@@ -655,7 +655,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setBool(name, (int) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,3):
-            searchParams->setAlgorithm(name, (int) ip[i]["value"]);
+            searchParams->setAlgorithm((int) ip[i]["value"]);
             break;
         };
      }
