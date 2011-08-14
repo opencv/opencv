@@ -132,7 +132,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  void callBack_updateRetinaParams(int, void*)
  {
 
-	 retina->setupOPLandIPLParvoChannel(true, true, (double)localAdaptation_photoreceptors/100.0, 0.5, 0.43, (double)retinaHcellsGain, 1, 7, (double)localAdaptation_Gcells/100.0);
+	 retina->setupOPLandIPLParvoChannel(true, true, (double)localAdaptation_photoreceptors/200.0, 0.5, 0.43, (double)retinaHcellsGain, 1, 7, (double)localAdaptation_Gcells/200.0);
  }
 
  int colorSaturationFactor;
@@ -222,16 +222,16 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 cv::createTrackbar("histogram edges clipping limit", "Retina input image (with cut edges histogram for basic pixels error avoidance)",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
 
 		 cv::namedWindow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", 1);
-		 colorSaturationFactor=2;
-		 cv::createTrackbar("Color saturation", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &colorSaturationFactor,100,callback_saturateColors);
+		 colorSaturationFactor=3;
+		 cv::createTrackbar("Color saturation", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &colorSaturationFactor,5,callback_saturateColors);
 
 		 retinaHcellsGain=40;
 		 cv::createTrackbar("Hcells gain", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping",&retinaHcellsGain,100,callBack_updateRetinaParams);
 
-		 localAdaptation_photoreceptors=99;
-		 localAdaptation_Gcells=99;
-		 cv::createTrackbar("Ph sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_photoreceptors,99,callBack_updateRetinaParams);
-		 cv::createTrackbar("Gcells sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_Gcells,99,callBack_updateRetinaParams);
+		 localAdaptation_photoreceptors=1;
+		 localAdaptation_Gcells=185;
+		 cv::createTrackbar("Ph sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_photoreceptors,199,callBack_updateRetinaParams);
+		 cv::createTrackbar("Gcells sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_Gcells,199,callBack_updateRetinaParams);
 
 		 /////////////////////////////////////////////
 		 // apply default parameters of user interaction variables
