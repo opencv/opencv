@@ -592,7 +592,6 @@ public:
     explicit Vec(const _Tp* values);
 
     Vec(const Vec<_Tp, cn>& v);
-    Vec<_Tp, cn>& operator =(const Matx<_Tp, cn, 1>& m);
     
     static Vec all(_Tp alpha);
 

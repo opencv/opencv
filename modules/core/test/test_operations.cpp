@@ -72,6 +72,8 @@ protected:
     bool TestTemplateMat();
     bool TestMatND();
     bool TestSparseMat();
+    bool TestVec();
+    bool TestMatxMultiplication();
     bool operations1();
 
     void checkDiff(const Mat& m1, const Mat& m2, const string& s) { if (norm(m1, m2, NORM_INF) != 0) throw test_excep(s); }
@@ -747,6 +749,56 @@ bool CV_OperationsTest::TestSparseMat()
     return true;
 }
 
+
+bool CV_OperationsTest::TestMatxMultiplication() 
+{ 
+    try 
+    { 
+        Matx33f mat(1, 0, 0, 0, 1, 0, 0, 0, 1); // Identity matrix 
+        Point2f pt(3, 4); 
+        Point3f res = mat * pt; // Correctly assumes homogeneous coordinates 
+        if(res.x != 3.0) throw test_excep(); 
+        if(res.y != 4.0) throw test_excep(); 
+        if(res.z != 1.0) throw test_excep(); 
+    } 
+    catch(const test_excep&) 
+    { 
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT); 
+        return false; 
+    } 
+    return true; 
+} 
+
+
+bool CV_OperationsTest::TestVec() 
+{ 
+    try 
+    { 
+        cv::Mat hsvImage_f(5, 5, CV_32FC3), hsvImage_b(5, 5, CV_8UC3);
+        int i = 0,j = 0;
+        cv::Vec3f a;
+        
+        //these compile
+        cv::Vec3b b = a;
+        hsvImage_f.at<cv::Vec3f>(i,j) = cv::Vec3f(i,0,1);
+        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3b(cv::Vec3f(i,0,1));
+        
+        //these don't
+        b = cv::Vec3f(1,0,0);
+        cv::Vec3b c;
+        c = cv::Vec3f(0,0,1);
+        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f(i,0,1);
+        hsvImage_b.at<cv::Vec3b>(i,j) = a;
+        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f(1,2,3);
+    } 
+    catch(const test_excep&) 
+    { 
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT); 
+        return false; 
+    } 
+    return true; 
+} 
+
 bool CV_OperationsTest::operations1()
 {    
     try 
@@ -818,6 +870,12 @@ void CV_OperationsTest::run( int /* start_from */)
         return;*/
 
     if (!TestSparseMat())
+        return;
+    
+    if (!TestVec())
+        return;
+    
+    if (!TestMatxMultiplication())
         return;
 
     if (!operations1())
