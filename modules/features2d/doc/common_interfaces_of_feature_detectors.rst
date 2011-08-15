@@ -589,30 +589,3 @@ SurfAdjuster
                 SurfAdjuster();
                 ...
         };
-
-FeatureDetector
----------------
-.. ocv:class:: FeatureDetector
-
-Abstract base class for 2D image feature detectors. ::
-
-    class CV_EXPORTS FeatureDetector
-    {
-    public:
-        virtual ~FeatureDetector();
-
-        void detect( const Mat& image, vector<KeyPoint>& keypoints,
-                     const Mat& mask=Mat() ) const;
-
-        void detect( const vector<Mat>& images,
-                     vector<vector<KeyPoint> >& keypoints,
-                     const vector<Mat>& masks=vector<Mat>() ) const;
-
-        virtual void read(const FileNode&);
-        virtual void write(FileStorage&) const;
-
-        static Ptr<FeatureDetector> create( const string& detectorType );
-
-    protected:
-    ...
-    };
