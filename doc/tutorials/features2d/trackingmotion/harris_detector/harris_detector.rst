@@ -6,14 +6,45 @@ Harris corner detector
 Goal
 =====
 
-In this tutorial you will learn how to:
+In this tutorial you will learn:
 
 .. container:: enumeratevisibleitemswithsquare
 
+   * What features are and why they are important    
    * Use the function :corner_harris:`cornerHarris <>` to detect corners using the Harris-Stephens method.
 
 Theory
 ======
+
+What is a feature?
+-------------------
+
+.. container:: enumeratevisibleitemswithsquare
+
+   * In computer vision, usually we need to find matching points between different frames of an environment. Why? If we know how two images relate to each other, we can use *both* images to extract information of them.
+
+   * When we say **matching points** we are referring, in a general sense, to *characteristics* in the scene that we can recognize easily. We call these characteristics **features**.
+
+   * **So, what characteristics should a feature have?**
+
+     * It must be *uniquely recognizable*
+
+
+Types of Image Features
+------------------------
+
+To mention a few:
+
+.. container:: enumeratevisibleitemswithsquare
+
+   * Edges
+   * Corner (also known as interest points)
+   * Blobs (also known as regions of interest )
+
+In this tutorial we will study the *corner* features, specifically.
+
+Why is a corner so special?
+----------------------------
 
 Code
 ====

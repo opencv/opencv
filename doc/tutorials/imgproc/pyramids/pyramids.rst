@@ -8,7 +8,9 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Use the OpenCV functions :pyr_up:`pyrUp <>` and :pyr_down:`pyrDown <>` to downsample  or upsample a given image.
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV functions :pyr_up:`pyrUp <>` and :pyr_down:`pyrDown <>` to downsample  or upsample a given image.
   
 Theory
 =======
@@ -16,25 +18,30 @@ Theory
 .. note::
    The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
-* Usually we need to convert an image to a size different than its original. For this, there are two possible options:
-  
-  * *Upsize* the image (zoom in) or 
-  * *Downsize* it (zoom out). 
+.. container:: enumeratevisibleitemswithsquare
 
-* Although there is a *geometric transformation* function in OpenCV that -literally- resize an image (:resize:`resize <>`, which we will show in a future tutorial), in this section we analyze first the use of **Image Pyramids**, which are widely applied in a huge range of vision applications.
+   * Usually we need to convert an image to a size different than its original. For this, there are two possible options:
+  
+     #. *Upsize* the image (zoom in) or 
+     #. *Downsize* it (zoom out). 
+
+   * Although there is a *geometric transformation* function in OpenCV that -literally- resize an image (:resize:`resize <>`, which we will show in a future tutorial), in this section we analyze first the use of **Image Pyramids**, which are widely applied in a huge range of vision applications.
+
 
 Image Pyramid
 --------------
 
-* An image pyramid is a collection of images - all arising from a single original image - that are successively downsampled until some desired stopping point is reached.
+.. container:: enumeratevisibleitemswithsquare
 
-* There are two common kinds of image pyramids:
+   * An image pyramid is a collection of images - all arising from a single original image - that are successively downsampled until some desired stopping point is reached.
 
-  * **Gaussian pyramid:** Used to downsample images
+   * There are two common kinds of image pyramids:
 
-  * **Laplacian pyramid:** Used to  reconstruct an upsampled image from an image lower in the pyramid (with less resolution) 
+     * **Gaussian pyramid:** Used to downsample images
 
-* In this tutorial we'll use the *Gaussian pyramid*.
+     * **Laplacian pyramid:** Used to  reconstruct an upsampled image from an image lower in the pyramid (with less resolution) 
+
+   * In this tutorial we'll use the *Gaussian pyramid*.
 
 Gaussian Pyramid
 ^^^^^^^^^^^^^^^^^

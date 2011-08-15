@@ -8,7 +8,9 @@ Goal
 
 In this tutorial you will learn how to:
 
-a. Use the OpenCV function :canny:`Canny <>` to implement the Canny Edge Detector.
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV function :canny:`Canny <>` to implement the Canny Edge Detector.
 
 Theory
 =======
@@ -265,21 +267,21 @@ Explanation
 Result
 =======
 
-#. After compiling the code above, we can run it giving as argument the path to an image. For example, using as an input the following image:
+* After compiling the code above, we can run it giving as argument the path to an image. For example, using as an input the following image:
 
    .. image:: images/Canny_Detector_Tutorial_Original_Image.jpg
            :alt: Original test image
            :width: 200pt
            :align: center
 
-   and moving the slider, trying different threshold, we obtain the following result:
+* Moving the slider, trying different threshold, we obtain the following result:
 
    .. image:: images/Canny_Detector_Tutorial_Result.jpg
            :alt: Result after running Canny
            :width: 200pt
            :align: center
   
-   Notice how the image is superposed to the black background on the edge regions.
+* Notice how the image is superposed to the black background on the edge regions.
   
 
 

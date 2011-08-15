@@ -8,7 +8,9 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Perform basic thresholding operations using OpenCV function :threshold:`threshold <>`
+.. container:: enumeratevisibleitemswithsquare
+
+   * Perform basic thresholding operations using OpenCV function :threshold:`threshold <>`
 
 
 Cool Theory

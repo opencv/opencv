@@ -9,8 +9,10 @@ Goal
 
 In this tutorial you will learn how to:
 
-#. Use the OpenCV function :sobel:`Sobel <>` to calculate the derivatives from an image.
-#. Use the OpenCV function :scharr:`Scharr <>` to calculate a more accurate derivative for a kernel of size :math:`3 \cdot 3`  
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV function :sobel:`Sobel <>` to calculate the derivatives from an image.
+   * Use the OpenCV function :scharr:`Scharr <>` to calculate a more accurate derivative for a kernel of size :math:`3 \cdot 3`  
   
 Theory
 ========

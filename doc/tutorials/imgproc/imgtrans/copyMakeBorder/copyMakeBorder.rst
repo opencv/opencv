@@ -8,10 +8,12 @@ Goal
 
 In this tutorial you will learn how to:
 
-#. Use the OpenCV function :copy_make_border:`copyMakeBorder <>` to set the borders (extra padding to your image).  
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV function :copy_make_border:`copyMakeBorder <>` to set the borders (extra padding to your image).  
   
 Theory
-============
+========
 
 .. note::
    The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
@@ -208,10 +210,12 @@ Results
 
 #. After compiling the code above, you  can execute it giving as argument the path of an image. The result should be:
 
-   * By default, it begins with the border set to BORDER_CONSTANT. Hence, a succession of random colored borders will be shown.
-   * If you press 'r', the border will become a replica of the edge pixels. 
-   * If you press 'c', the random colored borders will appear again
-   * If you press 'ESC' the program will exit.
+   .. container:: enumeratevisibleitemswithsquare
+
+      * By default, it begins with the border set to BORDER_CONSTANT. Hence, a succession of random colored borders will be shown.
+      * If you press 'r', the border will become a replica of the edge pixels. 
+      * If you press 'c', the random colored borders will appear again
+      * If you press 'ESC' the program will exit.
 
    Below some screenshot showing how the border changes color and how the *BORDER_REPLICATE* option looks:
    
