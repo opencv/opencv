@@ -18,7 +18,7 @@ void help(std::string errorMessage)
 	std::cout<<"\nProgram call procedure : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping [OpenEXR image to process]"<<std::endl;
 	std::cout<<"\t[OpenEXR image to process] : the input HDR image to process, must be an OpenEXR format, see http://www.openexr.com/ to get some samples or create your own using camera bracketing and Photoshop or equivalent software for OpenEXR image synthesis"<<std::endl;
 	std::cout<<"\nExamples:"<<std::endl;
-	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping KernerEnvLatLong.exr"<<std::endl;
+	std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr"<<std::endl;
 }
 
 // simple procedure for 1D curve tracing
@@ -104,7 +104,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 			 <<"\n\t"<<histogramClippingLimit*100<<"% index = "<<histLowerLimit<<" => normalizedHist value = "<<denseProb.at<float>(histLowerLimit)<<" => input gray level = "<<minInputValue
 			 <<"\n\t"<<(1-histogramClippingLimit)*100<<"% index = "<<histUpperLimit<<" => normalizedHist value = "<<denseProb.at<float>(histUpperLimit)<<" => input gray level = "<<maxInputValue
 			 <<std::endl;
-	 drawPlot(denseProb, "input histogram density probability", histLowerLimit, histUpperLimit);
+	 //drawPlot(denseProb, "input histogram density probability", histLowerLimit, histUpperLimit);
 	 drawPlot(normalizedHist, "input histogram", histLowerLimit, histUpperLimit);
 
 	 // rescale image range [minInputValue-maxInputValue] to [0-255]
@@ -132,7 +132,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  void callBack_updateRetinaParams(int, void*)
  {
 
-	 retina->setupOPLandIPLParvoChannel(true, true, (double)localAdaptation_photoreceptors/200.0, 0.5, 0.43, (double)retinaHcellsGain, 1, 7, (double)localAdaptation_Gcells/200.0);
+	 retina->setupOPLandIPLParvoChannel(true, true, (double)localAdaptation_photoreceptors/200.0, 0.5, 0.43, (double)retinaHcellsGain, 1.0, 7.0, (double)localAdaptation_Gcells/200.0);
  }
 
  int colorSaturationFactor;
@@ -184,7 +184,12 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 	 // image processing case
 	 // declare the retina input buffer... that will be fed differently in regard of the input media
 	 inputImage = cv::imread(inputImageName, -1); // load image in RGB mode
-
+	 std::cout<<"=> image size (h,w) = "<<inputImage.size().height<<", "<<inputImage.size().width<<std::endl;
+	 if (!inputImage.total())
+	 {
+	    help("could not load image, program end");
+            return -1; 
+         }
 	 // rescale between 0 and 1
 	 normalize(inputImage, inputImage, 0.0, 1.0, cv::NORM_MINMAX);
 	 cv::Mat gammaTransformedImage;
