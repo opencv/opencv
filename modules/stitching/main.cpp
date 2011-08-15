@@ -56,6 +56,7 @@
 #include "seam_finders.hpp"
 #include "motion_estimators.hpp"
 #include "exposure_compensate.hpp"
+#include "camera.hpp"
 
 using namespace std;
 using namespace cv;
