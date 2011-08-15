@@ -6,7 +6,7 @@ Drawing Functions
 Drawing functions work with matrices/images of arbitrary depth.
 The boundaries of the shapes can be rendered with antialiasing (implemented only for 8-bit images for now).
 All the functions include the parameter ``color`` that uses an RGB value (that may be constructed
-with ``CV_RGB`` or the  :ocv:class:`Scalar`  constructor
+with ``CV_RGB`` or the  :ocv:class:`Scalar_`  constructor
 ) for color
 images and brightness for grayscale images. For color images, the channel ordering
 is normally *Blue, Green, Red*.

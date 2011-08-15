@@ -176,7 +176,7 @@ Unlike many of the ML models, EM is an unsupervised learning algorithm and it do
 :math:`\texttt{labels}_i=\texttt{arg max}_k(p_{i,k}), i=1..N` (indices of the most probable mixture component for each sample).
 
 The trained model can be used further for prediction, just like any other classifier. The trained model is similar to the
-:ocv:class:`CvBayesClassifier`.
+:ocv:class:`CvNormalBayesClassifier`.
 
 For an example of clustering random samples of the multi-Gaussian distribution using EM, see ``em.cpp`` sample in the OpenCV distribution.
 

@@ -184,7 +184,7 @@ The function returns the final re-projection error.
 
 .. seealso::
 
-   :ocv:func:`FindChessboardCorners`,
+   :ocv:func:`findChessboardCorners`,
    :ocv:func:`solvePnP`,
    :ocv:func:`initCameraMatrix2D`, 
    :ocv:func:`stereoCalibrate`,
@@ -272,7 +272,7 @@ For points in an image of a stereo pair, computes the corresponding epilines in 
     
     :param whichImage: Index of the image (1 or 2) that contains the  ``points`` .
     
-    :param F: Fundamental matrix that can be estimated using  :ocv:func:`findFundamentalMat`         or  :ocv:func:`StereoRectify` .
+    :param F: Fundamental matrix that can be estimated using  :ocv:func:`findFundamentalMat`         or  :ocv:func:`stereoRectify` .
 
     :param lines: Output vector of the epipolar lines corresponding to the points in the other image. Each line :math:`ax + by + c=0`  is encoded by 3 numbers  :math:`(a, b, c)` .
     
@@ -435,7 +435,7 @@ Finds the positions of internal corners of the chessboard.
 
             * **CV_CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black and white, rather than a fixed threshold level (computed from the average image brightness).
 
-            * **CV_CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with  :ocv:func:`EqualizeHist`  before applying fixed or adaptive thresholding.
+            * **CV_CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with  :ocv:func:`equalizeHist`  before applying fixed or adaptive thresholding.
 
             * **CV_CALIB_CB_FILTER_QUADS** Use additional criteria (like contour area, perimeter, square-like shape) to filter out false quads extracted at the contour retrieval stage.
 
@@ -628,9 +628,9 @@ the found fundamental matrix. Normally just one matrix is found. But in case of 
 :math:`9 \times 3` matrix that stores all 3 matrices sequentially).
 
 The calculated fundamental matrix may be passed further to
-:ocv:func:`ComputeCorrespondEpilines` that finds the epipolar lines
+:ocv:func:`computeCorrespondEpilines` that finds the epipolar lines
 corresponding to the specified points. It can also be passed to
-:ocv:func:`StereoRectifyUncalibrated` to compute the rectification transformation. ::
+:ocv:func:`stereoRectifyUncalibrated` to compute the rectification transformation. ::
 
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;
@@ -726,11 +726,11 @@ Homography matrix is determined up to a scale. Thus, it is normalized so that
 
 .. seealso::
 
-    :ocv:func:`GetAffineTransform`,
-    :ocv:func:`GetPerspectiveTransform`,
-    :ocv:func:`EstimateRigidMotion`,
-    :ocv:func:`WarpPerspective`,
-    :ocv:func:`PerspectiveTransform`
+    :ocv:func:`getAffineTransform`,
+    :ocv:func:`getPerspectiveTransform`,
+    :ocv:func:`estimateRigidTransform`,
+    :ocv:func:`warpPerspective`,
+    :ocv:func:`perspectiveTransform`
 
 
 estimateAffine3D
@@ -800,7 +800,7 @@ Returns the new camera matrix based on the free scaling parameter.
 
     :param newImageSize: Image size after rectification. By default,it is set to  ``imageSize`` .
 
-    :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`StereoRectify` .
+    :param validPixROI: Optional output rectangle that outlines all-good-pixels region in the undistorted image. See  ``roi1, roi2``  description in  :ocv:func:`stereoRectify` .
 
     :param centerPrincipalPoint: Optional flag that indicates whether in the new camera matrix the principal point should be at the image center or not. By default, the principal point is chosen to best fit a subset of the source image (determined by ``alpha``) to the corrected image.
     
@@ -919,9 +919,9 @@ Reprojects a disparity image to 3D space.
 
     :param _3dImage: Output 3-channel floating-point image of the same size as  ``disparity`` . Each element of  ``_3dImage(x,y)``  contains 3D coordinates of the point  ``(x,y)``  computed from the disparity map.
 
-    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`StereoRectify` .
+    :param Q: :math:`4 \times 4`  perspective transformation matrix that can be obtained with  :ocv:func:`stereoRectify`.
     
-    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:func:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
+    :param handleMissingValues: Indicates, whether the function should handle missing values (i.e. points where the disparity was not computed). If ``handleMissingValues=true``, then pixels with the minimal disparity that corresponds to the outliers (see  :ocv:funcx:`StereoBM::operator()` ) are transformed to 3D points with a very large Z value (currently set to 10000).
 
     :param ddepth: The optional output array depth. If it is ``-1``, the output image will have ``CV_32F`` depth. ``ddepth`` can also be set to ``CV_16S``, ``CV_32S`` or ``CV_32F``.
     
@@ -933,8 +933,8 @@ The function transforms a single-channel disparity map to a 3-channel image repr
 
 The matrix ``Q`` can be an arbitrary
 :math:`4 \times 4` matrix (for example, the one computed by
-:ocv:func:`StereoRectify`). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
-:ocv:func:`PerspectiveTransform` .
+:ocv:func:`stereoRectify`). To reproject a sparse set of points {(x,y,d),...} to 3D space, use
+:ocv:func:`perspectiveTransform` .
 
 
 
@@ -962,7 +962,7 @@ Computes an RQ decomposition of 3x3 matrices.
     :param Qz: Optional output 3x3 rotation matrix around z-axis.
 
 The function computes a RQ decomposition using the given rotations. This function is used in
-:ocv:func:`DecomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
+:ocv:func:`decomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles
 (as the return value)
@@ -1036,12 +1036,12 @@ Class for computing stereo correspondence using the block matching algorithm. ::
         Ptr<CvStereoBMState> state;
     };
 
-The class is a C++ wrapper for the associated functions. In particular, ``StereoBM::operator()`` is the wrapper for
-:ocv:func:`StereoBM::operator()`. 
+The class is a C++ wrapper for the associated functions. In particular, :ocv:funcx:`StereoBM::operator()` is the wrapper for
+:ocv:cfunc:`cvFindStereoCorrespondenceBM`. 
 
 
 StereoBM::StereoBM
----------------------
+------------------
 The constructors.
 
 .. ocv:function:: StereoBM::StereoBM()
@@ -1137,7 +1137,7 @@ The class implements the modified H. Hirschmuller algorithm HH08 that differs fr
 
  * Mutual information cost function is not implemented. Instead, a simpler Birchfield-Tomasi sub-pixel metric from BT96 is used. Though, the color images are supported as well.
 
- * Some pre- and post- processing steps from K. Konolige algorithm :ocv:func:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
+ * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
 
 
@@ -1401,7 +1401,7 @@ Computes a rectification transform for an uncalibrated stereo camera.
     :param threshold: Optional threshold used to filter out the outliers. If the parameter is greater than zero, all the point pairs that do not comply with the epipolar geometry (that is, the points for which  :math:`|\texttt{points2[i]}^T*\texttt{F}*\texttt{points1[i]}|>\texttt{threshold}` ) are rejected prior to computing the homographies. Otherwise,all the points are considered inliers.
 
 The function computes the rectification transformations without knowing intrinsic parameters of the cameras and their relative position in the space, which explains the suffix "uncalibrated". Another related difference from
-:ocv:func:`StereoRectify` is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations encoded by the homography matrices ``H1`` and ``H2`` . The function implements the algorithm
+:ocv:func:`stereoRectify` is that the function outputs not the rectification transformations in the object (3D) space, but the planar perspective transformations encoded by the homography matrices ``H1`` and ``H2`` . The function implements the algorithm
 [Hartley99]_.
 
 .. note::

@@ -48,7 +48,7 @@ gpu::PtrStep\_
 .. ocv:class:: gpu::PtrStep\_
 
 Structure similar to 
-:ocv:class:`DevMem2D_` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. 
+:ocv:class:`gpu::DevMem2D_` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. 
 ::
 
     template<typename T> struct PtrStep_
@@ -79,7 +79,7 @@ gpu::PtrElemStrp\_
 .. ocv:class:: gpu::PtrElemStrp\_
 
 Structure similar to 
-:ocv:class:`DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. 
+:ocv:class:`gpu::DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. 
 ::
 
     template<typename T> struct PtrElemStep_ : public PtrStep_<T>
@@ -97,7 +97,7 @@ gpu::GpuMat
 .. ocv:class:: gpu::GpuMat
 
 Base storage class for GPU memory with reference counting. Its interface matches the
-:c:type:`Mat` interface with the following limitations:
+:ocv:class:`Mat` interface with the following limitations:
 
 *   
     no arbitrary dimensions support (only 2D)

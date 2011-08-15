@@ -143,7 +143,7 @@ The functions ``calcBackProject`` calculate the back project of the histogram. T
     Find connected components in the resulting picture and choose, for example, the largest component.
 
 This is an approximate algorithm of the
-:ocv:func:`CAMShift` color object tracker.
+:ocv:func:`CamShift` color object tracker.
 
 .. seealso:: :ocv:func:`calcHist`
 .. _compareHist:
@@ -315,7 +315,7 @@ Locates a template within an image by using a histogram comparison.
     
     :param factor: Normalization factor for histograms that affects the normalization scale of the destination image. Pass 1 if not sure. 
     
-The function calculates the back projection by comparing histograms of the source image patches with the given histogram. The function is similar to :ocv:func:`MatchTemplate`, but instead of comparing the raster patch with all its possible positions within the search window, the function ``CalcBackProjectPatch`` compares histograms. See the algorithm diagram below:
+The function calculates the back projection by comparing histograms of the source image patches with the given histogram. The function is similar to :ocv:func:`matchTemplate`, but instead of comparing the raster patch with all its possible positions within the search window, the function ``CalcBackProjectPatch`` compares histograms. See the algorithm diagram below:
 
 .. image:: pics/backprojectpatch.png
 

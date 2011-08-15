@@ -358,7 +358,7 @@ FlannBasedMatcher
 -----------------
 .. ocv:class:: FlannBasedMatcher
 
-Flann-based descriptor matcher. This matcher trains :ocv:func:`flann::Index` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because ``flann::Index`` does not support this. ::
+Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` on a train descriptor collection and calls its nearest search methods to find the best matches. So, this matcher may be faster when matching a large train collection than the brute force matcher. ``FlannBasedMatcher`` does not support masking permissible matches of descriptor sets because ``flann::Index`` does not support this. ::
 
     class FlannBasedMatcher : public DescriptorMatcher
     {

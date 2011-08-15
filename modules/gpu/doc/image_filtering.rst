@@ -240,7 +240,7 @@ gpu::boxFilter
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
- .. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
 
 .. seealso:: :ocv:func:`boxFilter`
 
@@ -541,7 +541,7 @@ gpu::sepFilter2D
 
 gpu::createDerivFilter_GPU
 ------------------------------
-.. ocv:function:: Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
+.. ocv:function:: Ptr<FilterEngine_GPU> gpu::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1)
 
     Creates a filter engine for the generalized Sobel operator.
 

@@ -144,8 +144,10 @@ The following detector types are supported:
 * ``"SURF"`` -- :ocv:class:`SurfFeatureDetector`
 * ``"ORB"`` -- :ocv:class:`OrbFeatureDetector`
 * ``"MSER"`` -- :ocv:class:`MserFeatureDetector`
-* ``"GFTT"`` -- :ocv:class:`GfttFeatureDetector`
-* ``"HARRIS"`` -- :ocv:class:`HarrisFeatureDetector`
+* ``"GFTT"`` -- :ocv:class:`GoodFeaturesToTrackDetector`
+* ``"HARRIS"`` -- :ocv:class:`GoodFeaturesToTrackDetector` with Harris detector enabled
+* ``"Dense"`` -- :ocv:class:`DenseFeatureDetector`
+* ``"SimpleBlob"`` -- :ocv:class:`SimpleBlobDetector`
 
 Also a combined format is supported: feature detector adapter name ( ``"Grid"`` --
 :ocv:class:`GridAdaptedFeatureDetector`, ``"Pyramid"`` --
@@ -587,30 +589,3 @@ SurfAdjuster
                 SurfAdjuster();
                 ...
         };
-
-FeatureDetector
----------------
-.. ocv:class:: FeatureDetector
-
-Abstract base class for 2D image feature detectors. ::
-
-    class CV_EXPORTS FeatureDetector
-    {
-    public:
-        virtual ~FeatureDetector();
-
-        void detect( const Mat& image, vector<KeyPoint>& keypoints,
-                     const Mat& mask=Mat() ) const;
-
-        void detect( const vector<Mat>& images,
-                     vector<vector<KeyPoint> >& keypoints,
-                     const vector<Mat>& masks=vector<Mat>() ) const;
-
-        virtual void read(const FileNode&);
-        virtual void write(FileStorage&) const;
-
-        static Ptr<FeatureDetector> create( const string& detectorType );
-
-    protected:
-    ...
-    };

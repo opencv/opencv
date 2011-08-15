@@ -10,7 +10,7 @@ This section documents OpenCV's interface to the FLANN library. FLANN (Fast Libr
 flann::Index\_
 -----------------
 
-.. ocv:class:: cv::flann::Index_
+.. ocv:class:: flann::Index_
 
 The FLANN nearest neighbor index class. This class is templated with the type of elements for which the index is built.
 

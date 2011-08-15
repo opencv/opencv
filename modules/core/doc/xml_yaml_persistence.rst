@@ -10,7 +10,7 @@ You can store and then restore various OpenCV data structures to/from XML (http:
 (http://www.yaml.org) formats. Also, it is possible store and load arbitrarily complex data structures, which include OpenCV data structures, as well as primitive data types (integer and floating-point numbers and text strings) as their elements.
 
 Use the following procedure to write something to XML or YAML:
- #. Create new :ocv:class:`FileStorage` and open it for writing. It can be done with a single call to :ocv:func:`FileStorage::FileStorage` constructor that takes a filename, or you can use the default constructor and then call :ocv:class:`FileStorage::open`. Format of the file (XML or YAML) is determined from the filename extension (".xml" and ".yml"/".yaml", respectively)
+ #. Create new :ocv:class:`FileStorage` and open it for writing. It can be done with a single call to :ocv:func:`FileStorage::FileStorage` constructor that takes a filename, or you can use the default constructor and then call :ocv:func:`FileStorage::open`. Format of the file (XML or YAML) is determined from the filename extension (".xml" and ".yml"/".yaml", respectively)
  #. Write all the data you want using the streaming operator ``>>``, just like in the case of STL streams.
  #. Close the file using :ocv:func:`FileStorage::release`. ``FileStorage`` destructor also closes the file.
 

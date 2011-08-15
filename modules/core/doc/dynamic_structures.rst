@@ -1,5 +1,5 @@
 Dynamic Structures
-==================
+================== 
 
 .. highlight:: c
 
@@ -43,7 +43,7 @@ The buffer is put in the end of already allocated space in the ``top`` memory bl
 
 If there are no more free blocks, a new block is allocated (or borrowed from the parent, see :ocv:cfunc:`CreateChildMemStorage`) and added to the end of list. Thus, the storage behaves as a stack with ``bottom`` indicating bottom of the stack and the pair (``top``, ``free_space``)
 indicating top of the stack. The stack top may be saved via :ocv:cfunc:`SaveMemStoragePos`, restored via 
-:ocv:cfunc:`RestoreMemStoragePos`, or reset via :ocv:cfunc:`ClearStorage`.
+:ocv:cfunc:`RestoreMemStoragePos`, or reset via :ocv:cfunc:`ClearMemStorage`.
 
 CvMemBlock
 ----------
@@ -112,26 +112,30 @@ CvSlice
 
 .. ocv:struct:: CvSlice
 
-A sequence slice. In C++ interface the class :ocv:class:`Range` should be used instead.
+  A sequence slice. In C++ interface the class :ocv:class:`Range` should be used instead.
 
-    .. ocv:member: int start_index
+  .. ocv:member:: int start_index
     
-        inclusive start index of the sequence slice
+    inclusive start index of the sequence slice
         
-    .. ocv:member: int end_index
+  .. ocv:member:: int end_index
     
-        exclusive end index of the sequence slice
+    exclusive end index of the sequence slice
+	
+There are helper functions to construct the slice and to compute its length:
 
-There are helper functions to construct the slice and to compute its length: ::
-    
-    inline CvSlice cvSlice( int start, int end );
+.. ocv:cfunction:: CvSlice cvSlice( int start, int end )
+
+::
+
     #define CV_WHOLE_SEQ_END_INDEX 0x3fffffff
     #define CV_WHOLE_SEQ  cvSlice(0, CV_WHOLE_SEQ_END_INDEX)
-    
-    /* calculates the sequence slice length */
-    int cvSliceLength( CvSlice slice, const CvSeq* seq );
 
 ..
+
+.. ocv:cfunction:: int cvSliceLength( CvSlice slice, const CvSeq* seq )
+
+  Calculates the sequence slice length
 
 Some of functions that operate on sequences take a ``CvSlice slice`` parameter that is often set to the whole sequence (CV_WHOLE_SEQ) by default. Either of the ``start_index`` and  ``end_index`` may be negative or exceed the sequence length. If they are equal, the slice is considered empty (i.e., contains no elements). Because sequences are treated as circular structures, the slice may select a
 few elements in the end of a sequence followed by a few elements at the beginning of the sequence. For example,  ``cvSlice(-2, 3)`` in the case of a 10-element sequence will select a 5-element slice, containing the pre-last (8th), last (9th), the very first (0th), second (1th) and third (2nd)
@@ -452,17 +456,17 @@ Finds an edge in a graph.
 
 .. ocv:cfunction:: CvGraphEdge* cvFindGraphEdge( const CvGraph* graph, int start_idx, int end_idx )
 
-::
-
-    #define cvGraphFindEdge cvFindGraphEdge
-
-..
-
     :param graph: Graph
 
     :param start_idx: Index of the starting vertex of the edge
 
     :param end_idx: Index of the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
+	
+::
+
+    #define cvGraphFindEdge cvFindGraphEdge
+
+..
 
 The function finds the graph edge connecting two specified vertices and returns a pointer to it or NULL if the edge does not exist.
 
@@ -472,17 +476,17 @@ Finds an edge in a graph by using its pointer.
 
 .. ocv:cfunction:: CvGraphEdge* cvFindGraphEdgeByPtr(  const CvGraph* graph, const CvGraphVtx* startVtx, const CvGraphVtx* endVtx )
 
-::
-
-    #define cvGraphFindEdgeByPtr cvFindGraphEdgeByPtr
-
-..
-
     :param graph: Graph
 
     :param startVtx: Pointer to the starting vertex of the edge
 
     :param endVtx: Pointer to the ending vertex of the edge. For an unoriented graph, the order of the vertex parameters does not matter.
+	
+::
+
+    #define cvGraphFindEdgeByPtr cvFindGraphEdgeByPtr
+
+..
 
 The function finds the graph edge connecting two specified vertices and returns pointer to it or NULL if the edge does not exists.
 
@@ -521,15 +525,16 @@ Returns a pointer to a sequence element according to its index.
 
 .. ocv:cfunction:: char* cvGetSeqElem( const CvSeq* seq, int index )
 
+    :param seq: Sequence
+
+    :param index: Index of element
+	
 ::
 
     #define CV_GET_SEQ_ELEM( TYPE, seq, index )  (TYPE*)cvGetSeqElem( (CvSeq*)(seq), (index) )
 
 ..
 
-    :param seq: Sequence
-
-    :param index: Index of element
 
 The function finds the element with the given
 index in the sequence and returns the pointer to it. If the element
@@ -841,6 +846,12 @@ Allocates a text string in a storage block.
 
 .. ocv:cfunction:: CvString cvMemStorageAllocString(CvMemStorage* storage, const char* ptr, int len=-1)
 
+    :param storage: Memory storage
+
+    :param ptr: The string
+
+    :param len: Length of the string (not counting the ending  ``NUL`` ) . If the parameter is negative, the function computes the length.
+	
 ::
 
     typedef struct CvString
@@ -851,12 +862,6 @@ Allocates a text string in a storage block.
     CvString;
 
 ..
-
-    :param storage: Memory storage
-
-    :param ptr: The string
-
-    :param len: Length of the string (not counting the ending  ``NUL`` ) . If the parameter is negative, the function computes the length.
 
 The function creates copy of the string
 in memory storage. It returns the structure that contains user-passed
@@ -1256,18 +1261,18 @@ Sorts sequence element using the specified comparison function.
 
 .. ocv:cfunction:: void cvSeqSort( CvSeq* seq, CvCmpFunc func, void* userdata=NULL )
 
+    :param seq: The sequence to sort
+
+    :param func: The comparison function that returns a negative, zero, or positive value depending on the relationships among the elements (see the above declaration and the example below) - a similar function is used by  ``qsort``  from C runline except that in the latter,  ``userdata``  is not used
+
+    :param userdata: The user parameter passed to the compasion function; helps to avoid global variables in some cases
+	
 ::
 
     /* a < b ? -1 : a > b ? 1 : 0 */
     typedef int (CV_CDECL* CvCmpFunc)(const void* a, const void* b, void* userdata);
 
 ..
-
-    :param seq: The sequence to sort
-
-    :param func: The comparison function that returns a negative, zero, or positive value depending on the relationships among the elements (see the above declaration and the example below) - a similar function is used by  ``qsort``  from C runline except that in the latter,  ``userdata``  is not used
-
-    :param userdata: The user parameter passed to the compasion function; helps to avoid global variables in some cases
 
 The function sorts the sequence in-place using the specified criteria. Below is an example of using this function:
 

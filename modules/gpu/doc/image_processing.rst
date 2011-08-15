@@ -278,12 +278,12 @@ gpu::ConvolveBuf::ConvolveBuf
 .. ocv:function:: ConvolveBuf::ConvolveBuf()
 
     Constructs an empty buffer that is properly resized after the first call of the 
-    :ocv:func:`convolve` function.
+    :ocv:func:`gpu::convolve` function.
 
 .. ocv:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
     Constructs a buffer for the 
-    :ocv:func:`convolve` function with respective arguments.
+    :ocv:func:`gpu::convolve` function with respective arguments.
 
 
 

@@ -161,7 +161,7 @@ Default and training constructors.
 
 .. ocv:function:: CvGBTrees::CvGBTrees( const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams() )
 
-.. ocv:function::CvGBTrees::CvGBTrees( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams() )
+.. ocv:function:: CvGBTrees::CvGBTrees( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams() )
 
 .. ocv:pyfunction:: cv2.GBTrees([trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params]]]]]]) -> <GBTrees object>
 
@@ -173,9 +173,9 @@ Trains a Gradient boosted tree model.
 
 .. ocv:function:: bool CvGBTrees::train(const Mat& trainData, int tflag, const Mat& responses, const Mat& varIdx=Mat(), const Mat& sampleIdx=Mat(), const Mat& varType=Mat(), const Mat& missingDataMask=Mat(), CvGBTreesParams params=CvGBTreesParams(), bool update=false)
 
-.. ocv:function::bool CvGBTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams(), bool update=false )
+.. ocv:function:: bool CvGBTrees::train( const CvMat* trainData, int tflag, const CvMat* responses, const CvMat* varIdx=0, const CvMat* sampleIdx=0, const CvMat* varType=0, const CvMat* missingDataMask=0, CvGBTreesParams params=CvGBTreesParams(), bool update=false )
 
-.. ocv:function::bool CvGBTrees::train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
+.. ocv:function:: bool CvGBTrees::train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
 
 .. ocv:pyfunction:: cv2.GBTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
     
@@ -200,7 +200,7 @@ Predicts a response for an input sample.
 
 .. ocv:function:: float CvGBTrees::predict(const Mat& sample, const Mat& missing=Mat(), const Range& slice = Range::all(), int k=-1) const
 
-.. ocv:function::float CvGBTrees::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weakResponses=0, CvSlice slice = CV_WHOLE_SEQ, int k=-1 ) const
+.. ocv:function:: float CvGBTrees::predict( const CvMat* sample, const CvMat* missing=0, CvMat* weakResponses=0, CvSlice slice = CV_WHOLE_SEQ, int k=-1 ) const
 
 .. ocv:pyfunction:: cv2.GBTrees.predict(sample[, missing[, slice[, k]]]) -> retval
 
@@ -232,7 +232,7 @@ Predicts a response for an input sample.
 The method predicts the response corresponding to the given sample
 (see :ref:`Predicting with GBT`).
 The result is either the class label or the estimated function value. The
-:ocv:func:`predict` method enables using the parallel version of the GBT model
+:ocv:func:`CvGBTrees::predict` method enables using the parallel version of the GBT model
 prediction if the OpenCV is built with the TBB library. In this case, predictions
 of single trees are computed in a parallel fashion. 
 
@@ -264,7 +264,7 @@ Calculates a training or testing error.
    :param resp: If non-zero, a vector of predictions on the corresponding data set is
     returned.
 
-If the :ocv:class:`CvMLData` data is used to store the data set, :ocv:func:`calc_error` can be
+If the :ocv:class:`CvMLData` data is used to store the data set, :ocv:func:`CvGBTrees::calc_error` can be
 used to get a training/testing error easily and (optionally) all predictions
 on the training/testing set. If the Intel* TBB* library is used, the error is computed in a
 parallel way, namely, predictions for different samples are computed at the same time.

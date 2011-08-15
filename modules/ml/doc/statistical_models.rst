@@ -120,7 +120,7 @@ Reads the model from the file storage.
 .. ocv:function:: void CvStatModel::read( CvFileStorage* storage, CvFileNode* node )
 
 The method ``read`` restores the complete model state from the specified node of the file storage. Use the function
-:ocv:func:`GetFileNodeByName` to locate the node.
+:ocv:cfunc:`GetFileNodeByName` to locate the node.
 
 The previous model state is cleared by :ocv:func:`CvStatModel::clear`.
 

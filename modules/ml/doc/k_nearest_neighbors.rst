@@ -19,7 +19,7 @@ Default and training constructors.
 
 .. ocv:function:: CvKNearest::CvKNearest( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int max_k=32 )
 
-.. ocv:function::CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
+.. ocv:function:: CvKNearest::CvKNearest( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool isRegression=false, int max_k=32 )
 
 See :ocv:func:`CvKNearest::train` for additional parameters descriptions.
 
@@ -29,7 +29,7 @@ Trains the model.
 
 .. ocv:function:: bool CvKNearest::train( const Mat& trainData, const Mat& responses, const Mat& sampleIdx=Mat(), bool isRegression=false, int maxK=32, bool updateBase=false )
 
-.. ocv:function::bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
+.. ocv:function:: bool CvKNearest::train( const CvMat* trainData, const CvMat* responses, const CvMat* sampleIdx=0, bool is_regression=false, int maxK=32, bool updateBase=false )
 
 .. ocv:pyfunction:: cv2.KNearest.train(trainData, responses[, sampleIdx[, isRegression[, maxK[, updateBase]]]]) -> retval
 
@@ -39,7 +39,7 @@ Trains the model.
 
     :param updateBase: Specifies whether the model is trained from scratch (``update_base=false``), or it is updated using the new training data (``update_base=true``). In the latter case, the parameter ``maxK`` must not be larger than the original value.
 
-The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStataModel::train` approach with the following limitations: 
+The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations: 
 
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.
@@ -54,7 +54,7 @@ Finds the neighbors and predicts responses for input vectors.
 
 .. ocv:function:: float CvKNearest::find_nearest( const Mat& samples, int k, Mat& results, Mat& neighborResponses, Mat& dists) const
 
-.. ocv:function::float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
+.. ocv:function:: float CvKNearest::find_nearest( const CvMat* samples, int k, CvMat* results=0, const float** neighbors=0, CvMat* neighborResponses=0, CvMat* dist=0 ) const
 
 .. ocv:pyfunction:: cv2.KNearest.find_nearest(samples, k[, results[, neighborResponses[, dists]]]) -> retval, results, neighborResponses, dists
 

@@ -70,7 +70,7 @@ The function converts a pair of maps for
 .. seealso::
 
     :ocv:func:`remap`,
-    :ocv:func:`undisort`,
+    :ocv:func:`undistort`,
     :ocv:func:`initUndistortRectifyMap`
 
 

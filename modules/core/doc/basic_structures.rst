@@ -246,7 +246,7 @@ Template class for short numerical vectors, a partial case of :ocv:class:`Matx`:
     typedef Vec<double, 4> Vec4d;
     typedef Vec<double, 6> Vec6d;
     
-It is possible to convert ``Vec<T,2>`` to/from ``Point_``, ``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to ``CvScalar`` or :ocv:class:`Scalar`. Use ``operator[]`` to access the elements of ``Vec``. 
+It is possible to convert ``Vec<T,2>`` to/from ``Point_``, ``Vec<T,3>`` to/from ``Point3_`` , and ``Vec<T,4>`` to :ocv:struct:`CvScalar` or :ocv:class:`Scalar_`. Use ``operator[]`` to access the elements of ``Vec``. 
 
 All the expected vector operations are also implemented:
 
@@ -1517,11 +1517,11 @@ The method is used in quite a few of OpenCV functions. The point is that element
 This approach, while being very simple, can boost the performance of a simple element-operation by 10-20 percents, especially if the image is rather small and the operation is quite simple.
 
 Another OpenCV idiom in this function, a call of
-:ocv:func:`Mat::create` for the destination array, that allocates the destination array unless it already has the proper size and type. And while the newly allocated arrays are always continuous, you still need to check the destination array because :ocv:func:`create` does not always allocate a new matrix.
+:ocv:func:`Mat::create` for the destination array, that allocates the destination array unless it already has the proper size and type. And while the newly allocated arrays are always continuous, you still need to check the destination array because :ocv:func:`Mat::create` does not always allocate a new matrix.
 
 
 Mat::elemSize
------------------
+-------------
 Returns  the matrix element size in bytes.
 
 .. ocv:function:: size_t Mat::elemSize() const
@@ -1530,7 +1530,7 @@ The method returns the matrix element size in bytes. For example, if the matrix 
 
 
 Mat::elemSize1
-------------------
+--------------
 Returns the size of each matrix element channel in bytes.
 
 .. ocv:function:: size_t Mat::elemSize1() const
@@ -1539,7 +1539,7 @@ The method returns the matrix element channel size in bytes, that is, it ignores
 
 
 Mat::type
--------------
+---------
 Returns the type of a matrix element.
 
 .. ocv:function:: int Mat::type() const
@@ -1622,7 +1622,7 @@ Returns a pointer to the specified matrix row.
     :param i: A 0-based row index.
 
 The methods return ``uchar*`` or typed pointer to the specified matrix row. See the sample in
-:ocv:func:`Mat::isContinuous` () to know how to use these methods.
+:ocv:func:`Mat::isContinuous` to know how to use these methods.
 
 
 Mat::at
