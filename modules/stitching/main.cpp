@@ -87,7 +87,7 @@ void printUsage()
         "  --save_graph <file_name>\n"
         "      Save matches graph represented in DOT language to <file_name> file.\n"
         "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
-        "                          C is confidence.\n"
+        "      C is confidence.\n"
         "\nCompositing Flags:\n"
         "  --warp (plane|cylindrical|spherical)\n" 
         "      Warp surface type. The default is 'spherical'.\n"
