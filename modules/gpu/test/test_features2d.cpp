@@ -320,7 +320,7 @@ TEST_P(BruteForceMatcher, KnnMatch)
     PRINT_PARAM(distStr);
     PRINT_PARAM(dim);
 
-    const int knn = 3;
+    const int knn = 2;
 
     std::vector< std::vector<cv::DMatch> > matches;
 

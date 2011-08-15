@@ -286,7 +286,7 @@ TEST(BruteForceMatcher)
 {
     // Init CPU matcher
 
-    int desc_len = 128;
+    int desc_len = 64;
 
     BruteForceMatcher< L2<float> > matcher;
 
@@ -328,7 +328,7 @@ TEST(BruteForceMatcher)
     d_matcher.knnMatch(d_query, d_train, d_matches, knn);
     GPU_OFF;
 
-    SUBTEST << "radiusMatch";
+    /*SUBTEST << "radiusMatch";
     float max_distance = 3.8f;
 
     CPU_ON;
@@ -337,7 +337,7 @@ TEST(BruteForceMatcher)
 
     GPU_ON;
     d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
-    GPU_OFF;
+    GPU_OFF;*/
 }
 
 
