@@ -48,6 +48,7 @@
 // 3) Automatic Panoramic Image Stitching using Invariant Features. 
 //    Matthew Brown and David G. Lowe. 2007.
 
+#include <fstream>
 #include "precomp.hpp"
 #include "util.hpp"
 #include "warpers.hpp"
@@ -83,6 +84,10 @@ void printUsage()
         "      Bundle adjustment cost function. The default is 'focal_ray'.\n"
         "  --wave_correct (no|yes)\n"
         "      Perform wave effect correction. The default is 'yes'.\n"
+        "  --save_graph <file_name>\n"
+        "      Save matches graph represented in DOT language to <file_name> file.\n"
+        "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
+        "                          C is confidence.\n"
         "\nCompositing Flags:\n"
         "  --warp (plane|cylindrical|spherical)\n" 
         "      Warp surface type. The default is 'spherical'.\n"
@@ -114,6 +119,8 @@ double compose_megapix = -1;
 int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
+bool save_graph = false;
+std::string save_graph_to;
 int warp_type = Warper::SPHERICAL;
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 float match_conf = 0.65f;
@@ -207,6 +214,12 @@ int parseCmdArgs(int argc, char** argv)
                 cout << "Bad --wave_correct flag value\n";
                 return -1;
             }
+            i++;
+        }
+        else if (string(argv[i]) == "--save_graph")
+        {
+            save_graph = true;
+            save_graph_to = argv[i + 1];
             i++;
         }
         else if (string(argv[i]) == "--warp")
@@ -377,6 +390,14 @@ int main(int argc, char* argv[])
     matcher(features, pairwise_matches);
     matcher.releaseMemory();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    // Check if we should save matches graph
+    if (save_graph)
+    {
+        LOGLN("Saving matches graph...");
+        ofstream f(save_graph_to.c_str());
+        f << matchesGraphAsString(img_names, pairwise_matches, conf_thresh);
+    }
 
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);

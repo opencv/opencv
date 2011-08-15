@@ -45,7 +45,7 @@
 #include "precomp.hpp"
 
 struct ImageFeatures
-{    
+{
     int img_idx;
     cv::Size img_size;
     std::vector<cv::KeyPoint> keypoints;

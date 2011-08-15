@@ -108,8 +108,9 @@ bool overlapRoi(cv::Point tl1, cv::Point tl2, cv::Size sz1, cv::Size sz2, cv::Re
 cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images);
 cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
 cv::Point resultTl(const std::vector<cv::Point> &corners);
-void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
+// Returns random 'count' element subset of the {0,1,...,size-1} set
+void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
 #include "util_inl.hpp"
 

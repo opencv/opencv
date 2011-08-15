@@ -122,6 +122,10 @@ void waveCorrect(std::vector<cv::Mat> &rmats);
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
+// Returns matches graph representation in DOT language
+std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+                                 float conf_threshold);
+
 std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
                                        float conf_threshold);
 

@@ -40,6 +40,7 @@
 //
 //M*/
 #include <algorithm>
+#include <sstream>
 #include "autocalib.hpp"
 #include "motion_estimators.hpp"
 #include "util.hpp"
@@ -406,6 +407,70 @@ void waveCorrect(vector<Mat> &rmats)
 
 
 //////////////////////////////////////////////////////////////////////////////
+
+string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwise_matches,
+                            float conf_threshold)
+{
+    stringstream str;
+    str << "graph matches_graph{\n";
+
+    set<int> added_imgs;
+
+    // Add matches
+    for (size_t i = 0; i < pairwise_matches.size(); ++i)
+    {
+        if (pairwise_matches[i].src_img_idx < pairwise_matches[i].dst_img_idx &&
+            pairwise_matches[i].confidence > conf_threshold)
+        {
+            string name_src = pathes[pairwise_matches[i].src_img_idx];
+            size_t prefix_len = name_src.find_last_of("/\\");
+            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
+
+            string name_dst = pathes[pairwise_matches[i].dst_img_idx];
+            prefix_len = name_dst.find_last_of("/\\");
+            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
+
+            added_imgs.insert(pairwise_matches[i].src_img_idx);
+            added_imgs.insert(pairwise_matches[i].dst_img_idx);
+
+            str << "\"" << name_src << "\" -- \"" << name_dst << "\""
+                << "[label=\"Nm=" << pairwise_matches[i].matches.size()
+                << ", Ni=" << pairwise_matches[i].num_inliers
+                << ", C=" << pairwise_matches[i].confidence << "\"];\n";
+        }
+    }
+
+    // Add unmatched images
+    for (size_t i = 0; i < pairwise_matches.size(); ++i)
+    {
+        if (pairwise_matches[i].src_img_idx < pairwise_matches[i].dst_img_idx)
+        {
+            if (added_imgs.find(pairwise_matches[i].src_img_idx) == added_imgs.end())
+            {
+                added_imgs.insert(pairwise_matches[i].src_img_idx);
+                string name = pathes[pairwise_matches[i].src_img_idx];
+                size_t prefix_len = name.find_last_of("/\\");
+                if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+                name = name.substr(prefix_len, name.size() - prefix_len);
+                str << "\"" << name << "\";\n";
+            }
+            if (added_imgs.find(pairwise_matches[i].dst_img_idx) == added_imgs.end())
+            {
+                added_imgs.insert(pairwise_matches[i].dst_img_idx);
+                string name = pathes[pairwise_matches[i].dst_img_idx];
+                size_t prefix_len = name.find_last_of("/\\");
+                if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+                name = name.substr(prefix_len, name.size() - prefix_len);
+                str << "\"" << name << "\";\n";
+            }
+        }
+    }
+
+    str << "}";
+    return str.str();
+}
 
 vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<MatchesInfo> &pairwise_matches, 
                                   float conf_threshold)
