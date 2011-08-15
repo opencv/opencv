@@ -64,6 +64,9 @@ Ptr<SeamFinder> SeamFinder::createDefault(int type)
 void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
                               vector<Mat> &masks)
 {
+    LOGLN("Finding seams...");
+    int64 t = getTickCount();
+
     if (src.size() == 0)
         return;
 
@@ -80,6 +83,8 @@ void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
                 findInPair(i, j, roi);
         }
     }
+
+    LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 

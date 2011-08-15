@@ -107,6 +107,9 @@ struct CalcRotation
 void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
                                         vector<CameraParams> &cameras)
 {
+    LOGLN("Estimating rotations...");
+    int64 t = getTickCount();
+
     const int num_images = static_cast<int>(features.size());
 
 #if 0
@@ -142,6 +145,8 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     vector<int> span_tree_centers;
     findMaxSpanningTree(num_images, pairwise_matches, span_tree, span_tree_centers);
     span_tree.walkBreadthFirst(span_tree_centers[0], CalcRotation(num_images, pairwise_matches, cameras));
+
+    LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 
@@ -150,6 +155,12 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches, 
                               vector<CameraParams> &cameras)
 {
+    if (cost_space_ == NO)
+        return;
+
+    LOG("Bundle adjustment");
+    int64 t = getTickCount();
+
     num_images_ = static_cast<int>(features.size());
     features_ = &features[0];
     pairwise_matches_ = &pairwise_matches[0];
@@ -251,6 +262,8 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
     Mat R_inv = cameras[span_tree_centers[0]].R.inv();
     for (int i = 0; i < num_images_; ++i)
         cameras[i].R = R_inv * cameras[i].R;
+
+    LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 
@@ -306,7 +319,7 @@ void BundleAdjuster::calcError(Mat &err)
                        p2.x * R2[3] + p2.y * R2[4] + p2.z * R2[5],
                        p2.x * R2[6] + p2.y * R2[7] + p2.z * R2[8]);
 
-            double mult = 1;
+            double mult = 1; // For cost_space_ == RAY_SPACE
             if (cost_space_ == FOCAL_RAY_SPACE)
                 mult = sqrt(f1 * f2);
             err.at<double>(3 * match_idx, 0) = mult * (d1.x - d2.x);
@@ -374,6 +387,9 @@ void BundleAdjuster::calcJacobian()
 
 void waveCorrect(vector<Mat> &rmats)
 {
+    LOGLN("Wave correcting...");
+    int64 t = getTickCount();
+
     float data[9];
     Mat r0(1, 3, CV_32F, data);
     Mat r1(1, 3, CV_32F, data + 3);
@@ -403,6 +419,8 @@ void waveCorrect(vector<Mat> &rmats)
 
     for (size_t i = 0; i < rmats.size(); ++i)
         rmats[i] = R * rmats[i];
+
+    LOGLN("Wave correcting, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 

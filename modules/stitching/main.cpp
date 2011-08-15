@@ -80,7 +80,7 @@ void printUsage()
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
-        "  --ba (ray|focal_ray)\n"
+        "  --ba (no|ray|focal_ray)\n"
         "      Bundle adjustment cost function. The default is 'focal_ray'.\n"
         "  --wave_correct (no|yes)\n"
         "      Perform wave effect correction. The default is 'yes'.\n"
@@ -187,7 +187,9 @@ int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--ba")
         {
-            if (string(argv[i + 1]) == "ray")
+            if (string(argv[i + 1]) == "no")
+                ba_space = BundleAdjuster::NO;
+            else if (string(argv[i + 1]) == "ray")
                 ba_space = BundleAdjuster::RAY_SPACE;
             else if (string(argv[i + 1]) == "focal_ray")
                 ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
@@ -423,12 +425,9 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    LOGLN("Estimating rotations...");
-    t = getTickCount();
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
     estimator(features, pairwise_matches, cameras);
-    LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     for (size_t i = 0; i < cameras.size(); ++i)
     {
@@ -438,11 +437,8 @@ int main(int argc, char* argv[])
         LOGLN("Initial focal length #" << indices[i]+1 << ": " << cameras[i].focal);
     }
 
-    LOG("Bundle adjustment");
-    t = getTickCount();
     BundleAdjuster adjuster(ba_space, conf_thresh);
     adjuster(features, pairwise_matches, cameras);
-    LOGLN("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Find median focal length
     vector<double> focals;
@@ -456,15 +452,12 @@ int main(int argc, char* argv[])
 
     if (wave_correct)
     {
-        LOGLN("Wave correcting...");
-        t = getTickCount();
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
         waveCorrect(rmats);
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];
-        LOGLN("Wave correcting, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
     }
 
     LOGLN("Warping images (auxiliary)... ");
@@ -501,17 +494,11 @@ int main(int argc, char* argv[])
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOGLN("Exposure compensation (feed)...");
-    t = getTickCount();
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     compensator->feed(corners, images_warped, masks_warped);
-    LOGLN("Exposure compensation (feed), time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOGLN("Finding seams...");
-    t = getTickCount();
     Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
     seam_finder->find(images_warped_f, corners, masks_warped);
-    LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Release unused memory
     images.clear();
@@ -612,7 +599,7 @@ int main(int argc, char* argv[])
             {
                 FeatherBlender* fb = dynamic_cast<FeatherBlender*>(static_cast<Blender*>(blender));
                 fb->setSharpness(1.f/blend_width);
-                LOGLN("Feather blender, number of bands: " << fb->sharpness());
+                LOGLN("Feather blender, sharpness: " << fb->sharpness());
             }
             blender->prepare(corners, sizes);
         }

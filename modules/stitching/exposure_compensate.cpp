@@ -74,6 +74,9 @@ void ExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &
 void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images, 
                            const vector<pair<Mat,uchar> > &masks)
 {
+    LOGLN("Exposure compensation...");
+    int64 t = getTickCount();
+
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
     const int num_images = static_cast<int>(images.size());
@@ -138,6 +141,8 @@ void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &imag
     }
 
     solve(A, b, gains_);
+
+    LOGLN("Exposure compensation, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 

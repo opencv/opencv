@@ -90,7 +90,7 @@ private:
 class BundleAdjuster : public Estimator
 {
 public:
-    enum { RAY_SPACE, FOCAL_RAY_SPACE };
+    enum { NO, RAY_SPACE, FOCAL_RAY_SPACE };
 
     BundleAdjuster(int cost_space = FOCAL_RAY_SPACE, float conf_thresh = 1.f) 
         : cost_space_(cost_space), conf_thresh_(conf_thresh) {}

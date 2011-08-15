@@ -114,7 +114,7 @@ void createLaplacePyr(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& 
 void createLaplacePyrGpu(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
 #endif
 
-// Restores source image in-place (result will be stored in pyr[0])
+// Restores source image
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
 
 #endif // __OPENCV_BLENDERS_HPP__
