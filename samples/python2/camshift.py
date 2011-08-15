@@ -2,6 +2,14 @@ import numpy as np
 import cv2
 import video
 
+help_message = '''USAGE: camshift.py [<video source>]
+
+Select a bright colored object to track.
+
+Keys:
+  ESC   - exit
+  b     - toggle back-projected probability visualization
+'''
 
 
 class App(object):
@@ -14,6 +22,7 @@ class App(object):
         self.selection = None
         self.drag_start = None
         self.tracking_state = 0
+        self.show_backproj = False
 
     def onmouse(self, event, x, y, flags, param):
         x, y = np.int16([x, y]) # BUG
@@ -47,37 +56,49 @@ class App(object):
     def run(self):
         while True:
             ret, self.frame = self.cam.read()
-            self.frame = self.frame.copy()
-            
+            vis = self.frame.copy()
             hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, np.array((0, 60, 32)), np.array((180, 255, 255)))
 
             if self.selection:
                 x0, y0, x1, y1 = self.selection
+                self.track_window = (x0, y0, x1-x0, y1-y0)
                 hsv_roi = hsv[y0:y1, x0:x1]
-                hist = cv2.calcHist( [hsv_roi], [0], None, [16], [0, 180] )
+                mask_roi = mask[y0:y1, x0:x1]
+                hist = cv2.calcHist( [hsv_roi], [0], mask_roi, [16], [0, 180] )
                 cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX);
                 self.hist = hist.reshape(-1)
                 self.show_hist()
                 
-                roi = self.frame[y0:y1, x0:x1]
-                cv2.bitwise_not(roi, roi)
+                vis_roi = vis[y0:y1, x0:x1]
+                cv2.bitwise_not(vis_roi, vis_roi)
+                vis[mask == 0] = 0
 
             if self.tracking_state == 1:
                 self.selection = None
                 prob = cv2.calcBackProject([hsv], [0], self.hist, [0, 180], 1)
+                prob &= mask
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
-                print cv2.CamShift(prob, term_crit)
-                #cv2.imshow('back', back)
+                track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
                 
+                if self.show_backproj:
+                    vis[:] = prob[...,np.newaxis]
+                try: cv2.ellipse(vis, track_box, (0, 0, 255), 2)
+                except: print track_box
                 
-            cv2.imshow('camshift', self.frame)
-            if cv2.waitKey(5) == 27:
+            cv2.imshow('camshift', vis)
+
+            ch = cv2.waitKey(5)
+            if ch == 27:
                 break
+            if ch == ord('b'):
+                self.show_backproj = not self.show_backproj
 
 
 if __name__ == '__main__':
     import sys
     try: video_src = sys.argv[1]
     except: video_src = video.presets['chess']
+    print help_message
     App(video_src).run()
 

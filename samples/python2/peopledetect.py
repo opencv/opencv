@@ -28,9 +28,7 @@ if __name__ == '__main__':
     print help_message
 
     hog = cv2.HOGDescriptor()
-    data = cv2.HOGDescriptor_getDefaultPeopleDetector()
-    data = np.float64(data.ravel()) # BUG
-    hog.setSVMDetector( data )
+    hog.setSVMDetector( cv2.HOGDescriptor_getDefaultPeopleDetector() )
 
     for fn in it.chain(*map(glob, sys.argv[1:])):
         print fn, ' - ',
