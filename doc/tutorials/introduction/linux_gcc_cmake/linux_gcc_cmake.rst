@@ -6,12 +6,14 @@ Using OpenCV with gcc and CMake
 .. note::
    We assume that you have successfully installed OpenCV in your workstation.
 
-The easiest way of using OpenCV in your code is to use `CMake <http://www.cmake.org/>`_. A few advantages (taken from the Wiki):
+.. container:: enumeratevisibleitemswithsquare
 
-* No need to change anything when porting between Linux and Windows
-* Can easily be combined with other tools by CMake( i.e. Qt, ITK and VTK ) 
+   * The easiest way of using OpenCV in your code is to use `CMake <http://www.cmake.org/>`_. A few advantages (taken from the Wiki):
 
-If you are not familiar with CMake, checkout the `tutorial <http://www.cmake.org/cmake/help/cmake_tutorial.html>`_ on its website.
+     #. No need to change anything when porting between Linux and Windows
+     #. Can easily be combined with other tools by CMake( i.e. Qt, ITK and VTK ) 
+
+   * If you are not familiar with CMake, checkout the `tutorial <http://www.cmake.org/cmake/help/cmake_tutorial.html>`_ on its website.
 
 Steps
 ======

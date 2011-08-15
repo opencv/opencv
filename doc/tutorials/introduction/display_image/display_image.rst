@@ -17,7 +17,7 @@ In this tutorial you will learn how to:
 Source Code
 ===========
 
-Download the :download:`source code from here <../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>` or look it up in our library at :file:`samples/cpp/tutorial_code/introduction/display_image/display_image.cpp`.
+Download the source code from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
@@ -108,20 +108,22 @@ Because we want our window to be displayed until the user presses a key (otherwi
 Result
 =======
 
-* Compile your code and then run the executable giving an image path as argument. If you're on Windows the executable will of course contain an *exe* extension too. Of course assure the image file is near your program file. 
+.. container:: enumeratevisibleitemswithsquare
 
-  .. code-block:: bash
+   * Compile your code and then run the executable giving an image path as argument. If you're on Windows the executable will of course contain an *exe* extension too. Of course assure the image file is near your program file. 
 
-     ./DisplayImage HappyFish.jpg
+     .. code-block:: bash
 
-* You should get a nice window as the one shown below:
+        ./DisplayImage HappyFish.jpg
 
-  .. image:: images/Display_Image_Tutorial_Result.jpg
-     :alt: Display Image Tutorial - Final Result
-     :align: center 
+   * You should get a nice window as the one shown below:
 
-.. raw:: html
+     .. image:: images/Display_Image_Tutorial_Result.jpg
+        :alt: Display Image Tutorial - Final Result
+        :align: center 
 
-  <div align="center">
-  <iframe title="Introduction - Display an Image" width="560" height="349" src="http://www.youtube.com/embed/1OJEqpuaGc4?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-  </div>
+   .. raw:: html
+
+     <div align="center">
+     <iframe title="Introduction - Display an Image" width="560" height="349" src="http://www.youtube.com/embed/1OJEqpuaGc4?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
+     </div>
