@@ -273,7 +273,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         
         #ifdef HAVE_XIMEA
         case CV_CAP_XIAPI:
-            capture = cvCreateCameraCapture_Ximea (index);
+            capture = cvCreateCameraCapture_XIMEA (index);
             if (capture)
                 return capture;
         break;
