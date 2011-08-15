@@ -108,6 +108,27 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 {
     const int num_images = static_cast<int>(features.size());
 
+#if 0
+    // Robustly estimate focal length from rotating cameras
+    vector<Mat> Hs;
+    for (int iter = 0; iter < 100; ++iter)
+    {
+        int len = 2 + rand()%(pairwise_matches.size() - 1);
+        vector<int> subset;
+        selectRandomSubset(len, pairwise_matches.size(), subset);
+        Hs.clear();
+        for (size_t i = 0; i < subset.size(); ++i)
+            if (!pairwise_matches[subset[i]].H.empty())
+                Hs.push_back(pairwise_matches[subset[i]].H);
+        Mat_<double> K;
+        if (Hs.size() >= 2)
+        {
+            if (calibrateRotatingCamera(Hs, K))
+                cin.get();
+        }
+    }
+#endif
+
     // Estimate focal length and set it for all cameras
     vector<double> focals;
     estimateFocal(features, pairwise_matches, focals);

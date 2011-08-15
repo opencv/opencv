@@ -148,3 +148,16 @@ Point resultTl(const vector<Point> &corners)
     return tl;
 }
 
+
+void selectRandomSubset(int count, int size, vector<int> &subset)
+{
+    subset.clear();
+    for (int i = 0; i < size; ++i)
+    {
+        if (randu<int>() % (size - i) < count)
+        {
+            subset.push_back(i);
+            count--;
+        }
+    }
+}

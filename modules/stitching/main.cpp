@@ -100,7 +100,7 @@ void printUsage()
         "  --blend_strength <float>\n"
         "      Blending strength from [0,100] range. The default is 5.\n"
         "  --output <result_img>\n"
-        "      The default is 'result.png'.\n";
+        "      The default is 'result.jpg'.\n";
 }
 
 
@@ -120,7 +120,7 @@ float match_conf = 0.65f;
 int seam_find_type = SeamFinder::GC_COLOR;
 int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
-string result_name = "result.png";
+string result_name = "result.jpg";
 
 int parseCmdArgs(int argc, char** argv)
 {

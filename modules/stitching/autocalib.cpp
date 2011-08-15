@@ -115,3 +115,70 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
             focals[i] = focals_sum / num_images;
     }
 }
+
+
+namespace
+{
+    template<typename _Tp> static inline bool
+    decomposeCholesky(_Tp* A, size_t astep, int m)
+    {
+        if (!Cholesky(A, astep, m, 0, 0, 0))
+            return false;
+        astep /= sizeof(A[0]);
+        for (int i = 0; i < m; ++i)
+            A[i*astep + i] = (_Tp)(1./A[i*astep + i]);
+        return true;
+    }
+} // namespace
+
+
+bool calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
+{
+    int m = static_cast<int>(Hs.size());
+    CV_Assert(m >= 1);
+
+    vector<Mat> Hs_(m);
+    for (int i = 0; i < m; ++i)
+    {
+        CV_Assert(Hs[i].size() == Size(3, 3) && Hs[i].type() == CV_64F);
+        Hs_[i] = Hs[i] / pow(determinant(Hs[i]), 1./3.);
+    }
+
+    const int idx_map[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};
+    Mat_<double> A(6*m, 6);
+    A.setTo(0);
+
+    int eq_idx = 0;
+    for (int k = 0; k < m; ++k)
+    {
+        Mat_<double> H(Hs_[k]);
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = i; j < 3; ++j, ++eq_idx)
+            {
+                for (int l = 0; l < 3; ++l)
+                {
+                    for (int s = 0; s < 3; ++s)
+                    {
+                        int idx = idx_map[l][s];
+                        A(eq_idx, idx) += H(i,l) * H(j,s);
+                    }
+                }
+                A(eq_idx, idx_map[i][j]) -= 1;
+            }
+        }
+    }
+
+    Mat_<double> wcoef;
+    SVD::solveZ(A, wcoef);
+
+    Mat_<double> W(3,3);
+    for (int i = 0; i < 3; ++i)
+        for (int j = i; j < 3; ++j)
+            W(i,j) = W(j,i) = wcoef(idx_map[i][j], 0) / wcoef(5,0);
+    if (!decomposeCholesky(W.ptr<double>(), W.step, 3))
+        return false;
+    W(0,1) = W(0,2) = W(1,2) = 0;
+    K = W.t();
+    return true;
+}

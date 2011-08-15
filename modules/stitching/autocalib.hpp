@@ -52,4 +52,6 @@ void focalsFromHomography(const cv::Mat &H, double &f0, double &f1, bool &f0_ok,
 void estimateFocal(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
                    std::vector<double> &focals);
 
+bool calibrateRotatingCamera(const std::vector<cv::Mat> &Hs, cv::Mat &K);
+
 #endif // __OPENCV_AUTOCALIB_HPP__
