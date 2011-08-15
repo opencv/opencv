@@ -414,57 +414,59 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
     stringstream str;
     str << "graph matches_graph{\n";
 
-    set<int> added_imgs;
+    const int num_images = static_cast<int>(pathes.size());
+    set<pair<int,int> > span_tree_edges;
+    DjSets comps(num_images);
 
-    // Add matches
-    for (size_t i = 0; i < pairwise_matches.size(); ++i)
+    for (int i = 0; i < num_images; ++i)
     {
-        if (pairwise_matches[i].src_img_idx < pairwise_matches[i].dst_img_idx &&
-            pairwise_matches[i].confidence > conf_threshold)
+        for (int j = 0; j < num_images; ++j)
         {
-            string name_src = pathes[pairwise_matches[i].src_img_idx];
+            if (pairwise_matches[i*num_images + j].confidence < conf_threshold)
+                continue;
+            int comp1 = comps.find(i);
+            int comp2 = comps.find(j);
+            if (comp1 != comp2)
+            {
+                comps.merge(comp1, comp2);
+                span_tree_edges.insert(make_pair(i, j));
+            }
+        }
+    }
+
+    for (set<pair<int,int> >::const_iterator itr = span_tree_edges.begin();
+         itr != span_tree_edges.end(); ++itr)
+    {
+        pair<int,int> edge = *itr;
+        if (span_tree_edges.find(edge) != span_tree_edges.end())
+        {
+            string name_src = pathes[edge.first];
             size_t prefix_len = name_src.find_last_of("/\\");
             if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
             name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
 
-            string name_dst = pathes[pairwise_matches[i].dst_img_idx];
+            string name_dst = pathes[edge.second];
             prefix_len = name_dst.find_last_of("/\\");
             if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
             name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
 
-            added_imgs.insert(pairwise_matches[i].src_img_idx);
-            added_imgs.insert(pairwise_matches[i].dst_img_idx);
-
+            int pos = edge.first*num_images + edge.second;
             str << "\"" << name_src << "\" -- \"" << name_dst << "\""
-                << "[label=\"Nm=" << pairwise_matches[i].matches.size()
-                << ", Ni=" << pairwise_matches[i].num_inliers
-                << ", C=" << pairwise_matches[i].confidence << "\"];\n";
+                << "[label=\"Nm=" << pairwise_matches[pos].matches.size()
+                << ", Ni=" << pairwise_matches[pos].num_inliers
+                << ", C=" << pairwise_matches[pos].confidence << "\"];\n";
         }
     }
 
-    // Add unmatched images
-    for (size_t i = 0; i < pairwise_matches.size(); ++i)
+    for (size_t i = 0; i < comps.size.size(); ++i)
     {
-        if (pairwise_matches[i].src_img_idx < pairwise_matches[i].dst_img_idx)
+        if (comps.size[comps.find(i)] == 1)
         {
-            if (added_imgs.find(pairwise_matches[i].src_img_idx) == added_imgs.end())
-            {
-                added_imgs.insert(pairwise_matches[i].src_img_idx);
-                string name = pathes[pairwise_matches[i].src_img_idx];
-                size_t prefix_len = name.find_last_of("/\\");
-                if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
-                name = name.substr(prefix_len, name.size() - prefix_len);
-                str << "\"" << name << "\";\n";
-            }
-            if (added_imgs.find(pairwise_matches[i].dst_img_idx) == added_imgs.end())
-            {
-                added_imgs.insert(pairwise_matches[i].dst_img_idx);
-                string name = pathes[pairwise_matches[i].dst_img_idx];
-                size_t prefix_len = name.find_last_of("/\\");
-                if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
-                name = name.substr(prefix_len, name.size() - prefix_len);
-                str << "\"" << name << "\";\n";
-            }
+            string name = pathes[i];
+            size_t prefix_len = name.find_last_of("/\\");
+            if (prefix_len != string::npos) prefix_len++; else prefix_len = 0;
+            name = name.substr(prefix_len, name.size() - prefix_len);
+            str << "\"" << name << "\";\n";
         }
     }
 
