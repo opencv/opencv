@@ -108,11 +108,11 @@ HammingLUT::ResultType HammingLUT::operator()( const unsigned char* a, const uns
 
 Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned char* b, int size) const
 {
-#if __GNUC__
-  ResultType result = 0;
-#if CV_NEON
+  ResultType result;
+#if defined __GNUC__ && CV_NEON
   if (CPU_HAS_NEON_FEATURE)
   {
+    result = 0;  
     for (size_t i = 0; i < size; i += 16)
     {
       uint8x16_t A_vec = vld1q_u8 (a + i);
@@ -131,32 +131,9 @@ Hamming::ResultType Hamming::operator()(const unsigned char* a, const unsigned c
     }
   }
   else
-#endif  
-  {
-    //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
-    typedef unsigned long long pop_t;
-    const size_t modulo = size % sizeof(pop_t);
-    const pop_t * a2 = reinterpret_cast<const pop_t*> (a);
-    const pop_t * b2 = reinterpret_cast<const pop_t*> (b);
-    const pop_t * a2_end = a2 + (size/sizeof(pop_t));
-
-    for (; a2 != a2_end; ++a2, ++b2)
-      result += __builtin_popcountll((*a2) ^ (*b2));
-
-    if (modulo)
-    {
-      //in the case where size is not divisible by sizeof(size_t)
-      //need to mask off the bits at the end  
-      pop_t a_final=0,b_final=0;
-      memcpy(&a_final,a2,modulo);
-      memcpy(&b_final,b2,modulo);
-      result += __builtin_popcountll(a_final ^ b_final);
-    }  
-  }
-  return result;
-#else
-  return HammingLUT()(a,b,size);
 #endif
+      result = HammingLUT()(a,b,size);
+  return result;
 }
 
 BriefDescriptorExtractor::BriefDescriptorExtractor(int bytes) :

@@ -180,6 +180,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
         }
         
         typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
+        typedef tbb::concurrent_vector<double> ConcurrentDoubleVector;
     }
 #else
     namespace cv
@@ -201,11 +202,12 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #ifdef HAVE_THREADING_FRAMEWORK 
 #include "threading_framework.hpp"
 
-	template<typename Body> 
-	static void parallel_for( const BlockedRange& range, const Body& body )
-	{
-		tf::parallel_for<Body>(range, body);
-	}
+        template<typename Body> 
+        static void parallel_for( const BlockedRange& range, const Body& body )
+        {
+            tf::parallel_for<Body>(range, body);
+        }
+        
         typedef tf::ConcurrentVector<Rect> ConcurrentRectVector;
 #else
         template<typename Body> static inline
@@ -214,6 +216,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
             body(range); 
         }
         typedef std::vector<Rect> ConcurrentRectVector;
+        typedef std::vector<double> ConcurrentDoubleVector;
 #endif
         
         template<typename Iterator, typename Body> static inline
