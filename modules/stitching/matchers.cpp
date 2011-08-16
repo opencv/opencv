@@ -465,6 +465,8 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 
     // Find pair-wise motion
     matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
+    if (abs(determinant(matches_info.H)) < numeric_limits<double>::epsilon())
+        return;
 
     // Find number of inliers
     matches_info.num_inliers = 0;

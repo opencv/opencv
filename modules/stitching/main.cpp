@@ -549,6 +549,7 @@ int main(int argc, char* argv[])
                     sz.width = cvRound(full_img_sizes[i].width * compose_scale);
                     sz.height = cvRound(full_img_sizes[i].height * compose_scale);
                 }
+
                 Rect roi = warper->warpRoi(sz, static_cast<float>(cameras[i].focal), cameras[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
