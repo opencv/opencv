@@ -24,7 +24,7 @@
 #ifndef AVUTIL_FIFO_H
 #define AVUTIL_FIFO_H
 
-#include <msc_stdint.h>
+#include <stdint.h>
 
 typedef struct AVFifoBuffer {
     uint8_t *buffer;
@@ -33,26 +33,26 @@ typedef struct AVFifoBuffer {
 } AVFifoBuffer;
 
 /**
- * Initializes an AVFifoBuffer.
+ * Initialize an AVFifoBuffer.
  * @param size of FIFO
  * @return AVFifoBuffer or NULL in case of memory allocation failure
  */
 AVFifoBuffer *av_fifo_alloc(unsigned int size);
 
 /**
- * Frees an AVFifoBuffer.
+ * Free an AVFifoBuffer.
  * @param *f AVFifoBuffer to free
  */
 void av_fifo_free(AVFifoBuffer *f);
 
 /**
- * Resets the AVFifoBuffer to the state right after av_fifo_alloc, in particular it is emptied.
+ * Reset the AVFifoBuffer to the state right after av_fifo_alloc, in particular it is emptied.
  * @param *f AVFifoBuffer to reset
  */
 void av_fifo_reset(AVFifoBuffer *f);
 
 /**
- * Returns the amount of data in bytes in the AVFifoBuffer, that is the
+ * Return the amount of data in bytes in the AVFifoBuffer, that is the
  * amount of data you can read from it.
  * @param *f AVFifoBuffer to read from
  * @return size
@@ -60,7 +60,7 @@ void av_fifo_reset(AVFifoBuffer *f);
 int av_fifo_size(AVFifoBuffer *f);
 
 /**
- * Returns the amount of space in bytes in the AVFifoBuffer, that is the
+ * Return the amount of space in bytes in the AVFifoBuffer, that is the
  * amount of data you can write into it.
  * @param *f AVFifoBuffer to write into
  * @return size
@@ -68,7 +68,7 @@ int av_fifo_size(AVFifoBuffer *f);
 int av_fifo_space(AVFifoBuffer *f);
 
 /**
- * Feeds data from an AVFifoBuffer to a user-supplied callback.
+ * Feed data from an AVFifoBuffer to a user-supplied callback.
  * @param *f AVFifoBuffer to read from
  * @param buf_size number of bytes to read
  * @param *func generic read function
@@ -77,7 +77,7 @@ int av_fifo_space(AVFifoBuffer *f);
 int av_fifo_generic_read(AVFifoBuffer *f, void *dest, int buf_size, void (*func)(void*, void*, int));
 
 /**
- * Feeds data from a user-supplied callback to an AVFifoBuffer.
+ * Feed data from a user-supplied callback to an AVFifoBuffer.
  * @param *f AVFifoBuffer to write to
  * @param *src data source; non-const since it may be used as a
  * modifiable context by the function defined in func
@@ -92,7 +92,7 @@ int av_fifo_generic_read(AVFifoBuffer *f, void *dest, int buf_size, void (*func)
 int av_fifo_generic_write(AVFifoBuffer *f, void *src, int size, int (*func)(void*, void*, int));
 
 /**
- * Resizes an AVFifoBuffer.
+ * Resize an AVFifoBuffer.
  * @param *f AVFifoBuffer to resize
  * @param size new AVFifoBuffer size in bytes
  * @return <0 for failure, >=0 otherwise
@@ -100,7 +100,7 @@ int av_fifo_generic_write(AVFifoBuffer *f, void *src, int size, int (*func)(void
 int av_fifo_realloc2(AVFifoBuffer *f, unsigned int size);
 
 /**
- * Reads and discards the specified amount of data from an AVFifoBuffer.
+ * Read and discard the specified amount of data from an AVFifoBuffer.
  * @param *f AVFifoBuffer to read from
  * @param size amount of data to read in bytes
  */

@@ -29,8 +29,8 @@
 
 #include "libavutil/avutil.h"
 
-#define LIBSWSCALE_VERSION_MAJOR 0
-#define LIBSWSCALE_VERSION_MINOR 11
+#define LIBSWSCALE_VERSION_MAJOR 2
+#define LIBSWSCALE_VERSION_MINOR 0
 #define LIBSWSCALE_VERSION_MICRO 0
 
 #define LIBSWSCALE_VERSION_INT  AV_VERSION_INT(LIBSWSCALE_VERSION_MAJOR, \
@@ -42,6 +42,20 @@
 #define LIBSWSCALE_BUILD        LIBSWSCALE_VERSION_INT
 
 #define LIBSWSCALE_IDENT        "SwS" AV_STRINGIFY(LIBSWSCALE_VERSION)
+
+/**
+ * Those FF_API_* defines are not part of public API.
+ * They may change, break or disappear at any time.
+ */
+#ifndef FF_API_SWS_GETCONTEXT
+#define FF_API_SWS_GETCONTEXT  (LIBSWSCALE_VERSION_MAJOR < 3)
+#endif
+#ifndef FF_API_SWS_CPU_CAPS
+#define FF_API_SWS_CPU_CAPS    (LIBSWSCALE_VERSION_MAJOR < 3)
+#endif
+#ifndef FF_API_SWS_FORMAT_NAME
+#define FF_API_SWS_FORMAT_NAME  (LIBSWSCALE_VERSION_MAJOR < 3)
+#endif
 
 /**
  * Returns the LIBSWSCALE_VERSION_INT constant.
@@ -87,11 +101,18 @@ const char *swscale_license(void);
 #define SWS_ACCURATE_RND      0x40000
 #define SWS_BITEXACT          0x80000
 
+#if FF_API_SWS_CPU_CAPS
+/**
+ * CPU caps are autodetected now, those flags
+ * are only provided for API compatibility.
+ */
 #define SWS_CPU_CAPS_MMX      0x80000000
 #define SWS_CPU_CAPS_MMX2     0x20000000
 #define SWS_CPU_CAPS_3DNOW    0x40000000
 #define SWS_CPU_CAPS_ALTIVEC  0x10000000
 #define SWS_CPU_CAPS_BFIN     0x01000000
+#define SWS_CPU_CAPS_SSE2     0x02000000
+#endif
 
 #define SWS_MAX_REDUCE_CUTOFF 0.002
 
@@ -143,11 +164,27 @@ int sws_isSupportedInput(enum PixelFormat pix_fmt);
 int sws_isSupportedOutput(enum PixelFormat pix_fmt);
 
 /**
+ * Allocates an empty SwsContext. This must be filled and passed to
+ * sws_init_context(). For filling see AVOptions, options.c and
+ * sws_setColorspaceDetails().
+ */
+struct SwsContext *sws_alloc_context(void);
+
+/**
+ * Initializes the swscaler context sws_context.
+ *
+ * @return zero or positive value on success, a negative value on
+ * error
+ */
+int sws_init_context(struct SwsContext *sws_context, SwsFilter *srcFilter, SwsFilter *dstFilter);
+
+/**
  * Frees the swscaler context swsContext.
  * If swsContext is NULL, then does nothing.
  */
 void sws_freeContext(struct SwsContext *swsContext);
 
+#if FF_API_SWS_GETCONTEXT
 /**
  * Allocates and returns a SwsContext. You need it to perform
  * scaling/conversion operations using sws_scale().
@@ -160,11 +197,15 @@ void sws_freeContext(struct SwsContext *swsContext);
  * @param dstFormat the destination image format
  * @param flags specify which algorithm and options to use for rescaling
  * @return a pointer to an allocated context, or NULL in case of error
+ * @note this function is to be removed after a saner alternative is
+ *       written
+ * @deprecated Use sws_getCachedContext() instead.
  */
 struct SwsContext *sws_getContext(int srcW, int srcH, enum PixelFormat srcFormat,
                                   int dstW, int dstH, enum PixelFormat dstFormat,
                                   int flags, SwsFilter *srcFilter,
                                   SwsFilter *dstFilter, const double *param);
+#endif
 
 /**
  * Scales the image slice in srcSlice and puts the resulting scaled
@@ -194,6 +235,7 @@ struct SwsContext *sws_getContext(int srcW, int srcH, enum PixelFormat srcFormat
  */
 int sws_scale(struct SwsContext *context, const uint8_t* const srcSlice[], const int srcStride[],
               int srcSliceY, int srcSliceH, uint8_t* const dst[], const int dstStride[]);
+
 #if LIBSWSCALE_VERSION_MAJOR < 1
 /**
  * @deprecated Use sws_scale() instead.
@@ -205,7 +247,6 @@ int sws_scale_ordered(struct SwsContext *context, const uint8_t* const src[],
 
 /**
  * @param inv_table the yuv2rgb coefficients, normally ff_yuv2rgb_coeffs[x]
- * @param fullRange if 1 then the luma range is 0..255 if 0 it is 16..235
  * @return -1 if not supported
  */
 int sws_setColorspaceDetails(struct SwsContext *c, const int inv_table[4],
@@ -312,7 +353,7 @@ struct SwsContext *sws_getCachedContext(struct SwsContext *context,
  * @param num_pixels number of pixels to convert
  * @param palette    array with [256] entries, which must match color arrangement (RGB or BGR) of src
  */
-void sws_convertPalette8ToPacked32(const uint8_t *src, uint8_t *dst, long num_pixels, const uint8_t *palette);
+void sws_convertPalette8ToPacked32(const uint8_t *src, uint8_t *dst, int num_pixels, const uint8_t *palette);
 
 /**
  * Converts an 8bit paletted frame into a frame with a color depth of 24 bits.
@@ -324,7 +365,7 @@ void sws_convertPalette8ToPacked32(const uint8_t *src, uint8_t *dst, long num_pi
  * @param num_pixels number of pixels to convert
  * @param palette    array with [256] entries, which must match color arrangement (RGB or BGR) of src
  */
-void sws_convertPalette8ToPacked24(const uint8_t *src, uint8_t *dst, long num_pixels, const uint8_t *palette);
+void sws_convertPalette8ToPacked24(const uint8_t *src, uint8_t *dst, int num_pixels, const uint8_t *palette);
 
 
 #endif /* SWSCALE_SWSCALE_H */

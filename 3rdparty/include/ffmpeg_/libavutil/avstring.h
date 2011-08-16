@@ -114,4 +114,20 @@ size_t av_strlcatf(char *dst, size_t size, const char *fmt, ...);
  */
 char *av_d2str(double d);
 
+/**
+ * Unescape the given string until a non escaped terminating char,
+ * and return the token corresponding to the unescaped string.
+ *
+ * The normal \ and ' escaping is supported. Leading and trailing
+ * whitespaces are removed, unless they are escaped with '\' or are
+ * enclosed between ''.
+ *
+ * @param buf the buffer to parse, buf will be updated to point to the
+ * terminating char
+ * @param term a 0-terminated list of terminating chars
+ * @return the malloced unescaped string, which must be av_freed by
+ * the user, NULL in case of allocation failure
+ */
+char *av_get_token(const char **buf, const char *term);
+
 #endif /* AVUTIL_AVSTRING_H */
