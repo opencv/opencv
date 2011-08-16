@@ -5,27 +5,14 @@ using namespace std;
 using namespace cv;
 
 
-CameraInfo CameraInfo::load(const string &path)
+CameraParams::CameraParams() : focal(1), R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
+
+CameraParams::CameraParams(const CameraParams &other) { *this = other; }
+
+const CameraParams& CameraParams::operator =(const CameraParams &other)
 {
-    FileStorage fs(path, FileStorage::READ);
-    CV_Assert(fs.isOpened());
-
-    CameraInfo cam;
-    if (!fs["R"].isNone())
-        fs["R"] >> cam.R;
-    if (!fs["K"].isNone())
-        fs["K"] >> cam.K;
-    return cam;
-}
-
-
-void CameraInfo::save(const string &path)
-{
-    FileStorage fs(path, FileStorage::WRITE);
-    CV_Assert(fs.isOpened());
-
-    if (!R.empty())
-        fs << "R" << R;
-    if (!K.empty())
-        fs << "K" << K;
+    focal = other.focal;
+    R = other.R.clone();
+    t = other.t.clone();
+    return *this;
 }

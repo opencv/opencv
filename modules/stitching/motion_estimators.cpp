@@ -51,21 +51,6 @@ using namespace cv;
 
 //////////////////////////////////////////////////////////////////////////////
 
-CameraParams::CameraParams() : focal(1), R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
-
-CameraParams::CameraParams(const CameraParams &other) { *this = other; }
-
-const CameraParams& CameraParams::operator =(const CameraParams &other)
-{
-    focal = other.focal;
-    R = other.R.clone();
-    t = other.t.clone();
-    return *this;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-
 struct IncDistance
 {
     IncDistance(vector<int> &dists) : dists(&dists[0]) {}
@@ -434,7 +419,7 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
 
     const int num_images = static_cast<int>(pathes.size());
     set<pair<int,int> > span_tree_edges;
-    DjSets comps(num_images);
+    DisjointSets comps(num_images);
 
     for (int i = 0; i < num_images; ++i)
     {
@@ -442,11 +427,11 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
         {
             if (pairwise_matches[i*num_images + j].confidence < conf_threshold)
                 continue;
-            int comp1 = comps.find(i);
-            int comp2 = comps.find(j);
+            int comp1 = comps.findSetByElem(i);
+            int comp2 = comps.findSetByElem(j);
             if (comp1 != comp2)
             {
-                comps.merge(comp1, comp2);
+                comps.mergeSets(comp1, comp2);
                 span_tree_edges.insert(make_pair(i, j));
             }
         }
@@ -478,7 +463,7 @@ string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwis
 
     for (size_t i = 0; i < comps.size.size(); ++i)
     {
-        if (comps.size[comps.find(i)] == 1)
+        if (comps.size[comps.findSetByElem(i)] == 1)
         {
             string name = pathes[i];
             size_t prefix_len = name.find_last_of("/\\");
@@ -497,17 +482,17 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
 {
     const int num_images = static_cast<int>(features.size());
 
-    DjSets comps(num_images);
+    DisjointSets comps(num_images);
     for (int i = 0; i < num_images; ++i)
     {
         for (int j = 0; j < num_images; ++j)
         {
             if (pairwise_matches[i*num_images + j].confidence < conf_threshold)
                 continue;
-            int comp1 = comps.find(i);
-            int comp2 = comps.find(j);
+            int comp1 = comps.findSetByElem(i);
+            int comp2 = comps.findSetByElem(j);
             if (comp1 != comp2) 
-                comps.merge(comp1, comp2);
+                comps.mergeSets(comp1, comp2);
         }
     }
 
@@ -516,7 +501,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
     vector<int> indices;
     vector<int> indices_removed;
     for (int i = 0; i < num_images; ++i)
-        if (comps.find(i) == max_comp)
+        if (comps.findSetByElem(i) == max_comp)
             indices.push_back(i);    
         else
             indices_removed.push_back(i);
@@ -569,7 +554,7 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
         }
     }
 
-    DjSets comps(num_images);
+    DisjointSets comps(num_images);
     span_tree.create(num_images);
     vector<int> span_tree_powers(num_images, 0);
 
@@ -577,11 +562,11 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
     sort(edges.begin(), edges.end(), greater<GraphEdge>());
     for (size_t i = 0; i < edges.size(); ++i)
     {
-        int comp1 = comps.find(edges[i].from);
-        int comp2 = comps.find(edges[i].to);
+        int comp1 = comps.findSetByElem(edges[i].from);
+        int comp2 = comps.findSetByElem(edges[i].to);
         if (comp1 != comp2)
         {
-            comps.merge(comp1, comp2);
+            comps.mergeSets(comp1, comp2);
             span_tree.addEdge(edges[i].from, edges[i].to, edges[i].weight);
             span_tree.addEdge(edges[i].to, edges[i].from, edges[i].weight);
             span_tree_powers[edges[i].from]++;

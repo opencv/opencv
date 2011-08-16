@@ -45,18 +45,7 @@
 #include "precomp.hpp"
 #include "matchers.hpp"
 #include "util.hpp"
-
-struct CameraParams
-{
-    CameraParams();
-    CameraParams(const CameraParams& other);
-    const CameraParams& operator =(const CameraParams& other);
-
-    double focal; // Focal length
-    cv::Mat R; // Rotation
-    cv::Mat t; // Translation
-};
-
+#include "camera.hpp"
 
 class Estimator
 {

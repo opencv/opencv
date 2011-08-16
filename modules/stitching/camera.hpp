@@ -45,14 +45,15 @@
 #include "precomp.hpp"
 
 
-class CameraInfo
+struct CameraParams
 {
-public:
-    static CameraInfo load(const std::string &path);
-    void save(const std::string &path);
+    CameraParams();
+    CameraParams(const CameraParams& other);
+    const CameraParams& operator =(const CameraParams& other);
 
-    cv::Mat R;
-    cv::Mat K;
+    double focal; // Focal length
+    cv::Mat R; // Rotation
+    cv::Mat t; // Translation
 };
 
 #endif // #ifndef __OPENCV_CAMERA_HPP__

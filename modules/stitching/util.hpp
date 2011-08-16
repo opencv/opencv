@@ -57,14 +57,14 @@
 #define LOGLN(msg) LOG(msg << std::endl)
 
 
-class DjSets
+class DisjointSets
 {
 public:
-    DjSets(int n = 0) { create(n); }
+    DisjointSets(int elem_count = 0) { createOneElemSets(elem_count); }
 
-    void create(int n);
-    int find(int elem);
-    int merge(int set1, int set2);
+    void createOneElemSets(int elem_count);
+    int findSetByElem(int elem);
+    int mergeSets(int set1, int set2);
 
     std::vector<int> parent;
     std::vector<int> size;
