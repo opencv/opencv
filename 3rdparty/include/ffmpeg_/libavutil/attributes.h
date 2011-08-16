@@ -65,7 +65,7 @@
 #endif
 
 #ifndef av_cold
-#if (!defined(__ICC) || __ICC > 1110) && AV_GCC_VERSION_AT_LEAST(4,3)
+#if AV_GCC_VERSION_AT_LEAST(4,3)
 #    define av_cold __attribute__((cold))
 #else
 #    define av_cold
@@ -73,7 +73,7 @@
 #endif
 
 #ifndef av_flatten
-#if (!defined(__ICC) || __ICC > 1110) && AV_GCC_VERSION_AT_LEAST(4,1)
+#if AV_GCC_VERSION_AT_LEAST(4,1)
 #    define av_flatten __attribute__((flatten))
 #else
 #    define av_flatten
@@ -96,8 +96,29 @@
 #endif
 #endif
 
+/**
+ * Mark a variable as used and prevent the compiler from optimizing it
+ * away.  This is useful for variables accessed only from inline
+ * assembler without the compiler being aware.
+ */
+#ifndef av_used
+#if AV_GCC_VERSION_AT_LEAST(3,1)
+#    define av_used __attribute__((used))
+#else
+#    define av_used
+#endif
+#endif
+
+#ifndef av_alias
+#if AV_GCC_VERSION_AT_LEAST(3,3)
+#   define av_alias __attribute__((may_alias))
+#else
+#   define av_alias
+#endif
+#endif
+
 #ifndef av_uninit
-#if defined(__GNUC__) && !defined(__ICC)
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #    define av_uninit(x) x=x
 #else
 #    define av_uninit(x) x

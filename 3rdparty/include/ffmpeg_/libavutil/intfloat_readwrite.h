@@ -21,7 +21,7 @@
 #ifndef AVUTIL_INTFLOAT_READWRITE_H
 #define AVUTIL_INTFLOAT_READWRITE_H
 
-#include <msc_stdint.h>
+#include <stdint.h>
 #include "attributes.h"
 
 /* IEEE 80 bits extended float */

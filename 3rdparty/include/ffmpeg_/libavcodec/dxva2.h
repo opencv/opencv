@@ -23,7 +23,7 @@
 #ifndef AVCODEC_DXVA_H
 #define AVCODEC_DXVA_H
 
-#include <msc_stdint.h>
+#include <stdint.h>
 
 #include <dxva2api.h>
 

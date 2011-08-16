@@ -22,9 +22,9 @@
 #ifndef AVUTIL_LZO_H
 #define AVUTIL_LZO_H
 
-#include <msc_stdint.h>
+#include <stdint.h>
 
-/** \defgroup errflags Error flags returned by av_lzo1x_decode
+/** @name Error flags returned by av_lzo1x_decode
   * \{ */
 //! end of the input buffer reached before decoding finished
 #define AV_LZO_INPUT_DEPLETED 1
