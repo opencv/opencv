@@ -942,7 +942,7 @@ struct HOGInvoker
     HOGInvoker( const HOGDescriptor* _hog, const Mat& _img,
                 double _hitThreshold, Size _winStride, Size _padding,
                 const double* _levelScale, ConcurrentRectVector* _vec, 
-                vector<double>* _weights=0, vector<double>* _scales=0 ) 
+                ConcurrentDoubleVector* _weights=0, ConcurrentDoubleVector* _scales=0 ) 
     {
         hog = _hog;
         img = _img;
@@ -1002,8 +1002,8 @@ struct HOGInvoker
     Size padding;
     const double* levelScale;
     ConcurrentRectVector* vec;
-    vector<double>* weights;
-    vector<double>* scales;
+    ConcurrentDoubleVector* weights;
+    ConcurrentDoubleVector* scales;
 };
 
 
@@ -1029,14 +1029,18 @@ void HOGDescriptor::detectMultiScale(
     levelScale.resize(levels);
 
     ConcurrentRectVector allCandidates;
-
+    ConcurrentDoubleVector tempScales;
+    ConcurrentDoubleVector tempWeights;
     vector<double> foundScales;
     
     parallel_for(BlockedRange(0, (int)levelScale.size()),
-                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &foundWeights, &foundScales));
+                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &tempWeights, &tempScales));
 
-    foundLocations.resize(allCandidates.size());
-    std::copy(allCandidates.begin(), allCandidates.end(), foundLocations.begin());
+    std::copy(tempScales.begin(), tempScales.end(), back_inserter(foundScales));
+    foundLocations.clear();
+    std::copy(allCandidates.begin(), allCandidates.end(), back_inserter(foundLocations));
+    foundWeights.clear();
+    std::copy(tempWeights.begin(), tempWeights.end(), back_inserter(foundWeights));
 
     if ( useMeanshiftGrouping )
     {
