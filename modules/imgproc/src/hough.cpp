@@ -325,7 +325,7 @@ icvHoughLinesSDiv( const CvMat* img,
     {
         for( ti = 0; ti < tn; ti++ )
         {
-            if( caccum[ri * tn + ti > threshold] )
+            if( caccum[ri * tn + ti] > threshold )
             {
                 count++;
             }
