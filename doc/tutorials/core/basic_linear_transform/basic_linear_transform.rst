@@ -18,8 +18,8 @@ In this tutorial you will learn how to:
 
    + Get some cool info about pixel transformations
 
-Cool Theory
-=================
+Theory
+=======
  
 .. note::
    The explanation below belongs to the book `Computer Vision: Algorithms and Applications <http://szeliski.org/Book/>`_  by Richard Szeliski 
@@ -27,44 +27,52 @@ Cool Theory
 Image Processing
 --------------------
 
-* A general image processing operator is a function that takes one or more input images and produces an output image. 
+.. container:: enumeratevisibleitemswithsquare
 
-* Image transforms can be seen as:
+   * A general image processing operator is a function that takes one or more input images and produces an output image. 
 
-  * Point operators (pixel transforms)
-  * Neighborhood (area-based) operators
+   * Image transforms can be seen as:
+
+     + Point operators (pixel transforms)
+     + Neighborhood (area-based) operators
 
 
 Pixel Transforms
 ^^^^^^^^^^^^^^^^^
 
-* In this kind of image processing transform, each output pixel's value depends on only the corresponding input pixel value (plus, potentially, some globally collected information or parameters).
+.. container:: enumeratevisibleitemswithsquare
 
-* Examples of such operators include *brightness and contrast adjustments* as well as color correction and transformations.
+   * In this kind of image processing transform, each output pixel's value depends on only the corresponding input pixel value (plus, potentially, some globally collected information or parameters).
+
+   * Examples of such operators include *brightness and contrast adjustments* as well as color correction and transformations.
 
 Brightness and contrast adjustments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* Two commonly used point processes are *multiplication* and *addition* with a constant:
 
-  .. math::
+.. container:: enumeratevisibleitemswithsquare
 
-     g(x) = \alpha f(x) + \beta
+   * Two commonly used point processes are *multiplication* and *addition* with a constant:
 
-* The parameters :math:`\alpha > 0` and :math:`\beta` are often called the *gain* and *bias* parameters; sometimes these parameters are said to control *contrast* and *brightness* respectively.
-
-* You can think of :math:`f(x)` as the source image pixels and :math:`g(x)` as the output image pixels. Then, more conveniently we can write the expression as:
-
-  .. math::
-   
-     g(i,j) = \alpha \cdot f(i,j) + \beta
+     .. math::
+ 
+        g(x) = \alpha f(x) + \beta
   
-  where :math:`i` and :math:`j` indicates that the pixel is located in the *i-th* row and *j-th* column. 
+   * The parameters :math:`\alpha > 0` and :math:`\beta` are often called the *gain* and *bias* parameters; sometimes these parameters are said to control *contrast* and *brightness* respectively.
+
+   * You can think of :math:`f(x)` as the source image pixels and :math:`g(x)` as the output image pixels. Then, more conveniently we can write the expression as:
+
+     .. math::
+   
+        g(i,j) = \alpha \cdot f(i,j) + \beta
+  
+     where :math:`i` and :math:`j` indicates that the pixel is located in the *i-th* row and *j-th* column. 
 
 Code
 =====
 
-* The following code performs the operation :math:`g(i,j) = \alpha \cdot f(i,j) + \beta`
-* Here it is:
+.. container:: enumeratevisibleitemswithsquare
+
+   * The following code performs the operation :math:`g(i,j) = \alpha \cdot f(i,j) + \beta` :
 
 .. code-block:: cpp
 
@@ -132,8 +140,10 @@ Explanation
 
 #. Now, since we will make some transformations to this image, we need a new Mat object to store it. Also, we want this to have the following features:
    
-   * Initial pixel values equal to zero
-   * Same size and type as the original image
+   .. container:: enumeratevisibleitemswithsquare
+
+      * Initial pixel values equal to zero
+      * Same size and type as the original image
  
    .. code-block:: cpp
 
@@ -155,9 +165,11 @@ Explanation
  
    Notice the following:
 
-   * To access each pixel in the images we are using this syntax: *image.at<Vec3b>(y,x)[c]* where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2). 
+   .. container:: enumeratevisibleitemswithsquare
 
-   * Since the operation :math:`\alpha \cdot p(i,j) + \beta` can give values out of range or not integers (if :math:`\alpha` is float), we use :saturate_cast:`saturate_cast <>` to make sure the values are valid.
+      * To access each pixel in the images we are using this syntax: *image.at<Vec3b>(y,x)[c]* where *y* is the row, *x* is the column and *c* is R, G or B (0, 1 or 2). 
+
+      * Since the operation :math:`\alpha \cdot p(i,j) + \beta` can give values out of range or not integers (if :math:`\alpha` is float), we use :saturate_cast:`saturate_cast <>` to make sure the values are valid.
 
 
 #. Finally, we create windows and show the images, the usual way.

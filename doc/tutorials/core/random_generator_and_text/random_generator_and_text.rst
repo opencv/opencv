@@ -8,16 +8,21 @@ Goals
 
 In this tutorial you will learn how to:
 
-* Use the *Random Number generator class* (:rng:`RNG <>`) and how to get a random number from a uniform distribution.
-* Display text on an OpenCV window by using the function :put_text:`putText <>`
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the *Random Number generator class* (:rng:`RNG <>`) and how to get a random number from a uniform distribution.
+   * Display text on an OpenCV window by using the function :put_text:`putText <>`
 
 Code
 =====
-* In the previous tutorial (:ref:`Drawing_1`) we drew diverse geometric figures, giving as input parameters such as coordinates (in the form of :point:`Points <>`), color, thickness, etc. You might have noticed that we gave specific values for these arguments.
- 
-* In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops* .
 
-* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Basic/Drawing_2.cpp>`_ .
+.. container:: enumeratevisibleitemswithsquare
+
+   * In the previous tutorial (:ref:`Drawing_1`) we drew diverse geometric figures, giving as input parameters such as coordinates (in the form of :point:`Points <>`), color, thickness, etc. You might have noticed that we gave specific values for these arguments.
+ 
+   * In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops* .
+
+   * This code is in your OpenCV sample folder. Otherwise you can grab it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp>`_ .
 
 Explanation
 ============
@@ -172,12 +177,14 @@ Explanation
 
    So, what does the function :put_text:`putText <>` do? In our example:
 
-   * Draws the text **"Testing text rendering"** in **image**
-   * The bottom-left corner of the text will be located in the Point **org**
-   * The font type is a random integer value in the range: :math:`[0, 8>`.
-   * The scale of the font is denoted by the expression **rng.uniform(0, 100)x0.05 + 0.1** (meaning its range is: :math:`[0.1, 5.1>`)
-   * The text color is random (denoted by **randomColor(rng)**)
-   * The text thickness ranges between 1 and 10, as specified by **rng.uniform(1,10)**
+   .. container:: enumeratevisibleitemswithsquare
+
+      * Draws the text **"Testing text rendering"** in **image**
+      * The bottom-left corner of the text will be located in the Point **org**
+      * The font type is a random integer value in the range: :math:`[0, 8>`.
+      * The scale of the font is denoted by the expression **rng.uniform(0, 100)x0.05 + 0.1** (meaning its range is: :math:`[0.1, 5.1>`)
+      * The text color is random (denoted by **randomColor(rng)**)
+      * The text thickness ranges between 1 and 10, as specified by **rng.uniform(1,10)**
 
    As a result, we will get (analagously to the other drawing functions) **NUMBER** texts over our image, in random locations.
 

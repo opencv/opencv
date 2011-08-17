@@ -70,7 +70,7 @@ Erosion
 Code
 ======
 
-This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Image_Processing/Morphology_1.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <https://code.ros.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp>`_
 
 .. code-block:: cpp 
 
@@ -175,16 +175,16 @@ Explanation
 
 #. Most of the stuff shown is known by you (if you have any doubt, please refer to the tutorials in previous sections). Let's check the general structure of the program:
 
-   * Load an image (can be RGB or grayscale)
+   .. container:: enumeratevisibleitemswithsquare
 
-   * Create two windows (one for dilation output, the other for erosion)
+      * Load an image (can be RGB or grayscale)
+      * Create two windows (one for dilation output, the other for erosion)
+      * Create a set of 02 Trackbars for each operation:
 
-   * Create a set of 02 Trackbars for each operation:
+        * The first trackbar "Element" returns either **erosion_elem** or **dilation_elem**
+        * The second trackbar "Kernel size" return **erosion_size** or **dilation_size** for the corresponding operation. 
 
-     * The first trackbar "Element" returns either **erosion_elem** or **dilation_elem**
-     * The second trackbar "Kernel size" return **erosion_size** or **dilation_size** for the corresponding operation. 
-
-   * Every time we move any slider, the user's function **Erosion** or **Dilation** will be called and it will update the output image based on the current trackbar values.
+      * Every time we move any slider, the user's function **Erosion** or **Dilation** will be called and it will update the output image based on the current trackbar values.
   
    Let's analyze these two functions:
  
@@ -220,13 +220,15 @@ Explanation
      	    				        Size( 2*erosion_size + 1, 2*erosion_size+1 ),
 				       	        Point( erosion_size, erosion_size ) );   
 						
-        We can choose any of three shapes for our kernel:
+       We can choose any of three shapes for our kernel:
 
-	* Rectangular box: MORPH_RECT
- 	* Cross:  MORPH_CROSS 
-	* Ellipse: MORPH_ELLIPSE
+       .. container:: enumeratevisibleitemswithsquare
 
-        Then, we just have to specify the size of our kernel and the *anchor point*. If not specified, it is assumed to be in the center.
+	  + Rectangular box: MORPH_RECT
+ 	  + Cross:  MORPH_CROSS 
+	  + Ellipse: MORPH_ELLIPSE
+
+       Then, we just have to specify the size of our kernel and the *anchor point*. If not specified, it is assumed to be in the center.
 
    * That is all. We are ready to perform the erosion of our image.
 

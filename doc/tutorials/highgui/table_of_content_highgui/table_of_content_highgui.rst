@@ -1,7 +1,7 @@
 .. _Table-Of-Content-HighGui:
 
 *highgui* module. High Level GUI and Media
------------------------------------------------------------
+------------------------------------------
 
 This section contains valuable tutorials about how to read/save your image/video files and how to use the built-in graphical user interface of the library. 
 
@@ -45,6 +45,26 @@ This section contains valuable tutorials about how to read/save your image/video
                    :height: 90pt
                    :width:  90pt
 
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  =============== ======================================================
+  |hVideoWrite|   *Title:* :ref:`videoWriteHighGui`
+
+                  *Compatibility:* > OpenCV 2.0
+
+                  *Author:* |Author_BernatG|
+
+                  Whenever you work with video feeds you may eventually want to save your image processing result in a form of a new video file. Here's how to do it.
+
+  =============== ======================================================
+
+  .. |hVideoWrite| image:: images/video-write.png
+                   :height: 90pt
+                   :width:  90pt
+
+
 .. raw:: latex
 
    \pagebreak
@@ -54,3 +74,4 @@ This section contains valuable tutorials about how to read/save your image/video
 
    ../trackbar/trackbar
    ../video-input-psnr-ssim/video-input-psnr-ssim
+   ../video-write/video-write

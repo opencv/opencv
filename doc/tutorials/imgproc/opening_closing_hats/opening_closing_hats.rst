@@ -8,25 +8,28 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Use the OpenCV function :morphology_ex:`morphologyEx <>` to apply Morphological Transformation such as:
-  
-  * Opening 
-  * Closing
-  * Morphological Gradient
-  * Top Hat
-  * Black Hat
+.. container:: enumeratevisibleitemswithsquare
 
-Cool Theory
-============
+   * Use the OpenCV function :morphology_ex:`morphologyEx <>` to apply Morphological Transformation such as:
+  
+     + Opening 
+     + Closing
+     + Morphological Gradient
+     + Top Hat
+     + Black Hat
+
+Theory
+=======
 
 .. note::
    The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
 In the previous tutorial we covered two basic Morphology operations: 
 
-* Erosion
+.. container:: enumeratevisibleitemswithsquare
 
-* Dilation. 
+   * Erosion
+   * Dilation. 
 
 Based on these two we can effectuate more sophisticated transformations to our images. Here we discuss briefly 05 operations offered by OpenCV:
 
@@ -246,11 +249,11 @@ Explanation
      * **dst**: Output image
      * **operation**: The kind of morphology transformation to be performed. Note that we have 5 alternatives:
 
-       * *Opening*: MORPH_OPEN : 2
-       * *Closing*: MORPH_CLOSE: 3
-       * *Gradient*: MORPH_GRADIENT: 4
-       * *Top Hat*: MORPH_TOPHAT: 5
-       * *Black Hat*: MORPH_BLACKHAT: 6
+       + *Opening*: MORPH_OPEN : 2
+       + *Closing*: MORPH_CLOSE: 3
+       + *Gradient*: MORPH_GRADIENT: 4
+       + *Top Hat*: MORPH_TOPHAT: 5
+       + *Black Hat*: MORPH_BLACKHAT: 6
 
        As you can see the values range from <2-6>, that is why we add (+2) to the values entered by the Trackbar:
 

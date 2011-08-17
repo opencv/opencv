@@ -8,10 +8,12 @@ Goal
 
 In this tutorial you will learn how to:
 
-* Use the OpenCV function :filter2d:`filter2D <>` to create your own linear filters.  
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV function :filter2d:`filter2D <>` to create your own linear filters.  
   
 Theory
-============
+=======
 
 .. note::
    The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.

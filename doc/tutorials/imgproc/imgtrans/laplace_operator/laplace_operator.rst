@@ -9,7 +9,9 @@ Goal
 
 In this tutorial you will learn how to:
 
-a. Use the OpenCV function :laplacian:`Laplacian <>` to implement a discrete analog of the *Laplacian operator*.
+.. container:: enumeratevisibleitemswithsquare
+
+   * Use the OpenCV function :laplacian:`Laplacian <>` to implement a discrete analog of the *Laplacian operator*.
 
 
 Theory
