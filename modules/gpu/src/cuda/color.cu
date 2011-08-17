@@ -44,11 +44,15 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/color.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::device;
-
-namespace cv { namespace gpu { namespace color
+namespace cv { namespace gpu { namespace device
 {
+    template <> struct TransformFunctorTraits<bgra_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
     #define OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, traits) \
         void name(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream) \
         { \

@@ -100,15 +100,32 @@ namespace cv { namespace gpu { namespace device
 
     namespace detail
     {
-        template <typename T, typename D, int bidx> struct RGB2RGB : public unary_function<T, D>
+        template <typename T, int scn, int dcn, int bidx> struct RGB2RGB : unary_function<typename TypeVec<T, scn>::vec_type, typename TypeVec<T, dcn>::vec_type>
         {
-            __device__ D operator()(const T& src) const
+            __device__ typename TypeVec<T, dcn>::vec_type operator()(const typename TypeVec<T, scn>::vec_type& src) const
             {
-                D dst;
+                typename TypeVec<T, dcn>::vec_type dst;
+
                 dst.x = (&src.x)[bidx];
                 dst.y = src.y;
                 dst.z = (&src.x)[bidx^2];
-                setAlpha(dst, getAlpha<typename VecTraits<T>::elem_type>(src));
+                setAlpha(dst, getAlpha<T>(src));
+
+                return dst;
+            }
+        };
+
+        template <> struct RGB2RGB<uchar, 4, 4, 2> : unary_function<uint, uint>
+        {
+            __device__ uint operator()(uint src) const
+            {
+                uint dst = 0;
+
+                dst |= (0xff & (src >> 16));
+                dst |= (0xff & (src >> 8)) << 8;
+                dst |= (0xff & (src)) << 16;
+                dst |= (0xff & (src >> 24)) << 24;
+
                 return dst;
             }
         };
@@ -117,10 +134,10 @@ namespace cv { namespace gpu { namespace device
 #define OPENCV_GPU_IMPLEMENT_RGB2RGB_TRAITS(name, scn, dcn, bidx) \
     template <typename T> struct name ## _traits \
     { \
-        typedef detail::RGB2RGB<typename TypeVec<T, scn>::vec_type, typename TypeVec<T, dcn>::vec_type, bidx> functor_type; \
+        typedef detail::RGB2RGB<T, scn, dcn, bidx> functor_type; \
         static __host__ __device__ __forceinline__ functor_type create_functor() \
         { \
-            return detail::RGB2RGB<typename TypeVec<T, scn>::vec_type, typename TypeVec<T, dcn>::vec_type, bidx>(); \
+            return functor_type(); \
         } \
     };
 
