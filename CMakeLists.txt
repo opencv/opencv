@@ -1223,7 +1223,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 
     if(X86 OR X86_64)
-        if(NOT APPLE AND ${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+        if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
             set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
         endif()
     endif()
@@ -1499,9 +1499,15 @@ set(BUILD_PACKAGE ON CACHE BOOL "Enables 'make package_source' command")
 if(BUILD_PACKAGE)
     set(TARBALL_NAME "${CMAKE_PROJECT_NAME}-${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_VERSION_PATCH}")
     if (NOT WIN32)
+        if(APPLE)
+            set(TAR_CMD gnutar)
+        else()
+            set(TAR_CMD tar)
+        endif()
+        set(TAR_TRANSFORM "\"s,^,${TARBALL_NAME}/,\"")
         add_custom_target(package_source
         #TODO: maybe we should not remove dll's
-        COMMAND tar --transform 's,^,${TARBALL_NAME}/,S' -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude-vcs --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
+        COMMAND ${TAR_CMD} --transform ${TAR_TRANSFORM} -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude=".svn" --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     else()
         add_custom_target(package_source
