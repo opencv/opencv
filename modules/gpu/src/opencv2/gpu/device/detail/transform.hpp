@@ -45,6 +45,7 @@
 
 #include "internal_shared.hpp"
 #include "../vec_traits.hpp"
+#include "../functional.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -68,51 +69,17 @@ namespace cv { namespace gpu { namespace device
 
         //! Read Write Traits
 
-        template <size_t src_elem_size, size_t dst_elem_size>
-        struct UnReadWriteTraits_
+        template <typename T, typename D, int shift> struct UnaryReadWriteTraits
         {
-            enum { shift = 1 };
-        };
-        template <size_t src_elem_size>
-        struct UnReadWriteTraits_<src_elem_size, 1>
-        {
-            enum { shift = 4 };
-        };
-        template <size_t src_elem_size>
-        struct UnReadWriteTraits_<src_elem_size, 2>
-        {
-            enum { shift = 2 };
-        };
-        template <typename T, typename D> struct UnReadWriteTraits
-        {
-            enum { shift = UnReadWriteTraits_<sizeof(T), sizeof(D)>::shift };
-            
             typedef typename TypeVec<T, shift>::vec_type read_type;
             typedef typename TypeVec<D, shift>::vec_type write_type;
         };
 
-        template <size_t src_elem_size1, size_t src_elem_size2, size_t dst_elem_size>
-        struct BinReadWriteTraits_
+        template <typename T1, typename T2, typename D, int shift> struct BinaryReadWriteTraits
         {
-            enum { shift = 1 };
-        };
-        template <size_t src_elem_size1, size_t src_elem_size2>
-        struct BinReadWriteTraits_<src_elem_size1, src_elem_size2, 1>
-        {
-            enum { shift = 4 };
-        };
-        template <size_t src_elem_size1, size_t src_elem_size2>
-        struct BinReadWriteTraits_<src_elem_size1, src_elem_size2, 2>
-        {
-            enum { shift = 2 };
-        };
-        template <typename T1, typename T2, typename D> struct BinReadWriteTraits
-        {
-            enum {shift = BinReadWriteTraits_<sizeof(T1), sizeof(T2), sizeof(D)>::shift};
-
             typedef typename TypeVec<T1, shift>::vec_type read_type1;
             typedef typename TypeVec<T2, shift>::vec_type read_type2;
-            typedef typename TypeVec<D , shift>::vec_type write_type;
+            typedef typename TypeVec<D, shift>::vec_type write_type;
         };
 
         //! Transform kernels
@@ -206,29 +173,73 @@ namespace cv { namespace gpu { namespace device
                     dst.w = op(src1.w, src2.w);
             }
         };
+        template <> struct OpUnroller<8>
+        {
+            template <typename T, typename D, typename UnOp, typename Mask>
+            static __device__ __forceinline__ void unroll(const T& src, D& dst, const Mask& mask, const UnOp& op, int x_shifted, int y)
+            {
+                if (mask(y, x_shifted))
+                    dst.a0 = op(src.a0);
+                if (mask(y, x_shifted + 1))
+                    dst.a1 = op(src.a1);
+                if (mask(y, x_shifted + 2))
+                    dst.a2 = op(src.a2);
+                if (mask(y, x_shifted + 3))
+                    dst.a3 = op(src.a3);
+                if (mask(y, x_shifted + 4))
+                    dst.a4 = op(src.a4);
+                if (mask(y, x_shifted + 5))
+                    dst.a5 = op(src.a5);
+                if (mask(y, x_shifted + 6))
+                    dst.a6 = op(src.a6);
+                if (mask(y, x_shifted + 7))
+                    dst.a7 = op(src.a7);
+            }
+
+            template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
+            static __device__ __forceinline__ void unroll(const T1& src1, const T2& src2, D& dst, const Mask& mask, const BinOp& op, int x_shifted, int y)
+            {
+                if (mask(y, x_shifted))
+                    dst.a0 = op(src1.a0, src2.a0);
+                if (mask(y, x_shifted + 1))
+                    dst.a1 = op(src1.a1, src2.a1);
+                if (mask(y, x_shifted + 2))
+                    dst.a2 = op(src1.a2, src2.a2);
+                if (mask(y, x_shifted + 3))
+                    dst.a3 = op(src1.a3, src2.a3);
+                if (mask(y, x_shifted + 4))
+                    dst.a4 = op(src1.a4, src2.a4);
+                if (mask(y, x_shifted + 5))
+                    dst.a5 = op(src1.a5, src2.a5);
+                if (mask(y, x_shifted + 6))
+                    dst.a6 = op(src1.a6, src2.a6);
+                if (mask(y, x_shifted + 7))
+                    dst.a7 = op(src1.a7, src2.a7);
+            }
+        };
 
         template <typename T, typename D, typename UnOp, typename Mask>
         __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep_<D> dst_, const Mask mask, const UnOp op)
         {
-            typedef typename UnReadWriteTraits<T, D>::read_type read_type;
-            typedef typename UnReadWriteTraits<T, D>::write_type write_type;
-            const int shift = UnReadWriteTraits<T, D>::shift;
+            typedef TransformFunctorTraits<UnOp> ft;
+            typedef typename UnaryReadWriteTraits<T, D, ft::smart_shift>::read_type read_type;
+            typedef typename UnaryReadWriteTraits<T, D, ft::smart_shift>::write_type write_type;
 
             const int x = threadIdx.x + blockIdx.x * blockDim.x;
             const int y = threadIdx.y + blockIdx.y * blockDim.y;
-            const int x_shifted = x * shift;
+            const int x_shifted = x * ft::smart_shift;
 
             if (y < src_.rows)
             {
                 const T* src = src_.ptr(y);
                 D* dst = dst_.ptr(y);
 
-                if (x_shifted + shift - 1 < src_.cols)
+                if (x_shifted + ft::smart_shift - 1 < src_.cols)
                 {
                     const read_type src_n_el = ((const read_type*)src)[x];
                     write_type dst_n_el;
 
-                    OpUnroller<shift>::unroll(src_n_el, dst_n_el, mask, op, x_shifted, y);
+                    OpUnroller<ft::smart_shift>::unroll(src_n_el, dst_n_el, mask, op, x_shifted, y);
 
                     ((write_type*)dst)[x] = dst_n_el;
                 }
@@ -259,14 +270,14 @@ namespace cv { namespace gpu { namespace device
         __global__ static void transformSmart(const DevMem2D_<T1> src1_, const PtrStep_<T2> src2_, PtrStep_<D> dst_, 
             const Mask mask, const BinOp op)
         {
-            typedef typename BinReadWriteTraits<T1, T2, D>::read_type1 read_type1;
-            typedef typename BinReadWriteTraits<T1, T2, D>::read_type2 read_type2;
-            typedef typename BinReadWriteTraits<T1, T2, D>::write_type write_type;
-            const int shift = BinReadWriteTraits<T1, T2, D>::shift;
+            typedef TransformFunctorTraits<BinOp> ft;
+            typedef typename BinaryReadWriteTraits<T1, T2, D, ft::smart_shift>::read_type1 read_type1;
+            typedef typename BinaryReadWriteTraits<T1, T2, D, ft::smart_shift>::read_type2 read_type2;
+            typedef typename BinaryReadWriteTraits<T1, T2, D, ft::smart_shift>::write_type write_type;
 
             const int x = threadIdx.x + blockIdx.x * blockDim.x;
             const int y = threadIdx.y + blockIdx.y * blockDim.y;
-            const int x_shifted = x * shift;
+            const int x_shifted = x * ft::smart_shift;
 
             if (y < src1_.rows)
             {
@@ -274,13 +285,13 @@ namespace cv { namespace gpu { namespace device
                 const T2* src2 = src2_.ptr(y);
                 D* dst = dst_.ptr(y);
 
-                if (x_shifted + shift - 1 < src1_.cols)
+                if (x_shifted + ft::smart_shift - 1 < src1_.cols)
                 {
                     const read_type1 src1_n_el = ((const read_type1*)src1)[x];
                     const read_type2 src2_n_el = ((const read_type2*)src2)[x];
                     write_type dst_n_el;
                     
-                    OpUnroller<shift>::unroll(src1_n_el, src2_n_el, dst_n_el, mask, op, x_shifted, y);
+                    OpUnroller<ft::smart_shift>::unroll(src1_n_el, src2_n_el, dst_n_el, mask, op, x_shifted, y);
 
                     ((write_type*)dst)[x] = dst_n_el;
                 }
@@ -308,7 +319,7 @@ namespace cv { namespace gpu { namespace device
                 const T2 src2_data = src2.ptr(y)[x];
                 dst.ptr(y)[x] = op(src1_data, src2_data);
             }
-        }        
+        }
 
         template <bool UseSmart> struct TransformDispatcher;
         template<> struct TransformDispatcher<false>
@@ -316,11 +327,10 @@ namespace cv { namespace gpu { namespace device
             template <typename T, typename D, typename UnOp, typename Mask>
             static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
             {
-                dim3 threads(16, 16, 1);
-                dim3 grid(1, 1, 1);
+                typedef TransformFunctorTraits<UnOp> ft;
 
-                grid.x = divUp(src.cols, threads.x);
-                grid.y = divUp(src.rows, threads.y);        
+                const dim3 threads(ft::simple_block_dim_x, ft::simple_block_dim_y, 1);
+                const dim3 grid(divUp(src.cols, threads.x), divUp(src.rows, threads.y), 1);     
 
                 transformSimple<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
@@ -332,11 +342,10 @@ namespace cv { namespace gpu { namespace device
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
             static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
             {
-                dim3 threads(16, 16, 1);
-                dim3 grid(1, 1, 1);
+                typedef TransformFunctorTraits<BinOp> ft;
 
-                grid.x = divUp(src1.cols, threads.x);
-                grid.y = divUp(src1.rows, threads.y);        
+                const dim3 threads(ft::simple_block_dim_x, ft::simple_block_dim_y, 1);
+                const dim3 grid(divUp(src1.cols, threads.x), divUp(src1.rows, threads.y), 1);     
 
                 transformSimple<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
@@ -350,13 +359,12 @@ namespace cv { namespace gpu { namespace device
             template <typename T, typename D, typename UnOp, typename Mask>
             static void call(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
             {
-                const int shift = UnReadWriteTraits<T, D>::shift;
+                typedef TransformFunctorTraits<UnOp> ft;
 
-                dim3 threads(16, 16, 1);
-                dim3 grid(1, 1, 1);            
+                StaticAssert<ft::smart_shift != 1>::check();
 
-                grid.x = divUp(src.cols, threads.x * shift);
-                grid.y = divUp(src.rows, threads.y);        
+                const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
+                const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);      
 
                 transformSmart<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
@@ -368,13 +376,12 @@ namespace cv { namespace gpu { namespace device
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
             static void call(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
             {
-                const int shift = BinReadWriteTraits<T1, T2, D>::shift;
+                typedef TransformFunctorTraits<BinOp> ft;
 
-                dim3 threads(16, 16, 1);
-                dim3 grid(1, 1, 1);
+                StaticAssert<ft::smart_shift != 1>::check();
 
-                grid.x = divUp(src1.cols, threads.x * shift);
-                grid.y = divUp(src1.rows, threads.y);        
+                const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
+                const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);    
 
                 transformSmart<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
@@ -382,44 +389,20 @@ namespace cv { namespace gpu { namespace device
                 if (stream == 0)
                     cudaSafeCall( cudaDeviceSynchronize() );            
             }
-        };
-
-        template <typename T, typename D, int scn, int dcn> struct UseSmartUn_
-        {
-            static const bool value = false;
-        };
-        template <typename T, typename D> struct UseSmartUn_<T, D, 1, 1>
-        {
-            static const bool value = UnReadWriteTraits<T, D>::shift != 1;
-        };
-        template <typename T, typename D> struct UseSmartUn
-        {
-            static const bool value = UseSmartUn_<T, D, VecTraits<T>::cn, VecTraits<D>::cn>::value;
-        };
-
-        template <typename T1, typename T2, typename D, int src1cn, int src2cn, int dstcn> struct UseSmartBin_
-        {
-            static const bool value = false;
-        };
-        template <typename T1, typename T2, typename D> struct UseSmartBin_<T1, T2, D, 1, 1, 1>
-        {
-            static const bool value = BinReadWriteTraits<T1, T2, D>::shift != 1;
-        };
-        template <typename T1, typename T2, typename D> struct UseSmartBin
-        {
-            static const bool value = UseSmartBin_<T1, T2, D, VecTraits<T1>::cn, VecTraits<T2>::cn, VecTraits<D>::cn>::value;
-        };
+        };        
 
         template <typename T, typename D, typename UnOp, typename Mask>
         static void transform_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, const Mask& mask, cudaStream_t stream)
         {
-            TransformDispatcher< UseSmartUn<T, D>::value >::call(src, dst, op, mask, stream);
+            typedef TransformFunctorTraits<UnOp> ft;
+            TransformDispatcher<VecTraits<T>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src, dst, op, mask, stream);
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
         static void transform_caller(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, const Mask& mask, cudaStream_t stream)
         {
-            TransformDispatcher< UseSmartBin<T1, T2, D>::value >::call(src1, src2, dst, op, mask, stream);
+            typedef TransformFunctorTraits<BinOp> ft;
+            TransformDispatcher<VecTraits<T1>::cn == 1 && VecTraits<T2>::cn == 1 && VecTraits<D>::cn == 1 && ft::smart_shift != 1>::call(src1, src2, dst, op, mask, stream);
         }
     }
 }}}

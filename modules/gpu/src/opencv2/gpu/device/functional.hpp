@@ -46,11 +46,16 @@
 #include <thrust/functional.h>
 #include "internal_shared.hpp"
 #include "saturate_cast.hpp"
+#include "vec_traits.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
+    // Function Objects
+
     using thrust::unary_function;
     using thrust::binary_function;
+
+    // Arithmetic Operations
 
     using thrust::plus;
     using thrust::minus;
@@ -58,6 +63,8 @@ namespace cv { namespace gpu { namespace device
     using thrust::divides;
     using thrust::modulus;
     using thrust::negate;
+
+    // Comparison Operations
     
     using thrust::equal_to;
     using thrust::not_equal_to;
@@ -65,10 +72,14 @@ namespace cv { namespace gpu { namespace device
     using thrust::less;
     using thrust::greater_equal;
     using thrust::less_equal;
+
+    // Logical Operations
     
     using thrust::logical_and;
     using thrust::logical_or;
     using thrust::logical_not;
+
+    // Bitwise Operations
 
     using thrust::bit_and;
     using thrust::bit_or;
@@ -78,7 +89,13 @@ namespace cv { namespace gpu { namespace device
         __forceinline__ __device__ T operator ()(const T& v) const {return ~v;}
     };
 
-    using thrust::identity;
+    // Generalized Identity Operations
+
+    using thrust::identity;    
+    using thrust::project1st;
+    using thrust::project2nd;
+
+    // Min/Max Operations
 
 #define OPENCV_GPU_IMPLEMENT_MINMAX(name, type, op) \
     template <> struct name<type> : binary_function<type, type, type> \
@@ -115,15 +132,8 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_MINMAX(minimum, double, fmin)
 
 #undef OPENCV_GPU_IMPLEMENT_MINMAX
-    
-    using thrust::project1st;
-    using thrust::project2nd;
 
-    using thrust::unary_negate;
-    using thrust::not1;
-
-    using thrust::binary_negate;
-    using thrust::not2;
+    // Math functions
 
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(func) \
     template <typename T> struct func ## _func : unary_function<T, float> \
@@ -192,6 +202,8 @@ namespace cv { namespace gpu { namespace device
         }
     };
 
+    // Saturate Cast Functor
+
     template <typename T, typename D> struct saturate_cast_func : unary_function<T, D>
     {
         __forceinline__ __device__ D operator ()(const T& v) const
@@ -199,6 +211,8 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(v);
         }
     };
+
+    // Threshold Functors
 
     template <typename T> struct thresh_binary_func : unary_function<T, T>
     {
@@ -256,7 +270,15 @@ namespace cv { namespace gpu { namespace device
         }
 
         const T thresh;
-    };
+    };    
+
+    // Function Object Adaptors
+
+    using thrust::unary_negate;
+    using thrust::not1;
+
+    using thrust::binary_negate;
+    using thrust::not2;
 
     template <typename Op> struct binder1st : unary_function<typename Op::second_argument_type, typename Op::result_type> 
     {
@@ -291,46 +313,77 @@ namespace cv { namespace gpu { namespace device
         return binder2nd<Op>(op, typename Op::second_argument_type(x));
     }
 
-    template <typename T1, typename T2> struct BinOpTraits
+    // Functor Traits
+
+    template <typename F> struct IsUnaryFunction
     {
-        typedef int argument_type;
+        struct Yes {};
+        struct No {Yes a[2];};
+
+        template <typename T, typename D> static Yes check(unary_function<T, D>*);
+        static No check(...);
+
+        enum { value = (sizeof(check((F*)0)) == sizeof(Yes)) };
     };
-    template <typename T> struct BinOpTraits<T, T>
+
+    template <typename F> struct IsBinaryFunction
     {
-        typedef T argument_type;
+        struct Yes {};
+        struct No {Yes a[2];};
+
+        template <typename T1, typename T2, typename D> static Yes check(binary_function<T1, T2, D>*);
+        static No check(...);
+
+        enum { value = (sizeof(check((F*)0)) == sizeof(Yes)) };
     };
-    template <typename T> struct BinOpTraits<T, double>
+
+    namespace detail
     {
-        typedef double argument_type;
-    };
-    template <typename T> struct BinOpTraits<double, T>
+        template <size_t src_elem_size, size_t dst_elem_size> struct UnOpShift { enum { shift = 1 }; };
+        template <size_t src_elem_size> struct UnOpShift<src_elem_size, 1> { enum { shift = 4 }; };
+        template <size_t src_elem_size> struct UnOpShift<src_elem_size, 2> { enum { shift = 2 }; };
+
+        template <typename T, typename D> struct DefaultUnaryShift
+        {
+            enum { shift = detail::UnOpShift<sizeof(T), sizeof(D)>::shift };
+        };
+        
+        template <size_t src_elem_size1, size_t src_elem_size2, size_t dst_elem_size> struct BinOpShift { enum { shift = 1 }; };
+        template <size_t src_elem_size1, size_t src_elem_size2> struct BinOpShift<src_elem_size1, src_elem_size2, 1> { enum { shift = 4 }; };
+        template <size_t src_elem_size1, size_t src_elem_size2> struct BinOpShift<src_elem_size1, src_elem_size2, 2> { enum { shift = 2 }; };
+
+        template <typename T1, typename T2, typename D> struct DefaultBinaryShift
+        {
+            enum { shift = detail::BinOpShift<sizeof(T1), sizeof(T2), sizeof(D)>::shift };
+        };
+
+        template <typename Func, bool unary = IsUnaryFunction<Func>::value> struct ShiftDispatcher;
+        template <typename Func> struct ShiftDispatcher<Func, true>
+        {
+            enum { shift = DefaultUnaryShift<typename Func::argument_type, typename Func::result_type>::shift };
+        };
+        template <typename Func> struct ShiftDispatcher<Func, false>
+        {
+            enum { shift = DefaultBinaryShift<typename Func::first_argument_type, typename Func::second_argument_type, typename Func::result_type>::shift };
+        };
+    }
+
+    template <typename Func> struct DefaultTransformShift
     {
-        typedef double argument_type;
+        enum { shift = detail::ShiftDispatcher<Func>::shift };
     };
-    template <> struct BinOpTraits<double, double>
+
+    template <typename Func> struct DefaultTransformFunctorTraits
     {
-        typedef double argument_type;
+        enum { simple_block_dim_x = 16 };
+        enum { simple_block_dim_y = 16 };
+
+        enum { smart_block_dim_x = 16 };
+        enum { smart_block_dim_y = 16 };
+        enum { smart_shift = DefaultTransformShift<Func>::shift };
     };
-    template <typename T> struct BinOpTraits<T, float>
-    {
-        typedef float argument_type;
-    };
-    template <typename T> struct BinOpTraits<float, T>
-    {
-        typedef float argument_type;
-    };
-    template <> struct BinOpTraits<float, float>
-    {
-        typedef float argument_type;
-    };
-    template <> struct BinOpTraits<double, float>
-    {
-        typedef double argument_type;
-    };
-    template <> struct BinOpTraits<float, double>
-    {
-        typedef double argument_type;
-    };
+
+    template <typename Func> struct TransformFunctorTraits : DefaultTransformFunctorTraits<Func> {};
 }}}
 
 #endif // __OPENCV_GPU_FUNCTIONAL_HPP__

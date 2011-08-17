@@ -286,7 +286,7 @@ TEST(BruteForceMatcher)
 {
     // Init CPU matcher
 
-    int desc_len = 64;
+    int desc_len = 128;
 
     BruteForceMatcher< L2<float> > matcher;
 
@@ -328,7 +328,7 @@ TEST(BruteForceMatcher)
     d_matcher.knnMatch(d_query, d_train, d_matches, knn);
     GPU_OFF;
 
-    /*SUBTEST << "radiusMatch";
+    SUBTEST << "radiusMatch";
     float max_distance = 3.8f;
 
     CPU_ON;
@@ -337,7 +337,7 @@ TEST(BruteForceMatcher)
 
     GPU_ON;
     d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
-    GPU_OFF;*/
+    GPU_OFF;
 }
 
 
@@ -689,26 +689,7 @@ TEST(threshold)
     Mat src, dst;
     gpu::GpuMat d_src, d_dst;
 
-    for (int size = 2000; size <= 4000; size += 1000)
-    {
-        SUBTEST << "size " << size << ", 8U, THRESH_TRUNC";
-
-        gen(src, size, size, CV_8U, 0, 100);
-        dst.create(size, size, CV_8U);
-
-        CPU_ON; 
-        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
-        CPU_OFF;
-
-        d_src = src;
-        d_dst.create(size, size, CV_8U);
-
-        GPU_ON;
-        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
-        GPU_OFF;
-    }
-
-    for (int size = 2000; size <= 4000; size += 1000)
+    for (int size = 1000; size <= 4000; size += 1000)
     {
         SUBTEST << "size " << size << ", 8U, THRESH_BINARY";
 
@@ -727,22 +708,47 @@ TEST(threshold)
         GPU_OFF;
     }
 
-    for (int size = 2000; size <= 4000; size += 1000)
+    for (int size = 1000; size <= 4000; size += 1000)
     {
-        SUBTEST << "size " << size << ", 32F, THRESH_TRUNC";
+        SUBTEST << "size " << size << ", 32F, THRESH_BINARY";
 
         gen(src, size, size, CV_32F, 0, 100);
         dst.create(size, size, CV_32F);
 
         CPU_ON; 
-        threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
+        threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
         CPU_OFF;
 
         d_src = src;
         d_dst.create(size, size, CV_32F);
 
         GPU_ON;
-        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
+        gpu::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
+        GPU_OFF;
+    }
+}
+
+TEST(pow)
+{
+    Mat src, dst;
+    gpu::GpuMat d_src, d_dst;
+
+    for (int size = 1000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32F";
+
+        gen(src, size, size, CV_32F, 0, 100);
+        dst.create(size, size, CV_32F);
+
+        CPU_ON;
+        pow(src, -2.0, dst);
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size, size, CV_32F);
+
+        GPU_ON;
+        gpu::pow(d_src, -2.0, d_dst);
         GPU_OFF;
     }
 }

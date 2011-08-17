@@ -67,7 +67,6 @@ void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
-
 void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&)  { throw_nogpu(); }
 
 #else
@@ -180,7 +179,7 @@ void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
 }
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     template <typename T>
     void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
@@ -192,7 +191,7 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stre
     {
         CV_Assert(src1.size() == src2.size());
         dst.create(src1.size(), src1.type());
-        mathfunc::subtractCaller<short>(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
+        device::subtractCaller<short>(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
     }
     else
         nppArithmCaller(src2, src1, dst, nppiSub_8u_C1RSfs, nppiSub_8u_C4RSfs, nppiSub_32s_C1R, nppiSub_32f_C1R, StreamAccessor::getStream(stream));
@@ -338,7 +337,7 @@ void cv::gpu::absdiff(const GpuMat& src1, const Scalar& src2, GpuMat& dst, Strea
 //////////////////////////////////////////////////////////////////////////////
 // Comparison of two matrixes
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
     void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
@@ -375,7 +374,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         }
         else
         {
-            mathfunc::compare_ne_8uc4(src1, src2, dst, stream);
+            device::compare_ne_8uc4(src1, src2, dst, stream);
         }
     }
     else
@@ -393,7 +392,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
         }
         else
         {
-            mathfunc::compare_ne_32f(src1, src2, dst, stream);
+            device::compare_ne_32f(src1, src2, dst, stream);
         }
     }
 }
@@ -402,7 +401,7 @@ void cv::gpu::compare(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, int c
 //////////////////////////////////////////////////////////////////////////////
 // Unary bitwise logical operations
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     void bitwiseNotCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src, PtrStep dst, cudaStream_t stream);
 
@@ -416,7 +415,7 @@ namespace
     {
         dst.create(src.size(), src.type());
 
-        cv::gpu::mathfunc::bitwiseNotCaller(src.rows, src.cols, src.elemSize1(), 
+        cv::gpu::device::bitwiseNotCaller(src.rows, src.cols, src.elemSize1(), 
                                               dst.channels(), src, dst, stream);
     }
 
@@ -426,10 +425,10 @@ namespace
         using namespace cv::gpu;
 
         typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
-        static Caller callers[] = {mathfunc::bitwiseMaskNotCaller<unsigned char>, mathfunc::bitwiseMaskNotCaller<unsigned char>, 
-                                   mathfunc::bitwiseMaskNotCaller<unsigned short>, mathfunc::bitwiseMaskNotCaller<unsigned short>,
-                                   mathfunc::bitwiseMaskNotCaller<unsigned int>, mathfunc::bitwiseMaskNotCaller<unsigned int>,
-                                   mathfunc::bitwiseMaskNotCaller<unsigned int>};
+        static Caller callers[] = {device::bitwiseMaskNotCaller<unsigned char>, device::bitwiseMaskNotCaller<unsigned char>, 
+                                   device::bitwiseMaskNotCaller<unsigned short>, device::bitwiseMaskNotCaller<unsigned short>,
+                                   device::bitwiseMaskNotCaller<unsigned int>, device::bitwiseMaskNotCaller<unsigned int>,
+                                   device::bitwiseMaskNotCaller<unsigned int>};
 
         CV_Assert(mask.type() == CV_8U && mask.size() == src.size());
         dst.create(src.size(), src.type());
@@ -456,7 +455,7 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     void bitwiseOrCaller(int rows, int cols, size_t elem_size1, int cn, const PtrStep src1, const PtrStep src2, PtrStep dst, cudaStream_t stream);
 
@@ -482,7 +481,7 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        cv::gpu::mathfunc::bitwiseOrCaller(dst.rows, dst.cols, dst.elemSize1(), 
+        cv::gpu::device::bitwiseOrCaller(dst.rows, dst.cols, dst.elemSize1(), 
                                              dst.channels(), src1, src2, dst, stream);
     }
 
@@ -492,10 +491,10 @@ namespace
         using namespace cv::gpu;
 
         typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
-        static Caller callers[] = {mathfunc::bitwiseMaskOrCaller<unsigned char>, mathfunc::bitwiseMaskOrCaller<unsigned char>, 
-                                   mathfunc::bitwiseMaskOrCaller<unsigned short>, mathfunc::bitwiseMaskOrCaller<unsigned short>,
-                                   mathfunc::bitwiseMaskOrCaller<unsigned int>, mathfunc::bitwiseMaskOrCaller<unsigned int>,
-                                   mathfunc::bitwiseMaskOrCaller<unsigned int>};
+        static Caller callers[] = {device::bitwiseMaskOrCaller<unsigned char>, device::bitwiseMaskOrCaller<unsigned char>, 
+                                   device::bitwiseMaskOrCaller<unsigned short>, device::bitwiseMaskOrCaller<unsigned short>,
+                                   device::bitwiseMaskOrCaller<unsigned int>, device::bitwiseMaskOrCaller<unsigned int>,
+                                   device::bitwiseMaskOrCaller<unsigned int>};
 
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
@@ -513,7 +512,7 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        cv::gpu::mathfunc::bitwiseAndCaller(dst.rows, dst.cols, dst.elemSize1(), 
+        cv::gpu::device::bitwiseAndCaller(dst.rows, dst.cols, dst.elemSize1(), 
                                               dst.channels(), src1, src2, dst, stream);
     }
 
@@ -523,10 +522,10 @@ namespace
         using namespace cv::gpu;
 
         typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
-        static Caller callers[] = {mathfunc::bitwiseMaskAndCaller<unsigned char>, mathfunc::bitwiseMaskAndCaller<unsigned char>, 
-                                   mathfunc::bitwiseMaskAndCaller<unsigned short>, mathfunc::bitwiseMaskAndCaller<unsigned short>,
-                                   mathfunc::bitwiseMaskAndCaller<unsigned int>, mathfunc::bitwiseMaskAndCaller<unsigned int>,
-                                   mathfunc::bitwiseMaskAndCaller<unsigned int>};
+        static Caller callers[] = {device::bitwiseMaskAndCaller<unsigned char>, device::bitwiseMaskAndCaller<unsigned char>, 
+                                   device::bitwiseMaskAndCaller<unsigned short>, device::bitwiseMaskAndCaller<unsigned short>,
+                                   device::bitwiseMaskAndCaller<unsigned int>, device::bitwiseMaskAndCaller<unsigned int>,
+                                   device::bitwiseMaskAndCaller<unsigned int>};
 
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
@@ -544,7 +543,7 @@ namespace
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
 
-        cv::gpu::mathfunc::bitwiseXorCaller(dst.rows, dst.cols, dst.elemSize1(), 
+        cv::gpu::device::bitwiseXorCaller(dst.rows, dst.cols, dst.elemSize1(), 
                                               dst.channels(), src1, src2, dst, stream);
     }
 
@@ -554,10 +553,10 @@ namespace
         using namespace cv::gpu;
 
         typedef void (*Caller)(int, int, int, const PtrStep, const PtrStep, const PtrStep, PtrStep, cudaStream_t);
-        static Caller callers[] = {mathfunc::bitwiseMaskXorCaller<unsigned char>, mathfunc::bitwiseMaskXorCaller<unsigned char>, 
-                                   mathfunc::bitwiseMaskXorCaller<unsigned short>, mathfunc::bitwiseMaskXorCaller<unsigned short>,
-                                   mathfunc::bitwiseMaskXorCaller<unsigned int>, mathfunc::bitwiseMaskXorCaller<unsigned int>,
-                                   mathfunc::bitwiseMaskXorCaller<unsigned int>};
+        static Caller callers[] = {device::bitwiseMaskXorCaller<unsigned char>, device::bitwiseMaskXorCaller<unsigned char>, 
+                                   device::bitwiseMaskXorCaller<unsigned short>, device::bitwiseMaskXorCaller<unsigned short>,
+                                   device::bitwiseMaskXorCaller<unsigned int>, device::bitwiseMaskXorCaller<unsigned int>,
+                                   device::bitwiseMaskXorCaller<unsigned int>};
 
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
@@ -601,7 +600,7 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 //////////////////////////////////////////////////////////////////////////////
 // Minimum and maximum operations
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream);
@@ -623,14 +622,14 @@ namespace
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        mathfunc::min_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+        device::min_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
 
     template <typename T>
     void min_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
     {
         dst.create(src1.size(), src1.type());
-        mathfunc::min_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
+        device::min_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
     }
     
     template <typename T>
@@ -638,14 +637,14 @@ namespace
     {
         CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
         dst.create(src1.size(), src1.type());
-        mathfunc::max_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
+        device::max_gpu<T>(src1.reshape(1), src2.reshape(1), dst.reshape(1), stream);
     }
 
     template <typename T>
     void max_caller(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream)
     {
         dst.create(src1.size(), src1.type());
-        mathfunc::max_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
+        device::max_gpu<T>(src1.reshape(1), saturate_cast<T>(src2), dst.reshape(1), stream);
     }
 }
 
@@ -709,7 +708,7 @@ void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // threshold
 
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
     template <typename T>
     void threshold_gpu(const DevMem2D& src, const DevMem2D& dst, T thresh, T maxVal, int type,
@@ -718,23 +717,24 @@ namespace cv { namespace gpu { namespace mathfunc
 
 namespace
 {
-    template <typename T>
-    void threshold_caller(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, 
-        cudaStream_t stream)
+    template <typename T> void threshold_caller(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, cudaStream_t stream)
     {
-        mathfunc::threshold_gpu<T>(src, dst, saturate_cast<T>(thresh), saturate_cast<T>(maxVal), type, stream);
+        device::threshold_gpu<T>(src, dst, saturate_cast<T>(thresh), saturate_cast<T>(maxVal), type, stream);
     }
 }
 
 double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxVal, int type, Stream& s)
 {
+    CV_Assert(src.channels() == 1 && src.depth() <= CV_64F);
+    CV_Assert(type <= THRESH_TOZERO_INV);
+
+    dst.create(src.size(), src.type());
+
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     if (src.type() == CV_32FC1 && type == THRESH_TRUNC)
     {
         NppStreamHandler h(stream);
-
-        dst.create(src.size(), src.type());
 
         NppiSize sz;
         sz.width  = src.cols;
@@ -761,12 +761,7 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
             threshold_caller<int>, threshold_caller<float>, threshold_caller<double>
         };
 
-        CV_Assert(src.channels() == 1 && src.depth() <= CV_64F);
-        CV_Assert(type <= THRESH_TOZERO_INV);
-
-        dst.create(src.size(), src.type());
-
-        if (src.depth() != CV_32F)
+        if (src.depth() != CV_32F && src.depth() != CV_64F)
         {
             thresh = cvFloor(thresh);
             maxVal = cvRound(maxVal);
@@ -781,17 +776,11 @@ double cv::gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double 
 ////////////////////////////////////////////////////////////////////////
 // pow
 
-namespace cv
+namespace cv { namespace gpu { namespace device
 {
-    namespace gpu
-    {
-        namespace mathfunc
-        {
-            template<typename T>
-            void pow_caller(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
-        }
-    }
-}
+    template<typename T>
+    void pow_caller(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+}}}
 
 void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
 {    
@@ -802,9 +791,9 @@ void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
 
     static const caller_t callers[] = 
     {
-        mathfunc::pow_caller<unsigned char>,  mathfunc::pow_caller<signed char>, 
-        mathfunc::pow_caller<unsigned short>, mathfunc::pow_caller<short>, 
-        mathfunc::pow_caller<int>, mathfunc::pow_caller<float>
+        device::pow_caller<unsigned char>,  device::pow_caller<signed char>, 
+        device::pow_caller<unsigned short>, device::pow_caller<short>, 
+        device::pow_caller<int>, device::pow_caller<float>
     };
 
     callers[src.depth()](src.reshape(1), (float)power, dst.reshape(1), StreamAccessor::getStream(stream));    

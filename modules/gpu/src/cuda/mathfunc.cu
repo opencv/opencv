@@ -40,14 +40,9 @@
 //
 //M*/
 
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/vec_math.hpp"
-#include "opencv2/gpu/device/transform.hpp"
 #include "internal_shared.hpp"
 
 using namespace cv::gpu;
-using namespace cv::gpu::device;
 
 #ifndef CV_PI
 #define CV_PI   3.1415926535897932384626433832795f

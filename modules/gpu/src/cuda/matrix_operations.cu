@@ -45,9 +45,7 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 
-using namespace cv::gpu::device;
-
-namespace cv { namespace gpu { namespace matrix_operations {
+namespace cv { namespace gpu { namespace device {
 
     template <typename T> struct shift_and_sizeof;
     template <> struct shift_and_sizeof<signed char> { enum { shift = 0 }; };
@@ -249,7 +247,55 @@ namespace cv { namespace gpu { namespace matrix_operations {
 
         const double alpha, beta;
     };
-    
+
+    namespace detail
+    {
+        template <size_t src_size, size_t dst_size, typename F> struct ConvertTraitsDispatcher : DefaultTransformFunctorTraits<F>
+        {
+        };
+        template <typename F> struct ConvertTraitsDispatcher<1, 1, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 8 };
+        };
+        template <typename F> struct ConvertTraitsDispatcher<1, 2, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 4 };
+        };
+        template <typename F> struct ConvertTraitsDispatcher<1, 4, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_block_dim_y = 8 };
+            enum { smart_shift = 4 };
+        };
+
+        template <typename F> struct ConvertTraitsDispatcher<2, 2, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 4 };
+        };
+        template <typename F> struct ConvertTraitsDispatcher<2, 4, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 2 };
+        };
+
+        template <typename F> struct ConvertTraitsDispatcher<4, 2, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_block_dim_y = 8 };
+            enum { smart_shift = 4 };
+        };
+        template <typename F> struct ConvertTraitsDispatcher<4, 4, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_block_dim_y = 8 };
+            enum { smart_shift = 2 };
+        };
+
+        template <typename F> struct ConvertTraits : ConvertTraitsDispatcher<sizeof(typename F::argument_type), sizeof(typename F::result_type), F>
+        {
+        };
+    }
+
+    template <typename T, typename D> struct TransformFunctorTraits< Convertor<T, D> > : detail::ConvertTraits< Convertor<T, D> >
+    {
+    };
+        
     template<typename T, typename D>
     void cvt_(const DevMem2D& src, const DevMem2D& dst, double alpha, double beta, cudaStream_t stream)
     {

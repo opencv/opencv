@@ -393,7 +393,7 @@ void cv::gpu::ensureSizeIsEnough(int, int, int, GpuMat&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace matrix_operations
+namespace cv { namespace gpu { namespace device
 {
     void copy_to_with_mask(const DevMem2D& src, DevMem2D dst, int depth, const DevMem2D& mask, int channels, const cudaStream_t & stream = 0);
 
@@ -449,7 +449,7 @@ void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
     else
     {
         mat.create(size(), type());
-        cv::gpu::matrix_operations::copy_to_with_mask(*this, mat, depth(), mask, channels());
+        device::copy_to_with_mask(*this, mat, depth(), mask, channels());
     }
 }
 
@@ -508,7 +508,7 @@ namespace
 
     void convertToKernelCaller(const GpuMat& src, GpuMat& dst)
     {
-        matrix_operations::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0);
+        device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0);
     }
 }
 
@@ -540,7 +540,7 @@ void cv::gpu::GpuMat::convertTo( GpuMat& dst, int rtype, double alpha, double be
     dst.create( size(), rtype );
 
     if (!noScale)
-        matrix_operations::convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta);
+        device::convert_gpu(psrc->reshape(1), sdepth, dst.reshape(1), ddepth, alpha, beta);
     else
     {
         typedef void (*convert_caller_t)(const GpuMat& src, GpuMat& dst);
@@ -681,7 +681,7 @@ namespace
     void kernelSet(GpuMat& src, const Scalar& s)
     {
         Scalar_<T> sf = s;
-        matrix_operations::set_to_gpu(src, sf.val, src.channels(), 0);
+        device::set_to_gpu(src, sf.val, src.channels(), 0);
     }
 
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
@@ -732,7 +732,7 @@ namespace
     void kernelSetMask(GpuMat& src, const Scalar& s, const GpuMat& mask)
     {
         Scalar_<T> sf = s;
-        matrix_operations::set_to_gpu(src, sf.val, mask, src.channels(), 0);
+        device::set_to_gpu(src, sf.val, mask, src.channels(), 0);
     }
 }
 

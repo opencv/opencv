@@ -150,6 +150,50 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 4>::vec_type>::make(f(a.x), f(a.y), f(a.z), f(a.w)); \
     }
 
+    namespace detail
+    {    
+        template <typename T1, typename T2> struct BinOpTraits
+        {
+            typedef int argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, T>
+        {
+            typedef T argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, double>
+        {
+            typedef double argument_type;
+        };
+        template <typename T> struct BinOpTraits<double, T>
+        {
+            typedef double argument_type;
+        };
+        template <> struct BinOpTraits<double, double>
+        {
+            typedef double argument_type;
+        };
+        template <typename T> struct BinOpTraits<T, float>
+        {
+            typedef float argument_type;
+        };
+        template <typename T> struct BinOpTraits<float, T>
+        {
+            typedef float argument_type;
+        };
+        template <> struct BinOpTraits<float, float>
+        {
+            typedef float argument_type;
+        };
+        template <> struct BinOpTraits<double, float>
+        {
+            typedef double argument_type;
+        };
+        template <> struct BinOpTraits<float, double>
+        {
+            typedef double argument_type;
+        };
+    }
+
 #define OPENCV_GPU_IMPLEMENT_VEC_BINOP(type, op, func) \
     static __device__ TypeVec<func<type>::result_type, 1>::vec_type op(const type ## 1 & a, const type ## 1 & b) \
     { \
@@ -157,16 +201,16 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 1>::vec_type>::make(f(a.x, b.x)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(const type ## 1 & v, T s) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(const type ## 1 & v, T s) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(v.x, s)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(v.x, s)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(T s, const type ## 1 & v) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type op(T s, const type ## 1 & v) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(s, v.x)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 1>::vec_type>::make(f(s, v.x)); \
     } \
     static __device__ TypeVec<func<type>::result_type, 2>::vec_type op(const type ## 2 & a, const type ## 2 & b) \
     { \
@@ -174,16 +218,16 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 2>::vec_type>::make(f(a.x, b.x), f(a.y, b.y)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(const type ## 2 & v, T s) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(const type ## 2 & v, T s) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(v.x, s), f(v.y, s)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(v.x, s), f(v.y, s)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(T s, const type ## 2 & v) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type op(T s, const type ## 2 & v) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(s, v.x), f(s, v.y)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 2>::vec_type>::make(f(s, v.x), f(s, v.y)); \
     } \
     static __device__ TypeVec<func<type>::result_type, 3>::vec_type op(const type ## 3 & a, const type ## 3 & b) \
     { \
@@ -191,16 +235,16 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 3>::vec_type>::make(f(a.x, b.x), f(a.y, b.y), f(a.z, b.z)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(const type ## 3 & v, T s) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(const type ## 3 & v, T s) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(T s, const type ## 3 & v) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type op(T s, const type ## 3 & v) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 3>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z)); \
     } \
     static __device__ TypeVec<func<type>::result_type, 4>::vec_type op(const type ## 4 & a, const type ## 4 & b) \
     { \
@@ -208,16 +252,16 @@ namespace cv {  namespace gpu { namespace device
         return VecTraits<TypeVec<func<type>::result_type, 4>::vec_type>::make(f(a.x, b.x), f(a.y, b.y), f(a.z, b.z), f(a.w, b.w)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(const type ## 4 & v, T s) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(const type ## 4 & v, T s) \
     { \
-        func<typename BinOpTraits<type, T>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s), f(v.w, s)); \
+        func<typename detail::BinOpTraits<type, T>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(v.x, s), f(v.y, s), f(v.z, s), f(v.w, s)); \
     } \
     template <typename T> \
-    static __device__ typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(T s, const type ## 4 & v) \
+    static __device__ typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type op(T s, const type ## 4 & v) \
     { \
-        func<typename BinOpTraits<T, type>::argument_type> f; \
-        return VecTraits<typename TypeVec<typename func<typename BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z), f(s, v.w)); \
+        func<typename detail::BinOpTraits<T, type>::argument_type> f; \
+        return VecTraits<typename TypeVec<typename func<typename detail::BinOpTraits<type, T>::argument_type>::result_type, 4>::vec_type>::make(f(s, v.x), f(s, v.y), f(s, v.z), f(s, v.w)); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_VEC_OP(type) \

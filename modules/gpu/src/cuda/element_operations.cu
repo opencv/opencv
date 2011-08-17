@@ -47,37 +47,33 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "internal_shared.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::device;
-
-namespace cv { namespace gpu { namespace mathfunc
+namespace cv { namespace gpu { namespace device
 {
-
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
 
-    template <typename T1, typename T2> struct NotEqual : binary_function<T1, T2, uchar>
+    template <typename T> struct NotEqual : binary_function<T, T, uchar>
     {
-        __device__ __forceinline__ uchar operator()(const T1& src1, const T2& src2) const
+        __device__ __forceinline__ uchar operator()(T src1, T src2) const
         {
             return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
         }
     };
 
-    template <typename T1, typename T2>
+    template <typename T>
     inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        NotEqual<T1, T2> op;
-        transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), dst, op, stream);
+        NotEqual<T> op;
+        transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, stream);
     }
 
     void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<uint, uint>(src1, src2, dst, stream);
+        compare_ne<uint>(src1, src2, dst, stream);
     }
     void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<float, float>(src1, src2, dst, stream);
+        compare_ne<float>(src1, src2, dst, stream);
     }
 
 
@@ -354,6 +350,35 @@ namespace cv { namespace gpu { namespace mathfunc
 
     //////////////////////////////////////////////////////////////////////////
     // min/max
+
+    namespace detail
+    {
+        template <size_t size, typename F> struct MinMaxTraits : DefaultTransformFunctorTraits<F>
+        {
+        };
+        template <typename F> struct MinMaxTraits<2, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 4 };
+        };
+        template <typename F> struct MinMaxTraits<4, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_block_dim_y = 4 };
+            enum { smart_shift = 4 };
+        };
+    }
+
+    template <typename T> struct TransformFunctorTraits< minimum<T> > : detail::MinMaxTraits< sizeof(T), minimum<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< maximum<T> > : detail::MinMaxTraits< sizeof(T), maximum<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< binder2nd< minimum<T> > > : detail::MinMaxTraits< sizeof(T), binder2nd< minimum<T> > >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< binder2nd< maximum<T> > > : detail::MinMaxTraits< sizeof(T), binder2nd< maximum<T> > >
+    {
+    };
     
     template <typename T>
     void min_gpu(const DevMem2D_<T>& src1, const DevMem2D_<T>& src2, const DevMem2D_<T>& dst, cudaStream_t stream)
@@ -413,7 +438,39 @@ namespace cv { namespace gpu { namespace mathfunc
 
     
     //////////////////////////////////////////////////////////////////////////
-    // threshold  
+    // threshold
+
+    namespace detail
+    {
+        template <size_t size, typename F> struct ThresholdTraits : DefaultTransformFunctorTraits<F>
+        {
+        };
+        template <typename F> struct ThresholdTraits<2, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_shift = 4 };
+        };
+        template <typename F> struct ThresholdTraits<4, F> : DefaultTransformFunctorTraits<F>
+        {
+            enum { smart_block_dim_y = 4 };
+            enum { smart_shift = 4 };
+        };
+    }
+
+    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_binary_func<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_binary_inv_func<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_trunc_func<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_to_zero_func<T> >
+    {
+    };
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_to_zero_inv_func<T> >
+    {
+    };
 
     template <template <typename> class Op, typename T>
     void threshold_caller(const DevMem2D_<T>& src, const DevMem2D_<T>& dst, T thresh, T maxVal, 
@@ -454,8 +511,13 @@ namespace cv { namespace gpu { namespace mathfunc
     //////////////////////////////////////////////////////////////////////////
     // subtract
 
-    template <typename T>
-    void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
+    template <> struct TransformFunctorTraits< minus<short> > : DefaultTransformFunctorTraits< minus<short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T> void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
     {
         transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, minus<T>(), stream);
     }
@@ -499,8 +561,33 @@ namespace cv { namespace gpu { namespace mathfunc
 
         __device__ __forceinline__ float operator()(const float& e) const
         {
-            return __powf(fabs(e), power);
+            return __powf(::fabs(e), power);
         }
+    };
+
+    namespace detail
+    {
+        template <size_t size, typename T> struct PowOpTraits : DefaultTransformFunctorTraits< PowOp<T> >
+        {
+        };
+        template <typename T> struct PowOpTraits<1, T> : DefaultTransformFunctorTraits< PowOp<T> >
+        {
+            enum { smart_block_dim_y = 8 };
+            enum { smart_shift = 8 };
+        };
+        template <typename T> struct PowOpTraits<2, T> : DefaultTransformFunctorTraits< PowOp<T> >
+        {
+            enum { smart_shift = 4 };
+        };
+        template <typename T> struct PowOpTraits<4, T> : DefaultTransformFunctorTraits< PowOp<T> >
+        {
+            enum { smart_block_dim_y = 4 };
+            enum { smart_shift = 4 };
+        };
+    }
+
+    template <typename T> struct TransformFunctorTraits< PowOp<T> > : detail::PowOpTraits<sizeof(T), T>
+    {
     };
 
     template<typename T>
@@ -514,6 +601,5 @@ namespace cv { namespace gpu { namespace mathfunc
     template void pow_caller<short>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
     template void pow_caller<ushort>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
     template void pow_caller<int>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
-    template void pow_caller<uint>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
     template void pow_caller<float>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
 }}}
