@@ -380,7 +380,22 @@ extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgp
 	        'flann' : ('http://opencv.willowgarage.com/documentation/cpp/flann_fast_approximate_nearest_neighbor_search.html?%s', None ),
 	        'cascade_classifier' : ('http://opencv.willowgarage.com/documentation/cpp/objdetect_cascade_classification.html#cascadeclassifier%s', None ),
 		'cascade_classifier_load' : ('http://opencv.willowgarage.com/documentation/cpp/objdetect_cascade_classification.html#cv-cascadeclassifier-load%s', None ),
-		'cascade_classifier_detect_multiscale' : ('http://opencv.willowgarage.com/documentation/cpp/objdetect_cascade_classification.html#cv-cascadeclassifier-detectmultiscale%s', None )			 		 
+		'cascade_classifier_detect_multiscale' : ('http://opencv.willowgarage.com/documentation/cpp/objdetect_cascade_classification.html#cv-cascadeclassifier-detectmultiscale%s', None ),
+            'filtering':('http://opencv.itseez.com/modules/imgproc/doc/filtering.html#%s', None),
+            'point_polygon_test' : ('http://opencv.willowgarage.com/documentation/cpp/imgproc_structural_analysis_and_shape_descriptors.html#cv-pointpolygontest%s', None),
+            'feature_detector' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#featuredetector%s', None),
+	    'feature_detector_detect' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#cv-featuredetector-detect%s', None ),
+	    'surf_feature_detector' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html#surffeaturedetector%s', None ),
+	    'draw_keypoints' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawkeypoints%s', None ),
+	    'descriptor_extractor': ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#descriptorextractor%s', None ),
+	    'descriptor_extractor_compute' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#cv-descriptorextractor-compute%s', None ),
+	    'surf_descriptor_extractor' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html#surfdescriptorextractor%s', None ),
+	    'draw_matches' : ( 'http://opencv.willowgarage.com/documentation/cpp/features2d_drawing_function_of_keypoints_and_matches.html#cv-drawmatches%s', None ),
+	    'find_homography' : ('http://opencv.willowgarage.com/documentation/cpp/calib3d_camera_calibration_and_3d_reconstruction.html?#findHomography%s', None),
+	    'perspective_transform' : ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?#perspectiveTransform%s', None ),
+	    'flann_based_matcher' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_matchers.html?#FlannBasedMatcher%s', None),
+	    'brute_force_matcher' : ('http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_matchers.html?#BruteForceMatcher%s', None ),
+	    'flann' : ('http://opencv.willowgarage.com/documentation/cpp/flann_fast_approximate_nearest_neighbor_search.html?%s', None )			 		 
            }
 
 
