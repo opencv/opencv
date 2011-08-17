@@ -191,7 +191,6 @@ Learn about how to use the feature points  detectors, descriptors and matching f
    :hidden:
 
    ../feature_description/feature_description
-   ../feature_detection/feature_detection
    ../trackingmotion/harris_detector/harris_detector
    ../feature_flann_matcher/feature_flann_matcher
    ../feature_homography/feature_homography
@@ -199,7 +198,6 @@ Learn about how to use the feature points  detectors, descriptors and matching f
    ../trackingmotion/generic_corner_detector/generic_corner_detector
    ../trackingmotion/corner_subpixeles/corner_subpixeles
    ../feature_detection/feature_detection
-   ../feature_detection/feature_description
    ../feature_flann_matcher/feature_flann_matcher
    ../feature_homography/feature_homography
    ../detection_of_planar_objects/detection_of_planar_objects

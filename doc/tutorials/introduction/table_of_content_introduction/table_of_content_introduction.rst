@@ -177,6 +177,23 @@ Here you can read tutorials about how to set up your computer to work with the O
                    :height: 90pt
                    :width:  90pt
 
+* **Want to contribute, and see your own work between the OpenCV tutorials?**
+
+  =============== ======================================================
+   |HowToWriteT|  **Title:** :ref:`howToWriteTutorial`
+
+                  *Compatibility:* > OpenCV 1.0
+
+                  *Author:* |Author_BernatG| 
+
+                  If you already have a good grasp on using OpenCV and have made some projects that would be perfect presenting an OpenCV feature not yet part of these tutorials, here it is what you need to know.
+
+  =============== ======================================================
+
+  .. |HowToWriteT| image:: images/how_to_write_a_tutorial.png
+                   :height: 90pt
+                   :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -194,3 +211,4 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../android_binary_package/android_binary_package_using_with_NDK
    ../display_image/display_image
    ../load_save_image/load_save_image
+   ../how_to_write_a_tutorial/how_to_write_a_tutorial
