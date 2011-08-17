@@ -1223,7 +1223,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 
     if(X86 OR X86_64)
-        if(NOT APPLE AND ${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+        if(NOT APPLE AND CMAKE_SIZEOF_VOID_P EQUAL 4)
             set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mfpmath=387")
         endif()
     endif()
