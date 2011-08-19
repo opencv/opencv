@@ -28,7 +28,7 @@ All the libraries above can be installed via Terminal or by using Synaptic Manag
 Getting OpenCV source code 
 ============================
 
-You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the SVN repository:
+You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository < http://code.ros.org/svn/opencv/>`_.
 
 Getting the latest stable OpenCV version
 ------------------------------------------
@@ -82,4 +82,7 @@ Building OpenCV from source using CMake, using the command line
       make
       sudo make install
 
+.. note::
+  
+   If the size of the created library is a critical issue (like in case of an Android build) you can use the ``install/strip`` command to get the smallest size as possible. The *stripped* version appears to be twice as small. However, we do not recommend using this unless those extra megabytes do really matter.
 

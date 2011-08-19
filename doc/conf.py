@@ -277,9 +277,9 @@ man_pages = [
 
 # ---- External links for tutorials -----------------
 extlinks = {'cvt_color': ('http://opencv.willowgarage.com/documentation/cpp/imgproc_miscellaneous_image_transformations.html#cv-cvtcolor%s', None),
-            'imread': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
-            'imwrite': ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#cv-imwrite%s', None),
-            'imshow': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=imshow#imshow%s', None),
+            'imread':    ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#imread%s', None),
+            'imwrite':   ('http://opencv.willowgarage.com/documentation/cpp/highgui_reading_and_writing_images_and_video.html?highlight=imread#cv-imwrite%s', None),
+            'imshow':    ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=imshow#imshow%s', None),
             'named_window': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=namedwindow#namedWindow%s', None),
             'wait_key': ('http://opencv.willowgarage.com/documentation/cpp/highgui_user_interface.html?highlight=namedwindow#cv-waitkey%s', None),
             'add_weighted': ('http://opencv.willowgarage.com/documentation/cpp/core_operations_on_arrays.html?highlight=addweighted#addWeighted%s', None),

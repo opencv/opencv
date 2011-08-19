@@ -60,7 +60,7 @@ If you are building your own libraries you can take either the source files from
 
    .. container:: enumeratevisibleitemswithsquare
 
-      + stable and tested build - https://code.ros.org/svn/opencv/branches/2.3 (this will change with every new realease)
+      + stable and tested build - https://code.ros.org/svn/opencv/branches/2.3 (the number at the end will change with every new realease, so change it to that)
       + development build - https://code.ros.org/svn/opencv/trunk/
 
 While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain many-many bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need to most up to date version of it. 
