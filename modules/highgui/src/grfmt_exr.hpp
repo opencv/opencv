@@ -81,7 +81,7 @@ protected:
     void  RGBToGray( float *in, float *out );
 
     InputFile      *m_file;
-    PixelType       m_type;
+    Imf::PixelType  m_type;
     Box2i           m_datawindow;
     bool            m_ischroma;
     const Channel  *m_red;
