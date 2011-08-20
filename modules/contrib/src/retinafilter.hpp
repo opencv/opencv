@@ -221,7 +221,7 @@ public:
 	* setup the local luminance adaptation capability
 	* @param V0CompressionParameter: the compression strengh of the photoreceptors local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 160
 	*/
-	inline void setPhotoreceptorsLocalAdaptationSensitivity(const double V0CompressionParameter){_photoreceptorsPrefilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount();};
+	inline void setPhotoreceptorsLocalAdaptationSensitivity(const double V0CompressionParameter){_photoreceptorsPrefilter.setV0CompressionParameter(1.0-V0CompressionParameter);_setInitPeriodCount();};
 
 	/**
 	* setup the local luminance adaptation capability
