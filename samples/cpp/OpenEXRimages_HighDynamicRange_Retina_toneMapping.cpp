@@ -233,10 +233,11 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 retinaHcellsGain=40;
 		 cv::createTrackbar("Hcells gain", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping",&retinaHcellsGain,100,callBack_updateRetinaParams);
 
-		 localAdaptation_photoreceptors=1;
+		 localAdaptation_photoreceptors=199;
 		 localAdaptation_Gcells=185;
 		 cv::createTrackbar("Ph sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_photoreceptors,199,callBack_updateRetinaParams);
 		 cv::createTrackbar("Gcells sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_Gcells,199,callBack_updateRetinaParams);
+
 
 		 /////////////////////////////////////////////
 		 // apply default parameters of user interaction variables
