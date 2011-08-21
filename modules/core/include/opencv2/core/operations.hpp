@@ -414,7 +414,7 @@ Matx<_Tp, m, 1> Matx<_Tp, m, n>::col(int j) const
     CV_DbgAssert((unsigned)j < (unsigned)n);
     Matx<_Tp, m, 1> v;
     for( int i = 0; i < m; i++ )
-        v[i] = val[i*n + j];
+        v.val[i] = val[i*n + j];
     return v;
 }
 
