@@ -80,16 +80,15 @@ namespace cv
 
 enum RETINA_COLORSAMPLINGMETHOD
 {
-	RETINA_COLOR_RANDOM, /// each pixel position is either R, G or B in a random choice
-	RETINA_COLOR_DIAGONAL,/// color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
-	RETINA_COLOR_BAYER/// standard bayer sampling
+	RETINA_COLOR_RANDOM, //!< each pixel position is either R, G or B in a random choice
+	RETINA_COLOR_DIAGONAL,//!< color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
+	RETINA_COLOR_BAYER//!< standard bayer sampling
 };
 
 class RetinaFilter;
 
 /**
- * @brief a wrapper class which allows the use of the Gipsa/Listic Labs retina model
- * @class Retina object is a wrapper class which allows the Gipsa/Listic Labs model to be used.
+ * @class Retina a wrapper class which allows the Gipsa/Listic Labs model to be used.
  * This retina model allows spatio-temporal image processing (applied on still images, video sequences).
  * As a summary, these are the retina model properties:
  * => It applies a spectral whithening (mid-frequency details enhancement)
@@ -97,9 +96,19 @@ class RetinaFilter;
  * => low frequency luminance to be reduced (luminance range compression)
  * => local logarithmic luminance compression allows details to be enhanced in low light conditions
  *
+ * USE : this model can be used basically for spatio-temporal video effects but also for :
+ *      _using the getParvo method output matrix : texture analysiswith enhanced signal to noise ratio and enhanced details robust against input images luminance ranges
+ *      _using the getMagno method output matrix : motion analysis also with the previously cited properties
+ *
  * for more information, reer to the following papers :
  * Benoit A., Caplier A., Durette B., Herault, J., "USING HUMAN VISUAL SYSTEM MODELING FOR BIO-INSPIRED LOW LEVEL IMAGE PROCESSING", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773, DOI: http://dx.doi.org/10.1016/j.cviu.2010.01.011
  * Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891.
+ *
+ * The retina filter includes the research contributions of phd/research collegues from which code has been redrawn by the author :
+ * _take a look at the retinacolor.hpp module to discover Brice Chaix de Lavarene color mosaicing/demosaicing and the reference paper:
+ * ====> B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
+ * _take a look at imagelogpolprojection.hpp to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions.
+ * ====> more informations in the above cited Jeanny Heraults's book.
  */
 class CV_EXPORTS Retina {
 
@@ -107,15 +116,17 @@ public:
 
 	/**
 	 * Main constructor with most commun use setup : create an instance of color ready retina model
+	 * @param parametersSaveFile : the filename of the xml file that records the used retina parametes setup
 	 * @param inputSize : the input frame size
 	 */
 	Retina(const std::string parametersSaveFile, Size inputSize);
 
 	/**
 	 * Complete Retina filter constructor which allows all basic structural parameters definition
-	 * @param inputSize : the input frame size
+	 * @param parametersSaveFile : the filename of the xml file that records the used retina parametes setup
+         * @param inputSize : the input frame size
 	 * @param colorMode : the chosen processing mode : with or without color processing
-	 * @param samplingMethod: specifies which kind of color sampling will be used
+	 * @param colorSamplingMethod: specifies which kind of color sampling will be used
 	 * @param useRetinaLogSampling: activate retina log sampling, if true, the 2 following parameters can be used
 	 * @param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
 	 * @param samplingStrenght: only usefull if param useRetinaLogSampling=true, specifies the strenght of the log scale that is applied
@@ -129,6 +140,7 @@ public:
 	 * => if the xml file does not exist, then default setup is applied
 	 * => warning, Exceptions are thrown if read XML file is not valid
 	 * @param retinaParameterFile : the parameters filename
+         * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
 	 */
 	void setup(std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
 
@@ -153,7 +165,7 @@ public:
 	 * @param HcellsSpatialConstant: the spatial constant of the first order low pass filter of the horizontal cells, use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel, this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level (Inner Plexiform Layer parvocellular channel model)
 	 * @param ganglionCellsSensitivity: the compression strengh of the ganglion cells local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 230
 	 */
-	void setupOPLandIPLParvoChannel(const bool colorMode=true, const bool normaliseOutput = true, const double photoreceptorsLocalAdaptationSensitivity=0.7, const double photoreceptorsTemporalConstant=0.5, const double photoreceptorsSpatialConstant=0.53, const double horizontalCellsGain=0, const double HcellsTemporalConstant=1, const double HcellsSpatialConstant=7, const double ganglionCellsSensitivity=0.7);
+	void setupOPLandIPLParvoChannel(const bool colorMode=true, const bool normaliseOutput = true, const float photoreceptorsLocalAdaptationSensitivity=0.7, const float photoreceptorsTemporalConstant=0.5, const float photoreceptorsSpatialConstant=0.53, const float horizontalCellsGain=0, const float HcellsTemporalConstant=1, const float HcellsSpatialConstant=7, const float ganglionCellsSensitivity=0.7);
 
 	/**
 	 * set parameters values for the Inner Plexiform Layer (IPL) magnocellular channel
@@ -167,13 +179,11 @@ public:
 	 * @param localAdaptintegration_tau: specifies the temporal constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
 	 * @param localAdaptintegration_k: specifies the spatial constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
 	 */
-	void setupIPLMagnoChannel(const bool normaliseOutput = true, const double parasolCells_beta=0, const double parasolCells_tau=0, const double parasolCells_k=7, const double amacrinCellsTemporalCutFrequency=1.2, const double V0CompressionParameter=0.95, const double localAdaptintegration_tau=0, const double localAdaptintegration_k=7);
+	void setupIPLMagnoChannel(const bool normaliseOutput = true, const float parasolCells_beta=0, const float parasolCells_tau=0, const float parasolCells_k=7, const float amacrinCellsTemporalCutFrequency=1.2, const float V0CompressionParameter=0.95, const float localAdaptintegration_tau=0, const float localAdaptintegration_k=7);
 
 	/**
-	 * method which allows retina to be applied on an input image
-	 * @param
-	 * 		/// encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
-	 *
+	 * method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
+	 * @param inputImage : the input cv::Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
 	 */
 	void run(const Mat &inputImage);
 
@@ -195,7 +205,7 @@ public:
 	 * @param saturateColors: boolean that activates color saturation (if true) or desactivate (if false)
 	 * @param colorSaturationValue: the saturation factor
 	 */
-	void setColorSaturation(const bool saturateColors=true, const double colorSaturationValue=4.0);
+	void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0);
 
 	/**
 	 * clear all retina buffers (equivalent to opening the eyes after a long period of eye close ;o)
@@ -203,16 +213,15 @@ public:
 	void clearBuffers();
 
 protected:
-	//// Parameteres setup members
-	// parameters file ... saved on instance delete
-	FileStorage _parametersSaveFile;
-	std::string _parametersSaveFileName;
-	//// Retina model related modules
-	// buffer that ensure library cross-compatibility
-	std::valarray<double> _inputBuffer;
+	// Parameteres setup members
+	FileStorage _parametersSaveFile; //!< parameters file ... saved on instance delete
+	std::string _parametersSaveFileName; //!< parameters file name
+	
+        // Retina model related modules
+	std::valarray<float> _inputBuffer; //!< buffer used to convert input cv::Mat to internal retina buffers format (valarrays)
 
 	// pointer to retina model
-	RetinaFilter* _retinaFilter;
+	RetinaFilter* _retinaFilter; //!< the pointer to the retina module, allocated with instance construction
 
 	/**
 	 * exports a valarray buffer outing from HVStools objects to a cv::Mat in CV_8UC1 (gray level picture) or CV_8UC3 (color) format
@@ -222,7 +231,7 @@ protected:
 	 * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
 	 * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
 	 */
-	void _convertValarrayBuffer2cvMat(const std::valarray<double> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, Mat &outBuffer);
+	void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, Mat &outBuffer);
 
 	/**
 	 *
@@ -230,9 +239,9 @@ protected:
 	 * @param outputValarrayMatrix : the output valarray
 	 * @return the input image color mode (color=true, gray levels=false)
 	 */
-	const bool _convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<double> &outputValarrayMatrix);
+	const bool _convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
-	// private method called by constructirs
+	//! private method called by constructors, gathers their parameters and use them in a unified way
 	void _init(const std::string parametersSaveFile, Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
 
