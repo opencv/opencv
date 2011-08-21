@@ -72,6 +72,7 @@ class App:
         demos_lb.bind('<<ListboxSelect>>', self.on_demo_select)
 
         self.cmd_entry = cmd_entry = tk.Entry(right)
+        cmd_entry.bind('<Return>', self.on_run)
         run_btn = tk.Button(right, command=self.on_run, text='Run', width=8)
 
         self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
@@ -137,7 +138,7 @@ class App:
             else:
                 text.tag_add(tag_proc, match_index, end_index)
 
-    def on_run(self):
+    def on_run(self, *args):
         cmd = self.cmd_entry.get()
         print 'running:', cmd
         Popen(cmd, shell=True)

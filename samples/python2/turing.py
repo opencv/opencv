@@ -1,6 +1,6 @@
 '''
-Multiscale Turing Patterns generator.
-=====================================
+Multiscale Turing Patterns generator
+====================================
 
 Inspired by http://www.jonathanmccabe.com/Cyclic_Symmetric_Multi-Scale_Turing_Patterns.pdf
 '''

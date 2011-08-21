@@ -1,9 +1,10 @@
 '''
-  Coherence-enhancing filtering example
+Coherence-enhancing filtering example
+=====================================
 
-  inspired by  
-    Joachim Weickert "Coherence-Enhancing Shock Filters"
-    http://www.mia.uni-saarland.de/Publications/weickert-dagm03.pdf
+inspired by  
+  Joachim Weickert "Coherence-Enhancing Shock Filters"
+  http://www.mia.uni-saarland.de/Publications/weickert-dagm03.pdf
 '''
 
 import numpy as np
