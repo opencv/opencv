@@ -3,6 +3,7 @@ from ScrolledText import ScrolledText
 from glob import glob
 from common import splitfn
 import webbrowser
+from subprocess import Popen
 
 #from IPython.Shell import IPShellEmbed
 #ipshell = IPShellEmbed()
@@ -70,14 +71,18 @@ class App:
                 self.samples[name] = fn
         demos_lb.bind('<<ListboxSelect>>', self.on_demo_select)
 
-        self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
-        text.pack(fill='both', expand=1)
-        self.linker = linker = LinkManager(text, self.on_link)
+        self.cmd_entry = cmd_entry = tk.Entry(right)
+        run_btn = tk.Button(right, command=self.on_run, text='Run', width=8)
 
+        self.text = text = ScrolledText(right, font=('arial', 12, 'normal'), width = 30, wrap='word')
+        self.linker = linker = LinkManager(text, self.on_link)
         self.text.tag_config("header1", font=('arial', 14, 'bold'))
         self.text.tag_config("header2", font=('arial', 12, 'bold'))
-
         text.config(state='disabled')
+
+        text.pack(fill='both', expand=1, side=tk.BOTTOM)
+        cmd_entry.pack(fill='x', side='left' , expand=1)
+        run_btn.pack()
 
     def on_link(self, url):
         print url
@@ -89,12 +94,15 @@ class App:
         loc = {}
         execfile(fn, loc)
         descr = loc.get('__doc__', 'no-description')
-        
+                
         self.linker.reset()
         self.text.config(state='normal')
         self.text.delete(1.0, tk.END)
         self.format_text(descr)
         self.text.config(state='disabled')
+
+        self.cmd_entry.delete(0, tk.END)
+        self.cmd_entry.insert(0, fn)
 
     def format_text(self, s):
         text = self.text
@@ -128,6 +136,11 @@ class App:
                 tag_proc(match_index, end_index, text.get(match_index, end_index))
             else:
                 text.tag_add(tag_proc, match_index, end_index)
+
+    def on_run(self):
+        cmd = self.cmd_entry.get()
+        print 'running:', cmd
+        Popen(cmd, shell=True)
 
     def run(self):
         tk.mainloop()
