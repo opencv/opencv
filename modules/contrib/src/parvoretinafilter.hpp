@@ -85,7 +85,7 @@
 * contoursExtractor->runfilter(FrameBuffer);
 *
 * // get the output frame, check in the class description below for more outputs:
-* const double *contours=contoursExtractor->getParvoONminusOFF();
+* const float *contours=contoursExtractor->getParvoONminusOFF();
 *
 * // at the end of the program, destroy object:
 * delete contoursExtractor;
@@ -141,14 +141,14 @@ public:
 	* @param tau2: the time constant of the first order low pass filter of the horizontal cells, use it to cut low temporal frequencies (local luminance variations), unit is frames, typical value is 1 frame, as the photoreceptors
 	* @param k2: the spatial constant of the first order low pass filter of the horizontal cells, use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel, this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level (Inner Plexiform Layer parvocellular channel model)
 	*/
-	void setOPLandParvoFiltersParameters(const double beta1, const double tau1, const double k1, const double beta2, const double tau2, const double k2);
+	void setOPLandParvoFiltersParameters(const float beta1, const float tau1, const float k1, const float beta2, const float tau2, const float k2);
 
 	/**
 	* setup more precisely the low pass filter used for the ganglion cells low pass filtering (used for local luminance adaptation)
 	* @param tau: time constant of the filter (unit is frame for video processing)
 	* @param k: spatial constant of the filter (unit is pixels)
 	*/
-	void setGanglionCellsLocalAdaptationLPfilterParameters(const double tau, const double k){BasicRetinaFilter::setLPfilterParameters(0, tau, k, 2);}; // change the parameters of the filter
+	void setGanglionCellsLocalAdaptationLPfilterParameters(const float tau, const float k){BasicRetinaFilter::setLPfilterParameters(0, tau, k, 2);}; // change the parameters of the filter
 
 
 	/**
@@ -160,59 +160,59 @@ public:
 	* also, bipolar cells output are accessible (difference between photoreceptors and horizontal cells, ON output has positive values, OFF ouput has negative values), use the following access methods: getBipolarCellsON() and getBipolarCellsOFF()if useParvoOutput is true,
 	* if useParvoOutput is true, the complete Parvocellular channel is computed, more outputs are updated and can be accessed threw: getParvoON(), getParvoOFF() and their difference with getOutput()
 	*/
-	const std::valarray<double> &runFilter(const std::valarray<double> &inputFrame, const bool useParvoOutput=true); // output return is _parvocellularOutputONminusOFF
+	const std::valarray<float> &runFilter(const std::valarray<float> &inputFrame, const bool useParvoOutput=true); // output return is _parvocellularOutputONminusOFF
 
 	/**
 	* @return the output of the photoreceptors filtering step (high cut frequency spatio-temporal low pass filter)
 	*/
-	inline const std::valarray<double> &getPhotoreceptorsLPfilteringOutput() const {return _photoreceptorsOutput;};
+	inline const std::valarray<float> &getPhotoreceptorsLPfilteringOutput() const {return _photoreceptorsOutput;};
 
 	/**
 	* @return the output of the photoreceptors filtering step (low cut frequency spatio-temporal low pass filter)
 	*/
-	inline const std::valarray<double> &getHorizontalCellsOutput() const { return _horizontalCellsOutput;};
+	inline const std::valarray<float> &getHorizontalCellsOutput() const { return _horizontalCellsOutput;};
 
 	/**
 	* @return the output Parvocellular ON channel of the retina model
 	*/
-	inline const std::valarray<double> &getParvoON() const {return _parvocellularOutputON;};
+	inline const std::valarray<float> &getParvoON() const {return _parvocellularOutputON;};
 
 	/**
 	* @return the output Parvocellular OFF channel of the retina model
 	*/
-	inline const std::valarray<double> &getParvoOFF() const {return _parvocellularOutputOFF;};
+	inline const std::valarray<float> &getParvoOFF() const {return _parvocellularOutputOFF;};
 
 	/**
 	* @return the output of the Bipolar cells of the ON channel of the retina model same as function getParvoON() but without luminance local adaptation
 	*/
-	inline const std::valarray<double> &getBipolarCellsON() const {return _bipolarCellsOutputON;};
+	inline const std::valarray<float> &getBipolarCellsON() const {return _bipolarCellsOutputON;};
 
 	/**
 	* @return the output of the Bipolar cells of the OFF channel of the retina model same as function getParvoON() but without luminance local adaptation
 	*/
-	inline const std::valarray<double> &getBipolarCellsOFF() const {return _bipolarCellsOutputOFF;};
+	inline const std::valarray<float> &getBipolarCellsOFF() const {return _bipolarCellsOutputOFF;};
 
 	/**
 	* @return the photoreceptors's temporal constant
 	*/
-	inline const double getPhotoreceptorsTemporalConstant(){return this->_filteringCoeficientsTable[2];};
+	inline const float getPhotoreceptorsTemporalConstant(){return this->_filteringCoeficientsTable[2];};
 
 	/**
 	* @return the horizontal cells' temporal constant
 	*/
-	inline const double getHcellsTemporalConstant(){return this->_filteringCoeficientsTable[5];};
+	inline const float getHcellsTemporalConstant(){return this->_filteringCoeficientsTable[5];};
 
 private:
 	// template buffers
-	std::valarray <double>_photoreceptorsOutput;
-	std::valarray <double>_horizontalCellsOutput;
-	std::valarray <double>_parvocellularOutputON;
-	std::valarray <double>_parvocellularOutputOFF;
-	std::valarray <double>_bipolarCellsOutputON;
-	std::valarray <double>_bipolarCellsOutputOFF;
-	std::valarray <double>_localAdaptationOFF;
-	std::valarray <double> *_localAdaptationON;
-	TemplateBuffer<double> *_parvocellularOutputONminusOFF;
+	std::valarray <float>_photoreceptorsOutput;
+	std::valarray <float>_horizontalCellsOutput;
+	std::valarray <float>_parvocellularOutputON;
+	std::valarray <float>_parvocellularOutputOFF;
+	std::valarray <float>_bipolarCellsOutputON;
+	std::valarray <float>_bipolarCellsOutputOFF;
+	std::valarray <float>_localAdaptationOFF;
+	std::valarray <float> *_localAdaptationON;
+	TemplateBuffer<float> *_parvocellularOutputONminusOFF;
 	// private functions
 	void _OPL_OnOffWaysComputing();
 

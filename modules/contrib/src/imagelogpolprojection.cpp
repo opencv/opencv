@@ -394,7 +394,7 @@ bool ImageLogPolProjection::_initLogPolarCortexSampling(const double reductionFa
 }
 
 // action function
-std::valarray<double> &ImageLogPolProjection::runProjection(const std::valarray<double> &inputFrame, const double colorMode)
+std::valarray<float> &ImageLogPolProjection::runProjection(const std::valarray<float> &inputFrame, const bool colorMode)
 {
 	if (_colorModeCapable&&colorMode)
 	{

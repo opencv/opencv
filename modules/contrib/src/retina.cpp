@@ -92,7 +92,7 @@ Retina::~Retina()
     delete _retinaFilter;
 }
 
-void Retina::setColorSaturation(const bool saturateColors, const double colorSaturationValue)
+void Retina::setColorSaturation(const bool saturateColors, const float colorSaturationValue)
 {
 	_retinaFilter->setColorSaturation(saturateColors, colorSaturationValue);
 }
@@ -123,7 +123,7 @@ void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetup
 
 		// preparing parameter setup
 		bool colorMode, normaliseOutput;
-		double photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
+		float photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
 		// OPL and Parvo init first
 		cv::FileNode rootFn = fs.root(), currFn=rootFn["OPLandIPLparvo"];
 		currFn["colorMode"]>>colorMode;
@@ -140,7 +140,7 @@ void Retina::setup(std::string retinaParameterFile, const bool applyDefaultSetup
 		// init retina IPL magno setup
 		currFn=rootFn["IPLmagno"];
 		currFn["normaliseOutput"]>>normaliseOutput;
-		double parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
+		float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
 		currFn["parasolCells_beta"]>>parasolCells_beta;
 		currFn["parasolCells_tau"]>>parasolCells_tau;
 		currFn["parasolCells_k"]>>parasolCells_k;
@@ -221,7 +221,7 @@ const std::string Retina::printSetup()
 	return outmessage.str();
 }
 
-void Retina::setupOPLandIPLParvoChannel(const bool colorMode, const bool normaliseOutput, const double photoreceptorsLocalAdaptationSensitivity, const double photoreceptorsTemporalConstant, const double photoreceptorsSpatialConstant, const double horizontalCellsGain, const double HcellsTemporalConstant, const double HcellsSpatialConstant, const double ganglionCellsSensitivity)
+void Retina::setupOPLandIPLParvoChannel(const bool colorMode, const bool normaliseOutput, const float photoreceptorsLocalAdaptationSensitivity, const float photoreceptorsTemporalConstant, const float photoreceptorsSpatialConstant, const float horizontalCellsGain, const float HcellsTemporalConstant, const float HcellsSpatialConstant, const float ganglionCellsSensitivity)
 {
 	// parameters setup (default setup)
 	_retinaFilter->setColorMode(colorMode);
@@ -246,7 +246,7 @@ void Retina::setupOPLandIPLParvoChannel(const bool colorMode, const bool normali
 	_parametersSaveFile << "}";
 }
 
-void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const double parasolCells_beta, const double parasolCells_tau, const double parasolCells_k, const double amacrinCellsTemporalCutFrequency, const double V0CompressionParameter, const double localAdaptintegration_tau, const double localAdaptintegration_k)
+void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float V0CompressionParameter, const float localAdaptintegration_tau, const float localAdaptintegration_k)
 {
 
 	_retinaFilter->setMagnoCoefficientsTable(parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k);
@@ -270,7 +270,7 @@ void Retina::setupIPLMagnoChannel(const bool normaliseOutput, const double paras
 
 void Retina::run(const cv::Mat &inputMatToConvert)
 {
-	// first convert input image to the compatible format : std::valarray<double>
+	// first convert input image to the compatible format : std::valarray<float>
 	const bool colorMode = _convertCvMat2ValarrayBuffer(inputMatToConvert, _inputBuffer);
 	// process the retina
 	if (!_retinaFilter->runFilter(_inputBuffer, colorMode, false, colorMode, false))
@@ -338,10 +338,10 @@ void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSiz
 	std::cout<<printSetup()<<std::endl;
 }
 
-void Retina::_convertValarrayBuffer2cvMat(const std::valarray<double> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
+void Retina::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, cv::Mat &outBuffer)
 {
 	// fill output buffer with the valarray buffer
-	const double *valarrayPTR=get_data(grayMatrixToConvert);
+	const float *valarrayPTR=get_data(grayMatrixToConvert);
 	if (!colorMode)
 	{
 		outBuffer.create(cv::Size(nbColumns, nbRows), CV_8U);
@@ -373,8 +373,7 @@ void Retina::_convertValarrayBuffer2cvMat(const std::valarray<double> &grayMatri
 	}
 }
 
-
-const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<double> &outputValarrayMatrix)
+const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
 {
 	// first check input consistency
 	if (inputMatToConvert.empty())
@@ -383,9 +382,8 @@ const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert,
 	// retreive color mode from image input
 	bool colorMode = inputMatToConvert.channels() >=3;
 
-	// convert to double AND fill the valarray buffer
-	const int dsttype = CV_64F; // output buffer is double format
-
+	// convert to float AND fill the valarray buffer
+	const int dsttype = CV_32F; // output buffer is float format
 	if (colorMode)
 	{
 		// create a cv::Mat table (for RGB planes)
@@ -396,12 +394,12 @@ const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert,
 				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
 		};
 		// split color cv::Mat in 3 planes... it fills valarray directely
-		cv::split(Mat_<double>(inputMatToConvert), planes);
+                cv::split(cv::Mat(inputMatToConvert), planes);
 
 	}else
 	{
 		// create a cv::Mat header for the valarray
-		cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
+                cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
 		inputMatToConvert.convertTo(dst, dsttype);
 	}
 	return colorMode;
@@ -410,3 +408,4 @@ const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert,
 void Retina::clearBuffers() {_retinaFilter->clearAllBuffers();}
 
 } // end of namespace cv
+

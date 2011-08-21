@@ -155,7 +155,7 @@ void ParvoRetinaFilter::resize(const unsigned int NBrows, const unsigned int NBc
 }
 
 // change the parameters of the filter
-void ParvoRetinaFilter::setOPLandParvoFiltersParameters(const double beta1, const double tau1, const double k1, const double beta2, const double tau2, const double k2)
+void ParvoRetinaFilter::setOPLandParvoFiltersParameters(const float beta1, const float tau1, const float k1, const float beta2, const float tau2, const float k2)
 {
 	// init photoreceptors low pass filter
 	setLPfilterParameters(beta1, tau1, k1);
@@ -170,7 +170,7 @@ void ParvoRetinaFilter::setOPLandParvoFiltersParameters(const double beta1, cons
 
 // run filter for a new frame input
 // output return is (*_parvocellularOutputONminusOFF)
-const std::valarray<double> &ParvoRetinaFilter::runFilter(const std::valarray<double> &inputFrame, const bool useParvoOutput)
+const std::valarray<float> &ParvoRetinaFilter::runFilter(const std::valarray<float> &inputFrame, const bool useParvoOutput)
 {
 	_spatiotemporalLPfilter(get_data(inputFrame), &_photoreceptorsOutput[0]);
 	_spatiotemporalLPfilter(&_photoreceptorsOutput[0], &_horizontalCellsOutput[0], 1);
@@ -189,9 +189,9 @@ const std::valarray<double> &ParvoRetinaFilter::runFilter(const std::valarray<do
 		//
 		//// loop that makes the difference between photoreceptor cells output and horizontal cells
 		//// positive part goes on the ON way, negative pat goes on the OFF way
-		register double *parvocellularOutputONminusOFF_PTR=&(*_parvocellularOutputONminusOFF)[0];
-		register double *parvocellularOutputON_PTR=&_parvocellularOutputON[0];
-		register double *parvocellularOutputOFF_PTR=&_parvocellularOutputOFF[0];
+		register float *parvocellularOutputONminusOFF_PTR=&(*_parvocellularOutputONminusOFF)[0];
+		register float *parvocellularOutputON_PTR=&_parvocellularOutputON[0];
+		register float *parvocellularOutputOFF_PTR=&_parvocellularOutputOFF[0];
 
 		for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
 			*(parvocellularOutputONminusOFF_PTR++)= (*(parvocellularOutputON_PTR++)-*(parvocellularOutputOFF_PTR++));
@@ -203,20 +203,20 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing()
 {
 	// loop that makes the difference between photoreceptor cells output and horizontal cells
 	// positive part goes on the ON way, negative pat goes on the OFF way
-	register double *photoreceptorsOutput_PTR= &_photoreceptorsOutput[0];
-	register double *horizontalCellsOutput_PTR= &_horizontalCellsOutput[0];
-	register double *bipolarCellsON_PTR = &_bipolarCellsOutputON[0];
-	register double *bipolarCellsOFF_PTR = &_bipolarCellsOutputOFF[0];
-	register double *parvocellularOutputON_PTR= &_parvocellularOutputON[0];
-	register double *parvocellularOutputOFF_PTR= &_parvocellularOutputOFF[0];
+	register float *photoreceptorsOutput_PTR= &_photoreceptorsOutput[0];
+	register float *horizontalCellsOutput_PTR= &_horizontalCellsOutput[0];
+	register float *bipolarCellsON_PTR = &_bipolarCellsOutputON[0];
+	register float *bipolarCellsOFF_PTR = &_bipolarCellsOutputOFF[0];
+	register float *parvocellularOutputON_PTR= &_parvocellularOutputON[0];
+	register float *parvocellularOutputOFF_PTR= &_parvocellularOutputOFF[0];
 
 	// compute bipolar cells response equal to photoreceptors minus horizontal cells response
 	// and copy the result on parvo cellular outputs... keeping time before their local contrast adaptation for final result
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
 	{
-		double pixelDifference = *(photoreceptorsOutput_PTR++) -*(horizontalCellsOutput_PTR++);
+		float pixelDifference = *(photoreceptorsOutput_PTR++) -*(horizontalCellsOutput_PTR++);
 		// test condition to allow write pixelDifference in ON or OFF buffer and 0 in the over
-		double isPositive=(double) (pixelDifference>0);
+		float isPositive=(float) (pixelDifference>0);
 
 		// ON and OFF channels writing step
 		*(parvocellularOutputON_PTR++)=*(bipolarCellsON_PTR++) = isPositive*pixelDifference;

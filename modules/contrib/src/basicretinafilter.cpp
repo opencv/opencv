@@ -159,10 +159,10 @@ void BasicRetinaFilter::resize(const unsigned int NBrows, const unsigned int NBc
 }
 
 // Change coefficients table
-void BasicRetinaFilter::setLPfilterParameters(const double beta, const double tau, const double desired_k, const unsigned int filterIndex)
+void BasicRetinaFilter::setLPfilterParameters(const float beta, const float tau, const float desired_k, const unsigned int filterIndex)
 {
-	double _beta = beta+tau;
-	double k=desired_k;
+	float _beta = beta+tau;
+	float k=desired_k;
 	// check if the spatial constant is correct (avoid 0 value to avoid division by 0)
 	if (desired_k<=0)
 	{
@@ -170,8 +170,8 @@ void BasicRetinaFilter::setLPfilterParameters(const double beta, const double ta
 		std::cerr<<"BasicRetinaFilter::spatial constant of the low pass filter must be superior to zero !!! correcting parameter setting to 0,001"<<std::endl;
 	}
 
-	double _alpha = k*k;
-	double _mu = 0.8;
+	float _alpha = k*k;
+	float _mu = 0.8;
 	unsigned int tableOffset=filterIndex*3;
 	if (k<=0)
 	{
@@ -179,8 +179,8 @@ void BasicRetinaFilter::setLPfilterParameters(const double beta, const double ta
 		_alpha=0.0001;
 	}
 
-	double _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	double _a = _filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
+	float _a = _filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
 	_filteringCoeficientsTable[1+tableOffset]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
 	_filteringCoeficientsTable[2+tableOffset] =tau;
 
@@ -189,7 +189,7 @@ void BasicRetinaFilter::setLPfilterParameters(const double beta, const double ta
 	//std::cout<<"BasicRetinaFilter::_a="<<_a<<", gain="<<_filteringCoeficientsTable[1+tableOffset]<<", tau="<<tau<<std::endl;
 }
 
-void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const double beta, const double tau, const double alpha0, const unsigned int filterIndex)
+void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const float beta, const float tau, const float alpha0, const unsigned int filterIndex)
 {
 	// check if dedicated buffers are already allocated, if not create them
 	if (_progressiveSpatialConstant.size()!=_filterOutput.size())
@@ -198,8 +198,8 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const doub
 		_progressiveGain.resize(_filterOutput.size());
 	}
 
-	double _beta = beta+tau;
-	double _mu=0.8;
+	float _beta = beta+tau;
+	float _mu=0.8;
 	if (alpha0<=0)
 	{
 		std::cerr<<"BasicRetinaFilter::spatial filtering coefficient must be superior to zero, correcting value to 0.01"<<std::endl;
@@ -208,19 +208,19 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const doub
 
 	unsigned int tableOffset=filterIndex*3;
 
-	double _alpha=0.8;
-	double _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	double _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	float _alpha=0.8;
+	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
+	float _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
 	_filteringCoeficientsTable[tableOffset+1]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
-	double commonFactor=alpha0/sqrt((double)(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows)+1.0);
+	float commonFactor=alpha0/sqrt((float)(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows)+1.0);
 	//memset(_progressiveSpatialConstant, 255, _filterOutput.getNBpixels());
 	for (unsigned int idColumn=0;idColumn<_halfNBcolumns; ++idColumn)
 		for (unsigned int idRow=0;idRow<_halfNBrows; ++idRow)
 		{
 			// computing local spatial constant
-			double localSpatialConstantValue=commonFactor*sqrt((double)(idColumn*idColumn)+(double)(idRow*idRow));
+			float localSpatialConstantValue=commonFactor*sqrt((float)(idColumn*idColumn)+(float)(idRow*idRow));
 			if (localSpatialConstantValue>1)
 				localSpatialConstantValue=1;
 
@@ -230,7 +230,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const doub
 			_progressiveSpatialConstant[_halfNBcolumns-1-idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1-idRow)]=localSpatialConstantValue;
 
 			// computing local gain
-			double localGain=(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)/(1+_beta);
+			float localGain=(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)/(1+_beta);
 			_progressiveGain[_halfNBcolumns-1+idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1+idRow)]=localGain;
 			_progressiveGain[_halfNBcolumns-1-idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1+idRow)]=localGain;
 			_progressiveGain[_halfNBcolumns-1+idColumn+_filterOutput.getNBcolumns()*(_halfNBrows-1-idRow)]=localGain;
@@ -240,7 +240,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const doub
 		}
 }
 
-void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const double beta, const double tau, const double k, const std::valarray<double> &accuracyMap, const unsigned int filterIndex)
+void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const float beta, const float tau, const float k, const std::valarray<float> &accuracyMap, const unsigned int filterIndex)
 {
 
 	if (accuracyMap.size()!=_filterOutput.size())
@@ -256,17 +256,17 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const doubl
 		_progressiveGain.resize(accuracyMap.size());
 	}
 
-	double _beta = beta+tau;
-	double _alpha=k*k;
-	double _mu=0.8;
+	float _beta = beta+tau;
+	float _alpha=k*k;
+	float _mu=0.8;
 	if (k<=0)
 	{
 		std::cerr<<"BasicRetinaFilter::spatial filtering coefficient must be superior to zero, correcting value to 0.01"<<std::endl;
 		//alpha0=0.0001;
 	}
 	unsigned int tableOffset=filterIndex*3;
-	double _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	double _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
+	float _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
 	_filteringCoeficientsTable[tableOffset+1]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
@@ -276,14 +276,14 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const doubl
 		{
 			// computing local spatial constant
 			unsigned int index=idColumn+idRow*_filterOutput.getNBcolumns();
-			double localSpatialConstantValue=_a*accuracyMap[index];
+			float localSpatialConstantValue=_a*accuracyMap[index];
 			if (localSpatialConstantValue>1)
 				localSpatialConstantValue=1;
 
 			_progressiveSpatialConstant[index]=localSpatialConstantValue;
 
 			// computing local gain
-			double localGain=(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)/(1+_beta);
+			float localGain=(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)*(1-localSpatialConstantValue)/(1+_beta);
 			_progressiveGain[index]=localGain;
 
 			//std::cout<<commonFactor<<", "<<sqrt((_halfNBcolumns-1-idColumn)+(_halfNBrows-idRow-1))<<", "<<(_halfNBcolumns-1-idColumn)<<", "<<(_halfNBrows-idRow-1)<<", "<<localSpatialConstantValue<<std::endl;
@@ -293,105 +293,105 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const doubl
 ///////////////////////////////////////////////////////////////////////
 /// Local luminance adaptation functions
 // run local adaptation filter and save result in _filterOutput
-const std::valarray<double> &BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<double> &inputFrame, const std::valarray<double> &localLuminance)
+const std::valarray<float> &BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<float> &inputFrame, const std::valarray<float> &localLuminance)
 {
 	_localLuminanceAdaptation(get_data(inputFrame), get_data(localLuminance), &_filterOutput[0]);
 	return _filterOutput;
 }
 // run local adaptation filter at a specific output adress
-void BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<double> &inputFrame, const std::valarray<double> &localLuminance, std::valarray<double> &outputFrame)
+void BasicRetinaFilter::runFilter_LocalAdapdation(const std::valarray<float> &inputFrame, const std::valarray<float> &localLuminance, std::valarray<float> &outputFrame)
 {
 	_localLuminanceAdaptation(get_data(inputFrame), get_data(localLuminance), &outputFrame[0]);
 }
 // run local adaptation filter and save result in _filterOutput with autonomous low pass filtering before adaptation
-const std::valarray<double> &BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<double> &inputFrame)
+const std::valarray<float> &BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<float> &inputFrame)
 {
 	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0]);
 	_localLuminanceAdaptation(get_data(inputFrame), &_filterOutput[0], &_filterOutput[0]);
 	return _filterOutput;
 }
 // run local adaptation filter at a specific output adress with autonomous low pass filtering before adaptation
-void BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<double> &inputFrame, std::valarray<double> &outputFrame)
+void BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame)
 {
 	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0]);
 	_localLuminanceAdaptation(get_data(inputFrame), &_filterOutput[0], &outputFrame[0]);
 }
 // local luminance adaptation of the input in regard of localLuminance buffer
-void BasicRetinaFilter::_localLuminanceAdaptation(const double *inputFrame, const double *localLuminance, double *outputFrame)
+void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const float *localLuminance, float *outputFrame)
 {
-	double meanLuminance=0;
-	const double *luminancePTR=inputFrame;
+	float meanLuminance=0;
+	const float *luminancePTR=inputFrame;
 	for (unsigned int i=0;i<_filterOutput.getNBpixels();++i)
 		meanLuminance+=*(luminancePTR++);
 	meanLuminance/=_filterOutput.getNBpixels();
-	//double tempMeanValue=meanLuminance+_meanInputValue*_tau;
+	//float tempMeanValue=meanLuminance+_meanInputValue*_tau;
 
 	updateCompressionParameter(meanLuminance);
 	//std::cout<<meanLuminance<<std::endl;
-	const double *localLuminancePTR=localLuminance;
-	const double *inputFramePTR=inputFrame;
-	double *outputFramePTR=outputFrame;
+	const float *localLuminancePTR=localLuminance;
+	const float *inputFramePTR=inputFrame;
+	float *outputFramePTR=outputFrame;
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputFramePTR)
 	{
-		double X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
+		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0);
 		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
 	}
 }
 
 // local adaptation applied on a range of values which can be positive and negative
-void BasicRetinaFilter::_localLuminanceAdaptationPosNegValues(const double *inputFrame, const double *localLuminance, double *outputFrame)
+void BasicRetinaFilter::_localLuminanceAdaptationPosNegValues(const float *inputFrame, const float *localLuminance, float *outputFrame)
 {
-	const double *localLuminancePTR=localLuminance;
-	const double *inputFramePTR=inputFrame;
-	double *outputFramePTR=outputFrame;
-	double factor=_maxInputValue*2/CV_PI;
+	const float *localLuminancePTR=localLuminance;
+	const float *inputFramePTR=inputFrame;
+	float *outputFramePTR=outputFrame;
+	float factor=_maxInputValue*2/CV_PI;
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputFramePTR)
 	{
-		double X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
+		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		*(outputFramePTR++) = factor*atan(*inputFramePTR/X0);//(_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0);
 		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
 	}
 }
 
 // local luminance adaptation of the input in regard of localLuminance buffer, the input is rewrited and becomes the output
-void BasicRetinaFilter::_localLuminanceAdaptation(double *inputOutputFrame, const double *localLuminance)
+void BasicRetinaFilter::_localLuminanceAdaptation(float *inputOutputFrame, const float *localLuminance)
 {
-	/*double meanLuminance=0;
-    const double *luminancePTR=inputOutputFrame;
+	/*float meanLuminance=0;
+    const float *luminancePTR=inputOutputFrame;
     for (unsigned int i=0;i<_filterOutput.getNBpixels();++i)
       meanLuminance+=*(luminancePTR++);
     meanLuminance/=_filterOutput.getNBpixels();
-    //double tempMeanValue=meanLuminance+_meanInputValue*_tau;
+    //float tempMeanValue=meanLuminance+_meanInputValue*_tau;
 
     updateCompressionParameter(meanLuminance);
 	 */
-	const double *localLuminancePTR=localLuminance;
-	double *inputOutputFramePTR=inputOutputFrame;
+	const float *localLuminancePTR=localLuminance;
+	float *inputOutputFramePTR=inputOutputFrame;
 
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputOutputFramePTR)
 	{
-		double X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
+		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		*(inputOutputFramePTR) = (_maxInputValue+X0)**inputOutputFramePTR/(*inputOutputFramePTR +X0);
 	}
 }
 ///////////////////////////////////////////////////////////////////////
 /// Spatio temporal Low Pass filter functions
 // run LP filter and save result in the basic retina element buffer
-const std::valarray<double> &BasicRetinaFilter::runFilter_LPfilter(const std::valarray<double> &inputFrame, const unsigned int filterIndex)
+const std::valarray<float> &BasicRetinaFilter::runFilter_LPfilter(const std::valarray<float> &inputFrame, const unsigned int filterIndex)
 {
 	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0], filterIndex);
 	return _filterOutput;
 }
 
 // run LP filter for a new frame input and save result at a specific output adress
-void BasicRetinaFilter::runFilter_LPfilter(const std::valarray<double> &inputFrame, std::valarray<double> &outputFrame, const unsigned int filterIndex)
+void BasicRetinaFilter::runFilter_LPfilter(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame, const unsigned int filterIndex)
 {
 	_spatiotemporalLPfilter(get_data(inputFrame), &outputFrame[0], filterIndex);
 }
 
 // run LP filter on the input data and rewrite it
-void BasicRetinaFilter::runFilter_LPfilter_Autonomous(std::valarray<double> &inputOutputFrame, const unsigned int filterIndex)
+void BasicRetinaFilter::runFilter_LPfilter_Autonomous(std::valarray<float> &inputOutputFrame, const unsigned int filterIndex)
 {
 	unsigned int coefTableOffset=filterIndex*3;
 
@@ -408,7 +408,7 @@ void BasicRetinaFilter::runFilter_LPfilter_Autonomous(std::valarray<double> &inp
 
 }
 // run LP filter for a new frame input and save result at a specific output adress
-void BasicRetinaFilter::_spatiotemporalLPfilter(const double *inputFrame, double *outputFrame, const unsigned int filterIndex)
+void BasicRetinaFilter::_spatiotemporalLPfilter(const float *inputFrame, float *outputFrame, const unsigned int filterIndex)
 {
 	unsigned int coefTableOffset=filterIndex*3;
 	/**********/
@@ -425,7 +425,7 @@ void BasicRetinaFilter::_spatiotemporalLPfilter(const double *inputFrame, double
 }
 
 // run SQUARING LP filter for a new frame input and save result at a specific output adress
-const double BasicRetinaFilter::_squaringSpatiotemporalLPfilter(const double *inputFrame, double *outputFrame, const unsigned int filterIndex)
+const float BasicRetinaFilter::_squaringSpatiotemporalLPfilter(const float *inputFrame, float *outputFrame, const unsigned int filterIndex)
 {
 	unsigned int coefTableOffset=filterIndex*3;
 	/**********/
@@ -445,15 +445,15 @@ const double BasicRetinaFilter::_squaringSpatiotemporalLPfilter(const double *in
 // standard version of the 1D low pass filters
 
 //  horizontal causal filter which adds the input inside
-void BasicRetinaFilter::_horizontalCausalFilter(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalCausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 
 
 	//#pragma omp parallel for
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double* outputPTR=outputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
-		register double result=0;
+		register float* outputPTR=outputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(outputPTR)+  _a* result;
@@ -462,14 +462,14 @@ void BasicRetinaFilter::_horizontalCausalFilter(double *outputFrame, unsigned in
 	}
 }
 //  horizontal causal filter which adds the input inside
-void BasicRetinaFilter::_horizontalCausalFilter_addInput(const double *inputFrame, double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 	//#pragma omp parallel for
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double* outputPTR=outputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
-		register const double* inputPTR=inputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
-		register double result=0;
+		register float* outputPTR=outputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
+		register const float* inputPTR=inputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(inputPTR++) + _tau**(outputPTR)+  _a* result;
@@ -480,14 +480,14 @@ void BasicRetinaFilter::_horizontalCausalFilter_addInput(const double *inputFram
 }
 
 //  horizontal anticausal filter  (basic way, no add on)
-void BasicRetinaFilter::_horizontalAnticausalFilter(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 
 	//#pragma omp parallel for
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double* outputPTR=outputFrame+(IDrowEnd-IDrow)*(_filterOutput.getNBcolumns())-1;
-		register double result=0;
+		register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(_filterOutput.getNBcolumns())-1;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(outputPTR)+  _a* result;
@@ -498,14 +498,14 @@ void BasicRetinaFilter::_horizontalAnticausalFilter(double *outputFrame, unsigne
 
 }
 //  horizontal anticausal filter which multiplies the output by _gain
-void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 
 	//#pragma omp parallel for
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double* outputPTR=outputFrame+(IDrowEnd-IDrow)*(_filterOutput.getNBcolumns())-1;
-		register double result=0;
+		register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(_filterOutput.getNBcolumns())-1;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(outputPTR)+  _a* result;
@@ -515,13 +515,13 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(double *outputFrame
 }
 
 //  vertical anticausal filter
-void BasicRetinaFilter::_verticalCausalFilter(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
 	//#pragma omp parallel for
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=outputFrame+IDcolumn;
+		register float result=0;
+		register float *outputPTR=outputFrame+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -535,14 +535,14 @@ void BasicRetinaFilter::_verticalCausalFilter(double *outputFrame, unsigned int 
 
 
 //  vertical anticausal filter (basic way, no add on)
-void BasicRetinaFilter::_verticalAnticausalFilter(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalAnticausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	double* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	//#pragma omp parallel for
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=offset+IDcolumn;
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -555,14 +555,14 @@ void BasicRetinaFilter::_verticalAnticausalFilter(double *outputFrame, unsigned 
 }
 
 //  vertical anticausal filter which multiplies the output by _gain
-void BasicRetinaFilter::_verticalAnticausalFilter_multGain(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	double* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	//#pragma omp parallel for
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=offset+IDcolumn;
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -579,13 +579,13 @@ void BasicRetinaFilter::_verticalAnticausalFilter_multGain(double *outputFrame, 
 // specific modifications of 1D filters
 
 // -> squaring horizontal causal filter
-void BasicRetinaFilter::_squaringHorizontalCausalFilter(const double *inputFrame, double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-	register double* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register const double* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(inputPTR)**(inputPTR) + _tau**(outputPTR)+  _a* result;
@@ -596,14 +596,14 @@ void BasicRetinaFilter::_squaringHorizontalCausalFilter(const double *inputFrame
 }
 
 //  vertical anticausal filter that returns the mean value of its result
-const double BasicRetinaFilter::_verticalAnticausalFilter_returnMeanValue(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+const float BasicRetinaFilter::_verticalAnticausalFilter_returnMeanValue(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	register double meanValue=0;
-	double* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	register float meanValue=0;
+	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=offset+IDcolumn;
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -615,11 +615,11 @@ const double BasicRetinaFilter::_verticalAnticausalFilter_returnMeanValue(double
 		}
 	}
 
-	return meanValue/(double)_filterOutput.getNBpixels();
+	return meanValue/(float)_filterOutput.getNBpixels();
 }
 
 // LP filter with integration in specific areas (regarding true values of a binary parameters image)
-void BasicRetinaFilter::_localSquaringSpatioTemporalLPfilter(const double *inputFrame, double *LPfilterOutput, const unsigned int *integrationAreas, const unsigned int filterIndex)
+void BasicRetinaFilter::_localSquaringSpatioTemporalLPfilter(const float *inputFrame, float *LPfilterOutput, const unsigned int *integrationAreas, const unsigned int filterIndex)
 {
 	unsigned int coefTableOffset=filterIndex*3;
 	_a=_filteringCoeficientsTable[coefTableOffset+0];
@@ -638,14 +638,14 @@ void BasicRetinaFilter::_localSquaringSpatioTemporalLPfilter(const double *input
 // same functions (some of them) but take a binary flag to allow integration, false flag means, no data change at the output...
 
 // this function take an image in input and squares it befor computing
-void BasicRetinaFilter::_local_squaringHorizontalCausalFilter(const double *inputFrame, double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas)
+void BasicRetinaFilter::_local_squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas)
 {
-	register double* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register const double* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
 	const unsigned int *integrationAreasPTR=integrationAreas;
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			if (*(integrationAreasPTR++))
@@ -659,15 +659,15 @@ void BasicRetinaFilter::_local_squaringHorizontalCausalFilter(const double *inpu
 	}
 }
 
-void BasicRetinaFilter::_local_horizontalAnticausalFilter(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas)
+void BasicRetinaFilter::_local_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas)
 {
 
-	register double* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
+	register float* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
 	const unsigned int *integrationAreasPTR=integrationAreas;
 
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			if (*(integrationAreasPTR++))
@@ -680,14 +680,14 @@ void BasicRetinaFilter::_local_horizontalAnticausalFilter(double *outputFrame, u
 
 }
 
-void BasicRetinaFilter::_local_verticalCausalFilter(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas)
+void BasicRetinaFilter::_local_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas)
 {
 	const unsigned int *integrationAreasPTR=integrationAreas;
 
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=outputFrame+IDcolumn;
+		register float result=0;
+		register float *outputPTR=outputFrame+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -702,15 +702,15 @@ void BasicRetinaFilter::_local_verticalCausalFilter(double *outputFrame, unsigne
 	}
 }
 // this functions affects _gain at the output
-void BasicRetinaFilter::_local_verticalAnticausalFilter_multGain(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas)
+void BasicRetinaFilter::_local_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas)
 {
 	const unsigned int *integrationAreasPTR=integrationAreas;
-	double* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=offset+IDcolumn;
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
 
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
@@ -730,7 +730,7 @@ void BasicRetinaFilter::_local_verticalAnticausalFilter_multGain(double *outputF
 // -> USE IRREGULAR SPATIAL CONSTANT
 
 // irregular filter computed from a buffer and rewrites it
-void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(double *inputOutputFrame, const unsigned int filterIndex)
+void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(float *inputOutputFrame, const unsigned int filterIndex)
 {
 	if (_progressiveGain.size()==0)
 	{
@@ -750,7 +750,7 @@ void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(double *inputOutputFra
 
 }
 // irregular filter computed from a buffer and puts result on another
-void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(const double *inputFrame, double *outputFrame, const unsigned int filterIndex)
+void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(const float *inputFrame, float *outputFrame, const unsigned int filterIndex)
 {
 	if (_progressiveGain.size()==0)
 	{
@@ -771,13 +771,13 @@ void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(const double *inputFra
 }
 // 1D filters with irregular spatial constant
 //  horizontal causal filter wich runs on its input buffer
-void BasicRetinaFilter::_horizontalCausalFilter_Irregular(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalCausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-	register double* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register const double* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowStart*_filterOutput.getNBcolumns();
+	register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register const float* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowStart*_filterOutput.getNBcolumns();
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(outputPTR)+  *(spatialConstantPTR++)* result;
@@ -787,14 +787,14 @@ void BasicRetinaFilter::_horizontalCausalFilter_Irregular(double *outputFrame, u
 }
 
 // horizontal causal filter with add input
-void BasicRetinaFilter::_horizontalCausalFilter_Irregular_addInput(const double *inputFrame, double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalCausalFilter_Irregular_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-	register double* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register const double* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register const double* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowStart*_filterOutput.getNBcolumns();
+	register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
+	register const float* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowStart*_filterOutput.getNBcolumns();
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(inputPTR++) + _tau**(outputPTR)+  *(spatialConstantPTR++)* result;
@@ -805,14 +805,14 @@ void BasicRetinaFilter::_horizontalCausalFilter_Irregular_addInput(const double 
 }
 
 //  horizontal anticausal filter  (basic way, no add on)
-void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(double *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-	register double* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
-	register const double* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowEnd*(_filterOutput.getNBcolumns())-1;
+	register float* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
+	register const float* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowEnd*(_filterOutput.getNBcolumns())-1;
 
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
-		register double result=0;
+		register float result=0;
 		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
 		{
 			result = *(outputPTR)+  *(spatialConstantPTR--)* result;
@@ -824,13 +824,13 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(double *outputFram
 }
 
 //  vertical anticausal filter
-void BasicRetinaFilter::_verticalCausalFilter_Irregular(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=outputFrame+IDcolumn;
-		register const double *spatialConstantPTR=&_progressiveSpatialConstant[0]+IDcolumn;
+		register float result=0;
+		register float *outputPTR=outputFrame+IDcolumn;
+		register const float *spatialConstantPTR=&_progressiveSpatialConstant[0]+IDcolumn;
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
 			result = *(outputPTR) + *(spatialConstantPTR) * result;
@@ -842,17 +842,17 @@ void BasicRetinaFilter::_verticalCausalFilter_Irregular(double *outputFrame, uns
 }
 
 //  vertical anticausal filter which multiplies the output by _gain
-void BasicRetinaFilter::_verticalAnticausalFilter_Irregular_multGain(double *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalAnticausalFilter_Irregular_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	double* outputOffset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
-	const double* constantOffset=&_progressiveSpatialConstant[0]+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
-	const double* gainOffset=&_progressiveGain[0]+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	float* outputOffset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	const float* constantOffset=&_progressiveSpatialConstant[0]+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	const float* gainOffset=&_progressiveGain[0]+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
-		register double result=0;
-		register double *outputPTR=outputOffset+IDcolumn;
-		register const double *spatialConstantPTR=constantOffset+IDcolumn;
-		register const double *progressiveGainPTR=gainOffset+IDcolumn;
+		register float result=0;
+		register float *outputPTR=outputOffset+IDcolumn;
+		register const float *spatialConstantPTR=constantOffset+IDcolumn;
+		register const float *progressiveGainPTR=gainOffset+IDcolumn;
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
 			result = *(outputPTR) + *(spatialConstantPTR) * result;

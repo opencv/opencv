@@ -83,7 +83,7 @@
 * movingContoursExtractor->runfilter(FrameBuffer);
 *
 * // get the output frame, check in the class description below for more outputs:
-* const double *movingContours=movingContoursExtractor->getMagnoYsaturated();
+* const float *movingContours=movingContoursExtractor->getMagnoYsaturated();
 *
 * // at the end of the program, destroy object:
 * delete movingContoursExtractor;
@@ -137,7 +137,7 @@ public:
 	* @param localAdaptIntegration_tau: specifies the temporal constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
 	* @param localAdaptIntegration_k: specifies the spatial constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
 	*/
-	void setCoefficientsTable(const double parasolCells_beta, const double parasolCells_tau, const double parasolCells_k, const double amacrinCellsTemporalCutFrequency, const double localAdaptIntegration_tau, const double localAdaptIntegration_k);
+	void setCoefficientsTable(const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float localAdaptIntegration_tau, const float localAdaptIntegration_k);
 
 	/**
 	* launch filter that runs all the IPL magno filter (model of the magnocellular channel of the Inner Plexiform Layer of the retina)
@@ -145,22 +145,22 @@ public:
 	* @param OPL_OFF: the output of the bipolar OFF cells of the retina (available from the ParvoRetinaFilter class (getBipolarCellsOFF() function)
 	* @return the processed result without post-processing
 	*/
-	const std::valarray<double> &runFilter(const std::valarray<double> &OPL_ON, const std::valarray<double> &OPL_OFF);
+	const std::valarray<float> &runFilter(const std::valarray<float> &OPL_ON, const std::valarray<float> &OPL_OFF);
 
 	/**
 	* @return the Magnocellular ON channel filtering output
 	*/
-	inline const std::valarray<double> &getMagnoON() const {return _magnoXOutputON;};
+	inline const std::valarray<float> &getMagnoON() const {return _magnoXOutputON;};
 
 	/**
 	* @return the Magnocellular OFF channel filtering output
 	*/
-	inline const std::valarray<double> &getMagnoOFF() const {return _magnoXOutputOFF;};
+	inline const std::valarray<float> &getMagnoOFF() const {return _magnoXOutputOFF;};
 
 	/**
 	* @return the Magnocellular Y (sum of the ON and OFF magno channels) filtering output
 	*/
-	inline const std::valarray<double> &getMagnoYsaturated() const {return *_magnoYsaturated;};
+	inline const std::valarray<float> &getMagnoYsaturated() const {return *_magnoYsaturated;};
 
 	/**
 	* applies an image normalization which saturates the high output values by the use of an assymetric sigmoide
@@ -170,28 +170,28 @@ public:
 	/**
 	* @return the horizontal cells' temporal constant
 	*/
-	inline const double getTemporalConstant(){return this->_filteringCoeficientsTable[2];};
+	inline const float getTemporalConstant(){return this->_filteringCoeficientsTable[2];};
 
 private:
 
 	// related pointers to these buffers
-	std::valarray<double> _previousInput_ON;
-	std::valarray<double> _previousInput_OFF;
-	std::valarray<double> _amacrinCellsTempOutput_ON;
-	std::valarray<double> _amacrinCellsTempOutput_OFF;
-	std::valarray<double> _magnoXOutputON;
-	std::valarray<double> _magnoXOutputOFF;
-	std::valarray<double> _localProcessBufferON;
-	std::valarray<double> _localProcessBufferOFF;
+	std::valarray<float> _previousInput_ON;
+	std::valarray<float> _previousInput_OFF;
+	std::valarray<float> _amacrinCellsTempOutput_ON;
+	std::valarray<float> _amacrinCellsTempOutput_OFF;
+	std::valarray<float> _magnoXOutputON;
+	std::valarray<float> _magnoXOutputOFF;
+	std::valarray<float> _localProcessBufferON;
+	std::valarray<float> _localProcessBufferOFF;
 	// reference to parent buffers and allow better readability
-	TemplateBuffer<double> *_magnoYOutput;
-	std::valarray<double> *_magnoYsaturated;
+	TemplateBuffer<float> *_magnoYOutput;
+	std::valarray<float> *_magnoYsaturated;
 
 	// varialbles
-	double _temporalCoefficient;
+	float _temporalCoefficient;
 
 	// amacrine cells filter : high pass temporal filter
-	void _amacrineCellsComputing(const double *ONinput, const double *OFFinput);
+	void _amacrineCellsComputing(const float *ONinput, const float *OFFinput);
 
 
 };

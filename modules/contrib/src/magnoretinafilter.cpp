@@ -142,7 +142,7 @@ void MagnoRetinaFilter::resize(const unsigned int NBrows, const unsigned int NBc
 	clearAllBuffers();
 }
 
-void MagnoRetinaFilter::setCoefficientsTable(const double parasolCells_beta, const double parasolCells_tau, const double parasolCells_k, const double amacrinCellsTemporalCutFrequency, const double localAdaptIntegration_tau, const double localAdaptIntegration_k )
+void MagnoRetinaFilter::setCoefficientsTable(const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float localAdaptIntegration_tau, const float localAdaptIntegration_k )
 {
 	_temporalCoefficient=exp(-1.0/amacrinCellsTemporalCutFrequency);
 	// the first set of parameters is dedicated to the low pass filtering property of the ganglion cells
@@ -151,24 +151,24 @@ void MagnoRetinaFilter::setCoefficientsTable(const double parasolCells_beta, con
 	BasicRetinaFilter::setLPfilterParameters(0, localAdaptIntegration_tau, localAdaptIntegration_k, 1);
 }
 
-void MagnoRetinaFilter::_amacrineCellsComputing(const double *OPL_ON, const double *OPL_OFF)
+void MagnoRetinaFilter::_amacrineCellsComputing(const float *OPL_ON, const float *OPL_OFF)
 {
-	register const double *OPL_ON_PTR=OPL_ON;
-	register const double *OPL_OFF_PTR=OPL_OFF;
-	register double *previousInput_ON_PTR= &_previousInput_ON[0];
-	register double *previousInput_OFF_PTR= &_previousInput_OFF[0];
-	register double *amacrinCellsTempOutput_ON_PTR= &_amacrinCellsTempOutput_ON[0];
-	register double *amacrinCellsTempOutput_OFF_PTR= &_amacrinCellsTempOutput_OFF[0];
+	register const float *OPL_ON_PTR=OPL_ON;
+	register const float *OPL_OFF_PTR=OPL_OFF;
+	register float *previousInput_ON_PTR= &_previousInput_ON[0];
+	register float *previousInput_OFF_PTR= &_previousInput_OFF[0];
+	register float *amacrinCellsTempOutput_ON_PTR= &_amacrinCellsTempOutput_ON[0];
+	register float *amacrinCellsTempOutput_OFF_PTR= &_amacrinCellsTempOutput_OFF[0];
 
 	for (unsigned int IDpixel=0 ; IDpixel<this->getNBpixels(); ++IDpixel)
 	{
 
 		/* Compute ON and OFF amacrin cells high pass temporal filter */
-		double magnoXonPixelResult = _temporalCoefficient*(*amacrinCellsTempOutput_ON_PTR+ *OPL_ON_PTR-*previousInput_ON_PTR);
-		*(amacrinCellsTempOutput_ON_PTR++)=((double)(magnoXonPixelResult>0))*magnoXonPixelResult;
+		float magnoXonPixelResult = _temporalCoefficient*(*amacrinCellsTempOutput_ON_PTR+ *OPL_ON_PTR-*previousInput_ON_PTR);
+		*(amacrinCellsTempOutput_ON_PTR++)=((float)(magnoXonPixelResult>0))*magnoXonPixelResult;
 
-		double magnoXoffPixelResult = _temporalCoefficient*(*amacrinCellsTempOutput_OFF_PTR+ *OPL_OFF_PTR-*previousInput_OFF_PTR);
-		*(amacrinCellsTempOutput_OFF_PTR++)=((double)(magnoXoffPixelResult>0))*magnoXoffPixelResult;
+		float magnoXoffPixelResult = _temporalCoefficient*(*amacrinCellsTempOutput_OFF_PTR+ *OPL_OFF_PTR-*previousInput_OFF_PTR);
+		*(amacrinCellsTempOutput_OFF_PTR++)=((float)(magnoXoffPixelResult>0))*magnoXoffPixelResult;
 
 		/* prepare next loop */
 		*(previousInput_ON_PTR++)=*(OPL_ON_PTR++);
@@ -178,7 +178,7 @@ void MagnoRetinaFilter::_amacrineCellsComputing(const double *OPL_ON, const doub
 }
 
 // launch filter that runs all the IPL filter
-const std::valarray<double> &MagnoRetinaFilter::runFilter(const std::valarray<double> &OPL_ON, const std::valarray<double> &OPL_OFF)
+const std::valarray<float> &MagnoRetinaFilter::runFilter(const std::valarray<float> &OPL_ON, const std::valarray<float> &OPL_OFF)
 {
 	// Compute the high pass temporal filter
 	_amacrineCellsComputing(get_data(OPL_ON), get_data(OPL_OFF));
@@ -194,9 +194,9 @@ const std::valarray<double> &MagnoRetinaFilter::runFilter(const std::valarray<do
 	_localLuminanceAdaptation(&_magnoXOutputOFF[0], &_localProcessBufferOFF[0]);
 
 	/* Compute MagnoY */
-	register double *magnoYOutput= &(*_magnoYOutput)[0];
-	register double *magnoXOutputON_PTR= &_magnoXOutputON[0];
-	register double *magnoXOutputOFF_PTR= &_magnoXOutputOFF[0];
+	register float *magnoYOutput= &(*_magnoYOutput)[0];
+	register float *magnoXOutputON_PTR= &_magnoXOutputON[0];
+	register float *magnoXOutputOFF_PTR= &_magnoXOutputOFF[0];
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
 		*(magnoYOutput++)=*(magnoXOutputON_PTR++)+*(magnoXOutputOFF_PTR++);
 

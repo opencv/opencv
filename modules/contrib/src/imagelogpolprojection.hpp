@@ -148,9 +148,10 @@ public:
 	/**
 	* main funtion of the class: run projection function
 	* @param inputFrame: the input frame to be processed
+        * @param colorMode: the input buffer color mode: false=gray levels, true = 3 color channels mode 
 	* @return the output frame
 	*/
-	std::valarray<double> &runProjection(const std::valarray<double> &inputFrame, const double colorMode=false);
+	std::valarray<float> &runProjection(const std::valarray<float> &inputFrame, const bool colorMode=false);
 
 	/**
 	* @return the numbers of rows (height) of the images OUTPUTS of the object
@@ -172,13 +173,13 @@ public:
 	/**
 	* @return the output of the filter which applies an irregular Low Pass spatial filter to the imag input (see function
 	*/
-	inline const std::valarray<double> &getIrregularLPfilteredInputFrame() const {return _irregularLPfilteredFrame;};
+	inline const std::valarray<float> &getIrregularLPfilteredInputFrame() const {return _irregularLPfilteredFrame;};
 
 	/**
 	* function which allows to retrieve the output frame which was updated after the "runProjection(...) function BasicRetinaFilter::runProgressiveFilter(...)
 	* @return the projection result
 	*/
-	inline const std::valarray<double> &getSampledFrame() const {return _sampledFrame;};
+	inline const std::valarray<float> &getSampledFrame() const {return _sampledFrame;};
 
 	/**
 	* function which allows gives the tranformation table, its size is (getNBrows()*getNBcolumns()*2)
@@ -213,11 +214,11 @@ private:
 	double _minDimension;
 
 	// template buffers
-	std::valarray<double>_sampledFrame;
-	std::valarray<double>&_tempBuffer;
+	std::valarray<float>_sampledFrame;
+	std::valarray<float>&_tempBuffer;
 	std::valarray<unsigned int>_transformTable;
 
-	std::valarray<double> &_irregularLPfilteredFrame; // just a reference for easier understanding
+	std::valarray<float> &_irregularLPfilteredFrame; // just a reference for easier understanding
 	unsigned int _usefullpixelIndex;
 
 	// init transformation tables

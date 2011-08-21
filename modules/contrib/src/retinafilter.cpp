@@ -200,16 +200,16 @@ void RetinaFilter::_createHybridTable()
 
 	// fill _hybridParvoMagnoCoefTable
 	int i, j, halfRows=_photoreceptorsPrefilter.getNBrows()/2, halfColumns=_photoreceptorsPrefilter.getNBcolumns()/2;
-	double *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
-	double minDistance=MIN(halfRows, halfColumns)*0.7;
+	float *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
+	float minDistance=(float)MIN(halfRows, halfColumns)*0.7;
 	for (i=0;i<(int)_photoreceptorsPrefilter.getNBrows();++i)
 	{
 		for (j=0;j<(int)_photoreceptorsPrefilter.getNBcolumns();++j)
 		{
-			double distanceToCenter=sqrt(((double)(i-halfRows)*(i-halfRows)+(j-halfColumns)*(j-halfColumns)));
+			float distanceToCenter=sqrt(((float)(i-halfRows)*(i-halfRows)+(j-halfColumns)*(j-halfColumns)));
 			if (distanceToCenter<minDistance)
 			{
-				double a=*(hybridParvoMagnoCoefTablePTR++)=0.5+0.5*cos(CV_PI*distanceToCenter/minDistance);
+				float a=*(hybridParvoMagnoCoefTablePTR++)=0.5+0.5*cos(CV_PI*distanceToCenter/minDistance);
 				*(hybridParvoMagnoCoefTablePTR++)=1.0-a;
 			}else
 			{
@@ -221,7 +221,7 @@ void RetinaFilter::_createHybridTable()
 }
 
 // setup parameters function and global data filling
-void RetinaFilter::setGlobalParameters(const double OPLspatialResponse1, const double OPLtemporalresponse1, const double OPLassymetryGain, const double OPLspatialResponse2, const double OPLtemporalresponse2, const double LPfilterSpatialResponse, const double LPfilterGain, const double LPfilterTemporalresponse, const double MovingContoursExtractorCoefficient, const bool normalizeParvoOutput_0_maxOutputValue, const bool normalizeMagnoOutput_0_maxOutputValue, const double maxOutputValue, const double maxInputValue, const double meanValue)
+void RetinaFilter::setGlobalParameters(const float OPLspatialResponse1, const float OPLtemporalresponse1, const float OPLassymetryGain, const float OPLspatialResponse2, const float OPLtemporalresponse2, const float LPfilterSpatialResponse, const float LPfilterGain, const float LPfilterTemporalresponse, const float MovingContoursExtractorCoefficient, const bool normalizeParvoOutput_0_maxOutputValue, const bool normalizeMagnoOutput_0_maxOutputValue, const float maxOutputValue, const float maxInputValue, const float meanValue)
 {
 	_normalizeParvoOutput_0_maxOutputValue=normalizeParvoOutput_0_maxOutputValue;
 	_normalizeMagnoOutput_0_maxOutputValue=normalizeMagnoOutput_0_maxOutputValue;
@@ -240,7 +240,7 @@ void RetinaFilter::setGlobalParameters(const double OPLspatialResponse1, const d
 	_setInitPeriodCount();
 }
 
-const bool RetinaFilter::checkInput(const std::valarray<double> &input, const bool)
+const bool RetinaFilter::checkInput(const std::valarray<float> &input, const bool)
 {
 
 	BasicRetinaFilter *inputTarget=&_photoreceptorsPrefilter;
@@ -259,7 +259,7 @@ const bool RetinaFilter::checkInput(const std::valarray<double> &input, const bo
 }
 
 // main function that runs the filter for a given input frame
-const bool RetinaFilter::runFilter(const std::valarray<double> &imageInput, const bool useAdaptiveFiltering, const bool processRetinaParvoMagnoMapping, const bool useColorMode, const bool inputIsColorMultiplexed)
+const bool RetinaFilter::runFilter(const std::valarray<float> &imageInput, const bool useAdaptiveFiltering, const bool processRetinaParvoMagnoMapping, const bool useColorMode, const bool inputIsColorMultiplexed)
 {
 	// preliminary check
 	bool processSuccess=true;
@@ -281,8 +281,8 @@ const bool RetinaFilter::runFilter(const std::valarray<double> &imageInput, cons
 	 * if color or something else must be considered, specific preprocessing are applied
 	 */
 
-	const std::valarray<double> *selectedPhotoreceptorsLocalAdaptationInput= &imageInput;
-	const std::valarray<double> *selectedPhotoreceptorsColorInput=&imageInput;
+	const std::valarray<float> *selectedPhotoreceptorsLocalAdaptationInput= &imageInput;
+	const std::valarray<float> *selectedPhotoreceptorsColorInput=&imageInput;
 
 	//********** Following is input data specific photoreceptors processing
 	if (_photoreceptorsLogSampling)
@@ -346,7 +346,7 @@ const bool RetinaFilter::runFilter(const std::valarray<double> &imageInput, cons
 	return processSuccess;
 }
 
-const std::valarray<double> &RetinaFilter::getContours()
+const std::valarray<float> &RetinaFilter::getContours()
 {
 	if (_useColorMode)
 		return _colorEngine.getLuminance();
@@ -355,7 +355,7 @@ const std::valarray<double> &RetinaFilter::getContours()
 }
 
 // run the initilized retina filter in order to perform gray image tone mapping, after this call all retina outputs are updated
-void RetinaFilter::runGrayToneMapping(const std::valarray<double> &grayImageInput, std::valarray<double> &grayImageOutput, const double PhotoreceptorsCompression, const double ganglionCellsCompression)
+void RetinaFilter::runGrayToneMapping(const std::valarray<float> &grayImageInput, std::valarray<float> &grayImageOutput, const float PhotoreceptorsCompression, const float ganglionCellsCompression)
 {
 	// preliminary check
 	if (!checkInput(grayImageInput, false))
@@ -365,17 +365,17 @@ void RetinaFilter::runGrayToneMapping(const std::valarray<double> &grayImageInpu
 }
 
 // run the initilized retina filter in order to perform gray image tone mapping, after this call all retina outputs are updated
-void RetinaFilter::_runGrayToneMapping(const std::valarray<double> &grayImageInput, std::valarray<double> &grayImageOutput, const double PhotoreceptorsCompression, const double ganglionCellsCompression)
+void RetinaFilter::_runGrayToneMapping(const std::valarray<float> &grayImageInput, std::valarray<float> &grayImageOutput, const float PhotoreceptorsCompression, const float ganglionCellsCompression)
 {
 	// stability controls value update
 	++_ellapsedFramesSinceLastReset;
 
-	std::valarray<double> temp2(grayImageInput.size());
+	std::valarray<float> temp2(grayImageInput.size());
 
 	// apply tone mapping on the multiplexed image
 	// -> photoreceptors local adaptation (large area adaptation)
 	_photoreceptorsPrefilter.runFilter_LPfilter(grayImageInput, grayImageOutput, 2); // compute low pass filtering modeling the horizontal cells filtering to acess local luminance
-	_photoreceptorsPrefilter.setV0CompressionParameterToneMapping(PhotoreceptorsCompression, grayImageOutput.sum()/(double)_photoreceptorsPrefilter.getNBpixels());
+	_photoreceptorsPrefilter.setV0CompressionParameterToneMapping(PhotoreceptorsCompression, grayImageOutput.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
 	_photoreceptorsPrefilter.runFilter_LocalAdapdation(grayImageInput, grayImageOutput, temp2); // adapt contrast to local luminance
 
 	// high pass filter
@@ -386,12 +386,12 @@ void RetinaFilter::_runGrayToneMapping(const std::valarray<double> &grayImageInp
 
 	// -> ganglion cells local adaptation (short area adaptation)
 	_photoreceptorsPrefilter.runFilter_LPfilter(temp2, grayImageOutput, 1); // compute low pass filtering (high cut frequency (remove spatio-temporal noise)
-	_photoreceptorsPrefilter.setV0CompressionParameterToneMapping(ganglionCellsCompression, temp2.max(), temp2.sum()/(double)_photoreceptorsPrefilter.getNBpixels());
+	_photoreceptorsPrefilter.setV0CompressionParameterToneMapping(ganglionCellsCompression, temp2.max(), temp2.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
 	_photoreceptorsPrefilter.runFilter_LocalAdapdation(temp2, grayImageOutput, grayImageOutput); // adapt contrast to local luminance
 
 }
 // run the initilized retina filter in order to perform color tone mapping, after this call all retina outputs are updated
-void RetinaFilter::runRGBToneMapping(const std::valarray<double> &RGBimageInput, std::valarray<double> &RGBimageOutput, const bool useAdaptiveFiltering, const double PhotoreceptorsCompression, const double ganglionCellsCompression)
+void RetinaFilter::runRGBToneMapping(const std::valarray<float> &RGBimageInput, std::valarray<float> &RGBimageOutput, const bool useAdaptiveFiltering, const float PhotoreceptorsCompression, const float ganglionCellsCompression)
 {
 	// preliminary check
 	if (!checkInput(RGBimageInput, true))
@@ -413,12 +413,12 @@ void RetinaFilter::runRGBToneMapping(const std::valarray<double> &RGBimageInput,
 	RGBimageOutput=_colorEngine.getDemultiplexedColorFrame();
 }
 
-void RetinaFilter::runLMSToneMapping(const std::valarray<double> &, std::valarray<double> &, const bool, const double, const double)
+void RetinaFilter::runLMSToneMapping(const std::valarray<float> &, std::valarray<float> &, const bool, const float, const float)
 {
 	std::cerr<<"not working, sorry"<<std::endl;
 
 	/*  // preliminary check
-    const std::valarray<double> &bufferInput=checkInput(LMSimageInput, true);
+    const std::valarray<float> &bufferInput=checkInput(LMSimageInput, true);
     if (!bufferInput)
       return NULL;
 
@@ -426,7 +426,7 @@ void RetinaFilter::runLMSToneMapping(const std::valarray<double> &, std::valarra
       std::cerr<<"RetinaFilter::Can not call tone mapping oeration if the retina filter was created for gray scale images"<<std::endl;
 
     // create a temporary buffer of size nrows, Mcolumns, 3 layers
-    std::valarray<double> lmsTempBuffer(LMSimageInput);
+    std::valarray<float> lmsTempBuffer(LMSimageInput);
     std::cout<<"RetinaFilter::--->min LMS value="<<lmsTempBuffer.min()<<std::endl;
 
     // setup local adaptation parameter at the photoreceptors level
@@ -454,8 +454,8 @@ void RetinaFilter::runLMSToneMapping(const std::valarray<double> &, std::valarra
     // compute LMS to A Cr1 Cr2 color space conversion
     _applyImageColorSpaceConversion(lmsTempBuffer.Buffer(), lmsTempBuffer.Buffer(), _LMStoACr1Cr2);
 
-    TemplateBuffer <double> acr1cr2TempBuffer(_NBrows, _NBcolumns, 3);
-    memcpy(acr1cr2TempBuffer.Buffer(), lmsTempBuffer.Buffer(), sizeof(double)*_NBpixels*3);
+    TemplateBuffer <float> acr1cr2TempBuffer(_NBrows, _NBcolumns, 3);
+    memcpy(acr1cr2TempBuffer.Buffer(), lmsTempBuffer.Buffer(), sizeof(float)*_NBpixels*3);
 
     // compute A Cr1 Cr2 to LMS color space conversion
     _applyImageColorSpaceConversion(acr1cr2TempBuffer.Buffer(), lmsTempBuffer.Buffer(), _ACr1Cr2toLMS);
@@ -473,31 +473,31 @@ void RetinaFilter::runLMSToneMapping(const std::valarray<double> &, std::valarra
 // return image with center Parvo and peripheral Magno channels
 void RetinaFilter::_processRetinaParvoMagnoMapping()
 {
-	register double *hybridParvoMagnoPTR= &_retinaParvoMagnoMappedFrame[0];
-	register const double *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
-	register const double *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
-	register double *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
+	register float *hybridParvoMagnoPTR= &_retinaParvoMagnoMappedFrame[0];
+	register const float *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
+	register const float *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
+	register float *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
 
 	for (unsigned int i=0 ; i<_photoreceptorsPrefilter.getNBpixels() ; ++i, hybridParvoMagnoCoefTablePTR+=2)
 	{
-		double hybridValue=*(parvoOutputPTR++)**(hybridParvoMagnoCoefTablePTR)+*(magnoXOutputPTR++)**(hybridParvoMagnoCoefTablePTR+1);
+		float hybridValue=*(parvoOutputPTR++)**(hybridParvoMagnoCoefTablePTR)+*(magnoXOutputPTR++)**(hybridParvoMagnoCoefTablePTR+1);
 		*(hybridParvoMagnoPTR++)=hybridValue;
 	}
 
-	TemplateBuffer<double>::normalizeGrayOutput_0_maxOutputValue(&_retinaParvoMagnoMappedFrame[0], _photoreceptorsPrefilter.getNBpixels());
+	TemplateBuffer<float>::normalizeGrayOutput_0_maxOutputValue(&_retinaParvoMagnoMappedFrame[0], _photoreceptorsPrefilter.getNBpixels());
 
 }
 
-const bool RetinaFilter::getParvoFoveaResponse(std::valarray<double> &parvoFovealResponse)
+const bool RetinaFilter::getParvoFoveaResponse(std::valarray<float> &parvoFovealResponse)
 {
 	if (!_useParvoOutput)
 		return false;
 	if (parvoFovealResponse.size() != _ParvoRetinaFilter.getNBpixels())
 		return false;
 
-	register const double *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
-	register double *fovealParvoResponsePTR= &parvoFovealResponse[0];
-	register double *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
+	register const float *parvoOutputPTR= get_data(_ParvoRetinaFilter.getOutput());
+	register float *fovealParvoResponsePTR= &parvoFovealResponse[0];
+	register float *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
 
 	for (unsigned int i=0 ; i<_photoreceptorsPrefilter.getNBpixels() ; ++i, hybridParvoMagnoCoefTablePTR+=2)
 	{
@@ -508,16 +508,16 @@ const bool RetinaFilter::getParvoFoveaResponse(std::valarray<double> &parvoFovea
 }
 
 // method to retrieve the parafoveal magnocellular pathway response (no energy motion in fovea)
-const bool RetinaFilter::getMagnoParaFoveaResponse(std::valarray<double> &magnoParafovealResponse)
+const bool RetinaFilter::getMagnoParaFoveaResponse(std::valarray<float> &magnoParafovealResponse)
 {
 	if (!_useMagnoOutput)
 		return false;
 	if (magnoParafovealResponse.size() != _MagnoRetinaFilter.getNBpixels())
 		return false;
 
-	register const double *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
-	register double *parafovealMagnoResponsePTR=&magnoParafovealResponse[0];
-	register double *hybridParvoMagnoCoefTablePTR=&_retinaParvoMagnoMapCoefTable[0]+1;
+	register const float *magnoXOutputPTR= get_data(_MagnoRetinaFilter.getOutput());
+	register float *parafovealMagnoResponsePTR=&magnoParafovealResponse[0];
+	register float *hybridParvoMagnoCoefTablePTR=&_retinaParvoMagnoMapCoefTable[0]+1;
 
 	for (unsigned int i=0 ; i<_photoreceptorsPrefilter.getNBpixels() ; ++i, hybridParvoMagnoCoefTablePTR+=2)
 	{
