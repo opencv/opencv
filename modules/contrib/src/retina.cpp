@@ -373,17 +373,22 @@ void Retina::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrix
 	}
 }
 
-const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
+const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputFrame, std::valarray<float> &outputValarrayMatrix)
 {
 	// first check input consistency
-	if (inputMatToConvert.empty())
+	if (inputFrame.empty())
 		throw cv::Exception(-1, "Retina cannot be applied, input buffer is empty", "Retina::run", "Retina.h", 0);
 
 	// retreive color mode from image input
-	bool colorMode = inputMatToConvert.channels() >=3;
+	bool colorMode = inputFrame.channels() >=3;
 
 	// convert to float AND fill the valarray buffer
 	const int dsttype = CV_32F; // output buffer is float format
+
+			// buffer format conversion... will be removed soon but WAITING for code error correction			
+			cv::Mat inputMatToConvert;
+			inputFrame.convertTo(inputMatToConvert, dsttype);
+
 	if (colorMode)
 	{
 		// create a cv::Mat table (for RGB planes)
