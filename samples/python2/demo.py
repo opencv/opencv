@@ -2,6 +2,7 @@ import Tkinter as tk
 from ScrolledText import ScrolledText
 from glob import glob
 from common import splitfn
+import webbrowser
 
 #from IPython.Shell import IPShellEmbed
 #ipshell = IPShellEmbed()
@@ -80,6 +81,7 @@ class App:
 
     def on_link(self, url):
         print url
+        webbrowser.open(url)
 
     def on_demo_select(self, evt):
         name = self.demos_lb.get( self.demos_lb.curselection()[0] )
@@ -101,28 +103,31 @@ class App:
             s = s.rstrip()
             if i == 0 and not s:
                 continue
-            sn = len(s)
-            if s and s == '='*sn:
+            if s and s == '='*len(s):
                 text.tag_add('header1', 'end-2l', 'end-1l')
-            elif s and s == '-'*sn:
+            elif s and s == '-'*len(s):
                 text.tag_add('header2', 'end-2l', 'end-1l')
             else:
                 text.insert('end', s+'\n')
+        
+        def add_link(start, end, url):
+            for tag in self.linker.add(url):
+                text.tag_add(tag, start, end)
+        self.match_text(r'http://\S+', add_link)
 
-    def format_line(self, s):
+    def match_text(self, pattern, tag_proc):
         text = self.text
-        pos, n = 0, len(s)
-        while pos < n:
-            next = s.find('http://', pos)
-            if next < 0:
-                next = n
-                test.insert(tk.END, s[pos:next])
-            pos = next
-        
-
-        #text.insert(tk.END, "click here!", linker.add('http://asdfsdaf')) 
-        
-
+        text.mark_set('matchPos', '1.0')
+        count = tk.IntVar()
+        while True:
+            match_index = text.search(pattern, 'matchPos', count=count, regexp=True, stopindex='end')
+            if not match_index: break
+            end_index = text.index( "%s+%sc" % (match_index, count.get()) )
+            text.mark_set('matchPos', end_index)
+            if callable(tag_proc):
+                tag_proc(match_index, end_index, text.get(match_index, end_index))
+            else:
+                text.tag_add(tag_proc, match_index, end_index)
 
     def run(self):
         tk.mainloop()

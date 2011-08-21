@@ -1,7 +1,7 @@
 '''
 Simple example of stereo image matching and point cloud generation.
 
-Resulting .ply file cam be easily viewed using MeshLab (http://meshlab.sourceforge.net/)
+Resulting .ply file cam be easily viewed using MeshLab ( http://meshlab.sourceforge.net/ )
 '''
 
 import numpy as np
