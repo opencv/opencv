@@ -373,41 +373,53 @@ void Retina::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrix
 	}
 }
 
-const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputFrame, std::valarray<float> &outputValarrayMatrix)
+const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert, std::valarray<float> &outputValarrayMatrix)
 {
 	// first check input consistency
-	if (inputFrame.empty())
+	if (inputMatToConvert.empty())
 		throw cv::Exception(-1, "Retina cannot be applied, input buffer is empty", "Retina::run", "Retina.h", 0);
 
 	// retreive color mode from image input
-	bool colorMode = inputFrame.channels() >=3;
+	int imageNumberOfChannels = inputMatToConvert.channels();
+	
+        // convert to float AND fill the valarray buffer
+	typedef float T; // define here the target pixel format, here, float
+        const int dsttype = DataType<T>::depth; // output buffer is float format
 
-	// convert to float AND fill the valarray buffer
-	const int dsttype = CV_32F; // output buffer is float format
 
-			// buffer format conversion... will be removed soon but WAITING for code error correction			
-			cv::Mat inputMatToConvert;
-			inputFrame.convertTo(inputMatToConvert, dsttype);
-
-	if (colorMode)
+	if(imageNumberOfChannels==4)
+        {
+	    // create a cv::Mat table (for RGBA planes)
+            cv::Mat planes[] =
+            {
+                cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
+                cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
+                cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]),
+                cv::Mat(inputMatToConvert.size(), dsttype)     // last channel (alpha) does not point on the valarray (not usefull in our case)
+            };
+            // split color cv::Mat in 4 planes... it fills valarray directely
+            cv::split(cv::Mat_<Vec<T, 4> >(inputMatToConvert), planes);
+        }else if (imageNumberOfChannels==3)
 	{
-		// create a cv::Mat table (for RGB planes)
-		cv::Mat planes[] =
-		{
-				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
-				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
-				cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
-		};
-		// split color cv::Mat in 3 planes... it fills valarray directely
-                cv::split(cv::Mat(inputMatToConvert), planes);
-
-	}else
+	    // create a cv::Mat table (for RGB planes)
+	    cv::Mat planes[] =
+	    {
+		cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
+		cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
+		cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
+	    };
+	    // split color cv::Mat in 3 planes... it fills valarray directely
+            cv::split(cv::Mat_<Vec<T, 3> >(inputMatToConvert), planes);
+	}else if(imageNumberOfChannels==1)
 	{
-		// create a cv::Mat header for the valarray
-                cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
-		inputMatToConvert.convertTo(dst, dsttype);
+	    // create a cv::Mat header for the valarray
+            cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
+	    inputMatToConvert.convertTo(dst, dsttype);
 	}
-	return colorMode;
+        else
+            CV_Error(CV_StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
+	
+    return imageNumberOfChannels>1; // return bool : false for gray level image processing, true for color mode
 }
 
 void Retina::clearBuffers() {_retinaFilter->clearAllBuffers();}
