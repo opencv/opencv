@@ -38,7 +38,7 @@ To mention a few:
 .. container:: enumeratevisibleitemswithsquare
 
    * Edges
-   * Corner (also known as interest points)
+   * **Corners** (also known as interest points)
    * Blobs (also known as regions of interest )
 
 In this tutorial we will study the *corner* features, specifically.
@@ -46,6 +46,108 @@ In this tutorial we will study the *corner* features, specifically.
 Why is a corner so special?
 ----------------------------
 
+.. container:: enumeratevisibleitemswithsquare
+
+   * Because, since it is the intersection of two edges, it represents a point in which the directions of these two edges *change*. Hence, the gradient of the image (in both directions) have a high variation, which can be used to detect it.
+
+
+How does it work?
+-----------------
+
+.. container:: enumeratevisibleitemswithsquare
+
+   * Let's look for corners. Since corners represents a variation in the gradient in the image, we will look for this "variation". 
+
+   * Consider a grayscale image :math:`I`. We are going to sweep a window :math:`w(x,y)` (with displacements :math:`u` in the x direction and :math:`v` in the right direction) :math:`I` and will calculate the variation of intensity.
+
+     .. math::
+
+        E(u,v) = \sum _{x,y} w(x,y)[ I(x+u,y+v) - I(x,y)]^{2}
+
+     where:
+
+     * :math:`w(x,y)` is the window at position :math:`(x,y)`    
+     * :math:`I(x,y)` is the intensity at :math:`(x,y)`
+     * :math:`I(x+u,y+v)` is the intensity at the moved window :math:`(x+u,y+v)`
+	
+   * Since we are looking for windows with corners, we are looking for windows with a large variation in intensity. Hence, we have to maximize the equation above, specifically the term:
+
+     .. math::
+
+        \sum _{x,y}[ I(x+u,y+v) - I(x,y)]^{2}
+
+
+   * Using *Taylor expansion*:
+
+     .. math::
+
+        E(u,v) \approx \sum _{x,y}[ I(x,y) + u I_{x} + vI_{y} - I(x,y)]^{2}
+
+
+   * Expanding the equation and cancelling properly:
+
+     .. math::
+
+        E(u,v) \approx \sum _{x,y} u^{2}I_{x}^{2} + 2uvI_{x}I_{y} + v^{2}I_{y}^{2}
+  
+   * Which can be expressed in a matrix form as:
+
+     .. math::
+
+        E(u,v) \approx \begin{bmatrix}
+                        u & v 
+                       \end{bmatrix}
+                       \left (
+		       \displaystyle \sum_{x,y}
+                       w(x,y)
+                       \begin{bmatrix}
+                        I_x^{2} & I_{x}I_{y} \\
+                        I_xI_{y} & I_{y}^{2} 
+		       \end{bmatrix}
+		       \right )	
+		       \begin{bmatrix}
+                        u \\
+			v 
+                       \end{bmatrix}		
+
+   * Let's denote:
+
+     .. math::
+
+        M = \displaystyle \sum_{x,y}
+			      w(x,y) 
+			      \begin{bmatrix}
+                        	I_x^{2} & I_{x}I_{y} \\
+                        	I_xI_{y} & I_{y}^{2} 
+		       	       \end{bmatrix}
+
+   * So, our equation now is:
+
+     .. math::
+
+        E(u,v) \approx \begin{bmatrix}
+                        u & v 
+                       \end{bmatrix}
+		       M
+		       \begin{bmatrix}
+                        u \\
+			v 
+                       \end{bmatrix}		
+
+  
+   * A score is calculated for each window, to determine if it can possibly contain a corner:
+
+     .. math::
+
+        R = det(M) - k(trace(M))^{2} 
+	
+     where:
+  
+     * det(M) = :math:`\lambda_{1}\lambda_{2}`
+     * trace(M) = :math:`\lambda_{1}+\lambda_{2}`
+
+     a window with a score :math:`R` greater than a certain value is considered a "corner"
+     
 Code
 ====
 
