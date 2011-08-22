@@ -111,6 +111,7 @@ int main(int argc, char* argv[]) {
 		else// -> else allocate "classical" retina :
 			myRetina = new cv::Retina("params.xml", inputFrame.size());
 
+		myRetina->clearBuffers();
 		// declare retina output buffers
 		cv::Mat retinaOutput_parvo;
 		cv::Mat retinaOutput_magno;
