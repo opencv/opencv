@@ -58,7 +58,7 @@ class App(object):
             ret, self.frame = self.cam.read()
             vis = self.frame.copy()
             hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, np.array((0, 60, 32)), np.array((180, 255, 255)))
+            mask = cv2.inRange(hsv, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
 
             if self.selection:
                 x0, y0, x1, y1 = self.selection

@@ -141,7 +141,7 @@ class App:
     def on_run(self, *args):
         cmd = self.cmd_entry.get()
         print 'running:', cmd
-        Popen(cmd, shell=True)
+        Popen("python " + cmd, shell=True)
 
     def run(self):
         tk.mainloop()
