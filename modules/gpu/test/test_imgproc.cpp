@@ -1352,6 +1352,63 @@ TEST_P(CvtColor, RGB2XYZ)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
+TEST_P(CvtColor, BGR2XYZ4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src = img;
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, BGRA2XYZ4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2BGRA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_BGR2XYZ);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2XYZ, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
 TEST_P(CvtColor, XYZ2BGR)
 {
     PRINT_PARAM(devInfo);
@@ -1391,6 +1448,62 @@ TEST_P(CvtColor, XYZ2RGB)
         cv::gpu::GpuMat gpuRes;
 
         cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2RGB);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, XYZ42BGR)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_XYZ2BGR);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2BGR);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, XYZ42BGRA)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2XYZ);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_XYZ2BGR, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_XYZ2BGR, 4);
 
         gpuRes.download(dst);
     );
@@ -1443,6 +1556,63 @@ TEST_P(CvtColor, RGB2YCrCb)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
+TEST_P(CvtColor, BGR2YCrCb4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src = img;
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_BGR2YCrCb);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YCrCb, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, RGBA2YCrCb4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_BGR2YCrCb);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YCrCb, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
 TEST_P(CvtColor, YCrCb2BGR)
 {
     PRINT_PARAM(devInfo);
@@ -1482,6 +1652,62 @@ TEST_P(CvtColor, YCrCb2RGB)
         cv::gpu::GpuMat gpuRes;
 
         cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, YCrCb42RGB)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_YCrCb2RGB);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, YCrCb42RGBA)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2YCrCb);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_YCrCb2RGB, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YCrCb2RGB, 4);
 
         gpuRes.download(dst);
     );
@@ -1540,6 +1766,70 @@ TEST_P(CvtColor, RGB2HSV)
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
 
+TEST_P(CvtColor, RGB2HSV4)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HSV);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, RGBA2HSV4)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HSV);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
 TEST_P(CvtColor, BGR2HLS)
 {
     if (type == CV_16U)
@@ -1591,6 +1881,70 @@ TEST_P(CvtColor, RGB2HLS)
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
 
+TEST_P(CvtColor, RGB2HLS4)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HLS);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, RGBA2HLS4)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HLS);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
 TEST_P(CvtColor, HSV2BGR)
 {
     if (type == CV_16U)
@@ -1636,6 +1990,68 @@ TEST_P(CvtColor, HSV2RGB)
         cv::gpu::GpuMat gpuRes;
 
         cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HSV42BGR)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HSV2BGR);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HSV42BGRA)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HSV);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HSV2BGR, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2BGR, 4);
 
         gpuRes.download(dst);
     );
@@ -1695,6 +2111,68 @@ TEST_P(CvtColor, HLS2RGB)
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
 
+TEST_P(CvtColor, HLS42RGB)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HLS2RGB);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HLS42RGBA)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HLS);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HLS2RGB, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB, 4);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
 TEST_P(CvtColor, BGR2HSV_FULL)
 {
     if (type == CV_16U)
@@ -1746,6 +2224,70 @@ TEST_P(CvtColor, RGB2HSV_FULL)
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
 
+TEST_P(CvtColor, RGB2HSV4_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HSV_FULL);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV_FULL, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, RGBA2HSV4_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HSV_FULL);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HSV_FULL, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
 TEST_P(CvtColor, BGR2HLS_FULL)
 {
     if (type == CV_16U)
@@ -1793,6 +2335,70 @@ TEST_P(CvtColor, RGB2HLS_FULL)
 
         gpuRes.download(dst);
     );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, RGB2HLS4_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGB);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HLS_FULL);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS_FULL, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, RGBA2HLS4_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2HLS_FULL);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2HLS_FULL, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
@@ -1849,6 +2455,68 @@ TEST_P(CvtColor, HSV2RGB_FULL)
     EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
 }
 
+TEST_P(CvtColor, HSV42RGB_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HSV2RGB_FULL);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB_FULL);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HSV42RGBA_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HSV_FULL);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HSV2RGB_FULL, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HSV2RGB_FULL, 4);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
 TEST_P(CvtColor, HLS2BGR_FULL)
 {
     if (type == CV_16U)
@@ -1894,6 +2562,68 @@ TEST_P(CvtColor, HLS2RGB_FULL)
         cv::gpu::GpuMat gpuRes;
 
         cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HLS42RGB_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HLS2RGB_FULL);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, type == CV_32F ? 1e-2 : 1);
+}
+
+TEST_P(CvtColor, HLS42RGBA_FULL)
+{
+    if (type == CV_16U)
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2HLS_FULL);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_HLS2RGB_FULL, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_HLS2RGB_FULL, 4);
 
         gpuRes.download(dst);
     );
@@ -1969,6 +2699,62 @@ TEST_P(CvtColor, YUV2BGR)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
+TEST_P(CvtColor, YUV42BGR)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2YUV);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_YUV2BGR);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2BGR);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, YUV42BGRA)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2YUV);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_YUV2BGR, 4);
+
+    cv::Mat channels[4];
+    cv::split(src, channels);
+    channels[3] = cv::Mat(src.size(), type, cv::Scalar::all(0));
+    cv::merge(channels, 4, src);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_YUV2BGR, 4);
+
+        gpuRes.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
 TEST_P(CvtColor, YUV2RGB)
 {
     PRINT_PARAM(devInfo);
@@ -1988,6 +2774,63 @@ TEST_P(CvtColor, YUV2RGB)
 
         gpuRes.download(dst);
     );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, BGR2YUV4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src = img;
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_BGR2YUV);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_BGR2YUV, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+}
+
+TEST_P(CvtColor, RGBA2YUV4)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+
+    cv::Mat src;
+    cv::cvtColor(img, src, CV_BGR2RGBA);
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, CV_RGB2YUV);
+
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat gpuRes;
+
+        cv::gpu::cvtColor(cv::gpu::GpuMat(src), gpuRes, CV_RGB2YUV, 4);
+
+        gpuRes.download(dst);
+    );
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat channels[4];
+    cv::split(dst, channels);
+    cv::merge(channels, 3, dst);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }

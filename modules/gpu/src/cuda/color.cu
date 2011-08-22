@@ -53,6 +53,173 @@ namespace cv { namespace gpu { namespace device
         enum { smart_shift = 4 };
     };
 
+    template <> struct TransformFunctorTraits<bgra_to_bgr555_traits::functor_type> : DefaultTransformFunctorTraits<bgra_to_bgr555_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_bgr555_traits::functor_type> : DefaultTransformFunctorTraits<rgba_to_bgr555_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<bgra_to_bgr565_traits::functor_type> : DefaultTransformFunctorTraits<bgra_to_bgr565_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_bgr565_traits::functor_type> : DefaultTransformFunctorTraits<rgba_to_bgr565_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<bgr555_to_bgra_traits::functor_type> : DefaultTransformFunctorTraits<bgr555_to_bgra_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<bgr555_to_rgba_traits::functor_type> : DefaultTransformFunctorTraits<bgr555_to_rgba_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<bgr565_to_bgra_traits::functor_type> : DefaultTransformFunctorTraits<bgr565_to_bgra_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<bgr565_to_rgba_traits::functor_type> : DefaultTransformFunctorTraits<bgr565_to_rgba_traits::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<gray_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<gray_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<gray_to_bgr555_traits::functor_type> : DefaultTransformFunctorTraits<gray_to_bgr555_traits::functor_type>
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<gray_to_bgr565_traits::functor_type> : DefaultTransformFunctorTraits<gray_to_bgr565_traits::functor_type>
+    {
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<bgra_to_yuv4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_yuv4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_yuv4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<rgba_to_yuv4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<yuv4_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<yuv4_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<yuv4_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<yuv4_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<bgra_to_YCrCb4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_YCrCb4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_YCrCb4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<rgba_to_YCrCb4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<YCrCb4_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<YCrCb4_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<YCrCb4_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<YCrCb4_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };    
+
+    template <> struct TransformFunctorTraits<bgra_to_xyz4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_xyz4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_xyz4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<rgba_to_xyz4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<xyz4_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<xyz4_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<xyz4_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<xyz4_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<bgra_to_hsv4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_hsv4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_hsv4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<rgba_to_hsv4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<hsv4_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<hsv4_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<hsv4_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<hsv4_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<bgra_to_hls4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<bgra_to_hls4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<rgba_to_hls4_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<rgba_to_hls4_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits<hls4_to_bgra_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<hls4_to_bgra_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits<hls4_to_rgba_traits<uchar>::functor_type> : DefaultTransformFunctorTraits<hls4_to_rgba_traits<uchar>::functor_type>
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
     #define OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, traits) \
         void name(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream) \
         { \
