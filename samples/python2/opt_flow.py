@@ -47,7 +47,7 @@ if __name__ == '__main__':
     import sys
     print help_message
     try: fn = sys.argv[1]
-    except: fn = video.presets['chess']
+    except: fn = 0
 
     cam = video.create_capture(fn)
     ret, prev = cam.read()

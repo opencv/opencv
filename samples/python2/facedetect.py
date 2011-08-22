@@ -25,7 +25,7 @@ if __name__ == '__main__':
     
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
     try: video_src = video_src[0]
-    except: video_src = 'synth:bg=../cpp/lena.jpg:noise=0.05'
+    except: video_src = 0
     args = dict(args)
     cascade_fn = args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml")
     nested_fn  = args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml")
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     cascade = cv2.CascadeClassifier(cascade_fn)
     nested = cv2.CascadeClassifier(nested_fn)
 
-    cam = create_capture(video_src)
+    cam = create_capture(video_src, fallback='synth:bg=../cpp/lena.jpg:noise=0.05')
 
     while True:
         ret, img = cam.read()

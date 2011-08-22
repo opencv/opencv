@@ -12,21 +12,21 @@ def draw_motion_comp(vis, (x, y, w, h), angle, color):
     cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0))
     r = min(w/2, h/2)
     cx, cy = x+w/2, y+h/2
-    angle = angle*3.1415926/180
+    angle = angle*np.pi/180
     cv2.circle(vis, (cx, cy), r, color, 3)
     cv2.line(vis, (cx, cy), (int(cx+np.cos(angle)*r), int(cy+np.sin(angle)*r)), color, 3)
 
 if __name__ == '__main__':
     import sys
     try: video_src = sys.argv[1]
-    except: video_src = 'synth:class=chess:bg=../cpp/lena.jpg:noise=0.01'
+    except: video_src = 0
 
     cv2.namedWindow('motempl')
     visuals = ['input', 'frame_diff', 'motion_hist', 'grad_orient']
     cv2.createTrackbar('visual', 'motempl', 2, len(visuals)-1, nothing)
     cv2.createTrackbar('threshold', 'motempl', DEFAULT_THRESHOLD, 255, nothing)
 
-    cam = video.create_capture(video_src)
+    cam = video.create_capture(video_src, fallback='synth:class=chess:bg=../cpp/lena.jpg:noise=0.01')
     ret, frame = cam.read()
     h, w = frame.shape[:2]
     prev_frame = frame.copy()

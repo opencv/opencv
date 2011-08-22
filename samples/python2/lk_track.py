@@ -77,7 +77,7 @@ class App:
 def main():
     import sys
     try: video_src = sys.argv[1]
-    except: video_src = video.presets['chess']
+    except: video_src = 0
 
     print help_message
     App(video_src).run()

@@ -39,6 +39,9 @@ class VideoSynthBase(object):
             buf = cv2.add(buf, noise, dtype=cv2.CV_8UC3)
         return True, buf
 
+    def isOpened(self):
+        return True
+
 class Chess(VideoSynthBase):
     def __init__(self, **kw):
         super(Chess, self).__init__(**kw)
@@ -87,33 +90,40 @@ class Chess(VideoSynthBase):
         self.draw_quads(dst, self.black_quads, (10, 10, 10))
 
 
-
 classes = dict(chess=Chess)
-
-def create_capture(source):
-    '''
-      source: <int> or '<int>' or '<filename>' or 'synth:<params>'
-    '''
-    try: source = int(source)
-    except ValueError: pass
-    else:
-        return cv2.VideoCapture(source)
-    source = str(source).strip()
-    if source.startswith('synth'):
-        ss = filter(None, source.split(':'))
-        params = dict( s.split('=') for s in ss[1:] )
-        try: Class = classes[params['class']]
-        except: Class = VideoSynthBase
-
-        return Class(**params)
-    return cv2.VideoCapture(source)
-
 
 presets = dict(
     empty = 'synth:',
     lena = 'synth:bg=../cpp/lena.jpg:noise=0.1',
     chess = 'synth:class=chess:bg=../cpp/lena.jpg:noise=0.1:size=640x480'
 )
+
+
+def create_capture(source = 0, fallback = presets['chess']):
+    '''
+      source: <int> or '<int>' or '<filename>' or 'synth:<params>'
+    '''
+    cap = None
+    try: source = int(source)
+    except ValueError: pass
+    else:
+        cap = cv2.VideoCapture(source)
+    if cap is None:
+        source = str(source).strip()
+        if source.startswith('synth'):
+            ss = filter(None, source.split(':'))
+            params = dict( s.split('=') for s in ss[1:] )
+            try: Class = classes[params['class']]
+            except: Class = VideoSynthBase
+            try: cap = Class(**params)
+            except: pass
+    if cap is None:
+        cap = cv2.VideoCapture(source)
+    if not cap.isOpened():
+        print 'Warning: unable to open video source: ', source
+        if fallback is not None:
+            return create_capture(fallback, None)
+    return cap
 
 if __name__ == '__main__':
     import sys
@@ -127,7 +137,7 @@ if __name__ == '__main__':
     args = dict(args)
     shotdir = args.get('--shotdir', '.')
     if len(sources) == 0:
-        sources = [ presets['chess'] ]
+        sources = [ 0 ]
 
     print 'Press SPACE to save current frame'
 

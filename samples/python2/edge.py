@@ -4,7 +4,7 @@ import sys
 
 if __name__ == '__main__':
     try: fn = sys.argv[1]
-    except: fn = video.presets['chess']
+    except: fn = 0
 
     def nothing(*arg):
         pass

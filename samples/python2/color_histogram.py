@@ -23,8 +23,8 @@ if __name__ == '__main__':
     cv2.createTrackbar('scale', 'hist', hist_scale, 32, set_scale)
 
     try: fn = sys.argv[1]
-    except: fn = 'synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05'
-    cam = video.create_capture(fn)
+    except: fn = 0
+    cam = video.create_capture(fn, fallback='synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05')
 
     while True:
         flag, frame = cam.read()
