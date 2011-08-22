@@ -28,7 +28,7 @@ All the libraries above can be installed via Terminal or by using Synaptic Manag
 Getting OpenCV source code 
 ============================
 
-You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository < http://code.ros.org/svn/opencv/>`_.
+You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository <http://code.ros.org/svn/opencv/>`_.
 
 Getting the latest stable OpenCV version
 ------------------------------------------

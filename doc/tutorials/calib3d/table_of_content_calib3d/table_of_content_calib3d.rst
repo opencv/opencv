@@ -26,6 +26,25 @@ Although we got most of our images in a 2D format they do come from a 3D world. 
      :height: 90pt
      :width:  90pt
 
++ 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ===================== ==============================================
+   |CameraCalibration|  **Title:** :ref:`cameraCalibrationOpenCV`
+
+                        *Compatibility:* > OpenCV 2.0
+
+                        *Author:* |Author_BernatG|
+
+                        Camera calibration by using either the chessboard, circle or the asymmetrical circle pattern. Get the images either from a camera attached, a video file or from an image collection.
+
+  ===================== ==============================================
+
+  .. |CameraCalibration| image:: images/camera_calibration.png
+     :height: 90pt
+     :width:  90pt
+
 .. raw:: latex
 
    \pagebreak
@@ -34,3 +53,4 @@ Although we got most of our images in a 2D format they do come from a 3D world. 
    :hidden:
 
    ../camera_calibration_square_chess/camera_calibration_square_chess
+   ../camera_calibration/camera_calibration
