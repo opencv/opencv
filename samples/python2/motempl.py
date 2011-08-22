@@ -12,7 +12,7 @@ def draw_motion_comp(vis, (x, y, w, h), angle, color):
     cv2.rectangle(vis, (x, y), (x+w, y+h), (0, 255, 0))
     r = min(w/2, h/2)
     cx, cy = x+w/2, y+h/2
-    angle = np.deg2rad(angle)
+    angle = angle*3.1415926/180
     cv2.circle(vis, (cx, cy), r, color, 3)
     cv2.line(vis, (cx, cy), (int(cx+np.cos(angle)*r), int(cy+np.sin(angle)*r)), color, 3)
 
