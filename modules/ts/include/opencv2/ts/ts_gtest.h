@@ -306,6 +306,10 @@
 #endif  // _WIN32_WCE
 #elif defined __APPLE__
 #define GTEST_OS_MAC 1
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#define GTEST_OS_MAC_IOS 1
+#endif
 #elif defined __linux__
 #define GTEST_OS_LINUX 1
 #elif defined __MVS__

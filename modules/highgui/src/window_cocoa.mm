@@ -40,6 +40,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include "precomp.hpp"
 
 #import <TargetConditionals.h>
 
@@ -67,7 +68,6 @@ CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 //*** end IphoneOS Stubs ***/
 #else
 
-#include "precomp.hpp"
 #import <Cocoa/Cocoa.h>
 
 #include <iostream>

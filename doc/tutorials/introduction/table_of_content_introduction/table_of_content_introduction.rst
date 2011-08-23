@@ -139,10 +139,27 @@ Here you can read tutorials about how to set up your computer to work with the O
                            :height: 90pt
                            :width:  90pt
 
-* **From where to start?**
+* **iOS**
 
-  .. tabularcolumns:: m{100pt} m{300pt}
-  .. cssclass:: toctableopencv  
+.. tabularcolumns:: m{100pt} m{300pt}
+.. cssclass:: toctableopencv
+
+=========== ======================================================
+|Install_2| **Title:** :ref:`iOS-Installation`
+
+            *Compatibility:* > OpenCV 2.3.1
+
+            *Author:* |Author_ArtemM|
+
+            We will learn how to setup OpenCV for using it in iOS!
+
+=========== ======================================================
+
+.. |Install_2| image:: images/ios4_logo.jpg
+               :width:  90pt
+
+.. tabularcolumns:: m{100pt} m{300pt}
+.. cssclass:: toctableopencv
 
   ============= ======================================================
   |Beginners_1| **Title:** :ref:`Display_Image`
@@ -209,6 +226,7 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
    ../android_binary_package/android_binary_package
    ../android_binary_package/android_binary_package_using_with_NDK
+   ../ios_install/ios_install
    ../display_image/display_image
    ../load_save_image/load_save_image
    ../how_to_write_a_tutorial/how_to_write_a_tutorial

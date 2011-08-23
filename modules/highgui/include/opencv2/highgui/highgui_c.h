@@ -289,7 +289,9 @@ enum
 
     CV_CAP_ANDROID  =1000,  // Android
     
-    CV_CAP_XIAPI    =1100   // XIMEA Camera API
+    CV_CAP_XIAPI    =1100,   // XIMEA Camera API
+    
+    CV_CAP_AVFOUNDATION = 1200	// AVFoundation framework for iOS (OS X Lion will have the same API)
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -397,7 +399,14 @@ enum
     CV_CAP_PROP_XI_AE_MAX_LIMIT  = 417,      // Maximum limit of exposure in AEAG procedure
     CV_CAP_PROP_XI_AG_MAX_LIMIT  = 418,      // Maximum limit of gain in AEAG procedure
     CV_CAP_PROP_XI_AEAG_LEVEL    = 419,       // Average intensity of output signal AEAG should achieve(in %)
-    CV_CAP_PROP_XI_TIMEOUT       = 420       // Image capture timeout in milliseconds
+    CV_CAP_PROP_XI_TIMEOUT       = 420,       // Image capture timeout in milliseconds
+    
+    // Properties of cameras available through AVFOUNDATION interface
+    CV_CAP_PROP_IOS_DEVICE_FOCUS = 9001,
+    CV_CAP_PROP_IOS_DEVICE_EXPOSURE = 9002,
+    CV_CAP_PROP_IOS_DEVICE_FLASH = 9003,
+    CV_CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
+    CV_CAP_PROP_IOS_DEVICE_TORCH = 9005
 };
 
 enum

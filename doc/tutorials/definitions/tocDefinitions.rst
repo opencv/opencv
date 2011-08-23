@@ -3,6 +3,7 @@
 .. |Author_AndreyK| unicode:: Andrey U+0020 Kamaev
 .. |Author_LeonidBLB| unicode:: Leonid U+0020 Beynenson
 .. |Author_VictorE| unicode:: Victor U+0020 Eruhimov 
+.. |Author_ArtemM| unicode:: Artem U+0020 Myagkov 
 .. |Author_FernandoI| unicode:: Fernando U+0020 Iglesias U+0020 Garc U+00ED a 
 
 

@@ -126,6 +126,8 @@ if(WIN32)
 endif()
 
 if(UNIX)
+	if(NOT IOS)
+		
     if(NOT HAVE_QT)        
         if(HAVE_GTK)
             set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
@@ -172,6 +174,8 @@ if(UNIX)
         endif()
     endif()
 
+    endif(NOT IOS)
+
     foreach(P ${HIGHGUI_INCLUDE_DIRS})
         include_directories(${P})
     endforeach()
@@ -188,7 +192,7 @@ if(WITH_OPENNI AND HAVE_OPENNI)
 endif()
 
 #YV
-if(APPLE)
+if(APPLE AND NOT IOS)
     add_definitions(-DHAVE_QUICKTIME=1)
     if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
         add_definitions(-DHAVE_IMAGEIO=1)
@@ -205,11 +209,17 @@ if(APPLE)
     endif()
     
     if(WITH_QUICKTIME)
-        set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
-    else()
-        set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
-    endif()
-endif(APPLE)
+	    set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
+	else()
+	    set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+	endif()
+
+endif(APPLE AND NOT IOS)
+
+if (IOS)
+	add_definitions(-DHAVE_IMAGEIO=1)
+    set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
+endif()
 
 if(WITH_ANDROID_CAMERA)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
@@ -346,7 +356,7 @@ if( OPENNI_LIBRARY )
     target_link_libraries(${the_target} ${OPENNI_LIBRARY})
 endif()
 
-if(APPLE)
+if(APPLE AND NOT IOS)
     target_link_libraries(${the_target} "-lbz2 -framework Cocoa -framework QuartzCore")
     if(WITH_CARBON)
         target_link_libraries(${the_target} "-framework Carbon")
@@ -357,6 +367,10 @@ if(APPLE)
     if(WITH_CARBON OR WITH_QUICKTIME)
         target_link_libraries(${the_target} "-framework QuickTime -framework CoreFoundation")
     endif()
+endif()
+
+if (IOS)
+	target_link_libraries(${the_target} "-lbz2 -framework QuartzCore -framework CoreFoundation -framework ImageIO -framework CoreGraphics -framework AVFoundation")
 endif()
 
 install(TARGETS ${the_target}
@@ -394,7 +408,7 @@ if(BUILD_TESTS)
   source_group("Include" FILES ${test_hdrs})
 
   set(the_target "opencv_test_highgui")
-
+ 
   add_executable(${the_target} ${test_srcs} ${test_hdrs})
 
   add_opencv_precompiled_headers(${the_target})

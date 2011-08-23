@@ -6078,7 +6078,7 @@ void InitGoogleTest(int* argc, wchar_t** argv) {
 
 #if GTEST_HAS_DEATH_TEST
 
-#if GTEST_OS_MAC
+#if GTEST_OS_MAC && !GTEST_OS_MAC_IOS
 #include <crt_externs.h>
 #endif  // GTEST_OS_MAC
 
@@ -6871,7 +6871,7 @@ struct ExecDeathTestArgs {
   int close_fd;       // File descriptor to close; the read end of a pipe
 };
 
-#if GTEST_OS_MAC
+#if GTEST_OS_MAC && !GTEST_OS_MAC_IOS
 inline char** GetEnviron() {
   // When Google Test is built as a framework on MacOS X, the environ variable
   // is unavailable. Apple's documentation (man environ) recommends using

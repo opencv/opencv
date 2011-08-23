@@ -33,10 +33,13 @@ if(BUILD_JAVA_SUPPORT)
 endif()
 
 add_subdirectory(video)
+
+if(NOT IOS)
 add_subdirectory(traincascade)
 add_subdirectory(haartraining)
+endif()
 
-if(NOT ANDROID)
+if(NOT (ANDROID OR IOS))
   add_subdirectory(gpu)
   add_subdirectory(stitching)
 endif()
