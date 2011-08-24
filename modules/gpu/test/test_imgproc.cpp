@@ -3959,23 +3959,28 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Blend, testing::Combine(
 ////////////////////////////////////////////////////////
 // pyrDown
 
-struct PyrDown : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct PyrDown : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {    
     cv::gpu::DeviceInfo devInfo;
+    int type;
     
+    cv::Size size;
     cv::Mat src;
     
     cv::Mat dst_gold;
 
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
         cv::gpu::setDevice(devInfo.deviceID());
-        
-        cv::Mat img = readImage("stereobm/aloe-L.png");
-        ASSERT_FALSE(img.empty());
-        
-        img.convertTo(src, CV_16S);
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
         
         cv::pyrDown(src, dst_gold);
     }
@@ -3984,6 +3989,8 @@ struct PyrDown : testing::TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(PyrDown, Accuracy)
 {
     PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
     
     cv::Mat dst;
 
@@ -3998,34 +4005,43 @@ TEST_P(PyrDown, Accuracy)
     ASSERT_EQ(dst_gold.cols, dst.cols);
     ASSERT_EQ(dst_gold.rows, dst.rows);
     ASSERT_EQ(dst_gold.type(), dst.type());
-
-    double err = cvtest::crossCorr(dst_gold, dst) /
-            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
+    
+    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::ValuesIn(devices()));
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                        CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4,
+                                        CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
+                                        CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4)));
 
 ////////////////////////////////////////////////////////
 // pyrUp
 
-struct PyrUp: testing::TestWithParam<cv::gpu::DeviceInfo>
+struct PyrUp: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {    
     cv::gpu::DeviceInfo devInfo;
+    int type;
     
+    cv::Size size;    
     cv::Mat src;
     
     cv::Mat dst_gold;
 
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+
         cv::gpu::setDevice(devInfo.deviceID());
         
-        cv::Mat img = readImage("stereobm/aloe-L.png");
-        ASSERT_FALSE(img.empty());
-        
-        img.convertTo(src, CV_16S);
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
         
         cv::pyrUp(src, dst_gold);
     }
@@ -4034,6 +4050,8 @@ struct PyrUp: testing::TestWithParam<cv::gpu::DeviceInfo>
 TEST_P(PyrUp, Accuracy)
 {
     PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(size);
     
     cv::Mat dst;
 
@@ -4049,12 +4067,17 @@ TEST_P(PyrUp, Accuracy)
     ASSERT_EQ(dst_gold.rows, dst.rows);
     ASSERT_EQ(dst_gold.type(), dst.type());
 
-    double err = cvtest::crossCorr(dst_gold, dst) /
-            (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
+    double err = cvtest::crossCorr(dst_gold, dst) / (cv::norm(dst_gold,cv::NORM_L2)*cv::norm(dst,cv::NORM_L2));
     ASSERT_NEAR(err, 1., 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::ValuesIn(devices()));
+
+INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                        CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4,
+                                        CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
+                                        CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4)));
 
 ////////////////////////////////////////////////////////
 // Canny

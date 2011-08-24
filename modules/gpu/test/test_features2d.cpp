@@ -312,7 +312,7 @@ TEST_P(BruteForceMatcher, MatchAdd)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatch)
+TEST_P(BruteForceMatcher, KnnMatch2)
 {
     const char* distStr = dists[distType];
 
@@ -352,7 +352,47 @@ TEST_P(BruteForceMatcher, KnnMatch)
     ASSERT_EQ(0, badCount);
 }
 
-TEST_P(BruteForceMatcher, KnnMatchAdd)
+TEST_P(BruteForceMatcher, KnnMatch3)
+{
+    const char* distStr = dists[distType];
+
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(distStr);
+    PRINT_PARAM(dim);
+
+    const int knn = 3;
+
+    std::vector< std::vector<cv::DMatch> > matches;
+
+    ASSERT_NO_THROW(
+        cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+        matcher.knnMatch(cv::gpu::GpuMat(query), cv::gpu::GpuMat(train), matches, knn);
+    );
+
+    ASSERT_EQ(queryDescCount, matches.size());
+
+    int badCount = 0;
+    for (size_t i = 0; i < matches.size(); i++)
+    {
+        if ((int)matches[i].size() != knn)
+            badCount++;
+        else
+        {
+            int localBadCount = 0;
+            for (int k = 0; k < knn; k++)
+            {
+                cv::DMatch match = matches[i][k];
+                if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k) || (match.imgIdx != 0))
+                    localBadCount++;
+            }
+            badCount += localBadCount > 0 ? 1 : 0;
+        }
+    }
+
+    ASSERT_EQ(0, badCount);
+}
+
+TEST_P(BruteForceMatcher, KnnMatchAdd2)
 {
     const char* distStr = dists[distType];
 
@@ -361,6 +401,76 @@ TEST_P(BruteForceMatcher, KnnMatchAdd)
     PRINT_PARAM(dim);
 
     const int knn = 2;
+    std::vector< std::vector<cv::DMatch> > matches;
+
+    bool isMaskSupported;
+
+    ASSERT_NO_THROW(
+        cv::gpu::BruteForceMatcher_GPU_base matcher(distType);
+
+        cv::gpu::GpuMat d_train(train);
+
+        // make add() twice to test such case
+        matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(0, train.rows / 2)));
+        matcher.add(std::vector<cv::gpu::GpuMat>(1, d_train.rowRange(train.rows / 2, train.rows)));
+
+        // prepare masks (make first nearest match illegal)
+        std::vector<cv::gpu::GpuMat> masks(2);
+        for (int mi = 0; mi < 2; mi++ )
+        {
+            masks[mi] = cv::gpu::GpuMat(query.rows, train.rows / 2, CV_8UC1, cv::Scalar::all(1));
+            for (int di = 0; di < queryDescCount / 2; di++)
+                masks[mi].col(di * countFactor).setTo(cv::Scalar::all(0));
+        }
+
+        matcher.knnMatch(cv::gpu::GpuMat(query), matches, knn, masks);
+
+        isMaskSupported = matcher.isMaskSupported();
+    );
+
+    ASSERT_EQ(queryDescCount, matches.size());
+
+    int badCount = 0;
+    int shift = isMaskSupported ? 1 : 0;
+    for (size_t i = 0; i < matches.size(); i++)
+    {
+        if ((int)matches[i].size() != knn)
+            badCount++;
+        else
+        {
+            int localBadCount = 0;
+            for (int k = 0; k < knn; k++)
+            {
+                cv::DMatch match = matches[i][k];
+                {
+                    if (i < queryDescCount / 2)
+                    {
+                        if ((match.queryIdx != (int)i) || (match.trainIdx != (int)i * countFactor + k + shift) || (match.imgIdx != 0) )
+                            localBadCount++;
+                    }
+                    else
+                    {
+                        if ((match.queryIdx != (int)i) || (match.trainIdx != ((int)i - queryDescCount / 2) * countFactor + k + shift) || (match.imgIdx != 1) )
+                            localBadCount++;
+                    }
+                }
+            }
+            badCount += localBadCount > 0 ? 1 : 0;
+        }
+    }
+
+    ASSERT_EQ(0, badCount);
+}
+
+TEST_P(BruteForceMatcher, KnnMatchAdd3)
+{
+    const char* distStr = dists[distType];
+
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(distStr);
+    PRINT_PARAM(dim);
+
+    const int knn = 3;
     std::vector< std::vector<cv::DMatch> > matches;
 
     bool isMaskSupported;

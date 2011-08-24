@@ -93,11 +93,7 @@ void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&
 void cv::gpu::downsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::upsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrDown(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::PyrDownBuf::create(Size, int) { throw_nogpu(); }
-void cv::gpu::pyrDown(const GpuMat&, GpuMat&, PyrDownBuf&, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrUp(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::PyrUpBuf::create(Size, int) { throw_nogpu(); }
-void cv::gpu::pyrUp(const GpuMat&, GpuMat&, PyrUpBuf&, Stream&) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_nogpu(); }
@@ -1598,66 +1594,64 @@ void cv::gpu::upsample(const GpuMat& src, GpuMat& dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
+namespace cv { namespace gpu { namespace imgproc
+{
+    template <typename T, int cn> void pyrDown_gpu(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+}}}
+
 void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    PyrDownBuf buf;
-    pyrDown(src, dst, buf, stream);
-}
+    using namespace cv::gpu::imgproc;
 
-cv::Mat cv::gpu::PyrDownBuf::ker;
+    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
 
-void cv::gpu::PyrDownBuf::create(Size image_size, int image_type_)
-{
-    if (ker.empty() || image_type_ != image_type)
-        ker = getGaussianKernel(5, 0, std::max(CV_32F, CV_MAT_DEPTH(image_type_)));
-
-    ensureSizeIsEnough(image_size.height, image_size.width, image_type_, buf);
-
-    if (filter.empty() || image_type_ != image_type)
+    static const func_t funcs[6][4] = 
     {
-        image_type = image_type_;
-        filter = createSeparableLinearFilter_GPU(image_type, image_type, ker, ker);
-    }
-}
+        {pyrDown_gpu<uchar, 1>, pyrDown_gpu<uchar, 2>, pyrDown_gpu<uchar, 3>, pyrDown_gpu<uchar, 4>},
+        {pyrDown_gpu<schar, 1>, pyrDown_gpu<schar, 2>, pyrDown_gpu<schar, 3>, pyrDown_gpu<schar, 4>},
+        {pyrDown_gpu<ushort, 1>, pyrDown_gpu<ushort, 2>, pyrDown_gpu<ushort, 3>, pyrDown_gpu<ushort, 4>},
+        {pyrDown_gpu<short, 1>, pyrDown_gpu<short, 2>, pyrDown_gpu<short, 3>, pyrDown_gpu<short, 4>},
+        {pyrDown_gpu<int, 1>, pyrDown_gpu<int, 2>, pyrDown_gpu<int, 3>, pyrDown_gpu<int, 4>},
+        {pyrDown_gpu<float, 1>, pyrDown_gpu<float, 2>, pyrDown_gpu<float, 3>, pyrDown_gpu<float, 4>},
+    };
 
-void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, PyrDownBuf& buf, Stream& stream)
-{
-    buf.create(src.size(), src.type());
-    buf.filter->apply(src, buf.buf, Rect(0, 0, src.cols, src.rows), stream);
-    downsample(buf.buf, dst, stream);
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+
+    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
+
+    funcs[src.depth()][src.channels() - 1](src, dst, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
+namespace cv { namespace gpu { namespace imgproc
+{
+    template <typename T, int cn> void pyrUp_gpu(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
+}}}
+
 void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
-    PyrUpBuf buf;
-    pyrUp(src, dst, buf, stream);
-}
+    using namespace cv::gpu::imgproc;
 
-cv::Mat cv::gpu::PyrUpBuf::ker;
+    typedef void (*func_t)(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream);
 
-void cv::gpu::PyrUpBuf::create(Size image_size, int image_type_)
-{
-    if (ker.empty() || image_type_ != image_type)
-        ker = getGaussianKernel(5, 0, std::max(CV_32F, CV_MAT_DEPTH(image_type_))) * 2;
-
-    ensureSizeIsEnough(image_size.height * 2, image_size.width * 2, image_type_, buf);
-
-    if (filter.empty() || image_type_ != image_type)
+    static const func_t funcs[6][4] = 
     {
-        image_type = image_type_;
-        filter = createSeparableLinearFilter_GPU(image_type, image_type, ker, ker);
-    }
-}
+        {pyrUp_gpu<uchar, 1>, pyrUp_gpu<uchar, 2>, pyrUp_gpu<uchar, 3>, pyrUp_gpu<uchar, 4>},
+        {pyrUp_gpu<schar, 1>, pyrUp_gpu<schar, 2>, pyrUp_gpu<schar, 3>, pyrUp_gpu<schar, 4>},
+        {pyrUp_gpu<ushort, 1>, pyrUp_gpu<ushort, 2>, pyrUp_gpu<ushort, 3>, pyrUp_gpu<ushort, 4>},
+        {pyrUp_gpu<short, 1>, pyrUp_gpu<short, 2>, pyrUp_gpu<short, 3>, pyrUp_gpu<short, 4>},
+        {pyrUp_gpu<int, 1>, pyrUp_gpu<int, 2>, pyrUp_gpu<int, 3>, pyrUp_gpu<int, 4>},
+        {pyrUp_gpu<float, 1>, pyrUp_gpu<float, 2>, pyrUp_gpu<float, 3>, pyrUp_gpu<float, 4>},
+    };
 
-void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, PyrUpBuf& buf, Stream& stream)
-{
-    buf.create(src.size(), src.type());
-    upsample(src, buf.buf, stream);
-    buf.filter->apply(buf.buf, dst, Rect(0, 0, buf.buf.cols, buf.buf.rows), stream);
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+
+    dst.create(src.rows*2, src.cols*2, src.type());
+
+    funcs[src.depth()][src.channels() - 1](src, dst, StreamAccessor::getStream(stream));
 }
 
 

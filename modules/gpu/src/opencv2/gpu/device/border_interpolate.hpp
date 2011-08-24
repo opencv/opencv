@@ -50,7 +50,7 @@ namespace cv { namespace gpu { namespace device
 {
     struct BrdReflect101 
     {
-        explicit BrdReflect101(int len): last(len - 1) {}
+        explicit __host__ __device__ __forceinline__ BrdReflect101(int len): last(len - 1) {}
 
         __device__ __forceinline__ int idx_low(int i) const
         {
@@ -67,17 +67,17 @@ namespace cv { namespace gpu { namespace device
             return idx_low(idx_high(i));
         }
 
-        bool is_range_safe(int mini, int maxi) const 
+        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
         {
             return -last <= mini && maxi <= 2 * last;
         }
 
-        int last;
+        const int last;
     };
 
     template <typename D> struct BrdRowReflect101 : BrdReflect101
     {
-        explicit BrdRowReflect101(int len): BrdReflect101(len) {}
+        explicit __host__ __device__ __forceinline__ BrdRowReflect101(int len): BrdReflect101(len) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -92,7 +92,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename D> struct BrdColReflect101 : BrdReflect101
     {
-        BrdColReflect101(int len, size_t step): BrdReflect101(len), step(step) {}
+        __host__ __device__ __forceinline__ BrdColReflect101(int len, size_t step): BrdReflect101(len), step(step) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -104,12 +104,12 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-        size_t step;
+        const size_t step;
     };
 
     struct BrdReplicate
     {
-        explicit BrdReplicate(int len): last(len - 1) {}
+        explicit __host__ __device__ __forceinline__ BrdReplicate(int len): last(len - 1) {}
 
         __device__ __forceinline__ int idx_low(int i) const
         {
@@ -131,12 +131,12 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-        int last;
+        const int last;
     };
 
     template <typename D> struct BrdRowReplicate : BrdReplicate
     {
-        explicit BrdRowReplicate(int len): BrdReplicate(len) {}
+        explicit __host__ __device__ __forceinline__ BrdRowReplicate(int len): BrdReplicate(len) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -152,7 +152,7 @@ namespace cv { namespace gpu { namespace device
 
     template <typename D> struct BrdColReplicate : BrdReplicate
     {
-        BrdColReplicate(int len, size_t step): BrdReplicate(len), step(step) {}
+        __host__ __device__ __forceinline__ BrdColReplicate(int len, size_t step): BrdReplicate(len), step(step) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -164,12 +164,12 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_high(i)*step));
         }
 
-        size_t step;
+        const size_t step;
     };
 
     template <typename D> struct BrdRowConstant
     {
-        explicit BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
+        explicit __host__ __device__ __forceinline__ BrdRowConstant(int len_, const D& val_ = VecTraits<D>::all(0)): len(len_), val(val_) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -181,18 +181,18 @@ namespace cv { namespace gpu { namespace device
             return i < len ? saturate_cast<D>(data[i]) : val;
         }
 
-        bool is_range_safe(int mini, int maxi) const 
+        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
         {
             return true;
         }
 
-        int len;
-        D val;
+        const int len;
+        const D val;
     };
 
     template <typename D> struct BrdColConstant
     {
-        BrdColConstant(int len_, size_t step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
+        __host__ __device__ __forceinline__ BrdColConstant(int len_, size_t step_, const D& val_ = VecTraits<D>::all(0)): len(len_), step(step_), val(val_) {}
 
         template <typename T> __device__ __forceinline__ D at_low(int i, const T* data) const 
         {
@@ -204,19 +204,19 @@ namespace cv { namespace gpu { namespace device
             return i < len ? saturate_cast<D>(*(const D*)((const char*)data + i*step)) : val;
         }
 
-        bool is_range_safe(int mini, int maxi) const 
+        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
         {
             return true;
         }
 
-        int len;
-        size_t step;
-        D val;
+        const int len;
+        const size_t step;
+        const D val;
     };
 
     template <typename OutT> struct BrdConstant
     {
-        BrdConstant(int w, int h, const OutT &val = VecTraits<OutT>::all(0)) : w(w), h(h), val(val) {}
+        __host__ __device__ __forceinline__ BrdConstant(int w, int h, const OutT &val = VecTraits<OutT>::all(0)) : w(w), h(h), val(val) {}
 
         __device__ __forceinline__ OutT at(int x, int y, const uchar* data, int step) const
         {
@@ -225,7 +225,8 @@ namespace cv { namespace gpu { namespace device
             return val;
         }
 
-        int w, h;
+        const int w;
+        const int h;
         OutT val;
     };
 }}}

@@ -762,47 +762,9 @@ namespace cv
 
         //! smoothes the source image and downsamples it
         CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-        
-        struct CV_EXPORTS PyrDownBuf;
-        
-        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, PyrDownBuf& buf, Stream& stream = Stream::Null());
-        
-        struct CV_EXPORTS PyrDownBuf
-        {
-            PyrDownBuf() : image_type(-1) {}
-            PyrDownBuf(Size image_size, int image_type_) : image_type(-1) { create(image_size, image_type_); }
-            void create(Size image_size, int image_type_);
-
-        private:
-            friend void pyrDown(const GpuMat&, GpuMat&, PyrDownBuf&, Stream& stream);
-
-            static Mat ker;
-            GpuMat buf;
-            Ptr<FilterEngine_GPU> filter;
-            int image_type;
-        };
 
         //! upsamples the source image and then smoothes it
         CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-        struct CV_EXPORTS PyrUpBuf;
-        
-        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, PyrUpBuf& buf, Stream& stream = Stream::Null());
-        
-        struct CV_EXPORTS PyrUpBuf
-        {
-            PyrUpBuf() : image_type(-1) {}
-            PyrUpBuf(Size image_size, int image_type_) : image_type(-1) { create(image_size, image_type_); }
-            void create(Size image_size, int image_type_);
-
-        private:
-            friend void pyrUp(const GpuMat&, GpuMat&, PyrUpBuf&, Stream& stream);
-
-            static Mat ker;
-            GpuMat buf;
-            Ptr<FilterEngine_GPU> filter;
-            int image_type;
-        };
 
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
