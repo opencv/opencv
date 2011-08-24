@@ -1,4 +1,4 @@
-message (STATUS "Setting up iPhoneOS toolchain")
+message (STATUS "Setting up iPhoneSimulator toolchain")
 set (IPHONESIMULATOR TRUE)
 
 # Standard settings
@@ -21,4 +21,4 @@ SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-message (STATUS "iPhoneOS toolchain loaded")
+message (STATUS "iPhoneSimulator toolchain loaded")

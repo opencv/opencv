@@ -100,6 +100,9 @@
 /* QuickTime video libraries */
 #cmakedefine  HAVE_QUICKTIME
 
+/* AVFoundation video libraries */
+#cmakedefine  HAVE_AVFOUNDATION
+
 /* TIFF codec */
 #cmakedefine  HAVE_TIFF
 

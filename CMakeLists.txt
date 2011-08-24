@@ -414,7 +414,7 @@ set(WITH_JPEG ON CACHE BOOL "Include JPEG support")
 set(WITH_JASPER ON CACHE BOOL "Include JPEG2K support")
 set(WITH_TIFF ON CACHE BOOL "Include TIFF support")
 set(WITH_OPENEXR ON CACHE BOOL "Include ILM support via OpenEXR")
-endif()
+
 
 if(UNIX)
     set(WITH_FFMPEG ON CACHE BOOL "Include FFMPEG support")
@@ -429,9 +429,15 @@ if(UNIX)
     set(WITH_1394 ON CACHE BOOL "Include IEEE1394 support")
 endif()
 
+endif()
+
 if(APPLE)
     set(WITH_CARBON OFF CACHE BOOL "Use Carbon for UI instead of Cocoa")
     set(WITH_QUICKTIME OFF CACHE BOOL "Use QuickTime for Video I/O insted of QTKit")
+endif()
+
+if(IOS)
+	set(WITH_AVFOUNDATION ON CACHE BOOL "Use AVFoundation for Video I/O")
 endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")

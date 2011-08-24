@@ -134,6 +134,8 @@ CvCapture* cvCreateCameraCapture_DShow( int index );
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
+CvCapture* cvCreateCameraCapture_AVFoundation(int index);
+
 
 CVAPI(int) cvHaveImageReader(const char* filename);
 CVAPI(int) cvHaveImageWriter(const char* filename);
@@ -142,6 +144,9 @@ CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
 
 CvCapture* cvCreateFileCapture_XINE (const char* filename);
+
+
+
 
 #define CV_CAP_GSTREAMER_1394		0
 #define CV_CAP_GSTREAMER_V4L		1
@@ -160,6 +165,11 @@ CvCapture * cvCreateCameraCapture_QT  (const int     index);
 
 CvVideoWriter* cvCreateVideoWriter_QT ( const char* filename, int fourcc,
                                         double fps, CvSize frameSize, int is_color );
+
+CvCapture* cvCreateFileCapture_AVFoundation (const char * filename);
+CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourcc,
+                                                double fps, CvSize frameSize, int is_color );
+
 
 CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
 CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);

@@ -157,7 +157,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         defined(HAVE_DC1394_2) || defined(HAVE_DC1394) || defined(HAVE_CMU1394) || \
         defined(HAVE_GSTREAMER) || defined(HAVE_MIL) || defined(HAVE_QUICKTIME) || \
         defined(HAVE_UNICAP) || defined(HAVE_PVAPI) || defined(HAVE_OPENNI) || defined(HAVE_ANDROID_NATIVE_CAMERA) || \
-        defined(TARGET_OS_IPHONE) || defined(TARGET_IPHONE_SIMULATOR)
+        defined(HAVE_AVFOUNDATION)
         // local variable to memorize the captured device
         CvCapture *capture;
         #endif
@@ -281,7 +281,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         break;
         #endif
 
-        #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+        #ifdef HAVE_AVFOUNDATION
         case CV_CAP_AVFOUNDATION:
             capture = cvCreateCameraCapture_AVFoundation (index);
             if (capture)
@@ -321,7 +321,7 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
         result = cvCreateFileCapture_QT (filename);
     #endif
     
-    #if  TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+    #ifdef HAVE_AVFOUNDATION
     if (! result)
         result = cvCreateFileCapture_AVFoundation (filename);
     #endif
@@ -354,7 +354,7 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 		result = cvCreateVideoWriter_XINE(filename, fourcc, fps, frameSize, is_color);
 	#endif
 */
-    #if  TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+    #ifdef HAVE_AVFOUNDATION 
     if (! result)
         result = cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color);
     #endif

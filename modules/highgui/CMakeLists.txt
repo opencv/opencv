@@ -125,9 +125,7 @@ if(WIN32)
     endif()
 endif()
 
-if(UNIX)
-	if(NOT IOS)
-		
+if(UNIX)		
     if(NOT HAVE_QT)        
         if(HAVE_GTK)
             set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
@@ -174,8 +172,6 @@ if(UNIX)
         endif()
     endif()
 
-    endif(NOT IOS)
-
     foreach(P ${HIGHGUI_INCLUDE_DIRS})
         include_directories(${P})
     endforeach()
@@ -192,8 +188,11 @@ if(WITH_OPENNI AND HAVE_OPENNI)
 endif()
 
 #YV
-if(APPLE AND NOT IOS)
-    add_definitions(-DHAVE_QUICKTIME=1)
+if(APPLE)
+	if (NOT IOS)
+		add_definitions(-DHAVE_QUICKTIME=1)
+	endif()
+
     if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
         add_definitions(-DHAVE_IMAGEIO=1)
     endif()
@@ -211,15 +210,19 @@ if(APPLE AND NOT IOS)
     if(WITH_QUICKTIME)
 	    set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
 	else()
-	    set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+		if (WITH_AVFOUNDATION)
+			add_definitions(-DHAVE_AVFOUNDATION=1)
+		    set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
+		else()
+			set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+		endif()
 	endif()
+	
 
-endif(APPLE AND NOT IOS)
 
-if (IOS)
-	add_definitions(-DHAVE_IMAGEIO=1)
-    set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
-endif()
+endif(APPLE)
+
+
 
 if(WITH_ANDROID_CAMERA)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
