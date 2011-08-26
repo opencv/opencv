@@ -121,7 +121,7 @@ missing_consts = \
         ), # private
         'public' :
         (
-            ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4), 
+            ('SVD_MODIFY_A', 1), ('SVD_NO_UV', 2), ('SVD_FULL_UV', 4),
             ('FILLED', -1),
             ('LINE_AA', 16), ('LINE_8', 8), ('LINE_4', 4),
             ('REDUCE_SUM', 0), ('REDUCE_AVG', 1), ('REDUCE_MAX', 2), ('REDUCE_MIN', 3),
@@ -481,10 +481,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "imshow"            : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "waitKey"           : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
-    
+
     'CvANN_MLP_TrainParams':
     {
-        "CvANN_MLP_TrainParams" : 
+        "CvANN_MLP_TrainParams" :
         {
             'j_code' : """
 //javadoc:CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
@@ -502,10 +502,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvANN_1MLP_1TrainParams_n_1newObj
             """
         },
     },
-    
+
     'CvBoostParams':
     {
-        "CvBoostParams" : 
+        "CvBoostParams" :
         {
             'j_code' : """
 //javadoc:CvBoostParams::CvBoostParams()
@@ -523,10 +523,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvBoostParams_n_1newObj
             """
         },
     },
-    
+
     'CvDTreeParams':
     {
-        "CvDTreeParams" : 
+        "CvDTreeParams" :
         {
             'j_code' : """
 //javadoc:CvDTreeParams::CvDTreeParams()
@@ -544,10 +544,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvDTreeParams_n_1newObj
             """
         },
     },
-    
+
     'CvEMParams':
     {
-        "CvEMParams" : 
+        "CvEMParams" :
         {
             'j_code' : """
 //javadoc:CvEMParams::CvEMParams()
@@ -565,10 +565,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvEMParams_n_1newObj
             """
         },
     },
-    
+
     'CvGBTreesParams':
     {
-        "CvGBTreesParams" : 
+        "CvGBTreesParams" :
         {
             'j_code' : """
 //javadoc:CvGBTreesParams::CvGBTreesParams()
@@ -586,10 +586,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvGBTreesParams_n_1newObj
             """
         },
     },
-    
+
     'CvParamGrid':
     {
-        "CvParamGrid" : 
+        "CvParamGrid" :
         {
             'j_code' : """
 //javadoc:CvParamGrid::CvParamGrid()
@@ -607,10 +607,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvParamGrid_n_1newObj
             """
         },
     },
-    
+
     'CvRTParams':
     {
-        "CvRTParams" : 
+        "CvRTParams" :
         {
             'j_code' : """
 //javadoc:CvRTParams::CvRTParams()
@@ -628,10 +628,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvRTParams_n_1newObj
             """
         },
     },
-    
+
     'CvStatModel':
     {
-        "CvStatModel" : 
+        "CvStatModel" :
         {
             'j_code' : """
 //javadoc:CvStatModel::CvStatModel()
@@ -649,10 +649,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_ml_CvStatModel_n_1newObj
             """
         },
     },
-    
+
     'CvSVMParams':
     {
-        "CvSVMParams" : 
+        "CvSVMParams" :
         {
             'j_code' : """
 //javadoc:CvSVMParams::CvSVMParams()
@@ -700,7 +700,7 @@ func_arg_fix = {
         'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
         'hconcat' : { 'src' : 'vector_Mat', },
         'vconcat' : { 'src' : 'vector_Mat', },
-        
+
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -806,6 +806,9 @@ class JavaWrapperGenerator(object):
         self.cpp_code = None
         self.ported_func_list = []
         self.skipped_func_list = []
+        self.def_args_hist = {} # { def_args_cnt : funcs_cnt }
+        self.classes_map = []
+        self.classes_simple = []
 
     def add_class_code_stream(self, class_name):
         jname = self.classes[class_name].jname
@@ -862,6 +865,10 @@ public class %(jc)s {
         if name in type_dict:
             print "Duplicated class: " + name
             return
+        if '/Simple' in decl[2]:
+            self.classes_simple.append(name)
+        if '/Map' in decl[2]:
+            self.classes_map.append(name)
         type_dict[name] = \
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
@@ -946,6 +953,9 @@ public class %(jc)s {
             func_map[ffi.jname].add_func(ffi.funcs[0])
         else:
             func_map[ffi.jname] = ffi
+        # calc args with def val
+        cnt = len([a for a in ffi.funcs[0].args if a.defval])
+        self.def_args_hist[cnt] = self.def_args_hist.get(cnt, 0) + 1
 
     def save(self, path, buf):
         f = open(path, "wt")
@@ -971,7 +981,7 @@ public class %(jc)s {
                     self.add_const(decl)
                 else: # function
                     self.add_func(decl)
-                    
+
         #FIXME: BackgroundSubtractor is merged into BackgroundSubtractorMOG because of inheritance
         if "BackgroundSubtractor" in self.classes:
             bs = self.classes["BackgroundSubtractor"]
@@ -1034,6 +1044,13 @@ extern "C" {
             (len(self.skipped_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
         )
         report.write("".join(self.skipped_func_list))
+
+        for i in self.def_args_hist.keys():
+            report.write("\n%i def args - %i funcs" % (i, self.def_args_hist[i]))
+
+        report.write("\n\nclass as MAP:\n\t" + "\n\t".join(self.classes_map))
+        report.write("\n\nclass SIMPLE:\n\t" + "\n\t".join(self.classes_simple))
+
         self.save(output_path+"/"+module+".txt", report.getvalue())
 
         print "Done %i of %i funcs." % (len(self.ported_func_list), len(self.ported_func_list)+ len(self.skipped_func_list))
