@@ -1,5 +1,8 @@
 package org.opencv.test.highgui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.opencv.highgui.Highgui;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -11,7 +14,10 @@ public class HighguiTest extends OpenCVTestCase {
     }
 
     public void testImencodeStringMatListOfByte() {
-        fail("Not yet implemented");
+        List<Byte> buf = new ArrayList<Byte>();
+        assertEquals(0, buf.size());
+        assertTrue( Highgui.imencode(".jpg", gray127, buf) );
+        assertFalse(0 == buf.size());
     }
 
     public void testImencodeStringMatListOfByteListOfInteger() {
