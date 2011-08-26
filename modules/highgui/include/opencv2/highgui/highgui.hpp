@@ -129,6 +129,27 @@ typedef void (*MouseCallback )(int event, int x, int y, int flags, void* param);
 
 //! assigns callback for mouse events
 CV_EXPORTS void setMouseCallback( const string& windowName, MouseCallback onMouse, void* param=0);
+
+enum
+{
+    // 8bit, color or not
+    IMREAD_UNCHANGED  =-1,
+    // 8bit, gray
+    IMREAD_GRAYSCALE  =0,
+    // ?, color
+    IMREAD_COLOR      =1,
+    // any depth, ?
+    IMREAD_ANYDEPTH   =2,
+    // ?, any color
+    IMREAD_ANYCOLOR   =4
+};
+    
+enum
+{
+    IMWRITE_JPEG_QUALITY =1,
+    IMWRITE_PNG_COMPRESSION =16,
+    IMWRITE_PXM_BINARY =32
+};
     
 CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
