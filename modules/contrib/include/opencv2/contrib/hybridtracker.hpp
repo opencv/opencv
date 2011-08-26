@@ -79,9 +79,9 @@ struct CV_EXPORTS CvMeanShiftTrackerParams
 	}
 
 	int tracking_type;
-	float h_range[];
-	float s_range[];
-	float v_range[];
+	vector<float> h_range;
+	vector<float> s_range;
+	vector<float> v_range;
 	CvTermCriteria term_crit;
 };
 
