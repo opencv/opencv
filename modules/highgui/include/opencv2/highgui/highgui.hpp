@@ -156,7 +156,7 @@ CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
               const vector<int>& params=vector<int>());
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 CV_EXPORTS_W bool imencode( const string& ext, InputArray img,
-                            vector<uchar>& buf,
+                            CV_OUT vector<uchar>& buf,
                             const vector<int>& params=vector<int>());
 
 CV_EXPORTS_W int waitKey(int delay=0);
