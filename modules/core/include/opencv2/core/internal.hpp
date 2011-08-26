@@ -209,6 +209,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
         }
         
         typedef tf::ConcurrentVector<Rect> ConcurrentRectVector;
+        typedef tf::ConcurrentVector<double> ConcurrentDoubleVector;
 #else
         template<typename Body> static inline
         void parallel_for( const BlockedRange& range, const Body& body )
