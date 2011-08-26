@@ -41,6 +41,7 @@
 //M*/
 
 #include <utility>
+#include <algorithm>
 #include "internal_shared.hpp"
 
 using namespace cv::gpu;
