@@ -60,6 +60,8 @@ CV_EXPORTS_W void namedWindow( const string& winname, int flags=WINDOW_AUTOSIZE 
 CV_EXPORTS_W void destroyWindow( const string& winname );
 CV_EXPORTS_W void destroyAllWindows();
 CV_EXPORTS_W int startWindowThread();
+CV_EXPORTS_W void resizeWindow( const string& name, int width, int height );
+CV_EXPORTS_W void moveWindow( const string& name, int x, int y );
 
 CV_EXPORTS_W void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS_W double getWindowProperty(const string& winname, int prop_id);//YV

@@ -45,85 +45,85 @@
 
 CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
 {
-	switch(prop_id)
-	{
-		//change between fullscreen or not.
-		case CV_WND_PROP_FULLSCREEN:
-		
-			if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
-				break;
-		
-			#if defined (HAVE_QT)
-			cvSetModeWindow_QT(name,prop_value);
-			#elif defined WIN32 || defined _WIN32 
-			cvSetModeWindow_W32(name,prop_value);
-			#elif defined (HAVE_GTK)
-			cvSetModeWindow_GTK(name,prop_value);
-			#elif defined (HAVE_CARBON)
-			cvSetModeWindow_CARBON(name,prop_value);
-			#endif
-		break;
-		
-		case CV_WND_PROP_AUTOSIZE:
-			#if defined (HAVE_QT)
-				cvSetPropWindow_QT(name,prop_value);
-			#endif
-		break;
-		
-		case CV_WND_PROP_ASPECTRATIO:
-			#if defined (HAVE_QT)
-				cvSetRatioWindow_QT(name,prop_value);
-			#endif
-		break;
-		
-	default:;
-	}
+    switch(prop_id)
+    {
+    //change between fullscreen or not.
+    case CV_WND_PROP_FULLSCREEN:
+    
+        if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
+            break;
+    
+        #if defined (HAVE_QT)
+        cvSetModeWindow_QT(name,prop_value);
+        #elif defined WIN32 || defined _WIN32 
+        cvSetModeWindow_W32(name,prop_value);
+        #elif defined (HAVE_GTK)
+        cvSetModeWindow_GTK(name,prop_value);
+        #elif defined (HAVE_CARBON)
+        cvSetModeWindow_CARBON(name,prop_value);
+        #endif
+    break;
+    
+    case CV_WND_PROP_AUTOSIZE:
+        #if defined (HAVE_QT)
+            cvSetPropWindow_QT(name,prop_value);
+        #endif
+    break;
+    
+    case CV_WND_PROP_ASPECTRATIO:
+        #if defined (HAVE_QT)
+            cvSetRatioWindow_QT(name,prop_value);
+        #endif
+    break;
+        
+    default:;
+    }
 }
 
 /* return -1 if error */
 CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 {
-	switch(prop_id)
-	{
-		case CV_WND_PROP_FULLSCREEN:
-		
-			if (!name)//bad argument
-				return -1;
-			
-            #if defined (HAVE_QT)
-				return cvGetModeWindow_QT(name);
-            #elif defined WIN32 || defined _WIN32 
-				return cvGetModeWindow_W32(name);
-			#elif defined (HAVE_GTK)
-				return cvGetModeWindow_GTK(name);
-			#elif defined (HAVE_CARBON)
-				return cvGetModeWindow_CARBON(name);
-			#else
-                return -1;
-			#endif
-		
-		case CV_WND_PROP_AUTOSIZE:
-		
-			if (!name)//bad argument
-				return -1;
-				
-			#if defined (HAVE_QT)
-				return cvGetPropWindow_QT(name);
-			#else
-				return -1;
-		    #endif	
-		    
-		case CV_WND_PROP_ASPECTRATIO:
-			#if defined (HAVE_QT)
-				return cvGetRatioWindow_QT(name);
-			#else
-				return -1;
-		    #endif	
-		break;
-		
-	    default:
-		    return -1;
-	}
+    switch(prop_id)
+    {
+    case CV_WND_PROP_FULLSCREEN:
+    
+        if (!name)//bad argument
+            return -1;
+        
+        #if defined (HAVE_QT)
+            return cvGetModeWindow_QT(name);
+        #elif defined WIN32 || defined _WIN32 
+            return cvGetModeWindow_W32(name);
+        #elif defined (HAVE_GTK)
+            return cvGetModeWindow_GTK(name);
+        #elif defined (HAVE_CARBON)
+            return cvGetModeWindow_CARBON(name);
+        #else
+            return -1;
+        #endif
+    
+    case CV_WND_PROP_AUTOSIZE:
+    
+        if (!name)//bad argument
+            return -1;
+            
+        #if defined (HAVE_QT)
+            return cvGetPropWindow_QT(name);
+        #else
+            return -1;
+        #endif  
+        
+    case CV_WND_PROP_ASPECTRATIO:
+        #if defined (HAVE_QT)
+            return cvGetRatioWindow_QT(name);
+        #else
+            return -1;
+        #endif  
+    break;
+    
+    default:
+        return -1;
+    }
 }
 
 void cv::namedWindow( const string& winname, int flags )
@@ -141,14 +141,24 @@ void cv::destroyAllWindows()
     cvDestroyAllWindows();
 }
 
+void cv::resizeWindow( const string& winname, int width, int height )
+{
+    cvResizeWindow( winname.c_str(), width, height );
+}
+
+void cv::moveWindow( const string& winname, int x, int y )
+{
+    cvMoveWindow( winname.c_str(), x, y );
+}
+
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
-	cvSetWindowProperty( winname.c_str(),prop_id,prop_value);
+    cvSetWindowProperty( winname.c_str(),prop_id,prop_value);
 }
 
 double cv::getWindowProperty(const string& winname, int prop_id)
 {
-	return  cvGetWindowProperty(winname.c_str(),prop_id);
+    return  cvGetWindowProperty(winname.c_str(),prop_id);
 }
 
 void cv::imshow( const string& winname, InputArray _img )
@@ -178,7 +188,7 @@ void cv::setTrackbarPos( const string& trackbarName, const string& winName, int 
 
 int cv::getTrackbarPos( const string& trackbarName, const string& winName )
 {
-	return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
+    return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
 }
     
 void cv::setMouseCallback( const string& windowName, MouseCallback onMouse, void* param)
@@ -200,48 +210,48 @@ return cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
 
 void cv::addText( const Mat& img, const string& text, Point org, CvFont font)
 {
-	CvMat _img = img;
-	cvAddText( &_img, text.c_str(), org,&font);
+    CvMat _img = img;
+    cvAddText( &_img, text.c_str(), org,&font);
 }
 
 void cv::displayStatusBar(const string& name,  const string& text, int delayms)
 {
-	cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
+    cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
 }
 
 void cv::createOpenGLCallback(const string& name,  OpenGLCallback callback, void* param)
 {
-	cvCreateOpenGLCallback(name.c_str(),callback, param);
+    cvCreateOpenGLCallback(name.c_str(),callback, param);
 }
 
 void cv::displayOverlay(const string& name,  const string& text, int delayms)
 {
-	cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
+    cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
 }
 
 int cv::startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
 {
-	return cvStartLoop(pt2Func, argc, argv);
+    return cvStartLoop(pt2Func, argc, argv);
 }
 
 void cv::stopLoop()
 {
-	cvStopLoop();
+    cvStopLoop();
 }
 
 void cv::saveWindowParameters(const string& windowName)
 {
-	cvSaveWindowParameters(windowName.c_str());
+    cvSaveWindowParameters(windowName.c_str());
 }
 
 void cv::loadWindowParameters(const string& windowName)
 {
-	cvLoadWindowParameters(windowName.c_str());
+    cvLoadWindowParameters(windowName.c_str());
 }
 
 int cv::createButton(const string& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
 {
-	return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
+    return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
 #endif
