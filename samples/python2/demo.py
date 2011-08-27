@@ -124,12 +124,12 @@ class App:
                 text.tag_add(tag, start, end)
         self.match_text(r'http://\S+', add_link)
 
-    def match_text(self, pattern, tag_proc):
+    def match_text(self, pattern, tag_proc, regexp=True):
         text = self.text
         text.mark_set('matchPos', '1.0')
         count = tk.IntVar()
         while True:
-            match_index = text.search(pattern, 'matchPos', count=count, regexp=True, stopindex='end')
+            match_index = text.search(pattern, 'matchPos', count=count, regexp=regexp, stopindex='end')
             if not match_index: break
             end_index = text.index( "%s+%sc" % (match_index, count.get()) )
             text.mark_set('matchPos', end_index)
