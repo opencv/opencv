@@ -134,7 +134,7 @@ public:
 	CvMeanShiftTrackerParams params;
 
 	CvMeanShiftTracker();
-	CvMeanShiftTracker(CvMeanShiftTrackerParams _params = CvMeanShiftTrackerParams());
+	explicit CvMeanShiftTracker(CvMeanShiftTrackerParams _params);
 	~CvMeanShiftTracker();
 	void newTrackingWindow(Mat image, Rect selection);
 	RotatedRect updateTrackingWindow(Mat image);
@@ -167,7 +167,7 @@ public:
 	CvFeatureTrackerParams params;
 
 	CvFeatureTracker();
-	CvFeatureTracker(CvFeatureTrackerParams params = CvFeatureTrackerParams(0,0));
+	explicit CvFeatureTracker(CvFeatureTrackerParams params);
 	~CvFeatureTracker();
 	void newTrackingWindow(Mat image, Rect selection);
 	Rect updateTrackingWindow(Mat image);
@@ -206,7 +206,7 @@ private:
 public:
 	CvHybridTrackerParams params;
 	CvHybridTracker();
-	CvHybridTracker(CvHybridTrackerParams params = CvHybridTrackerParams());
+	explicit CvHybridTracker(CvHybridTrackerParams params);
 	~CvHybridTracker();
 
 	void newTracker(Mat image, Rect selection);

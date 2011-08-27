@@ -197,6 +197,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithFlow(Mat image)
 
 	swap(features[0], features[1]);
 	image.copyTo(prev_image);
+	return prev_trackwindow;
 }
 
 void CvFeatureTracker::setTrackingWindow(Rect _window)
