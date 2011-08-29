@@ -91,7 +91,7 @@ Rect CvFeatureTracker::updateTrackingWindow(Mat image)
 	if(params.feature_type == CvFeatureTrackerParams::OPTICAL_FLOW)
 		return updateTrackingWindowWithFlow(image);
 	else
-		updateTrackingWindowWithSIFT(image);
+		return updateTrackingWindowWithSIFT(image);
 }
 
 Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
