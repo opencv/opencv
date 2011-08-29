@@ -3594,13 +3594,8 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate32F, testing::Combine(
                         testing::Range(1, 5), 
                         testing::Values((int)CV_TM_SQDIFF, (int)CV_TM_CCORR)));
 
-struct MatchTemplate : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+struct MatchTemplateBlackSource : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
 {
-    cv::Mat image;
-    cv::Mat pattern;
-
-    cv::Point maxLocGold;
-
     cv::gpu::DeviceInfo devInfo;
     int method;
 
@@ -3608,25 +3603,24 @@ struct MatchTemplate : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceIn
     {
         devInfo = std::tr1::get<0>(GetParam());
         method = std::tr1::get<1>(GetParam());
-
         cv::gpu::setDevice(devInfo.deviceID());
-        
-        image = readImage("matchtemplate/black.png");
-        ASSERT_FALSE(image.empty());
-        
-        pattern = readImage("matchtemplate/cat.png");
-        ASSERT_FALSE(pattern.empty());
-
-        maxLocGold = cv::Point(284, 12);
     }
 };
 
-TEST_P(MatchTemplate, FindPatternInBlack)
+TEST_P(MatchTemplateBlackSource, Accuracy)
 {
     const char* matchTemplateMethodStr = matchTemplateMethods[method];
 
     PRINT_PARAM(devInfo);
     PRINT_PARAM(matchTemplateMethodStr);
+
+    cv::Mat image = readImage("matchtemplate/black.png");
+    ASSERT_FALSE(image.empty());
+
+    cv::Mat pattern = readImage("matchtemplate/cat.png");
+    ASSERT_FALSE(pattern.empty());
+
+    cv::Point maxLocGold = cv::Point(284, 12);
 
     cv::Mat dst;
 
@@ -3643,9 +3637,60 @@ TEST_P(MatchTemplate, FindPatternInBlack)
     ASSERT_EQ(maxLocGold, maxLoc);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate, testing::Combine(
-                        testing::ValuesIn(devices()), 
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplateBlackSource, testing::Combine(
+                        testing::ValuesIn(devices()),
                         testing::Values((int)CV_TM_CCOEFF_NORMED, (int)CV_TM_CCORR_NORMED)));
+
+
+struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::tr1::tuple<const char*, const char*> > >
+{
+    cv::gpu::DeviceInfo devInfo;
+    cv::Mat image, pattern;
+
+    virtual void SetUp()
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+
+        image = readImage(std::tr1::get<0>(std::tr1::get<1>(GetParam())));
+        ASSERT_FALSE(image.empty());
+
+        pattern = readImage(std::tr1::get<1>(std::tr1::get<1>(GetParam())));
+        ASSERT_FALSE(pattern.empty());
+    }
+};
+
+TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+
+    cv::Mat dstGold;
+    cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
+    cv::Point minLocGold, maxLocGold;
+    cv::minMaxLoc(dstGold, NULL, NULL, &minLocGold, &maxLocGold);
+
+    cv::Mat dst;
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+        cv::gpu::matchTemplate(cv::gpu::GpuMat(image), cv::gpu::GpuMat(pattern), dev_dst, CV_TM_CCOEFF_NORMED);
+        dev_dst.download(dst);
+    );
+
+    cv::Point minLoc, maxLoc;
+    double minVal, maxVal;
+    cv::minMaxLoc(dst, &minVal, &maxVal, &minLoc, &maxLoc);
+
+    ASSERT_EQ(minLocGold, minLoc);
+    ASSERT_EQ(maxLocGold, maxLoc);
+    ASSERT_LE(maxVal, 1.);
+    ASSERT_GE(minVal, -1.);
+}
+
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(std::tr1::make_tuple("matchtemplate/source-0.png", "matchtemplate/target-0.png"),
+                                        std::tr1::make_tuple("matchtemplate/source-1.png", "matchtemplate/target-1.png"))));
+
 
 ////////////////////////////////////////////////////////////////////////////
 // MulSpectrums

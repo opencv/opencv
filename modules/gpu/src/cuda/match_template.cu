@@ -313,6 +313,29 @@ void matchTemplatePrepared_SQDIFF_8U(
 }
 
 
+// normAcc* are accurate normalization routines which make GPU matchTemplate
+// consistent with CPU one
+
+__device__ float normAcc(float num, float denum)
+{
+    if (fabs(num) < denum)
+        return num / denum;
+    if (fabs(num) < denum * 1.125f)
+        return num > 0 ? 1 : -1;
+    return 0;
+}
+
+
+__device__ float normAcc_SQDIFF(float num, float denum)
+{
+    if (fabs(num) < denum)
+        return num / denum;
+    if (fabs(num) < denum * 1.125f)
+        return num > 0 ? 1 : -1;
+    return 1;
+}
+
+
 template <int cn>
 __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
         int w, int h, const PtrStep_<unsigned long long> image_sqsum, 
@@ -327,8 +350,8 @@ __global__ void matchTemplatePreparedKernel_SQDIFF_NORMED_8U(
                 (image_sqsum.ptr(y + h)[(x + w) * cn] - image_sqsum.ptr(y)[(x + w) * cn]) -
                 (image_sqsum.ptr(y + h)[x * cn] - image_sqsum.ptr(y)[x * cn]));
         float ccorr = result.ptr(y)[x];
-        result.ptr(y)[x] = min(1.f, (image_sqsum_ - 2.f * ccorr + templ_sqsum) * 
-                           rsqrtf(image_sqsum_ * templ_sqsum));
+        result.ptr(y)[x] = normAcc_SQDIFF(image_sqsum_ - 2.f * ccorr + templ_sqsum,
+                                          sqrtf(image_sqsum_ * templ_sqsum));
     }
 }
 
@@ -440,7 +463,7 @@ void matchTemplatePrepared_CCOFF_8UC2(
 
 __global__ void matchTemplatePreparedKernel_CCOFF_8UC3(
         int w, int h, 
-        float templ_sum_scale_r, 
+        float templ_sum_scale_r,
         float templ_sum_scale_g,
         float templ_sum_scale_b,
         const PtrStep_<unsigned int> image_sum_r,
@@ -463,7 +486,7 @@ __global__ void matchTemplatePreparedKernel_CCOFF_8UC3(
                 (image_sum_b.ptr(y + h)[x + w] - image_sum_b.ptr(y)[x + w]) -
                 (image_sum_b.ptr(y + h)[x] - image_sum_b.ptr(y)[x]));
         float ccorr = result.ptr(y)[x];
-        result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r 
+        result.ptr(y)[x] = ccorr - image_sum_r_ * templ_sum_scale_r
                                  - image_sum_g_ * templ_sum_scale_g
                                  - image_sum_b_ * templ_sum_scale_b;
     }
@@ -484,8 +507,8 @@ void matchTemplatePrepared_CCOFF_8UC3(
     dim3 grid(divUp(result.cols, threads.x), divUp(result.rows, threads.y));
     matchTemplatePreparedKernel_CCOFF_8UC3<<<grid, threads>>>(
             w, h, 
-            (float)templ_sum_r / (w * h), 
-            (float)templ_sum_g / (w * h), 
+            (float)templ_sum_r / (w * h),
+            (float)templ_sum_g / (w * h),
             (float)templ_sum_b / (w * h),
             image_sum_r, image_sum_g, image_sum_b, result);
     cudaSafeCall( cudaGetLastError() );
@@ -579,8 +602,8 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8U(
         float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[x + w] - image_sqsum.ptr(y)[x + w]) -
                 (image_sqsum.ptr(y + h)[x] - image_sqsum.ptr(y)[x]));
-        result.ptr(y)[x] = (ccorr - image_sum_ * templ_sum_scale) * 
-                           rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_ - weight * image_sum_ * image_sum_));
+        result.ptr(y)[x] = normAcc(ccorr - image_sum_ * templ_sum_scale,
+                                   sqrtf(templ_sqsum_scale * (image_sqsum_ - weight * image_sum_ * image_sum_)));
     }
 }
 
@@ -631,11 +654,12 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC2(
         float image_sqsum_g_ = (float)(
                 (image_sqsum_g.ptr(y + h)[x + w] - image_sqsum_g.ptr(y)[x + w]) -
                 (image_sqsum_g.ptr(y + h)[x] - image_sqsum_g.ptr(y)[x]));
-        float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
-                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_));
-        result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
-                                  - image_sum_g_ * templ_sum_scale_g) * rdenom;
+
+        float num = result.ptr(y)[x] - image_sum_r_ * templ_sum_scale_r
+                                     - image_sum_g_ * templ_sum_scale_g;
+        float denum = sqrtf(templ_sqsum_scale * (image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
+                                                 + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_));
+        result.ptr(y)[x] = normAcc(num, denum);
     }
 }
 
@@ -701,13 +725,14 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC3(
         float image_sqsum_b_ = (float)(
                 (image_sqsum_b.ptr(y + h)[x + w] - image_sqsum_b.ptr(y)[x + w]) -
                 (image_sqsum_b.ptr(y + h)[x] - image_sqsum_b.ptr(y)[x]));
-        float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_ 
-                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
-                                                             + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_));
-        result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
-                                  - image_sum_g_ * templ_sum_scale_g
-                                  - image_sum_b_ * templ_sum_scale_b) * rdenom;
+
+        float num = result.ptr(y)[x] - image_sum_r_ * templ_sum_scale_r
+                                     - image_sum_g_ * templ_sum_scale_g
+                                     - image_sum_b_ * templ_sum_scale_b;
+        float denum = sqrtf(templ_sqsum_scale * (image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
+                                                 + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
+                                                 + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_));
+        result.ptr(y)[x] = normAcc(num, denum);
     }
 }
 
@@ -785,15 +810,14 @@ __global__ void matchTemplatePreparedKernel_CCOFF_NORMED_8UC4(
         float image_sqsum_a_ = (float)(
                 (image_sqsum_a.ptr(y + h)[x + w] - image_sqsum_a.ptr(y)[x + w]) -
                 (image_sqsum_a.ptr(y + h)[x] - image_sqsum_a.ptr(y)[x]));
-        float ccorr = result.ptr(y)[x];
-        float rdenom = rsqrtf(templ_sqsum_scale * max(1e-3f, image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
-                                                             + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
-                                                             + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_
-                                                             + image_sqsum_a_ - weight * image_sum_a_ * image_sum_a_));
-        result.ptr(y)[x] = (ccorr - image_sum_r_ * templ_sum_scale_r
-                                  - image_sum_g_ * templ_sum_scale_g
-                                  - image_sum_b_ * templ_sum_scale_b
-                                  - image_sum_a_ * templ_sum_scale_a) * rdenom;
+
+        float num = result.ptr(y)[x] - image_sum_r_ * templ_sum_scale_r - image_sum_g_ * templ_sum_scale_g
+                                     - image_sum_b_ * templ_sum_scale_b - image_sum_a_ * templ_sum_scale_a;
+        float denum = sqrtf(templ_sqsum_scale * (image_sqsum_r_ - weight * image_sum_r_ * image_sum_r_
+                                                 + image_sqsum_g_ - weight * image_sum_g_ * image_sum_g_
+                                                 + image_sqsum_b_ - weight * image_sum_b_ * image_sum_b_
+                                                 + image_sqsum_a_ - weight * image_sum_a_ * image_sum_a_));
+        result.ptr(y)[x] = normAcc(num, denum);
     }
 }
 
@@ -850,7 +874,7 @@ __global__ void normalizeKernel_8U(
         float image_sqsum_ = (float)(
                 (image_sqsum.ptr(y + h)[(x + w) * cn] - image_sqsum.ptr(y)[(x + w) * cn]) -
                 (image_sqsum.ptr(y + h)[x * cn] - image_sqsum.ptr(y)[x * cn]));
-        result.ptr(y)[x] = result.ptr(y)[x] * rsqrtf(max(1.f, image_sqsum_) * templ_sqsum);
+        result.ptr(y)[x] = normAcc(result.ptr(y)[x], sqrtf(image_sqsum_ * templ_sqsum));
     }
 }
 
