@@ -1127,11 +1127,11 @@ namespace cv { namespace gpu { namespace imgproc
 
         sum = VecTraits<value_type>::all(0);
 
-        sum = sum + 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx - 2) >> 1)];
-        sum = sum + 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx - 1) >> 1)];
-        sum = sum + 0.375f  * smem1[1 + threadIdx.y / 2][1 + ((tidx    ) >> 1)];
-        sum = sum + 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx + 1) >> 1)];
-        sum = sum + 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx + 2) >> 1)];
+        sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx - 2) >> 1)];
+        sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx - 1) >> 1)];
+        sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[1 + threadIdx.y / 2][1 + ((tidx    ) >> 1)];
+        sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[1 + threadIdx.y / 2][1 + ((tidx + 1) >> 1)];
+        sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[1 + threadIdx.y / 2][1 + ((tidx + 2) >> 1)];
 
         smem2[2 + threadIdx.y][tidx] = sum;
 
@@ -1139,11 +1139,11 @@ namespace cv { namespace gpu { namespace imgproc
         {
             sum = VecTraits<value_type>::all(0);
 
-            sum = sum + 0.0625f * smem1[0][1 + ((tidx - 2) >> 1)];
-            sum = sum + 0.25f   * smem1[0][1 + ((tidx - 1) >> 1)];
-            sum = sum + 0.375f  * smem1[0][1 + ((tidx    ) >> 1)];
-            sum = sum + 0.25f   * smem1[0][1 + ((tidx + 1) >> 1)];
-            sum = sum + 0.0625f * smem1[0][1 + ((tidx + 2) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[0][1 + ((tidx - 2) >> 1)];
+            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[0][1 + ((tidx - 1) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[0][1 + ((tidx    ) >> 1)];
+            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[0][1 + ((tidx + 1) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[0][1 + ((tidx + 2) >> 1)];
 
             smem2[threadIdx.y][tidx] = sum;
         }
@@ -1152,11 +1152,11 @@ namespace cv { namespace gpu { namespace imgproc
         {
             sum = VecTraits<value_type>::all(0);
 
-            sum = sum + 0.0625f * smem1[9][1 + ((tidx - 2) >> 1)];
-            sum = sum + 0.25f   * smem1[9][1 + ((tidx - 1) >> 1)];
-            sum = sum + 0.375f  * smem1[9][1 + ((tidx    ) >> 1)];
-            sum = sum + 0.25f   * smem1[9][1 + ((tidx + 1) >> 1)];
-            sum = sum + 0.0625f * smem1[9][1 + ((tidx + 2) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[9][1 + ((tidx - 2) >> 1)];
+            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[9][1 + ((tidx - 1) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.375f  * smem1[9][1 + ((tidx    ) >> 1)];
+            sum = sum + (tidx % 2 != 0) * 0.25f   * smem1[9][1 + ((tidx + 1) >> 1)];
+            sum = sum + (tidx % 2 == 0) * 0.0625f * smem1[9][1 + ((tidx + 2) >> 1)];
 
             smem2[4 + threadIdx.y][tidx] = sum;
         }
@@ -1165,14 +1165,14 @@ namespace cv { namespace gpu { namespace imgproc
 
         sum = VecTraits<value_type>::all(0);
 
-        sum = sum + 0.0625f * smem2[2 + threadIdx.y - 2][tidx];
-        sum = sum + 0.25f   * smem2[2 + threadIdx.y - 1][tidx];
-        sum = sum + 0.375f  * smem2[2 + threadIdx.y    ][tidx];
-        sum = sum + 0.25f   * smem2[2 + threadIdx.y + 1][tidx];
-        sum = sum + 0.0625f * smem2[2 + threadIdx.y + 2][tidx];
+        sum = sum + (tidx % 2 == 0) * 0.0625f * smem2[2 + threadIdx.y - 2][tidx];
+        sum = sum + (tidx % 2 != 0) * 0.25f   * smem2[2 + threadIdx.y - 1][tidx];
+        sum = sum + (tidx % 2 == 0) * 0.375f  * smem2[2 + threadIdx.y    ][tidx];
+        sum = sum + (tidx % 2 != 0) * 0.25f   * smem2[2 + threadIdx.y + 1][tidx];
+        sum = sum + (tidx % 2 == 0) * 0.0625f * smem2[2 + threadIdx.y + 2][tidx];
 
         if (x < dst.cols && y < dst.rows)
-            dst.ptr(y)[x] = saturate_cast<T>(sum);
+            dst.ptr(y)[x] = saturate_cast<T>(4.0f * sum);
     }
 
     template <typename T, int cn> void pyrUp_gpu(const DevMem2D& src, const DevMem2D& dst, cudaStream_t stream)
