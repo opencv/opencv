@@ -55,7 +55,7 @@ namespace cv
 			{
 #if __CUDA_ARCH__ >= 200
 				(void)cta_buffer;
-				return __ballot(predicat);
+				return __ballot(predicate);
 #else
 				int tid = threadIdx.x;				
 				cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;

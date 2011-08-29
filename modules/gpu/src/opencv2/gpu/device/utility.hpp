@@ -45,111 +45,274 @@
 
 #include "internal_shared.hpp"
 #include "saturate_cast.hpp"
-
-#ifndef __CUDA_ARCH__
-	#define __CUDA_ARCH__ 0
-#endif
+#include "datamov_utils.hpp"
+#include "functional.hpp"
+#include "detail/utility_detail.hpp"
 
 #define OPENCV_GPU_LOG_WARP_SIZE	    (5)
 #define OPENCV_GPU_WARP_SIZE	        (1 << OPENCV_GPU_LOG_WARP_SIZE)
 #define OPENCV_GPU_LOG_MEM_BANKS        ((__CUDA_ARCH__ >= 200) ? 5 : 4) // 32 banks on fermi, 16 on tesla
 #define OPENCV_GPU_MEM_BANKS            (1 << OPENCV_GPU_LOG_MEM_BANKS)
 
-#if defined(_WIN64) || defined(__LP64__)		
-    // 64-bit register modifier for inlined asm
-    #define OPENCV_GPU_ASM_PTR "l"
-#else	
-    // 32-bit register modifier for inlined asm
-    #define OPENCV_GPU_ASM_PTR "r"
-#endif
-
 namespace cv {  namespace gpu { namespace device
 {
-    template <typename T> void __host__ __device__ __forceinline__ swap(T& a, T& b) 
+    ///////////////////////////////////////////////////////////////////////////////
+    // swap
+
+    template <typename T> void __device__ __forceinline__ swap(T& a, T& b) 
     {
         const T temp = a;
         a = b;
         b = temp;
     }
 
-    // warp-synchronous 32 elements reduction
-    template <typename T, typename Op> __device__ __forceinline__ void warpReduce32(volatile T* data, T& partial_reduction, int tid, const Op& op)
-    {
-        data[tid] = partial_reduction;
+    ///////////////////////////////////////////////////////////////////////////////
+    // Mask Reader
 
-        if (tid < 16)
-        {
-            data[tid] = partial_reduction = op(partial_reduction, data[tid + 16]);
-            data[tid] = partial_reduction = op(partial_reduction, data[tid + 8 ]);
-            data[tid] = partial_reduction = op(partial_reduction, data[tid + 4 ]);
-            data[tid] = partial_reduction = op(partial_reduction, data[tid + 2 ]);
-            data[tid] = partial_reduction = op(partial_reduction, data[tid + 1 ]);
+    struct SingleMask
+    {
+        explicit __host__ __device__ __forceinline__ SingleMask(const PtrStep& mask_) : mask(mask_) {}
+        
+        __device__ __forceinline__ bool operator()(int y, int x) const
+        {            
+            return mask.ptr(y)[x] != 0;
         }
+
+        const PtrStep mask;
+    };
+
+    struct MaskCollection
+    {
+        explicit __host__ __device__ __forceinline__ MaskCollection(PtrStep* maskCollection_) : maskCollection(maskCollection_) {}
+
+        __device__ __forceinline__ void next()
+        {
+            curMask = *maskCollection++;
+        }
+        __device__ __forceinline__ void setMask(int z)
+        {
+            curMask = maskCollection[z];
+        }
+        
+        __device__ __forceinline__ bool operator()(int y, int x) const
+        {
+            uchar val;
+            return curMask.data == 0 || (ForceGlob<uchar>::Load(curMask.ptr(y), x, val), (val != 0));
+        }
+
+        const PtrStep* maskCollection;
+        PtrStep curMask;
+    };
+
+    struct WithOutMask
+    {
+        __device__ __forceinline__ void next() const
+        {
+        }
+        __device__ __forceinline__ void setMask(int) const
+        {
+        }
+
+        __device__ __forceinline__ bool operator()(int, int) const
+        {
+            return true;
+        }
+    };
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Reduction
+
+    // reduction
+    template <int n, typename T, typename Op> __device__ __forceinline__ void reduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
+    {
+        StaticAssert<n >= 8 && n <= 512>::check();
+        detail::ReductionDispatcher<n <= 64>::reduce<n>(data, partial_reduction, tid, op);
     }
 
-    // warp-synchronous 16 elements reduction
-    template <typename T, typename Op> __device__ __forceinline__ void warpReduce16(volatile T* data, T& partial_reduction, int tid, const Op& op)
+    template <int n, typename T, typename V, typename Pred> 
+    __device__ __forceinline__ void reducePredVal(volatile T* sdata, T& myData, V* sval, V& myVal, int tid, const Pred& pred)
     {
-        data[tid] = partial_reduction;
-
-        if (tid < 8)
-        {
-            data[tid] = partial_reduction = op(partial_reduction, (T)data[tid + 8 ]);
-            data[tid] = partial_reduction = op(partial_reduction, (T)data[tid + 4 ]);
-            data[tid] = partial_reduction = op(partial_reduction, (T)data[tid + 2 ]);
-            data[tid] = partial_reduction = op(partial_reduction, (T)data[tid + 1 ]);
-        }
+        StaticAssert<n >= 8 && n <= 512>::check();
+        detail::PredValReductionDispatcher<n <= 64>::reduce<n>(myData, myVal, sdata, sval, tid, pred);
     }
 
-    // warp-synchronous reduction
-    template <int n, typename T, typename Op> __device__ __forceinline__ void warpReduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
-    {
-        if (tid < n)
-            data[tid] = partial_reduction;
+    ///////////////////////////////////////////////////////////////////////////////
+    // Vector Distance
 
-        if (n > 16)
+    template <typename T> struct L1Dist
+    {
+        typedef int value_type;
+        typedef int result_type;
+
+        __device__ __forceinline__ L1Dist() : mySum(0) {}
+
+        __device__ __forceinline__ void reduceIter(int val1, int val2)
         {
-            if (tid < n - 16) 
-                data[tid] = partial_reduction = op(partial_reduction, data[tid + 16]);
-            if (tid < 8)
-            {
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  8]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  4]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  2]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  1]);
-            }
+            mySum = __sad(val1, val2, mySum);
         }
-        else if (n > 8)
+
+        template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
         {
-            if (tid < n - 8) 
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  8]);
-            if (tid < 4)
-            {
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  4]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  2]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  1]);
-            }
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
         }
-        else if (n > 4)
+
+        __device__ __forceinline__ operator int() const
         {
-            if (tid < n - 4) 
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  4]);
-            if (tid < 2)
-            {
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  2]);
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  1]);
-            }
-        }   
-        else if (n > 2)
+            return mySum;
+        }
+
+        int mySum;
+    };
+    template <> struct L1Dist<float>
+    {
+        typedef float value_type;
+        typedef float result_type;
+
+        __device__ __forceinline__ L1Dist() : mySum(0.0f) {}
+
+        __device__ __forceinline__ void reduceIter(float val1, float val2)
         {
-            if (tid < n - 2) 
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  2]);
-            if (tid < 2)
-            {
-                data[tid] = partial_reduction = op(partial_reduction, data[tid +  1]);
-            }
-        }      
+            mySum += ::fabs(val1 - val2);
+        }
+
+        template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
+        {
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+        }
+
+        __device__ __forceinline__ operator float() const
+        {
+            return mySum;
+        }
+
+        float mySum;
+    };
+
+    struct L2Dist
+    {
+        typedef float value_type;
+        typedef float result_type;
+
+        __device__ __forceinline__ L2Dist() : mySum(0.0f) {}
+
+        __device__ __forceinline__ void reduceIter(float val1, float val2)
+        {
+            float reg = val1 - val2;
+            mySum += reg * reg;
+        }
+
+        template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
+        {
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+        }
+
+        __device__ __forceinline__ operator float() const
+        {
+            return sqrtf(mySum);
+        }
+
+        float mySum;
+    };
+
+    struct HammingDist
+    {
+        typedef int value_type;
+        typedef int result_type;
+
+        __device__ __forceinline__ HammingDist() : mySum(0) {}
+
+        __device__ __forceinline__ void reduceIter(int val1, int val2)
+        {
+            mySum += __popc(val1 ^ val2);
+        }
+
+        template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
+        {
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
+        }
+
+        __device__ __forceinline__ operator int() const
+        {
+            return mySum;
+        }
+
+        int mySum;
+    };
+
+    // calc distance between two vectors in global memory
+    template <int THREAD_DIM, typename Dist, typename T1, typename T2> 
+    __device__ void calcVecDiffGlobal(const T1* vec1, const T2* vec2, int len, Dist& dist, typename Dist::result_type* smem, int tid)
+    {
+        for (int i = tid; i < len; i += THREAD_DIM)
+        {
+            T1 val1;
+            ForceGlob<T1>::Load(vec1, i, val1);
+
+            T2 val2;
+            ForceGlob<T2>::Load(vec2, i, val2);
+
+            dist.reduceIter(val1, val2);
+        }
+
+        dist.reduceAll<THREAD_DIM>(smem, tid);
     }
+
+    // calc distance between two vectors, first vector is cached in register or shared memory, second vector is in global memory
+    template <int THREAD_DIM, int MAX_LEN, bool LEN_EQ_MAX_LEN, typename Dist, typename T1, typename T2>
+    __device__ __forceinline__ void calcVecDiffCached(const T1* vecCached, const T2* vecGlob, int len, Dist& dist, typename Dist::result_type* smem, int tid)
+    {        
+        detail::VecDiffCachedCalculator<THREAD_DIM, MAX_LEN, LEN_EQ_MAX_LEN>::calc(vecCached, vecGlob, len, dist, tid);
+        
+        dist.reduceAll<THREAD_DIM>(smem, tid);
+    }
+
+    // calc distance between two vectors in global memory
+    template <int THREAD_DIM, typename T1> struct VecDiffGlobal
+    {
+        explicit __device__ __forceinline__ VecDiffGlobal(const T1* vec1_, int = 0, void* = 0, int = 0, int = 0)
+        {
+            vec1 = vec1_;
+        }
+
+        template <typename T2, typename Dist>
+        __device__ __forceinline__ void calc(const T2* vec2, int len, Dist& dist, typename Dist::result_type* smem, int tid) const
+        {
+            calcVecDiffGlobal<THREAD_DIM>(vec1, vec2, len, dist, smem, tid);
+        }
+
+        const T1* vec1;
+    };
+
+    // calc distance between two vectors, first vector is cached in register memory, second vector is in global memory
+    template <int THREAD_DIM, int MAX_LEN, bool LEN_EQ_MAX_LEN, typename U> struct VecDiffCachedRegister
+    {
+        template <typename T1> __device__ __forceinline__ VecDiffCachedRegister(const T1* vec1, int len, U* smem, int glob_tid, int tid)
+        {
+            if (glob_tid < len)
+                smem[glob_tid] = vec1[glob_tid];
+            __syncthreads();
+
+            U* vec1ValsPtr = vec1Vals;
+
+            #pragma unroll
+            for (int i = tid; i < MAX_LEN; i += THREAD_DIM)
+                *vec1ValsPtr++ = smem[i];
+
+            __syncthreads();
+        }
+
+        template <typename T2, typename Dist>
+        __device__ __forceinline__ void calc(const T2* vec2, int len, Dist& dist, typename Dist::result_type* smem, int tid) const
+        {
+            calcVecDiffCached<THREAD_DIM, MAX_LEN, LEN_EQ_MAX_LEN>(vec1Vals, vec2, len, dist, smem, tid);
+        }
+
+        U vec1Vals[MAX_LEN / THREAD_DIM];
+    };
+
+    
+    ///////////////////////////////////////////////////////////////////////////////
+    // Solve linear system
 
     // solve 2x2 linear system Ax=b
     template <typename T> __device__ __forceinline__ bool solve2x2(const T A[2][2], const T b[2], T x[2])

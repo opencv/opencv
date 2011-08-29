@@ -286,7 +286,7 @@ TEST(BruteForceMatcher)
 {
     // Init CPU matcher
 
-    int desc_len = 128;
+    int desc_len = 64;
 
     BruteForceMatcher< L2<float> > matcher;
 
@@ -329,7 +329,7 @@ TEST(BruteForceMatcher)
     GPU_OFF;
 
     SUBTEST << "radiusMatch";
-    float max_distance = 3.8f;
+    float max_distance = 2.0f;
 
     CPU_ON;
     matcher.radiusMatch(query, train, matches, max_distance);

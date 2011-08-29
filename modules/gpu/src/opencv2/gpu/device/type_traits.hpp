@@ -40,35 +40,41 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_TRANSFORM_HPP__
-#define __OPENCV_GPU_TRANSFORM_HPP__
+#ifndef __OPENCV_GPU_TYPE_TRAITS_HPP__
+#define __OPENCV_GPU_TYPE_TRAITS_HPP__
 
-#include "detail/transform_detail.hpp"
-#include "utility.hpp"
+#include "detail/type_traits_detail.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D, typename UnOp>
-    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const UnOp& op, cudaStream_t stream = 0)
+    template <typename T> struct IsSimpleParameter
     {
-        detail::transform_caller(src, dst, op, WithOutMask(), stream);
-    }
-    template <typename T, typename D, typename UnOp>
-    void transform(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, const PtrStep& mask, const UnOp& op, cudaStream_t stream = 0)
-    {
-        detail::transform_caller(src, dst, op, SingleMask(mask), stream);
-    }
+        enum {value = detail::IsIntegral<T>::value || detail::IsFloat<T>::value || detail::PointerTraits<typename detail::ReferenceTraits<T>::type>::value};
+    };
 
-    template <typename T1, typename T2, typename D, typename BinOp>
-    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const BinOp& op, cudaStream_t stream = 0)
+    template <typename T> struct TypeTraits
     {
-        detail::transform_caller(src1, src2, dst, op, WithOutMask(), stream);
-    }
-    template <typename T1, typename T2, typename D, typename BinOp>
-    void transform(const DevMem2D_<T1>& src1, const DevMem2D_<T2>& src2, const DevMem2D_<D>& dst, const PtrStep& mask, const BinOp& op, cudaStream_t stream = 0)
-    {
-        detail::transform_caller(src1, src2, dst, op, SingleMask(mask), stream);
-    }
+        typedef typename detail::UnConst<T>::type                                       NonConstType;
+        typedef typename detail::UnVolatile<T>::type                                    NonVolatileType;
+        typedef typename detail::UnVolatile<typename detail::UnConst<T>::type>::type    UnqualifiedType;
+        typedef typename detail::PointerTraits<UnqualifiedType>::type                   PointeeType;
+        typedef typename detail::ReferenceTraits<T>::type                               ReferredType;
+
+        enum { isConst          = detail::UnConst<T>::value };
+        enum { isVolatile       = detail::UnVolatile<T>::value };
+
+        enum { isReference      = detail::ReferenceTraits<UnqualifiedType>::value };
+        enum { isPointer        = detail::PointerTraits<typename detail::ReferenceTraits<UnqualifiedType>::type>::value };        
+
+        enum { isUnsignedInt = detail::IsUnsignedIntegral<UnqualifiedType>::value };
+        enum { isSignedInt   = detail::IsSignedIntergral<UnqualifiedType>::value };
+        enum { isIntegral    = detail::IsIntegral<UnqualifiedType>::value };
+        enum { isFloat       = detail::IsFloat<UnqualifiedType>::value  };
+        enum { isArith       = isIntegral || isFloat };
+        enum { isVec         = detail::IsVec<UnqualifiedType>::value  };
+        
+        typedef typename detail::Select<IsSimpleParameter<UnqualifiedType>::value, T, typename detail::AddParameterType<T>::type>::type ParameterType;
+    };
 }}}
 
-#endif // __OPENCV_GPU_TRANSFORM_HPP__
+#endif // __OPENCV_GPU_TYPE_TRAITS_HPP__

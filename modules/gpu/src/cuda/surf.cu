@@ -566,8 +566,8 @@ namespace cv { namespace gpu { namespace surf
 
                 float* s_sum_row = s_sum + threadIdx.y * 32;
 
-                warpReduce32(s_sum_row, sumx, threadIdx.x, plus<volatile float>());
-                warpReduce32(s_sum_row, sumy, threadIdx.x, plus<volatile float>());
+                reduce<32>(s_sum_row, sumx, threadIdx.x, plus<volatile float>());
+                reduce<32>(s_sum_row, sumy, threadIdx.x, plus<volatile float>());
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
                 if (temp_mod > best_mod)

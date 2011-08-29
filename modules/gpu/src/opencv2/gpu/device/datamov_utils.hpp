@@ -44,7 +44,14 @@
 #define __OPENCV_GPU_DATAMOV_UTILS_HPP__
 
 #include "internal_shared.hpp"
-#include "utility.hpp"
+
+#if defined(_WIN64) || defined(__LP64__)		
+    // 64-bit register modifier for inlined asm
+    #define OPENCV_GPU_ASM_PTR "l"
+#else	
+    // 32-bit register modifier for inlined asm
+    #define OPENCV_GPU_ASM_PTR "r"
+#endif
 
 namespace cv { namespace gpu { namespace device
 {

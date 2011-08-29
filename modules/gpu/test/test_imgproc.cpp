@@ -3642,19 +3642,24 @@ INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplateBlackSource, testing::Combine(
                         testing::Values((int)CV_TM_CCOEFF_NORMED, (int)CV_TM_CCORR_NORMED)));
 
 
-struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::tr1::tuple<const char*, const char*> > >
+struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, std::pair<std::string, std::string> > >
 {
     cv::gpu::DeviceInfo devInfo;
+    std::string imageName;
+    std::string patternName;
+
     cv::Mat image, pattern;
 
     virtual void SetUp()
     {
         devInfo = std::tr1::get<0>(GetParam());
+        imageName = std::tr1::get<1>(GetParam()).first;
+        patternName = std::tr1::get<1>(GetParam()).second;
 
-        image = readImage(std::tr1::get<0>(std::tr1::get<1>(GetParam())));
+        image = readImage(imageName);
         ASSERT_FALSE(image.empty());
 
-        pattern = readImage(std::tr1::get<1>(std::tr1::get<1>(GetParam())));
+        pattern = readImage(patternName);
         ASSERT_FALSE(pattern.empty());
     }
 };
@@ -3662,6 +3667,8 @@ struct MatchTemplate_CCOEF_NORMED : testing::TestWithParam< std::tr1::tuple<cv::
 TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
 {
     PRINT_PARAM(devInfo);
+    PRINT_PARAM(imageName);
+    PRINT_PARAM(patternName);
 
     cv::Mat dstGold;
     cv::matchTemplate(image, pattern, dstGold, CV_TM_CCOEFF_NORMED);
@@ -3688,8 +3695,8 @@ TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_CCOEF_NORMED, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(std::tr1::make_tuple("matchtemplate/source-0.png", "matchtemplate/target-0.png"),
-                                        std::tr1::make_tuple("matchtemplate/source-1.png", "matchtemplate/target-1.png"))));
+                        testing::Values(std::make_pair(std::string("matchtemplate/source-0.png"), std::string("matchtemplate/target-0.png")),
+                                        std::make_pair(std::string("matchtemplate/source-1.png"), std::string("matchtemplate/target-1.png")))));
 
 
 ////////////////////////////////////////////////////////////////////////////
