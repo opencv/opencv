@@ -11,6 +11,9 @@ for fn in glob('*.py'):
     found |= set(re.findall('cv2?\.\w+', code))
 
 cv2_used = found & cv2_callable
+cv2_unused = cv2_callable - cv2_used
+with open('unused_api.txt', 'w') as f:
+    f.write('\n'.join(sorted(cv2_unused)))
 
 r = 1.0 * len(cv2_used) / len(cv2_callable)
 print '\ncv2 api coverage: %d / %d  (%.1f%%)' % ( len(cv2_used), len(cv2_callable), r*100 )
