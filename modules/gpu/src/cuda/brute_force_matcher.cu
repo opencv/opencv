@@ -452,7 +452,7 @@ namespace cv { namespace gpu { namespace bfmatcher
     }
 
     template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename VecDiff, typename Dist, typename T, typename Mask>
-    __global__ void knnMatch2(const PtrStep_<T> query, const DevMem2D_<T> train, const Mask m, PtrStep_<int2> trainIdx, PtrStep_<float2> distance)
+    __global__ void knnMatch2(const PtrStep_<T> query, const DevMem2D_<T> train, const Mask m, int2* trainIdx, float2* distance)
     {
         typedef typename Dist::result_type result_type;
         typedef typename Dist::value_type value_type;
@@ -520,8 +520,8 @@ namespace cv { namespace gpu { namespace bfmatcher
                 }
             }
 
-            trainIdx.ptr(queryIdx)[0] = make_int2(bestTrainIdx1, bestTrainIdx2);
-            distance.ptr(queryIdx)[0] = make_float2(distMin1, distMin2);
+            trainIdx[queryIdx] = make_int2(bestTrainIdx1, bestTrainIdx2);
+            distance[queryIdx] = make_float2(distMin1, distMin2);
         }
     }
 
@@ -556,7 +556,7 @@ namespace cv { namespace gpu { namespace bfmatcher
         const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
 
         knnMatch2<BLOCK_DIM_X, BLOCK_DIM_Y, VecDiffCachedRegister<BLOCK_DIM_X, MAX_LEN, LEN_EQ_MAX_LEN, typename Dist::value_type>, Dist, T>
-              <<<grid, threads, 0, stream>>>(query, train, mask, trainIdx, distance);
+              <<<grid, threads, 0, stream>>>(query, train, mask, trainIdx.data, distance.data);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)

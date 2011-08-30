@@ -446,10 +446,17 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;
 
-    ensureSizeIsEnough(nQuery, k, CV_32S, trainIdx);
-    ensureSizeIsEnough(nQuery, k, CV_32F, distance);
-    if (k != 2)
+    if (k == 2)
+    {
+        ensureSizeIsEnough(1, nQuery, CV_32SC2, trainIdx);
+        ensureSizeIsEnough(1, nQuery, CV_32FC2, distance);
+    }
+    else
+    {
+        ensureSizeIsEnough(nQuery, k, CV_32S, trainIdx);
+        ensureSizeIsEnough(nQuery, k, CV_32F, distance);
         ensureSizeIsEnough(nQuery, nTrain, CV_32FC1, allDist);
+    }
 
     if (stream)
     {
@@ -491,14 +498,19 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchConvert(const Mat& trainIdx, c
     if (trainIdx.empty() || distance.empty())
         return;
 
-    CV_Assert(trainIdx.type() == CV_32SC1);
-    CV_Assert(distance.type() == CV_32FC1 && distance.size() == trainIdx.size());
+    CV_Assert(trainIdx.type() == CV_32SC2 || trainIdx.type() == CV_32SC1);
+    CV_Assert(distance.type() == CV_32FC2 || distance.type() == CV_32FC1);
+    CV_Assert(distance.size() == trainIdx.size());
+    CV_Assert(trainIdx.isContinuous() && distance.isContinuous());
 
-    const int nQuery = distance.rows;
-    const int k = trainIdx.cols;
+    const int nQuery = trainIdx.type() == CV_32SC2 ? trainIdx.cols : trainIdx.rows;
+    const int k = trainIdx.type() == CV_32SC2 ? 2 :trainIdx.cols;
 
     matches.clear();
     matches.reserve(nQuery);
+    
+    const int* trainIdx_ptr = trainIdx.ptr<int>();
+    const float* distance_ptr = distance.ptr<float>();
 
     for (int queryIdx = 0; queryIdx < nQuery; ++queryIdx)
     {
@@ -506,8 +518,6 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatchConvert(const Mat& trainIdx, c
         vector<DMatch>& curMatches = matches.back();
         curMatches.reserve(k);
 
-        const int* trainIdx_ptr = trainIdx.ptr<int>(queryIdx);
-        const float* distance_ptr = distance.ptr<float>(queryIdx);
         for (int i = 0; i < k; ++i, ++trainIdx_ptr, ++distance_ptr)
         {
             int trainIdx = *trainIdx_ptr;
