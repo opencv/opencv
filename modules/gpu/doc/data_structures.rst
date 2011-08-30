@@ -3,7 +3,7 @@ Data Structures
 
 .. highlight:: cpp
 
-.. index:: gpu::DevMem2D\_
+
 
 gpu::DevMem2D\_
 ---------------
@@ -38,18 +38,13 @@ Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compi
     typedef DevMem2D_<float> DevMem2Df;
     typedef DevMem2D_<int> DevMem2Di;
 
-..
 
-
-.. index:: gpu::PtrStep\_
 
 gpu::PtrStep\_
 --------------
 .. ocv:class:: gpu::PtrStep\_
 
-Structure similar to 
-:ocv:class:`gpu::DevMem2D_` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. 
-::
+Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
 
     template<typename T> struct PtrStep_
     {
@@ -72,15 +67,12 @@ Structure similar to
     typedef PtrStep_<int> PtrStepi;
 
 
-.. index:: gpu::PtrElemStrp\_
 
 gpu::PtrElemStrp\_
 ------------------
 .. ocv:class:: gpu::PtrElemStrp\_
 
-Structure similar to 
-:ocv:class:`gpu::DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. 
-::
+Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. ::
 
     template<typename T> struct PtrElemStep_ : public PtrStep_<T>
     {
@@ -90,25 +82,20 @@ Structure similar to
     };
 
 
-.. index:: gpu::GpuMat
 
 gpu::GpuMat
 -----------
 .. ocv:class:: gpu::GpuMat
 
-Base storage class for GPU memory with reference counting. Its interface matches the
-:ocv:class:`Mat` interface with the following limitations:
+Base storage class for GPU memory with reference counting. Its interface matches the :ocv:class:`Mat` interface with the following limitations:
 
-*   
-    no arbitrary dimensions support (only 2D)
-*   
-    no functions that return references to their data (because references on GPU are not valid for CPU)
-*   
-    no expression templates technique support
-    
+* no arbitrary dimensions support (only 2D)
+* no functions that return references to their data (because references on GPU are not valid for CPU)
+* no expression templates technique support
+
 Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`gpu::DevMem2D_` and :ocv:class:`gpu::PtrStep_` so it can be passed directly to the kernel.
 
-.. note:: In contrast with :ocv:class:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to a size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix. 
+.. note:: In contrast with :ocv:class:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to a size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix.
 
 ::
 
@@ -144,14 +131,77 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
     };
 
 
-.. note:: 
+.. note:: You are not recommended to leave static or global ``GpuMat`` variables allocated, that is, to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
 
-    You are not recommended to leave static or global ``GpuMat`` variables allocated, that is, to rely on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory release function returns error if the CUDA context has been destroyed before.
+.. seealso:: :ocv:class:`Mat`
 
-.. seealso:: 
-   :ocv:class:`Mat`
 
-.. index:: gpu::CudaMem
+
+gpu::createContinuous
+-------------------------
+Creates a continuous matrix in the GPU memory.
+
+.. ocv:function:: void gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+
+.. ocv:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
+
+.. ocv:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
+
+.. ocv:function:: GpuMat gpu::createContinuous(Size size, int type)
+
+    :param rows: Row count.
+
+    :param cols: Column count.
+
+    :param type: Type of the matrix.
+
+    :param m: Destination matrix. This parameter changes only if it has a proper type and area ( :math:`\texttt{rows} \times \texttt{cols}` ).
+
+Matrix is called continuous if its elements are stored continuously, that is, without gaps at the end of each row.
+
+
+
+gpu::ensureSizeIsEnough
+---------------------------
+Ensures that the size of a matrix is big enough and the matrix has a proper type.
+
+.. ocv:function:: void gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+
+.. ocv:function:: void gpu::ensureSizeIsEnough(Size size, int type, GpuMat& m)
+
+    :param rows: Minimum desired number of rows.
+
+    :param cols: Minimum desired number of columns.
+
+    :param size: Rows and coumns passed as a structure.
+
+    :param type: Desired matrix type.
+
+    :param m: Destination matrix.
+
+The function does not reallocate memory if the matrix has proper attributes already.
+
+
+
+gpu::registerPageLocked
+-------------------------------
+Page-locks the memory of matrix and maps it for the device(s).
+
+.. ocv:function:: void gpu::registerPageLocked(Mat& m)
+
+    :param m: Input matrix.
+
+
+
+gpu::unregisterPageLocked
+-------------------------------
+Unmaps the memory of matrix and makes it pageable again.
+
+.. ocv:function:: void gpu::unregisterPageLocked(Mat& m)
+
+    :param m: Input matrix.
+
+
 
 gpu::CudaMem
 ------------
@@ -159,16 +209,12 @@ gpu::CudaMem
 
 Class with reference counting wrapping special memory type allocation functions from CUDA. Its interface is also
 :ocv:func:`Mat`-like but with additional memory type parameters.
-    
-*
-    ``ALLOC_PAGE_LOCKED``  sets a page locked memory type used commonly for fast and asynchronous uploading/downloading data from/to GPU.
-*
-    ``ALLOC_ZEROCOPY``  specifies a zero copy memory allocation that enables mapping the host memory to GPU address space, if supported.
-*
-    ``ALLOC_WRITE_COMBINED``  sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
 
-.. note:: 
-   Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
+* **ALLOC_PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous uploading/downloading data from/to GPU.
+* **ALLOC_ZEROCOPY** specifies a zero copy memory allocation that enables mapping the host memory to GPU address space, if supported.
+* **ALLOC_WRITE_COMBINED**  sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
+
+.. note:: Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
 
 ::
 
@@ -202,33 +248,32 @@ Class with reference counting wrapping special memory type allocation functions 
     };
 
 
-.. index:: gpu::CudaMem::createMatHeader
 
 gpu::CudaMem::createMatHeader
 ---------------------------------
+Creates a header without reference counting to :ocv:class:`gpu::CudaMem` data.
 
 .. ocv:function:: Mat gpu::CudaMem::createMatHeader() const
 
-    Creates a header without reference counting to :ocv:class:`gpu::CudaMem` data.
 
-.. index:: gpu::CudaMem::createGpuMatHeader
 
 gpu::CudaMem::createGpuMatHeader
 ------------------------------------
+Maps CPU memory to GPU address space and creates the :ocv:class:`gpu::GpuMat` header without reference counting for it.
 
 .. ocv:function:: GpuMat gpu::CudaMem::createGpuMatHeader() const
 
-    Maps CPU memory to GPU address space and creates the :ocv:class:`gpu::GpuMat` header without reference counting for it. This can be done only if memory was allocated with the ``ALLOC_ZEROCOPY`` flag and if it is supported by the hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy.
+This can be done only if memory was allocated with the ``ALLOC_ZEROCOPY`` flag and if it is supported by the hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy.
 
-.. index:: gpu::CudaMem::canMapHostMemory
+
 
 gpu::CudaMem::canMapHostMemory
 ----------------------------------
+Returns ``true`` if the current hardware supports address space mapping and ``ALLOC_ZEROCOPY`` memory allocation.
+
 .. ocv:function:: static bool gpu::CudaMem::canMapHostMemory()
 
-    Returns ``true`` if the current hardware supports address space mapping and ``ALLOC_ZEROCOPY`` memory allocation.
 
-.. index:: gpu::Stream
 
 gpu::Stream
 -----------
@@ -236,8 +281,7 @@ gpu::Stream
 
 This class encapsulates a queue of asynchronous calls. Some functions have overloads with the additional ``gpu::Stream`` parameter. The overloads do initialization work (allocate output buffers, upload constants, and so on), start the GPU kernel, and return before results are ready. You can check whether all operations are complete via :ocv:func:`gpu::Stream::queryIfComplete`. You can asynchronously upload/download data from/to page-locked buffers, using the :ocv:class:`gpu::CudaMem` or :ocv:class:`Mat` header that points to a region of :ocv:class:`gpu::CudaMem`.
 
-.. note::
-   Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe. 
+.. note:: Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe.
 
 ::
 
@@ -276,81 +320,31 @@ This class encapsulates a queue of asynchronous calls. Some functions have overl
     };
 
 
-.. index:: gpu::Stream::queryIfComplete
 
 gpu::Stream::queryIfComplete
 --------------------------------
+Returns ``true`` if the current stream queue is finished. Otherwise, it returns false.
+
 .. ocv:function:: bool gpu::Stream::queryIfComplete()
 
-    Returns ``true`` if the current stream queue is finished. Otherwise, it returns false.
 
-.. index:: gpu::Stream::waitForCompletion
 
 gpu::Stream::waitForCompletion
 ----------------------------------
+Blocks the current CPU thread until all operations in the stream are complete.
+
 .. ocv:function:: void gpu::Stream::waitForCompletion()
 
-    Blocks the current CPU thread until all operations in the stream are complete.
 
-.. index:: gpu::StreamAccessor
 
 gpu::StreamAccessor
 -------------------
 .. ocv:class:: gpu::StreamAccessor
 
-Class that enables getting ``cudaStream_t`` from :ocv:class:`gpu::Stream` and is declared in ``stream_accessor.hpp`` because it is the only public header that depends on the CUDA Runtime API. Including it brings a dependency to your code. 
-::
+Class that enables getting ``cudaStream_t`` from :ocv:class:`gpu::Stream` and is declared in ``stream_accessor.hpp`` because it is the only public header that depends on the CUDA Runtime API. Including it brings a dependency to your code. ::
 
     struct StreamAccessor
     {
         CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
     };
-
-
-.. index:: gpu::createContinuous
-
-gpu::createContinuous
--------------------------
-.. ocv:function:: void gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
-
-    Creates a continuous matrix in the GPU memory.
-
-    :param rows: Row count.
-
-    :param cols: Column count.
-
-    :param type: Type of the matrix.
-
-    :param m: Destination matrix. This parameter changes only if it has a proper type and area (``rows x cols``).
-
-    The following wrappers are also available:
-    
-    
-        * .. ocv:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
-    
-        * .. ocv:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
-    
-        * .. ocv:function:: GpuMat gpu::createContinuous(Size size, int type)
-
-    Matrix is called continuous if its elements are stored continuously, that is, without gaps at the end of each row.
-
-.. index:: gpu::ensureSizeIsEnough
-
-gpu::ensureSizeIsEnough
----------------------------
-.. ocv:function:: void gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
-
-.. ocv:function:: void gpu::ensureSizeIsEnough(Size size, int type, GpuMat& m)
-
-    Ensures that the size of a matrix is big enough and the matrix has a proper type. The function does not reallocate memory if the matrix has proper attributes already.
-
-    :param rows: Minimum desired number of rows.
-
-    :param cols: Minimum desired number of columns.
-    
-    :param size: Rows and coumns passed as a structure.
-
-    :param type: Desired matrix type.
-
-    :param m: Destination matrix.    
 

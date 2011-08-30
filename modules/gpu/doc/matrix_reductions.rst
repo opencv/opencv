@@ -3,13 +3,13 @@ Matrix Reductions
 
 .. highlight:: cpp
 
-.. index:: gpu::meanStdDev
+
 
 gpu::meanStdDev
 -------------------
-.. ocv:function:: void gpu::meanStdDev(const GpuMat\& mtx, Scalar\& mean, Scalar\& stddev)
+Computes a mean value and a standard deviation of matrix elements.
 
-    Computes a mean value and a standard deviation of matrix elements.
+.. ocv:function:: void gpu::meanStdDev(const GpuMat& mtx, Scalar& mean, Scalar& stddev)
 
     :param mtx: Source matrix.  ``CV_8UC1``  matrices are supported for now.
 
@@ -17,18 +17,19 @@ gpu::meanStdDev
 
     :param stddev: Standard deviation value.
 
-.. seealso:: 
-   :ocv:func:`meanStdDev` 
+.. seealso:: :ocv:func:`meanStdDev`
 
-.. index:: gpu::norm
+
 
 gpu::norm
 -------------
-.. ocv:function:: double gpu::norm(const GpuMat\& src1, int normType=NORM_L2)
-.. ocv:function:: double gpu::norm(const GpuMat\& src1, int normType, GpuMat\& buf)
-.. ocv:function:: double norm(const GpuMat\& src1, const GpuMat\& src2, int normType=NORM_L2)
+Returns the norm of a matrix (or difference of two matrices).
 
-    Returns the norm of a matrix (or difference of two matrices).
+.. ocv:function:: double gpu::norm(const GpuMat& src1, int normType=NORM_L2)
+
+.. ocv:function:: double gpu::norm(const GpuMat& src1, int normType, GpuMat& buf)
+
+.. ocv:function:: double gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType=NORM_L2)
 
     :param src1: Source matrix. Any matrices except 64F are supported.
 
@@ -38,63 +39,61 @@ gpu::norm
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-.. seealso:: 
-   :ocv:func:`norm`
+.. seealso:: :ocv:func:`norm`
 
-.. index:: gpu::sum
+
 
 gpu::sum
 ------------
-.. ocv:function:: Scalar gpu::sum(const GpuMat\& src)
+Returns the sum of matrix elements.
 
-.. ocv:function:: Scalar gpu::sum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::sum(const GpuMat& src)
 
-    Returns the sum of matrix elements.
+.. ocv:function:: Scalar gpu::sum(const GpuMat& src, GpuMat& buf)
 
     :param src: Source image of any depth except for ``CV_64F`` .
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-.. seealso:: 
-   :ocv:func:`sum` 
+.. seealso:: :ocv:func:`sum`
 
-.. index:: gpu::absSum
+
 
 gpu::absSum
 ---------------
-.. ocv:function:: Scalar gpu::absSum(const GpuMat\& src)
+Returns the sum of absolute values for matrix elements.
 
-.. ocv:function:: Scalar gpu::absSum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::absSum(const GpuMat& src)
 
-    Returns the sum of absolute values for matrix elements.
+.. ocv:function:: Scalar gpu::absSum(const GpuMat& src, GpuMat& buf)
 
     :param src: Source image of any depth except for ``CV_64F`` .
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-.. index:: gpu::sqrSum
+
 
 gpu::sqrSum
 ---------------
-.. ocv:function:: Scalar gpu::sqrSum(const GpuMat\& src)
+Returns the squared sum of matrix elements.
 
-.. ocv:function:: Scalar gpu::sqrSum(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: Scalar gpu::sqrSum(const GpuMat& src)
 
-    Returns the squared sum of matrix elements.
+.. ocv:function:: Scalar gpu::sqrSum(const GpuMat& src, GpuMat& buf)
 
     :param src: Source image of any depth except for ``CV_64F`` .
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
-.. index:: gpu::minMax
+
 
 gpu::minMax
 ---------------
-.. ocv:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal=0, const GpuMat\& mask=GpuMat())
+Finds global minimum and maximum matrix elements and returns their values.
 
-.. ocv:function:: void gpu::minMax(const GpuMat\& src, double* minVal, double* maxVal, const GpuMat\& mask, GpuMat\& buf)
+.. ocv:function:: void gpu::minMax(const GpuMat& src, double* minVal, double* maxVal=0, const GpuMat& mask=GpuMat())
 
-    Finds global minimum and maximum matrix elements and returns their values.
+.. ocv:function:: void gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
 
     :param src: Single-channel source image.
 
@@ -107,19 +106,18 @@ gpu::minMax
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
-    
-.. seealso:: 
-   :ocv:func:`minMaxLoc` 
 
-.. index:: gpu::minMaxLoc
+.. seealso:: :ocv:func:`minMaxLoc`
+
+
 
 gpu::minMaxLoc
 ------------------
+Finds global minimum and maximum matrix elements and returns their values with locations.
+
 .. ocv:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, const GpuMat& mask=GpuMat())
 
 .. ocv:function:: void gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask, GpuMat& valbuf, GpuMat& locbuf)
-
-    Finds global minimum and maximum matrix elements and returns their values with locations.
 
     :param src: Single-channel source image.
 
@@ -139,24 +137,22 @@ gpu::minMaxLoc
 
     The function does not work with ``CV_64F`` images on GPU with the compute capability < 1.3.
 
-.. seealso:: 
-   :ocv:func:`minMaxLoc` 
+.. seealso:: :ocv:func:`minMaxLoc`
 
-.. index:: gpu::countNonZero
+
 
 gpu::countNonZero
 ---------------------
-.. ocv:function:: int gpu::countNonZero(const GpuMat\& src)
+Counts non-zero matrix elements.
 
-.. ocv:function:: int gpu::countNonZero(const GpuMat\& src, GpuMat\& buf)
+.. ocv:function:: int gpu::countNonZero(const GpuMat& src)
 
-    Counts non-zero matrix elements.
+.. ocv:function:: int gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 
     :param src: Single-channel source image.
 
     :param buf: Optional buffer to avoid extra memory allocations. It is resized automatically.
 
 The function does not work with ``CV_64F`` images on GPUs with the compute capability < 1.3.
-    
-.. seealso:: 
-   :ocv:func:`countNonZero` 
+
+.. seealso:: :ocv:func:`countNonZero`

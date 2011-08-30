@@ -3,76 +3,73 @@ Operations on Matrices
 
 .. highlight:: cpp
 
-.. index:: gpu::transpose
+
 
 gpu::transpose
 ------------------
-.. ocv:function:: void gpu::transpose(const GpuMat& src, GpuMat& dst)
+Transposes a matrix.
 
-    Transposes a matrix.
+.. ocv:function:: void gpu::transpose(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
 
-    :param src: Source matrix. 1-, 4-, 8-byte element sizes are supported for now.
+    :param src: Source matrix. 1-, 4-, 8-byte element sizes are supported for now (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc).
 
     :param dst: Destination matrix.
 
-.. seealso::
-   :ocv:func:`transpose` 
+    :param stream: Stream for the asynchronous version.
 
-.. index:: gpu::flip
+.. seealso:: :ocv:func:`transpose`
+
+
 
 gpu::flip
 -------------
-.. ocv:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode)
+Flips a 2D matrix around vertical, horizontal, or both axes.
 
-    Flips a 2D matrix around vertical, horizontal, or both axes.
+.. ocv:function:: void gpu::flip(const GpuMat& src, GpuMat& dst, int flipCode, Stream& stream = Stream::Null())
 
     :param src: Source matrix. Only  ``CV_8UC1``  and  ``CV_8UC4``  matrices are supported for now.
 
     :param dst: Destination matrix.
 
     :param flipCode: Flip mode for the source:
-        
-            * ``0`` Flips around x-axis.
-            
-            * ``>0`` Flips around y-axis.
-            
-            * ``<0`` Flips around both axes.
-            
 
-.. seealso::
-   :ocv:func:`flip` 
+        * ``0`` Flips around x-axis.
 
-.. index:: gpu::LUT
+        * ``>0`` Flips around y-axis.
+
+        * ``<0`` Flips around both axes.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`flip`
+
+
 
 gpu::LUT
 ------------
-.. ocv:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst)
+Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))``
 
-    Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))``
+.. ocv:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
 
     :param lut: Look-up table of 256 elements. It is a continuous ``CV_8U`` matrix.
 
-    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src``.
-            
+    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src`` .
 
-.. seealso:: 
-   :ocv:func:`LUT` 
+    :param stream: Stream for the asynchronous version.
 
-.. index:: gpu::merge
+.. seealso:: :ocv:func:`LUT`
+
+
 
 gpu::merge
 --------------
-.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst)
+Makes a multi-channel matrix out of several single-channel matrices.
 
-.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, const Stream& stream)
+.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst)
-
-.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, const Stream& stream)
-
-    Makes a multi-channel matrix out of several single-channel matrices.
+.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream = Stream::Null())
 
     :param src: Array/vector of source matrices.
 
@@ -82,22 +79,17 @@ gpu::merge
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: 
-   :ocv:func:`merge` 
+.. seealso:: :ocv:func:`merge`
 
-.. index:: gpu::split
+
 
 gpu::split
 --------------
-.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst)
+Copies each plane of a multi-channel matrix into an array.
 
-.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst, const Stream& stream)
+.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst)
-
-.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, const Stream& stream)
-
-    Copies each plane of a multi-channel matrix into an array.
+.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -105,125 +97,110 @@ gpu::split
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: 
-   :ocv:func:`split`
+.. seealso:: :ocv:func:`split`
 
-.. index:: gpu::magnitude
+
 
 gpu::magnitude
 ------------------
-.. ocv:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude)
+Computes magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitude(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
+.. ocv:function:: void gpu::magnitude(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
 
-    Computes magnitudes of complex matrix elements.
+    :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
 
-    :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
-    
-    :param x: Source matrix containing real components (``CV_32FC1``).
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
-    :param y: Source matrix containing imaginary components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
 
-    :param magnitude: Destination matrix of float magnitudes (``CV_32FC1``).
+    :param magnitude: Destination matrix of float magnitudes ( ``CV_32FC1`` ).
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-   :ocv:func:`magnitude` 
+.. seealso:: :ocv:func:`magnitude`
 
-.. index:: gpu::magnitudeSqr
+
 
 gpu::magnitudeSqr
 ---------------------
-.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude)
+Computes squared magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude)
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& xy, GpuMat& magnitude, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, const Stream& stream)
+.. ocv:function:: void gpu::magnitudeSqr(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, Stream& stream = Stream::Null())
 
-    Computes squared magnitudes of complex matrix elements.
+    :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
 
-    :param xy: Source complex matrix in the interleaved format (``CV_32FC2``).
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
-    :param x: Source matrix containing real components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
 
-    :param y: Source matrix containing imaginary components (``CV_32FC1``).
-
-    :param magnitude: Destination matrix of float magnitude squares (``CV_32FC1``).
+    :param magnitude: Destination matrix of float magnitude squares ( ``CV_32FC1`` ).
 
     :param stream: Stream for the asynchronous version.
 
-.. index:: gpu::phase
+
 
 gpu::phase
 --------------
-.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees=false)
+Computes polar angles of complex matrix elements.
 
-.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::phase(const GpuMat& x, const GpuMat& y, GpuMat& angle, bool angleInDegrees=false, Stream& stream = Stream::Null())
 
-    Computes polar angles of complex matrix elements.
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
-    :param x: Source matrix containing real components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
 
-    :param y: Source matrix containing imaginary components (``CV_32FC1``).
-
-    :param angle: Destionation matrix of angles (``CV_32FC1``).
+    :param angle: Destionation matrix of angles ( ``CV_32FC1`` ).
 
     :param angleInDegress: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-   :ocv:func:`phase` 
+.. seealso:: :ocv:func:`phase`
 
-.. index:: gpu::cartToPolar
+
 
 gpu::cartToPolar
 --------------------
-.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees=false)
+Converts Cartesian coordinates into polar.
 
-.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::cartToPolar(const GpuMat& x, const GpuMat& y, GpuMat& magnitude, GpuMat& angle, bool angleInDegrees=false, Stream& stream = Stream::Null())
 
-    Converts Cartesian coordinates into polar.
+    :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
-    :param x: Source matrix containing real components (``CV_32FC1``).
+    :param y: Source matrix containing imaginary components ( ``CV_32FC1`` ).
 
-    :param y: Source matrix containing imaginary components (``CV_32FC1``).
+    :param magnitude: Destination matrix of float magnitudes ( ``CV_32FC1`` ).
 
-    :param magnitude: Destination matrix of float magnitudes (``CV_32FC1``).
-
-    :param angle: Destionation matrix of angles (``CV_32FC1``).
+    :param angle: Destionation matrix of angles ( ``CV_32FC1`` ).
 
     :param angleInDegress: Flag for angles that must be evaluated in degress.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-   :ocv:func:`cartToPolar` 
+.. seealso:: :ocv:func:`cartToPolar`
 
-.. index:: gpu::polarToCart
+
 
 gpu::polarToCart
 --------------------
-.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees=false)
+Converts polar coordinates into Cartesian.
 
-.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, const Stream& stream)
+.. ocv:function:: void gpu::polarToCart(const GpuMat& magnitude, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees=false, Stream& stream = Stream::Null())
 
-    Converts polar coordinates into Cartesian.
+    :param magnitude: Source matrix containing magnitudes ( ``CV_32FC1`` ).
 
-    :param magnitude: Source matrix containing magnitudes (``CV_32FC1``).
+    :param angle: Source matrix containing angles ( ``CV_32FC1`` ).
 
-    :param angle: Source matrix containing angles (``CV_32FC1``).
+    :param x: Destination matrix of real components ( ``CV_32FC1`` ).
 
-    :param x: Destination matrix of real components (``CV_32FC1``).
-
-    :param y: Destination matrix of imaginary components (``CV_32FC1``).
+    :param y: Destination matrix of imaginary components ( ``CV_32FC1`` ).
 
     :param angleInDegress: Flag that indicates angles in degress.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-   :ocv:func:`polarToCart` 
+.. seealso:: :ocv:func:`polarToCart`

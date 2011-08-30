@@ -7,9 +7,9 @@ Image Processing
 
 gpu::meanShiftFiltering
 ---------------------------
-.. ocv:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+Performs mean-shift filtering for each point of the source image.
 
-    Performs mean-shift filtering for each point of the source image. It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
+.. ocv:function:: void gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -21,19 +21,21 @@ gpu::meanShiftFiltering
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
+It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
+
 
 
 gpu::meanShiftProc
 ----------------------
-.. ocv:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
-    Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
+.. ocv:function:: void gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
     :param dstr: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
 
-    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src`` size. The type is  ``CV_16SC2``.
+    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src`` size. The type is  ``CV_16SC2`` .
 
     :param sp: Spatial window radius.
 
@@ -41,14 +43,15 @@ gpu::meanShiftProc
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-.. seealso:: :ocv:func:`gpu::meanShiftFiltering` 
+.. seealso:: :ocv:func:`gpu::meanShiftFiltering`
+
 
 
 gpu::meanShiftSegmentation
 ------------------------------
-.. ocv:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+Performs a mean-shift segmentation of the source image and eliminates small segments.
 
-    Performs a mean-shift segmentation of the source image and eliminates small segments.
+.. ocv:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -66,11 +69,11 @@ gpu::meanShiftSegmentation
 
 gpu::integral
 -----------------
-.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum)
+Computes an integral image and a squared integral image.
 
-.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum)
+.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null())
 
-    Computes an integral image and a squared integral image.
+.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, GpuMat& sqsum, Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
@@ -78,27 +81,31 @@ gpu::integral
 
     :param sqsum: Squared integral image of the  ``CV_32FC1`` type.
 
-.. seealso:: :ocv:func:`integral` 
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`integral`
 
 
 
 gpu::sqrIntegral
 --------------------
-.. ocv:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum)
+Computes a squared integral image.
 
-    Computes a squared integral image.
+.. ocv:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
     :param sqsum: Squared integral image containing 64-bit unsigned integer values packed into  ``CV_64FC1`` .
 
+    :param stream: Stream for the asynchronous version.
+
 
 
 gpu::columnSum
 ------------------
-.. ocv:function:: void gpu::columnSum(const GpuMat& src, GpuMat& sum)
+Computes a vertical (column) sum.
 
-    Computes a vertical (column) sum.
+.. ocv:function:: void gpu::columnSum(const GpuMat& src, GpuMat& sum)
 
     :param src: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -108,9 +115,9 @@ gpu::columnSum
 
 gpu::cornerHarris
 ---------------------
-.. ocv:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
+Computes the Harris cornerness criteria at each image pixel.
 
-    Computes the Harris cornerness criteria at each image pixel.
+.. ocv:function:: void gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType=BORDER_REFLECT101)
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
@@ -124,18 +131,19 @@ gpu::cornerHarris
 
     :param borderType: Pixel extrapolation method. Only  ``BORDER_REFLECT101`` and  ``BORDER_REPLICATE`` are supported for now.
 
-.. seealso:: :ocv:func:`cornerHarris` 
+.. seealso:: :ocv:func:`cornerHarris`
+
 
 
 gpu::cornerMinEigenVal
 --------------------------
-.. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
+Computes the minimum eigen value of a 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
 
-    Computes the minimum eigen value of a 2x2 derivative covariation matrix at each pixel (the cornerness criteria).
+.. ocv:function:: void gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType=BORDER_REFLECT101)
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_32FC1`` images are supported for now.
 
-    :param dst: Destination image containing cornerness values. The size is the same. The type is  ``CV_32FC1``.
+    :param dst: Destination image containing cornerness values. The size is the same. The type is  ``CV_32FC1`` .
 
     :param blockSize: Neighborhood size.
 
@@ -151,9 +159,9 @@ gpu::cornerMinEigenVal
 
 gpu::mulSpectrums
 ---------------------
-.. ocv:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
+Performs a per-element multiplication of two Fourier spectrums.
 
-    Performs a per-element multiplication of two Fourier spectrums.
+.. ocv:function:: void gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false)
 
     :param a: First spectrum.
 
@@ -167,14 +175,15 @@ gpu::mulSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-.. seealso:: :ocv:func:`mulSpectrums` 
+.. seealso:: :ocv:func:`mulSpectrums`
+
 
 
 gpu::mulAndScaleSpectrums
 -----------------------------
-.. ocv:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
+Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
-    Performs a per-element multiplication of two Fourier spectrums and scales the result.
+.. ocv:function:: void gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false)
 
     :param a: First spectrum.
 
@@ -190,15 +199,15 @@ gpu::mulAndScaleSpectrums
 
     Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
-.. seealso:: :ocv:func:`mulSpectrums` 
+.. seealso:: :ocv:func:`mulSpectrums`
 
 
 
 gpu::dft
 ------------
-.. ocv:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
+Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
-    Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix. Use to handle real matrices (``CV32FC1``) and complex matrices in the interleaved format (``CV32FC2``).
+.. ocv:function:: void gpu::dft(const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0)
 
     :param src: Source matrix (real or complex).
 
@@ -208,37 +217,35 @@ gpu::dft
 
     :param flags: Optional flags:
 
-            * **DFT_ROWS** transforms each individual row of the source matrix.
+        * **DFT_ROWS** transforms each individual row of the source matrix.
 
-            * **DFT_SCALE** scales the result: divide it by the number of elements in the transform (obtained from  ``dft_size`` ).
+        * **DFT_SCALE** scales the result: divide it by the number of elements in the transform (obtained from  ``dft_size`` ).
 
-            * **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real cases are always forward and inverse, respectively).
+        * **DFT_INVERSE** inverts DFT. Use for complex-complex cases (real-complex and complex-real cases are always forward and inverse, respectively).
 
-            * **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of real-complex transform, so the destination matrix must be real.
-            
+        * **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of real-complex transform, so the destination matrix must be real.
 
-    The source matrix should be continuous, otherwise reallocation and data copying is performed. The function chooses an operation mode depending on the flags, size, and channel count of the source matrix:
+Use to handle real matrices ( ``CV32FC1`` ) and complex matrices in the interleaved format ( ``CV32FC2`` ).
 
-    *
-        If the source matrix is complex and the output is not specified as real, the destination matrix is complex and has the ``dft_size``    size and ``CV_32FC2``    type. The destination matrix contains a full result of the DFT (forward or inverse).
+The source matrix should be continuous, otherwise reallocation and data copying is performed. The function chooses an operation mode depending on the flags, size, and channel count of the source matrix:
 
-    *
-        If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see the next item). The destionation matrix has the ``dft_size``    size and ``CV_32FC1``    type. It contains the result of the inverse DFT.
+    * If the source matrix is complex and the output is not specified as real, the destination matrix is complex and has the ``dft_size``    size and ``CV_32FC2``    type. The destination matrix contains a full result of the DFT (forward or inverse).
 
-    *
-        If the source matrix is real (its type is ``CV_32FC1``    ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2``    ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1``    . But if the source is a single column, the height is reduced instead of the width.
+    * If the source matrix is complex and the output is specified as real, the function assumes that its input is the result of the forward transform (see the next item). The destionation matrix has the ``dft_size`` size and ``CV_32FC1`` type. It contains the result of the inverse DFT.
 
-.. seealso:: :ocv:func:`dft` 
+    * If the source matrix is real (its type is ``CV_32FC1`` ), forward DFT is performed. The result of the DFT is packed into complex ( ``CV_32FC2`` ) matrix. So, the width of the destination matrix is ``dft_size.width / 2 + 1`` . But if the source is a single column, the height is reduced instead of the width.
+
+.. seealso:: :ocv:func:`dft`
 
 
 
 gpu::convolve
 -----------------
+Computes a convolution (or cross-correlation) of two images.
+
 .. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
 
 .. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf)
-
-    Computes a convolution (or cross-correlation) of two images.
 
     :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -256,8 +263,7 @@ gpu::ConvolveBuf
 ----------------
 .. ocv:class:: gpu::ConvolveBuf
 
-Class providing a memory buffer for the :ocv:func:`gpu::convolve` function. 
-::
+Class providing a memory buffer for the :ocv:func:`gpu::convolve` function. ::
 
     struct CV_EXPORTS ConvolveBuf
     {
@@ -272,26 +278,25 @@ Class providing a memory buffer for the :ocv:func:`gpu::convolve` function.
 
 
 
-
 gpu::ConvolveBuf::ConvolveBuf
 ---------------------------------
+The constructors.
+
 .. ocv:function:: ConvolveBuf::ConvolveBuf()
 
-    Constructs an empty buffer that is properly resized after the first call of the 
-    :ocv:func:`gpu::convolve` function.
+Constructs an empty buffer that is properly resized after the first call of the :ocv:func:`gpu::convolve` function.
 
 .. ocv:function:: ConvolveBuf::ConvolveBuf(Size image_size, Size templ_size)
 
-    Constructs a buffer for the 
-    :ocv:func:`gpu::convolve` function with respective arguments.
+Constructs a buffer for the :ocv:func:`gpu::convolve` function with respective arguments.
 
 
 
 gpu::matchTemplate
 ----------------------
-.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
+Computes a proximity map for a raster template and an image where the template is searched for.
 
-    Computes a proximity map for a raster template and an image where the template is searched for.
+.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method)
 
     :param image: Source image.  ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
 
@@ -315,14 +320,15 @@ gpu::matchTemplate
     * ``CV_TM_SQDIFF``
     * ``CV_TM_CCORR``
 
-.. seealso:: :ocv:func:`matchTemplate` 
+.. seealso:: :ocv:func:`matchTemplate`
+
 
 
 gpu::remap
 --------------
-.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
+Applies a generic geometrical transformation to an image.
 
-    Applies a generic geometrical transformation to an image.
+.. ocv:function:: void gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap)
 
     :param src: Source image. Only  ``CV_8UC1`` and  ``CV_8UC3`` source types are supported.
 
@@ -340,18 +346,17 @@ The function transforms the source image using the specified map:
 
 Values of pixels with non-integer coordinates are computed using the bilinear interpolation.
 
-.. seealso:: :ocv:func:`remap` 
+.. seealso:: :ocv:func:`remap`
+
 
 
 gpu::cvtColor
 -----------------
-.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0)
+Converts an image from one color space to another.
 
-.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, const Stream& stream)
+.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null())
 
-    Converts an image from one color space to another.
-
-    :param src: Source image with  ``CV_8U``, ``CV_16U``, or  ``CV_32F`` depth and 1, 3, or 4 channels.
+    :param src: Source image with  ``CV_8U`` , ``CV_16U`` , or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
     :param dst: Destination image with the same size and depth as  ``src`` .
 
@@ -363,19 +368,17 @@ gpu::cvtColor
 
 3-channel color spaces (like ``HSV``, ``XYZ``, and so on) can be stored in a 4-channel image for better perfomance.
 
-.. seealso:: :ocv:func:`cvtColor` 
+.. seealso:: :ocv:func:`cvtColor`
 
 
 
 gpu::threshold
 ------------------
-.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type)
+Applies a fixed-level threshold to each array element.
 
-.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, const Stream& stream)
+.. ocv:function:: double gpu::threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null())
 
-    Applies a fixed-level threshold to each array element.
-
-    :param src: Source array (single-channel). ``CV_64F`` depth is not supported.
+    :param src: Source array (single-channel).
 
     :param dst: Destination array with the same size and type as  ``src`` .
 
@@ -387,94 +390,100 @@ gpu::threshold
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`threshold` 
+.. seealso:: :ocv:func:`threshold`
 
 
 
 gpu::resize
 ---------------
-.. ocv:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR)
+Resizes an image.
 
-    Resizes an image.
+.. ocv:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image.  ``CV_8UC1`` and  ``CV_8UC4`` types are supported.
 
-    :param dst: Destination image  with the same type as  ``src`` . The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()``, ``fx``, and  ``fy`` .
+    :param dst: Destination image  with the same type as  ``src`` . The size is ``dsize`` (when it is non-zero) or the size is computed from  ``src.size()`` , ``fx`` , and  ``fy`` .
 
-    :param dsize: Destination image size. If it is zero, it is computed as: 
+    :param dsize: Destination image size. If it is zero, it is computed as:
 
         .. math::
-            \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))} 
+            \texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}
 
         Either  ``dsize`` or both  ``fx`` and  ``fy`` must be non-zero.
 
-    :param fx: Scale factor along the horizontal axis. If it is zero, it is computed as: 
+    :param fx: Scale factor along the horizontal axis. If it is zero, it is computed as:
 
         .. math::
 
-            \texttt{(double)dsize.width/src.cols} 
+            \texttt{(double)dsize.width/src.cols}
 
-    :param fy: Scale factor along the vertical axis. If it is zero, it is computed as: 
+    :param fy: Scale factor along the vertical axis. If it is zero, it is computed as:
 
         .. math::
 
-            \texttt{(double)dsize.height/src.rows} 
+            \texttt{(double)dsize.height/src.rows}
 
     :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` and  ``INTER_LINEAR`` are supported.
 
-.. seealso:: :ocv:func:`resize` 
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`resize`
 
 
 
 gpu::warpAffine
 -------------------
-.. ocv:function:: void gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
+Applies an affine transformation to an image.
 
-    Applies an affine transformation to an image.
+.. ocv:function:: void gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null())
 
-    :param src: Source image.  ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
+    :param src: Source image.  ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
-    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` .
 
     :param M: *2x3*  transformation matrix.
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation (``dst=>src``). Only ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize`) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is an inverse transformation ( ``dst=>src`` ). Only ``INTER_NEAREST`` , ``INTER_LINEAR`` , and  ``INTER_CUBIC`` interpolation methods are supported.
 
-.. seealso:: :ocv:func:`warpAffine` 
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`warpAffine`
 
 
 
 gpu::warpPerspective
 ------------------------
-.. ocv:function:: void gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR)
+Applies a perspective transformation to an image.
 
-    Applies a perspective transformation to an image.
+.. ocv:function:: void gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null())
 
-    :param src: Source image. ``CV_8U``, ``CV_16U``, ``CV_32S``, or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
+    :param src: Source image. ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
-    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` .
 
     :param M: *3x3* transformation matrix.
 
     :param dsize: Size of the destination image.
 
-    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation (``dst => src``). Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` interpolation methods are supported.
+    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP`` specifying that  ``M`` is the inverse transformation ( ``dst => src`` ). Only  ``INTER_NEAREST`` , ``INTER_LINEAR`` , and  ``INTER_CUBIC`` interpolation methods are supported.
 
-.. seealso:: :ocv:func:`warpPerspective` 
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`warpPerspective`
 
 
 
 gpu::rotate
 ---------------
-.. ocv:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR)
+Rotates an image around the origin (0,0) and then shifts it.
 
-    Rotates an image around the origin (0,0) and then shifts it.
+.. ocv:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image.  ``CV_8UC1`` and  ``CV_8UC4`` types are supported.
 
-    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` . 
+    :param dst: Destination image with the same type as  ``src`` . The size is  ``dsize`` .
 
     :param dsize: Size of the destination image.
 
@@ -484,40 +493,45 @@ gpu::rotate
 
     :param yShift: Shift along the vertical axis.
 
-    :param interpolation: Interpolation method. Only  ``INTER_NEAREST``, ``INTER_LINEAR``, and  ``INTER_CUBIC`` are supported.
+    :param interpolation: Interpolation method. Only  ``INTER_NEAREST`` , ``INTER_LINEAR`` , and  ``INTER_CUBIC`` are supported.
 
-.. seealso:: :ocv:func:`gpu::warpAffine` 
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`gpu::warpAffine`
 
 
 
 gpu::copyMakeBorder
 -----------------------
-.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar())
+Copies a 2D array to a larger destination array and pads borders with the given constant.
 
-    Copies a 2D array to a larger destination array and pads borders with the given constant.
+.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar(), Stream& stream = Stream::Null())
 
-    :param src: Source image. ``CV_8UC1``, ``CV_8UC4``, ``CV_32SC1``, and  ``CV_32FC1`` types are supported.
+    :param src: Source image. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and  ``CV_32FC1`` types are supported.
 
     :param dst: Destination image with the same type as  ``src``. The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
 
     :param top:
-    
+
     :param bottom:
-    
+
     :param left:
-    
+
     :param right: Number of pixels in each direction from the source image rectangle to extrapolate. For example:  ``top=1, bottom=1, left=1, right=1`` mean that 1 pixel-wide border needs to be built.
 
     :param value: Border value.
 
+    :param stream: Stream for the asynchronous version.
+
 .. seealso:: :ocv:func:`copyMakeBorder`
+
 
 
 gpu::rectStdDev
 -------------------
-.. ocv:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect)
+Computes a standard deviation of integral images.
 
-    Computes a standard deviation of integral images.
+.. ocv:function:: void gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& stream = Stream::Null())
 
     :param src: Source image. Only the ``CV_32SC1`` type is supported.
 
@@ -527,13 +541,15 @@ gpu::rectStdDev
 
     :param rect: Rectangular window.
 
+    :param stream: Stream for the asynchronous version.
+
 
 
 gpu::evenLevels
 -------------------
-.. ocv:function:: void gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
+Computes levels with even distribution.
 
-    Computes levels with even distribution.
+.. ocv:function:: void gpu::evenLevels(GpuMat& levels, int nLevels, int lowerLevel, int upperLevel)
 
     :param levels: Destination array.  ``levels`` has 1 row, ``nLevels`` columns, and the ``CV_32SC1`` type.
 
@@ -543,13 +559,19 @@ gpu::evenLevels
 
     :param upperLevel: Upper boundary value of the greatest level.
 
+
+
 gpu::histEven
 -----------------
-.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel)
+Calculates a histogram with evenly distributed bins.
 
-.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, int* histSize, int* lowerLevel, int* upperLevel)
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
 
-    Calculates a histogram with evenly distributed bins.
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, int* histSize, int* lowerLevel, int* upperLevel, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::histEven(const GpuMat& src, GpuMat* hist, GpuMat& buf, int* histSize, int* lowerLevel, int* upperLevel, Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U``, ``CV_16U``, or ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
@@ -561,17 +583,217 @@ gpu::histEven
 
     :param upperLevel: Upper boundary of highest-level bin.
 
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+    :param stream: Stream for the asynchronous version.
+
+
+
 gpu::histRange
 ------------------
-.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels)
+Calculates a histogram with bins determined by the ``levels`` array.
 
-.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels)
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, Stream& stream = Stream::Null())
 
-    Calculates a histogram with bins determined by the ``levels`` array.
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat& hist, const GpuMat& levels, GpuMat& buf, Stream& stream = Stream::Null())
 
-    :param src: Source image. ``CV_8U``, ``CV_16U``, or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::histRange(const GpuMat& src, GpuMat* hist, const GpuMat* levels, GpuMat& buf, Stream& stream = Stream::Null())
+
+    :param src: Source image. ``CV_8U`` , ``CV_16U`` , or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
     :param hist: Destination histogram with one row, ``(levels.cols-1)`` columns, and the  ``CV_32SC1`` type.
 
     :param levels: Number of levels in the histogram.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::calcHist
+------------------
+Calculates histogram for one channel 8-bit image.
+
+.. ocv:function:: void gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param hist: Destination histogram with one row, 256 columns, and the  ``CV_32SC1`` type.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::equalizeHist
+------------------
+Equalizes the histogram of a grayscale image.
+
+.. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null())
+
+.. ocv:function:: void gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param dst: Destination image.
+
+    :param hist: Destination histogram with one row, 256 columns, and the  ``CV_32SC1`` type.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`equalizeHist`
+
+
+
+gpu::buildWarpPlaneMaps
+-------------------
+Builds plane warping maps.
+
+.. ocv:function:: void gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::buildWarpCylindricalMaps
+-------------------
+Builds cylindrical warping maps.
+
+.. ocv:function:: void gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::buildWarpSphericalMaps
+-------------------
+Builds spherical warping maps.
+
+.. ocv:function:: void gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::downsample
+-------------------
+Downsamples image by rejecting even rows and columns.
+
+.. ocv:function:: void gpu::downsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param dst: Destination image. Will have ``Size((src.cols+1)/2, (src.rows+1)/2)`` size and the same type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::upsample
+-------------------
+Upsamples the source image by injecting even zero rows and columns.
+
+.. ocv:function:: void gpu::upsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param dst: Destination image. Will have ``Size(src.cols*2, src.rows*2)`` size and the same type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::pyrDown
+-------------------
+Smoothes an image and downsamples it.
+
+.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param dst: Destination image. Will have ``Size((src.cols+1)/2, (src.rows+1)/2)`` size and the same type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`pyrDown`
+
+
+
+gpu::pyrUp
+-------------------
+Upsamples an image and then smoothes it.
+
+.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+
+    :param src: Source image.
+
+    :param dst: Destination image. Will have ``Size(src.cols*2, src.rows*2)`` size and the same type as ``src`` .
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`pyrUp`
+
+
+
+gpu::blendLinear
+-------------------
+Performs linear blending of two images.
+
+.. ocv:function:: void gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, GpuMat& result, Stream& stream = Stream::Null())
+
+    :param img1: First image. Supports only ``CV_8U`` and ``CV_32F`` depth.
+
+    :param img1: Second image. Must have the same size and the same type as ``img1`` .
+
+    :param weights1: Weights for first image. Must have tha same size as ``img1`` . Supports only ``CV_32F`` type.
+
+    :param weights2: Weights for second image. Must have tha same size as ``img2`` . Supports only ``CV_32F`` type.
+
+    :param result: Destination image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::Canny
+-------------------
+Finds edges in an image using the [Canny86]_ algorithm.
+
+.. ocv:function:: void gpu::Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+
+.. ocv:function:: void gpu::Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+
+.. ocv:function:: void gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false)
+
+.. ocv:function:: void gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false)
+
+    :param image: Single-channel 8-bit input image.
+
+    :param dx: First derivative of image in the vertical direction. Support only ``CV_32S`` type.
+
+    :param dy: First derivative of image in the horizontal direction. Support only ``CV_32S`` type.
+
+    :param edges: Output edge map. It has the same size and type as  ``image`` .
+
+    :param threshold1: First threshold for the hysteresis procedure.
+
+    :param threshold2: Second threshold for the hysteresis procedure.
+
+    :param apertureSize: Aperture size for the  :ocv:func:`Sobel`  operator.
+
+    :param L2gradient: Flag indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to compute the image gradient magnitude ( ``L2gradient=true`` ), or a faster default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+.. seealso:: :ocv:func:`Canny`
 
