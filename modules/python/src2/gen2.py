@@ -359,6 +359,7 @@ class FuncVariant(object):
                 outlist.append((a.name, argno))
             if (not a.inputarg or a.returnarg) and a.isbig():
                 outarr_list.append((a.name, argno))
+                continue
             if not a.inputarg:
                 continue
             if not a.defval:
