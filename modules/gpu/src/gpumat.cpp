@@ -885,7 +885,7 @@ void cv::gpu::GpuMat::release()
     if( refcount && CV_XADD(refcount, -1) == 1 )
     {
         fastFree(refcount);
-        cudaSafeCall( cudaFree(datastart) );
+        cudaFree(datastart);
     }
     data = datastart = dataend = 0;
     step = rows = cols = 0;

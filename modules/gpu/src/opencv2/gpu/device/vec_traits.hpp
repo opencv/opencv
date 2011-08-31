@@ -166,6 +166,7 @@ namespace cv { namespace gpu { namespace device
         enum {cn=1}; \
         static __device__ __host__ __forceinline__ type all(type v) {return v;} \
         static __device__ __host__ __forceinline__ type make(type x) {return x;} \
+        static __device__ __host__ __forceinline__ type make(const type* v) {return *v;} \
     }; \
     template<> struct VecTraits<type ## 1> \
     { \
@@ -173,6 +174,7 @@ namespace cv { namespace gpu { namespace device
         enum {cn=1}; \
         static __device__ __host__ __forceinline__ type ## 1 all(type v) {return make_ ## type ## 1(v);} \
         static __device__ __host__ __forceinline__ type ## 1 make(type x) {return make_ ## type ## 1(x);} \
+        static __device__ __host__ __forceinline__ type ## 1 make(const type* v) {return make_ ## type ## 1(*v);} \
     }; \
     template<> struct VecTraits<type ## 2> \
     { \
@@ -180,6 +182,7 @@ namespace cv { namespace gpu { namespace device
         enum {cn=2}; \
         static __device__ __host__ __forceinline__ type ## 2 all(type v) {return make_ ## type ## 2(v, v);} \
         static __device__ __host__ __forceinline__ type ## 2 make(type x, type y) {return make_ ## type ## 2(x, y);} \
+        static __device__ __host__ __forceinline__ type ## 2 make(const type* v) {return make_ ## type ## 2(v[0], v[1]);} \
     }; \
     template<> struct VecTraits<type ## 3> \
     { \
@@ -187,6 +190,7 @@ namespace cv { namespace gpu { namespace device
         enum {cn=3}; \
         static __device__ __host__ __forceinline__ type ## 3 all(type v) {return make_ ## type ## 3(v, v, v);} \
         static __device__ __host__ __forceinline__ type ## 3 make(type x, type y, type z) {return make_ ## type ## 3(x, y, z);} \
+        static __device__ __host__ __forceinline__ type ## 3 make(const type* v) {return make_ ## type ## 3(v[0], v[1], v[2]);} \
     }; \
     template<> struct VecTraits<type ## 4> \
     { \
@@ -194,6 +198,7 @@ namespace cv { namespace gpu { namespace device
         enum {cn=4}; \
         static __device__ __host__ __forceinline__ type ## 4 all(type v) {return make_ ## type ## 4(v, v, v, v);} \
         static __device__ __host__ __forceinline__ type ## 4 make(type x, type y, type z, type w) {return make_ ## type ## 4(x, y, z, w);} \
+        static __device__ __host__ __forceinline__ type ## 4 make(const type* v) {return make_ ## type ## 4(v[0], v[1], v[2], v[3]);} \
     }; \
     template<> struct VecTraits<type ## 8> \
     { \
@@ -201,10 +206,10 @@ namespace cv { namespace gpu { namespace device
         enum {cn=8}; \
         static __device__ __host__ __forceinline__ type ## 8 all(type v) {return make_ ## type ## 8(v, v, v, v, v, v, v, v);} \
         static __device__ __host__ __forceinline__ type ## 8 make(type a0, type a1, type a2, type a3, type a4, type a5, type a6, type a7) {return make_ ## type ## 8(a0, a1, a2, a3, a4, a5, a6, a7);} \
+        static __device__ __host__ __forceinline__ type ## 8 make(const type* v) {return make_ ## type ## 8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);} \
     };
 
     OPENCV_GPU_IMPLEMENT_VEC_TRAITS(uchar)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(char)
     OPENCV_GPU_IMPLEMENT_VEC_TRAITS(ushort)
     OPENCV_GPU_IMPLEMENT_VEC_TRAITS(short)
     OPENCV_GPU_IMPLEMENT_VEC_TRAITS(int)
@@ -214,12 +219,61 @@ namespace cv { namespace gpu { namespace device
 
 #undef OPENCV_GPU_IMPLEMENT_VEC_TRAITS
 
+    template<> struct VecTraits<char> 
+    { 
+        typedef char elem_type; 
+        enum {cn=1}; 
+        static __device__ __host__ __forceinline__ char all(char v) {return v;}
+        static __device__ __host__ __forceinline__ char make(char x) {return x;}
+        static __device__ __host__ __forceinline__ char make(const char* x) {return *x;}
+    };
     template<> struct VecTraits<schar> 
     { 
         typedef schar elem_type; 
         enum {cn=1}; 
         static __device__ __host__ __forceinline__ schar all(schar v) {return v;}
         static __device__ __host__ __forceinline__ schar make(schar x) {return x;}
+        static __device__ __host__ __forceinline__ schar make(const schar* x) {return *x;}
+    };
+    template<> struct VecTraits<char1>
+    {
+        typedef schar elem_type;
+        enum {cn=1};
+        static __device__ __host__ __forceinline__ char1 all(schar v) {return make_char1(v);}
+        static __device__ __host__ __forceinline__ char1 make(schar x) {return make_char1(x);}
+        static __device__ __host__ __forceinline__ char1 make(const schar* v) {return make_char1(v[0]);}
+    };
+    template<> struct VecTraits<char2>
+    {
+        typedef schar elem_type;
+        enum {cn=2};
+        static __device__ __host__ __forceinline__ char2 all(schar v) {return make_char2(v, v);}
+        static __device__ __host__ __forceinline__ char2 make(schar x, schar y) {return make_char2(x, y);}
+        static __device__ __host__ __forceinline__ char2 make(const schar* v) {return make_char2(v[0], v[1]);}
+    };
+    template<> struct VecTraits<char3>
+    {
+        typedef schar elem_type;
+        enum {cn=3};
+        static __device__ __host__ __forceinline__ char3 all(schar v) {return make_char3(v, v, v);}
+        static __device__ __host__ __forceinline__ char3 make(schar x, schar y, schar z) {return make_char3(x, y, z);}
+        static __device__ __host__ __forceinline__ char3 make(const schar* v) {return make_char3(v[0], v[1], v[2]);}
+    };
+    template<> struct VecTraits<char4>
+    {
+        typedef schar elem_type;
+        enum {cn=4};
+        static __device__ __host__ __forceinline__ char4 all(schar v) {return make_char4(v, v, v, v);}
+        static __device__ __host__ __forceinline__ char4 make(schar x, schar y, schar z, schar w) {return make_char4(x, y, z, w);}
+        static __device__ __host__ __forceinline__ char4 make(const schar* v) {return make_char4(v[0], v[1], v[2], v[3]);}
+    };
+    template<> struct VecTraits<char8>
+    {
+        typedef schar elem_type;
+        enum {cn=8};
+        static __device__ __host__ __forceinline__ char8 all(schar v) {return make_char8(v, v, v, v, v, v, v, v);}
+        static __device__ __host__ __forceinline__ char8 make(schar a0, schar a1, schar a2, schar a3, schar a4, schar a5, schar a6, schar a7) {return make_char8(a0, a1, a2, a3, a4, a5, a6, a7);}
+        static __device__ __host__ __forceinline__ char8 make(const schar* v) {return make_char8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);}
     };
 }}}
 

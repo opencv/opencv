@@ -79,9 +79,9 @@ TEST(remap)
     Mat src, dst, xmap, ymap;
     gpu::GpuMat d_src, d_dst, d_xmap, d_ymap;
 
-    for (int size = 1000; size <= 8000; size *= 2)
+    for (int size = 1000; size <= 4000; size *= 2)
     {
-        SUBTEST << "src " << size << " and 8U, 32F maps";
+        SUBTEST << "src " << size << ", 8UC1";
 
         gen(src, size, size, CV_8UC1, 0, 256);
 
@@ -101,7 +101,7 @@ TEST(remap)
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR);
+        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
         CPU_OFF;
 
         d_src = src;
@@ -110,7 +110,112 @@ TEST(remap)
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap);
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size <= 4000; size *= 2)
+    {
+        SUBTEST << "src " << size << ", 8UC3";
+
+        gen(src, size, size, CV_8UC3, 0, 256);
+
+        xmap.create(size, size, CV_32F);
+        ymap.create(size, size, CV_32F);
+        for (int i = 0; i < size; ++i)
+        {
+            float* xmap_row = xmap.ptr<float>(i);
+            float* ymap_row = ymap.ptr<float>(i);
+            for (int j = 0; j < size; ++j)
+            {
+                xmap_row[j] = (j - size * 0.5f) * 0.75f + size * 0.5f;
+                ymap_row[j] = (i - size * 0.5f) * 0.75f + size * 0.5f;
+            }
+        }
+
+        dst.create(xmap.size(), src.type());
+
+        CPU_ON;
+        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        CPU_OFF;
+
+        d_src = src;
+        d_xmap = xmap;
+        d_ymap = ymap;
+        d_dst.create(d_xmap.size(), d_src.type());
+
+        GPU_ON;
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size <= 4000; size *= 2)
+    {
+        SUBTEST << "src " << size << ", 8UC4";
+
+        gen(src, size, size, CV_8UC4, 0, 256);
+
+        xmap.create(size, size, CV_32F);
+        ymap.create(size, size, CV_32F);
+        for (int i = 0; i < size; ++i)
+        {
+            float* xmap_row = xmap.ptr<float>(i);
+            float* ymap_row = ymap.ptr<float>(i);
+            for (int j = 0; j < size; ++j)
+            {
+                xmap_row[j] = (j - size * 0.5f) * 0.75f + size * 0.5f;
+                ymap_row[j] = (i - size * 0.5f) * 0.75f + size * 0.5f;
+            }
+        }
+
+        dst.create(xmap.size(), src.type());
+
+        CPU_ON;
+        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        CPU_OFF;
+
+        d_src = src;
+        d_xmap = xmap;
+        d_ymap = ymap;
+        d_dst.create(d_xmap.size(), d_src.type());
+
+        GPU_ON;
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size <= 4000; size *= 2)
+    {
+        SUBTEST << "src " << size << ", 16SC3";
+
+        gen(src, size, size, CV_16SC3, 0, 256);
+
+        xmap.create(size, size, CV_32F);
+        ymap.create(size, size, CV_32F);
+        for (int i = 0; i < size; ++i)
+        {
+            float* xmap_row = xmap.ptr<float>(i);
+            float* ymap_row = ymap.ptr<float>(i);
+            for (int j = 0; j < size; ++j)
+            {
+                xmap_row[j] = (j - size * 0.5f) * 0.75f + size * 0.5f;
+                ymap_row[j] = (i - size * 0.5f) * 0.75f + size * 0.5f;
+            }
+        }
+
+        dst.create(xmap.size(), src.type());
+
+        CPU_ON;
+        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        CPU_OFF;
+
+        d_src = src;
+        d_xmap = xmap;
+        d_ymap = ymap;
+        d_dst.create(d_xmap.size(), d_src.type());
+
+        GPU_ON;
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
         GPU_OFF;
     }
 }

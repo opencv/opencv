@@ -66,6 +66,9 @@ namespace cv
         
         template <typename T> struct DevMem2D_
         {            
+            typedef T elem_type;
+            typedef int index_type;
+
             int cols;
             int rows;
             T* data;
@@ -79,8 +82,7 @@ namespace cv
             template <typename U>            
             explicit DevMem2D_(const DevMem2D_<U>& d)
                 : cols(d.cols), rows(d.rows), data((T*)d.data), step(d.step) {}
-            
-            typedef T elem_type;
+
             enum { elem_size = sizeof(elem_type) };
 
             __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
@@ -88,6 +90,9 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step ); }            
 
 			__CV_GPU_HOST_DEVICE__ operator T*() const { return data; }
+
+            __CV_GPU_HOST_DEVICE__ T& operator ()(int y, int x) { return ptr(y)[x]; }
+            __CV_GPU_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
 
 #if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)    
             thrust::device_ptr<T> begin() const { return thrust::device_ptr<T>(data); }
@@ -97,18 +102,23 @@ namespace cv
  
         template<typename T> struct PtrStep_
         {
+            typedef T elem_type;
+            typedef int index_type;
+
             T* data;
             size_t step;
 
             PtrStep_() : data(0), step(0) {}            
             PtrStep_(const DevMem2D_<T>& mem) : data(mem.data), step(mem.step) {}
 
-            typedef T elem_type;
             enum { elem_size = sizeof(elem_type) };
 
             __CV_GPU_HOST_DEVICE__ size_t elemSize() const { return elem_size; }
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return (T*)( (char*)data + y * step); }
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)data + y * step); }
+
+            __CV_GPU_HOST_DEVICE__ T& operator ()(int y, int x) { return ptr(y)[x]; }
+            __CV_GPU_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
 
 #if defined(__DEVCLASES_ADD_THRUST_BEGIN_END__)    
             thrust::device_ptr<T> begin() const { return thrust::device_ptr<T>(data); }
@@ -124,7 +134,10 @@ namespace cv
                 PtrStep_<T>::step /= PtrStep_<T>::elem_size;             
             }
             __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return PtrStep_<T>::data + y * PtrStep_<T>::step; }
-            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep_<T>::data + y * PtrStep_<T>::step; }                    
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep_<T>::data + y * PtrStep_<T>::step; }  
+
+            __CV_GPU_HOST_DEVICE__ T& operator ()(int y, int x) { return ptr(y)[x]; }
+            __CV_GPU_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }                  
         };
 
         typedef DevMem2D_<unsigned char> DevMem2D;

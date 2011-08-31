@@ -242,9 +242,9 @@ namespace filter_krnls
         {
             const T* srcCol = src.ptr() + x;
 
-            sDataColumn[ threadIdx.y                    * BLOCK_DIM_X] = b.at_low(y - BLOCK_DIM_Y, srcCol);
-            sDataColumn[(threadIdx.y + BLOCK_DIM_Y)     * BLOCK_DIM_X] = b.at_high(y, srcCol);
-            sDataColumn[(threadIdx.y + BLOCK_DIM_Y * 2) * BLOCK_DIM_X] = b.at_high(y + BLOCK_DIM_Y, srcCol);
+            sDataColumn[ threadIdx.y                    * BLOCK_DIM_X] = b.at_low(y - BLOCK_DIM_Y, srcCol, src.step);
+            sDataColumn[(threadIdx.y + BLOCK_DIM_Y)     * BLOCK_DIM_X] = b.at_high(y, srcCol, src.step);
+            sDataColumn[(threadIdx.y + BLOCK_DIM_Y * 2) * BLOCK_DIM_X] = b.at_high(y + BLOCK_DIM_Y, srcCol, src.step);
 
             __syncthreads();
 
@@ -273,7 +273,7 @@ namespace cv { namespace gpu { namespace filters
         dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
         dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
 
-        B<T> b(src.rows, src.step);
+        B<T> b(src.rows);
 
         if (!b.is_range_safe(-BLOCK_DIM_Y, (grid.y + 1) * BLOCK_DIM_Y - 1))
         {

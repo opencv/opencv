@@ -309,7 +309,6 @@ namespace cv {  namespace gpu { namespace device
 
         U vec1Vals[MAX_LEN / THREAD_DIM];
     };
-
     
     ///////////////////////////////////////////////////////////////////////////////
     // Solve linear system
@@ -364,6 +363,60 @@ namespace cv {  namespace gpu { namespace device
 
         return false;
     }
+    
+    ///////////////////////////////////////////////////////////////////////////////
+    // Filters    
+
+    template <typename Ptr2D> struct PointFilter
+    {
+        typedef typename Ptr2D::elem_type elem_type;
+        typedef float index_type;
+
+        explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_) : src(src_) {}
+         
+        __device__ __forceinline__ elem_type operator ()(float y, float x) const
+        {
+            return src(__float2int_rn(y), __float2int_rn(x));
+        }
+
+        const Ptr2D src;
+    };
+
+    template <typename Ptr2D> struct LinearFilter
+    {
+        typedef typename Ptr2D::elem_type elem_type;
+        typedef float index_type;
+
+        explicit __host__ __device__ __forceinline__ LinearFilter(const Ptr2D& src_) : src(src_) {}
+
+        __device__ __forceinline__ elem_type operator ()(float y, float x) const
+        {
+            typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
+
+            work_type out = VecTraits<work_type>::all(0);
+
+            const int x1 = __float2int_rd(x);
+            const int y1 = __float2int_rd(y);
+            const int x2 = x1 + 1;
+            const int y2 = y1 + 1;
+
+            elem_type src_reg = src(y1, x1);
+            out = out + src_reg * ((x2 - x) * (y2 - y));
+
+            src_reg = src(y1, x2);
+            out = out + src_reg * ((x - x1) * (y2 - y));
+
+            src_reg = src(y2, x1);
+            out = out + src_reg * ((x2 - x) * (y - y1));
+
+            src_reg = src(y2, x2);
+            out = out + src_reg * ((x - x1) * (y - y1));
+
+            return saturate_cast<elem_type>(out);
+        }
+
+        const Ptr2D src;
+    };
 }}}
 
 #endif // __OPENCV_GPU_UTILITY_HPP__

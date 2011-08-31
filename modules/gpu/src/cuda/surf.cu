@@ -675,31 +675,29 @@ namespace cv { namespace gpu { namespace surf
         3.695352233989979e-006f, 8.444558261544444e-006f, 1.760426494001877e-005f, 3.34794785885606e-005f, 5.808438800158911e-005f, 9.193058212986216e-005f, 0.0001327334757661447f, 0.0001748319627949968f, 0.0002100782439811155f, 0.0002302826324012131f, 0.0002302826324012131f, 0.0002100782439811155f, 0.0001748319627949968f, 0.0001327334757661447f, 9.193058212986216e-005f, 5.808438800158911e-005f, 3.34794785885606e-005f, 1.760426494001877e-005f, 8.444558261544444e-006f, 3.695352233989979e-006f
     };
 
-    __device__ __forceinline__ unsigned char calcWin(int i, int j, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir)
+    struct WinReader
     {
-        float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
-        float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
+        typedef uchar elem_type;
 
-        return tex2D(imgTex, pixel_x, pixel_y);
-    }
+        __device__ __forceinline__ WinReader(float centerX_, float centerY_, float win_offset_, float cos_dir_, float sin_dir_) : 
+            centerX(centerX_), centerY(centerY_), win_offset(win_offset_), cos_dir(cos_dir_), sin_dir(sin_dir_)
+        {
+        }
 
-    __device__ unsigned char calcPATCH(int i1, int j1, float centerX, float centerY, float win_offset, float cos_dir, float sin_dir, int win_size)
-    {
-        /* Scale the window to size PATCH_SZ so each pixel's size is s. This
-           makes calculating the gradients with wavelets of size 2s easy */
-        const float icoo = ((float)i1 / (PATCH_SZ + 1)) * win_size;
-        const float jcoo = ((float)j1 / (PATCH_SZ + 1)) * win_size;
+        __device__ __forceinline__ uchar operator ()(int i, int j) const
+        {
+            float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
+            float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
 
-        const int i = __float2int_rd(icoo);
-        const int j = __float2int_rd(jcoo);
+            return tex2D(imgTex, pixel_x, pixel_y);
+        }
 
-        float res = calcWin(i, j, centerX, centerY, win_offset, cos_dir, sin_dir) * (i + 1 - icoo) * (j + 1 - jcoo);
-        res += calcWin(i + 1, j, centerX, centerY, win_offset, cos_dir, sin_dir) * (icoo - i) * (j + 1 - jcoo);
-        res += calcWin(i + 1, j + 1, centerX, centerY, win_offset, cos_dir, sin_dir) * (icoo - i) * (jcoo - j);
-        res += calcWin(i, j + 1, centerX, centerY, win_offset, cos_dir, sin_dir) * (i + 1 - icoo) * (jcoo - j);
-
-        return saturate_cast<unsigned char>(res);
-    }  
+        float centerX; 
+        float centerY;
+        float win_offset; 
+        float cos_dir; 
+        float sin_dir;
+    };
 
     __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25], 
         const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
@@ -732,7 +730,13 @@ namespace cv { namespace gpu { namespace surf
         const int xIndex = xBlock * 5 + threadIdx.x;
         const int yIndex = yBlock * 5 + threadIdx.y;
 
-        s_PATCH[threadIdx.y][threadIdx.x] = calcPATCH(yIndex, xIndex, centerX, centerY, win_offset, cos_dir, sin_dir, win_size);
+        const float icoo = ((float)yIndex / (PATCH_SZ + 1)) * win_size;
+        const float jcoo = ((float)xIndex / (PATCH_SZ + 1)) * win_size;
+
+        LinearFilter<WinReader> filter(WinReader(centerX, centerY, win_offset, cos_dir, sin_dir));
+
+        s_PATCH[threadIdx.y][threadIdx.x] = filter(icoo, jcoo);
+
         __syncthreads();
 
         if (threadIdx.x < 5 && threadIdx.y < 5)

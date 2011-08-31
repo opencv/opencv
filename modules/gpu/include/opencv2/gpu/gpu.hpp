@@ -596,8 +596,9 @@ namespace cv
         ////////////////////////////// Image processing //////////////////////////////
 
         //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
-        //! supports CV_8UC1, CV_8UC3 source types and CV_32FC1 map type
-        CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap);
+        //! supports CV_32FC1 map type
+        CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap,
+            int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 
         //! Does mean shift filtering on GPU.
         CV_EXPORTS void meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr,
@@ -761,10 +762,10 @@ namespace cv
         CV_EXPORTS void upsample(const GpuMat& src, GpuMat &dst, Stream& stream = Stream::Null());
 
         //! smoothes the source image and downsamples it
-        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+        CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
         //! upsamples the source image and then smoothes it
-        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+        CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero

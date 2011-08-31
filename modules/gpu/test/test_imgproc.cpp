@@ -181,15 +181,18 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 
-struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    int interpolation;
+    int borderType;
 
     cv::Size size;
     cv::Mat src;
     cv::Mat xmap;
     cv::Mat ymap;
+    cv::Scalar borderValue;
 
     cv::Mat dst_gold;
     
@@ -197,43 +200,83 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int>
     {
         devInfo = std::tr1::get<0>(GetParam());
         type = std::tr1::get<1>(GetParam());
+        interpolation = std::tr1::get<2>(GetParam());
+        borderType = std::tr1::get<3>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
 
         cv::RNG& rng = cvtest::TS::ptr()->get_rng();
 
-        size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
-        xmap = cvtest::randomMat(rng, size, CV_32FC1, 0.0, src.cols - 1, false);
-        ymap = cvtest::randomMat(rng, size, CV_32FC1, 0.0, src.rows - 1, false);
+        src = cvtest::randomMat(rng, size, type, 0.0, 256.0, false);
+
+        xmap.create(size, CV_32FC1);
+        ymap.create(size, CV_32FC1);
+
+        for (int y = 0; y < src.rows; ++y)
+        {
+            float* xmap_row = xmap.ptr<float>(y);
+            float* ymap_row = ymap.ptr<float>(y);
+
+            for (int x = 0; x < src.cols; ++x)
+            {
+                xmap_row[x] = src.cols - 1 - x;
+                ymap_row[x] = src.rows - 1 - y;
+            }
+        }
+
+        borderValue[0] = rng.uniform(0.0, 256.0);
+        borderValue[1] = rng.uniform(0.0, 256.0);
+        borderValue[2] = rng.uniform(0.0, 256.0);
+        borderValue[3] = rng.uniform(0.0, 256.0);
         
-        cv::remap(src, dst_gold, xmap, ymap, cv::INTER_LINEAR, cv::BORDER_WRAP);
+        cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType, borderValue);
     }
 };
 
 TEST_P(Remap, Accuracy)
 {
+    static const char* interpolations_str[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC"};
+    static const char* borderTypes_str[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+
+    const char* interpolationStr = interpolations_str[interpolation];
+    const char* borderTypeStr = borderTypes_str[borderType];
+
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
+    PRINT_PARAM(interpolationStr);
+    PRINT_PARAM(borderTypeStr);
     PRINT_PARAM(size);
+    PRINT_PARAM(borderValue);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
         
-        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap));
+        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap), interpolation, borderType, borderValue);
 
         gpuRes.download(dst);
     );
 
-    EXPECT_MAT_SIMILAR(dst_gold, dst, 0.5);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Remap, testing::Combine(
-                        testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC3)));
+INSTANTIATE_TEST_CASE_P
+(
+    ImgProc, Remap, testing::Combine
+    (
+        testing::ValuesIn(devices()), 
+        testing::Values
+        (
+            CV_8UC1, CV_8UC3, CV_8UC4,
+            CV_32FC1, CV_32FC3, CV_32FC4
+        ),
+        testing::Values(cv::INTER_NEAREST, cv::INTER_LINEAR),
+        testing::Values(cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT)
+    )
+);
                         
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
