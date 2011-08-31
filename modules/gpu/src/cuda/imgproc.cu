@@ -120,10 +120,10 @@ namespace cv { namespace gpu { namespace imgproc
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D_<T>& dst, T borderValue);
 
-        static const caller_t callers[2][3] = 
+        static const caller_t callers[2][5] = 
         {
-            { remap_caller<PointFilter, BrdReflect101>, remap_caller<PointFilter, BrdReplicate>, remap_caller<PointFilter, BrdConstant> },
-            { remap_caller<LinearFilter, BrdReflect101>, remap_caller<LinearFilter, BrdReplicate>, remap_caller<LinearFilter, BrdConstant> }
+            { remap_caller<PointFilter, BrdReflect101>, remap_caller<PointFilter, BrdReplicate>, remap_caller<PointFilter, BrdConstant>, remap_caller<PointFilter, BrdReflect>, remap_caller<PointFilter, BrdWrap> },
+            { remap_caller<LinearFilter, BrdReflect101>, remap_caller<LinearFilter, BrdReplicate>, remap_caller<LinearFilter, BrdConstant>, remap_caller<LinearFilter, BrdReflect>, remap_caller<LinearFilter, BrdWrap> }
         };
 
         typename VecTraits<T>::elem_type brd[] = {(typename VecTraits<T>::elem_type)borderValue[0], (typename VecTraits<T>::elem_type)borderValue[1], (typename VecTraits<T>::elem_type)borderValue[2], (typename VecTraits<T>::elem_type)borderValue[3]};
@@ -1089,7 +1089,7 @@ namespace cv { namespace gpu { namespace imgproc
 
         static const caller_t callers[] = 
         {
-            pyrDown_caller<type, BrdReflect101>, pyrDown_caller<type, BrdReplicate>, pyrDown_caller<type, BrdConstant>
+            pyrDown_caller<type, BrdReflect101>, pyrDown_caller<type, BrdReplicate>, pyrDown_caller<type, BrdConstant>, pyrDown_caller<type, BrdReflect>, pyrDown_caller<type, BrdWrap>
         };
 
         callers[borderType](static_cast< DevMem2D_<type> >(src), static_cast< DevMem2D_<type> >(dst), stream);
@@ -1219,7 +1219,7 @@ namespace cv { namespace gpu { namespace imgproc
 
         static const caller_t callers[] = 
         {
-            pyrUp_caller<type, BrdReflect101>, pyrUp_caller<type, BrdReplicate>, pyrUp_caller<type, BrdConstant>
+            pyrUp_caller<type, BrdReflect101>, pyrUp_caller<type, BrdReplicate>, pyrUp_caller<type, BrdConstant>, pyrUp_caller<type, BrdReflect>, pyrUp_caller<type, BrdWrap>
         };
 
         callers[borderType](static_cast< DevMem2D_<type> >(src), static_cast< DevMem2D_<type> >(dst), stream);

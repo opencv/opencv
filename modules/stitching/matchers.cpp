@@ -411,15 +411,7 @@ namespace
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-    bool use_gpu = false;
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
-    {
-        DeviceInfo info;
-        if (info.majorVersion() >= 2 && cv::getNumberOfCPUs() < 4)
-            use_gpu = true;
-    }
-
-    if (use_gpu)
         impl_ = new GpuMatcher(match_conf);
     else
         impl_ = new CpuMatcher(match_conf);

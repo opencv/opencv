@@ -133,7 +133,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR);
 
-    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT);
+    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
 
@@ -1228,24 +1228,26 @@ namespace
 
 bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
 {
-    if (cpuBorderType == cv::BORDER_REFLECT101)
+    switch (cpuBorderType)
     {
+    case cv::BORDER_REFLECT101:
         gpuBorderType = cv::gpu::BORDER_REFLECT101_GPU;
         return true;
-    }
-
-    if (cpuBorderType == cv::BORDER_REPLICATE)
-    {
+    case cv::BORDER_REPLICATE:
         gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
         return true;
-    }
-    
-    if (cpuBorderType == cv::BORDER_CONSTANT)
-    {
+    case cv::BORDER_CONSTANT:
         gpuBorderType = cv::gpu::BORDER_CONSTANT_GPU;
         return true;
-    }
-
+    case cv::BORDER_REFLECT:
+        gpuBorderType = cv::gpu::BORDER_REFLECT_GPU;
+        return true;
+    case cv::BORDER_WRAP:
+        gpuBorderType = cv::gpu::BORDER_WRAP_GPU;
+        return true;
+    default:
+        return false;
+    };
     return false;
 }
 
@@ -1647,7 +1649,7 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, int borderType, Stream& st
 
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT);
+    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
@@ -1683,7 +1685,7 @@ void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, int borderType, Stream& stre
 
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT);
+    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 

@@ -192,7 +192,6 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
     cv::Mat src;
     cv::Mat xmap;
     cv::Mat ymap;
-    cv::Scalar borderValue;
 
     cv::Mat dst_gold;
     
@@ -221,17 +220,12 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
             for (int x = 0; x < src.cols; ++x)
             {
-                xmap_row[x] = src.cols - 1 - x;
-                ymap_row[x] = src.rows - 1 - y;
+                xmap_row[x] = src.cols - 1 - x + 10;
+                ymap_row[x] = src.rows - 1 - y + 10;
             }
         }
-
-        borderValue[0] = rng.uniform(0.0, 256.0);
-        borderValue[1] = rng.uniform(0.0, 256.0);
-        borderValue[2] = rng.uniform(0.0, 256.0);
-        borderValue[3] = rng.uniform(0.0, 256.0);
         
-        cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType, borderValue);
+        cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType);
     }
 };
 
@@ -248,17 +242,22 @@ TEST_P(Remap, Accuracy)
     PRINT_PARAM(interpolationStr);
     PRINT_PARAM(borderTypeStr);
     PRINT_PARAM(size);
-    PRINT_PARAM(borderValue);
 
     cv::Mat dst;
 
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
         
-        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap), interpolation, borderType, borderValue);
+        cv::gpu::remap(cv::gpu::GpuMat(src), gpuRes, cv::gpu::GpuMat(xmap), cv::gpu::GpuMat(ymap), interpolation, borderType);
 
         gpuRes.download(dst);
     );
+
+    if (dst_gold.depth() == CV_32F)
+    {
+        dst_gold.convertTo(dst_gold, CV_8U);
+        dst.convertTo(dst, CV_8U);
+    }
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
@@ -274,7 +273,7 @@ INSTANTIATE_TEST_CASE_P
             CV_32FC1, CV_32FC3, CV_32FC4
         ),
         testing::Values(cv::INTER_NEAREST, cv::INTER_LINEAR),
-        testing::Values(cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT)
+        testing::Values(cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
     )
 );
                         

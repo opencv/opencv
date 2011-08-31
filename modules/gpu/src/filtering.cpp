@@ -718,7 +718,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
             nppFilter1D_callers[CV_MAT_CN(srcType)]));
     }
     
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT);
+    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
@@ -833,7 +833,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
             nppFilter1D_callers[CV_MAT_CN(bufType)]));
     }
     
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT);
+    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
    

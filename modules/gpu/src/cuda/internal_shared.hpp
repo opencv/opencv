@@ -70,7 +70,9 @@ namespace cv
         {
             BORDER_REFLECT101_GPU = 0,
             BORDER_REPLICATE_GPU,
-            BORDER_CONSTANT_GPU
+            BORDER_CONSTANT_GPU,
+            BORDER_REFLECT_GPU,
+            BORDER_WRAP_GPU
         };
                 
         // Converts CPU border extrapolation mode into GPU internal analogue.

@@ -151,7 +151,7 @@ namespace cv { namespace gpu { namespace filters
     void linearRowFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream);
-        static const caller_t callers[3][17] = 
+        static const caller_t callers[5][17] = 
         {
             {
                 0, 
@@ -170,7 +170,7 @@ namespace cv { namespace gpu { namespace filters
                 linearRowFilter_caller<13, T, D, BrdRowReflect101>, 
                 linearRowFilter_caller<14, T, D, BrdRowReflect101>,
                 linearRowFilter_caller<15, T, D, BrdRowReflect101>, 
-                linearRowFilter_caller<16, T, D, BrdRowReflect101>,
+                linearRowFilter_caller<16, T, D, BrdRowReflect101>
             },
             {
                 0, 
@@ -189,7 +189,7 @@ namespace cv { namespace gpu { namespace filters
                 linearRowFilter_caller<13, T, D, BrdRowReplicate>, 
                 linearRowFilter_caller<14, T, D, BrdRowReplicate>,
                 linearRowFilter_caller<15, T, D, BrdRowReplicate>, 
-                linearRowFilter_caller<16, T, D, BrdRowReplicate>,
+                linearRowFilter_caller<16, T, D, BrdRowReplicate>
             },
             {
                 0, 
@@ -208,7 +208,45 @@ namespace cv { namespace gpu { namespace filters
                 linearRowFilter_caller<13, T, D, BrdRowConstant>,
                 linearRowFilter_caller<14, T, D, BrdRowConstant>,
                 linearRowFilter_caller<15, T, D, BrdRowConstant>, 
-                linearRowFilter_caller<16, T, D, BrdRowConstant>,
+                linearRowFilter_caller<16, T, D, BrdRowConstant>
+            },
+            {
+                0, 
+                linearRowFilter_caller<1 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<2 , T, D, BrdRowReflect>,
+                linearRowFilter_caller<3 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<4 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<5 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<6 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<7 , T, D, BrdRowReflect>, 
+                linearRowFilter_caller<8 , T, D, BrdRowReflect>,
+                linearRowFilter_caller<9 , T, D, BrdRowReflect>,
+                linearRowFilter_caller<10, T, D, BrdRowReflect>, 
+                linearRowFilter_caller<11, T, D, BrdRowReflect>, 
+                linearRowFilter_caller<12, T, D, BrdRowReflect>, 
+                linearRowFilter_caller<13, T, D, BrdRowReflect>,
+                linearRowFilter_caller<14, T, D, BrdRowReflect>,
+                linearRowFilter_caller<15, T, D, BrdRowReflect>, 
+                linearRowFilter_caller<16, T, D, BrdRowReflect>
+            },
+            {
+                0, 
+                linearRowFilter_caller<1 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<2 , T, D, BrdRowWrap>,
+                linearRowFilter_caller<3 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<4 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<5 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<6 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<7 , T, D, BrdRowWrap>, 
+                linearRowFilter_caller<8 , T, D, BrdRowWrap>,
+                linearRowFilter_caller<9 , T, D, BrdRowWrap>,
+                linearRowFilter_caller<10, T, D, BrdRowWrap>, 
+                linearRowFilter_caller<11, T, D, BrdRowWrap>, 
+                linearRowFilter_caller<12, T, D, BrdRowWrap>, 
+                linearRowFilter_caller<13, T, D, BrdRowWrap>,
+                linearRowFilter_caller<14, T, D, BrdRowWrap>,
+                linearRowFilter_caller<15, T, D, BrdRowWrap>, 
+                linearRowFilter_caller<16, T, D, BrdRowWrap>
             }
         };
         
@@ -292,7 +330,7 @@ namespace cv { namespace gpu { namespace filters
     void linearColumnFilter_gpu(const DevMem2D& src, const DevMem2D& dst, const float kernel[], int ksize, int anchor, int brd_type, cudaStream_t stream)
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream);
-        static const caller_t callers[3][17] = 
+        static const caller_t callers[5][17] = 
         {
             {
                 0, 
@@ -311,7 +349,7 @@ namespace cv { namespace gpu { namespace filters
                 linearColumnFilter_caller<13, T, D, BrdColReflect101>, 
                 linearColumnFilter_caller<14, T, D, BrdColReflect101>, 
                 linearColumnFilter_caller<15, T, D, BrdColReflect101>, 
-                linearColumnFilter_caller<16, T, D, BrdColReflect101>, 
+                linearColumnFilter_caller<16, T, D, BrdColReflect101> 
             },
             {
                 0, 
@@ -330,7 +368,7 @@ namespace cv { namespace gpu { namespace filters
                 linearColumnFilter_caller<13, T, D, BrdColReplicate>, 
                 linearColumnFilter_caller<14, T, D, BrdColReplicate>, 
                 linearColumnFilter_caller<15, T, D, BrdColReplicate>, 
-                linearColumnFilter_caller<16, T, D, BrdColReplicate>, 
+                linearColumnFilter_caller<16, T, D, BrdColReplicate>
             },
             {
                 0, 
@@ -349,7 +387,45 @@ namespace cv { namespace gpu { namespace filters
                 linearColumnFilter_caller<13, T, D, BrdColConstant>, 
                 linearColumnFilter_caller<14, T, D, BrdColConstant>, 
                 linearColumnFilter_caller<15, T, D, BrdColConstant>, 
-                linearColumnFilter_caller<16, T, D, BrdColConstant>, 
+                linearColumnFilter_caller<16, T, D, BrdColConstant> 
+            },
+            {
+                0, 
+                linearColumnFilter_caller<1 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<2 , T, D, BrdColReflect>,
+                linearColumnFilter_caller<3 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<4 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<5 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<6 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<7 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<8 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<9 , T, D, BrdColReflect>, 
+                linearColumnFilter_caller<10, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<11, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<12, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<13, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<14, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<15, T, D, BrdColReflect>, 
+                linearColumnFilter_caller<16, T, D, BrdColReflect>
+            },
+            {
+                0, 
+                linearColumnFilter_caller<1 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<2 , T, D, BrdColWrap>,
+                linearColumnFilter_caller<3 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<4 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<5 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<6 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<7 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<8 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<9 , T, D, BrdColWrap>, 
+                linearColumnFilter_caller<10, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<11, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<12, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<13, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<14, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<15, T, D, BrdColWrap>, 
+                linearColumnFilter_caller<16, T, D, BrdColWrap>,
             }
         };
         

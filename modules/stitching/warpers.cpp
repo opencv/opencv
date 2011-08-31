@@ -118,8 +118,14 @@ Point PlaneWarperGpu::warp(const Mat &src, float focal, const cv::Mat &R, cv::Ma
     gpu::buildWarpPlaneMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                             R, focal, projector_.scale, projector_.plane_dist, d_xmap_, d_ymap_);
 
-    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
-    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
+    d_src_.upload(src);
+
+    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
+
+    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
+
+    d_dst_.download(dst);
 
     return dst_tl;
 }
@@ -183,8 +189,14 @@ Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &d
     gpu::buildWarpSphericalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                                 R, focal, projector_.scale, d_xmap_, d_ymap_);
 
-    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
-    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
+    d_src_.upload(src);
+
+    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
+
+    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
+
+    d_dst_.download(dst);
 
     return dst_tl;
 }
@@ -204,8 +216,14 @@ Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat 
     gpu::buildWarpCylindricalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                                   R, focal, projector_.scale, d_xmap_, d_ymap_);
 
-    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
-    remap(src, dst, Mat(d_xmap_), Mat(d_ymap_), interp_mode, border_mode);
+    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
+    d_src_.upload(src);
+
+    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
+
+    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
+
+    d_dst_.download(dst);
 
     return dst_tl;
 }

@@ -122,7 +122,7 @@ public:
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
 
@@ -153,7 +153,7 @@ public:
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
 
@@ -186,7 +186,7 @@ public:
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_;
+    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
 #include "warpers_inl.hpp"
