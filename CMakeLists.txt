@@ -36,7 +36,11 @@ endif(NOT CMAKE_TOOLCHAIN_FILE)
 # --------------------------------------------------------------
 # Top level OpenCV project
 # --------------------------------------------------------------
-cmake_minimum_required(VERSION 2.6)
+if(NOT IOS)
+	cmake_minimum_required(VERSION 2.6)
+else()
+	cmake_minimum_required(VERSION 2.8)
+endif()
 project(OpenCV)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)

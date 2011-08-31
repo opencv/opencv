@@ -7,7 +7,7 @@ Required packages
 ==================
 
   * GCC 4.x or later
-  * CMake 2.6 or higher
+  * CMake 2.8 or higher
   * Xcode 4.0 or higher
 
 Getting the cutting-edge OpenCV from SourceForge SVN repository
