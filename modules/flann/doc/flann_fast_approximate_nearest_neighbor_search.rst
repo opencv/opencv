@@ -85,8 +85,27 @@ The method constructs a fast search structure from a set of features using the s
                     flann_centers_init_t centers_init = CENTERS_RANDOM,
                     float cb_index = 0.2 );
             };
-            
-        ..
+
+    *
+       **LshIndexParams** When using a parameters object of this type the index created uses multi-probe LSH (by ``Multi-Probe LSH: Efficient Indexing for High-Dimensional Similarity Search`` by Qin Lv, William Josephson, Zhe Wang, Moses Charikar, Kai Li., Proceedings of the 33rd International Conference on Very Large Data Bases (VLDB). Vienna, Austria. September 2007) ::
+    
+            struct LshIndexParams : public IndexParams
+            {
+                LshIndexParams(
+                    unsigned int table_number,
+                    unsigned int key_size,
+                    unsigned int multi_probe_level );
+            };
+    
+       ..
+    
+           * **table_number**  the number of hash tables to use (between 10 and 30 usually).
+
+
+           * **key_size**  the size of the hash key in bits (between 10 and 20 usually).
+
+
+           * **multi_probe_level**  the number of bits to shift to check for neighboring buckets (0 is regular LSH, 2 is recommended).
 
     *
        **AutotunedIndexParams** When passing an object of this type the index created is automatically tuned to offer  the best performance, by choosing the optimal index type (randomized kd-trees, hierarchical kmeans, linear) and parameters for the dataset provided. ::
