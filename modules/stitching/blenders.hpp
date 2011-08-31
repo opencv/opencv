@@ -109,10 +109,7 @@ void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
 
 void createLaplacePyr(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
 
-// TODO Use it after gpu::pyrDown and gpu::pyrUp are updated
-#if 0
 void createLaplacePyrGpu(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
-#endif
 
 // Restores source image
 void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
