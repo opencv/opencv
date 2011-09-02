@@ -16,13 +16,13 @@
 #     You need native port of make to build your project.
 #     For example this one: http://gnuwin32.sourceforge.net/packages/make.htm
 #
-#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r6
+#   $ SET ANDROID_NDK=C:\<absolute path to NDK>\android-ndk-r6b
 #   $ cmake.exe -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=<path to this file>\android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=C:\<absolute path to make>\make.exe ..
 #   $ C:\<absolute path to make>\make.exe
 #
 #
 #  Toolchain options (can be set as cmake parameters: -D<option_name>=<value>):
-#    ANDROID_NDK=/opt/android-ndk-r6 - path to NDK root.
+#    ANDROID_NDK=/opt/android-ndk-r6b - path to NDK root.
 #      Can be set as environment variable.
 #
 #    ANDROID_NDK_TOOLCHAIN_ROOT=/opt/android-toolchain - path to standalone toolchain.
@@ -99,6 +99,8 @@
 #     [~] fixed options caching
 #     [~] search for all supported NDK versions
 #     [~] allowed spaces in NDK path
+#   - modified September 2011 Andrey Kamaev andrey.kamaev@itseez.com
+#     [~] updated for NDK r6b
 # ----------------------------------------------------------------------------
 
 # this one is important
@@ -107,7 +109,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 set( CMAKE_SYSTEM_VERSION 1 )
 
 set( ANDROID_NDK_DEFAULT_SEARCH_PATH /opt/android-ndk )
-set( ANDROID_NDK_SUPPORTED_VERSIONS -r6 -r5c -r5b -r5 "")
+set( ANDROID_NDK_SUPPORTED_VERSIONS -r6b -r6 -r5c -r5b -r5 "")
 set( ANDROID_NDK_TOOLCHAIN_DEFAULT_SEARCH_PATH /opt/android-toolchain )
 set( TOOL_OS_SUFFIX "" )
 
