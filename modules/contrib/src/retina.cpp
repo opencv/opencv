@@ -77,19 +77,20 @@ namespace cv
     
 Retina::Retina(const std::string parametersSaveFile, const cv::Size inputSize)
 {
-	_retinaFilter = 0;
+    _retinaFilter = 0;
     _init(parametersSaveFile, inputSize, true, RETINA_COLOR_BAYER, false);
 }
 
 Retina::Retina(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     _retinaFilter = 0;
-	_init(parametersSaveFile, inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+    _init(parametersSaveFile, inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 };
     
 Retina::~Retina()
 {
-    delete _retinaFilter;
+    if (_retinaFilter)
+        delete _retinaFilter;
 }
 
 void Retina::setColorSaturation(const bool saturateColors, const float colorSaturationValue)
