@@ -214,9 +214,11 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 else// -> else allocate "classical" retina :
 			 retina = new cv::Retina("params.xml", inputImage.size());
 
+                 // desactivate Magnocellular pathway processing (motion information extraction) since it is not usefull here
+                 retina->activateMovingContoursProcessing(false);
+
 		 // declare retina output buffers
 		 cv::Mat retinaOutput_parvo;
-		 cv::Mat retinaOutput_magno;
 
 		 /////////////////////////////////////////////
 		 // prepare displays and interactions
@@ -253,10 +255,8 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 			 retina->run(imageInputRescaled);
 			 // Retrieve and display retina output
 			 retina->getParvo(retinaOutput_parvo);
-			 retina->getMagno(retinaOutput_magno);
 			 cv::imshow("Retina input image (with cut edges histogram for basic pixels error avoidance)", imageInputRescaled/255.0);
 			 cv::imshow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", retinaOutput_parvo);
-			 //cv::imshow("Retina Magno", retinaOutput_magno); // not usefull in this demo, uncomment if needed
 			 cv::waitKey(10);
 		 }
 	 }catch(cv::Exception e)
