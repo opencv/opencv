@@ -297,6 +297,9 @@ void Retina::getMagno(cv::Mat &retinaOutput_magno)
 	//retinaOutput_magno/=255.0;
 }
 
+// original API level data accessors
+void Retina::getMagno(std::valarray<float> &retinaOutput_magno){_retinaFilter->getMovingContours();}
+void Retina::getParvo(std::valarray<float> &retinaOutput_parvo){_retinaFilter->getContours();}
 
 // private method called by constructirs
 void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
@@ -312,7 +315,8 @@ void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSiz
 	_inputBuffer.resize(nbPixels*3); // buffer supports gray images but also 3 channels color buffers... (larger is better...)
 
 	// allocate the retina model
-    delete _retinaFilter;
+        if (_retinaFilter)
+           delete _retinaFilter;
 	_retinaFilter = new RetinaFilter(inputSize.height, inputSize.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
 	// prepare the parameter XML tree
@@ -423,6 +427,10 @@ const bool Retina::_convertCvMat2ValarrayBuffer(const cv::Mat inputMatToConvert,
 }
 
 void Retina::clearBuffers() {_retinaFilter->clearAllBuffers();}
+
+void Retina::activateMovingContoursProcessing(const bool activate){_retinaFilter->activateMovingContoursProcessing(activate);}
+
+void Retina::activateContoursProcessing(const bool activate){_retinaFilter->activateMovingContoursProcessing(activate);}
 
 } // end of namespace cv
 

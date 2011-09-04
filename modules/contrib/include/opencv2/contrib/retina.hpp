@@ -189,15 +189,27 @@ public:
 
 	/**
 	 * accessor of the details channel of the retina (models foveal vision)
-	 * @param retinaOutput_parvo : the output buffer (reallocated if necessary)
+	 * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
 	 */
 	void getParvo(Mat &retinaOutput_parvo);
 
 	/**
+	 * accessor of the details channel of the retina (models foveal vision)
+	 * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is the original retina filter model output, without any quantification or rescaling
+	 */
+	void getParvo(std::valarray<float> &retinaOutput_parvo);
+
+	/**
 	 * accessor of the motion channel of the retina (models peripheral vision)
-	 * @param retinaOutput_magno : the output buffer (reallocated if necessary)
+	 * @param retinaOutput_magno : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
 	 */
 	void getMagno(Mat &retinaOutput_magno);
+
+	/**
+	 * accessor of the motion channel of the retina (models peripheral vision)
+	 * @param retinaOutput_magno : the output buffer (reallocated if necessary), this output is the original retina filter model output, without any quantification or rescaling
+	 */
+	void getMagno(std::valarray<float> &retinaOutput_magno);
 
 	/**
 	 * activate color saturation as the final step of the color demultiplexing process
@@ -211,6 +223,18 @@ public:
 	 * clear all retina buffers (equivalent to opening the eyes after a long period of eye close ;o)
 	 */
 	void clearBuffers();
+
+        /**
+        * Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
+        * @param activate: true if Magnocellular output should be activated, false if not
+        */
+        void activateMovingContoursProcessing(const bool activate);
+
+        /**
+        * Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
+        * @param activate: true if Parvocellular (contours information extraction) output should be activated, false if not
+        */
+        void activateContoursProcessing(const bool activate);
 
 protected:
 	// Parameteres setup members
