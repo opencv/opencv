@@ -119,7 +119,7 @@ inline void CudaMem::create(Size _size, int _type, int _alloc_type) { create(_si
 //CCP void CudaMem::create(int _rows, int _cols, int _type, int _alloc_type);
 //CPP void CudaMem::release();
 
-inline Mat CudaMem::createMatHeader() const { return Mat(size(), type(), data); }
+inline Mat CudaMem::createMatHeader() const { return Mat(size(), type(), data, step); }
 inline CudaMem::operator Mat() const { return createMatHeader(); }
 
 inline CudaMem::operator GpuMat() const { return createGpuMatHeader(); }
