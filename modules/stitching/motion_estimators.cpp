@@ -370,7 +370,7 @@ void BundleAdjuster::calcJacobian()
 
 //////////////////////////////////////////////////////////////////////////////
 
-// TODO replace with eigen
+// TODO replace SVD with eigen
 void waveCorrect(vector<Mat> &rmats)
 {
     LOGLN("Wave correcting...");
@@ -527,7 +527,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
     LOG(indices_removed[0]+1);
     for (size_t i = 1; i < indices_removed.size(); ++i) 
         LOG(", " << indices_removed[i]+1);
-    LOGLN("). Try decrease --match_conf value.");
+    LOGLN("). Try to decrease --match_conf value.");
 
     features = features_subset;
     pairwise_matches = pairwise_matches_subset;
