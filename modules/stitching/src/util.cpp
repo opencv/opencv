@@ -39,10 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
+
+namespace cv
+{
 
 void DisjointSets::createOneElemSets(int n)
 {
@@ -161,3 +163,5 @@ void selectRandomSubset(int count, int size, vector<int> &subset)
         }
     }
 }
+
+} // namespace cv

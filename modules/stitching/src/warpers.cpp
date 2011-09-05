@@ -39,10 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "warpers.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
+
+namespace cv
+{
 
 Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
 {
@@ -227,3 +229,5 @@ Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat 
 
     return dst_tl;
 }
+
+} // namespace cv

@@ -39,14 +39,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#include "exposure_compensate.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 using namespace cv::gpu;
 
+namespace cv
+{
 
 Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
 {
@@ -243,3 +242,5 @@ void BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, const
         }
     }
 }
+
+} // namespace cv

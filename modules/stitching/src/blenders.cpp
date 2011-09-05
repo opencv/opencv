@@ -39,11 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "blenders.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
+
+namespace cv
+{
 
 static const float WEIGHT_EPS = 1e-5f;
 
@@ -147,7 +148,7 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
 void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 {
-    normalize(dst_weight_map_, dst_);
+    normalizeUsingWeightMap(dst_weight_map_, dst_);
     dst_mask_ = dst_weight_map_ > WEIGHT_EPS;
     Blender::blend(dst, dst_mask);
 }
@@ -281,7 +282,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 {
     for (int i = 0; i <= num_bands_; ++i)
-        normalize(dst_band_weights_[i], dst_pyr_laplace_[i]);
+        normalizeUsingWeightMap(dst_band_weights_[i], dst_pyr_laplace_[i]);
 
     restoreImageFromLaplacePyr(dst_pyr_laplace_);
 
@@ -299,7 +300,7 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void normalize(const Mat& weight, Mat& src)
+void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 {
     CV_Assert(weight.type() == CV_32F);
     CV_Assert(src.type() == CV_16SC3);
@@ -374,4 +375,4 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
     }
 }
 
-
+} // namespace cv

@@ -39,79 +39,87 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_UTIL_HPP__
-#define __OPENCV_STITCHING_UTIL_HPP__
+#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
+#define __OPENCV_STITCHING_UTIL_INL_HPP__
 
-#include <list>
-#include "precomp.hpp"
+#include <queue>
+#include "opencv2/core/core.hpp"
+#include "util.hpp" // Make your IDE see declarations
 
-#define ENABLE_LOG 1
-
-#if ENABLE_LOG
-  #include <iostream>
-  #define LOG(msg) { std::cout << msg; std::cout.flush(); }
-#else
-  #define LOG(msg)
-#endif
-
-#define LOGLN(msg) LOG(msg << std::endl)
-
-
-class DisjointSets
+namespace cv
 {
-public:
-    DisjointSets(int elem_count = 0) { createOneElemSets(elem_count); }
 
-    void createOneElemSets(int elem_count);
-    int findSetByElem(int elem);
-    int mergeSets(int set1, int set2);
-
-    std::vector<int> parent;
-    std::vector<int> size;
-
-private:
-    std::vector<int> rank_;
-};
-
-
-struct GraphEdge
+template <typename B>
+B Graph::forEach(B body) const
 {
-    GraphEdge(int from, int to, float weight) 
-        : from(from), to(to), weight(weight) {}
-    bool operator <(const GraphEdge& other) const { return weight < other.weight; }
-    bool operator >(const GraphEdge& other) const { return weight > other.weight; }
+    for (int i = 0; i < numVertices(); ++i)
+    {
+        std::list<GraphEdge>::const_iterator edge = edges_[i].begin();
+        for (; edge != edges_[i].end(); ++edge)
+            body(*edge);
+    }
+    return body;
+}
 
-    int from, to;
-    float weight;
-};
 
-
-class Graph
+template <typename B>
+B Graph::walkBreadthFirst(int from, B body) const
 {
-public:
-    Graph(int num_vertices = 0) { create(num_vertices); }
-    void create(int num_vertices) { edges_.assign(num_vertices, std::list<GraphEdge>()); }
-    int numVertices() const { return static_cast<int>(edges_.size()); }
-    void addEdge(int from, int to, float weight);
-    template <typename B> B forEach(B body) const;
-    template <typename B> B walkBreadthFirst(int from, B body) const;
-    
-private:
-    std::vector< std::list<GraphEdge> > edges_;
-};
+    std::vector<bool> was(numVertices(), false);
+    std::queue<int> vertices;
+
+    was[from] = true;
+    vertices.push(from);
+
+    while (!vertices.empty())
+    {
+        int vertex = vertices.front();
+        vertices.pop();
+
+        std::list<GraphEdge>::const_iterator edge = edges_[vertex].begin();
+        for (; edge != edges_[vertex].end(); ++edge)
+        {
+            if (!was[edge->to])
+            {
+                body(*edge);
+                was[edge->to] = true;
+                vertices.push(edge->to);
+            }
+        }
+    }
+
+    return body;
+}
 
 
 //////////////////////////////////////////////////////////////////////////////
-// Auxiliary functions
+// Some auxiliary math functions
 
-bool overlapRoi(cv::Point tl1, cv::Point tl2, cv::Size sz1, cv::Size sz2, cv::Rect &roi);
-cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images);
-cv::Rect resultRoi(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
-cv::Point resultTl(const std::vector<cv::Point> &corners);
+static inline
+float normL2(const Point3f& a)
+{
+    return a.x * a.x + a.y * a.y + a.z * a.z;
+}
 
-// Returns random 'count' element subset of the {0,1,...,size-1} set
-void selectRandomSubset(int count, int size, std::vector<int> &subset);
 
-#include "util_inl.hpp"
+static inline
+float normL2(const Point3f& a, const Point3f& b)
+{
+    return normL2(a - b);
+}
 
-#endif // __OPENCV_STITCHING_UTIL_HPP__
+
+static inline
+double normL2sq(const Mat &r)
+{
+    return r.dot(r);
+}
+
+
+static inline int sqr(int x) { return x * x; }
+static inline float sqr(float x) { return x * x; }
+static inline double sqr(double x) { return x * x; }
+
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_UTIL_INL_HPP__

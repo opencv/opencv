@@ -39,17 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <algorithm>
-#include <sstream>
-#include "autocalib.hpp"
-#include "motion_estimators.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 
-
-//////////////////////////////////////////////////////////////////////////////
+namespace cv
+{
 
 struct IncDistance
 {
@@ -605,3 +600,5 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
             centers.push_back(i);
     CV_Assert(centers.size() > 0 && centers.size() <= 2);
 }
+
+} // namespace cv

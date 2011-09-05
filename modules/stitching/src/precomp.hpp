@@ -39,60 +39,34 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_EXPOSURE_COMPENSATE_HPP__
-#define __OPENCV_EXPOSURE_COMPENSATE_HPP__
+#ifndef __OPENCV_STITCHING_PRECOMP_H__
+#define __OPENCV_STITCHING_PRECOMP_H__
 
-#include "precomp.hpp"
+#ifdef HAVE_CVCONFIG_H 
+#include "cvconfig.h"
+#endif
 
+#include <vector>
+#include <algorithm>
+#include <utility>
+#include <set>
+#include <functional>
+#include <sstream>
+#include "opencv2/stitching/autocalib.hpp"
+#include "opencv2/stitching/blenders.hpp"
+#include "opencv2/stitching/camera.hpp"
+#include "opencv2/stitching/exposure_compensate.hpp"
+#include "opencv2/stitching/matchers.hpp"
+#include "opencv2/stitching/motion_estimators.hpp"
+#include "opencv2/stitching/seam_finders.hpp"
+#include "opencv2/stitching/util.hpp"
+#include "opencv2/stitching/warpers.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/internal.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/gpu/gpu.hpp"
+#include "gcgraph.hpp"
 
-class ExposureCompensator
-{
-public:
-    enum { NO, GAIN, GAIN_BLOCKS };
-    static cv::Ptr<ExposureCompensator> createDefault(int type);
-
-    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-              const std::vector<cv::Mat> &masks);
-    virtual void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-                      const std::vector<std::pair<cv::Mat,uchar> > &masks) = 0;
-    virtual void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask) = 0;
-};
-
-
-class NoExposureCompensator : public ExposureCompensator
-{
-public:
-    void feed(const std::vector<cv::Point> &/*corners*/, const std::vector<cv::Mat> &/*images*/, 
-              const std::vector<std::pair<cv::Mat,uchar> > &/*masks*/) {};
-    void apply(int /*index*/, cv::Point /*corner*/, cv::Mat &/*image*/, const cv::Mat &/*mask*/) {};
-};
-
-
-class GainCompensator : public ExposureCompensator
-{
-public:
-    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-              const std::vector<std::pair<cv::Mat,uchar> > &masks);
-    void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
-    std::vector<double> gains() const;
-
-private:
-    cv::Mat_<double> gains_;
-};
-
-
-class BlocksGainCompensator : public ExposureCompensator
-{
-public:
-    BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 
-            : bl_width_(bl_width), bl_height_(bl_height) {}
-    void feed(const std::vector<cv::Point> &corners, const std::vector<cv::Mat> &images, 
-              const std::vector<std::pair<cv::Mat,uchar> > &masks);
-    void apply(int index, cv::Point corner, cv::Mat &image, const cv::Mat &mask);
-
-private:
-    int bl_width_, bl_height_;
-    std::vector<cv::Mat_<float> > gain_maps_;
-};
-
-#endif // __OPENCV_EXPOSURE_COMPENSATE_HPP__
+#endif

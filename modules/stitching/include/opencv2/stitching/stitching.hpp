@@ -7,11 +7,9 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
-//                For Open Source Computer Vision Library
+//                        Intel License Agreement
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -24,7 +22,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,21 +37,18 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_CAMERA_HPP__
-#define __OPENCV_CAMERA_HPP__
 
-#include "precomp.hpp"
+#ifndef __OPENCV_STITCHING_HPP__
+#define __OPENCV_STITCHING_HPP__
 
+#include "opencv2/stitching/autocalib.hpp"
+#include "opencv2/stitching/blenders.hpp"
+#include "opencv2/stitching/camera.hpp"
+#include "opencv2/stitching/exposure_compensate.hpp"
+#include "opencv2/stitching/matchers.hpp"
+#include "opencv2/stitching/motion_estimators.hpp"
+#include "opencv2/stitching/seam_finders.hpp"
+#include "opencv2/stitching/util.hpp"
+#include "opencv2/stitching/warpers.hpp"
 
-struct CameraParams
-{
-    CameraParams();
-    CameraParams(const CameraParams& other);
-    const CameraParams& operator =(const CameraParams& other);
-
-    double focal; // Focal length
-    cv::Mat R; // Rotation
-    cv::Mat t; // Translation
-};
-
-#endif // #ifndef __OPENCV_CAMERA_HPP__
+#endif // __OPENCV_STITCHING_HPP__

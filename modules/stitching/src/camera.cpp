@@ -1,9 +1,9 @@
-#include <fstream>
-#include "camera.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 
+namespace cv
+{
 
 CameraParams::CameraParams() : focal(1), R(Mat::eye(3, 3, CV_64F)), t(Mat::zeros(3, 1, CV_64F)) {}
 
@@ -16,3 +16,5 @@ const CameraParams& CameraParams::operator =(const CameraParams &other)
     t = other.t.clone();
     return *this;
 }
+
+} // namespace cv

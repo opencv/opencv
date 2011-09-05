@@ -39,13 +39,17 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_WARPERS_INL_HPP__
-#define __OPENCV_WARPERS_INL_HPP__
+#ifndef __OPENCV_STITCHING_WARPERS_INL_HPP__
+#define __OPENCV_STITCHING_WARPERS_INL_HPP__
 
+#include "opencv2/core/core.hpp"
 #include "warpers.hpp" // Make your IDE see declarations
 
+namespace cv
+{
+
 template <class P>
-cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+Point WarperBase<P>::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                               int interp_mode, int border_mode)
 {
     src_size_ = src.size();
@@ -54,11 +58,11 @@ cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R,
     projector_.focal = focal;
     projector_.setTransformation(R);
 
-    cv::Point dst_tl, dst_br;
+    Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
 
-    cv::Mat xmap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    cv::Mat ymap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    Mat xmap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    Mat ymap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
 
     float x, y;
     for (int v = dst_tl.y; v <= dst_br.y; ++v)
@@ -79,7 +83,7 @@ cv::Point WarperBase<P>::warp(const cv::Mat &src, float focal, const cv::Mat &R,
 
 
 template <class P>
-cv::Rect WarperBase<P>::warpRoi(const cv::Size &sz, float focal, const cv::Mat &R)
+Rect WarperBase<P>::warpRoi(const Size &sz, float focal, const Mat &R)
 {
     src_size_ = sz;
 
@@ -87,15 +91,15 @@ cv::Rect WarperBase<P>::warpRoi(const cv::Size &sz, float focal, const cv::Mat &
     projector_.focal = focal;
     projector_.setTransformation(R);
 
-    cv::Point dst_tl, dst_br;
+    Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
 
-    return cv::Rect(dst_tl, cv::Point(dst_br.x + 1, dst_br.y + 1));
+    return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
 }
 
 
 template <class P>
-void WarperBase<P>::detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br)
+void WarperBase<P>::detectResultRoi(Point &dst_tl, Point &dst_br)
 {
     float tl_uf = std::numeric_limits<float>::max();
     float tl_vf = std::numeric_limits<float>::max();
@@ -121,7 +125,7 @@ void WarperBase<P>::detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br)
 
 
 template <class P>
-void WarperBase<P>::detectResultRoiByBorder(cv::Point &dst_tl, cv::Point &dst_br)
+void WarperBase<P>::detectResultRoiByBorder(Point &dst_tl, Point &dst_br)
 {
     float tl_uf = std::numeric_limits<float>::max();
     float tl_vf = std::numeric_limits<float>::max();
@@ -252,4 +256,6 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     y = focal * y / z + size.height * 0.5f;
 }
 
-#endif // __OPENCV_WARPERS_INL_HPP__
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_WARPERS_INL_HPP__

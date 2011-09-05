@@ -39,11 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "autocalib.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
+
+namespace cv
+{
 
 void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, bool &f1_ok)
 {
@@ -59,8 +60,8 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     d2 = (h[7] - h[6]) * (h[7] + h[6]);
     v1 = -(h[0] * h[1] + h[3] * h[4]) / d1;
     v2 = (h[0] * h[0] + h[3] * h[3] - h[1] * h[1] - h[4] * h[4]) / d2;
-    if (v1 < v2) swap(v1, v2);
-    if (v1 > 0 && v2 > 0) f1 = sqrt(abs(d1) > abs(d2) ? v1 : v2);
+    if (v1 < v2) std::swap(v1, v2);
+    if (v1 > 0 && v2 > 0) f1 = sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
     else if (v1 > 0) f1 = sqrt(v1);
     else f1_ok = false;
 
@@ -69,8 +70,8 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     d2 = h[0] * h[0] + h[1] * h[1] - h[3] * h[3] - h[4] * h[4];
     v1 = -h[2] * h[5] / d1;
     v2 = (h[5] * h[5] - h[2] * h[2]) / d2;
-    if (v1 < v2) swap(v1, v2);
-    if (v1 > 0 && v2 > 0) f0 = sqrt(abs(d1) > abs(d2) ? v1 : v2);
+    if (v1 < v2) std::swap(v1, v2);
+    if (v1 > 0 && v2 > 0) f0 = sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
     else if (v1 > 0) f0 = sqrt(v1);
     else f0_ok = false;
 }
@@ -182,3 +183,5 @@ bool calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
     K = W.t();
     return true;
 }
+
+} // namespace cv

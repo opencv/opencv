@@ -39,17 +39,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <algorithm>
-#include <functional>
-#include "matchers.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 using namespace cv::gpu;
 
-
-//////////////////////////////////////////////////////////////////////////////
+namespace cv
+{
 
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features) 
 { 
@@ -58,10 +54,13 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
     //features.img = image.clone();
 }
 
-//////////////////////////////////////////////////////////////////////////////
+} // namespace cv
+
 
 namespace
 {
+    using namespace cv;
+
     class CpuSurfFeaturesFinder : public FeaturesFinder
     {
     public:
@@ -153,8 +152,11 @@ namespace
         keypoints_.release();
         descriptors_.release();
     }
-} // anonymous namespace
+} // namespace
 
+
+namespace cv
+{
 
 SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers, 
                                        int num_octaves_descr, int num_layers_descr)
@@ -240,8 +242,8 @@ struct MatchPairsBody
                 pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
 
             for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
-                swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
-                     pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+                std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
+                          pairwise_matches[dual_pair_idx].matches[j].trainIdx);
             LOG(".");
         }
     }
@@ -457,7 +459,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 
     // Find pair-wise motion
     matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, CV_RANSAC);
-    if (abs(determinant(matches_info.H)) < numeric_limits<double>::epsilon())
+    if (std::abs(determinant(matches_info.H)) < numeric_limits<double>::epsilon())
         return;
 
     // Find number of inliers
@@ -504,3 +506,5 @@ void BestOf2NearestMatcher::releaseMemory()
 {
     impl_->releaseMemory();
 }
+
+} // namespace cv

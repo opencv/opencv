@@ -39,12 +39,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "seam_finders.hpp"
-#include "util.hpp"
+#include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 
+namespace cv
+{
 
 Ptr<SeamFinder> SeamFinder::createDefault(int type)
 {
@@ -405,3 +405,5 @@ void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
 {
     impl_->find(src, corners, masks);
 }
+
+} // namespace cv

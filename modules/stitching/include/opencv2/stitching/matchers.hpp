@@ -39,10 +39,14 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_MATCHERS_HPP__
-#define __OPENCV_MATCHERS_HPP__
+#ifndef __OPENCV_STITCHING_MATCHERS_HPP__
+#define __OPENCV_STITCHING_MATCHERS_HPP__
 
-#include "precomp.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
+
+namespace cv
+{
 
 struct ImageFeatures
 {
@@ -136,4 +140,6 @@ protected:
     cv::Ptr<FeaturesMatcher> impl_;
 };
 
-#endif // __OPENCV_MATCHERS_HPP__
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_MATCHERS_HPP__

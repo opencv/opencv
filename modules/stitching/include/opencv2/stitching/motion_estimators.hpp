@@ -39,13 +39,16 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_MOTION_ESTIMATORS_HPP__
-#define __OPENCV_MOTION_ESTIMATORS_HPP__
+#ifndef __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__
+#define __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__
 
-#include "precomp.hpp"
+#include "opencv2/core/core.hpp"
 #include "matchers.hpp"
 #include "util.hpp"
 #include "camera.hpp"
+
+namespace cv
+{
 
 class Estimator
 {
@@ -88,24 +91,24 @@ private:
     void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
                   std::vector<CameraParams> &cameras);
 
-    void calcError(cv::Mat &err);
+    void calcError(Mat &err);
     void calcJacobian();
 
     int num_images_;
     int total_num_matches_;
     const ImageFeatures *features_;
     const MatchesInfo *pairwise_matches_;
-    cv::Mat cameras_;
+    Mat cameras_;
     std::vector<std::pair<int,int> > edges_;
 
     int cost_space_;
     float conf_thresh_;
-    cv::Mat err_, err1_, err2_;
-    cv::Mat J_;
+    Mat err_, err1_, err2_;
+    Mat J_;
 };
 
 
-void waveCorrect(std::vector<cv::Mat> &rmats);
+void waveCorrect(std::vector<Mat> &rmats);
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -121,4 +124,6 @@ std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features, std
 void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
                          Graph &span_tree, std::vector<int> &centers);
 
-#endif // __OPENCV_MOTION_ESTIMATORS_HPP__
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__

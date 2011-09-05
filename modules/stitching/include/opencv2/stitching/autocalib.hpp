@@ -39,25 +39,24 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_PRECOMP_H__
-#define __OPENCV_STITCHING_PRECOMP_H__
+#ifndef __OPENCV_STITCHING_AUTOCALIB_HPP__
+#define __OPENCV_STITCHING_AUTOCALIB_HPP__
 
-#ifdef HAVE_CVCONFIG_H 
-#include "cvconfig.h"
-#endif
-
-#include <vector>
-#include <algorithm>
-#include <utility>
-#include <set>
-#include <functional>
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "gcgraph.hpp"
+#include "matchers.hpp"
 
-#endif
+namespace cv
+{
+
+// See "Construction of Panoramic Image Mosaics with Global and Local Alignment"
+// by Heung-Yeung Shum and Richard Szeliski.
+void focalsFromHomography(const Mat &H, double &f0, double &f1, bool &f0_ok, bool &f1_ok);
+
+void estimateFocal(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
+                   std::vector<double> &focals);
+
+bool calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K);
+
+} // namespace cv
+
+#endif // __OPENCV_STITCHING_AUTOCALIB_HPP__

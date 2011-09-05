@@ -39,79 +39,70 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_BLENDERS_HPP__
-#define __OPENCV_BLENDERS_HPP__
+#ifndef __OPENCV_STITCHING_SEAM_FINDERS_HPP__
+#define __OPENCV_STITCHING_SEAM_FINDERS_HPP__
 
-#include "precomp.hpp"
+#include "opencv2/core/core.hpp"
 
-// Simple blender which puts one image over another
-class Blender
+namespace cv
+{
+
+class SeamFinder
 {
 public:
-    enum { NO, FEATHER, MULTI_BAND };
-    static cv::Ptr<Blender> createDefault(int type, bool try_gpu = false);
+    enum { NO, VORONOI, GC_COLOR, GC_COLOR_GRAD };
+    static Ptr<SeamFinder> createDefault(int type);
 
-    void prepare(const std::vector<cv::Point> &corners, const std::vector<cv::Size> &sizes);
-    virtual void prepare(cv::Rect dst_roi);
-    virtual void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
-    virtual void blend(cv::Mat &dst, cv::Mat &dst_mask);
+    virtual ~SeamFinder() {}
+    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                      std::vector<Mat> &masks) = 0;
+};
+
+
+class NoSeamFinder : public SeamFinder
+{
+public:
+    void find(const std::vector<Mat>&, const std::vector<Point>&, std::vector<Mat>&) {}
+};
+
+
+class PairwiseSeamFinder : public SeamFinder
+{
+public:
+    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                      std::vector<Mat> &masks);
 
 protected:
-    cv::Mat dst_, dst_mask_;
-    cv::Rect dst_roi_;
+    virtual void findInPair(size_t first, size_t second, Rect roi) = 0;
+
+    std::vector<Mat> images_;
+    std::vector<Point> corners_;
+    std::vector<Mat> masks_;
 };
 
 
-class FeatherBlender : public Blender
+class VoronoiSeamFinder : public PairwiseSeamFinder
+{
+private:
+    void findInPair(size_t first, size_t second, Rect roi);
+};
+
+
+class GraphCutSeamFinder : public SeamFinder
 {
 public:
-    FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
-    float sharpness() const { return sharpness_; }
-    void setSharpness(float val) { sharpness_ = val; }
+    enum { COST_COLOR, COST_COLOR_GRAD };
+    GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
+                       float bad_region_penalty = 1000.f);
 
-    void prepare(cv::Rect dst_roi);
-    void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
-    void blend(cv::Mat &dst, cv::Mat &dst_mask);
-
-private:
-    float sharpness_;
-    cv::Mat weight_map_;
-    cv::Mat dst_weight_map_;
-};
-
-
-class MultiBandBlender : public Blender
-{
-public:
-    MultiBandBlender(int try_gpu = false, int num_bands = 5);
-    int numBands() const { return actual_num_bands_; }
-    void setNumBands(int val) { actual_num_bands_ = val; }
-
-    void prepare(cv::Rect dst_roi);
-    void feed(const cv::Mat &img, const cv::Mat &mask, cv::Point tl);
-    void blend(cv::Mat &dst, cv::Mat &dst_mask);
+    void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+              std::vector<Mat> &masks);
 
 private:
-    int actual_num_bands_, num_bands_;
-    std::vector<cv::Mat> dst_pyr_laplace_;
-    std::vector<cv::Mat> dst_band_weights_;
-    cv::Rect dst_roi_final_;
-    bool can_use_gpu_;
+    class Impl;
+    Ptr<Impl> impl_;
 };
 
+} // namespace cv
 
-//////////////////////////////////////////////////////////////////////////////
-// Auxiliary functions
-
-void normalize(const cv::Mat& weight, cv::Mat& src);
-
-void createWeightMap(const cv::Mat& mask, float sharpness, cv::Mat& weight);
-
-void createLaplacePyr(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
-
-void createLaplacePyrGpu(const cv::Mat &img, int num_levels, std::vector<cv::Mat>& pyr);
-
-// Restores source image
-void restoreImageFromLaplacePyr(std::vector<cv::Mat>& pyr);
-
-#endif // __OPENCV_BLENDERS_HPP__
+#endif // __OPENCV_STITCHING_SEAM_FINDERS_HPP__

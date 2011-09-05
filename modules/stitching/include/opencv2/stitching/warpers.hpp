@@ -39,29 +39,34 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_WARPERS_HPP__
-#define __OPENCV_WARPERS_HPP__
+#ifndef __OPENCV_STITCHING_WARPERS_HPP__
+#define __OPENCV_STITCHING_WARPERS_HPP__
 
-#include "precomp.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/gpu/gpu.hpp"
+
+namespace cv
+{
 
 class Warper
 {
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
-    static cv::Ptr<Warper> createByCameraFocal(float focal, int type, bool try_gpu = false);
+    static Ptr<Warper> createByCameraFocal(float focal, int type, bool try_gpu = false);
 
     virtual ~Warper() {}
-    virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat& R, cv::Mat &dst,
-                           int interp_mode = cv::INTER_LINEAR, int border_mode = cv::BORDER_REFLECT) = 0;
-    virtual cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R) = 0;
+    virtual Point warp(const Mat &src, float focal, const Mat& R, Mat &dst,
+                           int interp_mode = INTER_LINEAR, int border_mode = BORDER_REFLECT) = 0;
+    virtual Rect warpRoi(const Size &sz, float focal, const Mat &R) = 0;
 };
 
 
 struct ProjectorBase
 {
-    void setTransformation(const cv::Mat& R);
+    void setTransformation(const Mat& R);
 
-    cv::Size size;
+    Size size;
     float focal;
     float r[9];
     float rinv[9];
@@ -73,20 +78,20 @@ template <class P>
 class WarperBase : public Warper
 {   
 public:
-    virtual cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+    virtual Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                            int interp_mode, int border_mode);
 
-    virtual cv::Rect warpRoi(const cv::Size &sz, float focal, const cv::Mat &R);
+    virtual Rect warpRoi(const Size &sz, float focal, const Mat &R);
 
 protected:
     // Detects ROI of the destination image. It's correct for any projection.
-    virtual void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
+    virtual void detectResultRoi(Point &dst_tl, Point &dst_br);
 
     // Detects ROI of the destination image by walking over image border.
     // Correctness for any projection isn't guaranteed.
-    void detectResultRoiByBorder(cv::Point &dst_tl, cv::Point &dst_br);
+    void detectResultRoiByBorder(Point &dst_tl, Point &dst_br);
 
-    cv::Size src_size_;
+    Size src_size_;
     P projector_;
 };
 
@@ -110,7 +115,7 @@ public:
     }
 
 protected:
-    void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
+    void detectResultRoi(Point &dst_tl, Point &dst_br);
 };
 
 
@@ -118,11 +123,11 @@ class PlaneWarperGpu : public PlaneWarper
 {
 public:
     PlaneWarperGpu(float plane_dist = 1.f, float scale = 1.f) : PlaneWarper(plane_dist, scale) {}
-    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
+    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
 
@@ -141,7 +146,7 @@ public:
     SphericalWarper(float scale = 300.f) { projector_.scale = scale; }
 
 protected:
-    void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br);
+    void detectResultRoi(Point &dst_tl, Point &dst_br);
 };
 
 
@@ -149,11 +154,11 @@ class SphericalWarperGpu : public SphericalWarper
 {
 public:
     SphericalWarperGpu(float scale = 300.f) : SphericalWarper(scale) {}
-    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
+    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
 
@@ -171,7 +176,7 @@ public:
     CylindricalWarper(float scale = 300.f) { projector_.scale = scale; }
 
 protected:
-    void detectResultRoi(cv::Point &dst_tl, cv::Point &dst_br)
+    void detectResultRoi(Point &dst_tl, Point &dst_br)
     {
         WarperBase<CylindricalProjector>::detectResultRoiByBorder(dst_tl, dst_br);
     }
@@ -182,13 +187,15 @@ class CylindricalWarperGpu : public CylindricalWarper
 {
 public:
     CylindricalWarperGpu(float scale = 300.f) : CylindricalWarper(scale) {}
-    cv::Point warp(const cv::Mat &src, float focal, const cv::Mat &R, cv::Mat &dst,
+    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                    int interp_mode, int border_mode);
 
 private:
-    cv::gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
+    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
+
+} // namespace cv
 
 #include "warpers_inl.hpp"
 
-#endif // __OPENCV_WARPERS_HPP__
+#endif // __OPENCV_STITCHING_WARPERS_HPP__
