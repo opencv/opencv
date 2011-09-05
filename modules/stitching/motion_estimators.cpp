@@ -370,6 +370,7 @@ void BundleAdjuster::calcJacobian()
 
 //////////////////////////////////////////////////////////////////////////////
 
+// TODO replace with eigen
 void waveCorrect(vector<Mat> &rmats)
 {
     LOGLN("Wave correcting...");
