@@ -1782,6 +1782,7 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
 {
     using namespace cv::gpu::canny;
 
+    CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(src.type() == CV_8UC1);
 
     if( low_thresh > high_thresh )
@@ -1820,6 +1821,7 @@ void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& d
 {
     using namespace cv::gpu::canny;
 
+    CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
     CV_Assert(dx.type() == CV_32SC1 && dy.type() == CV_32SC1 && dx.size() == dy.size());
 
     if( low_thresh > high_thresh )

@@ -618,7 +618,7 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
         }
     };
 
-    CV_Assert(DeviceInfo().supports(GLOBAL_ATOMICS));
+    CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
 
     const int nQuery = queryDescs.rows;
     const int nTrain = trainDescs.rows;
