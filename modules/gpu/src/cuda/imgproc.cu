@@ -77,8 +77,8 @@ namespace cv { namespace gpu { namespace imgproc
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
             B<work_type> brd(src.rows, src.cols, VecTraits<work_type>::make(borderValue));
-            BorderReader< PtrStep_<T>, B<work_type> > brd_src(src, brd);
-            Filter< BorderReader< PtrStep_<T>, B<work_type> > > filter_src(brd_src);
+            BorderReader< PtrStep_<T>, B<work_type> > brdSrc(src, brd);
+            Filter< BorderReader< PtrStep_<T>, B<work_type> > > filter_src(brdSrc);
 
             remap<<<grid, block>>>(filter_src, mapx, mapy, dst);
             cudaSafeCall( cudaGetLastError() );
@@ -98,6 +98,23 @@ namespace cv { namespace gpu { namespace imgproc
             return tex2D(tex_remap_ ## type , x, y); \
         } \
     }; \
+    template <template <typename> class Filter, template <typename> class B> struct RemapDispatcherNonStream<Filter, B, type> \
+    { \
+        static void call(const DevMem2D_< type >& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_< type >& dst, const float* borderValue) \
+        { \
+            typedef typename TypeVec<float, VecTraits< type >::cn>::vec_type work_type; \
+            dim3 block(32, 8); \
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
+            TextureBinder texHandler(&tex_remap_ ## type , src); \
+            tex_remap_ ## type ##_reader texSrc; \
+            B<work_type> brd(src.rows, src.cols, VecTraits<work_type>::make(borderValue)); \
+            BorderReader< tex_remap_ ## type ##_reader, B<work_type> > brdSrc(texSrc, brd); \
+            Filter< BorderReader< tex_remap_ ## type ##_reader, B<work_type> > > filter_src(brdSrc); \
+            remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
+            cudaSafeCall( cudaGetLastError() ); \
+            cudaSafeCall( cudaDeviceSynchronize() ); \
+        } \
+    }; \
     template <template <typename> class Filter> struct RemapDispatcherNonStream<Filter, BrdReplicate, type> \
     { \
         static void call(const DevMem2D_< type >& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_< type >& dst, const float*) \
@@ -106,7 +123,7 @@ namespace cv { namespace gpu { namespace imgproc
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
             TextureBinder texHandler(&tex_remap_ ## type , src); \
             tex_remap_ ## type ##_reader texSrc; \
-            Filter<tex_remap_ ## type ##_reader> filter_src(texSrc); \
+            Filter< tex_remap_ ## type ##_reader > filter_src(texSrc); \
             remap<<<grid, block>>>(filter_src, mapx, mapy, dst); \
             cudaSafeCall( cudaGetLastError() ); \
             cudaSafeCall( cudaDeviceSynchronize() ); \
