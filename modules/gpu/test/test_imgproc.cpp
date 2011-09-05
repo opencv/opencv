@@ -272,8 +272,8 @@ INSTANTIATE_TEST_CASE_P
             CV_8UC1, CV_8UC3, CV_8UC4,
             CV_32FC1, CV_32FC3, CV_32FC4
         ),
-        testing::Values(cv::INTER_NEAREST, cv::INTER_LINEAR),
-        testing::Values(cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
+        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
+        testing::Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP)
     )
 );
                         

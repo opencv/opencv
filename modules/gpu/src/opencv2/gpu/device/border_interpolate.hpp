@@ -45,6 +45,7 @@
 
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
+#include "vec_math.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
