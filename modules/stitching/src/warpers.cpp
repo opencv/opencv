@@ -42,11 +42,9 @@
 #include "precomp.hpp"
 
 using namespace std;
+using namespace cv;
 
-namespace cv
-{
-
-Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
+Ptr<Warper> cv::Warper::createByCameraFocal(float focal, int type, bool try_gpu)
 {
     bool can_use_gpu = try_gpu && gpu::getCudaEnabledDeviceCount();
     if (type == PLANE)
@@ -60,7 +58,7 @@ Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
 }
 
 
-void ProjectorBase::setTransformation(const Mat &R)
+void cv::ProjectorBase::setTransformation(const Mat &R)
 {
     CV_Assert(R.size() == Size(3, 3));
     CV_Assert(R.type() == CV_32F);
@@ -75,7 +73,7 @@ void ProjectorBase::setTransformation(const Mat &R)
 }
 
 
-void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
+void cv::PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 {
     float tl_uf = numeric_limits<float>::max();
     float tl_vf = numeric_limits<float>::max();
@@ -107,7 +105,7 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 }
 
 
-Point PlaneWarperGpu::warp(const Mat &src, float focal, const cv::Mat &R, cv::Mat &dst, int interp_mode, int border_mode)
+Point cv::PlaneWarperGpu::warp(const Mat &src, float focal, const cv::Mat &R, cv::Mat &dst, int interp_mode, int border_mode)
 {
     src_size_ = src.size();
     projector_.size = src.size();
@@ -133,7 +131,7 @@ Point PlaneWarperGpu::warp(const Mat &src, float focal, const cv::Mat &R, cv::Ma
 }
 
 
-void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
+void cv::SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 {
     detectResultRoiByBorder(dst_tl, dst_br);
 
@@ -177,8 +175,8 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 }
 
 
-Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                               int interp_mode, int border_mode)
+Point cv::SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+                                   int interp_mode, int border_mode)
 {
     src_size_ = src.size();
     projector_.size = src.size();
@@ -204,8 +202,8 @@ Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &d
 }
 
 
-Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                                 int interp_mode, int border_mode)
+Point cv::CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+                                     int interp_mode, int border_mode)
 {
     src_size_ = src.size();
     projector_.size = src.size();
@@ -230,4 +228,3 @@ Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat 
     return dst_tl;
 }
 
-} // namespace cv

@@ -42,25 +42,19 @@
 #include "precomp.hpp"
 
 using namespace std;
+using namespace cv;
 using namespace cv::gpu;
 
-namespace cv
-{
-
-void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features) 
+void cv::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 { 
     find(image, features);
     features.img_size = image.size();
     //features.img = image.clone();
 }
 
-} // namespace cv
-
 
 namespace
 {
-    using namespace cv;
-
     class CpuSurfFeaturesFinder : public FeaturesFinder
     {
     public:
@@ -155,10 +149,7 @@ namespace
 } // namespace
 
 
-namespace cv
-{
-
-SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers, 
+cv::SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
@@ -168,12 +159,12 @@ SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int
 }
 
 
-void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+void cv::SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     (*impl_)(image, features);
 }
 
-void SurfFeaturesFinder::releaseMemory()
+void cv::SurfFeaturesFinder::releaseMemory()
 {
     impl_->releaseMemory();
 }
@@ -181,11 +172,11 @@ void SurfFeaturesFinder::releaseMemory()
 
 //////////////////////////////////////////////////////////////////////////////
 
-MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), confidence(0) {}
+cv::MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), confidence(0) {}
 
-MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
+cv::MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
 
-const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
+const cv::MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 {
     src_img_idx = other.src_img_idx;
     dst_img_idx = other.dst_img_idx;
@@ -200,65 +191,69 @@ const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct DistIdxPair
+namespace
 {
-    bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
-    double dist;
-    int idx;
-};
 
-
-struct MatchPairsBody
-{
-    MatchPairsBody(const MatchPairsBody& other)
-            : matcher(other.matcher), features(other.features), 
-              pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
-
-    MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features, 
-                   vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
-            : matcher(matcher), features(features), 
-              pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
-
-    void operator ()(const BlockedRange &r) const 
+    struct DistIdxPair
     {
-        const int num_images = static_cast<int>(features.size());
-        for (int i = r.begin(); i < r.end(); ++i)
+        bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
+        double dist;
+        int idx;
+    };
+
+
+    struct MatchPairsBody
+    {
+        MatchPairsBody(const MatchPairsBody& other)
+                : matcher(other.matcher), features(other.features),
+                  pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
+
+        MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features,
+                       vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
+                : matcher(matcher), features(features),
+                  pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
+
+        void operator ()(const BlockedRange &r) const
         {
-            int from = near_pairs[i].first;
-            int to = near_pairs[i].second;
-            int pair_idx = from*num_images + to;
+            const int num_images = static_cast<int>(features.size());
+            for (int i = r.begin(); i < r.end(); ++i)
+            {
+                int from = near_pairs[i].first;
+                int to = near_pairs[i].second;
+                int pair_idx = from*num_images + to;
 
-            matcher(features[from], features[to], pairwise_matches[pair_idx]);
-            pairwise_matches[pair_idx].src_img_idx = from;
-            pairwise_matches[pair_idx].dst_img_idx = to;
+                matcher(features[from], features[to], pairwise_matches[pair_idx]);
+                pairwise_matches[pair_idx].src_img_idx = from;
+                pairwise_matches[pair_idx].dst_img_idx = to;
 
-            size_t dual_pair_idx = to*num_images + from;
+                size_t dual_pair_idx = to*num_images + from;
 
-            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
-            pairwise_matches[dual_pair_idx].src_img_idx = to;
-            pairwise_matches[dual_pair_idx].dst_img_idx = from;
+                pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
+                pairwise_matches[dual_pair_idx].src_img_idx = to;
+                pairwise_matches[dual_pair_idx].dst_img_idx = from;
 
-            if (!pairwise_matches[pair_idx].H.empty())
-                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
+                if (!pairwise_matches[pair_idx].H.empty())
+                    pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
 
-            for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
-                std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
-                          pairwise_matches[dual_pair_idx].matches[j].trainIdx);
-            LOG(".");
+                for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
+                    std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
+                              pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+                LOG(".");
+            }
         }
-    }
 
-    FeaturesMatcher &matcher;
-    const vector<ImageFeatures> &features;
-    vector<MatchesInfo> &pairwise_matches;
-    vector<pair<int,int> > &near_pairs;
+        FeaturesMatcher &matcher;
+        const vector<ImageFeatures> &features;
+        vector<MatchesInfo> &pairwise_matches;
+        vector<pair<int,int> > &near_pairs;
 
-private:
-    void operator =(const MatchPairsBody&);
-};
+    private:
+        void operator =(const MatchPairsBody&);
+    };
+} // namespace
 
 
-void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+void cv::FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
     const int num_images = static_cast<int>(features.size());
 
@@ -408,10 +403,10 @@ namespace
         vector< vector<DMatch> >().swap(pair_matches);
     }
 
-} // anonymous namespace
+} // namespace
 
 
-BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+cv::BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
@@ -424,7 +419,7 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 }
 
 
-void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
+void cv::BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
                                   MatchesInfo &matches_info)
 {
     (*impl_)(features1, features2, matches_info);
@@ -502,9 +497,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
 }
 
-void BestOf2NearestMatcher::releaseMemory()
+void cv::BestOf2NearestMatcher::releaseMemory()
 {
     impl_->releaseMemory();
 }
-
-} // namespace cv

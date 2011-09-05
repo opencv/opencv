@@ -42,11 +42,9 @@
 #include "precomp.hpp"
 
 using namespace std;
+using namespace cv;
 
-namespace cv
-{
-
-void DisjointSets::createOneElemSets(int n)
+void cv::DisjointSets::createOneElemSets(int n)
 {
     rank_.assign(n, 0);
     size.assign(n, 1);
@@ -56,7 +54,7 @@ void DisjointSets::createOneElemSets(int n)
 }
 
 
-int DisjointSets::findSetByElem(int elem)
+int cv::DisjointSets::findSetByElem(int elem)
 {
     int set = elem;
     while (set != parent[set])
@@ -72,7 +70,7 @@ int DisjointSets::findSetByElem(int elem)
 }
 
 
-int DisjointSets::mergeSets(int set1, int set2)
+int cv::DisjointSets::mergeSets(int set1, int set2)
 {
     if (rank_[set1] < rank_[set2]) 
     {
@@ -93,13 +91,13 @@ int DisjointSets::mergeSets(int set1, int set2)
 }
 
 
-void Graph::addEdge(int from, int to, float weight)
+void cv::Graph::addEdge(int from, int to, float weight)
 {
     edges_[from].push_back(GraphEdge(from, to, weight));
 }
 
 
-bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
+bool cv::overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 {
     int x_tl = max(tl1.x, tl2.x);
     int y_tl = max(tl1.y, tl2.y);
@@ -114,7 +112,7 @@ bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 }
 
 
-Rect resultRoi(const vector<Point> &corners, const vector<Mat> &images)
+Rect cv::resultRoi(const vector<Point> &corners, const vector<Mat> &images)
 {
     vector<Size> sizes(images.size());
     for (size_t i = 0; i < images.size(); ++i)
@@ -123,7 +121,7 @@ Rect resultRoi(const vector<Point> &corners, const vector<Mat> &images)
 }
 
 
-Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
+Rect cv::resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
 {
     CV_Assert(sizes.size() == corners.size());
     Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
@@ -139,7 +137,7 @@ Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
 }
 
 
-Point resultTl(const vector<Point> &corners)
+Point cv::resultTl(const vector<Point> &corners)
 {
     Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
     for (size_t i = 0; i < corners.size(); ++i)
@@ -151,7 +149,7 @@ Point resultTl(const vector<Point> &corners)
 }
 
 
-void selectRandomSubset(int count, int size, vector<int> &subset)
+void cv::selectRandomSubset(int count, int size, vector<int> &subset)
 {
     subset.clear();
     for (int i = 0; i < size; ++i)
@@ -163,5 +161,3 @@ void selectRandomSubset(int count, int size, vector<int> &subset)
         }
     }
 }
-
-} // namespace cv

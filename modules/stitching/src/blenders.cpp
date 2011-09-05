@@ -42,13 +42,11 @@
 #include "precomp.hpp"
 
 using namespace std;
-
-namespace cv
-{
+using namespace cv;
 
 static const float WEIGHT_EPS = 1e-5f;
 
-Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
+Ptr<Blender> cv::Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
         return new Blender();
@@ -61,13 +59,13 @@ Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 }
 
 
-void Blender::prepare(const vector<Point> &corners, const vector<Size> &sizes)
+void cv::Blender::prepare(const vector<Point> &corners, const vector<Size> &sizes)
 {
     prepare(resultRoi(corners, sizes));
 }
 
 
-void Blender::prepare(Rect dst_roi)
+void cv::Blender::prepare(Rect dst_roi)
 {
     dst_.create(dst_roi.size(), CV_16SC3);
     dst_.setTo(Scalar::all(0));
@@ -77,7 +75,7 @@ void Blender::prepare(Rect dst_roi)
 }
 
 
-void Blender::feed(const Mat &img, const Mat &mask, Point tl) 
+void cv::Blender::feed(const Mat &img, const Mat &mask, Point tl)
 {
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
@@ -101,7 +99,7 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void Blender::blend(Mat &dst, Mat &dst_mask)
+void cv::Blender::blend(Mat &dst, Mat &dst_mask)
 {
     dst_.setTo(Scalar::all(0), dst_mask_ == 0);
     dst = dst_;
@@ -111,7 +109,7 @@ void Blender::blend(Mat &dst, Mat &dst_mask)
 }
 
 
-void FeatherBlender::prepare(Rect dst_roi)
+void cv::FeatherBlender::prepare(Rect dst_roi)
 {
     Blender::prepare(dst_roi);
     dst_weight_map_.create(dst_roi.size(), CV_32F);
@@ -119,7 +117,7 @@ void FeatherBlender::prepare(Rect dst_roi)
 }
 
 
-void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
+void cv::FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 {
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
@@ -146,7 +144,7 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
+void cv::FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 {
     normalizeUsingWeightMap(dst_weight_map_, dst_);
     dst_mask_ = dst_weight_map_ > WEIGHT_EPS;
@@ -154,14 +152,14 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 }
 
 
-MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
+cv::MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
 {
     setNumBands(num_bands);
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 }
 
 
-void MultiBandBlender::prepare(Rect dst_roi)
+void cv::MultiBandBlender::prepare(Rect dst_roi)
 {
     dst_roi_final_ = dst_roi;
 
@@ -194,7 +192,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
 }
 
 
-void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
+void cv::MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 {
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
@@ -279,7 +277,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
+void cv::MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 {
     for (int i = 0; i <= num_bands_; ++i)
         normalizeUsingWeightMap(dst_band_weights_[i], dst_pyr_laplace_[i]);
@@ -300,7 +298,7 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void normalizeUsingWeightMap(const Mat& weight, Mat& src)
+void cv::normalizeUsingWeightMap(const Mat& weight, Mat& src)
 {
     CV_Assert(weight.type() == CV_32F);
     CV_Assert(src.type() == CV_16SC3);
@@ -319,7 +317,7 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 }
 
 
-void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
+void cv::createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 {
     CV_Assert(mask.type() == CV_8U);
     distanceTransform(mask, weight, CV_DIST_L1, 3);
@@ -327,7 +325,7 @@ void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 }
 
 
-void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
+void cv::createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
     pyr.resize(num_levels + 1);
     pyr[0] = img;
@@ -342,7 +340,7 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 }
 
 
-void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
+void cv::createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
     pyr.resize(num_levels + 1);
 
@@ -363,7 +361,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 }
 
 
-void restoreImageFromLaplacePyr(vector<Mat> &pyr)
+void cv::restoreImageFromLaplacePyr(vector<Mat> &pyr)
 {
     if (pyr.size() == 0)
         return;
@@ -374,5 +372,3 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
         add(tmp, pyr[i - 1], pyr[i - 1]);
     }
 }
-
-} // namespace cv
