@@ -780,14 +780,14 @@ bool CV_OperationsTest::TestVec()
         
         //these compile
         cv::Vec3b b = a;
-        hsvImage_f.at<cv::Vec3f>(i,j) = cv::Vec3f(i,0,1);
-        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3b(cv::Vec3f(i,0,1));
+        hsvImage_f.at<cv::Vec3f>(i,j) = cv::Vec3f((float)i,0,1);
+        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3b(cv::Vec3f((float)i,0,1));
         
         //these don't
         b = cv::Vec3f(1,0,0);
         cv::Vec3b c;
         c = cv::Vec3f(0,0,1);
-        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f(i,0,1);
+        hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f((float)i,0,1);
         hsvImage_b.at<cv::Vec3b>(i,j) = a;
         hsvImage_b.at<cv::Vec3b>(i,j) = cv::Vec3f(1,2,3);
     } 

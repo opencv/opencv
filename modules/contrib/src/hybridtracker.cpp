@@ -199,15 +199,15 @@ void CvHybridTracker::updateTrackerWithEM(Mat image) {
 	for (int i = 0; i < proj.rows; i++)
 		for (int j = 0; j < proj.cols; j++)
 			if (proj.at<double> (i, j) > 0) {
-				samples->data.fl[count * 2] = i;
-				samples->data.fl[count * 2 + 1] = j;
+				samples->data.fl[count * 2] = (float)i;
+				samples->data.fl[count * 2 + 1] = (float)j;
 				count++;
 			}
 
 	em_model.train(samples, 0, params.em_params, labels);
 
-	curr_center.x = em_model.getMeans().at<double> (0, 0);
-	curr_center.y = em_model.getMeans().at<double> (0, 1);
+	curr_center.x = (float)em_model.getMeans().at<double> (0, 0);
+	curr_center.y = (float)em_model.getMeans().at<double> (0, 1);
 }
 
 void CvHybridTracker::updateTrackerWithLowPassFilter(Mat image) {

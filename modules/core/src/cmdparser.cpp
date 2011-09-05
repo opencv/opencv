@@ -287,25 +287,25 @@ std::string CommandLineParser::analizeValue<std::string>(const std::string& str,
 }
 
 template<>
-int CommandLineParser::analizeValue<int>(const std::string& str, bool space_delete)
+int CommandLineParser::analizeValue<int>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<int>(str);
 }
 
 template<>
-unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str, bool space_delete)
+unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<unsigned int>(str);
 }
 
 template<>
-float CommandLineParser::analizeValue<float>(const std::string& str, bool space_delete)
+float CommandLineParser::analizeValue<float>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<float>(str);
 }
 
 template<>
-double CommandLineParser::analizeValue<double>(const std::string& str, bool space_delete)
+double CommandLineParser::analizeValue<double>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<double>(str);
 }

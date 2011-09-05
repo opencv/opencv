@@ -322,7 +322,7 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
             for(int j = 0; j < cols; j++)
             {
                 double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
-                dstData[i*cols + j] = wr * wc;
+                dstData[i*cols + j] = (float)(wr * wc);
             }
         }
 
