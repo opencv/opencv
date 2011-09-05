@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, const Scalar&){ throw_nogpu(); }
+void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, const Scalar&, Stream&){ throw_nogpu(); }
 void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria) { throw_nogpu(); }
 void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria) { throw_nogpu(); }
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
@@ -110,14 +110,14 @@ void cv::gpu::CannyBuf::release() { throw_nogpu(); }
 namespace cv { namespace gpu {  namespace imgproc
 {
     template <typename T> void remap_gpu(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, 
-                                         int interpolation, int borderMode, const double borderValue[4]);
+                                         int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
 }}}
 
-void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, const Scalar& borderValue)
+void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, const Scalar& borderValue, Stream& stream)
 {
     using namespace cv::gpu::imgproc;
 
-    typedef void (*caller_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, int interpolation, int borderMode, const double borderValue[4]);;
+    typedef void (*caller_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
     static const caller_t callers[6][4] = 
     {
         {remap_gpu<uchar>, remap_gpu<uchar2>, remap_gpu<uchar3>, remap_gpu<uchar4>},
@@ -138,8 +138,11 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
 
     dst.create(xmap.size(), src.type());
+    
+    Scalar_<float> borderValueFloat;
+    borderValueFloat = borderValue;
 
-    callers[src.depth()][src.channels() - 1](src, xmap, ymap, dst, interpolation, gpuBorderType, borderValue.val);
+    callers[src.depth()][src.channels() - 1](src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
