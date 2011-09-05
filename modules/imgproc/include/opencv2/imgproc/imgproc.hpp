@@ -1132,6 +1132,14 @@ struct CvLSHOperations
   virtual int hash_lookup(lsh_hash h, int l, int* ret_i, int ret_i_max) = 0;
 };
 
+namespace cv
+{
+
+CV_EXPORTS_W cv::Point2d phaseCorrelate(InputArray _src1, InputArray _src2, InputArray window = noArray());
+CV_EXPORTS_W void createHanningWindow(OutputArray _dst, cv::Size winSize, int type);
+
+}
+
 #endif /* __cplusplus */
 
 #endif

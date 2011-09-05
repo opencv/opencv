@@ -139,3 +139,67 @@ The function supports multi-channel images. Each channel is processed independen
     :ocv:func:`accumulate`,
     :ocv:func:`accumulateSquare`,
     :ocv:func:`accumulateProduct` 
+
+
+
+phaseCorrelate
+-------------------------------
+The function is used to detect translational shifts that occur between two images. The operation takes advantage of the Fourier shift theorem for detecting the translational shift in the frequency domain. It can be used for fast image registration as well as motion esitimation. For more information please see http://http://en.wikipedia.org/wiki/Phase\_correlation .
+
+Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with ``getOptimalDFTSize`` .
+
+.. ocv:function:: Point2d phaseCorrelate(InputArray src1, InputArray src2, InputArray window = noArray())
+    :param src1: Source floating point array (CV_32FC1 or CV_64FC1)
+    :param src2: Source floating point array (CV_32FC1 or CV_64FC1)
+    :param window: Floating point array with windowing coefficients to reduce edge effects (optional).
+    :param result: Detected phase shift (sub-pixel) between the two arrays.
+
+The function performs the following equations
+
+*
+    First it applies a Hanning window (see http://en.wikipedia.org/wiki/Hann\_function) to each image to remove possible edge effects. This window is cached until the array size changes to speed up processing time.
+
+*
+    Next it computes the forward DFTs of each source array:
+    ..math:
+        \mathbf{G}_a = \mathcal{F}\{src_1\}, \; \mathbf{G}_b = \mathcal{F}\{src_2\}
+    where
+    :math:`\mathcal{F} is the forward DFT.`
+
+*
+    It then computes the cross-power spectrum of each frequency domain array:
+    ..math:
+        R = \frac{ \mathbf{G}_a \mathbf{G}_b^*}{|\mathbf{G}_a \mathbf{G}_b^*|}
+
+*
+    Next the cross-correlation is converted back into the time domain via the inverse DFT:
+    ..math:
+        r = \mathcal{F}^{-1}\{R\}
+*
+    Finally, it computes the peak location and computes a 5x5 weighted centroid around the peak to achieve sub-pixel accuracy.
+    ..math:
+        (\Delta x, \Delta y) = \textrm{weighted_centroid}\{\arg \max_{(x, y)}\{r\}\}
+
+.. seealso::
+    :ocv:func:`dft`,
+    :ocv:func:`getOptimalDFTSize`,
+    :ocv:func:`idft`,
+    :ocv:func:`mulSpectrums`
+    :ocv:func:`createHanningWindow`
+
+createHanningWindow
+-------------------------------
+This function computes a Hanning window coefficients in two dimensions. See http://en.wikipedia.org/wiki/Hann\_function and http://en.wikipedia.org/wiki/Window\_function for more information.
+
+.. ocv:function:: void createHanningWindow(OutputArray dst, Size winSize, int type)
+    :param dst: Destination array to place Hann coefficients in
+    :param winSize: The window size specifications
+    :param type: Created array type
+
+::
+    // create hanning window of size 100x100 and type CV_32F 
+    Mat hann;
+    createHanningWindow(hann, Size(100, 100), CV_32F);
+
+.. seealso::
+    :ocv:func:`phaseCorrelate`
