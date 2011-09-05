@@ -84,6 +84,21 @@ using namespace cv::gpu::surf;
 
 namespace
 {
+    int calcSize(int octave, int layer)
+    {
+        /* Wavelet size at first layer of first octave. */
+        const int HAAR_SIZE0 = 9;
+
+        /* Wavelet size increment between layers. This should be an even number,
+         such that the wavelet sizes in an octave are either all even or all odd.
+         This ensures that when looking for the neighbours of a sample, the layers
+
+         above and below are aligned correctly. */
+        const int HAAR_SIZE_INC = 6;
+
+        return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
+    }
+    
     class SURF_GPU_Invoker : private CvSURFParams
     {
     public:
@@ -102,6 +117,16 @@ namespace
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
             CV_Assert(nOctaves > 0 && nOctaveLayers > 0);
             CV_Assert(TargetArchs::builtWith(GLOBAL_ATOMICS) && DeviceInfo().supports(GLOBAL_ATOMICS));
+                
+            const int min_size = calcSize(nOctaves - 1, 0);
+            CV_Assert(img_rows - min_size >= 0);
+            CV_Assert(img_cols - min_size >= 0);
+            
+            const int layer_rows = img_rows >> (nOctaves - 1);
+            const int layer_cols = img_cols >> (nOctaves - 1);
+            const int min_margin = ((calcSize((nOctaves - 1), 2) >> 1) >> (nOctaves - 1)) + 1;
+            CV_Assert(layer_rows - 2 * min_margin > 0);
+            CV_Assert(layer_cols - 2 * min_margin > 0);
 
             maxFeatures = min(static_cast<int>(img.size().area() * surf.keypointsRatio), 65535);
             maxCandidates = min(static_cast<int>(1.5 * maxFeatures), 65535);
@@ -279,20 +304,6 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMa
 
 namespace
 {
-    int calcSize(int octave, int layer)
-    {
-        /* Wavelet size at first layer of first octave. */
-        const int HAAR_SIZE0 = 9;
-
-        /* Wavelet size increment between layers. This should be an even number,
-         such that the wavelet sizes in an octave are either all even or all odd.
-         This ensures that when looking for the neighbours of a sample, the layers
-         above and below are aligned correctly. */
-        const int HAAR_SIZE_INC = 6;
-
-        return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
-    }
-
     int getPointOctave(float size, const CvSURFParams& params)
     {
         int best_octave = 0;
