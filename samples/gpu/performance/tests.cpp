@@ -80,7 +80,7 @@ TEST(remap)
     gpu::GpuMat d_src, d_dst, d_xmap, d_ymap;
     
     int interpolation = INTER_LINEAR;
-    int borderMode = BORDER_CONSTANT;
+    int borderMode = BORDER_REPLICATE;
 
     for (int size = 1000; size <= 4000; size *= 2)
     {

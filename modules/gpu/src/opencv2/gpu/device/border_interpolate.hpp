@@ -758,6 +758,29 @@ namespace cv { namespace gpu { namespace device
         const Ptr2D ptr;
         const B b;
     };
+
+    // under win32 there is some bug with templated types that passed as kernel parameters
+    // with this specialization all works fine
+    template <typename Ptr2D, typename D> struct BorderReader< Ptr2D, BrdConstant<D> >
+    {
+        typedef typename BrdConstant<D>::result_type elem_type;
+        typedef typename Ptr2D::index_type index_type;
+
+        __host__ __device__ __forceinline__ BorderReader(const Ptr2D& src_, const BrdConstant<D>& b) : 
+            src(src_), height(b.height), width(b.width), val(b.val) 
+        {
+        }
+
+        __device__ __forceinline__ D operator ()(index_type y, index_type x) const
+        {
+            return (x >= 0 && x < width && y >= 0 && y < height) ? saturate_cast<D>(src(y, x)) : val;
+        }
+
+        const Ptr2D src;
+        const int height;
+        const int width;
+        const D val;
+    };
 }}}
 
 #endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__

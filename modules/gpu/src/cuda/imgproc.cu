@@ -66,6 +66,24 @@ namespace cv { namespace gpu { namespace imgproc
             dst.ptr(y)[x] = saturate_cast<T>(src(ycoo, xcoo));
         }
     }
+
+    template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherStream
+    {
+        static void call(const DevMem2D_<T>& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_<T>& dst, const float* borderValue, cudaStream_t stream)
+        {
+            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
+            
+            dim3 block(32, 8);
+            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+            B<work_type> brd(src.rows, src.cols, VecTraits<work_type>::make(borderValue));
+            BorderReader< PtrStep_<T>, B<work_type> > brdSrc(src, brd);
+            Filter< BorderReader< PtrStep_<T>, B<work_type> > > filter_src(brdSrc);
+
+            remap<<<grid, block, 0, stream>>>(filter_src, mapx, mapy, dst);
+            cudaSafeCall( cudaGetLastError() );
+        }
+    };
     
     template <template <typename> class Filter, template <typename> class B, typename T> struct RemapDispatcherNonStream
     {
@@ -163,22 +181,7 @@ namespace cv { namespace gpu { namespace imgproc
             if (stream == 0)
                 RemapDispatcherNonStream<Filter, B, T>::call(src, mapx, mapy, dst, borderValue);
             else
-                callStream(src, mapx, mapy, dst, borderValue, stream);
-        }
-        
-        static void callStream(const DevMem2D_<T>& src, const DevMem2Df& mapx, const DevMem2Df& mapy, const DevMem2D_<T>& dst, const float* borderValue, cudaStream_t stream)
-        {
-            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type; 
-            
-            dim3 block(32, 8);
-            dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
-            B<work_type> brd(src.rows, src.cols, VecTraits<work_type>::make(borderValue));
-            BorderReader< PtrStep_<T>, B<work_type> > brd_src(src, brd);
-            Filter< BorderReader< PtrStep_<T>, B<work_type> > > filter_src(brd_src);
-
-            remap<<<grid, block, 0, stream>>>(filter_src, mapx, mapy, dst);
-            cudaSafeCall( cudaGetLastError() );
+                RemapDispatcherStream<Filter, B, T>::call(src, mapx, mapy, dst, borderValue, stream);
         }
     };
 
