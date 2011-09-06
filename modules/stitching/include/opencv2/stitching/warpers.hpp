@@ -49,7 +49,7 @@
 namespace cv
 {
 
-class Warper
+class CV_EXPORTS Warper
 {
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
@@ -62,7 +62,7 @@ public:
 };
 
 
-struct ProjectorBase
+struct CV_EXPORTS ProjectorBase
 {
     void setTransformation(const Mat& R);
 
@@ -75,7 +75,7 @@ struct ProjectorBase
 
 
 template <class P>
-class WarperBase : public Warper
+class CV_EXPORTS WarperBase : public Warper
 {   
 public:
     virtual Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
@@ -96,7 +96,7 @@ protected:
 };
 
 
-struct PlaneProjector : ProjectorBase
+struct CV_EXPORTS PlaneProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -105,7 +105,7 @@ struct PlaneProjector : ProjectorBase
 
 
 // Projects image onto z = plane_dist plane
-class PlaneWarper : public WarperBase<PlaneProjector>
+class CV_EXPORTS PlaneWarper : public WarperBase<PlaneProjector>
 {
 public:
     PlaneWarper(float plane_dist = 1.f, float scale = 1.f)
@@ -119,7 +119,7 @@ protected:
 };
 
 
-class PlaneWarperGpu : public PlaneWarper
+class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
     PlaneWarperGpu(float plane_dist = 1.f, float scale = 1.f) : PlaneWarper(plane_dist, scale) {}
@@ -131,7 +131,7 @@ private:
 };
 
 
-struct SphericalProjector : ProjectorBase
+struct CV_EXPORTS SphericalProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -140,7 +140,7 @@ struct SphericalProjector : ProjectorBase
 
 // Projects image onto unit sphere with origin at (0, 0, 0).
 // Poles are located at (0, -1, 0) and (0, 1, 0) points.
-class SphericalWarper : public WarperBase<SphericalProjector>
+class CV_EXPORTS SphericalWarper : public WarperBase<SphericalProjector>
 {
 public:
     SphericalWarper(float scale = 300.f) { projector_.scale = scale; }
@@ -150,7 +150,7 @@ protected:
 };
 
 
-class SphericalWarperGpu : public SphericalWarper
+class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
 {
 public:
     SphericalWarperGpu(float scale = 300.f) : SphericalWarper(scale) {}
@@ -162,7 +162,7 @@ private:
 };
 
 
-struct CylindricalProjector : ProjectorBase
+struct CV_EXPORTS CylindricalProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -170,7 +170,7 @@ struct CylindricalProjector : ProjectorBase
 
 
 // Projects image onto x * x + z * z = 1 cylinder
-class CylindricalWarper : public WarperBase<CylindricalProjector>
+class CV_EXPORTS CylindricalWarper : public WarperBase<CylindricalProjector>
 {
 public:
     CylindricalWarper(float scale = 300.f) { projector_.scale = scale; }
@@ -183,7 +183,7 @@ protected:
 };
 
 
-class CylindricalWarperGpu : public CylindricalWarper
+class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 {
 public:
     CylindricalWarperGpu(float scale = 300.f) : CylindricalWarper(scale) {}

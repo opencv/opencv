@@ -48,7 +48,7 @@
 namespace cv
 {
 
-struct ImageFeatures
+struct CV_EXPORTS ImageFeatures
 {
     int img_idx;
     cv::Size img_size;
@@ -57,7 +57,7 @@ struct ImageFeatures
 };
 
 
-class FeaturesFinder
+class CV_EXPORTS FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
@@ -70,7 +70,7 @@ protected:
 };
 
 
-class SurfFeaturesFinder : public FeaturesFinder
+class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
 public:
     SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 300.0, 
@@ -86,7 +86,7 @@ protected:
 };
 
 
-struct MatchesInfo
+struct CV_EXPORTS MatchesInfo
 {
     MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
@@ -101,7 +101,7 @@ struct MatchesInfo
 };
 
 
-class FeaturesMatcher
+class CV_EXPORTS FeaturesMatcher
 {
 public:
     virtual ~FeaturesMatcher() {}
@@ -124,7 +124,7 @@ protected:
 };
 
 
-class BestOf2NearestMatcher : public FeaturesMatcher
+class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
     BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, 

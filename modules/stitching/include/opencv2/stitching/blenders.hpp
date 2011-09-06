@@ -48,7 +48,7 @@ namespace cv
 {
 
 // Simple blender which puts one image over another
-class Blender
+class CV_EXPORTS Blender
 {
 public:
     enum { NO, FEATHER, MULTI_BAND };
@@ -65,7 +65,7 @@ protected:
 };
 
 
-class FeatherBlender : public Blender
+class CV_EXPORTS FeatherBlender : public Blender
 {
 public:
     FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
@@ -83,7 +83,7 @@ private:
 };
 
 
-class MultiBandBlender : public Blender
+class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
     MultiBandBlender(int try_gpu = false, int num_bands = 5);
@@ -106,16 +106,16 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void normalizeUsingWeightMap(const Mat& weight, Mat& src);
+void CV_EXPORTS normalizeUsingWeightMap(const Mat& weight, Mat& src);
 
-void createWeightMap(const Mat& mask, float sharpness, Mat& weight);
+void CV_EXPORTS createWeightMap(const Mat& mask, float sharpness, Mat& weight);
 
-void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat>& pyr);
+void CV_EXPORTS createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat>& pyr);
 
-void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat>& pyr);
+void CV_EXPORTS createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat>& pyr);
 
 // Restores source image
-void restoreImageFromLaplacePyr(std::vector<Mat>& pyr);
+void CV_EXPORTS restoreImageFromLaplacePyr(std::vector<Mat>& pyr);
 
 } // namespace cv
 

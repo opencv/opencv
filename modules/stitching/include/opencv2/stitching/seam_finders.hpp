@@ -47,7 +47,7 @@
 namespace cv
 {
 
-class SeamFinder
+class CV_EXPORTS SeamFinder
 {
 public:
     enum { NO, VORONOI, GC_COLOR, GC_COLOR_GRAD };
@@ -59,14 +59,14 @@ public:
 };
 
 
-class NoSeamFinder : public SeamFinder
+class CV_EXPORTS NoSeamFinder : public SeamFinder
 {
 public:
     void find(const std::vector<Mat>&, const std::vector<Point>&, std::vector<Mat>&) {}
 };
 
 
-class PairwiseSeamFinder : public SeamFinder
+class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
 {
 public:
     virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
@@ -81,14 +81,14 @@ protected:
 };
 
 
-class VoronoiSeamFinder : public PairwiseSeamFinder
+class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
 {
 private:
     void findInPair(size_t first, size_t second, Rect roi);
 };
 
 
-class GraphCutSeamFinder : public SeamFinder
+class CV_EXPORTS GraphCutSeamFinder : public SeamFinder
 {
 public:
     enum { COST_COLOR, COST_COLOR_GRAD };

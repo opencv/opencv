@@ -47,7 +47,7 @@
 namespace cv
 {
 
-struct CameraParams
+struct CV_EXPORTS CameraParams
 {
     CameraParams();
     CameraParams(const CameraParams& other);

@@ -59,7 +59,7 @@
 namespace cv
 {
 
-class DisjointSets
+class CV_EXPORTS DisjointSets
 {
 public:
     DisjointSets(int elem_count = 0) { createOneElemSets(elem_count); }
@@ -76,7 +76,7 @@ private:
 };
 
 
-struct GraphEdge
+struct CV_EXPORTS GraphEdge
 {
     GraphEdge(int from, int to, float weight) 
         : from(from), to(to), weight(weight) {}
@@ -88,7 +88,7 @@ struct GraphEdge
 };
 
 
-class Graph
+class CV_EXPORTS Graph
 {
 public:
     Graph(int num_vertices = 0) { create(num_vertices); }
@@ -106,13 +106,13 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
-Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
-Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
-Point resultTl(const std::vector<Point> &corners);
+bool CV_EXPORTS overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
+Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
+Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+Point CV_EXPORTS resultTl(const std::vector<Point> &corners);
 
 // Returns random 'count' element subset of the {0,1,...,size-1} set
-void selectRandomSubset(int count, int size, std::vector<int> &subset);
+void CV_EXPORTS selectRandomSubset(int count, int size, std::vector<int> &subset);
 
 } // namespace cv
 

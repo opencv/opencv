@@ -47,7 +47,7 @@
 namespace cv
 {
 
-class ExposureCompensator
+class CV_EXPORTS ExposureCompensator
 {
 public:
     enum { NO, GAIN, GAIN_BLOCKS };
@@ -61,7 +61,7 @@ public:
 };
 
 
-class NoExposureCompensator : public ExposureCompensator
+class CV_EXPORTS NoExposureCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<Point> &/*corners*/, const std::vector<Mat> &/*images*/,
@@ -70,7 +70,7 @@ public:
 };
 
 
-class GainCompensator : public ExposureCompensator
+class CV_EXPORTS GainCompensator : public ExposureCompensator
 {
 public:
     void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
@@ -83,7 +83,7 @@ private:
 };
 
 
-class BlocksGainCompensator : public ExposureCompensator
+class CV_EXPORTS BlocksGainCompensator : public ExposureCompensator
 {
 public:
     BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 

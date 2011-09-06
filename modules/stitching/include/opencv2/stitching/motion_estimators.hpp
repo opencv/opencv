@@ -50,7 +50,7 @@
 namespace cv
 {
 
-class Estimator
+class CV_EXPORTS Estimator
 {
 public:
     void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
@@ -65,7 +65,7 @@ protected:
 };
 
 
-class HomographyBasedEstimator : public Estimator
+class CV_EXPORTS HomographyBasedEstimator : public Estimator
 {
 public:
     HomographyBasedEstimator() : is_focals_estimated_(false) {}
@@ -79,7 +79,7 @@ private:
 };
 
 
-class BundleAdjuster : public Estimator
+class CV_EXPORTS BundleAdjuster : public Estimator
 {
 public:
     enum { NO, RAY_SPACE, FOCAL_RAY_SPACE };
@@ -108,21 +108,21 @@ private:
 };
 
 
-void waveCorrect(std::vector<Mat> &rmats);
+void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats);
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
 // Returns matches graph representation in DOT language
-std::string matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
-                                 float conf_threshold);
+std::string CV_EXPORTS matchesGraphAsString(std::vector<std::string> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+                                            float conf_threshold);
 
-std::vector<int> leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
-                                       float conf_threshold);
+std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
+                                                  float conf_threshold);
 
-void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
-                         Graph &span_tree, std::vector<int> &centers);
+void CV_EXPORTS findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
+                                    Graph &span_tree, std::vector<int> &centers);
 
 } // namespace cv
 
