@@ -2817,7 +2817,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         
         case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
         case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-            if(dcn <= 0) dcn = 3;
+            if(dcn <= 0) dcn = (code==CV_BGR5652BGRA || code==CV_BGR5552BGRA || code==CV_BGR5652RGBA || code==CV_BGR5552RGBA) ? 4 : 3;
             CV_Assert( (dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U );
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
@@ -2854,7 +2854,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
         
         case CV_GRAY2BGR: case CV_GRAY2BGRA:
-            if( dcn <= 0 ) dcn = 3;
+            if( dcn <= 0 ) dcn = (code==CV_GRAY2BGRA) ? 4 : 3;
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
@@ -3112,9 +3112,10 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 Bayer2RGB_VNG_8u(src, dst, code);
             }
             break;
-        case CV_YUV420sp2BGR: case CV_YUV420sp2RGB: case CV_YUV420i2BGR: case CV_YUV420i2RGB:
+        case CV_YUV420sp2BGR:  case CV_YUV420sp2RGB:  case CV_YUV420i2BGR:  case CV_YUV420i2RGB:
+        case CV_YUV420sp2BGRA: case CV_YUV420sp2RGBA: case CV_YUV420i2BGRA: case CV_YUV420i2RGBA:
             {
-                if(dcn <= 0) dcn = 3;
+                if(dcn <= 0) dcn = (code==CV_YUV420sp2BGRA || code==CV_YUV420sp2RGBA || code==CV_YUV420i2BGRA || code==CV_YUV420i2RGBA) ? 4 : 3;
                 CV_Assert( dcn == 3 || dcn == 4 );
                 CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U && src.isContinuous() );
 
@@ -3126,31 +3127,31 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 const uchar* uv = y + dstSz.area();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-                if (!tegra::YUV420i2BGR(y, uv, dst, CV_YUV420sp2RGB == code))
+                if (!tegra::YUV420i2BGR(y, uv, dst, CV_YUV420sp2RGB == code || CV_YUV420sp2RGBA == code))
 #endif
                 {
-                    if (CV_YUV420sp2RGB == code)
+                    if (CV_YUV420sp2RGB == code || CV_YUV420sp2RGBA == code)
                     {
                         if (dcn == 3)
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<2,0>(dst, dstSz.width, y, uv));
                         else
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<2,0>(dst, dstSz.width, y, uv));
                     }
-                    else if (CV_YUV420sp2BGR == code)
+                    else if (CV_YUV420sp2BGR == code || CV_YUV420sp2BGRA == code)
                     {
                         if (dcn == 3)
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<0,0>(dst, dstSz.width, y, uv));
                         else
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<0,0>(dst, dstSz.width, y, uv));
                     }
-                    else if (CV_YUV420i2RGB == code)
+                    else if (CV_YUV420i2RGB == code || CV_YUV420i2RGBA == code)
                     {
                         if (dcn == 3)
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<2,1>(dst, dstSz.width, y, uv));
                         else
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<2,1>(dst, dstSz.width, y, uv));
                     }
-                    else if (CV_YUV420i2BGR == code)
+                    else if (CV_YUV420i2BGR == code || CV_YUV420i2BGRA == code)
                     {
                         if (dcn == 3)
                             parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<0,1>(dst, dstSz.width, y, uv));
