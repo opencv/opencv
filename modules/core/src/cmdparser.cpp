@@ -72,7 +72,7 @@ vector<string> split_string(const string& str, const string& delimiters)
     return res;
 }
 
-CommandLineParser::CommandLineParser(int argc, const char* argv[], const char* keys)
+CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
 {
 
     std::string keys_buffer;
@@ -272,7 +272,7 @@ bool CommandLineParser::get<bool>(const std::string& name, bool space_delete)
     return true;
 }
 template<>
-std::string CommandLineParser::analizeValue<std::string>(const std::string& str, bool space_delete)
+std::string CommandLineParser::analyzeValue<std::string>(const std::string& str, bool space_delete)
 {
     if (space_delete)
     {
@@ -287,25 +287,31 @@ std::string CommandLineParser::analizeValue<std::string>(const std::string& str,
 }
 
 template<>
-int CommandLineParser::analizeValue<int>(const std::string& str, bool /*space_delete*/)
+int CommandLineParser::analyzeValue<int>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<int>(str);
 }
 
 template<>
-unsigned int CommandLineParser::analizeValue<unsigned int>(const std::string& str, bool /*space_delete*/)
+unsigned int CommandLineParser::analyzeValue<unsigned int>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<unsigned int>(str);
 }
 
 template<>
-float CommandLineParser::analizeValue<float>(const std::string& str, bool /*space_delete*/)
+uint64 CommandLineParser::analyzeValue<uint64>(const std::string& str, bool /*space_delete*/)
+{
+    return fromStringNumber<uint64>(str);
+}
+
+template<>
+float CommandLineParser::analyzeValue<float>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<float>(str);
 }
 
 template<>
-double CommandLineParser::analizeValue<double>(const std::string& str, bool /*space_delete*/)
+double CommandLineParser::analyzeValue<double>(const std::string& str, bool /*space_delete*/)
 {
     return fromStringNumber<double>(str);
 }

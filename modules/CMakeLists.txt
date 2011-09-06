@@ -1,12 +1,5 @@
-if(ANDROID)
-  ADD_DEFINITIONS(-DGTEST_HAS_STD_WSTRING=0)
-  if(ANDROID_API_LEVEL LESS 8)
-    ADD_DEFINITIONS(-DGTEST_HAS_CLONE=0)
-  endif()
-  
-  IF(WITH_ANDROID_CAMERA)
-      add_subdirectory(androidcamera)
-  endif()
+if(ANDROID AND WITH_ANDROID_CAMERA)
+    add_subdirectory(androidcamera)
 endif()
 
 add_subdirectory(calib3d)
@@ -14,9 +7,10 @@ add_subdirectory(core)
 add_subdirectory(features2d)
 add_subdirectory(flann)
 
-if(BUILD_TESTS)
+if(BUILD_TESTS OR BUILD_PERF_TESTS)
   add_subdirectory(ts)
 endif()
+
 add_subdirectory(highgui)
 add_subdirectory(imgproc)
 add_subdirectory(legacy)
@@ -35,8 +29,8 @@ endif()
 add_subdirectory(video)
 
 if(NOT IOS)
-add_subdirectory(traincascade)
-add_subdirectory(haartraining)
+  add_subdirectory(traincascade)
+  add_subdirectory(haartraining)
 endif()
 
 if(NOT (ANDROID OR IOS))

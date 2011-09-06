@@ -3,6 +3,8 @@
 macro(add_opencv_precompiled_headers the_target)
     if("${the_target}" MATCHES "opencv_test_.*")
         SET(pch_name "test/test_precomp")
+    elseif("${the_target}" MATCHES "opencv_perf_.*")
+        SET(pch_name "perf/perf_precomp")
     else()
         SET(pch_name "src/precomp")
     endif()
@@ -19,7 +21,110 @@ macro(add_opencv_precompiled_headers the_target)
     endif()
 endmacro()
 
-# this is template for a OpenCV module 
+# this is a template for a OpenCV performance tests
+# define_opencv_perf_test(<module_name> <dependencies>)
+macro(define_opencv_perf_test name)
+    set(perf_path "${CMAKE_CURRENT_SOURCE_DIR}/perf")
+    if(BUILD_PERF_TESTS AND EXISTS "${perf_path}")
+
+        include_directories("${perf_path}" "${CMAKE_CURRENT_BINARY_DIR}")
+
+        # opencv_highgui is required for imread/imwrite
+        set(perf_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_OPENCV_${name}_DEPS})
+
+        foreach(d ${perf_deps})
+            if(d MATCHES "opencv_")
+                string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
+                if (EXISTS "${d_dir}/include")
+                   include_directories("${d_dir}/include")
+                endif()
+            endif()
+        endforeach()
+
+        file(GLOB perf_srcs "${perf_path}/*.cpp")
+        file(GLOB perf_hdrs "${perf_path}/*.h*")
+        
+        source_group("Src" FILES ${perf_srcs})
+        source_group("Include" FILES ${perf_hdrs})
+
+        set(the_target "opencv_perf_${name}")
+        add_executable(${the_target} ${perf_srcs} ${perf_hdrs})
+
+        # Additional target properties
+        set_target_properties(${the_target} PROPERTIES
+            DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+            RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+            )
+
+        if(ENABLE_SOLUTION_FOLDERS)
+            set_target_properties(${the_target} PROPERTIES FOLDER "performance tests")
+        endif() 
+
+        add_dependencies(${the_target} ${perf_deps})
+        target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${perf_deps})
+
+        add_opencv_precompiled_headers(${the_target})
+
+        if (PYTHON_EXECUTABLE)
+            add_dependencies(perf ${the_target})
+        endif()
+    endif()    
+endmacro()
+
+# this is a template for a OpenCV regression tests
+# define_opencv_test(<module_name> <dependencies>)
+macro(define_opencv_test name)
+    set(test_path "${CMAKE_CURRENT_SOURCE_DIR}/test")
+    if(BUILD_TESTS AND EXISTS "${test_path}")
+        include_directories("${test_path}" "${CMAKE_CURRENT_BINARY_DIR}")
+
+        # opencv_highgui is required for imread/imwrite
+        set(test_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_OPENCV_${name}_DEPS})
+
+        foreach(d ${test_deps})
+            if(d MATCHES "opencv_")
+                string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
+                if (EXISTS "${d_dir}/include")
+                   include_directories("${d_dir}/include")
+                endif()
+            endif()
+        endforeach()
+
+        file(GLOB test_srcs "${test_path}/*.cpp")
+        file(GLOB test_hdrs "${test_path}/*.h*")
+        
+        source_group("Src" FILES ${test_srcs})
+        source_group("Include" FILES ${test_hdrs})
+
+        set(the_target "opencv_test_${name}")
+        add_executable(${the_target} ${test_srcs} ${test_hdrs})
+
+        # Additional target properties
+        set_target_properties(${the_target} PROPERTIES
+            DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+            RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+            )
+
+        if(ENABLE_SOLUTION_FOLDERS)
+            set_target_properties(${the_target} PROPERTIES FOLDER "tests")
+        endif() 
+
+        add_dependencies(${the_target} ${test_deps})
+        target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
+
+        enable_testing()
+        get_target_property(LOC ${the_target} LOCATION)
+        add_test(${the_target} "${LOC}")
+
+        #if(WIN32)
+        #    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
+        #endif()
+        add_opencv_precompiled_headers(${the_target})
+    endif()
+endmacro()
+
+# this is a template for a OpenCV module
+# define_opencv_module(<module_name> <dependencies>)
 macro(define_opencv_module name)
     
     project(opencv_${name})
@@ -30,21 +135,22 @@ macro(define_opencv_module name)
     
     foreach(d ${ARGN})
         if(d MATCHES "opencv_")
-            string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-            include_directories("${d_dir}/include")
+            string(REPLACE "opencv_" "${OpenCV_SOURCE_DIR}/modules/" d_dir ${d})
+            if (EXISTS "${d_dir}/include")
+                include_directories("${d_dir}/include")
+            endif()
         endif()
     endforeach()
 
     file(GLOB lib_srcs "src/*.cpp")
     file(GLOB lib_int_hdrs "src/*.h*")
+    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
 
     if(COMMAND get_module_external_sources)
        get_module_external_sources(${name})
     endif()
 
     source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
-
-    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
     source_group("Include" FILES ${lib_hdrs})
 
     set(the_target "opencv_${name}")
@@ -86,8 +192,6 @@ macro(define_opencv_module name)
         INSTALL_NAME_DIR lib
         )
 
-    add_opencv_precompiled_headers(${the_target})
-
     # Add the required libraries for linking:
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
 
@@ -114,53 +218,8 @@ macro(define_opencv_module name)
         DESTINATION ${OPENCV_INCLUDE_PREFIX}/opencv2/${name}
         COMPONENT main)
         
-    if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
-        include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/test"
-                            "${CMAKE_CURRENT_BINARY_DIR}")
+    add_opencv_precompiled_headers(${the_target})
 
-        set(test_deps opencv_${name} ${ARGN} opencv_ts opencv_highgui ${EXTRA_${the_target}_DEPS})
-        foreach(d ${test_deps})
-            if(d MATCHES "opencv_")
-                string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-                include_directories("${d_dir}/include")
-            endif()
-        endforeach()
-
-        file(GLOB test_srcs "test/*.cpp")
-        file(GLOB test_hdrs "test/*.h*")
-        
-        source_group("Src" FILES ${test_srcs})
-        source_group("Include" FILES ${test_hdrs})
-
-        set(the_target "opencv_test_${name}")
-
-        add_executable(${the_target} ${test_srcs} ${test_hdrs})
-
-        add_opencv_precompiled_headers(${the_target})
-
-        # Additional target properties
-        set_target_properties(${the_target} PROPERTIES
-            DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-            RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
-            )
-
-        if(ENABLE_SOLUTION_FOLDERS)
-            set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-        endif() 
-
-        add_dependencies(${the_target} ${test_deps})
-
-        # Add the required libraries for linking:
-        target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
-
-        enable_testing()
-        get_target_property(LOC ${the_target} LOCATION)
-        add_test(${the_target} "${LOC}")
-
-        #if(WIN32)
-        #    install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
-        #endif()
-    endif()    
-
+    define_opencv_test(${name})
+    define_opencv_perf_test(${name})
 endmacro()

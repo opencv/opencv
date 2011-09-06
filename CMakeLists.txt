@@ -339,6 +339,7 @@ if(NOT IOS)
 else()
 	set(BUILD_TESTS OFF CACHE BOOL "Build tests")
 endif()
+set(BUILD_PERF_TESTS ON CACHE BOOL "Build performance tests")
 
 # Build 3rdparty libraries under unix
 # ===================================================
@@ -1556,6 +1557,17 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 #-----------------------------------
+# performance tests
+#-----------------------------------
+if(BUILD_PERF_TESTS AND PYTHON_EXECUTABLE)
+    add_custom_target(perf 
+        ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
+    )
+endif()
+
+#-----------------------------------
 # Subdirectories:
 #-----------------------------------
 add_subdirectory(include)
@@ -1763,8 +1775,9 @@ endif()
 # samples and tests
 status("")
 status("  Tests and samples:")
-status("    Tests:"    BUILD_TESTS     THEN YES ELSE NO)
-status("    Examples:" BUILD_EXAMPLES  THEN YES ELSE NO)
+status("    Tests:"             BUILD_TESTS       THEN YES ELSE NO)
+status("    Performance tests:" BUILD_PERF_TESTS  THEN YES ELSE NO)
+status("    Examples:"          BUILD_EXAMPLES    THEN YES ELSE NO)
 
 if(ANDROID)
    status("    Android tests:" BUILD_TESTS AND CAN_BUILD_ANDROID_PROJECTS THEN YES ELSE NO)

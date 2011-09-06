@@ -4276,7 +4276,7 @@ class CV_EXPORTS CommandLineParser
     public:
 
     //! the default constructor
-      CommandLineParser(int argc, const char* argv[], const char* key_map);
+      CommandLineParser(int argc, const char* const argv[], const char* key_map);
 
     //! get parameter, you can choose: delete spaces in end and begin or not
     template<typename _Tp>
@@ -4287,7 +4287,7 @@ class CV_EXPORTS CommandLineParser
             return _Tp();
         }
         std::string str = getString(name);
-        return analizeValue<_Tp>(str, space_delete);
+        return analyzeValue<_Tp>(str, space_delete);
     }
 
     //! print short name, full name, current value and help for all params
@@ -4300,7 +4300,7 @@ class CV_EXPORTS CommandLineParser
     bool has(const std::string& keys);
 
     template<typename _Tp>
-    _Tp analizeValue(const std::string& str, bool space_delete=false);
+    _Tp analyzeValue(const std::string& str, bool space_delete=false);
 
     template<typename _Tp>
     static _Tp getData(const std::string& str)
@@ -4320,19 +4320,22 @@ template<> CV_EXPORTS
 bool CommandLineParser::get<bool>(const std::string& name, bool space_delete);
 
 template<> CV_EXPORTS
-std::string CommandLineParser::analizeValue<std::string>(const std::string& str, bool space_delete);
+std::string CommandLineParser::analyzeValue<std::string>(const std::string& str, bool space_delete);
 
 template<> CV_EXPORTS
-int CommandLineParser::analizeValue<int>(const std::string& str, bool space_delete);
+int CommandLineParser::analyzeValue<int>(const std::string& str, bool space_delete);
 
 template<> CV_EXPORTS
-unsigned CommandLineParser::analizeValue<unsigned int>(const std::string& str, bool space_delete);
+unsigned int CommandLineParser::analyzeValue<unsigned int>(const std::string& str, bool space_delete);
 
 template<> CV_EXPORTS
-float CommandLineParser::analizeValue<float>(const std::string& str, bool space_delete);
+uint64 CommandLineParser::analyzeValue<uint64>(const std::string& str, bool space_delete);
 
 template<> CV_EXPORTS
-double CommandLineParser::analizeValue<double>(const std::string& str, bool space_delete);
+float CommandLineParser::analyzeValue<float>(const std::string& str, bool space_delete);
+
+template<> CV_EXPORTS
+double CommandLineParser::analyzeValue<double>(const std::string& str, bool space_delete);
 
 }
 

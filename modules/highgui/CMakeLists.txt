@@ -125,7 +125,7 @@ if(WIN32)
     endif()
 endif()
 
-if(UNIX)		
+if(UNIX)
     if(NOT HAVE_QT)        
         if(HAVE_GTK)
             set(highgui_srcs ${highgui_srcs} src/window_gtk.cpp)
@@ -190,7 +190,7 @@ endif()
 #YV
 if(APPLE)
 	if (NOT IOS)
-		add_definitions(-DHAVE_QUICKTIME=1)
+        add_definitions(-DHAVE_QUICKTIME=1)
 	endif()
 
     if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
@@ -208,21 +208,16 @@ if(APPLE)
     endif()
     
     if(WITH_QUICKTIME)
-	    set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
-	else()
+        set(highgui_srcs ${highgui_srcs} src/cap_qt.cpp)
+    else()
 		if (WITH_AVFOUNDATION)
 			add_definitions(-DHAVE_AVFOUNDATION=1)
 		    set(highgui_srcs ${highgui_srcs} src/cap_avfoundation.mm)
 		else()
-			set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
-		endif()
-	endif()
-	
-
-
+            set(highgui_srcs ${highgui_srcs} src/cap_qtkit.mm)
+        endif()
+    endif()
 endif(APPLE)
-
-
 
 if(WITH_ANDROID_CAMERA)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../androidcamera/include")
@@ -387,58 +382,5 @@ install(FILES ${highgui_ext_hdrs}
 
 
 ############################# highgui tests ################################
-if(BUILD_TESTS)
-
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/test"
-                      "${CMAKE_CURRENT_BINARY_DIR}")
-
-  set(test_deps opencv_ts opencv_highgui opencv_imgproc)
-  if(WITH_ANDROID_CAMERA)
-    set(test_deps ${test_deps} opencv_androidcamera)
-  endif()
-
-  foreach(d ${test_deps})
-      if(${d} MATCHES "opencv_")
-          string(REPLACE "opencv_" "${CMAKE_CURRENT_SOURCE_DIR}/../" d_dir ${d})
-          include_directories("${d_dir}/include")
-      endif()
-  endforeach()
-
-  file(GLOB test_srcs "test/*.cpp")
-  file(GLOB test_hdrs "test/*.h*")
-
-  source_group("Src" FILES ${test_srcs})
-  source_group("Include" FILES ${test_hdrs})
-
-  set(the_target "opencv_test_highgui")
- 
-  add_executable(${the_target} ${test_srcs} ${test_hdrs})
-
-  add_opencv_precompiled_headers(${the_target})
-
-  # Additional target properties
-  set_target_properties(${the_target} PROPERTIES
-      DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-      RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
-      )
-
-  if(ENABLE_SOLUTION_FOLDERS)
-    set_target_properties(${the_target} PROPERTIES FOLDER "tests")
-  endif()
-
-  add_dependencies(${the_target} ${test_deps})
-
-  # Add the required libraries for linking:
-  target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${test_deps})
-
-  enable_testing()
-  get_target_property(LOC ${the_target} LOCATION)
-  add_test(${the_target} "${LOC}")
-
-  if(WIN32)
-      if (MSVC AND NOT BUILD_SHARED_LIBS)
-        set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
-      endif()
-      #install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
-  endif()
-endif(BUILD_TESTS)
+define_opencv_test(highgui)
+define_opencv_perf_test(highgui)
