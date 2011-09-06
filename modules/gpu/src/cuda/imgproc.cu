@@ -45,7 +45,7 @@
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/filters.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -186,7 +186,7 @@ namespace cv { namespace gpu { namespace imgproc
     {
         typedef void (*caller_t)(const DevMem2D_<T>& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D_<T>& dst, const float* borderValue, cudaStream_t stream);
 
-        static const caller_t callers[2][5] = 
+        static const caller_t callers[3][5] = 
         {
             { 
                 RemapDispatcher<PointFilter, BrdReflect101, T>::call, 
@@ -201,6 +201,13 @@ namespace cv { namespace gpu { namespace imgproc
                 RemapDispatcher<LinearFilter, BrdConstant, T>::call, 
                 RemapDispatcher<LinearFilter, BrdReflect, T>::call, 
                 RemapDispatcher<LinearFilter, BrdWrap, T>::call 
+            },
+            { 
+                RemapDispatcher<CubicFilter, BrdReflect101, T>::call, 
+                RemapDispatcher<CubicFilter, BrdReplicate, T>::call, 
+                RemapDispatcher<CubicFilter, BrdConstant, T>::call, 
+                RemapDispatcher<CubicFilter, BrdReflect, T>::call, 
+                RemapDispatcher<CubicFilter, BrdWrap, T>::call 
             }
         };
 

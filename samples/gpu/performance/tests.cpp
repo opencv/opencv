@@ -78,6 +78,9 @@ TEST(remap)
 {
     Mat src, dst, xmap, ymap;
     gpu::GpuMat d_src, d_dst, d_xmap, d_ymap;
+    
+    int interpolation = INTER_LINEAR;
+    int borderMode = BORDER_CONSTANT;
 
     for (int size = 1000; size <= 4000; size *= 2)
     {
@@ -101,7 +104,7 @@ TEST(remap)
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
         d_src = src;
@@ -110,7 +113,7 @@ TEST(remap)
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
         GPU_OFF;
     }
 
@@ -136,7 +139,7 @@ TEST(remap)
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
         d_src = src;
@@ -145,7 +148,7 @@ TEST(remap)
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
         GPU_OFF;
     }
 
@@ -171,7 +174,7 @@ TEST(remap)
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
         d_src = src;
@@ -180,7 +183,7 @@ TEST(remap)
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
         GPU_OFF;
     }
 
@@ -206,7 +209,7 @@ TEST(remap)
         dst.create(xmap.size(), src.type());
 
         CPU_ON;
-        remap(src, dst, xmap, ymap, INTER_LINEAR, BORDER_REPLICATE);
+        remap(src, dst, xmap, ymap, interpolation, borderMode);
         CPU_OFF;
 
         d_src = src;
@@ -215,7 +218,7 @@ TEST(remap)
         d_dst.create(d_xmap.size(), d_src.type());
 
         GPU_ON;
-        gpu::remap(d_src, d_dst, d_xmap, d_ymap, INTER_LINEAR, BORDER_REPLICATE);
+        gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
         GPU_OFF;
     }
 }

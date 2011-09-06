@@ -50,6 +50,7 @@
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/filters.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

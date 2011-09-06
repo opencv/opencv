@@ -42,7 +42,7 @@
 
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/vec_distance.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;

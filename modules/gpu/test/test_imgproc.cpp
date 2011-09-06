@@ -210,20 +210,8 @@ struct Remap : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int,
 
         src = cvtest::randomMat(rng, size, type, 0.0, 256.0, false);
 
-        xmap.create(size, CV_32FC1);
-        ymap.create(size, CV_32FC1);
-
-        for (int y = 0; y < src.rows; ++y)
-        {
-            float* xmap_row = xmap.ptr<float>(y);
-            float* ymap_row = ymap.ptr<float>(y);
-
-            for (int x = 0; x < src.cols; ++x)
-            {
-                xmap_row[x] = src.cols - 1 - x + 10;
-                ymap_row[x] = src.rows - 1 - y + 10;
-            }
-        }
+        xmap = cvtest::randomMat(rng, size, CV_32FC1, -20.0, src.cols + 20, false);
+        ymap = cvtest::randomMat(rng, size, CV_32FC1, -20.0, src.rows + 20, false);
         
         cv::remap(src, dst_gold, xmap, ymap, interpolation, borderType);
     }
@@ -253,13 +241,7 @@ TEST_P(Remap, Accuracy)
         gpuRes.download(dst);
     );
 
-    if (dst_gold.depth() == CV_32F)
-    {
-        dst_gold.convertTo(dst_gold, CV_8U);
-        dst.convertTo(dst, CV_8U);
-    }
-
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
+    EXPECT_MAT_SIMILAR(dst_gold, dst, 1e-1);
 }
 
 INSTANTIATE_TEST_CASE_P
@@ -272,7 +254,7 @@ INSTANTIATE_TEST_CASE_P
             CV_8UC1, CV_8UC3, CV_8UC4,
             CV_32FC1, CV_32FC3, CV_32FC4
         ),
-        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
+        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC),
         testing::Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP)
     )
 );
