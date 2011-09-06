@@ -53,6 +53,8 @@ namespace cv
 class CV_EXPORTS Estimator
 {
 public:
+    virtual ~Estimator() {}
+
     void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
                      std::vector<CameraParams> &cameras)
     {
