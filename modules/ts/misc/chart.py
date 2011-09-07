@@ -121,7 +121,8 @@ if __name__ == "__main__":
     names = set()
     for pair in tests:
         sn = pair[0].shortName()
-        names.add(sn)
+        if len(pair[1]) > 1:
+            names.add(sn)
         if sn == sname:
             if len(pair[1]) != argsnum:
                 print >> sys.stderr, "Error - unable to create chart tables for functions having different argument numbers"
@@ -130,7 +131,7 @@ if __name__ == "__main__":
                 arglists[i][pair[1][i]] = 1
     
     if len(names) != 1:
-        print >> sys.stderr, "Error - unable to create chart tables for functions from different test suits:"
+        print >> sys.stderr, "Error - unable to create tables for functions from different test suits:"
         i = 1
         for name in sorted(names):
             print >> sys.stderr, "%4s:   %s" % (i, name)
