@@ -49,13 +49,27 @@ namespace detail {
 
 Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
 {
+#ifndef ANDROID
     bool can_use_gpu = try_gpu && gpu::getCudaEnabledDeviceCount();
-    if (type == PLANE)
-        return !can_use_gpu ? new PlaneWarper(focal) : new PlaneWarperGpu(focal);
-    if (type == CYLINDRICAL)
-        return !can_use_gpu ? new CylindricalWarper(focal) : new CylindricalWarperGpu(focal);
-    if (type == SPHERICAL)
-        return !can_use_gpu ? new SphericalWarper(focal) : new SphericalWarperGpu(focal);
+    if (can_use_gpu)
+    {
+        if (type == PLANE)
+            return new PlaneWarperGpu(focal);
+        if (type == CYLINDRICAL)
+            return new CylindricalWarperGpu(focal);
+        if (type == SPHERICAL)
+            return new SphericalWarperGpu(focal);
+    }
+    else
+#endif
+    {
+        if (type == PLANE)
+            return new PlaneWarper(focal);
+        if (type == CYLINDRICAL)
+            return new CylindricalWarper(focal);
+        if (type == SPHERICAL)
+            return new SphericalWarper(focal);
+    }
     CV_Error(CV_StsBadArg, "unsupported warping type");
     return NULL;
 }
@@ -107,7 +121,7 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     dst_br.y = static_cast<int>(br_vf);
 }
 
-
+#ifndef ANDROID
 Point PlaneWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst, int interp_mode, int border_mode)
 {
     src_size_ = src.size();
@@ -132,6 +146,7 @@ Point PlaneWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst, 
 
     return dst_tl;
 }
+#endif
 
 
 void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
@@ -177,7 +192,7 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     dst_br.y = static_cast<int>(br_vf);
 }
 
-
+#ifndef ANDROID
 Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
                                    int interp_mode, int border_mode)
 {
@@ -230,6 +245,7 @@ Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat 
 
     return dst_tl;
 }
+#endif
 
 } // namespace detail
 } // namespace cv

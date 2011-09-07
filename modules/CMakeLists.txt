@@ -28,12 +28,12 @@ endif()
 
 add_subdirectory(video)
 
+if(NOT (ANDROID OR IOS))
+  add_subdirectory(gpu)
+endif()
+
 if(NOT IOS)
   add_subdirectory(traincascade)
   add_subdirectory(haartraining)
-endif()
-
-if(NOT (ANDROID OR IOS))
-  add_subdirectory(gpu)
   add_subdirectory(stitching)
 endif()

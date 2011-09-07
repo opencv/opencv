@@ -45,7 +45,9 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+#ifndef ANDROID
 using namespace cv::gpu;
+#endif
 
 namespace {
 
@@ -67,7 +69,7 @@ private:
     Ptr<DescriptorExtractor> extractor_;
 };
 
-
+#ifndef ANDROID
 class GpuSurfFeaturesFinder : public FeaturesFinder
 {
 public:
@@ -97,6 +99,7 @@ private:
     int num_octaves_, num_layers_;
     int num_octaves_descr_, num_layers_descr_;
 };
+#endif
 
 
 void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
@@ -108,7 +111,7 @@ void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     extractor_->compute(gray_image, features.keypoints, features.descriptors);
 }
 
-
+#ifndef ANDROID
 void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     CV_Assert(image.depth() == CV_8U);
@@ -141,6 +144,7 @@ void GpuSurfFeaturesFinder::releaseMemory()
     keypoints_.release();
     descriptors_.release();
 }
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -220,7 +224,7 @@ private:
     float match_conf_;
 };
 
-
+#ifndef ANDROID
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -235,6 +239,7 @@ private:
     GpuMat train_idx_, distance_, all_dist_;
     vector< vector<DMatch> > pair_matches;
 };
+#endif
 
 
 void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
@@ -274,7 +279,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     }
 }
 
-
+#ifndef ANDROID
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -330,6 +335,7 @@ void GpuMatcher::releaseMemory()
     all_dist_.release();
     vector< vector<DMatch> >().swap(pair_matches);
 }
+#endif
 
 } // namespace
 
@@ -348,9 +354,11 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
+#ifndef ANDROID
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
     else
+#endif
         impl_ = new CpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
 }
 
@@ -412,9 +420,11 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
+#ifndef ANDROID
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
     else
+#endif
         impl_ = new CpuMatcher(match_conf);
 
     is_thread_safe_ = impl_->isThreadSafe();

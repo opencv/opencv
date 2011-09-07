@@ -43,7 +43,9 @@
 #include "precomp.hpp"
 
 using namespace std;
+#ifndef ANDROID
 using namespace cv::gpu;
+#endif
 
 namespace cv {
 namespace detail {

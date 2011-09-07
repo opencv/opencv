@@ -44,7 +44,9 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#ifndef ANDROID
+# include "opencv2/gpu/gpu.hpp"
+#endif
 
 namespace cv {
 namespace detail {
@@ -118,7 +120,7 @@ protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br);
 };
 
-
+#ifndef ANDROID
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
@@ -129,6 +131,7 @@ public:
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
+#endif
 
 
 struct CV_EXPORTS SphericalProjector : ProjectorBase
@@ -150,6 +153,7 @@ protected:
 };
 
 
+#ifndef ANDROID
 class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
 {
 public:
@@ -160,6 +164,7 @@ public:
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
+#endif
 
 
 struct CV_EXPORTS CylindricalProjector : ProjectorBase
@@ -183,6 +188,7 @@ protected:
 };
 
 
+#ifndef ANDROID
 class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 {
 public:
@@ -193,6 +199,7 @@ public:
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
+#endif
 
 } // namespace detail
 } // namespace cv

@@ -158,7 +158,11 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
 {
     setNumBands(num_bands);
+#ifndef ANDROID
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
+#else
+    can_use_gpu_ = false;
+#endif
 }
 
 
@@ -342,9 +346,9 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
     }
 }
 
-
 void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
+#ifndef ANDROID
     pyr.resize(num_levels + 1);
 
     vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
@@ -361,8 +365,8 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
     }
 
     pyr[num_levels] = gpu_pyr[num_levels];
+#endif
 }
-
 
 void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 {
