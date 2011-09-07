@@ -40,14 +40,6 @@
 //
 //M*/
 
-// We follow to these papers:
-// 1) Construction of panoramic mosaics with global and local alignment.
-//    Heung-Yeung Shum and Richard Szeliski. 2000.
-// 2) Eliminating Ghosting and Exposure Artifacts in Image Mosaics.
-//    Matthew Uyttendaele, Ashley Eden and Richard Szeliski. 2001.
-// 3) Automatic Panoramic Image Stitching using Invariant Features.
-//    Matthew Brown and David G. Lowe. 2007.
-
 #include <iostream>
 #include <fstream>
 #include "opencv2/highgui/highgui.hpp"
@@ -55,6 +47,33 @@
 
 using namespace std;
 using namespace cv;
+
+bool try_use_gpu = false;
+vector<Mat> imgs;
+string result_name = "result.jpg";
+
+void printUsage();
+int parseCmdArgs(int argc, char** argv);
+
+int main(int argc, char* argv[])
+{
+    int retval = parseCmdArgs(argc, argv);
+    if (retval) return -1;
+
+    Mat pano;
+    Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
+    Stitcher::Status status = stitcher.stitch(imgs, pano);
+
+    if (status != Stitcher::OK)
+    {
+        cout << "Can't stitch images, error code = " << status << endl;
+        return -1;
+    }
+
+    imwrite(result_name, pano);
+    return 0;
+}
+
 
 void printUsage()
 {
@@ -69,9 +88,6 @@ void printUsage()
         "      The default is 'result.jpg'.\n";
 }
 
-bool try_use_gpu = false;
-vector<Mat> imgs;
-string result_name = "result.jpg";
 
 int parseCmdArgs(int argc, char** argv)
 {
@@ -116,26 +132,6 @@ int parseCmdArgs(int argc, char** argv)
             imgs.push_back(img);
         }
     }
-    return 0;
-}
-
-
-int main(int argc, char* argv[])
-{
-    int retval = parseCmdArgs(argc, argv);
-    if (retval) return -1;
-
-    Mat pano;
-    Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
-    Stitcher::Status status = stitcher.stitch(imgs, pano);
-
-    if (status != Stitcher::OK)
-    {
-        cout << "Can't stitch images, error code = " << status << endl;
-        return -1;
-    }
-
-    imwrite(result_name, pano);
     return 0;
 }
 

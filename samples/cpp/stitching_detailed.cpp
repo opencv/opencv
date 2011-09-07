@@ -40,14 +40,6 @@
 //
 //M*/
 
-// We follow to these papers:
-// 1) Construction of panoramic mosaics with global and local alignment.
-//    Heung-Yeung Shum and Richard Szeliski. 2000.
-// 2) Eliminating Ghosting and Exposure Artifacts in Image Mosaics.
-//    Matthew Uyttendaele, Ashley Eden and Richard Szeliski. 2001.
-// 3) Automatic Panoramic Image Stitching using Invariant Features.
-//    Matthew Brown and David G. Lowe. 2007.
-
 #include <fstream>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
