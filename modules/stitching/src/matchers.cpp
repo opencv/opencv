@@ -39,13 +39,305 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 using namespace std;
 using namespace cv;
+using namespace cv::detail;
 using namespace cv::gpu;
 
-void cv::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
+namespace {
+
+class CpuSurfFeaturesFinder : public FeaturesFinder
+{
+public:
+    CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
+                          int num_octaves_descr, int num_layers_descr)
+    {
+        detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
+        extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
+    }
+
+protected:
+    void find(const Mat &image, ImageFeatures &features);
+
+private:
+    Ptr<FeatureDetector> detector_;
+    Ptr<DescriptorExtractor> extractor_;
+};
+
+
+class GpuSurfFeaturesFinder : public FeaturesFinder
+{
+public:
+    GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
+                          int num_octaves_descr, int num_layers_descr)
+    {
+        surf_.keypointsRatio = 0.1f;
+        surf_.hessianThreshold = hess_thresh;
+        surf_.extended = false;
+        num_octaves_ = num_octaves;
+        num_layers_ = num_layers;
+        num_octaves_descr_ = num_octaves_descr;
+        num_layers_descr_ = num_layers_descr;
+    }
+
+    void releaseMemory();
+
+protected:
+    void find(const Mat &image, ImageFeatures &features);
+
+private:
+    GpuMat image_;
+    GpuMat gray_image_;
+    SURF_GPU surf_;
+    GpuMat keypoints_;
+    GpuMat descriptors_;
+    int num_octaves_, num_layers_;
+    int num_octaves_descr_, num_layers_descr_;
+};
+
+
+void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+{
+    Mat gray_image;
+    CV_Assert(image.depth() == CV_8U);
+    cvtColor(image, gray_image, CV_BGR2GRAY);
+    detector_->detect(gray_image, features.keypoints);
+    extractor_->compute(gray_image, features.keypoints, features.descriptors);
+}
+
+
+void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+{
+    CV_Assert(image.depth() == CV_8U);
+
+    ensureSizeIsEnough(image.size(), image.type(), image_);
+    image_.upload(image);
+
+    ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
+    cvtColor(image_, gray_image_, CV_BGR2GRAY);
+
+    surf_.nOctaves = num_octaves_;
+    surf_.nOctaveLayers = num_layers_;
+    surf_.upright = false;
+    surf_(gray_image_, GpuMat(), keypoints_);
+
+    surf_.nOctaves = num_octaves_descr_;
+    surf_.nOctaveLayers = num_layers_descr_;
+    surf_.upright = true;
+    surf_(gray_image_, GpuMat(), keypoints_, descriptors_, true);
+    surf_.downloadKeypoints(keypoints_, features.keypoints);
+
+    descriptors_.download(features.descriptors);
+}
+
+void GpuSurfFeaturesFinder::releaseMemory()
+{
+    surf_.releaseMemory();
+    image_.release();
+    gray_image_.release();
+    keypoints_.release();
+    descriptors_.release();
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct DistIdxPair
+{
+    bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
+    double dist;
+    int idx;
+};
+
+
+struct MatchPairsBody
+{
+    MatchPairsBody(const MatchPairsBody& other)
+            : matcher(other.matcher), features(other.features),
+              pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
+
+    MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features,
+                   vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
+            : matcher(matcher), features(features),
+              pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
+
+    void operator ()(const BlockedRange &r) const
+    {
+        const int num_images = static_cast<int>(features.size());
+        for (int i = r.begin(); i < r.end(); ++i)
+        {
+            int from = near_pairs[i].first;
+            int to = near_pairs[i].second;
+            int pair_idx = from*num_images + to;
+
+            matcher(features[from], features[to], pairwise_matches[pair_idx]);
+            pairwise_matches[pair_idx].src_img_idx = from;
+            pairwise_matches[pair_idx].dst_img_idx = to;
+
+            size_t dual_pair_idx = to*num_images + from;
+
+            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
+            pairwise_matches[dual_pair_idx].src_img_idx = to;
+            pairwise_matches[dual_pair_idx].dst_img_idx = from;
+
+            if (!pairwise_matches[pair_idx].H.empty())
+                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
+
+            for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
+                std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
+                          pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+            LOG(".");
+        }
+    }
+
+    FeaturesMatcher &matcher;
+    const vector<ImageFeatures> &features;
+    vector<MatchesInfo> &pairwise_matches;
+    vector<pair<int,int> > &near_pairs;
+
+private:
+    void operator =(const MatchPairsBody&);
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+typedef set<pair<int,int> > MatchesSet;
+
+// These two classes are aimed to find features matches only, not to
+// estimate homography
+
+class CpuMatcher : public FeaturesMatcher
+{
+public:
+    CpuMatcher(float match_conf) : FeaturesMatcher(true), match_conf_(match_conf) {}
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+
+private:
+    float match_conf_;
+};
+
+
+class GpuMatcher : public FeaturesMatcher
+{
+public:
+    GpuMatcher(float match_conf) : match_conf_(match_conf) {}
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+
+    void releaseMemory();
+
+private:
+    float match_conf_;
+    GpuMat descriptors1_, descriptors2_;
+    GpuMat train_idx_, distance_, all_dist_;
+    vector< vector<DMatch> > pair_matches;
+};
+
+
+void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
+{
+    matches_info.matches.clear();
+    FlannBasedMatcher matcher;
+    vector< vector<DMatch> > pair_matches;
+    MatchesSet matches;
+
+    // Find 1->2 matches
+    matcher.knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+        {
+            matches_info.matches.push_back(m0);
+            matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
+        }
+    }
+
+    // Find 2->1 matches
+    pair_matches.clear();
+    matcher.knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+            if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
+    }
+}
+
+
+void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
+{
+    matches_info.matches.clear();
+
+    ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
+    ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
+
+    descriptors1_.upload(features1.descriptors);
+    descriptors2_.upload(features2.descriptors);
+
+    BruteForceMatcher_GPU< L2<float> > matcher;
+    MatchesSet matches;
+
+    // Find 1->2 matches
+    pair_matches.clear();
+    matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
+    matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+        {
+            matches_info.matches.push_back(m0);
+            matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
+        }
+    }
+
+    // Find 2->1 matches
+    pair_matches.clear();
+    matcher.knnMatch(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
+    matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+            if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
+    }
+}
+
+void GpuMatcher::releaseMemory()
+{
+    descriptors1_.release();
+    descriptors2_.release();
+    train_idx_.release();
+    distance_.release();
+    all_dist_.release();
+    vector< vector<DMatch> >().swap(pair_matches);
+}
+
+} // namespace
+
+
+namespace cv {
+namespace detail {
+
+void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 { 
     find(image, features);
     features.img_size = image.size();
@@ -53,104 +345,7 @@ void cv::FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 }
 
 
-namespace
-{
-    class CpuSurfFeaturesFinder : public FeaturesFinder
-    {
-    public:
-        CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
-                              int num_octaves_descr, int num_layers_descr) 
-        {
-            detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
-            extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
-        }
-
-    protected:
-        void find(const Mat &image, ImageFeatures &features);
-
-    private:
-        Ptr<FeatureDetector> detector_;
-        Ptr<DescriptorExtractor> extractor_;
-    };
-
-
-    class GpuSurfFeaturesFinder : public FeaturesFinder
-    {
-    public:
-        GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers, 
-                              int num_octaves_descr, int num_layers_descr) 
-        {
-            surf_.keypointsRatio = 0.1f;
-            surf_.hessianThreshold = hess_thresh;
-            surf_.extended = false;
-            num_octaves_ = num_octaves;
-            num_layers_ = num_layers;
-            num_octaves_descr_ = num_octaves_descr;
-            num_layers_descr_ = num_layers_descr;
-        }
-
-        void releaseMemory();
-
-    protected:
-        void find(const Mat &image, ImageFeatures &features);
-
-    private:
-        GpuMat image_;
-        GpuMat gray_image_;
-        SURF_GPU surf_;
-        GpuMat keypoints_;
-        GpuMat descriptors_;
-        int num_octaves_, num_layers_;
-        int num_octaves_descr_, num_layers_descr_;
-    };
-
-
-    void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
-    {
-        Mat gray_image;
-        CV_Assert(image.depth() == CV_8U);
-        cvtColor(image, gray_image, CV_BGR2GRAY);
-        detector_->detect(gray_image, features.keypoints);
-        extractor_->compute(gray_image, features.keypoints, features.descriptors);
-    }
-  
-
-    void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
-    {
-        CV_Assert(image.depth() == CV_8U);
-
-        ensureSizeIsEnough(image.size(), image.type(), image_);
-        image_.upload(image);
-
-        ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-        cvtColor(image_, gray_image_, CV_BGR2GRAY);
-
-        surf_.nOctaves = num_octaves_;
-        surf_.nOctaveLayers = num_layers_;
-        surf_.upright = false;
-        surf_(gray_image_, GpuMat(), keypoints_);
-
-        surf_.nOctaves = num_octaves_descr_;
-        surf_.nOctaveLayers = num_layers_descr_;
-        surf_.upright = true;
-        surf_(gray_image_, GpuMat(), keypoints_, descriptors_, true);
-        surf_.downloadKeypoints(keypoints_, features.keypoints);
-
-        descriptors_.download(features.descriptors);
-    }
-
-    void GpuSurfFeaturesFinder::releaseMemory()
-    {
-        surf_.releaseMemory();
-        image_.release();
-        gray_image_.release();
-        keypoints_.release();
-        descriptors_.release();
-    }
-} // namespace
-
-
-cv::SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers,
+SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
@@ -160,12 +355,13 @@ cv::SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh,
 }
 
 
-void cv::SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
+void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
     (*impl_)(image, features);
 }
 
-void cv::SurfFeaturesFinder::releaseMemory()
+
+void SurfFeaturesFinder::releaseMemory()
 {
     impl_->releaseMemory();
 }
@@ -173,11 +369,11 @@ void cv::SurfFeaturesFinder::releaseMemory()
 
 //////////////////////////////////////////////////////////////////////////////
 
-cv::MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), confidence(0) {}
+MatchesInfo::MatchesInfo() : src_img_idx(-1), dst_img_idx(-1), num_inliers(0), confidence(0) {}
 
-cv::MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
+MatchesInfo::MatchesInfo(const MatchesInfo &other) { *this = other; }
 
-const cv::MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
+const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 {
     src_img_idx = other.src_img_idx;
     dst_img_idx = other.dst_img_idx;
@@ -192,69 +388,7 @@ const cv::MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
-namespace
-{
-
-    struct DistIdxPair
-    {
-        bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
-        double dist;
-        int idx;
-    };
-
-
-    struct MatchPairsBody
-    {
-        MatchPairsBody(const MatchPairsBody& other)
-                : matcher(other.matcher), features(other.features),
-                  pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
-
-        MatchPairsBody(FeaturesMatcher &matcher, const vector<ImageFeatures> &features,
-                       vector<MatchesInfo> &pairwise_matches, vector<pair<int,int> > &near_pairs)
-                : matcher(matcher), features(features),
-                  pairwise_matches(pairwise_matches), near_pairs(near_pairs) {}
-
-        void operator ()(const BlockedRange &r) const
-        {
-            const int num_images = static_cast<int>(features.size());
-            for (int i = r.begin(); i < r.end(); ++i)
-            {
-                int from = near_pairs[i].first;
-                int to = near_pairs[i].second;
-                int pair_idx = from*num_images + to;
-
-                matcher(features[from], features[to], pairwise_matches[pair_idx]);
-                pairwise_matches[pair_idx].src_img_idx = from;
-                pairwise_matches[pair_idx].dst_img_idx = to;
-
-                size_t dual_pair_idx = to*num_images + from;
-
-                pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
-                pairwise_matches[dual_pair_idx].src_img_idx = to;
-                pairwise_matches[dual_pair_idx].dst_img_idx = from;
-
-                if (!pairwise_matches[pair_idx].H.empty())
-                    pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
-
-                for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
-                    std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
-                              pairwise_matches[dual_pair_idx].matches[j].trainIdx);
-                LOG(".");
-            }
-        }
-
-        FeaturesMatcher &matcher;
-        const vector<ImageFeatures> &features;
-        vector<MatchesInfo> &pairwise_matches;
-        vector<pair<int,int> > &near_pairs;
-
-    private:
-        void operator =(const MatchPairsBody&);
-    };
-} // namespace
-
-
-void cv::FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
 {
     const int num_images = static_cast<int>(features.size());
 
@@ -276,138 +410,7 @@ void cv::FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vec
 
 //////////////////////////////////////////////////////////////////////////////
 
-namespace 
-{
-    typedef set<pair<int,int> > MatchesSet;
-
-    // These two classes are aimed to find features matches only, not to 
-    // estimate homography
-
-    class CpuMatcher : public FeaturesMatcher
-    {
-    public:
-        CpuMatcher(float match_conf) : FeaturesMatcher(true), match_conf_(match_conf) {}
-        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
-
-    private:
-        float match_conf_;
-    };
-
-
-    class GpuMatcher : public FeaturesMatcher
-    {
-    public:
-        GpuMatcher(float match_conf) : match_conf_(match_conf) {}
-        void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
-
-        void releaseMemory();
-
-    private:
-        float match_conf_;
-        GpuMat descriptors1_, descriptors2_;
-        GpuMat train_idx_, distance_, all_dist_;
-        vector< vector<DMatch> > pair_matches;
-    };
-
-
-    void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
-    {
-        matches_info.matches.clear();
-        FlannBasedMatcher matcher;
-        vector< vector<DMatch> > pair_matches;        
-        MatchesSet matches;
-
-        // Find 1->2 matches
-        matcher.knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
-        for (size_t i = 0; i < pair_matches.size(); ++i)
-        {
-            if (pair_matches[i].size() < 2)
-                continue;
-            const DMatch& m0 = pair_matches[i][0];
-            const DMatch& m1 = pair_matches[i][1];
-            if (m0.distance < (1.f - match_conf_) * m1.distance)
-            {
-                matches_info.matches.push_back(m0);
-                matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
-            }
-        }
-
-        // Find 2->1 matches
-        pair_matches.clear();
-        matcher.knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
-        for (size_t i = 0; i < pair_matches.size(); ++i)
-        {
-            if (pair_matches[i].size() < 2)
-                continue;
-            const DMatch& m0 = pair_matches[i][0];
-            const DMatch& m1 = pair_matches[i][1];
-            if (m0.distance < (1.f - match_conf_) * m1.distance)
-                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
-                    matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
-        }
-    }
-       
-
-    void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
-    {
-        matches_info.matches.clear(); 
-
-        ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
-        ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
-
-        descriptors1_.upload(features1.descriptors);
-        descriptors2_.upload(features2.descriptors);
-
-        BruteForceMatcher_GPU< L2<float> > matcher;
-        MatchesSet matches;
-
-        // Find 1->2 matches
-        pair_matches.clear();
-        matcher.knnMatch(descriptors1_, descriptors2_, train_idx_, distance_, all_dist_, 2);
-        matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
-        for (size_t i = 0; i < pair_matches.size(); ++i)
-        {
-            if (pair_matches[i].size() < 2)
-                continue;
-            const DMatch& m0 = pair_matches[i][0];
-            const DMatch& m1 = pair_matches[i][1];
-            if (m0.distance < (1.f - match_conf_) * m1.distance)
-            {
-                matches_info.matches.push_back(m0);
-                matches.insert(make_pair(m0.queryIdx, m0.trainIdx));
-            }
-        }
-
-        // Find 2->1 matches
-        pair_matches.clear();
-        matcher.knnMatch(descriptors2_, descriptors1_, train_idx_, distance_, all_dist_, 2);
-        matcher.knnMatchDownload(train_idx_, distance_, pair_matches);
-        for (size_t i = 0; i < pair_matches.size(); ++i)
-        {
-            if (pair_matches[i].size() < 2)
-                continue;
-            const DMatch& m0 = pair_matches[i][0];
-            const DMatch& m1 = pair_matches[i][1];
-            if (m0.distance < (1.f - match_conf_) * m1.distance)
-                if (matches.find(make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
-                    matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
-        }
-    }
-
-    void GpuMatcher::releaseMemory()
-    {
-        descriptors1_.release();
-        descriptors2_.release();
-        train_idx_.release();
-        distance_.release();
-        all_dist_.release();
-        vector< vector<DMatch> >().swap(pair_matches);
-    }
-
-} // namespace
-
-
-cv::BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
@@ -420,7 +423,7 @@ cv::BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_c
 }
 
 
-void cv::BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
+void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
                                   MatchesInfo &matches_info)
 {
     (*impl_)(features1, features2, matches_info);
@@ -498,7 +501,10 @@ void cv::BestOf2NearestMatcher::match(const ImageFeatures &features1, const Imag
     matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
 }
 
-void cv::BestOf2NearestMatcher::releaseMemory()
+void BestOf2NearestMatcher::releaseMemory()
 {
     impl_->releaseMemory();
 }
+
+} // namespace detail
+} // namespace cv

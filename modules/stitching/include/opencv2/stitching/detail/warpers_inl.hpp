@@ -45,8 +45,8 @@
 #include "opencv2/core/core.hpp"
 #include "warpers.hpp" // Make your IDE see declarations
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
 template <class P>
 Point WarperBase<P>::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
@@ -256,6 +256,7 @@ void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
     y = focal * y / z + size.height * 0.5f;
 }
 
+} // namespace detail
 } // namespace cv
 
 #endif // __OPENCV_STITCHING_WARPERS_INL_HPP__

@@ -39,56 +39,69 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 using namespace std;
 using namespace cv;
+using namespace cv::detail;
 
-namespace
+namespace {
+
+struct IncDistance
 {
+    IncDistance(vector<int> &dists) : dists(&dists[0]) {}
+    void operator ()(const GraphEdge &edge) { dists[edge.to] = dists[edge.from] + 1; }
+    int* dists;
+};
 
-    struct IncDistance
+
+struct CalcRotation
+{
+    CalcRotation(int num_images, const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
+        : num_images(num_images), pairwise_matches(&pairwise_matches[0]), cameras(&cameras[0]) {}
+
+    void operator ()(const GraphEdge &edge)
     {
-        IncDistance(vector<int> &dists) : dists(&dists[0]) {}
-        void operator ()(const GraphEdge &edge) { dists[edge.to] = dists[edge.from] + 1; }
-        int* dists;
-    };
+        int pair_idx = edge.from * num_images + edge.to;
+
+        double f_from = cameras[edge.from].focal;
+        double f_to = cameras[edge.to].focal;
+
+        Mat K_from = Mat::eye(3, 3, CV_64F);
+        K_from.at<double>(0, 0) = f_from;
+        K_from.at<double>(1, 1) = f_from;
+
+        Mat K_to = Mat::eye(3, 3, CV_64F);
+        K_to.at<double>(0, 0) = f_to;
+        K_to.at<double>(1, 1) = f_to;
+
+        Mat R = K_from.inv() * pairwise_matches[pair_idx].H.inv() * K_to;
+        cameras[edge.to].R = cameras[edge.from].R * R;
+    }
+
+    int num_images;
+    const MatchesInfo* pairwise_matches;
+    CameraParams* cameras;
+};
 
 
-    struct CalcRotation
-    {
-        CalcRotation(int num_images, const vector<MatchesInfo> &pairwise_matches, vector<CameraParams> &cameras)
-            : num_images(num_images), pairwise_matches(&pairwise_matches[0]), cameras(&cameras[0]) {}
+//////////////////////////////////////////////////////////////////////////////
 
-        void operator ()(const GraphEdge &edge)
-        {
-            int pair_idx = edge.from * num_images + edge.to;
-
-            double f_from = cameras[edge.from].focal;
-            double f_to = cameras[edge.to].focal;
-
-            Mat K_from = Mat::eye(3, 3, CV_64F);
-            K_from.at<double>(0, 0) = f_from;
-            K_from.at<double>(1, 1) = f_from;
-
-            Mat K_to = Mat::eye(3, 3, CV_64F);
-            K_to.at<double>(0, 0) = f_to;
-            K_to.at<double>(1, 1) = f_to;
-
-            Mat R = K_from.inv() * pairwise_matches[pair_idx].H.inv() * K_to;
-            cameras[edge.to].R = cameras[edge.from].R * R;
-        }
-
-        int num_images;
-        const MatchesInfo* pairwise_matches;
-        CameraParams* cameras;
-    };
+void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
+{
+    for (int i = 0; i < err1.rows; ++i)
+        res.at<double>(i, 0) = (err2.at<double>(i, 0) - err1.at<double>(i, 0)) / h;
+}
 
 } // namespace
 
 
-void cv::HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
-                                            vector<CameraParams> &cameras)
+namespace cv {
+namespace detail {
+
+void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
+                                        vector<CameraParams> &cameras)
 {
     LOGLN("Estimating rotations...");
     int64 t = getTickCount();
@@ -135,8 +148,8 @@ void cv::HomographyBasedEstimator::estimate(const vector<ImageFeatures> &feature
 
 //////////////////////////////////////////////////////////////////////////////
 
-void cv::BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
-                                  vector<CameraParams> &cameras)
+void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
+                              vector<CameraParams> &cameras)
 {
     if (cost_space_ == NO)
         return;
@@ -250,7 +263,7 @@ void cv::BundleAdjuster::estimate(const vector<ImageFeatures> &features, const v
 }
 
 
-void cv::BundleAdjuster::calcError(Mat &err)
+void BundleAdjuster::calcError(Mat &err)
 {
     err.create(total_num_matches_ * 3, 1, CV_64F);
 
@@ -314,19 +327,7 @@ void cv::BundleAdjuster::calcError(Mat &err)
 }
 
 
-namespace
-{
-
-    void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
-    {
-        for (int i = 0; i < err1.rows; ++i)
-            res.at<double>(i, 0) = (err2.at<double>(i, 0) - err1.at<double>(i, 0)) / h;
-    }
-
-} // namespace
-
-
-void cv::BundleAdjuster::calcJacobian()
+void BundleAdjuster::calcJacobian()
 {
     J_.create(total_num_matches_ * 3, num_images_ * 4, CV_64F);
 
@@ -374,7 +375,7 @@ void cv::BundleAdjuster::calcJacobian()
 //////////////////////////////////////////////////////////////////////////////
 
 // TODO replace SVD with eigen
-void cv::waveCorrect(vector<Mat> &rmats)
+void waveCorrect(vector<Mat> &rmats)
 {
     LOGLN("Wave correcting...");
     int64 t = getTickCount();
@@ -415,7 +416,7 @@ void cv::waveCorrect(vector<Mat> &rmats)
 
 //////////////////////////////////////////////////////////////////////////////
 
-string cv::matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwise_matches,
+string matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pairwise_matches,
                                 float conf_threshold)
 {
     stringstream str;
@@ -481,7 +482,7 @@ string cv::matchesGraphAsString(vector<string> &pathes, vector<MatchesInfo> &pai
     return str.str();
 }
 
-vector<int> cv::leaveBiggestComponent(vector<ImageFeatures> &features,  vector<MatchesInfo> &pairwise_matches,
+vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<MatchesInfo> &pairwise_matches,
                                       float conf_threshold)
 {
     const int num_images = static_cast<int>(features.size());
@@ -539,7 +540,7 @@ vector<int> cv::leaveBiggestComponent(vector<ImageFeatures> &features,  vector<M
 }
 
 
-void cv::findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_matches,
+void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_matches,
                              Graph &span_tree, vector<int> &centers)
 {
     Graph graph(num_images);
@@ -608,3 +609,7 @@ void cv::findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise
             centers.push_back(i);
     CV_Assert(centers.size() > 0 && centers.size() <= 2);
 }
+
+} // namespace detail
+} // namespace cv
+

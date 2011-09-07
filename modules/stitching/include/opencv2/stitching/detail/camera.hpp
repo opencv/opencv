@@ -44,8 +44,8 @@
 
 #include "opencv2/core/core.hpp"
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
 struct CV_EXPORTS CameraParams
 {
@@ -58,6 +58,7 @@ struct CV_EXPORTS CameraParams
     Mat t; // Translation
 };
 
+} // namespace detail
 } // namespace cv
 
 #endif // #ifndef __OPENCV_STITCHING_CAMERA_HPP__

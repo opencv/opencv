@@ -39,27 +39,32 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 using namespace std;
 using namespace cv;
 
-namespace
+namespace {
+
+template<typename _Tp> static inline bool
+decomposeCholesky(_Tp* A, size_t astep, int m)
 {
-    template<typename _Tp> static inline bool
-    decomposeCholesky(_Tp* A, size_t astep, int m)
-    {
-        if (!Cholesky(A, astep, m, 0, 0, 0))
-            return false;
-        astep /= sizeof(A[0]);
-        for (int i = 0; i < m; ++i)
-            A[i*astep + i] = (_Tp)(1./A[i*astep + i]);
-        return true;
-    }
+    if (!Cholesky(A, astep, m, 0, 0, 0))
+        return false;
+    astep /= sizeof(A[0]);
+    for (int i = 0; i < m; ++i)
+        A[i*astep + i] = (_Tp)(1./A[i*astep + i]);
+    return true;
+}
+
 } // namespace
 
 
-void cv::focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, bool &f1_ok)
+namespace cv {
+namespace detail {
+
+void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, bool &f1_ok)
 {
     CV_Assert(H.type() == CV_64F && H.size() == Size(3, 3));
 
@@ -90,7 +95,7 @@ void cv::focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok,
 }
 
 
-void cv::estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
+void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesInfo> &pairwise_matches,
                        vector<double> &focals)
 {
     const int num_images = static_cast<int>(features.size());
@@ -131,7 +136,7 @@ void cv::estimateFocal(const vector<ImageFeatures> &features, const vector<Match
 }
 
 
-bool cv::calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
+bool calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
 {
     int m = static_cast<int>(Hs.size());
     CV_Assert(m >= 1);
@@ -181,3 +186,6 @@ bool cv::calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
     K = W.t();
     return true;
 }
+
+} // namespace detail
+} // namespace cv

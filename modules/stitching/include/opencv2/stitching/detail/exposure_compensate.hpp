@@ -39,25 +39,67 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_AUTOCALIB_HPP__
-#define __OPENCV_STITCHING_AUTOCALIB_HPP__
+#ifndef __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__
+#define __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__
 
 #include "opencv2/core/core.hpp"
-#include "matchers.hpp"
 
-namespace cv
+namespace cv {
+namespace detail {
+
+class CV_EXPORTS ExposureCompensator
 {
+public:
+    virtual ~ExposureCompensator() {}
 
-// See "Construction of Panoramic Image Mosaics with Global and Local Alignment"
-// by Heung-Yeung Shum and Richard Szeliski.
-void CV_EXPORTS focalsFromHomography(const Mat &H, double &f0, double &f1, bool &f0_ok, bool &f1_ok);
+    enum { NO, GAIN, GAIN_BLOCKS };
+    static Ptr<ExposureCompensator> createDefault(int type);
 
-void CV_EXPORTS estimateFocal(const std::vector<ImageFeatures> &features, 
-                              const std::vector<MatchesInfo> &pairwise_matches, 
-                              std::vector<double> &focals);
+    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
+              const std::vector<Mat> &masks);
+    virtual void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
+                      const std::vector<std::pair<Mat,uchar> > &masks) = 0;
+    virtual void apply(int index, Point corner, Mat &image, const Mat &mask) = 0;
+};
 
-bool CV_EXPORTS calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K);
 
+class CV_EXPORTS NoExposureCompensator : public ExposureCompensator
+{
+public:
+    void feed(const std::vector<Point> &/*corners*/, const std::vector<Mat> &/*images*/,
+              const std::vector<std::pair<Mat,uchar> > &/*masks*/) {};
+    void apply(int /*index*/, Point /*corner*/, Mat &/*image*/, const Mat &/*mask*/) {};
+};
+
+
+class CV_EXPORTS GainCompensator : public ExposureCompensator
+{
+public:
+    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
+              const std::vector<std::pair<Mat,uchar> > &masks);
+    void apply(int index, Point corner, Mat &image, const Mat &mask);
+    std::vector<double> gains() const;
+
+private:
+    Mat_<double> gains_;
+};
+
+
+class CV_EXPORTS BlocksGainCompensator : public ExposureCompensator
+{
+public:
+    BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 
+            : bl_width_(bl_width), bl_height_(bl_height) {}
+    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
+              const std::vector<std::pair<Mat,uchar> > &masks);
+    void apply(int index, Point corner, Mat &image, const Mat &mask);
+
+private:
+    int bl_width_, bl_height_;
+    std::vector<Mat_<float> > gain_maps_;
+};
+
+} // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_AUTOCALIB_HPP__
+#endif // __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__

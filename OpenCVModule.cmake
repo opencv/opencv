@@ -144,7 +144,7 @@ macro(define_opencv_module name)
 
     file(GLOB lib_srcs "src/*.cpp")
     file(GLOB lib_int_hdrs "src/*.h*")
-    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
+    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*" "include/opencv2/${name}/detail/*.h*")
 
     if(COMMAND get_module_external_sources)
        get_module_external_sources(${name})

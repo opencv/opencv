@@ -39,13 +39,16 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 using namespace cv::gpu;
 
-Ptr<ExposureCompensator> cv::ExposureCompensator::createDefault(int type)
+namespace cv {
+namespace detail {
+
+Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
 {
     if (type == NO)
         return new NoExposureCompensator();
@@ -58,8 +61,8 @@ Ptr<ExposureCompensator> cv::ExposureCompensator::createDefault(int type)
 }
 
 
-void cv::ExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
-                                   const vector<Mat> &masks)
+void ExposureCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
+                               const vector<Mat> &masks)
 {
     vector<pair<Mat,uchar> > level_masks;
     for (size_t i = 0; i < masks.size(); ++i)
@@ -68,8 +71,8 @@ void cv::ExposureCompensator::feed(const vector<Point> &corners, const vector<Ma
 }
 
 
-void cv::GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
-                               const vector<pair<Mat,uchar> > &masks)
+void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
+                           const vector<pair<Mat,uchar> > &masks)
 {
     LOGLN("Exposure compensation...");
     int64 t = getTickCount();
@@ -143,13 +146,13 @@ void cv::GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &
 }
 
 
-void cv::GainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+void GainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
 {
     image *= gains_(index, 0);
 }
 
 
-vector<double> cv::GainCompensator::gains() const
+vector<double> GainCompensator::gains() const
 {
     vector<double> gains_vec(gains_.rows);
     for (int i = 0; i < gains_.rows; ++i)
@@ -158,7 +161,7 @@ vector<double> cv::GainCompensator::gains() const
 }
 
 
-void cv::BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
+void BlocksGainCompensator::feed(const vector<Point> &corners, const vector<Mat> &images,
                                      const vector<pair<Mat,uchar> > &masks)
 {
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
@@ -218,7 +221,7 @@ void cv::BlocksGainCompensator::feed(const vector<Point> &corners, const vector<
 }
 
 
-void cv::BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
+void BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, const Mat &/*mask*/)
 {
     CV_Assert(image.type() == CV_8UC3);
 
@@ -240,3 +243,6 @@ void cv::BlocksGainCompensator::apply(int index, Point /*corner*/, Mat &image, c
         }
     }
 }
+
+} // namespace detail
+} // namespace cv

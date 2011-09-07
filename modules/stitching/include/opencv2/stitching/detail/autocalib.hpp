@@ -39,87 +39,26 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
-#define __OPENCV_STITCHING_UTIL_INL_HPP__
+#ifndef __OPENCV_STITCHING_AUTOCALIB_HPP__
+#define __OPENCV_STITCHING_AUTOCALIB_HPP__
 
-#include <queue>
 #include "opencv2/core/core.hpp"
-#include "util.hpp" // Make your IDE see declarations
+#include "matchers.hpp"
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
-template <typename B>
-B Graph::forEach(B body) const
-{
-    for (int i = 0; i < numVertices(); ++i)
-    {
-        std::list<GraphEdge>::const_iterator edge = edges_[i].begin();
-        for (; edge != edges_[i].end(); ++edge)
-            body(*edge);
-    }
-    return body;
-}
+// See "Construction of Panoramic Image Mosaics with Global and Local Alignment"
+// by Heung-Yeung Shum and Richard Szeliski.
+void CV_EXPORTS focalsFromHomography(const Mat &H, double &f0, double &f1, bool &f0_ok, bool &f1_ok);
 
+void CV_EXPORTS estimateFocal(const std::vector<ImageFeatures> &features, 
+                              const std::vector<MatchesInfo> &pairwise_matches, 
+                              std::vector<double> &focals);
 
-template <typename B>
-B Graph::walkBreadthFirst(int from, B body) const
-{
-    std::vector<bool> was(numVertices(), false);
-    std::queue<int> vertices;
+bool CV_EXPORTS calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K);
 
-    was[from] = true;
-    vertices.push(from);
-
-    while (!vertices.empty())
-    {
-        int vertex = vertices.front();
-        vertices.pop();
-
-        std::list<GraphEdge>::const_iterator edge = edges_[vertex].begin();
-        for (; edge != edges_[vertex].end(); ++edge)
-        {
-            if (!was[edge->to])
-            {
-                body(*edge);
-                was[edge->to] = true;
-                vertices.push(edge->to);
-            }
-        }
-    }
-
-    return body;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Some auxiliary math functions
-
-static inline
-float normL2(const Point3f& a)
-{
-    return a.x * a.x + a.y * a.y + a.z * a.z;
-}
-
-
-static inline
-float normL2(const Point3f& a, const Point3f& b)
-{
-    return normL2(a - b);
-}
-
-
-static inline
-double normL2sq(const Mat &r)
-{
-    return r.dot(r);
-}
-
-
-static inline int sqr(int x) { return x * x; }
-static inline float sqr(float x) { return x * x; }
-static inline double sqr(double x) { return x * x; }
-
+} // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_UTIL_INL_HPP__
+#endif // __OPENCV_STITCHING_AUTOCALIB_HPP__

@@ -39,66 +39,88 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__
-#define __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__
+#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
+#define __OPENCV_STITCHING_UTIL_INL_HPP__
 
+#include <queue>
 #include "opencv2/core/core.hpp"
+#include "util.hpp" // Make your IDE see declarations
 
-namespace cv
+namespace cv {
+namespace detail {
+
+template <typename B>
+B Graph::forEach(B body) const
 {
+    for (int i = 0; i < numVertices(); ++i)
+    {
+        std::list<GraphEdge>::const_iterator edge = edges_[i].begin();
+        for (; edge != edges_[i].end(); ++edge)
+            body(*edge);
+    }
+    return body;
+}
 
-class CV_EXPORTS ExposureCompensator
+
+template <typename B>
+B Graph::walkBreadthFirst(int from, B body) const
 {
-public:
-    virtual ~ExposureCompensator() {}
+    std::vector<bool> was(numVertices(), false);
+    std::queue<int> vertices;
 
-    enum { NO, GAIN, GAIN_BLOCKS };
-    static Ptr<ExposureCompensator> createDefault(int type);
+    was[from] = true;
+    vertices.push(from);
 
-    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-              const std::vector<Mat> &masks);
-    virtual void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-                      const std::vector<std::pair<Mat,uchar> > &masks) = 0;
-    virtual void apply(int index, Point corner, Mat &image, const Mat &mask) = 0;
-};
+    while (!vertices.empty())
+    {
+        int vertex = vertices.front();
+        vertices.pop();
+
+        std::list<GraphEdge>::const_iterator edge = edges_[vertex].begin();
+        for (; edge != edges_[vertex].end(); ++edge)
+        {
+            if (!was[edge->to])
+            {
+                body(*edge);
+                was[edge->to] = true;
+                vertices.push(edge->to);
+            }
+        }
+    }
+
+    return body;
+}
 
 
-class CV_EXPORTS NoExposureCompensator : public ExposureCompensator
+//////////////////////////////////////////////////////////////////////////////
+// Some auxiliary math functions
+
+static inline
+float normL2(const Point3f& a)
 {
-public:
-    void feed(const std::vector<Point> &/*corners*/, const std::vector<Mat> &/*images*/,
-              const std::vector<std::pair<Mat,uchar> > &/*masks*/) {};
-    void apply(int /*index*/, Point /*corner*/, Mat &/*image*/, const Mat &/*mask*/) {};
-};
+    return a.x * a.x + a.y * a.y + a.z * a.z;
+}
 
 
-class CV_EXPORTS GainCompensator : public ExposureCompensator
+static inline
+float normL2(const Point3f& a, const Point3f& b)
 {
-public:
-    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-              const std::vector<std::pair<Mat,uchar> > &masks);
-    void apply(int index, Point corner, Mat &image, const Mat &mask);
-    std::vector<double> gains() const;
-
-private:
-    Mat_<double> gains_;
-};
+    return normL2(a - b);
+}
 
 
-class CV_EXPORTS BlocksGainCompensator : public ExposureCompensator
+static inline
+double normL2sq(const Mat &r)
 {
-public:
-    BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 
-            : bl_width_(bl_width), bl_height_(bl_height) {}
-    void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
-              const std::vector<std::pair<Mat,uchar> > &masks);
-    void apply(int index, Point corner, Mat &image, const Mat &mask);
+    return r.dot(r);
+}
 
-private:
-    int bl_width_, bl_height_;
-    std::vector<Mat_<float> > gain_maps_;
-};
 
+static inline int sqr(int x) { return x * x; }
+static inline float sqr(float x) { return x * x; }
+static inline double sqr(double x) { return x * x; }
+
+} // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP__
+#endif // __OPENCV_STITCHING_UTIL_INL_HPP__

@@ -47,8 +47,8 @@
 #include "util.hpp"
 #include "camera.hpp"
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
 class CV_EXPORTS Estimator
 {
@@ -126,6 +126,7 @@ std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &fe
 void CV_EXPORTS findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches, 
                                     Graph &span_tree, std::vector<int> &centers);
 
+} // namespace detail
 } // namespace cv
 
 #endif // __OPENCV_STITCHING_MOTION_ESTIMATORS_HPP__

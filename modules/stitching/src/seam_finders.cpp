@@ -39,12 +39,15 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 using namespace std;
-using namespace cv;
 
-Ptr<SeamFinder> cv::SeamFinder::createDefault(int type)
+namespace cv {
+namespace detail {
+
+Ptr<SeamFinder> SeamFinder::createDefault(int type)
 {
     if (type == NO)
         return new NoSeamFinder();
@@ -59,7 +62,7 @@ Ptr<SeamFinder> cv::SeamFinder::createDefault(int type)
 }
 
 
-void cv::PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
+void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
                                   vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
@@ -86,7 +89,7 @@ void cv::PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &c
 }
 
 
-void cv::VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
+void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 {
     const int gap = 10;
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
@@ -140,7 +143,7 @@ void cv::VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 }
 
 
-class cv::GraphCutSeamFinder::Impl : public PairwiseSeamFinder
+class GraphCutSeamFinder::Impl : public PairwiseSeamFinder
 {
 public:
     Impl(int cost_type, float terminal_cost, float bad_region_penalty)
@@ -163,7 +166,7 @@ private:
 };
 
 
-void cv::GraphCutSeamFinder::Impl::find(const vector<Mat> &src, const vector<Point> &corners,
+void GraphCutSeamFinder::Impl::find(const vector<Mat> &src, const vector<Point> &corners,
                                         vector<Mat> &masks)
 {
     // Compute gradients
@@ -194,7 +197,7 @@ void cv::GraphCutSeamFinder::Impl::find(const vector<Mat> &src, const vector<Poi
 }
 
 
-void cv::GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &img2,
+void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &img2,
                                                         const Mat &mask1, const Mat &mask2, GCGraph<float> &graph)
 {
     const Size img_size = img1.size();
@@ -242,7 +245,7 @@ void cv::GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const M
 }
 
 
-void cv::GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
+void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
         const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2, 
         const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
         GCGraph<float> &graph)
@@ -296,7 +299,7 @@ void cv::GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
 }
 
 
-void cv::GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
+void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
 {
     Mat img1 = images_[first], img2 = images_[second];
     Mat dx1 = dx_[first], dx2 = dx_[second];
@@ -394,12 +397,16 @@ void cv::GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect 
 }
 
 
-cv::GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float bad_region_penalty)
+GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float bad_region_penalty)
     : impl_(new Impl(cost_type, terminal_cost, bad_region_penalty)) {}
 
 
-void cv::GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
+void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners,
                               vector<Mat> &masks)
 {
     impl_->find(src, corners, masks);
 }
+
+} // namespace detail
+} // namespace cv
+

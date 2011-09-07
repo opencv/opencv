@@ -46,8 +46,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
 class CV_EXPORTS Warper
 {
@@ -194,6 +194,7 @@ private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
 };
 
+} // namespace detail
 } // namespace cv
 
 #include "warpers_inl.hpp"

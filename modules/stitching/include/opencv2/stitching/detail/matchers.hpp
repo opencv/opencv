@@ -45,8 +45,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 
-namespace cv
-{
+namespace cv {
+namespace detail {
 
 struct CV_EXPORTS ImageFeatures
 {
@@ -140,6 +140,7 @@ protected:
     cv::Ptr<FeaturesMatcher> impl_;
 };
 
+} // namespace detail
 } // namespace cv
 
 #endif // __OPENCV_STITCHING_MATCHERS_HPP__

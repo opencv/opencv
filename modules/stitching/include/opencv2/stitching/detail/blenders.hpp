@@ -39,83 +39,87 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#ifndef __OPENCV_STITCHING_UTIL_HPP__
-#define __OPENCV_STITCHING_UTIL_HPP__
+#ifndef __OPENCV_STITCHING_BLENDERS_HPP__
+#define __OPENCV_STITCHING_BLENDERS_HPP__
 
-#include <list>
 #include "opencv2/core/core.hpp"
 
-#define ENABLE_LOG 1
+namespace cv {
+namespace detail {
 
-#if ENABLE_LOG
-  #include <iostream>
-  #define LOG(msg) { std::cout << msg; std::cout.flush(); }
-#else
-  #define LOG(msg)
-#endif
-
-#define LOGLN(msg) LOG(msg << std::endl)
-
-namespace cv
-{
-
-class CV_EXPORTS DisjointSets
+// Simple blender which puts one image over another
+class CV_EXPORTS Blender
 {
 public:
-    DisjointSets(int elem_count = 0) { createOneElemSets(elem_count); }
+    virtual ~Blender() {}
 
-    void createOneElemSets(int elem_count);
-    int findSetByElem(int elem);
-    int mergeSets(int set1, int set2);
+    enum { NO, FEATHER, MULTI_BAND };
+    static Ptr<Blender> createDefault(int type, bool try_gpu = false);
 
-    std::vector<int> parent;
-    std::vector<int> size;
+    void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    virtual void prepare(Rect dst_roi);
+    virtual void feed(const Mat &img, const Mat &mask, Point tl);
+    virtual void blend(Mat &dst, Mat &dst_mask);
 
-private:
-    std::vector<int> rank_;
+protected:
+    Mat dst_, dst_mask_;
+    Rect dst_roi_;
 };
 
 
-struct CV_EXPORTS GraphEdge
+class CV_EXPORTS FeatherBlender : public Blender
 {
-    GraphEdge(int from, int to, float weight) 
-        : from(from), to(to), weight(weight) {}
-    bool operator <(const GraphEdge& other) const { return weight < other.weight; }
-    bool operator >(const GraphEdge& other) const { return weight > other.weight; }
+public:
+    FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
+    float sharpness() const { return sharpness_; }
+    void setSharpness(float val) { sharpness_ = val; }
 
-    int from, to;
-    float weight;
+    void prepare(Rect dst_roi);
+    void feed(const Mat &img, const Mat &mask, Point tl);
+    void blend(Mat &dst, Mat &dst_mask);
+
+private:
+    float sharpness_;
+    Mat weight_map_;
+    Mat dst_weight_map_;
 };
 
 
-class CV_EXPORTS Graph
+class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
-    Graph(int num_vertices = 0) { create(num_vertices); }
-    void create(int num_vertices) { edges_.assign(num_vertices, std::list<GraphEdge>()); }
-    int numVertices() const { return static_cast<int>(edges_.size()); }
-    void addEdge(int from, int to, float weight);
-    template <typename B> B forEach(B body) const;
-    template <typename B> B walkBreadthFirst(int from, B body) const;
-    
+    MultiBandBlender(int try_gpu = false, int num_bands = 5);
+    int numBands() const { return actual_num_bands_; }
+    void setNumBands(int val) { actual_num_bands_ = val; }
+
+    void prepare(Rect dst_roi);
+    void feed(const Mat &img, const Mat &mask, Point tl);
+    void blend(Mat &dst, Mat &dst_mask);
+
 private:
-    std::vector< std::list<GraphEdge> > edges_;
+    int actual_num_bands_, num_bands_;
+    std::vector<Mat> dst_pyr_laplace_;
+    std::vector<Mat> dst_band_weights_;
+    Rect dst_roi_final_;
+    bool can_use_gpu_;
 };
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-bool CV_EXPORTS overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi);
-Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images);
-Rect CV_EXPORTS resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes);
-Point CV_EXPORTS resultTl(const std::vector<Point> &corners);
+void CV_EXPORTS normalizeUsingWeightMap(const Mat& weight, Mat& src);
 
-// Returns random 'count' element subset of the {0,1,...,size-1} set
-void CV_EXPORTS selectRandomSubset(int count, int size, std::vector<int> &subset);
+void CV_EXPORTS createWeightMap(const Mat& mask, float sharpness, Mat& weight);
 
+void CV_EXPORTS createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat>& pyr);
+
+void CV_EXPORTS createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat>& pyr);
+
+// Restores source image
+void CV_EXPORTS restoreImageFromLaplacePyr(std::vector<Mat>& pyr);
+
+} // namespace detail
 } // namespace cv
 
-#include "util_inl.hpp"
-
-#endif // __OPENCV_STITCHING_UTIL_HPP__
+#endif // __OPENCV_STITCHING_BLENDERS_HPP__
