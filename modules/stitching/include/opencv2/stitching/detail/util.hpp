@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_UTIL_HPP__
 #define __OPENCV_STITCHING_UTIL_HPP__
 
@@ -47,6 +48,7 @@
 
 #define ENABLE_LOG 1
 
+// TODO remove LOG macros, add logging class
 #if ENABLE_LOG
   #include <iostream>
   #define LOG(msg) { std::cout << msg; std::cout.flush(); }

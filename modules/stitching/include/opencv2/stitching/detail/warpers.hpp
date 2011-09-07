@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_WARPERS_HPP__
 #define __OPENCV_STITCHING_WARPERS_HPP__
 
@@ -55,11 +56,13 @@ class CV_EXPORTS Warper
 {
 public:
     enum { PLANE, CYLINDRICAL, SPHERICAL };
+
+    // TODO remove this method
     static Ptr<Warper> createByCameraFocal(float focal, int type, bool try_gpu = false);
 
     virtual ~Warper() {}
     virtual Point warp(const Mat &src, float focal, const Mat& R, Mat &dst,
-                           int interp_mode = INTER_LINEAR, int border_mode = BORDER_REFLECT) = 0;
+                       int interp_mode = INTER_LINEAR, int border_mode = BORDER_REFLECT) = 0;
     virtual Rect warpRoi(const Size &sz, float focal, const Mat &R) = 0;
 };
 
@@ -81,7 +84,7 @@ class CV_EXPORTS WarperBase : public Warper
 {   
 public:
     virtual Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                           int interp_mode, int border_mode);
+                       int interp_mode, int border_mode);
 
     virtual Rect warpRoi(const Size &sz, float focal, const Mat &R);
 
@@ -126,7 +129,7 @@ class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 public:
     PlaneWarperGpu(float plane_dist = 1.f, float scale = 1.f) : PlaneWarper(plane_dist, scale) {}
     Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                   int interp_mode, int border_mode);
+               int interp_mode, int border_mode);
 
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;

@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_WARPERS_INL_HPP__
 #define __OPENCV_STITCHING_WARPERS_INL_HPP__
 
@@ -50,7 +51,7 @@ namespace detail {
 
 template <class P>
 Point WarperBase<P>::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                              int interp_mode, int border_mode)
+                          int interp_mode, int border_mode)
 {
     src_size_ = src.size();
 

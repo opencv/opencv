@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_MATCHERS_HPP__
 #define __OPENCV_STITCHING_MATCHERS_HPP__
 
@@ -51,9 +52,9 @@ namespace detail {
 struct CV_EXPORTS ImageFeatures
 {
     int img_idx;
-    cv::Size img_size;
-    std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
+    Size img_size;
+    std::vector<KeyPoint> keypoints;
+    Mat descriptors;
 };
 
 
@@ -61,12 +62,13 @@ class CV_EXPORTS FeaturesFinder
 {
 public:
     virtual ~FeaturesFinder() {}
-    void operator ()(const cv::Mat &image, ImageFeatures &features);
+    void operator ()(const Mat &image, ImageFeatures &features);
 
-    virtual void releaseMemory() {}
+    // TODO put it into operator ()
+    virtual void collectGarbage() {}
 
 protected:
-    virtual void find(const cv::Mat &image, ImageFeatures &features) = 0;
+    virtual void find(const Mat &image, ImageFeatures &features) = 0;
 };
 
 
@@ -77,12 +79,12 @@ public:
                        int num_octaves = 3, int num_layers = 4, 
                        int num_octaves_descr = 4, int num_layers_descr = 2);
 
-    void releaseMemory();
+    void collectGarbage();
 
 protected:
-    void find(const cv::Mat &image, ImageFeatures &features);
+    void find(const Mat &image, ImageFeatures &features);
 
-    cv::Ptr<FeaturesFinder> impl_;
+    Ptr<FeaturesFinder> impl_;
 };
 
 
@@ -93,10 +95,10 @@ struct CV_EXPORTS MatchesInfo
     const MatchesInfo& operator =(const MatchesInfo &other);
 
     int src_img_idx, dst_img_idx;       // Images indices (optional)
-    std::vector<cv::DMatch> matches;
+    std::vector<DMatch> matches;
     std::vector<uchar> inliers_mask;    // Geometrically consistent matches mask
     int num_inliers;                    // Number of geometrically consistent matches
-    cv::Mat H;                          // Estimated homography
+    Mat H;                              // Estimated homography
     double confidence;                  // Confidence two images are from the same panorama
 };
 
@@ -112,7 +114,7 @@ public:
 
     bool isThreadSafe() const { return is_thread_safe_; }
 
-    virtual void releaseMemory() {}
+    virtual void collectGarbage() {}
 
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
@@ -127,17 +129,17 @@ protected:
 class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
-    BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.55f, int num_matches_thresh1 = 6, 
+    BestOf2NearestMatcher(bool try_use_gpu = true, float match_conf = 0.65f, int num_matches_thresh1 = 6,
                           int num_matches_thresh2 = 6);
 
-    void releaseMemory();
+    void collectGarbage();
 
 protected:
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
 
     int num_matches_thresh1_;
     int num_matches_thresh2_;
-    cv::Ptr<FeaturesMatcher> impl_;
+    Ptr<FeaturesMatcher> impl_;
 };
 
 } // namespace detail

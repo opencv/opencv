@@ -40,26 +40,66 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_CAMERA_HPP__
-#define __OPENCV_STITCHING_CAMERA_HPP__
+#ifndef __OPENCV_STITCHING_WARPER_CREATORS_HPP__
+#define __OPENCV_STITCHING_WARPER_CREATORS_HPP__
 
-#include "opencv2/core/core.hpp"
+#include "detail/warpers.hpp"
 
 namespace cv {
-namespace detail {
 
-struct CV_EXPORTS CameraParams
+class WarperCreator
 {
-    CameraParams();
-    CameraParams(const CameraParams& other);
-    const CameraParams& operator =(const CameraParams& other);
-
-    double focal; // Focal length
-    Mat R; // Rotation
-    Mat t; // Translation
+public:
+    virtual ~WarperCreator() {}
+    virtual Ptr<detail::Warper> createByFocalLength(double f) const = 0;
 };
 
-} // namespace detail
+
+class PlaneWarper : public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::PlaneWarper(f); }
+};
+
+
+class CylindricalWarper: public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::CylindricalWarper(f); }
+};
+
+
+class SphericalWarper: public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::SphericalWarper(f); }
+};
+
+
+#ifndef ANDROID
+
+class PlaneWarperGpu: public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::PlaneWarperGpu(f); }
+};
+
+
+class CylindricalWarperGpu: public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::CylindricalWarperGpu(f); }
+};
+
+
+class SphericalWarperGpu: public WarperCreator
+{
+public:
+    Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::SphericalWarperGpu(f); }
+};
+
+#endif
+
 } // namespace cv
 
-#endif // #ifndef __OPENCV_STITCHING_CAMERA_HPP__
+#endif // __OPENCV_STITCHING_WARPER_CREATORS_HPP__

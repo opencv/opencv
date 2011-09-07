@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_PRECOMP_H__
 #define __OPENCV_STITCHING_PRECOMP_H__
 
@@ -52,6 +53,8 @@
 #include <set>
 #include <functional>
 #include <sstream>
+#include <cmath>
+#include "opencv2/stitching/stitcher.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/camera.hpp"

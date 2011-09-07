@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_AUTOCALIB_HPP__
 #define __OPENCV_STITCHING_AUTOCALIB_HPP__
 

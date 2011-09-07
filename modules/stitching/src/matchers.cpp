@@ -85,7 +85,7 @@ public:
         num_layers_descr_ = num_layers_descr;
     }
 
-    void releaseMemory();
+    void collectGarbage();
 
 protected:
     void find(const Mat &image, ImageFeatures &features);
@@ -136,7 +136,7 @@ void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     descriptors_.download(features.descriptors);
 }
 
-void GpuSurfFeaturesFinder::releaseMemory()
+void GpuSurfFeaturesFinder::collectGarbage()
 {
     surf_.releaseMemory();
     image_.release();
@@ -231,7 +231,7 @@ public:
     GpuMatcher(float match_conf) : match_conf_(match_conf) {}
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
 
-    void releaseMemory();
+    void collectGarbage();
 
 private:
     float match_conf_;
@@ -326,7 +326,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     }
 }
 
-void GpuMatcher::releaseMemory()
+void GpuMatcher::collectGarbage()
 {
     descriptors1_.release();
     descriptors2_.release();
@@ -369,9 +369,9 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 }
 
 
-void SurfFeaturesFinder::releaseMemory()
+void SurfFeaturesFinder::collectGarbage()
 {
-    impl_->releaseMemory();
+    impl_->collectGarbage();
 }
 
 
@@ -511,9 +511,9 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     matches_info.H = findHomography(src_points, dst_points, CV_RANSAC);
 }
 
-void BestOf2NearestMatcher::releaseMemory()
+void BestOf2NearestMatcher::collectGarbage()
 {
-    impl_->releaseMemory();
+    impl_->collectGarbage();
 }
 
 } // namespace detail

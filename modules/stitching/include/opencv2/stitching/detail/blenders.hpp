@@ -39,6 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #ifndef __OPENCV_STITCHING_BLENDERS_HPP__
 #define __OPENCV_STITCHING_BLENDERS_HPP__
 
@@ -56,7 +57,7 @@ public:
     enum { NO, FEATHER, MULTI_BAND };
     static Ptr<Blender> createDefault(int type, bool try_gpu = false);
 
-    void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);    
     virtual void prepare(Rect dst_roi);
     virtual void feed(const Mat &img, const Mat &mask, Point tl);
     virtual void blend(Mat &dst, Mat &dst_mask);
