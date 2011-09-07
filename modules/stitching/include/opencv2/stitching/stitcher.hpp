@@ -53,7 +53,7 @@
 
 namespace cv {
 
-class Stitcher
+class CV_EXPORTS Stitcher
 {
 public:
     enum { ORIG_RESOL = -1 };
