@@ -1378,7 +1378,7 @@ protected:
 /*
  * Abstract base class for 2D image feature detectors.
  */
-class CV_EXPORTS FeatureDetector
+class CV_EXPORTS_W FeatureDetector
 {
 public:
     virtual ~FeatureDetector();
@@ -1390,7 +1390,7 @@ public:
      * mask         Mask specifying where to look for keypoints (optional). Must be a char
      *              matrix with non-zero values in the region of interest.
      */
-    void detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    CV_WRAP void detect( const Mat& image, CV_OUT vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     
     /*
      * Detect keypoints in an image set.
@@ -1406,10 +1406,10 @@ public:
     virtual void write( FileStorage& ) const;
 
     // Return true if detector object is empty
-    virtual bool empty() const;
+    CV_WRAP virtual bool empty() const;
 
     // Create feature detector by detector name.
-    static Ptr<FeatureDetector> create( const string& detectorType );
+    CV_WRAP static Ptr<FeatureDetector> create( const string& detectorType );
 
 protected:
     virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
@@ -1422,10 +1422,10 @@ protected:
     static void removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints );
 };
 
-class CV_EXPORTS FastFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W FastFeatureDetector : public FeatureDetector
 {
 public:
-    FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true );
+    CV_WRAP FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true );
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
 
@@ -1673,11 +1673,11 @@ protected:
  * Adapts a detector to detect points over multiple levels of a Gaussian
  * pyramid. Useful for detectors that are not inherently scaled.
  */
-class CV_EXPORTS PyramidAdaptedFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W PyramidAdaptedFeatureDetector : public FeatureDetector
 {
 public:
     // maxLevel - The 0-based index of the last pyramid layer
-    PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxLevel=2 );
+    CV_WRAP PyramidAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxLevel=2 );
     
     // TODO implement read/write
     virtual bool empty() const;
@@ -1835,7 +1835,7 @@ CV_EXPORTS Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const v
  * distances between descriptors. Therefore we represent a collection of
  * descriptors as a cv::Mat, where each row is one keypoint descriptor.
  */
-class CV_EXPORTS DescriptorExtractor
+class CV_EXPORTS_W DescriptorExtractor
 {
 public:
     virtual ~DescriptorExtractor();
@@ -1846,7 +1846,7 @@ public:
      * keypoints    The input keypoints. Keypoints for which a descriptor cannot be computed are removed.
      * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
      */
-    void compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    CV_WRAP void compute( const Mat& image, CV_IN_OUT vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
 
     /*
      * Compute the descriptors for a keypoints collection detected in image collection.
@@ -1860,12 +1860,12 @@ public:
     virtual void read( const FileNode& );
     virtual void write( FileStorage& ) const;
 
-    virtual int descriptorSize() const = 0;
-    virtual int descriptorType() const = 0;
+    CV_WRAP virtual int descriptorSize() const = 0;
+    CV_WRAP virtual int descriptorType() const = 0;
 
-    virtual bool empty() const;
+    CV_WRAP virtual bool empty() const;
 
-    static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
+    CV_WRAP static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
 
 protected:
     virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
@@ -2201,19 +2201,19 @@ struct CV_EXPORTS Hamming
 /*
  * Struct for matching: query descriptor index, train descriptor index, train image index and distance between descriptors.
  */
-struct CV_EXPORTS DMatch
+struct CV_EXPORTS_W_SIMPLE DMatch
 {
-    DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), distance(std::numeric_limits<float>::max()) {}
-    DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+    CV_WRAP DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), distance(std::numeric_limits<float>::max()) {}
+    CV_WRAP DMatch( int _queryIdx, int _trainIdx, float _distance ) :
             queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1), distance(_distance) {}
-    DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+    CV_WRAP DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
             queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx), distance(_distance) {}
 
-    int queryIdx; // query descriptor index
-    int trainIdx; // train descriptor index
-    int imgIdx;   // train image index
+    CV_PROP_RW int queryIdx; // query descriptor index
+    CV_PROP_RW int trainIdx; // train descriptor index
+    CV_PROP_RW int imgIdx;   // train image index
 
-    float distance;
+    CV_PROP_RW float distance;
 
     // less is better
     bool operator<( const DMatch &m ) const
@@ -2228,7 +2228,7 @@ struct CV_EXPORTS DMatch
 /*
  * Abstract base class for matching two sets of descriptors.
  */
-class CV_EXPORTS DescriptorMatcher
+class CV_EXPORTS_W DescriptorMatcher
 {
 public:
     virtual ~DescriptorMatcher();
@@ -2273,14 +2273,14 @@ public:
      * Method train() is run in this methods.
      */
     // Find one best match for each query descriptor (if mask is empty).
-    void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
+                CV_OUT vector<DMatch>& matches, const Mat& mask=Mat() ) const;
     // Find k best matches for each query descriptor (in increasing order of distances).
     // compactResult is used when mask is not empty. If compactResult is false matches
     // vector will have the same size as queryDescriptors rows. If compactResult is true
     // matches vector will not contain matches for fully masked out query descriptors.
-    void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                   vector<vector<DMatch> >& matches, int k,
+    CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+                   CV_OUT vector<vector<DMatch> >& matches, int k,
                    const Mat& mask=Mat(), bool compactResult=false ) const;
     // Find best matches for each query descriptor which have distance less than
     // maxDistance (in increasing order of distances).
@@ -2308,7 +2308,7 @@ public:
     // but with empty train data.
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-    static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
+    CV_WRAP static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
 protected:
     /*
      * Class to work with descriptors from several images as with one merged matrix.

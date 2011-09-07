@@ -64,9 +64,15 @@ typedef vector<Vec4i> vector_Vec4i;
 typedef vector<Rect> vector_Rect;
 typedef vector<KeyPoint> vector_KeyPoint;
 typedef vector<Mat> vector_Mat;
+typedef vector<DMatch> vector_DMatch;
 typedef vector<vector<Point> > vector_vector_Point;
 typedef vector<vector<Point2f> > vector_vector_Point2f;
 typedef vector<vector<Point3f> > vector_vector_Point3f;
+typedef vector<vector<DMatch> > vector_vector_DMatch;
+
+typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
+typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
+typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
@@ -310,6 +316,14 @@ static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown
 static PyObject* pyopencv_from(size_t value)
 {
     return PyLong_FromUnsignedLong((unsigned long)value);
+}
+
+static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unknown>")
+{
+    if(!obj || obj == Py_None)
+        return true;
+    value = (int)PyLong_AsUnsignedLong(obj);
+    return value != -1 || !PyErr_Occurred();
 }
 
 static PyObject* pyopencv_from(int value)
@@ -605,6 +619,7 @@ template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& 
 }
 
 static PyObject* pyopencv_from(const KeyPoint&);
+static PyObject* pyopencv_from(const DMatch&);
 
 template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
 {
@@ -684,6 +699,19 @@ template<> struct pyopencvVecConverter<KeyPoint>
     }
     
     static PyObject* from(const vector<KeyPoint>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
+template<> struct pyopencvVecConverter<DMatch>
+{
+    static bool to(PyObject* obj, vector<DMatch>& value, const char* name="<unknown>")
+    {
+        return pyopencv_to_generic_vec(obj, value, name);
+    }
+    
+    static PyObject* from(const vector<DMatch>& value)
     {
         return pyopencv_from_generic_vec(value);
     }

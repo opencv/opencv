@@ -7,7 +7,11 @@ gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv
 """)
 
 gen_template_call_constructor = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-        if(self) ERRWRAP2(self->v = $op$cname""")
+        new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
+        if(self) ERRWRAP2(self->v = new $cname""")
+
+gen_template_simple_call_constructor = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        if(self) ERRWRAP2(self->v = $cname""")
 
 gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL };
     if( PyArg_ParseTupleAndKeywords(args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
@@ -66,7 +70,7 @@ gen_template_type_decl = Template("""
 struct pyopencv_${name}_t
 {
     PyObject_HEAD
-    ${cname}* v;
+    Ptr<${cname}> v;
 };
 
 static PyTypeObject pyopencv_${name}_Type =
@@ -79,9 +83,31 @@ static PyTypeObject pyopencv_${name}_Type =
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
-    delete ((pyopencv_${name}_t*)self)->v;
+    ((pyopencv_${name}_t*)self)->v = NULL;
     PyObject_Del(self);
 }
+
+static PyObject* pyopencv_from(const Ptr<${cname}>& r)
+{
+    pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+    new (&(m->v)) Ptr<$cname>(); // init Ptr with placement new
+    m->v = r;
+    return (PyObject*)m;
+}
+
+static bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name="<unknown>")
+{
+    if( src == NULL || src == Py_None )
+        return true;
+    if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+    {
+        failmsg("Expected ${cname} for argument '%s'", name);
+        return false;
+    }
+    dst = ((pyopencv_${name}_t*)src)->v;
+    return true;
+}
+
 """)
 
 gen_template_map_type_cvt = Template("""
@@ -490,10 +516,10 @@ class FuncInfo(object):
 
             if self.isconstructor:
                 code_decl += "    pyopencv_%s_t* self = 0;\n" % selfinfo.name
-                op = "new "
+                templ = gen_template_call_constructor
                 if selfinfo.issimple:
-                    op = ""
-                code_fcall = gen_template_call_constructor.substitute(name=selfinfo.name, cname=selfinfo.cname, op=op)
+                    templ = gen_template_simple_call_constructor
+                code_fcall = templ.substitute(name=selfinfo.name, cname=selfinfo.cname)
             else:
                 code_fcall = "ERRWRAP2( "
                 if v.rettype:
