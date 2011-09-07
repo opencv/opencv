@@ -47,7 +47,7 @@
 // */
 
 #include "precomp.hpp"
-
+ 
 namespace cv
 {
 
@@ -868,7 +868,7 @@ struct VResizeLinear
     typedef T value_type;
     typedef WT buf_type;
     typedef AT alpha_type;
-
+ 
     void operator()(const WT** src, T* dst, const AT* beta, int width ) const
     {
         WT b0 = beta[0], b1 = beta[1];
@@ -877,7 +877,7 @@ struct VResizeLinear
         VecOp vecOp;
 
         int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
-        for( ; x <= width - 4; x += 4 )
+		for( ; x <= width - 4; x += 4 )
         {
             WT t0, t1;
             t0 = S0[x]*b0 + S1[x]*b1;
@@ -1128,8 +1128,7 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
         if( k0 < ksize )
             hresize( srows + k0, rows + k0, ksize - k0, xofs, alpha,
                      ssize.width, dsize.width, cn, xmin, xmax );
-
-        vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
+		vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
     }
 }
 
@@ -1320,16 +1319,40 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+	    Mat src1 = _src.getMat();
+		Size ssize1 = src1.size();
+
+		int wSrc = ssize1.width;
+		int hSrc = ssize1.height;
+		if (hSrc < 1)
+			return;
+		int wDst = dsize.width;
+		int hDst = dsize.height;
+		_dst.create(dsize, src1.type());
+		Mat dst1 = _dst.getMat();
+		unsigned int *bSrc = (unsigned int*)(src1.data);
+		unsigned int *bDst = (unsigned int*)dst1.data;
+		if(src1.channels()==1){ 
+			tegra::stretch1(bSrc, bDst, wSrc, hSrc, wDst, hDst);
+			return;
+		} 
+		if(src1.channels()==4){
+			tegra::stretch4(bSrc, bDst, wSrc, hSrc, wDst, hDst);
+			return;
+		}
+#endif
     static ResizeFunc linear_tab[] =
     {
         resizeGeneric_<
             HResizeLinear<uchar, int, short,
                 INTER_RESIZE_COEF_SCALE,
-                HResizeLinearVec_8u32s>,
+				HResizeLinearVec_8u32s>,
             VResizeLinear<uchar, int, short,
                 FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>,
-                VResizeLinearVec_32s8u> >,
-        0,
+				VResizeLinearVec_32s8u> >,
+		0,
         resizeGeneric_<
             HResizeLinear<ushort, float, float, 1,
                 HResizeLinearVec_16u32f>,
@@ -3123,6 +3146,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
  * where:
  *   cij - matrix coefficients
  */
+
 cv::Mat cv::getAffineTransform( const Point2f src[], const Point2f dst[] )
 {
     Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.data);
@@ -3187,7 +3211,6 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         CV_Error( CV_StsUnsupportedFormat, "" );
 }    
 
-
 cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst)
 {
     Mat src = _src.getMat(), dst = _dst.getMat();
@@ -3201,7 +3224,6 @@ cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)
     CV_Assert(src.checkVector(2, CV_32F) == 3 && dst.checkVector(2, CV_32F) == 3);
     return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
 }
-
 
 CV_IMPL void
 cvResize( const CvArr* srcarr, CvArr* dstarr, int method )
