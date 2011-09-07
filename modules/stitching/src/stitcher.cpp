@@ -46,7 +46,6 @@ using namespace std;
 
 namespace cv {
 
-// TODO put all #ifndef ANDROID here, avoid passing try_use_gpu
 Stitcher Stitcher::createDefault(bool try_use_gpu)
 {
     Stitcher stitcher;
@@ -55,18 +54,25 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setCompositingResol(ORIG_RESOL);
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setHorizontalStrightening(true);
-    stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder(try_use_gpu));
     stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
+
 #ifndef ANDROID
-    bool must_use_gpu = try_use_gpu && (gpu::getCudaEnabledDeviceCount() > 0);
-    stitcher.setWarper(must_use_gpu ? static_cast<WarperCreator*>(new SphericalWarperGpu()) :
-                                      static_cast<WarperCreator*>(new SphericalWarper()));
-#else
-    stitcher.setWarper(new SphericalWarper());
+    if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+    {
+        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
+        stitcher.setWarper(new SphericalWarperGpu());
+    }
+    else
 #endif
+    {
+        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
+        stitcher.setWarper(new SphericalWarper());
+    }
+
     stitcher.setExposureCompenstor(new detail::BlocksGainCompensator());
     stitcher.setSeamFinder(new detail::GraphCutSeamFinder());
     stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
+
     return stitcher;
 }
 

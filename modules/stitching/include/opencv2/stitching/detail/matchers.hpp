@@ -46,6 +46,10 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 
+#ifndef ANDROID
+#include "opencv2/gpu/gpu.hpp"
+#endif
+
 namespace cv {
 namespace detail {
 
@@ -63,8 +67,6 @@ class CV_EXPORTS FeaturesFinder
 public:
     virtual ~FeaturesFinder() {}
     void operator ()(const Mat &image, ImageFeatures &features);
-
-    // TODO put it into operator ()
     virtual void collectGarbage() {}
 
 protected:
@@ -75,17 +77,38 @@ protected:
 class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
 public:
-    SurfFeaturesFinder(bool try_use_gpu = true, double hess_thresh = 300.0, 
-                       int num_octaves = 3, int num_layers = 4, 
+    SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
                        int num_octaves_descr = 4, int num_layers_descr = 2);
+
+private:
+    void find(const Mat &image, ImageFeatures &features);
+
+    Ptr<FeatureDetector> detector_;
+    Ptr<DescriptorExtractor> extractor_;
+};
+
+
+#ifndef ANDROID
+class SurfFeaturesFinderGpu : public FeaturesFinder
+{
+public:
+    SurfFeaturesFinderGpu(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
+                          int num_octaves_descr = 4, int num_layers_descr = 2);
 
     void collectGarbage();
 
-protected:
+private:
     void find(const Mat &image, ImageFeatures &features);
 
-    Ptr<FeaturesFinder> impl_;
+    gpu::GpuMat image_;
+    gpu::GpuMat gray_image_;
+    gpu::SURF_GPU surf_;
+    gpu::GpuMat keypoints_;
+    gpu::GpuMat descriptors_;
+    int num_octaves_, num_layers_;
+    int num_octaves_descr_, num_layers_descr_;
 };
+#endif
 
 
 struct CV_EXPORTS MatchesInfo

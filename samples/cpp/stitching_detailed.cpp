@@ -326,10 +326,16 @@ int main(int argc, char* argv[])
     LOGLN("Finding features...");
     int64 t = getTickCount();
 
-    vector<ImageFeatures> features(num_images);
-    SurfFeaturesFinder finder(try_gpu);
-    Mat full_img, img;
+    Ptr<FeaturesFinder> finder;
+#ifndef ANDROID
+    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+        finder = new SurfFeaturesFinderGpu();
+    else
+#endif
+        finder = new SurfFeaturesFinder();
 
+    Mat full_img, img;
+    vector<ImageFeatures> features(num_images);
     vector<Mat> images(num_images);
     vector<Size> full_img_sizes(num_images);
     double seam_work_aspect = 1;
@@ -366,7 +372,7 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        finder(img, features[i]);
+        (*finder)(img, features[i]);
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
@@ -374,8 +380,7 @@ int main(int argc, char* argv[])
         images[i] = img.clone();
     }
 
-    finder.collectGarbage();
-
+    finder->collectGarbage();
     full_img.release();
     img.release();
 

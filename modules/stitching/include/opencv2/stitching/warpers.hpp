@@ -77,7 +77,6 @@ public:
 
 
 #ifndef ANDROID
-
 class PlaneWarperGpu: public WarperCreator
 {
 public:
@@ -97,7 +96,6 @@ class SphericalWarperGpu: public WarperCreator
 public:
     Ptr<detail::Warper> createByFocalLength(double f) const { return new detail::SphericalWarperGpu(f); }
 };
-
 #endif
 
 } // namespace cv

@@ -51,104 +51,6 @@ using namespace cv::gpu;
 
 namespace {
 
-class CpuSurfFeaturesFinder : public FeaturesFinder
-{
-public:
-    CpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
-                          int num_octaves_descr, int num_layers_descr)
-    {
-        detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
-        extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
-    }
-
-protected:
-    void find(const Mat &image, ImageFeatures &features);
-
-private:
-    Ptr<FeatureDetector> detector_;
-    Ptr<DescriptorExtractor> extractor_;
-};
-
-#ifndef ANDROID
-class GpuSurfFeaturesFinder : public FeaturesFinder
-{
-public:
-    GpuSurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
-                          int num_octaves_descr, int num_layers_descr)
-    {
-        surf_.keypointsRatio = 0.1f;
-        surf_.hessianThreshold = hess_thresh;
-        surf_.extended = false;
-        num_octaves_ = num_octaves;
-        num_layers_ = num_layers;
-        num_octaves_descr_ = num_octaves_descr;
-        num_layers_descr_ = num_layers_descr;
-    }
-
-    void collectGarbage();
-
-protected:
-    void find(const Mat &image, ImageFeatures &features);
-
-private:
-    GpuMat image_;
-    GpuMat gray_image_;
-    SURF_GPU surf_;
-    GpuMat keypoints_;
-    GpuMat descriptors_;
-    int num_octaves_, num_layers_;
-    int num_octaves_descr_, num_layers_descr_;
-};
-#endif
-
-
-void CpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
-{
-    Mat gray_image;
-    CV_Assert(image.depth() == CV_8U);
-    cvtColor(image, gray_image, CV_BGR2GRAY);
-    detector_->detect(gray_image, features.keypoints);
-    extractor_->compute(gray_image, features.keypoints, features.descriptors);
-}
-
-#ifndef ANDROID
-void GpuSurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
-{
-    CV_Assert(image.depth() == CV_8U);
-
-    ensureSizeIsEnough(image.size(), image.type(), image_);
-    image_.upload(image);
-
-    ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
-    cvtColor(image_, gray_image_, CV_BGR2GRAY);
-
-    surf_.nOctaves = num_octaves_;
-    surf_.nOctaveLayers = num_layers_;
-    surf_.upright = false;
-    surf_(gray_image_, GpuMat(), keypoints_);
-
-    surf_.nOctaves = num_octaves_descr_;
-    surf_.nOctaveLayers = num_layers_descr_;
-    surf_.upright = true;
-    surf_(gray_image_, GpuMat(), keypoints_, descriptors_, true);
-    surf_.downloadKeypoints(keypoints_, features.keypoints);
-
-    descriptors_.download(features.descriptors);
-}
-
-void GpuSurfFeaturesFinder::collectGarbage()
-{
-    surf_.releaseMemory();
-    image_.release();
-    gray_image_.release();
-    keypoints_.release();
-    descriptors_.release();
-}
-#endif
-
-
-//////////////////////////////////////////////////////////////////////////////
-
 struct DistIdxPair
 {
     bool operator<(const DistIdxPair &other) const { return dist < other.dist; }
@@ -347,32 +249,74 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 { 
     find(image, features);
     features.img_size = image.size();
-    //features.img = image.clone();
 }
 
 
-SurfFeaturesFinder::SurfFeaturesFinder(bool try_use_gpu, double hess_thresh, int num_octaves, int num_layers,
+SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
-#ifndef ANDROID
-    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
-        impl_ = new GpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
-    else
-#endif
-        impl_ = new CpuSurfFeaturesFinder(hess_thresh, num_octaves, num_layers, num_octaves_descr, num_layers_descr);
+    detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
+    extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
 }
 
 
 void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 {
-    (*impl_)(image, features);
+    Mat gray_image;
+    CV_Assert(image.depth() == CV_8U);
+    cvtColor(image, gray_image, CV_BGR2GRAY);
+    detector_->detect(gray_image, features.keypoints);
+    extractor_->compute(gray_image, features.keypoints, features.descriptors);
 }
 
 
-void SurfFeaturesFinder::collectGarbage()
+#ifndef ANDROID
+SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
+                                             int num_octaves_descr, int num_layers_descr)
 {
-    impl_->collectGarbage();
+    surf_.keypointsRatio = 0.1f;
+    surf_.hessianThreshold = hess_thresh;
+    surf_.extended = false;
+    num_octaves_ = num_octaves;
+    num_layers_ = num_layers;
+    num_octaves_descr_ = num_octaves_descr;
+    num_layers_descr_ = num_layers_descr;
 }
+
+
+void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
+{
+    CV_Assert(image.depth() == CV_8U);
+
+    ensureSizeIsEnough(image.size(), image.type(), image_);
+    image_.upload(image);
+
+    ensureSizeIsEnough(image.size(), CV_8UC1, gray_image_);
+    cvtColor(image_, gray_image_, CV_BGR2GRAY);
+
+    surf_.nOctaves = num_octaves_;
+    surf_.nOctaveLayers = num_layers_;
+    surf_.upright = false;
+    surf_(gray_image_, GpuMat(), keypoints_);
+
+    surf_.nOctaves = num_octaves_descr_;
+    surf_.nOctaveLayers = num_layers_descr_;
+    surf_.upright = true;
+    surf_(gray_image_, GpuMat(), keypoints_, descriptors_, true);
+    surf_.downloadKeypoints(keypoints_, features.keypoints);
+
+    descriptors_.download(features.descriptors);
+}
+
+void SurfFeaturesFinderGpu::collectGarbage()
+{
+    surf_.releaseMemory();
+    image_.release();
+    gray_image_.release();
+    keypoints_.release();
+    descriptors_.release();
+}
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////////
