@@ -16,7 +16,6 @@ if __name__ == "__main__":
         exit(0)
 
     options.generateHtml = detectHtmlOutputType(options.format)
-    args[0] = os.path.basename(args[0])
         
     tests = []
     files = []

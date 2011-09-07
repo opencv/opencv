@@ -3,13 +3,15 @@ from table_formatter import *
 from optparse import OptionParser
 
 cvsize_re = re.compile("^\d+x\d+$")
-cvtype_re = re.compile("^(8U|8S|16U|16S|32S|32F|64F)C\d{1,3}$")
+cvtype_re = re.compile("^(CV_)(8U|8S|16U|16S|32S|32F|64F)(C\d{1,3})?$")
 
 def keyselector(a):
     if cvsize_re.match(a):
         size = [int(d) for d in a.split('x')]
         return size[0] * size[1]
     elif cvtype_re.match(a):
+        if a.startswith("CV_"):
+            a = a[3:]
         depth = 7
         if a[0] == '8':
             depth = (0, 1) [a[1] == 'S']
@@ -21,9 +23,13 @@ def keyselector(a):
             depth = 5
         elif a[0] == '6':
             depth = 6
-        channels = int(a[a.index('C') + 1:])
+        cidx = a.find('C')
+        if cidx < 0:
+            channels = 1
+        else:
+            channels = int(a[a.index('C') + 1:])
         #return (depth & 7) + ((channels - 1) << 3)
-        return ((channels-1) & 511) + (depth << 8) 
+        return ((channels-1) & 511) + (depth << 9)
     return a
 
 def getValueParams(test):
@@ -86,7 +92,6 @@ if __name__ == "__main__":
         exit(1)
 
     options.generateHtml = detectHtmlOutputType(options.format)
-    args[0] = os.path.basename(args[0])
     if options.metric not in metrix_table:
         options.metric = "gmean"
     if options.metric.endswith("%"):
@@ -97,6 +102,10 @@ if __name__ == "__main__":
     if options.filter:
         expr = re.compile(options.filter)
         tests = [(t,getValueParams(t)) for t in tests if expr.search(str(t))]
+    else:
+        tests = [(t,getValueParams(t)) for t in tests]
+        
+    args[0] = os.path.basename(args[0])
         
     if not tests:
         print >> sys.stderr, "Error - no tests matched"
@@ -108,22 +117,33 @@ if __name__ == "__main__":
     arglists = []
     for i in range(argsnum):
         arglists.append({})
-    
+        
+    names = set()
     for pair in tests:
-        if len(pair[1]) != argsnum:
-            print >> sys.stderr, "Error - unable to create chart tables for functions having different argument numbers"
-            exit(1)
-        if pair[0].shortName() != sname:
-            print >> sys.stderr, "Error - unable to create chart tables for functions from different test suits:"
-            print >> sys.stderr, "First: ", sname
-            print >> sys.stderr, "Second:", pair[0].shortName()
-            exit(1)
-        for i in range(argsnum):
-            arglists[i][pair[1][i]] = 1
+        sn = pair[0].shortName()
+        names.add(sn)
+        if sn == sname:
+            if len(pair[1]) != argsnum:
+                print >> sys.stderr, "Error - unable to create chart tables for functions having different argument numbers"
+                sys.exit(1)
+            for i in range(argsnum):
+                arglists[i][pair[1][i]] = 1
+    
+    if len(names) != 1:
+        print >> sys.stderr, "Error - unable to create chart tables for functions from different test suits:"
+        i = 1
+        for name in sorted(names):
+            print >> sys.stderr, "%4s:   %s" % (i, name)
+            i += 1
+        sys.exit(1)
+    
+    if argsnum < 2:
+        print >> sys.stderr, "Error - tests from %s have less than 2 parameters" % sname
+        exit(1)
             
     for i in range(argsnum):
         arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=keyselector)
-        
+                
     if options.generateHtml:
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))
             
