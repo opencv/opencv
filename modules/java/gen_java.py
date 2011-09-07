@@ -12,7 +12,7 @@ class_ignore_list = (
     #highgui
     "VideoWriter", "VideoCapture",
     #features2d
-    "KeyPoint", "MSER", "StarDetector", "SURF",
+    #"KeyPoint", "MSER", "StarDetector", "SURF", "DMatch",
 )
 
 const_ignore_list = (
