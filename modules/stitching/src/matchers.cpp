@@ -127,6 +127,7 @@ namespace
 
         surf_.nOctaves = num_octaves_;
         surf_.nOctaveLayers = num_layers_;
+        surf_.upright = false;
         surf_(gray_image_, GpuMat(), keypoints_);
 
         surf_.nOctaves = num_octaves_descr_;
