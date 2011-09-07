@@ -274,7 +274,7 @@ PERF_TEST_P(DevInfo_Size_MatType, pow, testing::Combine(testing::ValuesIn(device
 PERF_TEST_P(DevInfo_Size_MatType_CmpOp, compare, testing::Combine(testing::ValuesIn(devices()), 
                                                                   testing::Values(GPU_TYPICAL_MAT_SIZES), 
                                                                   testing::Values(CV_8UC4, CV_32FC1), 
-                                                                  testing::Values(CMP_NE, CMP_EQ)))
+                                                                  testing::Values((int)CMP_NE, (int)CMP_EQ)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
