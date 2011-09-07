@@ -217,3 +217,6 @@ if(BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
     #    install(TARGETS ${the_test_target} RUNTIME DESTINATION bin COMPONENT main)
     #endif()
 endif()
+
+
+define_opencv_perf_test(${name})

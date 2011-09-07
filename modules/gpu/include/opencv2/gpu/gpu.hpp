@@ -596,8 +596,8 @@ namespace cv
 
         ////////////////////////////// Image processing //////////////////////////////
 
-        //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]] with bilinear interpolation.
-        //! supports CV_32FC1 map type
+        //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
+        //! supports only CV_32FC1 map type
         CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap,
             int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), 
             Stream& stream = Stream::Null());
