@@ -89,7 +89,7 @@ private:
 
 
 #ifndef ANDROID
-class SurfFeaturesFinderGpu : public FeaturesFinder
+class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
 {
 public:
     SurfFeaturesFinderGpu(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
