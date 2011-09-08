@@ -1,8 +1,13 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
+#if HAVE_CVCONFIG_H
+#include "cvconfig.h"
+#endif
 #ifndef GTEST_CREATE_SHARED_LIBRARY
+#ifdef BUILD_SHARED_LIBS
 #define GTEST_LINKED_AS_SHARED_LIBRARY 1
+#endif
 #endif
 
 #ifdef ANDROID
