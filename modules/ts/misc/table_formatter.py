@@ -426,7 +426,7 @@ html, body {font-family: Lucida Console, Courier New, Courier;font-size: 16px;co
 .tbl th{color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;}
 .tbl td{border-bottom:1px solid #CCCCCC;color:#666699;padding:6px 8px;white-space:nowrap;}
 .tbl tbody tr:hover td{color:#000099;}
-.tbl caption{font:italic 16px "Trebuchet MS",Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;}
+.tbl caption{font:italic 16px "Trebuchet MS",Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;white-space:normal;}
 </style>
 </head>
 <body>

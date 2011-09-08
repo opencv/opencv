@@ -1561,7 +1561,7 @@ endif()
 #-----------------------------------
 if(BUILD_PERF_TESTS AND PYTHON_EXECUTABLE)
     add_custom_target(perf 
-        ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" "${CMAKE_BINARY_DIR}"
+        ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py" --configuration $<CONFIGURATION> "${CMAKE_BINARY_DIR}"
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/modules/ts/misc/run.py"
     )

@@ -1,4 +1,4 @@
-import testlog_parser, sys, os, xml, re
+import testlog_parser, sys, os, xml, re, glob
 from table_formatter import *
 from optparse import OptionParser
 
@@ -16,12 +16,31 @@ if __name__ == "__main__":
         exit(0)
 
     options.generateHtml = detectHtmlOutputType(options.format)
-        
+    
+    # expand wildcards and filter duplicates
+    files = []
+    files1 = []
+    for arg in args:
+        if ("*" in arg) or ("?" in arg):
+            files1.extend([os.path.abspath(f) for f in glob.glob(arg)])
+        else:
+            files.append(os.path.abspath(arg))
+    seen = set()
+    files = [ x for x in files if x not in seen and not seen.add(x)]
+    files.extend((set(files1) - set(files)))
+    args = files
+
+    # load test data
     tests = []
     files = []
     for arg in set(args):
-        files.append(os.path.basename(arg))
-        tests.extend(testlog_parser.parseLogFile(arg))
+        try:
+            cases = testlog_parser.parseLogFile(arg)
+            if cases:
+                files.append(os.path.basename(arg))
+                tests.extend(cases)
+        except:
+            pass
 
     if options.filter:
         expr = re.compile(options.filter)

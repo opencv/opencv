@@ -47,7 +47,7 @@ def query_yes_no(stdout, question, default="yes"):
                              "(or 'y' or 'n').\n")
             
 class RunInfo(object):
-    def __init__(self, path):
+    def __init__(self, path, configuration = None):
         self.path = path
         self.error = None
         for p in parse_patterns:
@@ -97,7 +97,10 @@ class RunInfo(object):
 
         # fix test path
         if "Visual Studio" in self.cmake_generator:
-            self.tests_dir = os.path.join(self.tests_dir, self.build_type)
+            if configuration:
+                self.tests_dir = os.path.join(self.tests_dir, configuration)
+            else:
+                self.tests_dir = os.path.join(self.tests_dir, self.build_type)
         elif not self.is_x64 and self.cxx_compiler:
             #one more attempt to detect x64 compiler
             try:
@@ -209,7 +212,9 @@ class RunInfo(object):
             hw = str(self.hardware).replace(" ", "_") + "_"
         else:
             hw = ""
-        return "%s_%s_%s_%s%s%s.xml" %(app, self.targetos, self.targetarch, hw, rev, timestamp.strftime("%Y%m%dT%H%M%S"))
+        #stamp = timestamp.strftime("%Y%m%dT%H%M%S")
+        stamp = timestamp.strftime("%Y-%m-%d--%H-%M-%S")
+        return "%s_%s_%s_%s%s%s.xml" %(app, self.targetos, self.targetarch, hw, rev, stamp)
         
     def getTest(self, name):
         # full path
@@ -381,6 +386,7 @@ if __name__ == "__main__":
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("", "--android_test_data_path", dest="test_data_path", help="OPENCV_TEST_DATA_PATH for Android run", metavar="PATH", default="/sdcard/opencv_testdata/")
+    parser.add_option("", "--configuration", dest="configuration", help="force Debug or Release donfiguration", metavar="CFG", default="")
     
     (options, args) = parser.parse_args(argv)
     
@@ -409,7 +415,7 @@ if __name__ == "__main__":
     
     logs = []
     for path in run_args:
-        info = RunInfo(path)
+        info = RunInfo(path, options.configuration)
         #print vars(info),"\n"
         if not info.isRunnable():
             print >> sys.stderr, "Error:", info.error
