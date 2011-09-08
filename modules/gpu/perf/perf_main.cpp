@@ -5,7 +5,7 @@
 int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    cvtest::TS::ptr()->init("gpu");
+    //cvtest::TS::ptr()->init("gpu");
     Regression::Init("gpu");
     TestBase::Init(argc, argv);
     return RUN_ALL_TESTS();

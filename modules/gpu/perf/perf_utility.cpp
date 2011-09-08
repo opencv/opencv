@@ -5,7 +5,7 @@ using namespace cv::gpu;
 
 Mat readImage(const string& fileName, int flags)
 {
-    return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
+    return imread(::perf::TestBase::getDataPath(fileName), flags);
 }
 
 bool supportFeature(const DeviceInfo& info, FeatureSet feature)

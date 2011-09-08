@@ -22,6 +22,8 @@ parse_patterns = (
   {'name': "is_x64",             'default': "OFF",      'pattern': re.compile("^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
   {'name': "cmake_generator",    'default': None,       'pattern': re.compile("^CMAKE_GENERATOR:INTERNAL=(.+)$")},
   {'name': "cxx_compiler",       'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.+)$")},
+  {'name': "with_cuda",          'default': "OFF",      'pattern': re.compile("^WITH_CUDA:BOOL=(ON)$")},
+  {'name': "cuda_library",       'default': None,       'pattern': re.compile("^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
 )
 
 def query_yes_no(stdout, question, default="yes"):
@@ -67,6 +69,7 @@ class RunInfo(object):
         except:
             pass
         cachefile.close()
+        
         # fix empty tests dir
         if not self.tests_dir:
             self.tests_dir = self.path
@@ -119,6 +122,12 @@ class RunInfo(object):
             self.targetarch = "x86"
         else:
             self.targetarch = "unknown"
+            
+        # fix CUDA attributes
+        self.with_cuda = self.with_cuda == "ON"
+        if self.cuda_library and self.cuda_library.endswith("-NOTFOUND"):
+            self.cuda_library = None
+        self.has_cuda = self.with_cuda and self.cuda_library and self.targetarch in ["x86", "x64"]
             
         self.hardware = None
         
@@ -210,6 +219,8 @@ class RunInfo(object):
             rev = ""
         if self.hardware:
             hw = str(self.hardware).replace(" ", "_") + "_"
+        elif self.has_cuda:
+            hw = "CUDA_"
         else:
             hw = ""
         #stamp = timestamp.strftime("%Y%m%dT%H%M%S")

@@ -203,6 +203,7 @@ public:
     TestBase();
 
     static void Init(int argc, const char* const argv[]);
+    static std::string getDataPath(const std::string& relativePath);
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -213,8 +214,6 @@ protected:
     void startTimer();
     void stopTimer();
     bool next();
-
-    std::string getDataPath(const std::string& relativePath);
 
     //_declareHelper declare;
 
