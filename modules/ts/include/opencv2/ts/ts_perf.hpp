@@ -93,8 +93,6 @@ private: int _val;\
 };\
 inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }
 
-CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
-
 #define CV_FLAGS(class_name, ...) \
 class CV_EXPORTS class_name {\
 public:\
@@ -121,6 +119,8 @@ public:\
 private: int _val;\
 };\
 inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }
+
+CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
 
 /*****************************************************************************************\
 *                 Regression control utility for performance testing                      *
@@ -186,7 +186,8 @@ typedef struct CV_EXPORTS performance_metrics
     {
         TERM_ITERATIONS = 0,
         TERM_TIME = 1,
-        TERM_UNKNOWN = 2
+        TERM_INTERRUPT = 2,
+        TERM_UNKNOWN = -1
     };
 
     performance_metrics();
@@ -224,10 +225,12 @@ protected:
         WARMUP_RNG,
         WARMUP_NONE
     };
+
+    void reportMetrics(bool toJUnitXML = false);
     static void warmup(cv::InputOutputArray a, int wtype = WARMUP_READ);
 
     performance_metrics& calcMetrics();
-    void reportMetrics(bool toJUnitXML = false);
+    void RunPerfTestBody();
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
     typedef std::vector<int64> TimeVector;
@@ -332,12 +335,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(test_case_name, test_name){\
-      try {\
-       PerfTestBody();\
-      }catch(cv::Exception e) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what(); }\
-      catch(...) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws."; }\
-     }\
+     TEST_F(test_case_name, test_name){ RunPerfTestBody(); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name)::test_case_name::PerfTestBody()
 
@@ -375,12 +373,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
       protected:\
        virtual void PerfTestBody();\
      };\
-     TEST_F(fixture, testname){\
-      try {\
-       PerfTestBody();\
-      }catch(cv::Exception e) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what(); }\
-      catch(...) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws."; }\
-     }\
+     TEST_F(fixture, testname){ RunPerfTestBody(); }\
     }\
     void PERF_PROXY_NAMESPACE_NAME_(fixture, testname)::fixture::PerfTestBody()
 
@@ -413,12 +406,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
      protected:\
       virtual void PerfTestBody();\
     };\
-    TEST_P(fixture##_##name, name /*perf*/){\
-     try {\
-      PerfTestBody();\
-     }catch(cv::Exception e) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what(); }\
-     catch(...) { FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws."; }\
-    }\
+    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 

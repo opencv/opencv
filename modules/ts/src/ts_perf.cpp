@@ -27,6 +27,11 @@ void randu(cv::Mat& m)
     }
 }
 
+/*****************************************************************************************\
+*                       inner exception class for early termination
+\*****************************************************************************************/
+
+class PerfEarlyExitException: public cv::Exception {};
 
 /*****************************************************************************************\
 *                                   ::perf::Regression
@@ -381,9 +386,9 @@ const char *command_line_keys =
     "{!!bugbugbugbug!!   |perf_min_samples    |10       |minimal required numer of samples}"
     "{!!bugbugbugbug!!   |perf_seed           |809564   |seed for random numbers generator}"
     #if ANDROID
-    "{!!bugbugbugbug!!   |perf_time_limit     |2.0      |default time limit for a single test (in seconds)}"
+    "{!!bugbugbugbug!!   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     #else
-    "{!!bugbugbugbug!!   |perf_time_limit     |1.0      |default time limit for a single test (in seconds)}"
+    "{!!bugbugbugbug!!   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
     #endif
     "{!!bugbugbugbug!!   |perf_max_deviation  |1.0      |}"
     "{h                  |help                |false    |}"
@@ -410,8 +415,6 @@ void TestBase::Init(int argc, const char* const argv[])
         printf("\n\n");
         return;
     }
-
-    //LOGD("!!!!!!!!!!!! %f !!!!!!", param_time_limit);
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     _timeadjustment = _calibrate();
@@ -567,12 +570,15 @@ performance_metrics& TestBase::calcMetrics()
     metrics.samples = (unsigned int)times.size();
     metrics.outliers = 0;
 
-    if (currentIter == nIters)
-        metrics.terminationReason = performance_metrics::TERM_ITERATIONS;
-    else if (totalTime >= timeLimit)
-        metrics.terminationReason = performance_metrics::TERM_TIME;
-    else
-        metrics.terminationReason = performance_metrics::TERM_UNKNOWN;
+    if (metrics.terminationReason != performance_metrics::TERM_INTERRUPT)
+    {
+        if (currentIter == nIters)
+            metrics.terminationReason = performance_metrics::TERM_ITERATIONS;
+        else if (totalTime >= timeLimit)
+            metrics.terminationReason = performance_metrics::TERM_TIME;
+        else
+            metrics.terminationReason = performance_metrics::TERM_UNKNOWN;
+    }
 
     std::sort(times.begin(), times.end());
 
@@ -697,7 +703,7 @@ void TestBase::reportMetrics(bool toJUnitXML)
 #endif
 
         if (type_param)  LOGD("type      = %11s", type_param);
-        if (value_param) LOGD("param     = %11s", value_param);
+        if (value_param) LOGD("params    = %11s", value_param);
 
         switch (m.terminationReason)
         {
@@ -706,6 +712,9 @@ void TestBase::reportMetrics(bool toJUnitXML)
             break;
         case performance_metrics::TERM_TIME:
             LOGD("termination reason:  reached time limit");
+            break;
+        case performance_metrics::TERM_INTERRUPT:
+            LOGD("termination reason:  aborted by the performance testing framework");
             break;
         case performance_metrics::TERM_UNKNOWN:
         default:
@@ -721,12 +730,15 @@ void TestBase::reportMetrics(bool toJUnitXML)
             LOGD("samples   =%11u of %u", m.samples, nIters);
         LOGD("outliers  =%11u", m.outliers);
         LOGD("frequency =%11.0f", m.frequency);
-        LOGD("min       =%11.0f = %.2fms", m.min, m.min * 1e3 / m.frequency);
-        LOGD("median    =%11.0f = %.2fms", m.median, m.median * 1e3 / m.frequency);
-        LOGD("gmean     =%11.0f = %.2fms", m.gmean, m.gmean * 1e3 / m.frequency);
-        LOGD("gstddev   =%11.8f = %.2fms for 97%% dispersion interval", m.gstddev, m.gmean * 2 * sinh(m.gstddev * 3) * 1e3 / m.frequency);
-        LOGD("mean      =%11.0f = %.2fms", m.mean, m.mean * 1e3 / m.frequency);
-        LOGD("stddev    =%11.0f = %.2fms", m.stddev, m.stddev * 1e3 / m.frequency);
+        if (m.samples > 0)
+        {
+            LOGD("min       =%11.0f = %.2fms", m.min, m.min * 1e3 / m.frequency);
+            LOGD("median    =%11.0f = %.2fms", m.median, m.median * 1e3 / m.frequency);
+            LOGD("gmean     =%11.0f = %.2fms", m.gmean, m.gmean * 1e3 / m.frequency);
+            LOGD("gstddev   =%11.8f = %.2fms for 97%% dispersion interval", m.gstddev, m.gmean * 2 * sinh(m.gstddev * 3) * 1e3 / m.frequency);
+            LOGD("mean      =%11.0f = %.2fms", m.mean, m.mean * 1e3 / m.frequency);
+            LOGD("stddev    =%11.0f = %.2fms", m.stddev, m.stddev * 1e3 / m.frequency);
+        }
     }
 }
 
@@ -762,7 +774,7 @@ std::string TestBase::getDataPath(const std::string& relativePath)
     if (relativePath.empty())
     {
         ADD_FAILURE() << "  Bad path to test resource";
-        return std::string();
+        throw PerfEarlyExitException();
     }
 
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
@@ -791,8 +803,32 @@ std::string TestBase::getDataPath(const std::string& relativePath)
     if (fp)
         fclose(fp);
     else
+    {
         ADD_FAILURE() << "  Requested file \"" << path << "\" does not exist.";
+        throw PerfEarlyExitException();
+    }
     return path;
+}
+
+void TestBase::RunPerfTestBody()
+{
+    try
+    {
+        this->PerfTestBody();
+    }
+    catch(PerfEarlyExitException)
+    {
+        metrics.terminationReason = performance_metrics::TERM_INTERRUPT;
+        return;//no additional failure logging
+    }
+    catch(cv::Exception e)
+    {
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what();
+    }
+    catch(...)
+    {
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws.";
+    }
 }
 
 /*****************************************************************************************\
