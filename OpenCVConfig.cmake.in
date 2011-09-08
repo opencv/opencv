@@ -71,7 +71,7 @@ LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 # ====================================================================
 # Link libraries: e.g.   libopencv_core.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
-SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core )
+SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core opencv_stitching)
 #libraries order is very important because linker from Android NDK is one-pass linker
 if(NOT ANDROID)
     LIST(INSERT OpenCV_LIB_COMPONENTS 0 opencv_gpu)
