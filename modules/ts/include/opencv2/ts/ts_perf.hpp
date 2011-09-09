@@ -187,6 +187,7 @@ typedef struct CV_EXPORTS performance_metrics
         TERM_ITERATIONS = 0,
         TERM_TIME = 1,
         TERM_INTERRUPT = 2,
+        TERM_EXCEPTION = 3,
         TERM_UNKNOWN = -1
     };
 

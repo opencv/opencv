@@ -570,7 +570,7 @@ performance_metrics& TestBase::calcMetrics()
     metrics.samples = (unsigned int)times.size();
     metrics.outliers = 0;
 
-    if (metrics.terminationReason != performance_metrics::TERM_INTERRUPT)
+    if (metrics.terminationReason != performance_metrics::TERM_INTERRUPT && metrics.terminationReason != performance_metrics::TERM_EXCEPTION)
     {
         if (currentIter == nIters)
             metrics.terminationReason = performance_metrics::TERM_ITERATIONS;
@@ -716,6 +716,9 @@ void TestBase::reportMetrics(bool toJUnitXML)
         case performance_metrics::TERM_INTERRUPT:
             LOGD("termination reason:  aborted by the performance testing framework");
             break;
+        case performance_metrics::TERM_EXCEPTION:
+            LOGD("termination reason:  unhandled exception");
+            break;
         case performance_metrics::TERM_UNKNOWN:
         default:
             LOGD("termination reason:  unknown");
@@ -823,10 +826,12 @@ void TestBase::RunPerfTestBody()
     }
     catch(cv::Exception e)
     {
+        metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what();
     }
     catch(...)
     {
+        metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws.";
     }
 }

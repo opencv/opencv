@@ -1,4 +1,4 @@
-import testlog_parser, sys, os, xml, glob
+import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
 
@@ -14,6 +14,8 @@ if __name__ == "__main__":
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
     parser.add_option("", "--no-relatives", action="store_false", dest="calc_relatives", default=True, help="do not output relative values")
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
+    parser.add_option("", "--match", dest="match", default=None)
+    parser.add_option("", "--match-replace", dest="match_replace", default="")
     (options, args) = parser.parse_args()
     
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -41,7 +43,9 @@ if __name__ == "__main__":
             tests = testlog_parser.parseLogFile(arg)
             if options.filter:
                 expr = re.compile(options.filter)
-                tests = [t for t in tests if expr.search(str(t))] 
+                tests = [t for t in tests if expr.search(str(t))]
+            if options.match:
+                tests = [t for t in tests if t.get("status") != "notrun"]
             if tests:
                 test_sets.append((os.path.basename(arg), tests))
         except IOError as err:
@@ -57,9 +61,14 @@ if __name__ == "__main__":
     setsCount = len(test_sets)
     test_cases = {}
     
+    name_extractor = lambda name: str(name)
+    if options.match:
+        reg = re.compile(options.match)
+        name_extractor = lambda name: reg.sub(options.match_replace, str(name))
+    
     for i in range(setsCount):
         for case in test_sets[i][1]:
-            name = str(case)
+            name = name_extractor(case)
             if name not in test_cases:
                 test_cases[name] = [None] * setsCount
             test_cases[name][i] = case
