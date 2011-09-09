@@ -71,12 +71,31 @@ LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 # ====================================================================
 # Link libraries: e.g.   libopencv_core.so, opencv_imgproc220d.lib, etc...
 # ====================================================================
-SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core opencv_stitching)
-#libraries order is very important because linker from Android NDK is one-pass linker
-if(NOT ANDROID)
-    LIST(INSERT OpenCV_LIB_COMPONENTS 0 opencv_gpu)
-ELSEIF(NOT OpenCV_SHARED AND OpenCV_HAVE_ANDROID_CAMERA)
-    LIST(APPEND OpenCV_LIB_COMPONENTS opencv_androidcamera)
+
+# OpenCV internal dependencies:
+# opencv_androidcamera -> {}
+# opencv_core          -> {}
+# opencv_flann         -> {opencv_core}
+# opencv_imgproc       -> {opencv_core}
+# opencv_ml            -> {opencv_core}
+# opencv_highgui       -> {opencv_core, opencv_imgproc, opencv_androidcamera}
+# opencv_video         -> {opencv_core, opencv_imgproc}
+# opencv_features2d    -> {opencv_core, opencv_imgproc, opencv_flann, opencv_highgui}
+# opencv_calib3d       -> {opencv_core, opencv_imgproc, opencv_flann,                 opencv_features2d}
+# opencv_objdetect     -> {opencv_core, opencv_imgproc, opencv_flann, opencv_highgui, opencv_features2d, opencv_calib3d}
+# opencv_gpu           -> {opencv_core, opencv_imgproc, opencv_flann,                 opencv_features2d, opencv_calib3d, opencv_objdetect}
+# opencv_stitching     -> {opencv_core, opencv_imgproc, opencv_flann,                 opencv_features2d, opencv_calib3d, opencv_objdetect, opencv_gpu}
+# opencv_legacy        -> {opencv_core, opencv_imgproc, opencv_flann, opencv_highgui, opencv_features2d, opencv_calib3d,                   opencv_video}
+# opencv_contrib       -> {opencv_core, opencv_imgproc, opencv_flann, opencv_highgui, opencv_features2d, opencv_calib3d, opencv_objdetect, opencv_video, opencv_ml}
+
+SET(OpenCV_LIB_COMPONENTS opencv_contrib opencv_legacy opencv_stitching opencv_gpu opencv_objdetect opencv_calib3d opencv_features2d opencv_video opencv_highgui opencv_ml opencv_imgproc opencv_flann opencv_core opencv_androidcamera)
+
+# remove modules unavailable on current platform:
+if(ANDROID)
+    LIST(REMOVE_ITEM OpenCV_LIB_COMPONENTS opencv_gpu)
+endif()
+if(NOT ANDROID OR OpenCV_SHARED OR NOT OpenCV_HAVE_ANDROID_CAMERA)
+    LIST(REMOVE_ITEM OpenCV_LIB_COMPONENTS opencv_androidcamera)
 endif()
 
 if(OpenCV_USE_MANGLED_PATHS)
