@@ -328,20 +328,26 @@ class table(object):
             return (height - space + 1) / 2
         return 0
     
-    def htmlPrintTable(self, out):
+    def htmlPrintTable(self, out, embeedcss = False):
         columns = self.layoutTable()
         
-        out.write("<div class=\"tableFormatter\">\n<table class=\"tbl\">\n")
+        if embeedcss:
+            out.write("<div style=\"font-family: Lucida Console, Courier New, Courier;font-size: 16px;color:#3e4758;\">\n<table style=\"background:none repeat scroll 0 0 #FFFFFF;border-collapse:collapse;font-family:'Lucida Sans Unicode','Lucida Grande',Sans-Serif;font-size:14px;margin:20px;text-align:left;width:480px;margin-left: auto;margin-right: auto;white-space:nowrap;\">\n")
+        else:
+            out.write("<div class=\"tableFormatter\">\n<table class=\"tbl\">\n")
         if self.caption:
-            out.write(" <caption>%s</caption>\n" % htmlEncode(self.reformatTextValue(self.caption)))
+            if embeedcss:
+                out.write(" <caption style=\"font:italic 16px 'Trebuchet MS',Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;white-space:normal;\">%s</caption>\n" % htmlEncode(self.reformatTextValue(self.caption)))
+            else:
+                out.write(" <caption>%s</caption>\n" % htmlEncode(self.reformatTextValue(self.caption)))
         out.write(" <thead>\n")
         
         headerRow = tblRow(len(columns), {"align": "center", "valign": "top", "bold": True, "header": True})
         headerRow.cells = columns
         
         header_rows = [headerRow]
-        
         header_rows.extend([row for row in self.rows if self.getValue("header")])
+        last_row = header_rows[len(header_rows) - 1]
         
         for row in header_rows:
             out.write("  <tr>\n")
@@ -353,7 +359,12 @@ class table(object):
                     attr += " align=\"%s\"" % align
                 if valign:
                     attr += " valign=\"%s\"" % valign
-                out.write("   <th%s>\n" % attr)
+                css = ""
+                if embeedcss:
+                    css = " style=\"border:none;color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;\""
+                    if row == last_row:
+                        css = css[:-1] + "padding-bottom:5px;\""
+                out.write("   <th%s%s>\n" % (attr, css))
                 if th is not None:
                     out.write("    %s\n" % htmlEncode(th.text))
                 out.write("   </th>\n")
@@ -399,7 +410,12 @@ class table(object):
                         rows[q].cells[i] = colspan
                 if style:
                     attr += " style=\"%s\"" % style
-                out.write("   <td%s>\n" % attr)
+                css = ""
+                if embeedcss:
+                    css = " style=\"border:none;border-bottom:1px solid #CCCCCC;color:#666699;padding:6px 8px;white-space:nowrap;\""
+                    if r == 0:
+                        css = css[:-1] + "border-top:2px solid #6678B1;\""
+                out.write("   <td%s%s>\n" % (attr, css))
                 if th is not None:
                     out.write("    %s\n" % htmlEncode(td.text))
                 out.write("   </td>\n")
@@ -423,8 +439,8 @@ html, body {font-family: Lucida Console, Courier New, Courier;font-size: 16px;co
 .tbl span{display:block;white-space:nowrap;}
 .tbl thead tr:last-child th {padding-bottom:5px;}
 .tbl tbody tr:first-child td {border-top:2px solid #6678B1;}
-.tbl th{color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;}
-.tbl td{border-bottom:1px solid #CCCCCC;color:#666699;padding:6px 8px;white-space:nowrap;}
+.tbl th{border:none;color:#003399;font-size:16px;font-weight:normal;white-space:nowrap;padding:3px 10px;}
+.tbl td{border:none;border-bottom:1px solid #CCCCCC;color:#666699;padding:6px 8px;white-space:nowrap;}
 .tbl tbody tr:hover td{color:#000099;}
 .tbl caption{font:italic 16px "Trebuchet MS",Verdana,Arial,Helvetica,sans-serif;padding:0 0 5px;text-align:right;white-space:normal;}
 </style>
@@ -452,7 +468,7 @@ def getStdoutFilename():
 def detectHtmlOutputType(requestedType):
     if requestedType == "txt":
         return False
-    elif requestedType == "html":
+    elif requestedType in ["html", "moinwiki"]:
         return True
     else:
         if sys.stdout.isatty():

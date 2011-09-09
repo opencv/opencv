@@ -145,7 +145,7 @@ if __name__ == "__main__":
     for i in range(argsnum):
         arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=keyselector)
                 
-    if options.generateHtml:
+    if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))
             
     indexes = [0] * argsnum
@@ -191,11 +191,11 @@ if __name__ == "__main__":
                     tbl.newCell(col, "-")
         
         if options.generateHtml:
-            tbl.htmlPrintTable(sys.stdout)
+            tbl.htmlPrintTable(sys.stdout, options.format == "moinwiki")
         else:
             tbl.consolePrintTable(sys.stdout)
         if not nextPermutation(indexes, arglists, x, y):
             break
     
-    if options.generateHtml:
+    if options.generateHtml and options.format != "moinwiki":
         htmlPrintFooter(sys.stdout)

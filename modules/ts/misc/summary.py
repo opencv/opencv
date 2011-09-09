@@ -137,8 +137,11 @@ if __name__ == "__main__":
 
     # output table
     if options.generateHtml:
-        htmlPrintHeader(sys.stdout, "Summary report for %s tests from %s test logs" % (len(test_cases), setsCount))
-        tbl.htmlPrintTable(sys.stdout)
-        htmlPrintFooter(sys.stdout)
+        if options.format == "moinwiki":
+            tbl.htmlPrintTable(sys.stdout, True)
+        else:
+            htmlPrintHeader(sys.stdout, "Summary report for %s tests from %s test logs" % (len(test_cases), setsCount))
+            tbl.htmlPrintTable(sys.stdout)
+            htmlPrintFooter(sys.stdout)
     else:
         tbl.consolePrintTable(sys.stdout)
