@@ -602,4 +602,71 @@ namespace cv { namespace gpu { namespace device
     template void pow_caller<ushort>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
     template void pow_caller<int>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
     template void pow_caller<float>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // multiply
+
+    template <typename TSrc1, typename TSrc2, typename TDst, int cn>
+    void __global__ multiplyKernel(const PtrStep src1, const PtrStep src2, int rows, int cols,
+                                   PtrStep dst)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            ((TDst*)dst.ptr(y))[x] = saturate_cast<TDst>(((TSrc1*)src1.ptr(y))[x] * ((TSrc2*)src2.ptr(y))[x / cn]);
+        }
+    }
+
+
+    template <typename TSrc1, typename TSrc2, typename TDst, int cn>
+    void multiplyCaller(const PtrStep src1, const PtrStep src2, int rows, int cols, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        multiplyKernel<TSrc1, TSrc2, TDst, cn><<<grid, threads>>>(src1, src2, rows, cols, dst);
+        cudaSafeCall(cudaGetLastError());
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    template void multiplyCaller<uchar, float, uchar, 4>(const PtrStep src1, const PtrStep src2, int rows, int cols, PtrStep dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // multiply (by scalar)
+
+    template <typename TSrc, typename TDst>
+    void __global__ multiplyScalarKernel(const PtrStep src1, float scale, int rows, int cols, PtrStep dst)
+    {
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x < cols && y < rows)
+        {
+            ((TDst*)dst.ptr(y))[x] = saturate_cast<TDst>(((TSrc*)src1.ptr(y))[x] * scale);
+        }
+    }
+
+
+    template <typename TSrc, typename TDst>
+    void multiplyScalarCaller(const PtrStep src, float scale, int rows, int cols, PtrStep dst, cudaStream_t stream)
+    {
+        dim3 threads(32, 8);
+        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+
+        multiplyScalarKernel<TSrc, TDst><<<grid, threads>>>(src, scale, rows, cols, dst);
+        cudaSafeCall(cudaGetLastError());
+
+        if (stream == 0)
+            cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
+    template void multiplyScalarCaller<uchar, uchar>(const PtrStep src, float scale, int rows, int cols, PtrStep dst, cudaStream_t stream);
 }}}
