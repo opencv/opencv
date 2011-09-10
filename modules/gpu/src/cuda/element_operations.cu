@@ -607,6 +607,7 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////
     // multiply
 
+    // TODO implement more efficient version
     template <typename TSrc1, typename TSrc2, typename TDst, int cn>
     void __global__ multiplyKernel(const PtrStep src1, const PtrStep src2, int rows, int cols,
                                    PtrStep dst)
@@ -641,6 +642,7 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////
     // multiply (by scalar)
 
+    // TODO implement more efficient version
     template <typename TSrc, typename TDst>
     void __global__ multiplyScalarKernel(const PtrStep src1, float scale, int rows, int cols, PtrStep dst)
     {
