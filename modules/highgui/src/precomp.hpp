@@ -48,6 +48,16 @@
 
 #include "cvconfig.h"
 
+#if defined WIN32 || defined _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef min
+#undef max
+
+void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
+#endif
+
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
@@ -62,16 +72,6 @@
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/highgui/highgui_tegra.hpp"
-#endif
-
-#if defined WIN32 || defined _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#undef min
-#undef max
-
-void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
 #endif
 
 /* Errors */

@@ -420,7 +420,7 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 		if (window->status==CV_WINDOW_FULLSCREEN && prop_value==CV_WINDOW_NORMAL)
 		{
 			icvLoadWindowPos(window->name,position );
-			SetWindowLongPtr(window->frame, GWL_STYLE, dwStyle | WS_CAPTION);
+			SetWindowLongPtr(window->frame, GWL_STYLE, dwStyle | WS_CAPTION | WS_THICKFRAME);
 
 			SetWindowPos(window->frame, HWND_TOP, position.x, position.y , position.width,position.height, SWP_NOZORDER | SWP_FRAMECHANGED);
 			window->status=CV_WINDOW_NORMAL;
@@ -447,7 +447,7 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
 			//fullscreen
 			position.x=mi.rcMonitor.left;position.y=mi.rcMonitor.top;
 			position.width=mi.rcMonitor.right - mi.rcMonitor.left;position.height=mi.rcMonitor.bottom - mi.rcMonitor.top;
-			SetWindowLongPtr(window->frame, GWL_STYLE, dwStyle & ~WS_CAPTION);
+			SetWindowLongPtr(window->frame, GWL_STYLE, dwStyle & ~WS_CAPTION & ~WS_THICKFRAME);
 
 			SetWindowPos(window->frame, HWND_TOP, position.x, position.y , position.width,position.height, SWP_NOZORDER | SWP_FRAMECHANGED);
 			window->status=CV_WINDOW_FULLSCREEN;
