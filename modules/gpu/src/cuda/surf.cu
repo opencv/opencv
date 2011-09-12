@@ -250,9 +250,9 @@ namespace cv { namespace gpu { namespace surf
         // Is this thread within the hessian buffer?
         const int zoff = blockDim.x * blockDim.y;
         const int localLin = threadIdx.x + threadIdx.y * blockDim.x + zoff;
-        N9[localLin - zoff] = det.ptr(c_layer_rows * (layer - 1) + i)[j];
-        N9[localLin       ] = det.ptr(c_layer_rows * (layer    ) + i)[j];
-        N9[localLin + zoff] = det.ptr(c_layer_rows * (layer + 1) + i)[j];
+        N9[localLin - zoff] = det.ptr(c_layer_rows * (layer - 1) + min(max(i, 0), c_img_rows))[min(max(j, 0), c_img_cols - 1)];
+        N9[localLin       ] = det.ptr(c_layer_rows * (layer    ) + min(max(i, 0), c_img_rows))[min(max(j, 0), c_img_cols - 1)];
+        N9[localLin + zoff] = det.ptr(c_layer_rows * (layer + 1) + min(max(i, 0), c_img_rows))[min(max(j, 0), c_img_cols - 1)];
         __syncthreads();
 
         if (i < c_layer_rows - margin && j < c_layer_cols - margin && threadIdx.x > 0 && threadIdx.x < blockDim.x - 1 && threadIdx.y > 0 && threadIdx.y < blockDim.y - 1)
