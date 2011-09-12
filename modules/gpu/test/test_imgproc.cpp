@@ -137,7 +137,7 @@ struct Resize : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
         size = cv::Size(rng.uniform(20, 150), rng.uniform(20, 150));
 
-        src = cvtest::randomMat(rng, size, type, 0.0, 127.0, false);
+        src = cvtest::randomMat(rng, size, type, 0.0, CV_MAT_DEPTH(type) == CV_32F ? 1.0 : 255.0, false);
 
         cv::resize(src, dst_gold1, cv::Size(), 2.0, 2.0, interpolation);
         cv::resize(src, dst_gold2, cv::Size(), 0.5, 0.5, interpolation);
@@ -146,7 +146,7 @@ struct Resize : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int
 
 TEST_P(Resize, Accuracy)
 {
-    static const char* interpolations[] = {"INTER_NEAREST", "INTER_LINEAR"};
+    static const char* interpolations[] = {"INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC"};
     const char* interpolationStr = interpolations[interpolation];
 
     PRINT_PARAM(devInfo);
@@ -169,14 +169,14 @@ TEST_P(Resize, Accuracy)
         gpuRes2.download(dst2);
     );
 
-    EXPECT_MAT_SIMILAR(dst_gold1, dst1, 0.5);
-    EXPECT_MAT_SIMILAR(dst_gold2, dst2, 0.5);
+    EXPECT_MAT_SIMILAR(dst_gold1, dst1, 0.2);
+    EXPECT_MAT_SIMILAR(dst_gold2, dst2, 0.2);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
                         testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC4), 
-                        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR)));
+                        testing::Values(CV_8UC1, CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4), 
+                        testing::Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR, (int)cv::INTER_CUBIC)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // remap

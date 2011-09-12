@@ -245,8 +245,8 @@ PERF_TEST_P(DevInfo_Size_MatType, threshold, testing::Combine(testing::ValuesIn(
 
 PERF_TEST_P(DevInfo_Size_MatType_Interpolation_SizeCoeff, resize, testing::Combine(testing::ValuesIn(devices()),
                                                                                    testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                                   testing::Values(CV_8UC1, CV_8UC4),
-                                                                                   testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR),
+                                                                                   testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                                                                                   testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC),
                                                                                    testing::Values(0.5, 2.0)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
@@ -264,7 +264,7 @@ PERF_TEST_P(DevInfo_Size_MatType_Interpolation_SizeCoeff, resize, testing::Combi
     GpuMat src(src_host);
     GpuMat dst;
 
-    declare.time(0.5).iterations(100);
+    declare.time(1.0).iterations(100);
 
     SIMPLE_TEST_CYCLE()
     {

@@ -633,8 +633,7 @@ namespace cv
         CV_EXPORTS double threshold(const GpuMat& src, GpuMat& dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
         //! resizes the image
-        //! Supports INTER_NEAREST, INTER_LINEAR
-        //! supports CV_8UC1, CV_8UC4 types
+        //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
         CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
         //! warps the image using affine transformation

@@ -272,14 +272,28 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q,
 ////////////////////////////////////////////////////////////////////////
 // resize
 
+namespace cv { namespace gpu {  namespace imgproc
+{
+    template <typename T> void resize_gpu(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
+}}}
+
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
-    static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR/*, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS*/};
+    using namespace cv::gpu::imgproc;
 
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR/* || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4*/);
+    typedef void (*caller_t)(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
+    static const caller_t callers[6][4] = 
+    {
+        {resize_gpu<uchar>, resize_gpu<uchar2>, resize_gpu<uchar3>, resize_gpu<uchar4>},
+        {resize_gpu<schar>, resize_gpu<char2>, resize_gpu<char3>, resize_gpu<char4>},
+        {resize_gpu<ushort>, resize_gpu<ushort2>, resize_gpu<ushort3>, resize_gpu<ushort4>},
+        {resize_gpu<short>, resize_gpu<short2>, resize_gpu<short3>, resize_gpu<short4>},
+        {resize_gpu<int>, resize_gpu<int2>, resize_gpu<int3>, resize_gpu<int4>},
+        {resize_gpu<float>, resize_gpu<float2>, resize_gpu<float3>, resize_gpu<float4>}
+    };
 
-    CV_Assert( src.size().area() > 0 );
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
     CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
 
     if( dsize == Size() )
@@ -294,34 +308,43 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     dst.create(dsize, src.type());
 
-    NppiSize srcsz;
-    srcsz.width  = src.cols;
-    srcsz.height = src.rows;
-    NppiRect srcrect;
-    srcrect.x = srcrect.y = 0;
-    srcrect.width  = src.cols;
-    srcrect.height = src.rows;
-    NppiSize dstsz;
-    dstsz.width  = dst.cols;
-    dstsz.height = dst.rows;
-
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    NppStreamHandler h(stream);
-
-    if (src.type() == CV_8UC1)
+    if ((src.type() == CV_8UC1 || src.type() == CV_8UC4) && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR))
     {
-        nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
+        static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
+
+        NppiSize srcsz;
+        srcsz.width  = src.cols;
+        srcsz.height = src.rows;
+        NppiRect srcrect;
+        srcrect.x = srcrect.y = 0;
+        srcrect.width  = src.cols;
+        srcrect.height = src.rows;
+        NppiSize dstsz;
+        dstsz.width  = dst.cols;
+        dstsz.height = dst.rows;
+
+        NppStreamHandler h(stream);
+
+        if (src.type() == CV_8UC1)
+        {
+            nppSafeCall( nppiResize_8u_C1R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
+        }
+        else
+        {
+            nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
+                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
     else
     {
-        nppSafeCall( nppiResize_8u_C4R(src.ptr<Npp8u>(), srcsz, static_cast<int>(src.step), srcrect,
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
+        callers[src.depth()][src.channels() - 1](src, static_cast<float>(fx), static_cast<float>(fy), dst, interpolation, stream);
     }
-
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
 }
 
 ////////////////////////////////////////////////////////////////////////

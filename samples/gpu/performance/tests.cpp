@@ -592,7 +592,7 @@ TEST(resize)
 
     for (int size = 1000; size <= 3000; size += 1000)
     {
-        SUBTEST << "size " << size;
+        SUBTEST << "size " << size << ", 8UC1, up";
 
         gen(src, size, size, CV_8U, 0, 256);
         dst.create(size * 2, size * 2, CV_8U);
@@ -603,6 +603,132 @@ TEST(resize)
 
         d_src = src;
         d_dst.create(size * 2, size * 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8UC1, down";
+
+        gen(src, size, size, CV_8U, 0, 256);
+        dst.create(size / 2, size / 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size / 2, size / 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8UC3, up";
+
+        gen(src, size, size, CV_8UC3, 0, 256);
+        dst.create(size * 2, size * 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size * 2, size * 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8UC3, down";
+
+        gen(src, size, size, CV_8UC3, 0, 256);
+        dst.create(size / 2, size / 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size / 2, size / 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8UC4, up";
+
+        gen(src, size, size, CV_8UC4, 0, 256);
+        dst.create(size * 2, size * 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size * 2, size * 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 8UC4, down";
+
+        gen(src, size, size, CV_8UC4, 0, 256);
+        dst.create(size / 2, size / 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size / 2, size / 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32FC1, up";
+
+        gen(src, size, size, CV_32FC1, 0, 256);
+        dst.create(size * 2, size * 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size * 2, size * 2, CV_8U);
+
+        GPU_ON;
+        gpu::resize(d_src, d_dst, d_dst.size());
+        GPU_OFF;
+    }
+    for (int size = 1000; size <= 3000; size += 1000)
+    {
+        SUBTEST << "size " << size << ", 32FC1, down";
+
+        gen(src, size, size, CV_32FC1, 0, 256);
+        dst.create(size / 2, size / 2, CV_8U);
+
+        CPU_ON;
+        resize(src, dst, dst.size());
+        CPU_OFF;
+
+        d_src = src;
+        d_dst.create(size / 2, size / 2, CV_8U);
 
         GPU_ON;
         gpu::resize(d_src, d_dst, d_dst.size());
