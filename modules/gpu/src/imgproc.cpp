@@ -308,6 +308,15 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 
     dst.create(dsize, src.type());
 
+    if (dsize == src.size())
+    {
+        if (s)
+            s.enqueueCopy(src, dst);
+        else
+            src.copyTo(dst);
+        return;
+    }
+
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     if ((src.type() == CV_8UC1 || src.type() == CV_8UC4) && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR))
