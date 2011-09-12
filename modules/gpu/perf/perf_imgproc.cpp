@@ -47,7 +47,7 @@ PERF_TEST_P(DevInfo, meanShiftFiltering, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat img = readImage("meanshift/cones.png");
+    Mat img = readImage("gpu/meanshift/cones.png");
     ASSERT_FALSE(img.empty());
     
     Mat rgba;
@@ -74,7 +74,7 @@ PERF_TEST_P(DevInfo, meanShiftProc, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat img = readImage("meanshift/cones.png");
+    Mat img = readImage("gpu/meanshift/cones.png");
     ASSERT_FALSE(img.empty());
     
     Mat rgba;
@@ -104,7 +104,7 @@ PERF_TEST_P(DevInfo, meanShiftSegmentation, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat img = readImage("meanshift/cones.png");
+    Mat img = readImage("gpu/meanshift/cones.png");
     ASSERT_FALSE(img.empty());
     
     Mat rgba;
@@ -121,6 +121,35 @@ PERF_TEST_P(DevInfo, meanShiftSegmentation, testing::ValuesIn(devices()))
     }
 
     SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, drawColorDisp, testing::Combine(testing::ValuesIn(devices()),
+                                                                  testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                  testing::Values(CV_8UC1, CV_16SC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, CV_8UC1);
+    declare.in(src_host, WARMUP_RNG);
+    src_host.convertTo(src_host, type);
+
+    GpuMat src(src_host);
+    GpuMat dst(size, CV_8UC4);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        drawColorDisp(src, dst, 255);
+    }
+
+    Mat dst_host(dst);
+
+    SANITY_CHECK(dst_host);
 }
 
 PERF_TEST_P(DevInfo_Size_MatType, reprojectImageTo3D, testing::Combine(testing::ValuesIn(devices()),
@@ -156,7 +185,8 @@ PERF_TEST_P(DevInfo_Size_MatType_CvtColorInfo, cvtColor, testing::Combine(testin
             testing::Values(GPU_TYPICAL_MAT_SIZES), 
             testing::Values(CV_8UC1, CV_16UC1, CV_32FC1),
             testing::Values(CvtColorInfo(4, 4, CV_RGBA2BGRA), CvtColorInfo(4, 1, CV_BGRA2GRAY), CvtColorInfo(1, 4, CV_GRAY2BGRA), 
-                            CvtColorInfo(4, 4, CV_BGR2XYZ), CvtColorInfo(4, 4, CV_BGR2YCrCb), CvtColorInfo(4, 4, CV_BGR2HSV))))
+                            CvtColorInfo(4, 4, CV_BGR2XYZ), CvtColorInfo(4, 4, CV_BGR2YCrCb), CvtColorInfo(4, 4, CV_YCrCb2BGR), 
+                            CvtColorInfo(4, 4, CV_BGR2HSV), CvtColorInfo(4, 4, CV_HSV2BGR))))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -321,6 +351,81 @@ PERF_TEST_P(DevInfo_Size_MatType_Interpolation, warpPerspective, testing::Combin
     SANITY_CHECK(dst_host);
 }
 
+PERF_TEST_P(DevInfo_Size, buildWarpPlaneMaps, testing::Combine(testing::ValuesIn(devices()),
+                                                               testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    GpuMat map_x(size, CV_32FC1);
+    GpuMat map_y(size, CV_32FC1);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        buildWarpPlaneMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, 1.0, map_x, map_y);
+    }
+
+    Mat map_x_host(map_x);
+    Mat map_y_host(map_y);
+
+    SANITY_CHECK(map_x_host);
+    SANITY_CHECK(map_y_host);
+}
+
+PERF_TEST_P(DevInfo_Size, buildWarpCylindricalMaps, testing::Combine(testing::ValuesIn(devices()),
+                                                               testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    GpuMat map_x(size, CV_32FC1);
+    GpuMat map_y(size, CV_32FC1);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        buildWarpCylindricalMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, map_x, map_y);
+    }
+
+    Mat map_x_host(map_x);
+    Mat map_y_host(map_y);
+
+    SANITY_CHECK(map_x_host);
+    SANITY_CHECK(map_y_host);
+}
+
+PERF_TEST_P(DevInfo_Size, buildWarpSphericalMaps, testing::Combine(testing::ValuesIn(devices()),
+                                                               testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    GpuMat map_x(size, CV_32FC1);
+    GpuMat map_y(size, CV_32FC1);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        buildWarpSphericalMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, map_x, map_y);
+    }
+
+    Mat map_x_host(map_x);
+    Mat map_y_host(map_y);
+
+    SANITY_CHECK(map_x_host);
+    SANITY_CHECK(map_y_host);
+}
+
 PERF_TEST_P(DevInfo_Size_MatType_Interpolation, rotate, testing::Combine(testing::ValuesIn(devices()),
                                                                          testing::Values(GPU_TYPICAL_MAT_SIZES), 
                                                                          testing::Values(CV_8UC1, CV_8UC4),
@@ -381,8 +486,8 @@ PERF_TEST_P(DevInfo_Size_MatType, copyMakeBorder, testing::Combine(testing::Valu
     SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size, integral, testing::Combine(testing::ValuesIn(devices()),
-                                                     testing::Values(GPU_TYPICAL_MAT_SIZES)))
+PERF_TEST_P(DevInfo_Size, integralBuffered, testing::Combine(testing::ValuesIn(devices()),
+                                                             testing::Values(GPU_TYPICAL_MAT_SIZES)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -407,6 +512,35 @@ PERF_TEST_P(DevInfo_Size, integral, testing::Combine(testing::ValuesIn(devices()
     Mat dst_host(dst);
 
     SANITY_CHECK(dst_host);
+}
+
+PERF_TEST_P(DevInfo_Size, integral, testing::Combine(testing::ValuesIn(devices()),
+                                                     testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, CV_8UC1);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    GpuMat sum, sqsum;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        integral(src, sum, sqsum);
+    }
+
+    Mat sum_host(sum);
+    Mat sqsum_host(sqsum);
+
+    SANITY_CHECK(sum_host);
+    SANITY_CHECK(sqsum_host);
 }
 
 PERF_TEST_P(DevInfo_Size, sqrIntegral, testing::Combine(testing::ValuesIn(devices()),
@@ -471,7 +605,7 @@ PERF_TEST_P(DevInfo_MatType, cornerHarris, testing::Combine(testing::ValuesIn(de
 
     setDevice(devInfo.deviceID());
     
-    Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = readImage("gpu/stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
@@ -509,7 +643,7 @@ PERF_TEST_P(DevInfo_MatType, cornerMinEigenVal, testing::Combine(testing::Values
 
     setDevice(devInfo.deviceID());
     
-    Mat img = readImage("stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = readImage("gpu/stereobm/aloe-L.png", CV_LOAD_IMAGE_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
@@ -723,7 +857,7 @@ PERF_TEST_P(DevInfo, Canny, testing::ValuesIn(devices()))
 
     setDevice(devInfo.deviceID());
 
-    Mat image_host = readImage("perf/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat image_host = readImage("gpu/perf/aloe.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     ASSERT_FALSE(image_host.empty());
 
     GpuMat image(image_host);
@@ -735,6 +869,63 @@ PERF_TEST_P(DevInfo, Canny, testing::ValuesIn(devices()))
     SIMPLE_TEST_CYCLE()
     {
         Canny(image, buf, dst, 50.0, 100.0);
+    }
+
+    Mat dst_host(dst);
+
+    SANITY_CHECK(dst_host);
+}
+
+PERF_TEST_P(DevInfo_Size, calcHist, testing::Combine(testing::ValuesIn(devices()),
+                                                     testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, CV_8UC1);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    GpuMat hist;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        calcHist(src, hist, buf);
+    }
+
+    Mat hist_host(hist);
+
+    SANITY_CHECK(hist_host);
+}
+
+PERF_TEST_P(DevInfo_Size, equalizeHist, testing::Combine(testing::ValuesIn(devices()),
+                                                         testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, CV_8UC1);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    GpuMat dst;
+    GpuMat hist;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        equalizeHist(src, dst, hist, buf);
     }
 
     Mat dst_host(dst);

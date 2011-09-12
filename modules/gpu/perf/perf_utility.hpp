@@ -19,6 +19,7 @@ CV_ENUM(FlipCode, HORIZONTAL_AXIS, VERTICAL_AXIS, BOTH_AXIS)
 CV_ENUM(CmpOp, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
 CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
 CV_ENUM(MatchMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
+CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
 
 struct CvtColorInfo
 {
@@ -44,6 +45,10 @@ typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, Interpolat
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, Interpolation, BorderMode> > DevInfo_Size_MatType_Interpolation_BorderMode;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, CvtColorInfo> > DevInfo_Size_MatType_CvtColorInfo;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, MatchMethod> > DevInfo_Size_MatType_MatchMethod;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, NormType> > DevInfo_Size_NormType;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, NormType> > DevInfo_Size_MatType_NormType;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int> > DevInfo_DescSize;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int, int> > DevInfo_K_DescSize;
 
 const cv::Size sz1800x1500 = cv::Size(1800, 1500);
 const cv::Size sz4700x3000 = cv::Size(4700, 3000);

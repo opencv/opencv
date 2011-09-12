@@ -215,6 +215,96 @@ PERF_TEST_P(DevInfo_Size_MatType, addScalar, testing::Combine(testing::ValuesIn(
     SANITY_CHECK(c_host);
 }
 
+PERF_TEST_P(DevInfo_Size_MatType, subtractMat, testing::Combine(testing::ValuesIn(devices()), 
+                                                                testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                testing::Values(CV_8UC1, CV_8UC4, CV_16SC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat a_host(size, type);
+    Mat b_host(size, type);
+
+    declare.in(a_host, b_host, WARMUP_RNG);
+
+    GpuMat a(a_host);
+    GpuMat b(b_host);
+    GpuMat c(size, type);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        subtract(a, b, c);
+    }
+
+    Mat c_host = c;
+
+    SANITY_CHECK(c_host);
+}
+
+PERF_TEST_P(DevInfo_Size, multiplyMat, testing::Combine(testing::ValuesIn(devices()), 
+                                                        testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat a_host(size, CV_8UC1);
+    Mat b_host(size, CV_32FC1);
+
+    declare.in(a_host, b_host, WARMUP_RNG);
+
+    GpuMat a(a_host);
+    GpuMat b(b_host);
+    GpuMat c;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        multiply(a, b, c);
+    }
+
+    Mat c_host = c;
+
+    SANITY_CHECK(c_host);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, multiplyScalar, testing::Combine(testing::ValuesIn(devices()), 
+                                                                   testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                   testing::Values(CV_8UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat a_host(size, type);
+
+    declare.in(a_host, WARMUP_RNG);
+
+    GpuMat a(a_host);
+    Scalar b(1,2,3,4);
+    GpuMat c(size, type);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        multiply(a, b, c);
+    }
+
+    Mat c_host = c;
+
+    SANITY_CHECK(c_host);
+}
+
 PERF_TEST_P(DevInfo_Size, exp, testing::Combine(testing::ValuesIn(devices()), 
                                                 testing::Values(GPU_TYPICAL_MAT_SIZES)))
 {
@@ -393,4 +483,205 @@ PERF_TEST_P(DevInfo_Size_MatType, min, testing::Combine(testing::ValuesIn(device
     Mat dst_host = dst;
 
     SANITY_CHECK(dst_host);
+}
+
+PERF_TEST_P(DevInfo_Size, meanStdDev, testing::Combine(testing::ValuesIn(devices()), 
+                                                       testing::Values(GPU_TYPICAL_MAT_SIZES)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, CV_8UC1);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host); 
+    Scalar mean;
+    Scalar stddev;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        meanStdDev(src, mean, stddev);
+    }
+
+    SANITY_CHECK(mean);
+    SANITY_CHECK(stddev);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType_NormType, norm, testing::Combine(testing::ValuesIn(devices()), 
+                                                                  testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                  testing::Values(CV_8UC1, CV_16UC1, CV_32SC1),
+                                                                  testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+    int normType = std::tr1::get<3>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    double dst;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        dst = norm(src, normType, buf);
+    }
+
+    SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(DevInfo_Size_NormType, normDiff, testing::Combine(testing::ValuesIn(devices()), 
+                                                              testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                              testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int normType = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src1_host(size, CV_8UC1);
+    Mat src2_host(size, CV_8UC1);
+
+    declare.in(src1_host, src2_host, WARMUP_RNG);
+
+    GpuMat src1(src1_host);
+    GpuMat src2(src2_host);
+    double dst;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        dst = norm(src1, src2, normType);
+    }
+
+    SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, sum, testing::Combine(testing::ValuesIn(devices()), 
+                                                        testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                        testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    Scalar dst;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        dst = sum(src, buf);
+    }
+
+    SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, minMax, testing::Combine(testing::ValuesIn(devices()), 
+                                                           testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                           testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    double minVal, maxVal;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        minMax(src, &minVal, &maxVal, GpuMat(), buf);
+    }
+
+    SANITY_CHECK(minVal);
+    SANITY_CHECK(maxVal);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, minMaxLoc, testing::Combine(testing::ValuesIn(devices()), 
+                                                              testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                              testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    double minVal, maxVal;
+    Point minLoc, maxLoc;
+    GpuMat valbuf, locbuf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc, GpuMat(), valbuf, locbuf);
+    }
+
+    SANITY_CHECK(minVal);
+    SANITY_CHECK(maxVal);
+}
+
+PERF_TEST_P(DevInfo_Size_MatType, countNonZero, testing::Combine(testing::ValuesIn(devices()), 
+                                                                 testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                 testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    int dst;
+    GpuMat buf;
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        dst = countNonZero(src, buf);
+    }
+
+    SANITY_CHECK(dst);
 }
