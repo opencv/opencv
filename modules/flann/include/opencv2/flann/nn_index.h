@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_NNINDEX_H
-#define FLANN_NNINDEX_H
+#ifndef OPENCV_FLANN_NNINDEX_H
+#define OPENCV_FLANN_NNINDEX_H
 
 #include <string>
 
@@ -176,4 +176,4 @@ public:
 
 }
 
-#endif //FLANN_NNINDEX_H
+#endif //OPENCV_FLANN_NNINDEX_H

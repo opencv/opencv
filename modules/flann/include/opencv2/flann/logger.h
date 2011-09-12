@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_LOGGER_H
-#define FLANN_LOGGER_H
+#ifndef OPENCV_FLANN_LOGGER_H
+#define OPENCV_FLANN_LOGGER_H
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -127,4 +127,4 @@ private:
 
 }
 
-#endif //FLANN_LOGGER_H
+#endif //OPENCV_FLANN_LOGGER_H

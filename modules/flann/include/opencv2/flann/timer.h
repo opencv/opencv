@@ -28,8 +28,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
 
-#ifndef FLANN_TIMER_H
-#define FLANN_TIMER_H
+#ifndef OPENCV_FLANN_TIMER_H
+#define OPENCV_FLANN_TIMER_H
 
 #include <time.h>
 
