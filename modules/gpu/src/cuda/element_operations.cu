@@ -607,68 +607,59 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////
     // multiply
 
-    // TODO implement more efficient version
-    template <typename TSrc1, typename TSrc2, typename TDst, int cn>
-    void __global__ multiplyKernel(const PtrStep src1, const PtrStep src2, int rows, int cols,
-                                   PtrStep dst)
+    struct multiply_8uc4_32f : binary_function<uint, float, uint>
     {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x < cols && y < rows)
+        __device__ __forceinline__ uint operator ()(uint a, float b) const
         {
-            ((TDst*)dst.ptr(y))[x] = saturate_cast<TDst>(((TSrc1*)src1.ptr(y))[x] * ((TSrc2*)src2.ptr(y))[x / cn]);
+            uint res = 0;
+
+            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a      )) * b)      );
+            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
+            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
+            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
+
+            return res;
         }
-    }
+    };
 
-
-    template <typename TSrc1, typename TSrc2, typename TDst, int cn>
-    void multiplyCaller(const PtrStep src1, const PtrStep src2, int rows, int cols, PtrStep dst, cudaStream_t stream)
+    template <> struct TransformFunctorTraits<multiply_8uc4_32f> : DefaultTransformFunctorTraits<multiply_8uc4_32f>
     {
-        dim3 threads(32, 8);
-        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
 
-        multiplyKernel<TSrc1, TSrc2, TDst, cn><<<grid, threads>>>(src1, src2, rows, cols, dst);
-        cudaSafeCall(cudaGetLastError());
-
-        if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+    void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), stream);
     }
-
-
-    template void multiplyCaller<uchar, float, uchar, 4>(const PtrStep src1, const PtrStep src2, int rows, int cols, PtrStep dst, cudaStream_t stream);
-
 
     //////////////////////////////////////////////////////////////////////////
     // multiply (by scalar)
 
-    // TODO implement more efficient version
-    template <typename TSrc, typename TDst>
-    void __global__ multiplyScalarKernel(const PtrStep src1, float scale, int rows, int cols, PtrStep dst)
+    template <typename T, typename D, typename S> struct MultiplyScalar : unary_function<T, D>
     {
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
+        __host__ __device__ __forceinline__ MultiplyScalar(typename TypeTraits<S>::ParameterType scale_) : scale(scale_) {}
 
-        if (x < cols && y < rows)
+        __device__ __forceinline__ D operator ()(typename TypeTraits<T>::ParameterType a) const
         {
-            ((TDst*)dst.ptr(y))[x] = saturate_cast<TDst>(((TSrc*)src1.ptr(y))[x] * scale);
+            return saturate_cast<D>(a * scale);
         }
-    }
 
+        const S scale;
+    };
 
-    template <typename TSrc, typename TDst>
-    void multiplyScalarCaller(const PtrStep src, float scale, int rows, int cols, PtrStep dst, cudaStream_t stream)
+    template <> struct TransformFunctorTraits< MultiplyScalar<uchar, uchar, float> > : DefaultTransformFunctorTraits< MultiplyScalar<uchar, uchar, float> >
     {
-        dim3 threads(32, 8);
-        dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
 
-        multiplyScalarKernel<TSrc, TDst><<<grid, threads>>>(src, scale, rows, cols, dst);
-        cudaSafeCall(cudaGetLastError());
-
-        if (stream == 0)
-            cudaSafeCall(cudaDeviceSynchronize());
+    template <typename T, typename D>
+    void multiplyScalar_gpu(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), MultiplyScalar<T, D, float>(scale), stream);
     }
 
-
-    template void multiplyScalarCaller<uchar, uchar>(const PtrStep src, float scale, int rows, int cols, PtrStep dst, cudaStream_t stream);
+    template void multiplyScalar_gpu<uchar, uchar>(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream);
 }}}

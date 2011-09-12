@@ -199,22 +199,21 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stre
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename TSrc1, typename TSrc2, typename TDst, int cn>
-    void multiplyCaller(const PtrStep src1, const PtrStep src2, int rows, int cols, PtrStep dst, cudaStream_t stream);
+    void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
 
-    template <typename TSrc, typename TDst>
-    void multiplyScalarCaller(const PtrStep src, float scalar, int rows, int cols, PtrStep dst, cudaStream_t stream);
+    template <typename T, typename D>
+    void multiplyScalar_gpu(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream);
 }}}
 
 void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    if (src1.type() == CV_8UC4 && src2.type() == CV_32F)
+    if (src1.type() == CV_8UC4 && src2.type() == CV_32FC1)
     {
         CV_Assert(src1.size() == src2.size());
+
         dst.create(src1.size(), src1.type());
-        device::multiplyCaller<uchar, float, uchar, 4>(static_cast<DevMem2D>(src1), static_cast<DevMem2D>(src2),
-                                                       src1.rows, src1.cols * 4, static_cast<DevMem2D>(dst),
-                                                       StreamAccessor::getStream(stream));
+
+        device::multiply_gpu(src1, src2, dst, StreamAccessor::getStream(stream));
     }
     else
         nppArithmCaller(src1, src2, dst, nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, nppiMul_32s_C1R, nppiMul_32f_C1R, StreamAccessor::getStream(stream));
@@ -225,8 +224,8 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream&
     if (src.depth() == CV_8U)
     {
         dst.create(src.size(), src.type());
-        device::multiplyScalarCaller<uchar, uchar>(static_cast<DevMem2D>(src), (float)(sc[0]), src.rows, src.cols * src.channels(),
-                                                   static_cast<DevMem2D>(dst), StreamAccessor::getStream(stream));
+
+        device::multiplyScalar_gpu<uchar, uchar>(src.reshape(1), (float)(sc[0]), dst, StreamAccessor::getStream(stream));
     }
     else
     {
