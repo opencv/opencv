@@ -613,10 +613,10 @@ namespace cv { namespace gpu { namespace device
         {
             uint res = 0;
 
-            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a      )) * b)      );
-            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
-            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
-            res |= 0xffu & (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
+            res |= (saturate_cast<uchar>((0xffu & (a      )) * b)      );
+            res |= (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
+            res |= (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
+            res |= (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
 
             return res;
         }
