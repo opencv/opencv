@@ -630,6 +630,8 @@ struct HistIntersectionDistance
         while (a < last) {
             min0 = (ResultType)(*a < *b ? *a : *b);
             result += min0;
+            ++a;
+            ++b;
         }
         return result;
     }
