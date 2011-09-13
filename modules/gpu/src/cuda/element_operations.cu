@@ -605,6 +605,78 @@ namespace cv { namespace gpu { namespace device
 
 
     //////////////////////////////////////////////////////////////////////////
+    // divide
+
+    struct divide_8uc4_32f : binary_function<uchar4, float, uchar4>
+    {
+        __device__ __forceinline__ uchar4 operator ()(uchar4 a, float b) const
+        {
+            return make_uchar4(saturate_cast<uchar>(a.x / b), saturate_cast<uchar>(a.y / b),
+                               saturate_cast<uchar>(a.z / b), saturate_cast<uchar>(a.w / b));
+        }
+    };
+
+    template <> struct TransformFunctorTraits<divide_8uc4_32f> : DefaultTransformFunctorTraits<divide_8uc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<uchar4> >(src1), src2, static_cast< DevMem2D_<uchar4> >(dst), divide_8uc4_32f(), stream);
+    }
+
+
+    struct divide_16sc4_32f : binary_function<short4, float, short4>
+    {
+        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
+        {
+            return make_short4(saturate_cast<short>(a.x / b), saturate_cast<uchar>(a.y / b),
+                               saturate_cast<short>(a.z / b), saturate_cast<uchar>(a.w / b));
+        }
+    };
+
+    template <> struct TransformFunctorTraits<divide_16sc4_32f> : DefaultTransformFunctorTraits<divide_16sc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), divide_16sc4_32f(), stream);
+    }
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // multiply
+
+    struct add_16sc4 : binary_function<short4, short4, short4>
+    {
+        __device__ __forceinline__ short4 operator ()(short4 a, short4 b) const
+        {
+            return make_short4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+        }
+    };
+
+    template <> struct TransformFunctorTraits<add_16sc4> : DefaultTransformFunctorTraits<add_16sc4>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void add_gpu(const DevMem2D_<short4>& src1, const DevMem2D_<short4>& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<short4> >(src1), static_cast< DevMem2D_<short4> >(src2), 
+                  static_cast< DevMem2D_<short4> >(dst), add_16sc4(), stream);
+    }
+
+
+    //////////////////////////////////////////////////////////////////////////
     // multiply
 
     struct multiply_8uc4_32f : binary_function<uint, float, uint>
@@ -633,6 +705,29 @@ namespace cv { namespace gpu { namespace device
     {
         transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), stream);
     }
+
+    struct multiply_16sc4_32f : binary_function<short4, float, short4>
+    {
+        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
+        {
+            return make_short4(saturate_cast<short>(a.x * b), saturate_cast<short>(a.y * b),
+                               saturate_cast<short>(a.z * b), saturate_cast<short>(a.w * b));
+        }
+    };
+
+    template <> struct TransformFunctorTraits<multiply_16sc4_32f> : DefaultTransformFunctorTraits<multiply_16sc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<short4> >(src1), src2, 
+                  static_cast< DevMem2D_<short4> >(dst), multiply_16sc4_32f(), stream);
+    }
+
 
     //////////////////////////////////////////////////////////////////////////
     // multiply (by scalar)

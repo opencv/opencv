@@ -174,9 +174,21 @@ namespace
     };
 }
 
+namespace cv { namespace gpu { namespace device
+{
+    void add_gpu(const DevMem2D_<short4>& src1, const DevMem2D_<short4>& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
+}}}
+
 void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
+    if (src1.type() == CV_16SC4 && src2.type() == CV_16SC4)
+    {
+        CV_Assert(src1.size() == src2.size());
+        dst.create(src1.size(), src1.type());
+        device::add_gpu(src1, src2, dst, StreamAccessor::getStream(stream));
+    }
+    else
+        nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));
 }
 
 namespace cv { namespace gpu { namespace device
@@ -200,6 +212,7 @@ void cv::gpu::subtract(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stre
 namespace cv { namespace gpu { namespace device
 {
     void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
+    void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
 
     template <typename T, typename D>
     void multiplyScalar_gpu(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream);
@@ -213,7 +226,17 @@ void cv::gpu::multiply(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stre
 
         dst.create(src1.size(), src1.type());
 
-        device::multiply_gpu(src1, src2, dst, StreamAccessor::getStream(stream));
+        device::multiply_gpu(static_cast<DevMem2D_<uchar4> >(src1), static_cast<DevMem2Df>(src2), 
+                             static_cast<DevMem2D_<uchar4> >(dst), StreamAccessor::getStream(stream));
+    }
+    else if (src1.type() == CV_16SC4 && src2.type() == CV_32FC1)
+    {
+        CV_Assert(src1.size() == src2.size());
+
+        dst.create(src1.size(), src1.type());
+
+        device::multiply_gpu(static_cast<DevMem2D_<short4> >(src1), static_cast<DevMem2Df>(src2), 
+                             static_cast<DevMem2D_<short4> >(dst), StreamAccessor::getStream(stream));
     }
     else
         nppArithmCaller(src1, src2, dst, nppiMul_8u_C1RSfs, nppiMul_8u_C4RSfs, nppiMul_32s_C1R, nppiMul_32f_C1R, StreamAccessor::getStream(stream));
@@ -249,9 +272,35 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream&
 }
 
 
+namespace cv { namespace gpu { namespace device
+{
+    void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream);
+    void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
+}}}
+
+
 void cv::gpu::divide(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    nppArithmCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32s_C1R, nppiDiv_32f_C1R, StreamAccessor::getStream(stream));
+    if (src1.type() == CV_8UC4 && src2.type() == CV_32FC1)
+    {
+        CV_Assert(src1.size() == src2.size());
+
+        dst.create(src1.size(), src1.type());
+
+        device::divide_gpu(static_cast<DevMem2D_<uchar4> >(src1), static_cast<DevMem2Df>(src2),
+                           static_cast<DevMem2D_<uchar4> >(dst), StreamAccessor::getStream(stream));
+    }
+    else if (src1.type() == CV_16SC4 && src2.type() == CV_32FC1)
+    {
+        CV_Assert(src1.size() == src2.size());
+
+        dst.create(src1.size(), src1.type());
+
+        device::divide_gpu(static_cast<DevMem2D_<short4> >(src1), static_cast<DevMem2Df>(src2),
+                           static_cast<DevMem2D_<short4> >(dst), StreamAccessor::getStream(stream));
+    }
+    else
+        nppArithmCaller(src2, src1, dst, nppiDiv_8u_C1RSfs, nppiDiv_8u_C4RSfs, nppiDiv_32s_C1R, nppiDiv_32f_C1R, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::add(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream& stream)

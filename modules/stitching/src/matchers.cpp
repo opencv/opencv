@@ -347,7 +347,8 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
     vector<pair<int,int> > near_pairs;
     for (int i = 0; i < num_images - 1; ++i)
         for (int j = i + 1; j < num_images; ++j)
-            near_pairs.push_back(make_pair(i, j));
+            if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0)
+                near_pairs.push_back(make_pair(i, j));
 
     pairwise_matches.resize(num_images * num_images);
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
