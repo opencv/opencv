@@ -255,7 +255,7 @@ private:
     static int64 _timeadjustment;
     static int64 _calibrate();
 
-    static void warmup(cv::Mat m, int wtype);
+    static void warmup_impl(cv::Mat m, int wtype);
     static int getSizeInBytes(cv::InputArray a);
     static cv::Size getSize(cv::InputArray a);
     static void declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype = 0);

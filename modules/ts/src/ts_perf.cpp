@@ -472,12 +472,12 @@ void TestBase::warmup(cv::InputOutputArray a, int wtype)
 {
     if (a.empty()) return;
     if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
-        warmup(a.getMat(), wtype);
+        warmup_impl(a.getMat(), wtype);
     else
     {
         size_t total = a.total();
         for (size_t i = 0; i < total; ++i)
-            warmup(a.getMat(i), wtype);
+            warmup_impl(a.getMat(i), wtype);
     }
 }
 
@@ -507,7 +507,7 @@ bool TestBase::next()
     return ++currentIter < nIters && totalTime < timeLimit;
 }
 
-void TestBase::warmup(cv::Mat m, int wtype)
+void TestBase::warmup_impl(cv::Mat m, int wtype)
 {
     switch(wtype)
     {
