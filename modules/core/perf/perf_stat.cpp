@@ -345,7 +345,9 @@ PERF_TEST_P( Size_MatType, countNonZero, TYPICAL_MATS_C1 )
 /*
 // void minMaxLoc(InputArray src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
 */
-PERF_TEST_P( Size_MatType, minMaxLoc, TYPICAL_MATS_C1 )
+PERF_TEST_P( Size_MatType, minMaxLoc, testing::Combine(
+                 testing::Values( TYPICAL_MAT_SIZES ),
+                 testing::Values( CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1,  CV_32FC1, CV_64FC1 ) ) )
 {
     Size sz = std::tr1::get<0>(GetParam());
     int matType = std::tr1::get<1>(GetParam());
@@ -354,7 +356,15 @@ PERF_TEST_P( Size_MatType, minMaxLoc, TYPICAL_MATS_C1 )
     double minVal, maxVal;
     Point minLoc, maxLoc;
 
-    declare.in(src, WARMUP_RNG);
+    // avoid early exit on 1 byte data
+    if (matType == CV_8U)
+        randu(src, 1, 254);
+    else if (matType == CV_8S)
+        randu(src, -127, 126);
+    else
+        warmup(src, WARMUP_RNG);
+
+    declare.in(src);
     
     TEST_CYCLE(100) { minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);  }
     
