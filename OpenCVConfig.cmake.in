@@ -28,6 +28,7 @@
 #      - OpenCV_EXTRA_COMPONENTS
 #      - OpenCV_USE_MANGLED_PATHS
 #      - OpenCV_HAVE_ANDROID_CAMERA
+#      - OpenCV_SOURCE_PATH
 #
 # =================================================================================================
 
@@ -128,11 +129,12 @@ endif()
 # ==============================================================
 #  Extra include directories, needed by OpenCV 2 new structure
 # ==============================================================
-if(NOT "@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@" STREQUAL  "")
+SET(OpenCV_SOURCE_PATH "@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@")
+if(NOT "${OpenCV_SOURCE_PATH}" STREQUAL  "")
     foreach(__CVLIB ${OpenCV_LIB_COMPONENTS})
         # We only need the "core",... part here: "opencv_core" -> "core"
         STRING(REGEX REPLACE "opencv_(.*)" "\\1" __MODNAME ${__CVLIB})
-        INCLUDE_DIRECTORIES("@CMAKE_OPENCV2_INCLUDE_DIRS_CONFIGCMAKE@/modules/${__MODNAME}/include")
+        INCLUDE_DIRECTORIES("${OpenCV_SOURCE_PATH}/modules/${__MODNAME}/include")
     endforeach()
 endif()
 
