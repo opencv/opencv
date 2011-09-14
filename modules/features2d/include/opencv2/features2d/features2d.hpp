@@ -425,8 +425,8 @@ public:
     enum { DEFAULT_N_LEVELS = 3, DEFAULT_FIRST_LEVEL = 0};
 
     /** default constructor */
-    CommonParams(float scale_factor = 1.2f, unsigned int n_levels = DEFAULT_N_LEVELS, int edge_threshold = 31,
-                 unsigned int first_level = DEFAULT_FIRST_LEVEL) :
+    CommonParams(float scale_factor = 1.2f, unsigned n_levels = DEFAULT_N_LEVELS, int edge_threshold = 31,
+                 unsigned first_level = DEFAULT_FIRST_LEVEL) :
       scale_factor_(scale_factor), n_levels_(n_levels), first_level_(first_level >= n_levels ? 0 : first_level),
       edge_threshold_(edge_threshold)
     {
@@ -439,11 +439,11 @@ public:
     /** Coefficient by which we divide the dimensions from one scale pyramid level to the next */
     float scale_factor_;
     /** The number of levels in the scale pyramid */
-    unsigned int n_levels_;
+    unsigned n_levels_;
     /** The level at which the image is given
      * if 1, that means we will also look at the image scale_factor_ times bigger
      */
-    unsigned int first_level_;
+    unsigned first_level_;
     /** How far from the boundary the points should be */
     int edge_threshold_;
 
@@ -515,7 +515,7 @@ private:
    * @param keypoints the resulting keypoints
    */
   void
-  computeOrientation(const cv::Mat& image, const cv::Mat& integral_image, unsigned int level,
+  computeOrientation(const cv::Mat& image, const cv::Mat& integral_image, unsigned level,
                      std::vector<cv::KeyPoint>& keypoints) const;
 
   /** Compute the ORB descriptors
@@ -526,7 +526,7 @@ private:
    * @param descriptors the resulting descriptors
    */
   void
-  computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image, unsigned int level,
+  computeDescriptors(const cv::Mat& image, const cv::Mat& integral_image, unsigned level,
                      std::vector<cv::KeyPoint>& keypoints, cv::Mat & descriptors) const;
 
   /** Compute the integral image and upadte the cached values
@@ -534,7 +534,7 @@ private:
    * @param level the scale at which we compute the orientation
    * @param descriptors the resulting descriptors
    */
-  void computeIntegralImage(const cv::Mat & image, unsigned int level, cv::Mat &integral_image);
+  void computeIntegralImage(const cv::Mat & image, unsigned level, cv::Mat &integral_image);
 
   /** Parameters tuning ORB */
   CommonParams params_;
@@ -1554,7 +1554,7 @@ private:
   /** The parameters used */
   ORB::CommonParams params_;
   /** the number of features that need to be retrieved */
-  unsigned int n_features_;
+  unsigned n_features_;
 };
 
 class CV_EXPORTS SimpleBlobDetector : public cv::FeatureDetector
