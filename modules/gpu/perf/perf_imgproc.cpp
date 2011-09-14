@@ -244,8 +244,8 @@ PERF_TEST_P(DevInfo_Size_MatType, threshold, testing::Combine(testing::ValuesIn(
 }
 
 PERF_TEST_P(DevInfo_Size_MatType_Interpolation_SizeCoeff, resize, testing::Combine(testing::ValuesIn(devices()),
-                                                                                   testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                                   testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                                                                                   testing::Values(szSXGA, sz1080p), 
+                                                                                   testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32FC1),
                                                                                    testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC),
                                                                                    testing::Values(0.5, 2.0)))
 {

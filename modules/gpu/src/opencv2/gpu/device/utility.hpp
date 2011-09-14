@@ -46,7 +46,6 @@
 #include "internal_shared.hpp"
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
-#include "functional.hpp"
 #include "detail/utility_detail.hpp"
 
 #define OPENCV_GPU_LOG_WARP_SIZE	    (5)

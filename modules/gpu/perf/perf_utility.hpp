@@ -53,7 +53,8 @@ typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int, int> > DevInfo_K_Des
 const cv::Size sz1800x1500 = cv::Size(1800, 1500);
 const cv::Size sz4700x3000 = cv::Size(4700, 3000);
 
-#define GPU_TYPICAL_MAT_SIZES szXGA, szSXGA, sz720p, sz1080p, sz1800x1500, sz4700x3000
+//#define GPU_TYPICAL_MAT_SIZES szXGA, szSXGA, sz720p, sz1080p, sz1800x1500, sz4700x3000
+#define GPU_TYPICAL_MAT_SIZES szSXGA, sz1080p, sz4700x3000
 
 //! read image from testdata folder.
 Mat readImage(const string& fileName, int flags = CV_LOAD_IMAGE_COLOR);

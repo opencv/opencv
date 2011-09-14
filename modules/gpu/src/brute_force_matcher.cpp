@@ -179,18 +179,18 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchSingle(const GpuMat& queryDescs, 
     static const match_caller_t match_callers[3][8] =
     {
         {
-            matchSingleL1_gpu<unsigned char>, matchSingleL1_gpu<signed char>, 
+            matchSingleL1_gpu<unsigned char>, 0/*matchSingleL1_gpu<signed char>*/, 
             matchSingleL1_gpu<unsigned short>, matchSingleL1_gpu<short>, 
             matchSingleL1_gpu<int>, matchSingleL1_gpu<float>, 0, 0
         },
         {
-            matchSingleL2_gpu<unsigned char>, matchSingleL2_gpu<signed char>, 
-            matchSingleL2_gpu<unsigned short>, matchSingleL2_gpu<short>, 
-            matchSingleL2_gpu<int>, matchSingleL2_gpu<float>, 0, 0
+            0/*matchSingleL2_gpu<unsigned char>*/, 0/*matchSingleL2_gpu<signed char>*/, 
+            0/*matchSingleL2_gpu<unsigned short>*/, 0/*matchSingleL2_gpu<short>*/, 
+            0/*matchSingleL2_gpu<int>*/, matchSingleL2_gpu<float>, 0, 0
         },
         {
-            matchSingleHamming_gpu<unsigned char>, matchSingleHamming_gpu<signed char>, 
-            matchSingleHamming_gpu<unsigned short>, matchSingleHamming_gpu<short>, 
+            matchSingleHamming_gpu<unsigned char>, 0/*matchSingleHamming_gpu<signed char>*/, 
+            matchSingleHamming_gpu<unsigned short>, 0/*matchSingleHamming_gpu<short>*/, 
             matchSingleHamming_gpu<int>, 0, 0, 0
         }
     };
@@ -318,18 +318,18 @@ void cv::gpu::BruteForceMatcher_GPU_base::matchCollection(const GpuMat& queryDes
     static const match_caller_t match_callers[3][8] =
     {
         {
-            matchCollectionL1_gpu<unsigned char>, matchCollectionL1_gpu<signed char>,
+            matchCollectionL1_gpu<unsigned char>, 0/*matchCollectionL1_gpu<signed char>*/,
             matchCollectionL1_gpu<unsigned short>, matchCollectionL1_gpu<short>,
             matchCollectionL1_gpu<int>, matchCollectionL1_gpu<float>, 0, 0
         },
         {
-            matchCollectionL2_gpu<unsigned char>, matchCollectionL2_gpu<signed char>,
-            matchCollectionL2_gpu<unsigned short>, matchCollectionL2_gpu<short>,
-            matchCollectionL2_gpu<int>, matchCollectionL2_gpu<float>, 0, 0
+            0/*matchCollectionL2_gpu<unsigned char>*/, 0/*matchCollectionL2_gpu<signed char>*/,
+            0/*matchCollectionL2_gpu<unsigned short>*/, 0/*matchCollectionL2_gpu<short>*/,
+            0/*matchCollectionL2_gpu<int>*/, matchCollectionL2_gpu<float>, 0, 0
         },
         {
-            matchCollectionHamming_gpu<unsigned char>, matchCollectionHamming_gpu<signed char>,
-            matchCollectionHamming_gpu<unsigned short>, matchCollectionHamming_gpu<short>,
+            matchCollectionHamming_gpu<unsigned char>, 0/*matchCollectionHamming_gpu<signed char>*/,
+            matchCollectionHamming_gpu<unsigned short>, 0/*matchCollectionHamming_gpu<short>*/,
             matchCollectionHamming_gpu<int>, 0, 0, 0
         }
     };
@@ -427,16 +427,16 @@ void cv::gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& queryDescs, con
     static const match_caller_t match_callers[3][8] =
     {
         {
-            knnMatchL1_gpu<unsigned char>, knnMatchL1_gpu<signed char>, knnMatchL1_gpu<unsigned short>,
+            knnMatchL1_gpu<unsigned char>, 0/*knnMatchL1_gpu<signed char>*/, knnMatchL1_gpu<unsigned short>,
             knnMatchL1_gpu<short>, knnMatchL1_gpu<int>, knnMatchL1_gpu<float>, 0, 0
         },
         {
-            knnMatchL2_gpu<unsigned char>, knnMatchL2_gpu<signed char>, knnMatchL2_gpu<unsigned short>,
-            knnMatchL2_gpu<short>, knnMatchL2_gpu<int>, knnMatchL2_gpu<float>, 0, 0
+            0/*knnMatchL2_gpu<unsigned char>*/, 0/*knnMatchL2_gpu<signed char>*/, 0/*knnMatchL2_gpu<unsigned short>*/,
+            0/*knnMatchL2_gpu<short>*/, 0/*knnMatchL2_gpu<int>*/, knnMatchL2_gpu<float>, 0, 0
         },
         {
-            knnMatchHamming_gpu<unsigned char>, knnMatchHamming_gpu<signed char>, knnMatchHamming_gpu<unsigned short>,
-            knnMatchHamming_gpu<short>, knnMatchHamming_gpu<int>, 0, 0, 0
+            knnMatchHamming_gpu<unsigned char>, 0/*knnMatchHamming_gpu<signed char>*/, knnMatchHamming_gpu<unsigned short>,
+            0/*knnMatchHamming_gpu<short>*/, knnMatchHamming_gpu<int>, 0, 0, 0
         }
     };
 
@@ -605,16 +605,16 @@ void cv::gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& queryDescs, 
     static const radiusMatch_caller_t radiusMatch_callers[3][8] =
     {
         {
-            radiusMatchL1_gpu<unsigned char>, radiusMatchL1_gpu<signed char>, radiusMatchL1_gpu<unsigned short>,
+            radiusMatchL1_gpu<unsigned char>, 0/*radiusMatchL1_gpu<signed char>*/, radiusMatchL1_gpu<unsigned short>,
             radiusMatchL1_gpu<short>, radiusMatchL1_gpu<int>, radiusMatchL1_gpu<float>, 0, 0
         },
         {
-            radiusMatchL2_gpu<unsigned char>, radiusMatchL2_gpu<signed char>, radiusMatchL2_gpu<unsigned short>,
-            radiusMatchL2_gpu<short>, radiusMatchL2_gpu<int>, radiusMatchL2_gpu<float>, 0, 0
+            0/*radiusMatchL2_gpu<unsigned char>*/, 0/*radiusMatchL2_gpu<signed char>*/, 0/*radiusMatchL2_gpu<unsigned short>*/,
+            0/*radiusMatchL2_gpu<short>*/, 0/*radiusMatchL2_gpu<int>*/, radiusMatchL2_gpu<float>, 0, 0
         },
         {
-            radiusMatchHamming_gpu<unsigned char>, radiusMatchHamming_gpu<signed char>, radiusMatchHamming_gpu<unsigned short>,
-            radiusMatchHamming_gpu<short>, radiusMatchHamming_gpu<int>, 0, 0, 0
+            radiusMatchHamming_gpu<unsigned char>, 0/*radiusMatchHamming_gpu<signed char>*/, radiusMatchHamming_gpu<unsigned short>,
+            0/*radiusMatchHamming_gpu<short>*/, radiusMatchHamming_gpu<int>, 0, 0, 0
         }
     };
 

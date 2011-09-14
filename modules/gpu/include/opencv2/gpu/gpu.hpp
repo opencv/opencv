@@ -756,12 +756,6 @@ namespace cv
         //! computes the proximity map for the raster template and the image where the template is searched for
         CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method);
 
-        //! downsamples image
-        CV_EXPORTS void downsample(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! upsamples image
-        CV_EXPORTS void upsample(const GpuMat& src, GpuMat &dst, Stream& stream = Stream::Null());
-
         //! smoothes the source image and downsamples it
         CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, int borderType = BORDER_DEFAULT, Stream& stream = Stream::Null());
 

@@ -3,7 +3,7 @@
 PERF_TEST_P(DevInfo_Size_MatType_KernelSize, boxFilter, testing::Combine(testing::ValuesIn(devices()), 
                                                               testing::Values(GPU_TYPICAL_MAT_SIZES), 
                                                               testing::Values(CV_8UC1, CV_8UC4),
-                                                              testing::Values(3, 5, 7)))
+                                                              testing::Values(3, 5)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -37,7 +37,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MorphOp_KernelSize, morphologyFilter, testing::
                                                                                         testing::Values(GPU_TYPICAL_MAT_SIZES), 
                                                                                         testing::Values(CV_8UC1, CV_8UC4),
                                                                                         testing::Values((int)MORPH_ERODE, (int)MORPH_DILATE),
-                                                                                        testing::Values(3, 5, 7)))
+                                                                                        testing::Values(3, 5)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -71,7 +71,7 @@ PERF_TEST_P(DevInfo_Size_MatType_MorphOp_KernelSize, morphologyFilter, testing::
 PERF_TEST_P(DevInfo_Size_MatType_KernelSize, linearFilter, testing::Combine(testing::ValuesIn(devices()), 
                                                                             testing::Values(GPU_TYPICAL_MAT_SIZES), 
                                                                             testing::Values(CV_8UC1, CV_8UC4),
-                                                                            testing::Values(3, 5, 7)))
+                                                                            testing::Values(3, 5)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -103,8 +103,8 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, linearFilter, testing::Combine(test
 
 PERF_TEST_P(DevInfo_Size_MatType_KernelSize_BorderMode, separableLinearFilter, testing::Combine(testing::ValuesIn(devices()), 
                                                                                testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                               testing::Values(CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC3, CV_32FC1),
-                                                                               testing::Values(3, 5, 7),
+                                                                               testing::Values(CV_8UC1, CV_8UC4, CV_16SC3, CV_32FC1),
+                                                                               testing::Values(3, 5),
                                                                                testing::Values((int)BORDER_REFLECT101, (int)BORDER_CONSTANT)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());

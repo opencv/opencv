@@ -90,8 +90,6 @@ void cv::gpu::dft(const GpuMat&, GpuMat&, Size, int) { throw_nogpu(); }
 void cv::gpu::ConvolveBuf::create(Size, Size) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool) { throw_nogpu(); }
 void cv::gpu::convolve(const GpuMat&, const GpuMat&, GpuMat&, bool, ConvolveBuf&) { throw_nogpu(); }
-void cv::gpu::downsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::upsample(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrDown(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::pyrUp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_nogpu(); }
@@ -120,16 +118,19 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     typedef void (*caller_t)(const DevMem2D& src, const DevMem2Df& xmap, const DevMem2Df& ymap, const DevMem2D& dst, int interpolation, int borderMode, const float* borderValue, cudaStream_t stream);
     static const caller_t callers[6][4] = 
     {
-        {remap_gpu<uchar>, remap_gpu<uchar2>, remap_gpu<uchar3>, remap_gpu<uchar4>},
-        {remap_gpu<schar>, remap_gpu<char2>, remap_gpu<char3>, remap_gpu<char4>},
-        {remap_gpu<ushort>, remap_gpu<ushort2>, remap_gpu<ushort3>, remap_gpu<ushort4>},
-        {remap_gpu<short>, remap_gpu<short2>, remap_gpu<short3>, remap_gpu<short4>},
-        {remap_gpu<int>, remap_gpu<int2>, remap_gpu<int3>, remap_gpu<int4>},
-        {remap_gpu<float>, remap_gpu<float2>, remap_gpu<float3>, remap_gpu<float4>}
+        {remap_gpu<uchar>, 0/*remap_gpu<uchar2>*/, remap_gpu<uchar3>, remap_gpu<uchar4>},
+        {0/*remap_gpu<schar>*/, 0/*remap_gpu<char2>*/, 0/*remap_gpu<char3>*/, 0/*remap_gpu<char4>*/},
+        {remap_gpu<ushort>, 0/*remap_gpu<ushort2>*/, remap_gpu<ushort3>, remap_gpu<ushort4>},
+        {remap_gpu<short>, 0/*remap_gpu<short2>*/, remap_gpu<short3>, remap_gpu<short4>},
+        {0/*remap_gpu<int>*/, 0/*remap_gpu<int2>*/, 0/*remap_gpu<int3>*/, 0/*remap_gpu<int4>*/},
+        {remap_gpu<float>, 0/*remap_gpu<float2>*/, remap_gpu<float3>, remap_gpu<float4>}
     };
 
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
     CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F && xmap.size() == ymap.size());
+
+    caller_t func = callers[src.depth()][src.channels() - 1];
+    CV_Assert(func != 0);
 
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
@@ -142,7 +143,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     Scalar_<float> borderValueFloat;
     borderValueFloat = borderValue;
 
-    callers[src.depth()][src.channels() - 1](src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream));
+    func(src, xmap, ymap, dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -279,19 +280,6 @@ namespace cv { namespace gpu {  namespace imgproc
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
-    using namespace cv::gpu::imgproc;
-
-    typedef void (*caller_t)(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
-    static const caller_t callers[6][4] = 
-    {
-        {resize_gpu<uchar>, resize_gpu<uchar2>, resize_gpu<uchar3>, resize_gpu<uchar4>},
-        {resize_gpu<schar>, resize_gpu<char2>, resize_gpu<char3>, resize_gpu<char4>},
-        {resize_gpu<ushort>, resize_gpu<ushort2>, resize_gpu<ushort3>, resize_gpu<ushort4>},
-        {resize_gpu<short>, resize_gpu<short2>, resize_gpu<short3>, resize_gpu<short4>},
-        {resize_gpu<int>, resize_gpu<int2>, resize_gpu<int3>, resize_gpu<int4>},
-        {resize_gpu<float>, resize_gpu<float2>, resize_gpu<float3>, resize_gpu<float4>}
-    };
-
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
     CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
     CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
@@ -352,6 +340,19 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     }
     else
     {
+        using namespace cv::gpu::imgproc;
+
+        typedef void (*caller_t)(const DevMem2D& src, float fx, float fy, const DevMem2D& dst, int interpolation, cudaStream_t stream);
+        static const caller_t callers[6][4] = 
+        {
+            {resize_gpu<uchar>, 0/*resize_gpu<uchar2>*/, resize_gpu<uchar3>, resize_gpu<uchar4>},
+            {0/*resize_gpu<schar>*/, 0/*resize_gpu<char2>*/, 0/*resize_gpu<char3>*/, 0/*resize_gpu<char4>*/},
+            {resize_gpu<ushort>, 0/*resize_gpu<ushort2>*/, resize_gpu<ushort3>, resize_gpu<ushort4>},
+            {resize_gpu<short>, 0/*resize_gpu<short2>*/, resize_gpu<short3>, resize_gpu<short4>},
+            {0/*resize_gpu<int>*/, 0/*resize_gpu<int2>*/, 0/*resize_gpu<int3>*/, 0/*resize_gpu<int4>*/},
+            {resize_gpu<float>, 0/*resize_gpu<float2>*/, resize_gpu<float3>, resize_gpu<float4>}
+        };
+
         callers[src.depth()][src.channels() - 1](src, static_cast<float>(fx), static_cast<float>(fy), dst, interpolation, stream);
     }
 }
@@ -1588,75 +1589,6 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     cufftSafeCall(cufftDestroy(planR2C));
     cufftSafeCall(cufftDestroy(planC2R));
 }
-
-
-////////////////////////////////////////////////////////////////////
-// downsample
-
-namespace cv { namespace gpu { namespace imgproc
-{
-    template <typename T, int cn>
-    void downsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
-}}}
-
-
-void cv::gpu::downsample(const GpuMat& src, GpuMat& dst, Stream& stream)
-{
-    CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
-
-    typedef void (*Caller)(const DevMem2D, DevMem2D, cudaStream_t stream);
-    static const Caller callers[6][4] =
-        {{imgproc::downsampleCaller<uchar,1>, imgproc::downsampleCaller<uchar,2>,
-          imgproc::downsampleCaller<uchar,3>, imgproc::downsampleCaller<uchar,4>},
-         {0,0,0,0}, {0,0,0,0},
-         {imgproc::downsampleCaller<short,1>, imgproc::downsampleCaller<short,2>,
-          imgproc::downsampleCaller<short,3>, imgproc::downsampleCaller<short,4>},
-         {0,0,0,0},
-         {imgproc::downsampleCaller<float,1>, imgproc::downsampleCaller<float,2>,
-          imgproc::downsampleCaller<float,3>, imgproc::downsampleCaller<float,4>}};
-
-    Caller caller = callers[src.depth()][src.channels()-1];
-    if (!caller)
-        CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
-
-    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
-    caller(src, dst.reshape(1), StreamAccessor::getStream(stream));
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-// upsample
-
-namespace cv { namespace gpu { namespace imgproc
-{
-    template <typename T, int cn>
-    void upsampleCaller(const DevMem2D src, DevMem2D dst, cudaStream_t stream);
-}}}
-
-
-void cv::gpu::upsample(const GpuMat& src, GpuMat& dst, Stream& stream)
-{
-    CV_Assert(src.depth() < CV_64F && src.channels() <= 4);
-
-    typedef void (*Caller)(const DevMem2D, DevMem2D, cudaStream_t stream);
-    static const Caller callers[6][5] =
-        {{imgproc::upsampleCaller<uchar,1>, imgproc::upsampleCaller<uchar,2>,
-          imgproc::upsampleCaller<uchar,3>, imgproc::upsampleCaller<uchar,4>},
-         {0,0,0,0}, {0,0,0,0},
-         {imgproc::upsampleCaller<short,1>, imgproc::upsampleCaller<short,2>,
-          imgproc::upsampleCaller<short,3>, imgproc::upsampleCaller<short,4>},
-         {0,0,0,0},
-         {imgproc::upsampleCaller<float,1>, imgproc::upsampleCaller<float,2>,
-          imgproc::upsampleCaller<float,3>, imgproc::upsampleCaller<float,4>}};
-
-    Caller caller = callers[src.depth()][src.channels()-1];
-    if (!caller)
-        CV_Error(CV_StsUnsupportedFormat, "bad number of channels");
-
-    dst.create(src.rows*2, src.cols*2, src.type());
-    caller(src, dst.reshape(1), StreamAccessor::getStream(stream));
-}
-
 
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
