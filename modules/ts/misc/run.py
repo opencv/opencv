@@ -48,7 +48,7 @@ def query_yes_no(stdout, question, default="yes"):
             stdout.write("Please respond with 'yes' or 'no' "\
                              "(or 'y' or 'n').\n")
                              
-def getRunningProcessExePathByName_win32(name) :
+def getRunningProcessExePathByName_win32(name):
     from ctypes import windll, POINTER, pointer, Structure, sizeof
     from ctypes import c_long , c_int , c_uint , c_char , c_ubyte , c_char_p , c_void_p
     
@@ -126,15 +126,26 @@ def getRunningProcessExePathByName_win32(name) :
     CloseHandle( hProcessSnap )
     return path
 
+def getRunningProcessExePathByName_posix(name):
+    pids= [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    for pid in pids:
+        try:
+            path = os.readlink(os.path.join('/proc', pid, 'exe'))
+            if path and path.endswith(name):  
+                return path
+        except:
+            pass
+
 def getRunningProcessExePathByName(name):
     try:
         if hostos == "nt":
             return getRunningProcessExePathByName_win32(name)
+        elif hostos == "posix":
+            return getRunningProcessExePathByName_posix(name)
         else:
             return None
     except:
         return None
-
         
 class RunInfo(object):
     def __init__(self, path, configuration = None):
