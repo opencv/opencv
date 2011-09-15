@@ -4,35 +4,53 @@ Feature homography
 
 Example of using features2d framework for interactive video homography matching.
 
+Usage
+-----
+feature_homography.py [<video source>]
+
 Keys
 ----
 SPACE - set reference frame
 ESC   - exit
 '''
 
+
 import numpy as np
 import cv2
 import video
-from common import draw_str
+from common import draw_str, clock
+import sys
+
+
+detector = cv2.FastFeatureDetector(16, True)
+detector = cv2.GridAdaptedFeatureDetector(detector)
+extractor = cv2.DescriptorExtractor_create('ORB')
+
+FLANN_INDEX_KDTREE = 1
+FLANN_INDEX_LSH    = 6
+flann_params= dict(algorithm = FLANN_INDEX_LSH,
+                   table_number = 6, # 12
+                   key_size = 12,     # 20
+                   multi_probe_level = 1) #2
+matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
+
+green, red = (0, 255, 0), (0, 0, 255)
+
 
 if __name__ == '__main__':
-
     print __doc__
 
-    detector = cv2.FeatureDetector_create('ORB')
-    extractor = cv2.DescriptorExtractor_create('ORB')
-    matcher = cv2.DescriptorMatcher_create('BruteForce-Hamming') # 'BruteForce-Hamming' # FlannBased
+    try: src = sys.argv[1]
+    except: src = 0
+    cap = video.create_capture(src)
 
-    ref_desc = None
     ref_kp = None
 
-    green, red = (0, 255, 0), (0, 0, 255)
-
-    cap = video.create_capture(0)
     while True:
         ret, img = cap.read()
         vis = img.copy()
         kp = detector.detect(img)
+        kp, desc = extractor.compute(img, kp)
 
         for p in kp:
             x, y = np.int32(p.pt)
@@ -40,14 +58,17 @@ if __name__ == '__main__':
             cv2.circle(vis, (x, y), r, (0, 255, 0))
         draw_str(vis, (20, 20), 'feature_n: %d' % len(kp))
         
-        desc = extractor.compute(img, kp)
-        if ref_desc is not None:
-            raw_matches = matcher.knnMatch(desc, ref_desc, 2)
-            eps = 1e-5
-            matches = [(m1.trainIdx, m1.queryIdx) for m1, m2 in raw_matches if (m1.distance+eps) / (m2.distance+eps) < 0.7]
+        if ref_kp is not None:
+            raw_matches = matcher.knnMatch(desc, 2)
+            matches = []
+            for m in raw_matches:
+                if len(m) == 2:
+                    m1, m2 = m
+                    if m1.distance < m2.distance * 0.7:
+                        matches.append((m1.trainIdx, m1.queryIdx))
             match_n = len(matches)
 
-            inliner_n = 0
+            inlier_n = 0
             if match_n > 10:
                 p0 = np.float32( [ref_kp[i].pt for i, j in matches] )
                 p1 = np.float32( [kp[j].pt for i, j in matches] )
@@ -66,7 +87,8 @@ if __name__ == '__main__':
         cv2.imshow('img', vis)
         ch = cv2.waitKey(1)
         if ch == ord(' '):
-            ref_desc = desc
+            matcher.clear()
+            matcher.add([desc])
             ref_kp = kp
             ref_img = img.copy()
         if ch == 27:

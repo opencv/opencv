@@ -2237,24 +2237,24 @@ public:
      * Add descriptors to train descriptor collection.
      * descriptors      Descriptors to add. Each descriptors[i] is a descriptors set from one image.
      */
-    virtual void add( const vector<Mat>& descriptors );
+    CV_WRAP virtual void add( const vector<Mat>& descriptors );
     /*
      * Get train descriptors collection.
      */
-    const vector<Mat>& getTrainDescriptors() const;
+    CV_WRAP const vector<Mat>& getTrainDescriptors() const;
     /*
      * Clear train descriptors collection.
      */
-    virtual void clear();
+    CV_WRAP virtual void clear();
 
     /*
      * Return true if there are not train descriptors in collection.
      */
-    virtual bool empty() const;
+    CV_WRAP virtual bool empty() const;
     /*
      * Return true if the matcher supports mask in match methods.
      */
-    virtual bool isMaskSupported() const = 0;
+    CV_WRAP virtual bool isMaskSupported() const = 0;
 
     /*
      * Train matcher (e.g. train flann index).
@@ -2267,7 +2267,7 @@ public:
      * if it has not trained yet or if new descriptors have been added to the train
      * collection).
      */
-    virtual void train();
+    CV_WRAP virtual void train();
     /*
      * Group of methods to match descriptors from image pair.
      * Method train() is run in this methods.
@@ -2291,9 +2291,9 @@ public:
      * Group of methods to match descriptors from one image to image set.
      * See description of similar methods for matching image pair above.
      */
-    void match( const Mat& queryDescriptors, vector<DMatch>& matches,
+    CV_WRAP void match( const Mat& queryDescriptors, CV_OUT vector<DMatch>& matches,
                 const vector<Mat>& masks=vector<Mat>() );
-    void knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int k,
+    CV_WRAP void knnMatch( const Mat& queryDescriptors, CV_OUT vector<vector<DMatch> >& matches, int k,
            const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
     void radiusMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
                    const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
@@ -2562,10 +2562,10 @@ void BruteForceMatcher<L2<float> >::radiusMatchImpl( const Mat& queryDescriptors
 /*
  * Flann based matcher
  */
-class CV_EXPORTS FlannBasedMatcher : public DescriptorMatcher
+class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
                        const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
 
     virtual void add( const vector<Mat>& descriptors );

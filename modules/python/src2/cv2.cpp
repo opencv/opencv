@@ -74,6 +74,11 @@ typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
+typedef cvflann::flann_distance_t cvflann_flann_distance_t;
+typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
+typedef Ptr<flann::IndexParams> Ptr_flann_IndexParams;
+typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
+
 static PyObject* failmsgp(const char *fmt, ...)
 {
   char str[1000];
@@ -819,6 +824,14 @@ static bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name
     Py_XDECREF(values);
     return ok;
 }
+
+template <class T>
+static bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name="<unknown>")
+{
+    p = new T();
+    return pyopencv_to(o, *p, name);
+}
+
 
 static bool pyopencv_to(PyObject *o, cvflann::flann_distance_t& dist, const char *name="<unknown>")
 {
