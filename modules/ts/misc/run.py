@@ -47,7 +47,95 @@ def query_yes_no(stdout, question, default="yes"):
         else:
             stdout.write("Please respond with 'yes' or 'no' "\
                              "(or 'y' or 'n').\n")
-            
+                             
+def getRunningProcessExePathByName_win32(name) :
+    from ctypes import windll, POINTER, pointer, Structure, sizeof
+    from ctypes import c_long , c_int , c_uint , c_char , c_ubyte , c_char_p , c_void_p
+    
+    class PROCESSENTRY32(Structure):
+        _fields_ = [ ( 'dwSize' , c_uint ) , 
+                    ( 'cntUsage' , c_uint) ,
+                    ( 'th32ProcessID' , c_uint) ,
+                    ( 'th32DefaultHeapID' , c_uint) ,
+                    ( 'th32ModuleID' , c_uint) ,
+                    ( 'cntThreads' , c_uint) ,
+                    ( 'th32ParentProcessID' , c_uint) ,
+                    ( 'pcPriClassBase' , c_long) ,
+                    ( 'dwFlags' , c_uint) ,
+                    ( 'szExeFile' , c_char * 260 ) , 
+                    ( 'th32MemoryBase' , c_long) ,
+                    ( 'th32AccessKey' , c_long ) ]
+                    
+    class MODULEENTRY32(Structure):
+        _fields_ = [ ( 'dwSize' , c_long ) , 
+                    ( 'th32ModuleID' , c_long ),
+                    ( 'th32ProcessID' , c_long ),
+                    ( 'GlblcntUsage' , c_long ),
+                    ( 'ProccntUsage' , c_long ) ,
+                    ( 'modBaseAddr' , c_long ) ,
+                    ( 'modBaseSize' , c_long ) , 
+                    ( 'hModule' , c_void_p ) ,
+                    ( 'szModule' , c_char * 256 ),
+                    ( 'szExePath' , c_char * 260 ) ]
+                
+    TH32CS_SNAPPROCESS = 2
+    TH32CS_SNAPMODULE = 0x00000008
+    
+    ## CreateToolhelp32Snapshot
+    CreateToolhelp32Snapshot= windll.kernel32.CreateToolhelp32Snapshot
+    CreateToolhelp32Snapshot.reltype = c_long
+    CreateToolhelp32Snapshot.argtypes = [ c_int , c_int ]
+    ## Process32First
+    Process32First = windll.kernel32.Process32First
+    Process32First.argtypes = [ c_void_p , POINTER( PROCESSENTRY32 ) ]
+    Process32First.rettype = c_int
+    ## Process32Next
+    Process32Next = windll.kernel32.Process32Next
+    Process32Next.argtypes = [ c_void_p , POINTER(PROCESSENTRY32) ]
+    Process32Next.rettype = c_int
+    ## CloseHandle
+    CloseHandle = windll.kernel32.CloseHandle
+    CloseHandle.argtypes = [ c_void_p ]
+    CloseHandle.rettype = c_int
+    ## Module32First
+    Module32First = windll.kernel32.Module32First
+    Module32First.argtypes = [ c_void_p , POINTER(MODULEENTRY32) ]
+    Module32First.rettype = c_int
+                    
+    hProcessSnap = c_void_p(0)
+    hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS , 0 )
+
+    pe32 = PROCESSENTRY32()
+    pe32.dwSize = sizeof( PROCESSENTRY32 )
+    ret = Process32First( hProcessSnap , pointer( pe32 ) )
+    path = None
+
+    while ret :
+        if name + ".exe" == pe32.szExeFile:
+            hModuleSnap = c_void_p(0)
+            me32 = MODULEENTRY32()
+            me32.dwSize = sizeof( MODULEENTRY32 )
+            hModuleSnap = CreateToolhelp32Snapshot( TH32CS_SNAPMODULE, pe32.th32ProcessID )
+
+            ret = Module32First( hModuleSnap, pointer(me32) )
+            path = me32.szExePath
+            CloseHandle( hModuleSnap )
+            if path:
+                break
+        ret = Process32Next( hProcessSnap, pointer(pe32) )
+    CloseHandle( hProcessSnap )
+    return path
+
+def getRunningProcessExePathByName(name):
+    try:
+        if hostos == "nt":
+            return getRunningProcessExePathByName_win32(name)
+        else:
+            return None
+    except:
+        return None
+
+        
 class RunInfo(object):
     def __init__(self, path, configuration = None):
         self.path = path
@@ -76,20 +164,32 @@ class RunInfo(object):
         # add path to adb
         if self.android_executable:
             self.adb = os.path.join(os.path.dirname(os.path.dirname(self.android_executable)), ("platform-tools/adb","platform-tools/adb.exe")[hostos == 'nt'])
+            if not os.path.isfile(self.adb) or not os.access(self.adb, os.X_OK):
+                self.adb = None
         else:
             self.adb = None
 
         # detect target platform    
         if self.android_executable or self.arm_target or self.ndk_path:
             self.targetos = "android"
+        else:
+            self.targetos = hostos
+            
+        if self.targetos == "android":
+            # fix adb tool location
+            if not self.adb:
+                self.adb = getRunningProcessExePathByName("adb")
             if not self.adb:
                 try:
                     output = Popen(["adb", "devices"], stdout=PIPE, stderr=PIPE).communicate()
                     self.adb = "adb"
                 except OSError:
                     pass
-        else:
-            self.targetos = hostos
+            else:
+                try:
+                    output = Popen([self.adb, "devices"], stdout=PIPE, stderr=PIPE).communicate()
+                except OSError:
+                    self.adb = None
 
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"
@@ -280,30 +380,30 @@ class RunInfo(object):
             self.error = "Target architecture is incompatible with current platform (at %s)" % self.path
             return False
         if self.targetos == "android":
-            if not self.adb or not os.path.isfile(self.adb) or not os.access(self.adb, os.X_OK):
-                self.error = "Could not find adb executable (at %s)" % self.path
+            if not self.adb:
+                self.error = "Could not find adb executable (for %s)" % self.path
                 return False
             adb_res = self.runAdb("devices")
             if not adb_res:
-                self.error = "Could not run adb command: %s (at %s)" % (self.error, self.path)
+                self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
                 return False
-            connected_devices = len(re.findall(r"^[^ \t]+[ \t]+device$", adb_res, re.MULTILINE))
+            connected_devices = len(re.findall(r"^[^ \t]+[ \t]+device\r?$", adb_res, re.MULTILINE))
             if connected_devices == 0:
-                self.error = "No Android device connected (at %s)" % self.path
+                self.error = "No Android device connected (for %s)" % self.path
                 return False
             if connected_devices > 1:
-                self.error = "Too many (%s) devices are connected. Single device is required. (at %s)" % (connected_devices, self.path)
+                self.error = "Too many (%s) devices are connected. Single device is required. (for %s)" % (connected_devices, self.path)
                 return False
             if "armeabi-v7a" in self.arm_target:
                 adb_res = self.runAdb("shell", "cat /proc/cpuinfo")
                 if not adb_res:
-                    self.error = "Could not get info about Android platform: %s (at %s)" % (self.error, self.path)
+                    self.error = "Could not get info about Android platform: %s (for %s)" % (self.error, self.path)
                     return False
                 if "ARMv7" not in adb_res:
-                    self.error = "Android device does not support ARMv7 commands, but tests are built for armeabi-v7a (at %s)" % self.path
+                    self.error = "Android device does not support ARMv7 commands, but tests are built for armeabi-v7a (for %s)" % self.path
                     return False
                 if "NEON" in self.arm_target and "neon" not in adb_res:
-                    self.error = "Android device has no NEON, but tests are built for %s (at %s)" % (self.arm_target, self.path)
+                    self.error = "Android device has no NEON, but tests are built for %s (for %s)" % (self.arm_target, self.path)
                     return False
                 hw = re.search(r"^Hardware[ \t]*:[ \t]*(.*?)$", adb_res, re.MULTILINE)
                 if hw:
