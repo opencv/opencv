@@ -62,7 +62,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
       dists.at<float>(i, j) = (float)norm(points[i] - points[j]);
       distsMask.at<uchar>(i, j) = 255;
       //TODO: use symmetry
-      distsMask.at<uchar>(j, i) = distsMask.at<uchar>(i, j);
+      distsMask.at<uchar>(j, i) = 255;//distsMask.at<uchar>(i, j);
       dists.at<float>(j, i) = dists.at<float>(i, j);
     }
   }
@@ -74,7 +74,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
   }
 
   int patternClusterIdx = 0;
-  while(clusters[patternClusterIdx].size() < static_cast<size_t>(patternSize.area()) && countNonZero(distsMask == 255) > 0)
+  while(clusters[patternClusterIdx].size() < static_cast<size_t>(patternSize.area()) && countNonZero(distsMask) > 0)
   {
     Point minLoc;
     minMaxLoc(dists, 0, 0, &minLoc, 0, distsMask);
