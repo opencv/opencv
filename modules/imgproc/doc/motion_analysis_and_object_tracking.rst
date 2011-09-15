@@ -149,6 +149,7 @@ The function is used to detect translational shifts that occur between two image
 Calculates the cross-power spectrum of two supplied source arrays. The arrays are padded if needed with ``getOptimalDFTSize`` .
 
 .. ocv:function:: Point2d phaseCorrelate(InputArray src1, InputArray src2, InputArray window = noArray())
+
     :param src1: Source floating point array (CV_32FC1 or CV_64FC1)
     :param src2: Source floating point array (CV_32FC1 or CV_64FC1)
     :param window: Floating point array with windowing coefficients to reduce edge effects (optional).
@@ -196,6 +197,7 @@ createHanningWindow
 This function computes a Hanning window coefficients in two dimensions. See http://en.wikipedia.org/wiki/Hann\_function and http://en.wikipedia.org/wiki/Window\_function for more information.
 
 .. ocv:function:: void createHanningWindow(OutputArray dst, Size winSize, int type)
+
     :param dst: Destination array to place Hann coefficients in
     :param winSize: The window size specifications
     :param type: Created array type
