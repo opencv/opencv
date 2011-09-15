@@ -136,7 +136,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename Mag, typename Angle>
     void cartToPolar_caller(const DevMem2Df& x, const DevMem2Df& y, const DevMem2Df& mag, const DevMem2Df& angle, bool angleInDegrees, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
+        dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
 
         grid.x = divUp(x.cols, threads.x);
@@ -186,7 +186,7 @@ namespace cv { namespace gpu { namespace mathfunc
     template <typename Mag>
     void polarToCart_caller(const DevMem2Df& mag, const DevMem2Df& angle, const DevMem2Df& x, const DevMem2Df& y, bool angleInDegrees, cudaStream_t stream)
     {
-        dim3 threads(16, 16, 1);
+        dim3 threads(32, 8, 1);
         dim3 grid(1, 1, 1);
 
         grid.x = divUp(mag.cols, threads.x);
