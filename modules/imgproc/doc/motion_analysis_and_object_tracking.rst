@@ -162,7 +162,6 @@ The function performs the following equations
 
 *
     Next it computes the forward DFTs of each source array:
-    
     .. math::
         \mathbf{G}_a = \mathcal{F}\{src_1\}, \; \mathbf{G}_b = \mathcal{F}\{src_2\}
     where
@@ -170,18 +169,15 @@ The function performs the following equations
 
 *
     It then computes the cross-power spectrum of each frequency domain array:
-
     .. math::
         R = \frac{ \mathbf{G}_a \mathbf{G}_b^*}{|\mathbf{G}_a \mathbf{G}_b^*|}
 
 *
     Next the cross-correlation is converted back into the time domain via the inverse DFT:
-
     .. math::
         r = \mathcal{F}^{-1}\{R\}
 *
     Finally, it computes the peak location and computes a 5x5 weighted centroid around the peak to achieve sub-pixel accuracy.
-
     .. math::
         (\Delta x, \Delta y) = \texttt{weighted_centroid}\{\arg \max_{(x, y)}\{r\}\}
 
