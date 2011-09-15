@@ -1483,11 +1483,11 @@ protected:
     MSER mser;
 };
 
-class CV_EXPORTS StarFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W StarFeatureDetector : public FeatureDetector
 {
 public:
     StarFeatureDetector( const CvStarDetectorParams& params=cvStarDetectorParams() );
-    StarFeatureDetector( int maxSize, int responseThreshold=30, int lineThresholdProjected = 10,
+    CV_WRAP StarFeatureDetector( int maxSize, int responseThreshold=30, int lineThresholdProjected = 10,
                          int lineThresholdBinarized=8, int suppressNonmaxSize=5 );
     virtual void read( const FileNode& fn );
     virtual void write( FileStorage& fs ) const;
@@ -1644,7 +1644,7 @@ protected:
  * Adapts a detector to partition the source image into a grid and detect
  * points in each cell.
  */
-class CV_EXPORTS GridAdaptedFeatureDetector : public FeatureDetector
+class CV_EXPORTS_W GridAdaptedFeatureDetector : public FeatureDetector
 {
 public:
     /*
@@ -1654,7 +1654,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxTotalKeypoints=1000,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector, int maxTotalKeypoints=1000,
                                 int gridRows=4, int gridCols=4 );
     
     // TODO implement read/write
@@ -1846,7 +1846,7 @@ public:
      * keypoints    The input keypoints. Keypoints for which a descriptor cannot be computed are removed.
      * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
      */
-    CV_WRAP void compute( const Mat& image, CV_IN_OUT vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
+    CV_WRAP void compute( const Mat& image, CV_OUT CV_IN_OUT vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
 
     /*
      * Compute the descriptors for a keypoints collection detected in image collection.
