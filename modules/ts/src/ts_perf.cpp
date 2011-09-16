@@ -387,6 +387,7 @@ const char *command_line_keys =
     "{!!bugbugbugbug!!   |perf_seed           |809564   |seed for random numbers generator}"
     #if ANDROID
     "{!!bugbugbugbug!!   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
+    "{!!bugbugbugbug!!   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
     #else
     "{!!bugbugbugbug!!   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
     #endif
@@ -399,6 +400,24 @@ double       param_max_deviation;
 unsigned int param_min_samples;
 uint64       param_seed;
 double       param_time_limit;
+#if ANDROID
+int          param_affinity_mask;
+
+#include <sys/syscall.h>
+#include <pthread.h>
+static void setCurrentThreadAffinityMask(int mask)
+{
+    pid_t pid=gettid();
+    int syscallres=syscall(__NR_sched_setaffinity, pid, sizeof(mask), &mask);
+    if (syscallres)
+    {
+        int err=errno;
+        err=err;//to avoid warnings about unused variables
+        LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
+    }
+}
+
+#endif
 
 void TestBase::Init(int argc, const char* const argv[])
 {
@@ -408,6 +427,9 @@ void TestBase::Init(int argc, const char* const argv[])
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
     param_seed = args.get<uint64>("perf_seed");
     param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
+#if ANDROID
+    param_affinity_mask = args.get<int>("perf_affinity_mask");
+#endif
 
     if (args.get<bool>("help"))
     {
@@ -747,6 +769,10 @@ void TestBase::reportMetrics(bool toJUnitXML)
 
 void TestBase::SetUp()
 {
+#if ANDROID
+    if (param_affinity_mask)
+        setCurrentThreadAffinityMask(param_affinity_mask);
+#endif
     lastTime = 0;
     totalTime = 0;
     nIters = (unsigned int)-1;
