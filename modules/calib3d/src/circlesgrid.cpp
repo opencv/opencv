@@ -52,58 +52,61 @@ using namespace std;
 
 void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSize, vector<Point2f> &patternPoints)
 {
-  int i, j, n = (int)points.size();
-  Mat dists(n, n, CV_32FC1, Scalar(0));
-  Mat distsMask(dists.size(), CV_8UC1, Scalar(0));
-  for(i = 0; i < n; i++)
-  {
-    for(j = i+1; j < n; j++)
+    int i, j, n = (int)points.size();
+    size_t pn = static_cast<size_t>(patternSize.area());
+
+    patternPoints.clear();
+    if (pn >= points.size())
     {
-      dists.at<float>(i, j) = (float)norm(points[i] - points[j]);
-      distsMask.at<uchar>(i, j) = 255;
-      //TODO: use symmetry
-      distsMask.at<uchar>(j, i) = 255;//distsMask.at<uchar>(i, j);
-      dists.at<float>(j, i) = dists.at<float>(i, j);
+        if (pn == points.size())
+            patternPoints = points;
+        return;
     }
-  }
 
-  vector<std::list<size_t> > clusters(points.size());
-  for(size_t i=0; i<points.size(); i++)
-  {
-    clusters[i].push_back(i);
-  }
+    Mat dists(n, n, CV_32FC1, Scalar(0));
+    Mat distsMask(dists.size(), CV_8UC1, Scalar(0));
+    for(i = 0; i < n; i++)
+    {
+        for(j = i+1; j < n; j++)
+        {
+            dists.at<float>(i, j) = (float)norm(points[i] - points[j]);
+            distsMask.at<uchar>(i, j) = 255;
+            //TODO: use symmetry
+            distsMask.at<uchar>(j, i) = 255;//distsMask.at<uchar>(i, j);
+            dists.at<float>(j, i) = dists.at<float>(i, j);
+        }
+    }
 
-  int patternClusterIdx = 0;
-  while(clusters[patternClusterIdx].size() < static_cast<size_t>(patternSize.area()) && countNonZero(distsMask) > 0)
-  {
-    Point minLoc;
-    minMaxLoc(dists, 0, 0, &minLoc, 0, distsMask);
-    int minIdx = std::min(minLoc.x, minLoc.y);
-    int maxIdx = std::max(minLoc.x, minLoc.y);
+    vector<std::list<size_t> > clusters(points.size());
+    for(size_t i=0; i<points.size(); i++)
+    {
+        clusters[i].push_back(i);
+    }
 
-    distsMask.row(maxIdx).setTo(0);
-    distsMask.col(maxIdx).setTo(0);
-    Mat newDists = cv::min(dists.row(minLoc.x), dists.row(minLoc.y));
-    Mat tmpLine = dists.row(minIdx);
-    newDists.copyTo(tmpLine);
-    tmpLine = dists.col(minIdx);
-    newDists.copyTo(tmpLine);
+    int patternClusterIdx = 0;
+    while(clusters[patternClusterIdx].size() < pn)
+    {
+        Point minLoc;
+        minMaxLoc(dists, 0, 0, &minLoc, 0, distsMask);
+        int minIdx = std::min(minLoc.x, minLoc.y);
+        int maxIdx = std::max(minLoc.x, minLoc.y);
 
-    clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
-    patternClusterIdx = minIdx;
-  }
+        distsMask.row(maxIdx).setTo(0);
+        distsMask.col(maxIdx).setTo(0);
+        Mat tmpRow = dists.row(minIdx);
+        Mat tmpCol = dists.col(minIdx);
+        cv::min(dists.row(minLoc.x), dists.row(minLoc.y), tmpRow);
+        tmpRow.copyTo(tmpCol);
 
-  patternPoints.clear();
+        clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
+        patternClusterIdx = minIdx;
+    }
 
-  if(clusters[patternClusterIdx].size() != static_cast<size_t>(patternSize.area()))
-  {
-    return;
-  }
-  patternPoints.reserve(clusters[patternClusterIdx].size());
-  for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end(); it++)
-  {
-    patternPoints.push_back(points[*it]);
-  }
+    patternPoints.reserve(clusters[patternClusterIdx].size());
+    for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end(); it++)
+    {
+        patternPoints.push_back(points[*it]);
+    }
 }
 
 void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, cv::Size _patternSize, vector<Point2f>& centers)
