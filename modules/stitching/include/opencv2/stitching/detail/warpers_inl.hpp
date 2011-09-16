@@ -50,14 +50,11 @@ namespace cv {
 namespace detail {
 
 template <class P>
-Point WarperBase<P>::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+Point WarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
                           int interp_mode, int border_mode)
 {
     src_size_ = src.size();
-
-    projector_.size = src.size();
-    projector_.focal = focal;
-    projector_.setTransformation(R);
+    projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
@@ -84,13 +81,10 @@ Point WarperBase<P>::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
 
 
 template <class P>
-Rect WarperBase<P>::warpRoi(const Size &sz, float focal, const Mat &R)
+Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R)
 {
     src_size_ = sz;
-
-    projector_.size = sz;
-    projector_.focal = focal;
-    projector_.setTransformation(R);
+    projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
@@ -165,43 +159,37 @@ void WarperBase<P>::detectResultRoiByBorder(Point &dst_tl, Point &dst_br)
 inline
 void PlaneProjector::mapForward(float x, float y, float &u, float &v)
 {
-    x -= size.width * 0.5f;
-    y -= size.height * 0.5f;
+    float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
-    float x_ = r[0] * x + r[1] * y + r[2] * focal;
-    float y_ = r[3] * x + r[4] * y + r[5] * focal;
-    float z_ = r[6] * x + r[7] * y + r[8] * focal;
-
-    u = scale * x_ / z_ * plane_dist;
-    v = scale * y_ / z_ * plane_dist;
+    u = scale * x_ / z_;
+    v = scale * y_ / z_;
 }
 
 
 inline
 void PlaneProjector::mapBackward(float u, float v, float &x, float &y)
 {
-    float x_ = u / scale;
-    float y_ = v / scale;
+    u /= scale;
+    v /= scale;
 
     float z;
-    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * plane_dist;
-    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * plane_dist;
-    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * plane_dist;
+    x = k_rinv[0] * u + k_rinv[1] * v + k_rinv[2];
+    y = k_rinv[3] * u + k_rinv[4] * v + k_rinv[5];
+    z = k_rinv[6] * u + k_rinv[7] * v + k_rinv[8];
 
-    x = focal * x / z + size.width * 0.5f;
-    y = focal * y / z + size.height * 0.5f;
+    x /= z;
+    y /= z;
 }
 
 
 inline
 void SphericalProjector::mapForward(float x, float y, float &u, float &v)
-{
-    x -= size.width * 0.5f;
-    y -= size.height * 0.5f;
-
-    float x_ = r[0] * x + r[1] * y + r[2] * focal;
-    float y_ = r[3] * x + r[4] * y + r[5] * focal;
-    float z_ = r[6] * x + r[7] * y + r[8] * focal;
+{    
+    float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     u = scale * atan2f(x_, z_);
     v = scale * (static_cast<float>(CV_PI) - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_)));
@@ -211,30 +199,30 @@ void SphericalProjector::mapForward(float x, float y, float &u, float &v)
 inline
 void SphericalProjector::mapBackward(float u, float v, float &x, float &y)
 {
-    float sinv = sinf(static_cast<float>(CV_PI) - v / scale);
-    float x_ = sinv * sinf(u / scale);
-    float y_ = cosf(static_cast<float>(CV_PI) - v / scale);
-    float z_ = sinv * cosf(u / scale);
+    u /= scale;
+    v /= scale;
+
+    float sinv = sinf(static_cast<float>(CV_PI) - v);
+    float x_ = sinv * sinf(u);
+    float y_ = cosf(static_cast<float>(CV_PI) - v);
+    float z_ = sinv * cosf(u);
 
     float z;
-    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * z_;
-    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * z_;
-    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * z_;
+    x = k_rinv[0] * x_ + k_rinv[1] * y_ + k_rinv[2] * z_;
+    y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
+    z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
 
-    x = focal * x / z + size.width * 0.5f;
-    y = focal * y / z + size.height * 0.5f;
+    x /= z;
+    y /= z;
 }
 
 
 inline
 void CylindricalProjector::mapForward(float x, float y, float &u, float &v)
 {
-    x -= size.width * 0.5f;
-    y -= size.height * 0.5f;
-
-    float x_ = r[0] * x + r[1] * y + r[2] * focal;
-    float y_ = r[3] * x + r[4] * y + r[5] * focal;
-    float z_ = r[6] * x + r[7] * y + r[8] * focal;
+    float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
+    float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
+    float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     u = scale * atan2f(x_, z_);
     v = scale * y_ / sqrtf(x_ * x_ + z_ * z_);
@@ -244,17 +232,20 @@ void CylindricalProjector::mapForward(float x, float y, float &u, float &v)
 inline
 void CylindricalProjector::mapBackward(float u, float v, float &x, float &y)
 {
-    float x_ = sinf(u / scale);
-    float y_ = v / scale;
-    float z_ = cosf(u / scale);
+    u /= scale;
+    v /= scale;
+
+    float x_ = sinf(u);
+    float y_ = v;
+    float z_ = cosf(u);
 
     float z;
-    x = rinv[0] * x_ + rinv[1] * y_ + rinv[2] * z_;
-    y = rinv[3] * x_ + rinv[4] * y_ + rinv[5] * z_;
-    z = rinv[6] * x_ + rinv[7] * y_ + rinv[8] * z_;
+    x = k_rinv[0] * x_ + k_rinv[1] * y_ + k_rinv[2] * z_;
+    y = k_rinv[3] * x_ + k_rinv[4] * y_ + k_rinv[5] * z_;
+    z = k_rinv[6] * x_ + k_rinv[7] * y_ + k_rinv[8] * z_;
 
-    x = focal * x / z + size.width * 0.5f;
-    y = focal * y / z + size.height * 0.5f;
+    x /= z;
+    y /= z;
 }
 
 } // namespace detail

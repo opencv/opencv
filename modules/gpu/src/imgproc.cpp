@@ -56,9 +56,9 @@ void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&)
 void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
 void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, double, double, double, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, double, double, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, double, double, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_nogpu(); }
 void cv::gpu::integral(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::integralBuffered(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -584,22 +584,25 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
 namespace cv { namespace gpu { namespace imgproc
 {
     void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                            const float r[9], const float rinv[9], float f, float s, float dist,
-                            float half_w, float half_h, cudaStream_t stream);
+                            const float k_rinv[9], const float r_kinv[9], float scale,
+                            cudaStream_t stream);
 }}}
 
-void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
-                                 double dist, GpuMat& map_x, GpuMat& map_y, Stream& stream)
+void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
+                                 GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
-    CV_Assert(R.size() == Size(3,3) && R.isContinuous() && R.type() == CV_32F);
-    Mat Rinv = R.inv();
-    CV_Assert(Rinv.isContinuous());
+    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
+    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
+
+    Mat K_Rinv = K * R.t();
+    Mat R_Kinv = R * K.inv();
+    CV_Assert(K_Rinv.isContinuous());
+    CV_Assert(R_Kinv.isContinuous());
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                static_cast<float>(f), static_cast<float>(s), static_cast<float>(dist), 
-                                0.5f*src_size.width, 0.5f*src_size.height, StreamAccessor::getStream(stream));
+    imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+                                scale, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -608,22 +611,25 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, doub
 namespace cv { namespace gpu { namespace imgproc
 {
     void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                                  const float r[9], const float rinv[9], float f, float s,
-                                  float half_w, float half_h, cudaStream_t stream);
+                                  const float k_rinv[9], const float r_kinv[9], float scale,
+                                  cudaStream_t stream);
 }}}
 
-void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                        GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
-    CV_Assert(R.size() == Size(3,3) && R.isContinuous() && R.type() == CV_32F);
-    Mat Rinv = R.inv();
-    CV_Assert(Rinv.isContinuous());
+    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
+    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
+
+    Mat K_Rinv = K * R.t();
+    Mat R_Kinv = R * K.inv();
+    CV_Assert(K_Rinv.isContinuous());
+    CV_Assert(R_Kinv.isContinuous());
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                      static_cast<float>(f), static_cast<float>(s), 0.5f*src_size.width, 0.5f*src_size.height, 
-                                      StreamAccessor::getStream(stream));
+    imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+                                      scale, StreamAccessor::getStream(stream));
 }
 
 
@@ -633,22 +639,25 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R
 namespace cv { namespace gpu { namespace imgproc
 {
     void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                                const float r[9], const float rinv[9], float f, float s,
-                                float half_w, float half_h, cudaStream_t stream);
+                                const float k_rinv[9], const float r_kinv[9], float scale,
+                                cudaStream_t stream);
 }}}
 
-void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                      GpuMat& map_x, GpuMat& map_y, Stream& stream)
 {
-    CV_Assert(R.size() == Size(3,3) && R.isContinuous() && R.type() == CV_32F);
-    Mat Rinv = R.inv();
-    CV_Assert(Rinv.isContinuous());
+    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
+    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
+
+    Mat K_Rinv = K * R.t();
+    Mat R_Kinv = R * K.inv();
+    CV_Assert(K_Rinv.isContinuous());
+    CV_Assert(R_Kinv.isContinuous());
 
     map_x.create(dst_roi.size(), CV_32F);
     map_y.create(dst_roi.size(), CV_32F);
-    imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, R.ptr<float>(), Rinv.ptr<float>(),
-                                    static_cast<float>(f), static_cast<float>(s), 0.5f*src_size.width, 0.5f*src_size.height, 
-                                    StreamAccessor::getStream(stream));
+    imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+                                    scale, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

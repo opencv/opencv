@@ -103,7 +103,7 @@ int parseCmdArgs(int argc, char** argv)
             printUsage();
             return -1;
         }
-        else if (string(argv[i]) == "--try_gpu")
+        else if (string(argv[i]) == "--try_use_gpu")
         {
             if (string(argv[i + 1]) == "no")
                 try_use_gpu = false;

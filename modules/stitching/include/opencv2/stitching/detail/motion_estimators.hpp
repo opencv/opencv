@@ -58,9 +58,7 @@ public:
 
     void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
                      std::vector<CameraParams> &cameras)
-    {
-        estimate(features, pairwise_matches, cameras);
-    }
+        { estimate(features, pairwise_matches, cameras); }
 
 protected:
     virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
@@ -89,6 +87,8 @@ public:
 
     BundleAdjuster(int cost_space = FOCAL_RAY_SPACE, float conf_thresh = 1.f) 
         : cost_space_(cost_space), conf_thresh_(conf_thresh) {}
+
+    Mat K;
 
 private:
     void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 

@@ -47,46 +47,30 @@ using namespace std;
 namespace cv {
 namespace detail {
 
-Ptr<Warper> Warper::createByCameraFocal(float focal, int type, bool try_gpu)
+void ProjectorBase::setCameraParams(const Mat &K, const Mat &R)
 {
-#ifndef ANDROID
-    bool can_use_gpu = try_gpu && gpu::getCudaEnabledDeviceCount();
-    if (can_use_gpu)
-    {
-        if (type == PLANE)
-            return new PlaneWarperGpu(focal);
-        if (type == CYLINDRICAL)
-            return new CylindricalWarperGpu(focal);
-        if (type == SPHERICAL)
-            return new SphericalWarperGpu(focal);
-    }
-    else
-#endif
-    {
-        if (type == PLANE)
-            return new PlaneWarper(focal);
-        if (type == CYLINDRICAL)
-            return new CylindricalWarper(focal);
-        if (type == SPHERICAL)
-            return new SphericalWarper(focal);
-    }
-    CV_Error(CV_StsBadArg, "unsupported warping type");
-    return NULL;
-}
+    CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
+    CV_Assert(R.size() == Size(3, 3) && R.type() == CV_32F);
 
+    Mat_<float> K_(K);
+    k[0] = K_(0,0); k[1] = K_(0,1); k[2] = K_(0,2);
+    k[3] = K_(1,0); k[4] = K_(1,1); k[5] = K_(1,2);
+    k[6] = K_(2,0); k[7] = K_(2,1); k[8] = K_(2,2);
 
-void ProjectorBase::setTransformation(const Mat &R)
-{
-    CV_Assert(R.size() == Size(3, 3));
-    CV_Assert(R.type() == CV_32F);
-    r[0] = R.at<float>(0, 0); r[1] = R.at<float>(0, 1); r[2] = R.at<float>(0, 2);
-    r[3] = R.at<float>(1, 0); r[4] = R.at<float>(1, 1); r[5] = R.at<float>(1, 2);
-    r[6] = R.at<float>(2, 0); r[7] = R.at<float>(2, 1); r[8] = R.at<float>(2, 2);
+    Mat_<float> Rinv = R.t();
+    rinv[0] = Rinv(0,0); rinv[1] = Rinv(0,1); rinv[2] = Rinv(0,2);
+    rinv[3] = Rinv(1,0); rinv[4] = Rinv(1,1); rinv[5] = Rinv(1,2);
+    rinv[6] = Rinv(2,0); rinv[7] = Rinv(2,1); rinv[8] = Rinv(2,2);
 
-    Mat Rinv = R.inv();
-    rinv[0] = Rinv.at<float>(0, 0); rinv[1] = Rinv.at<float>(0, 1); rinv[2] = Rinv.at<float>(0, 2);
-    rinv[3] = Rinv.at<float>(1, 0); rinv[4] = Rinv.at<float>(1, 1); rinv[5] = Rinv.at<float>(1, 2);
-    rinv[6] = Rinv.at<float>(2, 0); rinv[7] = Rinv.at<float>(2, 1); rinv[8] = Rinv.at<float>(2, 2);
+    Mat_<float> R_Kinv = R * K.inv();
+    r_kinv[0] = R_Kinv(0,0); r_kinv[1] = R_Kinv(0,1); r_kinv[2] = R_Kinv(0,2); 
+    r_kinv[3] = R_Kinv(1,0); r_kinv[4] = R_Kinv(1,1); r_kinv[5] = R_Kinv(1,2); 
+    r_kinv[6] = R_Kinv(2,0); r_kinv[7] = R_Kinv(2,1); r_kinv[8] = R_Kinv(2,2); 
+
+    Mat_<float> K_Rinv = K * Rinv;
+    k_rinv[0] = K_Rinv(0,0); k_rinv[1] = K_Rinv(0,1); k_rinv[2] = K_Rinv(0,2); 
+    k_rinv[3] = K_Rinv(1,0); k_rinv[4] = K_Rinv(1,1); k_rinv[5] = K_Rinv(1,2); 
+    k_rinv[6] = K_Rinv(2,0); k_rinv[7] = K_Rinv(2,1); k_rinv[8] = K_Rinv(2,2); 
 }
 
 
@@ -122,18 +106,16 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 }
 
 #ifndef ANDROID
-Point PlaneWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst, int interp_mode, int border_mode)
+Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst, int interp_mode, int border_mode)
 {
     src_size_ = src.size();
-    projector_.size = src.size();
-    projector_.focal = focal;
-    projector_.setTransformation(R);
+    projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
 
     gpu::buildWarpPlaneMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                            R, focal, projector_.scale, projector_.plane_dist, d_xmap_, d_ymap_);
+                            K, R, projector_.scale, d_xmap_, d_ymap_);
 
     gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
     d_src_.upload(src);
@@ -163,9 +145,11 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     float z = projector_.rinv[7];
     if (y > 0.f)
     {
-        x = projector_.focal * x / z + src_size_.width * 0.5f;
-        y = projector_.focal * y / z + src_size_.height * 0.5f;
-        if (x > 0.f && x < src_size_.width && y > 0.f && y < src_size_.height)
+        //x = projector_.focal * x / z + src_size_.width * 0.5f;
+        //y = projector_.focal * y / z + src_size_.height * 0.5f;
+        float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
+        float y_ = projector_.k[4] * y / z + projector_.k[5];
+        if (x_ > 0.f && x_ < src_size_.width && y_ > 0.f && y_ < src_size_.height)
         {
             tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
             br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(CV_PI * projector_.scale));
@@ -177,9 +161,11 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     z = projector_.rinv[7];
     if (y > 0.f)
     {
-        x = projector_.focal * x / z + src_size_.width * 0.5f;
-        y = projector_.focal * y / z + src_size_.height * 0.5f;
-        if (x > 0.f && x < src_size_.width && y > 0.f && y < src_size_.height)
+        //x = projector_.focal * x / z + src_size_.width * 0.5f;
+        //y = projector_.focal * y / z + src_size_.height * 0.5f;
+        float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
+        float y_ = projector_.k[4] * y / z + projector_.k[5];
+        if (x_ > 0.f && x_ < src_size_.width && y_ > 0.f && y_ < src_size_.height)
         {
             tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(0));
             br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(0));
@@ -193,19 +179,17 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 }
 
 #ifndef ANDROID
-Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                                   int interp_mode, int border_mode)
+Point SphericalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+                               int interp_mode, int border_mode)
 {
     src_size_ = src.size();
-    projector_.size = src.size();
-    projector_.focal = focal;
-    projector_.setTransformation(R);
+    projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
 
     gpu::buildWarpSphericalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                                R, focal, projector_.scale, d_xmap_, d_ymap_);
+                                K, R, projector_.scale, d_xmap_, d_ymap_);
 
     gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
     d_src_.upload(src);
@@ -220,19 +204,17 @@ Point SphericalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &d
 }
 
 
-Point CylindricalWarperGpu::warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                                     int interp_mode, int border_mode)
+Point CylindricalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+                                 int interp_mode, int border_mode)
 {
     src_size_ = src.size();
-    projector_.size = src.size();
-    projector_.focal = focal;
-    projector_.setTransformation(R);
+    projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
     detectResultRoi(dst_tl, dst_br);
 
     gpu::buildWarpCylindricalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                                  R, focal, projector_.scale, d_xmap_, d_ymap_);
+                                  K, R, projector_.scale, d_xmap_, d_ymap_);
 
     gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
     d_src_.upload(src);

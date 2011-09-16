@@ -53,8 +53,12 @@ struct CV_EXPORTS CameraParams
     CameraParams();
     CameraParams(const CameraParams& other);
     const CameraParams& operator =(const CameraParams& other);
+    Mat K() const;
 
     double focal; // Focal length
+    double aspect; // Aspect ratio
+    double ppx; // Principal point X
+    double ppy; // Principal point Y
     Mat R; // Rotation
     Mat t; // Translation
 };

@@ -42,6 +42,7 @@
 //M*/
 
 #include <fstream>
+#include <string>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -52,6 +53,7 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
+#include "opencv2/stitching/warpers.hpp"
 
 using namespace std;
 using namespace cv;
@@ -118,7 +120,7 @@ float conf_thresh = 1.f;
 bool wave_correct = true;
 bool save_graph = false;
 std::string save_graph_to;
-int warp_type = Warper::SPHERICAL;
+string warp_type = "spherical";
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 float match_conf = 0.65f;
 int seam_find_type = SeamFinder::GC_COLOR;
@@ -223,17 +225,7 @@ int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--warp")
         {
-            if (string(argv[i + 1]) == "plane")
-                warp_type = Warper::PLANE;
-            else if (string(argv[i + 1]) == "cylindrical")
-                warp_type = Warper::CYLINDRICAL;
-            else if (string(argv[i + 1]) == "spherical")
-                warp_type = Warper::SPHERICAL;
-            else
-            {
-                cout << "Bad warping method\n";
-                return -1;
-            }
+            warp_type = string(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--expos_comp")
@@ -479,15 +471,42 @@ int main(int argc, char* argv[])
     }
 
     // Warp images and their masks
-    Ptr<Warper> warper = Warper::createByCameraFocal(static_cast<float>(warped_image_scale * seam_work_aspect),
-                                                     warp_type, try_gpu);
+
+    Ptr<WarperCreator> warper_creator;
+#ifndef ANDROID
+    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+    {
+        if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
+        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
+        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
+    }
+    else
+#endif
+    {
+        if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
+        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarperGpu();
+        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarperGpu();
+    }
+
+    if (warper_creator.empty())
+    {
+        cout << "Can't create the following warper '" << warp_type << "'\n";
+        return 1;
+    }
+    
+    Ptr<Warper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
+
     for (int i = 0; i < num_images; ++i)
     {
-        corners[i] = warper->warp(images[i], static_cast<float>(cameras[i].focal * seam_work_aspect),
-                                  cameras[i].R, images_warped[i]);
+        Mat_<float> K;
+        cameras[i].K().convertTo(K, CV_32F);
+        K(0,0) *= seam_work_aspect; K(0,2) *= seam_work_aspect;
+        K(1,1) *= seam_work_aspect; K(1,2) *= seam_work_aspect;
+
+        corners[i] = warper->warp(images[i], K, cameras[i].R, images_warped[i]);
         sizes[i] = images_warped[i].size();
-        warper->warp(masks[i], static_cast<float>(cameras[i].focal * seam_work_aspect),
-                     cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+
+        warper->warp(masks[i], K, cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
 
     vector<Mat> images_warped_f(num_images);
@@ -535,23 +554,27 @@ int main(int argc, char* argv[])
 
             // Update warped image scale
             warped_image_scale *= static_cast<float>(compose_work_aspect);
-            warper = Warper::createByCameraFocal(warped_image_scale, warp_type, try_gpu);
+            warper = warper_creator->create(warped_image_scale);
 
             // Update corners and sizes
             for (int i = 0; i < num_images; ++i)
             {
-                // Update camera focal
+                // Update intrinsics
                 cameras[i].focal *= compose_work_aspect;
+                cameras[i].ppx *= compose_work_aspect;
+                cameras[i].ppy *= compose_work_aspect;
 
                 // Update corner and size
                 Size sz = full_img_sizes[i];
-                if (abs(compose_scale - 1) > 1e-1)
+                if (std::abs(compose_scale - 1) > 1e-1)
                 {
                     sz.width = cvRound(full_img_sizes[i].width * compose_scale);
                     sz.height = cvRound(full_img_sizes[i].height * compose_scale);
                 }
 
-                Rect roi = warper->warpRoi(sz, static_cast<float>(cameras[i].focal), cameras[i].R);
+                Mat K;
+                cameras[i].K().convertTo(K, CV_32F);
+                Rect roi = warper->warpRoi(sz, K, cameras[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
             }
@@ -563,15 +586,16 @@ int main(int argc, char* argv[])
         full_img.release();
         Size img_size = img.size();
 
+        Mat K;
+        cameras[img_idx].K().convertTo(K, CV_32F);
+
         // Warp the current image
-        warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R,
-                     img_warped);
+        warper->warp(img, K, cameras[img_idx].R, img_warped);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
-        warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
-                     INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(mask, K, cameras[img_idx].R, mask_warped, INTER_NEAREST, BORDER_CONSTANT);
 
         // Compensate exposure
         compensator->apply(img_idx, corners[img_idx], img_warped, mask_warped);

@@ -366,7 +366,8 @@ PERF_TEST_P(DevInfo_Size, buildWarpPlaneMaps, testing::Combine(testing::ValuesIn
 
     SIMPLE_TEST_CYCLE()
     {
-        buildWarpPlaneMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, 1.0, map_x, map_y);
+        buildWarpPlaneMaps(size, Rect(0, 0, size.width, size.height), Mat::eye(3, 3, CV_32FC1), 
+                           Mat::ones(3, 3, CV_32FC1), 1.0, map_x, map_y);
     }
 
     Mat map_x_host(map_x);
@@ -391,7 +392,8 @@ PERF_TEST_P(DevInfo_Size, buildWarpCylindricalMaps, testing::Combine(testing::Va
 
     SIMPLE_TEST_CYCLE()
     {
-        buildWarpCylindricalMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, map_x, map_y);
+        buildWarpCylindricalMaps(size, Rect(0, 0, size.width, size.height), Mat::eye(3, 3, CV_32FC1),
+                                 Mat::ones(3, 3, CV_32FC1), 1.0, map_x, map_y);
     }
 
     Mat map_x_host(map_x);
@@ -402,7 +404,7 @@ PERF_TEST_P(DevInfo_Size, buildWarpCylindricalMaps, testing::Combine(testing::Va
 }
 
 PERF_TEST_P(DevInfo_Size, buildWarpSphericalMaps, testing::Combine(testing::ValuesIn(devices()),
-                                                               testing::Values(GPU_TYPICAL_MAT_SIZES)))
+                                                                   testing::Values(GPU_TYPICAL_MAT_SIZES)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
@@ -416,7 +418,8 @@ PERF_TEST_P(DevInfo_Size, buildWarpSphericalMaps, testing::Combine(testing::Valu
 
     SIMPLE_TEST_CYCLE()
     {
-        buildWarpSphericalMaps(size, Rect(0, 0, size.width, size.height), Mat::ones(3, 3, CV_32FC1), 1.0, 1.0, map_x, map_y);
+        buildWarpSphericalMaps(size, Rect(0, 0, size.width, size.height), Mat::eye(3, 3, CV_32FC1),
+                               Mat::ones(3, 3, CV_32FC1), 1.0, map_x, map_y);
     }
 
     Mat map_x_host(map_x);

@@ -142,6 +142,13 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
     findMaxSpanningTree(num_images, pairwise_matches, span_tree, span_tree_centers);
     span_tree.walkBreadthFirst(span_tree_centers[0], CalcRotation(num_images, pairwise_matches, cameras));
 
+    // As calculations were performed under assumption that p.p. is in image center
+    for (int i = 0; i < num_images; ++i)
+    {
+        cameras[i].ppx = 0.5 * features[i].img_size.width;
+        cameras[i].ppy = 0.5 * features[i].img_size.height;
+    }
+
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
@@ -162,11 +169,14 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
     pairwise_matches_ = &pairwise_matches[0];
 
     // Prepare focals and rotations
-    cameras_.create(num_images_ * 4, 1, CV_64F);
+    cameras_.create(num_images_ * 7, 1, CV_64F);
     SVD svd;
     for (int i = 0; i < num_images_; ++i)
     {
-        cameras_.at<double>(i * 4, 0) = cameras[i].focal;
+        cameras_.at<double>(i * 7, 0) = cameras[i].focal;
+        cameras_.at<double>(i * 7 + 1, 0) = cameras[i].ppx;
+        cameras_.at<double>(i * 7 + 2, 0) = cameras[i].ppy;
+        cameras_.at<double>(i * 7 + 3, 0) = cameras[i].aspect;
 
         svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
@@ -175,9 +185,9 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
 
         Mat rvec;
         Rodrigues(R, rvec); CV_Assert(rvec.type() == CV_32F);
-        cameras_.at<double>(i * 4 + 1, 0) = rvec.at<float>(0, 0);
-        cameras_.at<double>(i * 4 + 2, 0) = rvec.at<float>(1, 0);
-        cameras_.at<double>(i * 4 + 3, 0) = rvec.at<float>(2, 0);
+        cameras_.at<double>(i * 7 + 4, 0) = rvec.at<float>(0, 0);
+        cameras_.at<double>(i * 7 + 5, 0) = rvec.at<float>(1, 0);
+        cameras_.at<double>(i * 7 + 6, 0) = rvec.at<float>(2, 0);
     }
 
     // Select only consistent image pairs for futher adjustment
@@ -197,7 +207,7 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
     for (size_t i = 0; i < edges_.size(); ++i)
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * 4, total_num_matches_ * 3,
+    CvLevMarq solver(num_images_ * 7, total_num_matches_ * 2,
                      cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
 
     CvMat matParams = cameras_;
@@ -234,17 +244,20 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
         }
     }
     LOGLN("");
-    LOGLN("Bundle adjustment, final error: " << sqrt(err_.dot(err_)));
+    LOGLN("Bundle adjustment, final error: " << sqrt(err_.dot(err_)) / total_num_matches_);
     LOGLN("Bundle adjustment, iterations done: " << count);
 
     // Obtain global motion
     for (int i = 0; i < num_images_; ++i)
     {
-        cameras[i].focal = cameras_.at<double>(i * 4, 0);
+        cameras[i].focal = cameras_.at<double>(i * 7, 0);
+        cameras[i].ppx = cameras_.at<double>(i * 7 + 1, 0);
+        cameras[i].ppy = cameras_.at<double>(i * 7 + 2, 0);
+        cameras[i].aspect = cameras_.at<double>(i * 7 + 3, 0);
         Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cameras_.at<double>(i * 4 + 1, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(i * 4 + 2, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(i * 4 + 3, 0);
+        rvec.at<double>(0, 0) = cameras_.at<double>(i * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cameras_.at<double>(i * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cameras_.at<double>(i * 7 + 6, 0);
         Rodrigues(rvec, cameras[i].R);
         Mat Mf;
         cameras[i].R.convertTo(Mf, CV_32F);
@@ -265,62 +278,65 @@ void BundleAdjuster::estimate(const vector<ImageFeatures> &features, const vecto
 
 void BundleAdjuster::calcError(Mat &err)
 {
-    err.create(total_num_matches_ * 3, 1, CV_64F);
+    err.create(total_num_matches_ * 2, 1, CV_64F);
 
     int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
     {
         int i = edges_[edge_idx].first;
         int j = edges_[edge_idx].second;
-        double f1 = cameras_.at<double>(i * 4, 0);
-        double f2 = cameras_.at<double>(j * 4, 0);
-        double R1[9], R2[9];
-        Mat R1_(3, 3, CV_64F, R1), R2_(3, 3, CV_64F, R2);
+        double f1 = cameras_.at<double>(i * 7, 0);
+        double f2 = cameras_.at<double>(j * 7, 0);
+        double ppx1 = cameras_.at<double>(i * 7 + 1, 0);
+        double ppx2 = cameras_.at<double>(j * 7 + 1, 0);
+        double ppy1 = cameras_.at<double>(i * 7 + 2, 0);
+        double ppy2 = cameras_.at<double>(j * 7 + 2, 0);
+        double a1 = cameras_.at<double>(i * 7 + 3, 0);
+        double a2 = cameras_.at<double>(j * 7 + 3, 0);
+
+        double R1[9];
+        Mat R1_(3, 3, CV_64F, R1);
         Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cameras_.at<double>(i * 4 + 1, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(i * 4 + 2, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(i * 4 + 3, 0);
-        Rodrigues(rvec, R1_); CV_Assert(R1_.type() == CV_64F);
-        rvec.at<double>(0, 0) = cameras_.at<double>(j * 4 + 1, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(j * 4 + 2, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(j * 4 + 3, 0);
-        Rodrigues(rvec, R2_); CV_Assert(R2_.type() == CV_64F);
+        rvec.at<double>(0, 0) = cameras_.at<double>(i * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cameras_.at<double>(i * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cameras_.at<double>(i * 7 + 6, 0);
+        Rodrigues(rvec, R1_);
+
+        double R2[9];
+        Mat R2_(3, 3, CV_64F, R2);
+        rvec.at<double>(0, 0) = cameras_.at<double>(j * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cameras_.at<double>(j * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cameras_.at<double>(j * 7 + 6, 0);
+        Rodrigues(rvec, R2_);
 
         const ImageFeatures& features1 = features_[i];
         const ImageFeatures& features2 = features_[j];
         const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
 
+        Mat_<double> K1 = Mat::eye(3, 3, CV_64F);
+        K1(0,0) = f1; K1(0,2) = ppx1;
+        K1(1,1) = f1*a1; K1(1,2) = ppy1;
+
+        Mat_<double> K2 = Mat::eye(3, 3, CV_64F);
+        K2(0,0) = f2; K2(0,2) = ppx2;
+        K2(1,1) = f2*a2; K2(1,2) = ppy2;
+
+        Mat_<double> H = K2 * R2_.inv() * R1_ * K1.inv();
+
         for (size_t k = 0; k < matches_info.matches.size(); ++k)
         {
             if (!matches_info.inliers_mask[k])
                 continue;
-
             const DMatch& m = matches_info.matches[k];
 
-            Point2d kp1 = features1.keypoints[m.queryIdx].pt;
-            kp1.x -= 0.5 * features1.img_size.width;
-            kp1.y -= 0.5 * features1.img_size.height;
-            Point2d kp2 = features2.keypoints[m.trainIdx].pt;
-            kp2.x -= 0.5 * features2.img_size.width;
-            kp2.y -= 0.5 * features2.img_size.height;
-            double len1 = sqrt(kp1.x * kp1.x + kp1.y * kp1.y + f1 * f1);
-            double len2 = sqrt(kp2.x * kp2.x + kp2.y * kp2.y + f2 * f2);
-            Point3d p1(kp1.x / len1, kp1.y / len1, f1 / len1);
-            Point3d p2(kp2.x / len2, kp2.y / len2, f2 / len2);
+            Point2d p1 = features1.keypoints[m.queryIdx].pt;
+            Point2d p2 = features2.keypoints[m.trainIdx].pt;
+            double x = H(0,0)*p1.x + H(0,1)*p1.y + H(0,2);
+            double y = H(1,0)*p1.x + H(1,1)*p1.y + H(1,2);
+            double z = H(2,0)*p1.x + H(2,1)*p1.y + H(2,2);
 
-            Point3d d1(p1.x * R1[0] + p1.y * R1[1] + p1.z * R1[2],
-                       p1.x * R1[3] + p1.y * R1[4] + p1.z * R1[5],
-                       p1.x * R1[6] + p1.y * R1[7] + p1.z * R1[8]);
-            Point3d d2(p2.x * R2[0] + p2.y * R2[1] + p2.z * R2[2],
-                       p2.x * R2[3] + p2.y * R2[4] + p2.z * R2[5],
-                       p2.x * R2[6] + p2.y * R2[7] + p2.z * R2[8]);
-
-            double mult = 1; // For cost_space_ == RAY_SPACE
-            if (cost_space_ == FOCAL_RAY_SPACE)
-                mult = sqrt(f1 * f2);
-            err.at<double>(3 * match_idx, 0) = mult * (d1.x - d2.x);
-            err.at<double>(3 * match_idx + 1, 0) = mult * (d1.y - d2.y);
-            err.at<double>(3 * match_idx + 2, 0) = mult * (d1.z - d2.z);
+            err.at<double>(2 * match_idx, 0) = p2.x - x/z;
+            err.at<double>(2 * match_idx + 1, 0) = p2.y - y/z;
             match_idx++;
         }
     }
@@ -329,45 +345,23 @@ void BundleAdjuster::calcError(Mat &err)
 
 void BundleAdjuster::calcJacobian()
 {
-    J_.create(total_num_matches_ * 3, num_images_ * 4, CV_64F);
+    J_.create(total_num_matches_ * 2, num_images_ * 7, CV_64F);
 
-    double f, r;
-    const double df = 0.001; // Focal length step
-    const double dr = 0.001; // Angle step
+    double val;
+    const double step = 1e-3;
 
     for (int i = 0; i < num_images_; ++i)
     {
-        f = cameras_.at<double>(i * 4, 0);
-        cameras_.at<double>(i * 4, 0) = f - df;
-        calcError(err1_);
-        cameras_.at<double>(i * 4, 0) = f + df;
-        calcError(err2_);
-        calcDeriv(err1_, err2_, 2 * df, J_.col(i * 4));
-        cameras_.at<double>(i * 4, 0) = f;
-
-        r = cameras_.at<double>(i * 4 + 1, 0);
-        cameras_.at<double>(i * 4 + 1, 0) = r - dr;
-        calcError(err1_);
-        cameras_.at<double>(i * 4 + 1, 0) = r + dr;
-        calcError(err2_);
-        calcDeriv(err1_, err2_, 2 * dr, J_.col(i * 4 + 1));
-        cameras_.at<double>(i * 4 + 1, 0) = r;
-
-        r = cameras_.at<double>(i * 4 + 2, 0);
-        cameras_.at<double>(i * 4 + 2, 0) = r - dr;
-        calcError(err1_);
-        cameras_.at<double>(i * 4 + 2, 0) = r + dr;
-        calcError(err2_);
-        calcDeriv(err1_, err2_, 2 * dr, J_.col(i * 4 + 2));
-        cameras_.at<double>(i * 4 + 2, 0) = r;
-
-        r = cameras_.at<double>(i * 4 + 3, 0);
-        cameras_.at<double>(i * 4 + 3, 0) = r - dr;
-        calcError(err1_);
-        cameras_.at<double>(i * 4 + 3, 0) = r + dr;
-        calcError(err2_);
-        calcDeriv(err1_, err2_, 2 * dr, J_.col(i * 4 + 3));
-        cameras_.at<double>(i * 4 + 3, 0) = r;
+        for (int j = 0; j < 7; ++j)
+        {
+            val = cameras_.at<double>(i * 7 + j, 0);
+            cameras_.at<double>(i * 7+ j, 0) = val - step;
+            calcError(err1_);
+            cameras_.at<double>(i * 7 + j, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, J_.col(i * 7 + j));
+            cameras_.at<double>(i * 7 + j, 0) = val;
+        }
     }
 }
 

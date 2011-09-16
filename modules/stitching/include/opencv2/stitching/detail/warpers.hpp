@@ -55,27 +55,22 @@ namespace detail {
 class CV_EXPORTS Warper
 {
 public:
-    enum { PLANE, CYLINDRICAL, SPHERICAL };
-
-    // TODO remove this method
-    static Ptr<Warper> createByCameraFocal(float focal, int type, bool try_gpu = false);
-
     virtual ~Warper() {}
-    virtual Point warp(const Mat &src, float focal, const Mat& R, Mat &dst,
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
                        int interp_mode = INTER_LINEAR, int border_mode = BORDER_REFLECT) = 0;
-    virtual Rect warpRoi(const Size &sz, float focal, const Mat &R) = 0;
+    virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R) = 0;
 };
 
 
 struct CV_EXPORTS ProjectorBase
 {
-    void setTransformation(const Mat& R);
+    void setCameraParams(const Mat &K, const Mat &R);
 
-    Size size;
-    float focal;
-    float r[9];
-    float rinv[9];
     float scale;
+    float k[9];
+    float rinv[9];
+    float r_kinv[9];
+    float k_rinv[9];
 };
 
 
@@ -83,10 +78,10 @@ template <class P>
 class CV_EXPORTS WarperBase : public Warper
 {   
 public:
-    virtual Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
                        int interp_mode, int border_mode);
 
-    virtual Rect warpRoi(const Size &sz, float focal, const Mat &R);
+    virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R);
 
 protected:
     // Detects ROI of the destination image. It's correct for any projection.
@@ -105,7 +100,6 @@ struct CV_EXPORTS PlaneProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
-    float plane_dist;
 };
 
 
@@ -113,11 +107,7 @@ struct CV_EXPORTS PlaneProjector : ProjectorBase
 class CV_EXPORTS PlaneWarper : public WarperBase<PlaneProjector>
 {
 public:
-    PlaneWarper(float plane_dist = 1.f, float scale = 1.f)
-    {
-        projector_.plane_dist = plane_dist;
-        projector_.scale = scale;
-    }
+    PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
 
 protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br);
@@ -127,8 +117,8 @@ protected:
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
-    PlaneWarperGpu(float plane_dist = 1.f, float scale = 1.f) : PlaneWarper(plane_dist, scale) {}
-    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
+    PlaneWarperGpu(float scale = 1.f) : PlaneWarper(scale) {}
+    Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
                int interp_mode, int border_mode);
 
 private:
@@ -149,7 +139,7 @@ struct CV_EXPORTS SphericalProjector : ProjectorBase
 class CV_EXPORTS SphericalWarper : public WarperBase<SphericalProjector>
 {
 public:
-    SphericalWarper(float scale = 300.f) { projector_.scale = scale; }
+    SphericalWarper(float scale) { projector_.scale = scale; }
 
 protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br);
@@ -160,9 +150,9 @@ protected:
 class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
 {
 public:
-    SphericalWarperGpu(float scale = 300.f) : SphericalWarper(scale) {}
-    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                   int interp_mode, int border_mode);
+    SphericalWarperGpu(float scale) : SphericalWarper(scale) {}
+    Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+               int interp_mode, int border_mode);
 
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
@@ -181,13 +171,11 @@ struct CV_EXPORTS CylindricalProjector : ProjectorBase
 class CV_EXPORTS CylindricalWarper : public WarperBase<CylindricalProjector>
 {
 public:
-    CylindricalWarper(float scale = 300.f) { projector_.scale = scale; }
+    CylindricalWarper(float scale) { projector_.scale = scale; }
 
 protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br)
-    {
-        WarperBase<CylindricalProjector>::detectResultRoiByBorder(dst_tl, dst_br);
-    }
+        { WarperBase<CylindricalProjector>::detectResultRoiByBorder(dst_tl, dst_br); }
 };
 
 
@@ -195,9 +183,9 @@ protected:
 class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 {
 public:
-    CylindricalWarperGpu(float scale = 300.f) : CylindricalWarper(scale) {}
-    Point warp(const Mat &src, float focal, const Mat &R, Mat &dst,
-                   int interp_mode, int border_mode);
+    CylindricalWarperGpu(float scale) : CylindricalWarper(scale) {}
+    Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+               int interp_mode, int border_mode);
 
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;

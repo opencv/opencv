@@ -645,15 +645,15 @@ namespace cv
         CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
 
         //! builds plane warping maps
-        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s, double dist,
+        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                            GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
 
         //! builds cylindrical warping maps
-        CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+        CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                                  GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
 
         //! builds spherical warping maps
-        CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat& R, double f, double s,
+        CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
                                                GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
 
         //! rotate 8bit single or four channel image

@@ -787,14 +787,14 @@ namespace cv { namespace gpu { namespace imgproc
     //////////////////////////////////////////////////////////////////////////
     // buildWarpMaps
 
+    // TODO use intrinsics like __sinf and so on
+
     namespace build_warp_maps
     {
 
-        __constant__ float cr[9];
-        __constant__ float crinv[9];
-        __constant__ float cf, cs;
-        __constant__ float chalf_w, chalf_h;
-        __constant__ float cdist;
+        __constant__ float ck_rinv[9];
+        __constant__ float cr_kinv[9];
+        __constant__ float cscale;
     }
 
 
@@ -805,16 +805,16 @@ namespace cv { namespace gpu { namespace imgproc
         {
             using namespace build_warp_maps;
 
-            float x_ = u / cs;
-            float y_ = v / cs;
+            float x_ = u / cscale;
+            float y_ = v / cscale;
 
             float z;
-            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*cdist;
-            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*cdist;
-            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*cdist;
+            x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2];
+            y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5];
+            z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8];
 
-            x = cf*x/z + chalf_w;
-            y = cf*y/z + chalf_h;
+            x /= z;
+            y /= z;
         }
     };
 
@@ -826,18 +826,18 @@ namespace cv { namespace gpu { namespace imgproc
         {
             using namespace build_warp_maps;
 
-            u /= cs;
+            u /= cscale;
             float x_ = sinf(u);
-            float y_ = v / cs;
+            float y_ = v / cscale;
             float z_ = cosf(u);
 
             float z;
-            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*z_;
-            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*z_;
-            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*z_;
+            x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2] * z_;
+            y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
+            z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
 
-            x = cf*x/z + chalf_w;
-            y = cf*y/z + chalf_h;
+            x /= z;
+            y /= z;
         }
     };
 
@@ -849,8 +849,8 @@ namespace cv { namespace gpu { namespace imgproc
         {
             using namespace build_warp_maps;
 
-            v /= cs;
-            u /= cs;
+            v /= cscale;
+            u /= cscale;
 
             float sinv = sinf(v);
             float x_ = sinv * sinf(u);
@@ -858,12 +858,12 @@ namespace cv { namespace gpu { namespace imgproc
             float z_ = sinv * cosf(u);
 
             float z;
-            x = crinv[0]*x_ + crinv[1]*y_ + crinv[2]*z_;
-            y = crinv[3]*x_ + crinv[4]*y_ + crinv[5]*z_;
-            z = crinv[6]*x_ + crinv[7]*y_ + crinv[8]*z_;
+            x = ck_rinv[0] * x_ + ck_rinv[1] * y_ + ck_rinv[2] * z_;
+            y = ck_rinv[3] * x_ + ck_rinv[4] * y_ + ck_rinv[5] * z_;
+            z = ck_rinv[6] * x_ + ck_rinv[7] * y_ + ck_rinv[8] * z_;
 
-            x = cf*x/z + chalf_w;
-            y = cf*y/z + chalf_h;
+            x /= z;
+            y /= z;
         }
     };
 
@@ -887,16 +887,12 @@ namespace cv { namespace gpu { namespace imgproc
 
 
     void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                            const float r[9], const float rinv[9], float f, float s, float dist,
-                            float half_w, float half_h, cudaStream_t stream)
+                            const float k_rinv[9], const float r_kinv[9], float scale,
+                            cudaStream_t stream)
     {
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cdist, &dist, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
         int cols = map_x.cols;
         int rows = map_x.rows;
@@ -912,15 +908,12 @@ namespace cv { namespace gpu { namespace imgproc
 
 
     void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                                  const float r[9], const float rinv[9], float f, float s,
-                                  float half_w, float half_h, cudaStream_t stream)
+                            const float k_rinv[9], const float r_kinv[9], float scale,
+                            cudaStream_t stream)
     {
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
         int cols = map_x.cols;
         int rows = map_x.rows;
@@ -936,15 +929,12 @@ namespace cv { namespace gpu { namespace imgproc
 
 
     void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
-                                const float r[9], const float rinv[9], float f, float s,
-                                float half_w, float half_h, cudaStream_t stream)
+                            const float k_rinv[9], const float r_kinv[9], float scale,
+                            cudaStream_t stream)
     {
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr, r, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::crinv, rinv, 9*sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cf, &f, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cs, &s, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_w, &half_w, sizeof(float)));
-        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::chalf_h, &half_h, sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
+        cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
 
         int cols = map_x.cols;
         int rows = map_x.rows;

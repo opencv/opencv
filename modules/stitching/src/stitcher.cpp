@@ -186,7 +186,7 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial focal length #" << indices[i]+1 << ": " << cameras[i].focal);
+        LOGLN("Initial intrinsic parameters #" << indices[i]+1 << ":\n " << cameras[i].K());
     }
 
     detail::BundleAdjuster adjuster(detail::BundleAdjuster::FOCAL_RAY_SPACE, conf_thresh_);
@@ -196,7 +196,7 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
-        LOGLN("Camera #" << indices[i]+1 << " focal length: " << cameras[i].focal);
+        LOGLN("Camera #" << indices[i]+1 << ":\n" << cameras[i].K());
         focals.push_back(cameras[i].focal);
     }
     nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
@@ -229,14 +229,18 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
     }
 
     // Warp images and their masks
-    Ptr<detail::Warper> warper = warper_->createByFocalLength(warped_image_scale * seam_work_aspect);
+    Ptr<detail::Warper> warper = warper_->create(warped_image_scale * seam_work_aspect);
     for (int i = 0; i < num_imgs; ++i)
     {
-        corners[i] = warper->warp(seam_est_imgs[i], static_cast<float>(cameras[i].focal * seam_work_aspect),
-                                  cameras[i].R, images_warped[i]);
+        Mat_<float> K;
+        cameras[i].K().convertTo(K, CV_32F);
+        K(0,0) *= seam_work_aspect; K(0,2) *= seam_work_aspect;
+        K(1,1) *= seam_work_aspect; K(1,2) *= seam_work_aspect;
+
+        corners[i] = warper->warp(seam_est_imgs[i], K, cameras[i].R, images_warped[i]);
         sizes[i] = images_warped[i].size();
-        warper->warp(masks[i], static_cast<float>(cameras[i].focal * seam_work_aspect),
-                     cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+
+        warper->warp(masks[i], K, cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
     }
 
     vector<Mat> images_warped_f(num_imgs);
@@ -281,13 +285,15 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
 
             // Update warped image scale
             warped_image_scale *= static_cast<float>(compose_work_aspect);
-            warper = warper_->createByFocalLength(warped_image_scale);
+            warper = warper_->create(warped_image_scale);
 
             // Update corners and sizes
             for (int i = 0; i < num_imgs; ++i)
             {
-                // Update camera focal
+                // Update intrinsics
                 cameras[i].focal *= compose_work_aspect;
+                cameras[i].ppx *= compose_work_aspect;
+                cameras[i].ppy *= compose_work_aspect;
 
                 // Update corner and size
                 Size sz = full_img_sizes[i];
@@ -297,7 +303,9 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
                     sz.height = cvRound(full_img_sizes[i].height * compose_scale);
                 }
 
-                Rect roi = warper->warpRoi(sz, static_cast<float>(cameras[i].focal), cameras[i].R);
+                Mat K;
+                cameras[i].K().convertTo(K, CV_32F);
+                Rect roi = warper->warpRoi(sz, K, cameras[i].R);
                 corners[i] = roi.tl();
                 sizes[i] = roi.size();
             }
@@ -309,15 +317,16 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
         full_img.release();
         Size img_size = img.size();
 
+        Mat K;
+        cameras[img_idx].K().convertTo(K, CV_32F);
+
         // Warp the current image
-        warper->warp(img, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R,
-                     img_warped);
+        warper->warp(img, K, cameras[img_idx].R, img_warped);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
-        warper->warp(mask, static_cast<float>(cameras[img_idx].focal), cameras[img_idx].R, mask_warped,
-                     INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(mask, K, cameras[img_idx].R, mask_warped, INTER_NEAREST, BORDER_CONSTANT);
 
         // Compensate exposure
         exposure_comp_->apply(img_idx, corners[img_idx], img_warped, mask_warped);
