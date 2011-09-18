@@ -172,7 +172,9 @@ if( EXISTS "${ANDROID_NDK}" )
 
  set( PossibleAndroidLevels "3;4;5;8;9" )
  set( ANDROID_API_LEVEL ${ANDROID_API_LEVEL} CACHE STRING "android API level" )
- set_property( CACHE ANDROID_API_LEVEL PROPERTY STRINGS ${PossibleAndroidLevels} )
+ if( CMAKE_VERSION VERSION_GREATER "2.8")
+  set_property( CACHE ANDROID_API_LEVEL PROPERTY STRINGS ${PossibleAndroidLevels} )
+ endif()
  
  if( NOT ANDROID_API_LEVEL GREATER 2 )
   set( ANDROID_API_LEVEL 8)
@@ -237,7 +239,9 @@ IF( NOT ARM_TARGET)
  set( ARM_TARGET armeabi-v7a )
 ENDIF()
 set( ARM_TARGET "${ARM_TARGET}" CACHE INTERNAL "the arm target for android, recommend armeabi-v7a for floating point support and NEON." )
-set_property( CACHE ARM_TARGET PROPERTY STRINGS ${PossibleArmTargets} )
+if( CMAKE_VERSION VERSION_GREATER "2.8")
+ set_property( CACHE ARM_TARGET PROPERTY STRINGS ${PossibleArmTargets} )
+endif()
 
 #set these flags for client use
 if( ARM_TARGET STREQUAL "armeabi" )
