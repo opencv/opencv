@@ -79,8 +79,6 @@ void printUsage()
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
-        "  --ba (no|ray|focal_ray)\n"
-        "      Bundle adjustment cost function. The default is 'focal_ray'.\n"
         "  --wave_correct (no|yes)\n"
         "      Perform wave effect correction. The default is 'yes'.\n"
         "  --save_graph <file_name>\n"
@@ -115,7 +113,6 @@ bool try_gpu = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
-int ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
 float conf_thresh = 1.f;
 bool wave_correct = true;
 bool save_graph = false;
@@ -182,21 +179,6 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--match_conf")
         {
             match_conf = static_cast<float>(atof(argv[i + 1]));
-            i++;
-        }
-        else if (string(argv[i]) == "--ba")
-        {
-            if (string(argv[i + 1]) == "no")
-                ba_space = BundleAdjuster::NO;
-            else if (string(argv[i + 1]) == "ray")
-                ba_space = BundleAdjuster::RAY_SPACE;
-            else if (string(argv[i + 1]) == "focal_ray")
-                ba_space = BundleAdjuster::FOCAL_RAY_SPACE;
-            else
-            {
-                cout << "Bad bundle adjustment space\n";
-                return -1;
-            }
             i++;
         }
         else if (string(argv[i]) == "--conf_thresh")
@@ -431,14 +413,14 @@ int main(int argc, char* argv[])
         LOGLN("Initial focal length #" << indices[i]+1 << ": " << cameras[i].focal);
     }
 
-    BundleAdjuster adjuster(ba_space, conf_thresh);
+    BundleAdjusterReproj adjuster(conf_thresh);
     adjuster(features, pairwise_matches, cameras);
 
     // Find median focal length
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
-        LOGLN("Camera #" << indices[i]+1 << " focal length: " << cameras[i].focal);
+        LOGLN("Camera #" << indices[i]+1 << ":\n" << cameras[i].K());
         focals.push_back(cameras[i].focal);
     }
     nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
@@ -476,16 +458,16 @@ int main(int argc, char* argv[])
 #ifndef ANDROID
     if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
-        if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
-        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
-        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
+        if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
+        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarperGpu();
+        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarperGpu();
     }
     else
 #endif
     {
-        if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
-        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarperGpu();
-        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarperGpu();
+        if (warp_type == "plane") warper_creator = new cv::PlaneWarper();
+        else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarper();
+        else if (warp_type == "spherical") warper_creator = new cv::SphericalWarper();
     }
 
     if (warper_creator.empty())
