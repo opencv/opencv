@@ -410,7 +410,7 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial focal length #" << indices[i]+1 << ": " << cameras[i].focal);
+        LOGLN("Initial intrinsics #" << indices[i]+1 << ":\n" << cameras[i].K());
     }
 
     BundleAdjusterReproj adjuster(conf_thresh);
