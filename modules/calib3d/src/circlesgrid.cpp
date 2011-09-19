@@ -52,6 +52,10 @@ using namespace std;
 
 void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSize, vector<Point2f> &patternPoints)
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::hierarchicalClustering(points, patternSize, patternPoints))
+        return;
+#endif
     int i, j, n = (int)points.size();
     size_t pn = static_cast<size_t>(patternSize.area());
 
