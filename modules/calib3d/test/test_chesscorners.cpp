@@ -74,23 +74,25 @@ void show_points( const Mat& gray, const Mat& u, const vector<Point2f>& v, Size 
 }
 
 
-enum Pattern { CHESSBOARD, CIRCLES_GRID };
+enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
 
 class CV_ChessboardDetectorTest : public cvtest::BaseTest
 {
 public:
-    CV_ChessboardDetectorTest( Pattern pattern );
+    CV_ChessboardDetectorTest( Pattern pattern, int algorithmFlags = 0 );
 protected:
     void run(int);
     void run_batch(const string& filename);
     bool checkByGenerator();
 
     Pattern pattern;
+    int algorithmFlags;
 };
 
-CV_ChessboardDetectorTest::CV_ChessboardDetectorTest( Pattern _pattern )
+CV_ChessboardDetectorTest::CV_ChessboardDetectorTest( Pattern _pattern, int _algorithmFlags )
 {
     pattern = _pattern;
+    algorithmFlags = _algorithmFlags;
 }
 
 double calcError(const vector<Point2f>& v, const Mat& u)
@@ -147,6 +149,9 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
         case CIRCLES_GRID:
             run_batch("circles_list.dat");
             break;
+        case ASYMMETRIC_CIRCLES_GRID:
+            run_batch("acircles_list.dat");
+            break;
     }
 }
 
@@ -168,6 +173,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             break;
         case CIRCLES_GRID:
             folder = string(ts.get_data_path()) + "cameracalibration/circles/";
+            break;
+        case ASYMMETRIC_CIRCLES_GRID:
+            folder = string(ts.get_data_path()) + "cameracalibration/asymmetric_circles/";
             break;
     }
 
@@ -228,6 +236,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 break;
             case CIRCLES_GRID:
                 result = findCirclesGrid(gray, pattern_size, v);
+                break;
+            case ASYMMETRIC_CIRCLES_GRID:
+                result = findCirclesGrid(gray, pattern_size, v, CALIB_CB_ASYMMETRIC_GRID | algorithmFlags);
                 break;
         }
         show_points( gray, Mat(), v, pattern_size, result );
@@ -439,5 +450,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
 TEST(Calib3d_ChessboardDetector, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD ); test.safe_run(); }
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
+TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
+TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
 
 /* End of file. */
