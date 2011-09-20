@@ -224,7 +224,7 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 #endif
 
   vector<Point2f> tangentVectors(corners.size());
-  for(size_t k=0; k<=corners.size(); k++)
+  for(size_t k=0; k<corners.size(); k++)
   {
     Point2f diff = corners[(k + 1) % corners.size()] - corners[k];
     tangentVectors[k] = diff * (1.0f / norm(diff));
