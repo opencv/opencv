@@ -215,9 +215,6 @@ void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f>
 {
   outsideCorners.clear();
   //find two pairs of the most nearest corners
-  double min1 = std::numeric_limits<double>::max();
-  double min2 = std::numeric_limits<double>::max();
-  Point minLoc1, minLoc2;
   int i, j, n = (int)corners.size();
 
 #ifdef DEBUG_CIRCLES
