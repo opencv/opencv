@@ -175,7 +175,7 @@ cv::gpu::GpuMat cv::gpu::HOGDescriptor::getBuffer(const Size& sz, int type, GpuM
 	if (buf.empty() || buf.type() != type)
 		buf.create(sz, type);
 	else
-		if (buf.cols < sz.width || buf.rows < sz.width)
+		if (buf.cols < sz.width || buf.rows < sz.height)
 			buf.create(std::max(buf.rows, sz.height), std::max(buf.cols, sz.width), type);	
 
 	return buf(Rect(Point(0,0), sz));
