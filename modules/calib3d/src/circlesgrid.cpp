@@ -50,6 +50,16 @@
 using namespace cv;
 using namespace std;
 
+#ifdef DEBUG_CIRCLES
+void drawPoints(const vector<Point2f> &points, Mat &outImage, int radius = 2,  Scalar color = Scalar::all(255), int thickness = -1)
+{
+  for(size_t i=0; i<points.size(); i++)
+  {
+    circle(outImage, points[i], radius, color, thickness);
+  }
+}
+#endif
+
 void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSize, vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -106,6 +116,12 @@ void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> poin
         patternClusterIdx = minIdx;
     }
 
+    //the largest cluster can have more than pn points -- we need to filter out such situations
+    if(clusters[patternClusterIdx].size() != static_cast<size_t>(patternSize.area()))
+    {
+      return;
+    }
+
     patternPoints.reserve(clusters[patternClusterIdx].size());
     for(std::list<size_t>::iterator it = clusters[patternClusterIdx].begin(); it != clusters[patternClusterIdx].end(); it++)
     {
@@ -128,6 +144,12 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> points, c
   {
     return;
   }
+
+#ifdef DEBUG_CIRCLES
+  Mat patternPointsImage(1024, 1248, CV_8UC1, Scalar(0));
+  drawPoints(patternPoints, patternPointsImage);
+  imshow("pattern points", patternPointsImage);
+#endif
 
   vector<Point2f> hull2f;
   convexHull(Mat(patternPoints), hull2f, false);
@@ -178,60 +200,93 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   Mat sortedIndices;
   sortIdx(anglesMat, sortedIndices, CV_SORT_EVERY_COLUMN + CV_SORT_DESCENDING);
   CV_Assert(sortedIndices.type() == CV_32SC1);
+  CV_Assert(sortedIndices.cols == 1);
   const int cornersCount = isAsymmetricGrid ? 6 : 4;
+  Mat cornersIndices;
+  cv::sort(sortedIndices.rowRange(0, cornersCount), cornersIndices, CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
   corners.clear();
   for(int i=0; i<cornersCount; i++)
   {
-    corners.push_back(hull2f[sortedIndices.at<int>(i, 0)]);
+    corners.push_back(hull2f[cornersIndices.at<int>(i, 0)]);
   }
 }
 
 void CirclesGridClusterFinder::findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners)
 {
+  outsideCorners.clear();
   //find two pairs of the most nearest corners
   double min1 = std::numeric_limits<double>::max();
   double min2 = std::numeric_limits<double>::max();
   Point minLoc1, minLoc2;
   int i, j, n = (int)corners.size();
 
+#ifdef DEBUG_CIRCLES
+  Mat cornersImage(1024, 1248, CV_8UC1, Scalar(0));
+  drawPoints(corners, cornersImage);
+  imshow("corners", cornersImage);
+#endif
+
+  vector<Point2f> tangentVectors(corners.size());
+  for(size_t k=0; k<=corners.size(); k++)
+  {
+    Point2f diff = corners[(k + 1) % corners.size()] - corners[k];
+    tangentVectors[k] = diff * (1.0f / norm(diff));
+  }
+
+  //compute angles between all sides
+  Mat cosAngles(n, n, CV_32FC1, 0.0f);
   for(i = 0; i < n; i++)
   {
-    for(j = i+1; j < n; j++)
+    for(j = i + 1; j < n; j++)
     {
-      double dist = norm(corners[i] - corners[j]);
-      Point loc(j, i);
-      if(dist < min1)
-      {
-        min2 = min1;
-        minLoc2 = minLoc1;
-        min1 = dist;
-        minLoc1 = loc;
-      }
-      else
-      {
-        if(dist < min2)
-        {
-          min2 = dist;
-          minLoc2 = loc;
-        }
-      }
+      float val = fabs(tangentVectors[i].dot(tangentVectors[j]));
+      cosAngles.at<float>(i, j) = val;
+      cosAngles.at<float>(j, i) = val;
     }
   }
-  std::set<int> outsideCornersIndices;
-  for(i = 0; i < n; i++)
-  {
-    outsideCornersIndices.insert(i);
-  }
-  outsideCornersIndices.erase(minLoc1.x);
-  outsideCornersIndices.erase(minLoc1.y);
-  outsideCornersIndices.erase(minLoc2.x);
-  outsideCornersIndices.erase(minLoc2.y);
 
-  outsideCorners.clear();
-  for(std::set<int>::iterator it = outsideCornersIndices.begin(); it != outsideCornersIndices.end(); it++)
+  //find two parallel sides to which outside corners belong
+  Point maxLoc;
+  minMaxLoc(cosAngles, 0, 0, 0, &maxLoc);
+  const int diffBetweenFalseLines = 3;
+  if(abs(maxLoc.x - maxLoc.y) == diffBetweenFalseLines)
   {
-    outsideCorners.push_back(corners[*it]);
+    cosAngles.row(maxLoc.x).setTo(0.0f);
+    cosAngles.col(maxLoc.x).setTo(0.0f);
+    cosAngles.row(maxLoc.y).setTo(0.0f);
+    cosAngles.col(maxLoc.y).setTo(0.0f);
+    minMaxLoc(cosAngles, 0, 0, 0, &maxLoc);
   }
+
+#ifdef DEBUG_CIRCLES
+  Mat linesImage(1024, 1248, CV_8UC1, Scalar(0));
+  line(linesImage, corners[maxLoc.y], corners[(maxLoc.y + 1) % n], Scalar(255));
+  line(linesImage, corners[maxLoc.x], corners[(maxLoc.x + 1) % n], Scalar(255));
+  imshow("lines", linesImage);
+#endif
+
+  int maxIdx = std::max(maxLoc.x, maxLoc.y);
+  int minIdx = std::min(maxLoc.x, maxLoc.y);
+  const int bigDiff = 4;
+  if(maxIdx - minIdx == bigDiff)
+  {
+    minIdx += n;
+    std::swap(maxIdx, minIdx);
+  }
+  if(maxIdx - minIdx != n - bigDiff)
+  {
+    return;
+  }
+
+  int outsidersSegmentIdx = (minIdx + maxIdx) / 2;
+
+  outsideCorners.push_back(corners[outsidersSegmentIdx % n]);
+  outsideCorners.push_back(corners[(outsidersSegmentIdx + 1) % n]);
+
+#ifdef DEBUG_CIRCLES
+  drawPoints(outsideCorners, cornersImage, 2, Scalar(128));
+  imshow("corners", outsideCornersImage);
+#endif
 }
 
 void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners)
@@ -355,6 +410,9 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
 
       if(dists[0] > maxRectifiedDistance)
       {
+#ifdef DEBUG_CIRCLES
+        cout << "Pattern not detected: too large rectified distance" << endl;
+#endif
         centers.clear();
         return;
       }
