@@ -73,11 +73,6 @@ namespace cv { namespace gpu { namespace device
             return (x >= 0 && x < width) ? saturate_cast<D>(data[x]) : val;
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
-        }
-
         const int width;
         const D val;
     };
@@ -103,11 +98,6 @@ namespace cv { namespace gpu { namespace device
             return (y >= 0 && y < height) ? saturate_cast<D>(*(const T*)((const char*)data + y * step)) : val;
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
-        }
-
         const int height;
         const D val;
     };
@@ -116,8 +106,7 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdConstant(int height_, int width_, const D& val_ = VecTraits<D>::all(0)) : 
-            height(height_), width(width_), val(val_) 
+        __host__ __device__ __forceinline__ BrdConstant(int height_, int width_, const D& val_ = VecTraits<D>::all(0)) : height(height_), width(width_), val(val_) 
         {
         }
 
@@ -176,11 +165,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
-        }
-
         const int last_col;
     };
 
@@ -221,11 +205,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const T*)((const char*)data + idx_row(y) * step));
         }
 
-        bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
-        }
-
         const int last_row;
     };
 
@@ -233,15 +212,8 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdReplicate(int height, int width) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
-        template <typename U> 
-        __host__ __device__ __forceinline__ BrdReplicate(int height, int width, U) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
+        __host__ __device__ __forceinline__ BrdReplicate(int height, int width) : last_row(height - 1), last_col(width - 1) {}
+        template <typename U> __host__ __device__ __forceinline__ BrdReplicate(int height, int width, U) : last_row(height - 1), last_col(width - 1) {}
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
@@ -299,12 +271,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_col_low(int x) const
         {
-            return ::abs(x);
+            return ::abs(x) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col_high(int x) const 
         {
-            return last_col - ::abs(last_col - x);
+            return ::abs(last_col - ::abs(last_col - x)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col(int x) const
@@ -327,11 +299,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return -last_col <= mini && maxi <= 2 * last_col;
-        }
-
         const int last_col;
     };
 
@@ -344,12 +311,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
-            return ::abs(y);
+            return ::abs(y) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row_high(int y) const 
         {
-            return last_row - ::abs(last_row - y);
+            return ::abs(last_row - ::abs(last_row - y)) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row(int y) const
@@ -372,11 +339,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return -last_row <= mini && maxi <= 2 * last_row;
-        }
-
         const int last_row;
     };
 
@@ -384,24 +346,17 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdReflect101(int height, int width) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
-        template <typename U> 
-        __host__ __device__ __forceinline__ BrdReflect101(int height, int width, U) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
+        __host__ __device__ __forceinline__ BrdReflect101(int height, int width) : last_row(height - 1), last_col(width - 1) {}
+        template <typename U> __host__ __device__ __forceinline__ BrdReflect101(int height, int width, U) : last_row(height - 1), last_col(width - 1) {}
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
-            return ::abs(y);
+            return ::abs(y) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row_high(int y) const 
         {
-            return last_row - ::abs(last_row - y);
+            return ::abs(last_row - ::abs(last_row - y)) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row(int y) const
@@ -411,12 +366,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_col_low(int x) const
         {
-            return ::abs(x);
+            return ::abs(x) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col_high(int x) const 
         {
-            return last_col - ::abs(last_col - x);
+            return ::abs(last_col - ::abs(last_col - x)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col(int x) const
@@ -450,12 +405,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_col_low(int x) const
         {
-            return ::abs(x) - (x < 0);
+            return (::abs(x) - (x < 0)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col_high(int x) const 
         {
-            return last_col - ::abs(last_col - x) + (x > last_col);
+            return ::abs(last_col - ::abs(last_col - x) + (x > last_col)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col(int x) const
@@ -478,11 +433,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return -last_col <= mini && maxi <= 2 * last_col;
-        }
-
         const int last_col;
     };
 
@@ -495,12 +445,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
-            return ::abs(y) - (y < 0);
+            return (::abs(y) - (y < 0)) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row_high(int y) const 
         {
-            return last_row - ::abs(last_row - y) + (y > last_row);
+            return ::abs(last_row - ::abs(last_row - y) + (y > last_row)) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row(int y) const
@@ -523,11 +473,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return -last_row <= mini && maxi <= 2 * last_row;
-        }
-
         const int last_row;
     };
 
@@ -535,24 +480,17 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdReflect(int height, int width) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
-        template <typename U> 
-        __host__ __device__ __forceinline__ BrdReflect(int height, int width, U) : 
-            last_row(height - 1), last_col(width - 1) 
-        {
-        }
+        __host__ __device__ __forceinline__ BrdReflect(int height, int width) : last_row(height - 1), last_col(width - 1) {}
+        template <typename U> __host__ __device__ __forceinline__ BrdReflect(int height, int width, U) : last_row(height - 1), last_col(width - 1) {}
 
         __device__ __forceinline__ int idx_row_low(int y) const
         {
-            return ::abs(y) - (y < 0);
+            return (::abs(y) - (y < 0)) % (last_row + 1);
         }
 
         __device__ __forceinline__ int idx_row_high(int y) const 
         {
-            return last_row - ::abs(last_row - y) + (y > last_row);
+            return /*::abs*/(last_row - ::abs(last_row - y) + (y > last_row)) /*% (last_row + 1)*/;
         }
 
         __device__ __forceinline__ int idx_row(int y) const
@@ -562,12 +500,12 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ int idx_col_low(int x) const
         {
-            return ::abs(x) - (x < 0);
+            return (::abs(x) - (x < 0)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col_high(int x) const 
         {
-            return last_col - ::abs(last_col - x) + (x > last_col);
+            return /*::abs*/(last_col - ::abs(last_col - x) + (x > last_col)) /*% (last_col + 1)*/;
         }
 
         __device__ __forceinline__ int idx_col(int x) const
@@ -629,11 +567,6 @@ namespace cv { namespace gpu { namespace device
             return saturate_cast<D>(data[idx_col(x)]);
         }
 
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
-        }
-
         const int width;
     };
 
@@ -672,11 +605,6 @@ namespace cv { namespace gpu { namespace device
         template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
-        }
-
-        __host__ __device__ __forceinline__ bool is_range_safe(int mini, int maxi) const 
-        {
-            return true;
         }
 
         const int height;

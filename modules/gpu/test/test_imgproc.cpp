@@ -262,10 +262,11 @@ INSTANTIATE_TEST_CASE_P
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int> >
 {
     cv::gpu::DeviceInfo devInfo;
     int type;
+    int borderType;
 
     cv::Size size;
     cv::Mat src;
@@ -281,6 +282,7 @@ struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
     {
         devInfo = std::tr1::get<0>(GetParam());
         type = std::tr1::get<1>(GetParam());
+        borderType = std::tr1::get<2>(GetParam());
 
         cv::gpu::setDevice(devInfo.deviceID());
 
@@ -296,12 +298,16 @@ struct CopyMakeBorder : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceI
         right = rng.uniform(1, 10);
         val = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 
-        cv::copyMakeBorder(src, dst_gold, top, botton, left, right, cv::BORDER_CONSTANT, val);
+        cv::copyMakeBorder(src, dst_gold, top, botton, left, right, borderType, val);
     }
 };
 
 TEST_P(CopyMakeBorder, Accuracy)
 {
+    static const char* borderTypes_str[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+
+    const char* borderTypeStr = borderTypes_str[borderType];
+
     PRINT_PARAM(devInfo);
     PRINT_TYPE(type);
     PRINT_PARAM(size);
@@ -309,6 +315,7 @@ TEST_P(CopyMakeBorder, Accuracy)
     PRINT_PARAM(botton);
     PRINT_PARAM(left);
     PRINT_PARAM(right);
+    PRINT_PARAM(borderTypeStr);
     PRINT_PARAM(val);
 
     cv::Mat dst;
@@ -316,7 +323,7 @@ TEST_P(CopyMakeBorder, Accuracy)
     ASSERT_NO_THROW(
         cv::gpu::GpuMat gpuRes;
 
-        cv::gpu::copyMakeBorder(cv::gpu::GpuMat(src), gpuRes, top, botton, left, right, val);
+        cv::gpu::copyMakeBorder(cv::gpu::GpuMat(src), gpuRes, top, botton, left, right, borderType, val);
 
         gpuRes.download(dst);
     );
@@ -326,7 +333,8 @@ TEST_P(CopyMakeBorder, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, CopyMakeBorder, testing::Combine(
                         testing::ValuesIn(devices()), 
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1)));
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        testing::Values((int)cv::BORDER_REFLECT101, (int)cv::BORDER_REPLICATE, (int)cv::BORDER_CONSTANT, (int)cv::BORDER_REFLECT, (int)cv::BORDER_WRAP)));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // warpAffine & warpPerspective

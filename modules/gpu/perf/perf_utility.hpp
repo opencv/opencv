@@ -49,6 +49,7 @@ typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, NormType> > DevInfo
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, NormType> > DevInfo_Size_MatType_NormType;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int> > DevInfo_DescSize;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int, int> > DevInfo_K_DescSize;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, BorderMode> > DevInfo_Size_MatType_BorderMode;
 
 const cv::Size sz1800x1500 = cv::Size(1800, 1500);
 const cv::Size sz4700x3000 = cv::Size(4700, 3000);

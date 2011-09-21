@@ -109,12 +109,6 @@ namespace cv { namespace gpu { namespace filters
 
         B<T> b(src.rows);
 
-        if (!b.is_range_safe(-BLOCK_DIM_Y, (grid.y + 1) * BLOCK_DIM_Y - 1))
-        {
-            cv::gpu::error("linearColumnFilter: can't use specified border extrapolation, image is too small, "
-                           "try bigger image or another border extrapolation mode", __FILE__, __LINE__);
-        }
-
         filter_krnls_column::linearColumnFilter<ksize, T, D><<<grid, threads, 0, stream>>>(src, dst, anchor, b);
         cudaSafeCall( cudaGetLastError() );
 

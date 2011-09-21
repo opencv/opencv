@@ -460,13 +460,15 @@ PERF_TEST_P(DevInfo_Size_MatType_Interpolation, rotate, testing::Combine(testing
     SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType, copyMakeBorder, testing::Combine(testing::ValuesIn(devices()),
-                                                                         testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                         testing::Values(CV_8UC1, CV_8UC4, CV_32SC1)))
+PERF_TEST_P(DevInfo_Size_MatType_BorderMode, copyMakeBorder, testing::Combine(testing::ValuesIn(devices()),
+                                                                              testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                              testing::Values(CV_8UC1, CV_8UC4, CV_32FC1), 
+                                                                              testing::Values((int)BORDER_REPLICATE, (int)BORDER_CONSTANT)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
     int type = std::tr1::get<2>(GetParam());
+    int borderType = std::tr1::get<3>(GetParam());
 
     setDevice(devInfo.deviceID());
 
@@ -481,7 +483,7 @@ PERF_TEST_P(DevInfo_Size_MatType, copyMakeBorder, testing::Combine(testing::Valu
 
     SIMPLE_TEST_CYCLE()
     {
-        copyMakeBorder(src, dst, 5, 5, 5, 5);
+        copyMakeBorder(src, dst, 5, 5, 5, 5, borderType);
     }
 
     Mat dst_host(dst);

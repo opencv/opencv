@@ -125,12 +125,6 @@ namespace cv { namespace gpu { namespace filters
         typedef typename filter_krnls_row::SmemType<T>::smem_t smem_t;
         B<smem_t> b(src.cols);
 
-        if (!b.is_range_safe(-BLOCK_DIM_X, (grid.x + 1) * BLOCK_DIM_X - 1))
-        {
-            cv::gpu::error("linearRowFilter: can't use specified border extrapolation, image is too small, "
-                           "try bigger image or another border extrapolation mode", __FILE__, __LINE__);
-        }
-
         filter_krnls_row::linearRowFilter<ksize, T, D><<<grid, threads, 0, stream>>>(src, dst, anchor, b);
         cudaSafeCall( cudaGetLastError() );
 

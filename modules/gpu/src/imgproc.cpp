@@ -53,7 +53,7 @@ void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCrite
 void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, Stream&) { throw_nogpu(); }
 void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&) { throw_nogpu(); }
-void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
+void cv::gpu::copyMakeBorder(const GpuMat&, GpuMat&, int, int, int, int, int, const Scalar&, Stream&) { throw_nogpu(); }
 void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
 void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, Stream&) { throw_nogpu(); }
 void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -360,60 +360,99 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value, Stream& s)
+namespace cv { namespace gpu {  namespace imgproc
 {
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
+    template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
+}}}
+
+namespace
+{
+    template <typename T, int cn> void copyMakeBorder_caller(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
+    {
+        Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
+
+        imgproc::copyMakeBorder_gpu<T, cn>(src, dst, top, left, borderType, val.val, stream);
+    }
+}
+
+void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& s)
+{
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
 
     dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
 
-    NppiSize srcsz;
-    srcsz.width  = src.cols;
-    srcsz.height = src.rows;
-    NppiSize dstsz;
-    dstsz.width  = dst.cols;
-    dstsz.height = dst.rows;
-
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    NppStreamHandler h(stream);
-
-    switch (src.type())
+    if (borderType == BORDER_CONSTANT && (src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1))
     {
-    case CV_8UC1:
-        {
-            Npp8u nVal = static_cast<Npp8u>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
-            break;
-        }
-    case CV_8UC4:
-        {
-            Npp8u nVal[] = {static_cast<Npp8u>(value[0]), static_cast<Npp8u>(value[1]), static_cast<Npp8u>(value[2]), static_cast<Npp8u>(value[3])};
-            nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
-            break;
-        }
-    case CV_32SC1:
-        {
-            Npp32s nVal = static_cast<Npp32s>(value[0]);
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
-                dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
-            break;
-        }
-    case CV_32FC1:
-        {
-            Npp32f val = static_cast<Npp32f>(value[0]);
-            Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
-            nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
-                dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
-            break;
-        }
-    default:
-        CV_Assert(!"Unsupported source type");
-    }
+        NppiSize srcsz;
+        srcsz.width  = src.cols;
+        srcsz.height = src.rows;
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        NppiSize dstsz;
+        dstsz.width  = dst.cols;
+        dstsz.height = dst.rows;
+
+        NppStreamHandler h(stream);
+
+        switch (src.type())
+        {
+        case CV_8UC1:
+            {
+                Npp8u nVal = saturate_cast<Npp8u>(value[0]);
+                nppSafeCall( nppiCopyConstBorder_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
+                    dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
+                break;
+            }
+        case CV_8UC4:
+            {
+                Npp8u nVal[] = {saturate_cast<Npp8u>(value[0]), saturate_cast<Npp8u>(value[1]), saturate_cast<Npp8u>(value[2]), saturate_cast<Npp8u>(value[3])};
+                nppSafeCall( nppiCopyConstBorder_8u_C4R(src.ptr<Npp8u>(), static_cast<int>(src.step), srcsz,
+                    dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
+                break;
+            }
+        case CV_32SC1:
+            {
+                Npp32s nVal = saturate_cast<Npp32s>(value[0]);
+                nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
+                    dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
+                break;
+            }
+        case CV_32FC1:
+            {
+                Npp32f val = saturate_cast<Npp32f>(value[0]);
+                Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
+                nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
+                    dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
+                break;
+            }
+        }
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+    else
+    {
+        typedef void (*caller_t)(const DevMem2D& src, const DevMem2D& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
+        static const caller_t callers[6][4] = 
+        {
+            {   copyMakeBorder_caller<uchar, 1>  , 0/*copyMakeBorder_caller<uchar, 2>*/ ,    copyMakeBorder_caller<uchar, 3>  ,    copyMakeBorder_caller<uchar, 4>},
+            {0/*copyMakeBorder_caller<schar, 1>*/, 0/*copyMakeBorder_caller<schar, 2>*/ , 0/*copyMakeBorder_caller<schar, 3>*/, 0/*copyMakeBorder_caller<schar, 4>*/},
+            {   copyMakeBorder_caller<ushort, 1> , 0/*copyMakeBorder_caller<ushort, 2>*/,    copyMakeBorder_caller<ushort, 3> ,    copyMakeBorder_caller<ushort, 4>},
+            {   copyMakeBorder_caller<short, 1>  , 0/*copyMakeBorder_caller<short, 2>*/ ,    copyMakeBorder_caller<short, 3>  ,    copyMakeBorder_caller<short, 4>},
+            {0/*copyMakeBorder_caller<int, 1>*/  , 0/*copyMakeBorder_caller<int, 2>*/   , 0/*copyMakeBorder_caller<int, 3>*/  , 0/*copyMakeBorder_caller<int, 4>*/},
+            {   copyMakeBorder_caller<float, 1>  , 0/*copyMakeBorder_caller<float, 2>*/ ,    copyMakeBorder_caller<float, 3>  ,    copyMakeBorder_caller<float ,4>}
+        };
+
+        caller_t func = callers[src.depth()][src.channels() - 1];
+        CV_Assert(func != 0);
+
+        int gpuBorderType;
+        CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
+
+        func(src, dst, top, left, gpuBorderType, value, stream);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////

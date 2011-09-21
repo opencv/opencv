@@ -662,8 +662,7 @@ namespace cv
         CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1 and CV_32FC1 types
-        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, const Scalar& value = Scalar(), Stream& stream = Stream::Null());
+        CV_EXPORTS void copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
         //! computes the integral image
         //! sum will have CV_32S type, but will contain unsigned int values
