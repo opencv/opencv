@@ -32,6 +32,8 @@ namespace cv
 #define CC_LBP  "LBP"
 #define CC_RECT "rect"
 
+#define CC_HOG  "HOG"
+
 #define CV_SUM_PTRS( p0, p1, p2, p3, sum, rect, step )                    \
     /* (x, y) */                                                          \
     (p0) = sum + (rect).x + (step) * (rect).y,                            \
@@ -234,6 +236,84 @@ inline void LBPEvaluator::Feature :: updatePtrs( const Mat& sum )
     CV_SUM_PTRS( p[10], p[11], p[14], p[15], ptr, tr, step );
     tr.x -= 2*rect.width;
     CV_SUM_PTRS( p[8], p[9], p[12], p[13], ptr, tr, step );
+}
+
+//---------------------------------------------- HOGEvaluator -------------------------------------------
+
+class HOGEvaluator : public FeatureEvaluator
+{
+public:
+    struct Feature
+    {
+        Feature();
+        float calc( int offset ) const;
+        void updatePtrs( const vector<Mat>& _hist, const Mat &_normSum );
+        bool read( const FileNode& node );  
+
+        enum { CELL_NUM = 4, BIN_NUM = 9 };
+
+        Rect rect[CELL_NUM];
+        int featComponent; //component index from 0 to 35
+        const float* pF[4]; //for feature calculation
+        const float* pN[4]; //for normalization calculation
+    };
+    HOGEvaluator();
+    virtual ~HOGEvaluator();
+    virtual bool read( const FileNode& node );
+    virtual Ptr<FeatureEvaluator> clone() const;
+    virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
+    virtual bool setImage( const Mat& image, Size winSize );
+    virtual bool setWindow( Point pt );
+    double operator()(int featureIdx) const
+    {
+        return featuresPtr[featureIdx].calc(offset);
+    }
+    virtual double calcOrd( int featureIdx ) const
+    {
+        return (*this)(featureIdx);
+    }
+
+private:
+    virtual void integralHistogram( const Mat& srcImage, vector<Mat> &histogram, Mat &norm, int nbins ) const;
+
+    Size origWinSize;
+    Ptr<vector<Feature>> features;
+    Feature* featuresPtr;
+    vector<Mat> hist;
+    Mat normSum;
+    int offset;
+};
+
+inline HOGEvaluator::Feature :: Feature()
+{
+    rect[0] = rect[1] = rect[2] = rect[3] = Rect();
+    pF[0] = pF[1] = pF[2] = pF[3] = 0;
+    pN[0] = pN[1] = pN[2] = pN[3] = 0;
+    featComponent = 0;
+}
+
+inline float HOGEvaluator::Feature :: calc( int offset ) const
+{
+    float res = CALC_SUM(pF, offset);
+    float normFactor = CALC_SUM(pN, offset);
+    res = (res > 0.001f) ? (res / ( normFactor + 0.001f) ) : 0.f;
+    return res;
+}
+
+inline void HOGEvaluator::Feature :: updatePtrs( const vector<Mat> &_hist, const Mat &_normSum )
+{
+    int binIdx = featComponent % BIN_NUM;
+    int cellIdx = featComponent / BIN_NUM;
+    Rect normRect = Rect( rect[0].x, rect[0].y, 2*rect[0].width, 2*rect[0].height );
+
+    const float* featBuf = (const float*)_hist[binIdx].data;
+    size_t featStep = _hist[0].step / sizeof(featBuf[0]);
+
+    const float* normBuf = (const float*)_normSum.data;
+    size_t normStep = _normSum.step / sizeof(normBuf[0]);
+
+    CV_SUM_PTRS( pF[0], pF[1], pF[2], pF[3], featBuf, rect[cellIdx], featStep );
+    CV_SUM_PTRS( pN[0], pN[1], pN[2], pN[3], normBuf, normRect, normStep );
 }
 
 

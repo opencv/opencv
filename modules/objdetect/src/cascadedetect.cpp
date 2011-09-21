@@ -592,14 +592,197 @@ bool LBPEvaluator::setWindow( Point pt )
         return false;
     offset = pt.y * ((int)sum.step/sizeof(int)) + pt.x;
     return true;
+}          
+
+//----------------------------------------------  HOGEvaluator ---------------------------------------
+bool HOGEvaluator::Feature :: read( const FileNode& node )
+{
+    FileNode rnode = node[CC_RECT];
+    FileNodeIterator it = rnode.begin();
+    it >> rect[0].x >> rect[0].y >> rect[0].width >> rect[0].height >> featComponent;
+    rect[1].x = rect[0].x + rect[0].width;
+    rect[1].y = rect[0].y;
+    rect[2].x = rect[0].x;
+    rect[2].y = rect[0].y + rect[0].height;
+    rect[3].x = rect[0].x + rect[0].width;
+    rect[3].y = rect[0].y + rect[0].height;
+    rect[1].width = rect[2].width = rect[3].width = rect[0].width;
+    rect[1].height = rect[2].height = rect[3].height = rect[0].height;
+    return true;
 }
 
-Ptr<FeatureEvaluator> FeatureEvaluator::create(int featureType)
+HOGEvaluator::HOGEvaluator()
+{
+    features = new vector<Feature>();
+}
+
+HOGEvaluator::~HOGEvaluator()
+{
+}
+
+bool HOGEvaluator::read( const FileNode& node )
+{
+    features->resize(node.size());
+    featuresPtr = &(*features)[0];
+    FileNodeIterator it = node.begin(), it_end = node.end();
+    for(int i = 0; it != it_end; ++it, i++)
+    {
+        if(!featuresPtr[i].read(*it))
+            return false;
+    }
+    return true;
+}
+
+Ptr<FeatureEvaluator> HOGEvaluator::clone() const
+{
+    HOGEvaluator* ret = new HOGEvaluator;
+    ret->origWinSize = origWinSize;
+    ret->features = features;
+    ret->featuresPtr = &(*ret->features)[0];
+    ret->offset = offset;
+    ret->hist = hist;
+    ret->normSum = normSum;    
+    return ret;
+}
+
+bool HOGEvaluator::setImage( const Mat& image, Size winSize )
+{
+    int rows = image.rows + 1;
+    int cols = image.cols + 1;
+    origWinSize = winSize;
+    if( image.cols < origWinSize.width || image.rows < origWinSize.height )
+        return false;
+    hist.clear();
+    for( int bin = 0; bin < Feature::BIN_NUM; bin++ )
+    {
+        hist.push_back( Mat(rows, cols, CV_32FC1) );
+    }
+    normSum.create( rows, cols, CV_32FC1 );
+
+    integralHistogram( image, hist, normSum, Feature::BIN_NUM );
+
+    size_t featIdx, featCount = features->size();
+
+    for( featIdx = 0; featIdx < featCount; featIdx++ )
+    {
+        featuresPtr[featIdx].updatePtrs( hist, normSum );
+    }
+    return true;
+}
+
+bool HOGEvaluator::setWindow(Point pt)
+{
+    if( pt.x < 0 || pt.y < 0 ||
+        pt.x + origWinSize.width >= hist[0].cols-2 ||
+        pt.y + origWinSize.height >= hist[0].rows-2 )
+        return false;
+    offset = pt.y * ((int)hist[0].step/sizeof(float)) + pt.x;
+    return true;
+}
+
+void HOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, Mat &norm, int nbins) const
+{
+    CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
+    int x, y, binIdx;
+
+    Size gradSize(img.size());
+    Size histSize(histogram[0].size());
+    Mat grad(gradSize, CV_32F);
+    Mat qangle(gradSize, CV_8U);
+
+    AutoBuffer<int> mapbuf(gradSize.width + gradSize.height + 4);
+    int* xmap = (int*)mapbuf + 1;
+    int* ymap = xmap + gradSize.width + 2;
+
+    const int borderType = (int)BORDER_REPLICATE;
+
+    for( x = -1; x < gradSize.width + 1; x++ )
+        xmap[x] = borderInterpolate(x, gradSize.width, borderType);
+    for( y = -1; y < gradSize.height + 1; y++ )
+        ymap[y] = borderInterpolate(y, gradSize.height, borderType);
+
+    int width = gradSize.width;
+    AutoBuffer<float> _dbuf(width*4);
+    float* dbuf = _dbuf;
+    Mat Dx(1, width, CV_32F, dbuf);
+    Mat Dy(1, width, CV_32F, dbuf + width);
+    Mat Mag(1, width, CV_32F, dbuf + width*2);
+    Mat Angle(1, width, CV_32F, dbuf + width*3);
+
+    float angleScale = (float)(nbins/CV_PI);
+
+    for( y = 0; y < gradSize.height; y++ )
+    {
+        const uchar* currPtr = img.data + img.step*ymap[y];
+        const uchar* prevPtr = img.data + img.step*ymap[y-1];
+        const uchar* nextPtr = img.data + img.step*ymap[y+1];
+        float* gradPtr = (float*)grad.ptr(y);
+        uchar* qanglePtr = (uchar*)qangle.ptr(y);
+
+        for( x = 0; x < width; x++ )
+        {
+            dbuf[x] = (float)(currPtr[xmap[x+1]] - currPtr[xmap[x-1]]);
+            dbuf[width + x] = (float)(nextPtr[xmap[x]] - prevPtr[xmap[x]]);
+        }
+        cartToPolar( Dx, Dy, Mag, Angle, false );
+        for( x = 0; x < width; x++ )
+        {
+            float mag = dbuf[x+width*2];
+            float angle = dbuf[x+width*3];
+            angle = angle*angleScale - 0.5f;
+            int bidx = cvFloor(angle);
+            angle -= bidx;
+            if( bidx < 0 )
+                bidx += nbins;
+            else if( bidx >= nbins )
+                bidx -= nbins;
+
+            qanglePtr[x] = (uchar)bidx;
+            gradPtr[x] = mag;
+        }
+    }
+    integral(grad, norm, grad.depth());
+
+    float* histBuf;
+    const float* magBuf;
+    const uchar* binsBuf;
+
+    int binsStep = (int)( qangle.step / sizeof(uchar) );
+    int histStep = (int)( histogram[0].step / sizeof(float) );
+    int magStep = (int)( grad.step / sizeof(float) );
+    for( binIdx = 0; binIdx < nbins; binIdx++ )
+    {
+        histBuf = (float*)histogram[binIdx].data;
+        magBuf = (const float*)grad.data;
+        binsBuf = (const uchar*)qangle.data;
+
+        memset( histBuf, 0, histSize.width * sizeof(histBuf[0]) );
+        histBuf += histStep + 1;
+        for( y = 0; y < qangle.rows; y++ )
+        { 
+            histBuf[-1] = 0.f;
+            float strSum = 0.f;
+            for( x = 0; x < qangle.cols; x++ )
+            {
+                if( binsBuf[x] == binIdx )
+                    strSum += magBuf[x];
+                histBuf[x] = histBuf[-histStep + x] + strSum;
+            }
+            histBuf += histStep;
+            binsBuf += binsStep;
+            magBuf += magStep;
+        }
+    }
+}
+
+Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 {
     return featureType == HAAR ? Ptr<FeatureEvaluator>(new HaarEvaluator) :
-        featureType == LBP ? Ptr<FeatureEvaluator>(new LBPEvaluator) : Ptr<FeatureEvaluator>();
+        featureType == LBP ? Ptr<FeatureEvaluator>(new LBPEvaluator) : 
+        featureType == HOG ? Ptr<FeatureEvaluator>(new HOGEvaluator) :
+        Ptr<FeatureEvaluator>();
 }
-    
+
 //---------------------------------------- Classifier Cascade --------------------------------------------
 
 CascadeClassifier::CascadeClassifier()
@@ -637,21 +820,38 @@ bool CascadeClassifier::load(const string& filename)
     return !oldCascade.empty();
 }
     
-
 int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& featureEvaluator, Point pt, double& weight )
 {
     CV_Assert( oldCascade.empty() );
         
-    assert(data.featureType == FeatureEvaluator::HAAR ||
-           data.featureType == FeatureEvaluator::LBP);
+    assert( data.featureType == FeatureEvaluator::HAAR ||
+            data.featureType == FeatureEvaluator::LBP ||
+            data.featureType == FeatureEvaluator::HOG );
 
-    return !featureEvaluator->setWindow(pt) ? -1 :
-                data.isStumpBased ? ( data.featureType == FeatureEvaluator::HAAR ?
-                    predictOrderedStump<HaarEvaluator>( *this, featureEvaluator, weight ) :
-                    predictCategoricalStump<LBPEvaluator>( *this, featureEvaluator, weight ) ) :
-                                 ( data.featureType == FeatureEvaluator::HAAR ?
-                    predictOrdered<HaarEvaluator>( *this, featureEvaluator, weight ) :
-                    predictCategorical<LBPEvaluator>( *this, featureEvaluator, weight ) );
+    if( !featureEvaluator->setWindow(pt) )
+        return -1;
+    if( data.isStumpBased )
+    {
+        if( data.featureType == FeatureEvaluator::HAAR )
+            return predictOrderedStump<HaarEvaluator>( *this, featureEvaluator, weight );
+        else if( data.featureType == FeatureEvaluator::LBP )
+            return predictCategoricalStump<LBPEvaluator>( *this, featureEvaluator, weight );
+        else if( data.featureType == FeatureEvaluator::HOG )
+            return predictOrderedStump<HOGEvaluator>( *this, featureEvaluator, weight );
+        else
+            return -2;
+    }
+    else
+    {
+        if( data.featureType == FeatureEvaluator::HAAR )
+            return predictOrdered<HaarEvaluator>( *this, featureEvaluator, weight );
+        else if( data.featureType == FeatureEvaluator::LBP )
+            return predictCategorical<LBPEvaluator>( *this, featureEvaluator, weight );
+        else if( data.featureType == FeatureEvaluator::HOG )
+            return predictOrdered<HOGEvaluator>( *this, featureEvaluator, weight );
+        else
+            return -2;
+    }
 }
     
 bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& featureEvaluator, const Mat& image )
@@ -827,7 +1027,16 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
         resize( grayImage, scaledImage, scaledImageSize, 0, 0, CV_INTER_LINEAR );
 
-        int yStep = factor > 2. ? 1 : 2;
+        int yStep;
+        if( getFeatureType() == cv::FeatureEvaluator::HOG )
+        {
+            yStep = 4;
+        }
+        else
+        {
+            yStep = factor > 2. ? 1 : 2;
+        }
+
         int stripCount, stripSize;
 
     #if defined(HAVE_TBB) || defined(HAVE_THREADING_FRAMEWORK)
@@ -885,6 +1094,9 @@ bool CascadeClassifier::Data::read(const FileNode &root)
         featureType = FeatureEvaluator::HAAR;
     else if( featureTypeStr == CC_LBP )
         featureType = FeatureEvaluator::LBP;
+    else if( featureTypeStr == CC_HOG )
+        featureType = FeatureEvaluator::HOG;
+
     else
         return false;
 
