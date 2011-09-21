@@ -189,7 +189,8 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
         LOGLN("Initial intrinsic parameters #" << indices[i]+1 << ":\n " << cameras[i].K());
     }
 
-    detail::BundleAdjusterReproj adjuster(conf_thresh_);
+    detail::BundleAdjusterReproj adjuster;
+    adjuster.setConfThresh(conf_thresh_);
     adjuster(features, pairwise_matches, cameras);
 
     // Find median focal length

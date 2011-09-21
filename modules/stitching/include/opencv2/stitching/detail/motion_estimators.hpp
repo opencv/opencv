@@ -80,29 +80,61 @@ private:
 };
 
 
-// Minimizes reprojection error
-class CV_EXPORTS BundleAdjusterReproj : public Estimator
+class CV_EXPORTS BundleAdjusterBase : public Estimator
 {
 public:
-    BundleAdjusterReproj(float conf_thresh = 1.f) : conf_thresh_(conf_thresh) {}
+    double confThresh() const { return conf_thresh_; }
+    void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
-private:
-    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, 
-                  std::vector<CameraParams> &cameras);
+protected:
+    BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement) 
+        : num_params_per_cam_(num_params_per_cam), 
+          num_errs_per_measurement_(num_errs_per_measurement) 
+        { setConfThresh(1.); }
 
-    void calcError(Mat &err);
-    void calcJacobian();
+    // Runs bundle adjustment
+    virtual void estimate(const std::vector<ImageFeatures> &features, 
+                          const std::vector<MatchesInfo> &pairwise_matches,
+                          std::vector<CameraParams> &cameras);
+
+    virtual void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) = 0;
+    virtual void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const = 0;
+    virtual void calcError(Mat &err) = 0;
+    virtual void calcJacobian(Mat &jac) = 0;
 
     int num_images_;
     int total_num_matches_;
+
+    int num_params_per_cam_;
+    int num_errs_per_measurement_;
+
     const ImageFeatures *features_;
     const MatchesInfo *pairwise_matches_;
-    Mat cameras_;
-    std::vector<std::pair<int,int> > edges_;
 
-    float conf_thresh_;
-    Mat err_, err1_, err2_;
-    Mat J_;
+    // Threshold to filter out poorly matched image pairs
+    double conf_thresh_;
+
+    // Camera parameters matrix (CV_64F)
+    Mat cam_params_;
+
+    // Connected images pairs
+    std::vector<std::pair<int,int> > edges_;
+};
+
+
+// Minimizes reprojection error
+class CV_EXPORTS BundleAdjusterReproj : public BundleAdjusterBase
+{
+public:
+    BundleAdjusterReproj() : BundleAdjusterBase(6, 2) {}
+
+private:
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
+    void calcError(Mat &err);
+    void calcJacobian(Mat &jac);
+
+    Mat err1_, err2_;
 };
 
 

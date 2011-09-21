@@ -413,7 +413,8 @@ int main(int argc, char* argv[])
         LOGLN("Initial intrinsics #" << indices[i]+1 << ":\n" << cameras[i].K());
     }
 
-    BundleAdjusterReproj adjuster(conf_thresh);
+    BundleAdjusterReproj adjuster;
+    adjuster.setConfThresh(conf_thresh);
     adjuster(features, pairwise_matches, cameras);
 
     // Find median focal length

@@ -155,9 +155,9 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjusterReproj::estimate(const vector<ImageFeatures> &features,
-                                    const vector<MatchesInfo> &pairwise_matches,
-                                    vector<CameraParams> &cameras)
+void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
+                                  const vector<MatchesInfo> &pairwise_matches,
+                                  vector<CameraParams> &cameras)
 {
     LOG("Bundle adjustment");
     int64 t = getTickCount();
@@ -166,28 +166,9 @@ void BundleAdjusterReproj::estimate(const vector<ImageFeatures> &features,
     features_ = &features[0];
     pairwise_matches_ = &pairwise_matches[0];
 
-    // Prepare focals and rotations
-    cameras_.create(num_images_ * 6, 1, CV_64F);
-    SVD svd;
-    for (int i = 0; i < num_images_; ++i)
-    {
-        cameras_.at<double>(i * 6, 0) = cameras[i].focal;
-        cameras_.at<double>(i * 6 + 1, 0) = cameras[i].ppx;
-        cameras_.at<double>(i * 6 + 2, 0) = cameras[i].ppy;
+    setUpInitialCameraParams(cameras);
 
-        svd(cameras[i].R, SVD::FULL_UV);
-        Mat R = svd.u * svd.vt;
-        if (determinant(R) < 0) 
-            R *= -1;
-
-        Mat rvec;
-        Rodrigues(R, rvec); CV_Assert(rvec.type() == CV_32F);
-        cameras_.at<double>(i * 6 + 3, 0) = rvec.at<float>(0, 0);
-        cameras_.at<double>(i * 6 + 4, 0) = rvec.at<float>(1, 0);
-        cameras_.at<double>(i * 6 + 5, 0) = rvec.at<float>(2, 0);
-    }
-
-    // Select only consistent image pairs for futher adjustment
+    // Leave only consistent image pairs
     edges_.clear();
     for (int i = 0; i < num_images_ - 1; ++i)
     {
@@ -202,63 +183,53 @@ void BundleAdjusterReproj::estimate(const vector<ImageFeatures> &features,
     // Compute number of correspondences
     total_num_matches_ = 0;
     for (size_t i = 0; i < edges_.size(); ++i)
-        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + edges_[i].second].num_inliers);
+        total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ + 
+                                                                edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * 6, total_num_matches_ * 2,
+    CvLevMarq solver(num_images_ * num_params_per_cam_, 
+                     total_num_matches_ * num_errs_per_measurement_,
                      cvTermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 1000, DBL_EPSILON));
 
-    CvMat matParams = cameras_;
+    Mat err, jac;
+    CvMat matParams = cam_params_;
     cvCopy(&matParams, solver.param);
 
-    int count = 0;
+    int iter = 0;
     for(;;)
     {
         const CvMat* _param = 0;
-        CvMat* _J = 0;
+        CvMat* _jac = 0;
         CvMat* _err = 0;
 
-        bool proceed = solver.update(_param, _J, _err);
+        bool proceed = solver.update(_param, _jac, _err);
 
-        cvCopy( _param, &matParams );
+        cvCopy(_param, &matParams);
 
-        if( !proceed || !_err )
+        if (!proceed || !_err)
             break;
 
-        if( _J )
+        if (_jac)
         {
-            calcJacobian();
-            CvMat matJ = J_;
-            cvCopy( &matJ, _J );
+            calcJacobian(jac);
+            CvMat tmp = jac;
+            cvCopy(&tmp, _jac);
         }
 
         if (_err)
         {
-            calcError(err_);
+            calcError(err);
             LOG(".");
-            count++;
-            CvMat matErr = err_;
-            cvCopy( &matErr, _err );
+            iter++;
+            CvMat tmp = err;
+            cvCopy(&tmp, _err);
         }
     }
-    LOGLN("");
-    LOGLN("Bundle adjustment, final error: " << sqrt(err_.dot(err_)) / total_num_matches_);
-    LOGLN("Bundle adjustment, iterations done: " << count);
 
-    // Obtain global motion
-    for (int i = 0; i < num_images_; ++i)
-    {
-        cameras[i].focal = cameras_.at<double>(i * 6, 0);
-        cameras[i].ppx = cameras_.at<double>(i * 6 + 1, 0);
-        cameras[i].ppy = cameras_.at<double>(i * 6 + 2, 0);
-        Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cameras_.at<double>(i * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(i * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(i * 6 + 5, 0);
-        Rodrigues(rvec, cameras[i].R);
-        Mat Mf;
-        cameras[i].R.convertTo(Mf, CV_32F);
-        cameras[i].R = Mf;
-    }
+    LOGLN("");
+    LOGLN("Bundle adjustment, final RMS error: " << sqrt(err.dot(err) / total_num_matches_));
+    LOGLN("Bundle adjustment, iterations done: " << iter);
+
+    obtainRefinedCameraParams(cameras);
 
     // Normalize motion to center image
     Graph span_tree;
@@ -272,6 +243,55 @@ void BundleAdjusterReproj::estimate(const vector<ImageFeatures> &features,
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+
+void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &cameras)
+{
+    cam_params_.create(num_images_ * 6, 1, CV_64F);
+    SVD svd;
+    for (int i = 0; i < num_images_; ++i)
+    {
+        cam_params_.at<double>(i * 6, 0) = cameras[i].focal;
+        cam_params_.at<double>(i * 6 + 1, 0) = cameras[i].ppx;
+        cam_params_.at<double>(i * 6 + 2, 0) = cameras[i].ppy;
+
+        svd(cameras[i].R, SVD::FULL_UV);
+        Mat R = svd.u * svd.vt;
+        if (determinant(R) < 0) 
+            R *= -1;
+
+        Mat rvec;
+        Rodrigues(R, rvec);
+        CV_Assert(rvec.type() == CV_32F);
+        cam_params_.at<double>(i * 6 + 3, 0) = rvec.at<float>(0, 0);
+        cam_params_.at<double>(i * 6 + 4, 0) = rvec.at<float>(1, 0);
+        cam_params_.at<double>(i * 6 + 5, 0) = rvec.at<float>(2, 0);
+    }
+}
+
+
+void BundleAdjusterReproj::obtainRefinedCameraParams(vector<CameraParams> &cameras) const
+{
+    for (int i = 0; i < num_images_; ++i)
+    {
+        cameras[i].focal = cam_params_.at<double>(i * 6, 0);
+        cameras[i].ppx = cam_params_.at<double>(i * 6 + 1, 0);
+        cameras[i].ppy = cam_params_.at<double>(i * 6 + 2, 0);
+        cameras[i].aspect = 1.;
+
+        Mat rvec(3, 1, CV_64F);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 6 + 3, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 6 + 4, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 6 + 5, 0);
+        Rodrigues(rvec, cameras[i].R);
+
+        Mat tmp;
+        cameras[i].R.convertTo(tmp, CV_32F);
+        cameras[i].R = tmp;
+    }
+}
+
+
 void BundleAdjusterReproj::calcError(Mat &err)
 {
     err.create(total_num_matches_ * 2, 1, CV_64F);
@@ -281,26 +301,26 @@ void BundleAdjusterReproj::calcError(Mat &err)
     {
         int i = edges_[edge_idx].first;
         int j = edges_[edge_idx].second;
-        double f1 = cameras_.at<double>(i * 6, 0);
-        double f2 = cameras_.at<double>(j * 6, 0);
-        double ppx1 = cameras_.at<double>(i * 6 + 1, 0);
-        double ppx2 = cameras_.at<double>(j * 6 + 1, 0);
-        double ppy1 = cameras_.at<double>(i * 6 + 2, 0);
-        double ppy2 = cameras_.at<double>(j * 6 + 2, 0);
+        double f1 = cam_params_.at<double>(i * 6, 0);
+        double f2 = cam_params_.at<double>(j * 6, 0);
+        double ppx1 = cam_params_.at<double>(i * 6 + 1, 0);
+        double ppx2 = cam_params_.at<double>(j * 6 + 1, 0);
+        double ppy1 = cam_params_.at<double>(i * 6 + 2, 0);
+        double ppy2 = cam_params_.at<double>(j * 6 + 2, 0);
 
         double R1[9];
         Mat R1_(3, 3, CV_64F, R1);
         Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cameras_.at<double>(i * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(i * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(i * 6 + 5, 0);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 6 + 3, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 6 + 4, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 6 + 5, 0);
         Rodrigues(rvec, R1_);
 
         double R2[9];
         Mat R2_(3, 3, CV_64F, R2);
-        rvec.at<double>(0, 0) = cameras_.at<double>(j * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cameras_.at<double>(j * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cameras_.at<double>(j * 6 + 5, 0);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(j * 6 + 3, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(j * 6 + 4, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(j * 6 + 5, 0);
         Rodrigues(rvec, R2_);
 
         const ImageFeatures& features1 = features_[i];
@@ -321,8 +341,8 @@ void BundleAdjusterReproj::calcError(Mat &err)
         {
             if (!matches_info.inliers_mask[k])
                 continue;
-            const DMatch& m = matches_info.matches[k];
 
+            const DMatch& m = matches_info.matches[k];
             Point2f p1 = features1.keypoints[m.queryIdx].pt;
             Point2f p2 = features2.keypoints[m.trainIdx].pt;
             double x = H(0,0)*p1.x + H(0,1)*p1.y + H(0,2);
@@ -337,9 +357,9 @@ void BundleAdjusterReproj::calcError(Mat &err)
 }
 
 
-void BundleAdjusterReproj::calcJacobian()
+void BundleAdjusterReproj::calcJacobian(Mat &jac)
 {
-    J_.create(total_num_matches_ * 2, num_images_ * 6, CV_64F);
+    jac.create(total_num_matches_ * 2, num_images_ * 6, CV_64F);
 
     double val;
     const double step = 1e-4;
@@ -348,13 +368,13 @@ void BundleAdjusterReproj::calcJacobian()
     {
         for (int j = 0; j < 6; ++j)
         {
-            val = cameras_.at<double>(i * 6 + j, 0);
-            cameras_.at<double>(i * 6 + j, 0) = val - step;
+            val = cam_params_.at<double>(i * 6 + j, 0);
+            cam_params_.at<double>(i * 6 + j, 0) = val - step;
             calcError(err1_);
-            cameras_.at<double>(i * 6 + j, 0) = val + step;
+            cam_params_.at<double>(i * 6 + j, 0) = val + step;
             calcError(err2_);
-            calcDeriv(err1_, err2_, 2 * step, J_.col(i * 6 + j));
-            cameras_.at<double>(i * 6 + j, 0) = val;
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 6 + j));
+            cam_params_.at<double>(i * 6 + j, 0) = val;
         }
     }
 }
