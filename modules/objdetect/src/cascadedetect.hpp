@@ -277,7 +277,7 @@ private:
     virtual void integralHistogram( const Mat& srcImage, vector<Mat> &histogram, Mat &norm, int nbins ) const;
 
     Size origWinSize;
-    Ptr<vector<Feature>> features;
+    Ptr<vector<Feature> > features;
     Feature* featuresPtr;
     vector<Mat> hist;
     Mat normSum;
