@@ -593,6 +593,10 @@ namespace cv
         //! computes per-element maximum of array and scalar (dst = max(src1, src2))
         CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
 
+        //! computes the weighted sum of two arrays
+        CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, 
+            int dtype = -1, Stream& stream = Stream::Null());
+
 
         ////////////////////////////// Image processing //////////////////////////////
 

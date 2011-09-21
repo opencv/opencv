@@ -685,3 +685,34 @@ PERF_TEST_P(DevInfo_Size_MatType, countNonZero, testing::Combine(testing::Values
 
     SANITY_CHECK(dst);
 }
+
+PERF_TEST_P(DevInfo_Size_MatType, addWeighted, testing::Combine(testing::ValuesIn(devices()), 
+                                                                testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                testing::Values(CV_8UC1, CV_16UC1, CV_32FC1)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src1_host(size, type);
+    Mat src2_host(size, type);
+
+    declare.in(src1_host, src2_host, WARMUP_RNG);
+
+    GpuMat src1(src1_host);
+    GpuMat src2(src2_host);
+    GpuMat dst(size, type);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        addWeighted(src1, 0.5, src2, 0.5, 0.0, dst);
+    }
+
+    Mat dst_host = dst;
+
+    SANITY_CHECK(dst_host);
+}

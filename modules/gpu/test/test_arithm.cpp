@@ -1135,7 +1135,7 @@ TEST_P(MinMax, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     double minVal, maxVal;
@@ -1216,7 +1216,7 @@ TEST_P(MinMaxLoc, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     double minVal, maxVal;
@@ -1281,7 +1281,7 @@ TEST_P(CountNonZero, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     int n;
@@ -1333,7 +1333,7 @@ TEST_P(Sum, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Scalar sum;
@@ -1385,7 +1385,7 @@ TEST_P(AbsSum, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Scalar sum;
@@ -1439,7 +1439,7 @@ TEST_P(SqrSum, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Scalar sum;
@@ -1500,7 +1500,7 @@ TEST_P(BitwiseNot, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Mat dst;
@@ -1564,7 +1564,7 @@ TEST_P(BitwiseOr, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Mat dst;
@@ -1628,7 +1628,7 @@ TEST_P(BitwiseAnd, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Mat dst;
@@ -1692,7 +1692,7 @@ TEST_P(BitwiseXor, Accuracy)
         return;
 
     PRINT_PARAM(devInfo);
-    PRINT_TYPE(type)
+    PRINT_TYPE(type);
     PRINT_PARAM(size);
 
     cv::Mat dst;
@@ -1711,5 +1711,81 @@ TEST_P(BitwiseXor, Accuracy)
 INSTANTIATE_TEST_CASE_P(Arithm, BitwiseXor, testing::Combine(
                         testing::ValuesIn(devices()),
                         testing::ValuesIn(all_types())));
+
+//////////////////////////////////////////////////////////////////////////////
+// addWeighted
+
+struct AddWeighted : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type1;
+    int type2;
+    int dtype;
+
+    cv::Size size;
+    cv::Mat src1;
+    cv::Mat src2;
+    double alpha;
+    double beta;
+    double gamma;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type1 = std::tr1::get<1>(GetParam());
+        type2 = std::tr1::get<2>(GetParam());
+        dtype = std::tr1::get<3>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        src1 = cvtest::randomMat(rng, size, type1, 0.0, 255.0, false);
+        src2 = cvtest::randomMat(rng, size, type2, 0.0, 255.0, false);
+
+        alpha = rng.uniform(-10.0, 10.0);
+        beta = rng.uniform(-10.0, 10.0);
+        gamma = rng.uniform(-10.0, 10.0);
+
+        cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dtype);
+    }
+};
+
+TEST_P(AddWeighted, Accuracy) 
+{
+    if ((src1.depth() == CV_64F || src2.depth() == CV_64F || dst_gold.depth() == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        return;
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type1);
+    PRINT_TYPE(type2);
+    PRINT_TYPE(dtype);
+    PRINT_PARAM(size);
+    PRINT_PARAM(alpha);
+    PRINT_PARAM(beta);
+    PRINT_PARAM(gamma);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::addWeighted(cv::gpu::GpuMat(src1), alpha, cv::gpu::GpuMat(src2), beta, gamma, dev_dst, dtype);
+
+        dev_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst_gold, dst, dtype < CV_32F ? 1.0 : 1e-12);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)),
+                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)),
+                        testing::ValuesIn(types(CV_8U, CV_64F, 1, 1))));
 
 #endif // HAVE_CUDA

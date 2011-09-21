@@ -757,4 +757,326 @@ namespace cv { namespace gpu { namespace device
     }
 
     template void multiplyScalar_gpu<uchar, uchar>(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream);
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // addWeighted
+
+    template <typename T1, typename T2, typename D> struct AddWeighted : binary_function<T1, T2, D>
+    {
+        __host__ __device__ __forceinline__ AddWeighted(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
+
+        __device__ __forceinline__ D operator ()(typename TypeTraits<T1>::ParameterType a, typename TypeTraits<T2>::ParameterType b) const
+        {
+            return saturate_cast<D>(alpha * a + beta * b + gamma);
+        }
+
+        const double alpha;
+        const double beta;
+        const double gamma;
+    };
+
+    template <> struct TransformFunctorTraits< AddWeighted<ushort, ushort, ushort> > : DefaultTransformFunctorTraits< AddWeighted<ushort, ushort, ushort> >
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<ushort, ushort, short> > : DefaultTransformFunctorTraits< AddWeighted<ushort, ushort, short> >
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<ushort, short, ushort> > : DefaultTransformFunctorTraits< AddWeighted<ushort, short, ushort> >
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<ushort, short, short> > : DefaultTransformFunctorTraits< AddWeighted<ushort, short, short> >
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<short, short, ushort> > : DefaultTransformFunctorTraits< AddWeighted<short, short, ushort> >
+    {
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<short, short, short> > : DefaultTransformFunctorTraits< AddWeighted<short, short, short> >
+    {
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct TransformFunctorTraits< AddWeighted<int, int, int> > : DefaultTransformFunctorTraits< AddWeighted<int, int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<int, int, float> > : DefaultTransformFunctorTraits< AddWeighted<int, int, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<int, float, int> > : DefaultTransformFunctorTraits< AddWeighted<int, float, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<int, float, float> > : DefaultTransformFunctorTraits< AddWeighted<int, float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<float, float, int> > : DefaultTransformFunctorTraits< AddWeighted<float, float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddWeighted<float, float, float> > : DefaultTransformFunctorTraits< AddWeighted<float, float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T1, typename T2, typename D>
+    void addWeighted_gpu(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
+        cudaSafeCall( cudaSetDoubleForDevice(&beta) );
+        cudaSafeCall( cudaSetDoubleForDevice(&gamma) );
+
+        AddWeighted<T1, T2, D> op(alpha, beta, gamma);
+
+        transform(static_cast< DevMem2D_<T1> >(src1), static_cast< DevMem2D_<T2> >(src2), static_cast< DevMem2D_<D> >(dst), op, stream);
+    }
+
+    template void addWeighted_gpu<uchar, uchar, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, uchar, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, schar, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, schar, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, ushort, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, ushort, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, short, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, short, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, int, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, int, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<uchar, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<uchar, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+
+
+    template void addWeighted_gpu<schar, schar, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, schar, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<schar, ushort, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, ushort, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<schar, short, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, short, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<schar, int, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, int, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<schar, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<schar, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<schar, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+
+
+    template void addWeighted_gpu<ushort, ushort, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, ushort, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<ushort, short, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, short, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<ushort, int, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, int, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<ushort, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<ushort, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<ushort, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+
+
+    template void addWeighted_gpu<short, short, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, short, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<short, int, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, int, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<short, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<short, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<short, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    
+
+    template void addWeighted_gpu<int, int, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, int, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<int, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<int, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<int, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    
+
+    template void addWeighted_gpu<float, float, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, float, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    template void addWeighted_gpu<float, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<float, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    
+
+    template void addWeighted_gpu<double, double, uchar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, schar>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, ushort>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, short>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, int>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, float>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+    template void addWeighted_gpu<double, double, double>(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
 }}}

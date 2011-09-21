@@ -67,7 +67,8 @@ void cv::gpu::min(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::max(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
 double cv::gpu::threshold(const GpuMat&, GpuMat&, double, double, int, Stream&) {throw_nogpu(); return 0.0;}
-void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&)  { throw_nogpu(); }
+void cv::gpu::pow(const GpuMat&, double, GpuMat&, Stream&) { throw_nogpu(); }
+void cv::gpu::addWeighted(const GpuMat&, double, const GpuMat&, double, double, GpuMat&, int, Stream&) { throw_nogpu(); }
 
 #else
 
@@ -248,7 +249,7 @@ void cv::gpu::multiply(const GpuMat& src, const Scalar& sc, GpuMat& dst, Stream&
     {
         dst.create(src.size(), src.type());
 
-        device::multiplyScalar_gpu<uchar, uchar>(src.reshape(1), (float)(sc[0]), dst, StreamAccessor::getStream(stream));
+        device::multiplyScalar_gpu<unsigned char, unsigned char>(src.reshape(1), (float)(sc[0]), dst, StreamAccessor::getStream(stream));
     }
     else
     {
@@ -733,7 +734,7 @@ void cv::gpu::min(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
-        min_caller<uchar>, min_caller<schar>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<unsigned char>, min_caller<signed char>, min_caller<unsigned short>, min_caller<short>, min_caller<int>, 
         min_caller<float>, min_caller<double>
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
@@ -746,7 +747,7 @@ void cv::gpu::min(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream)
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
-        min_caller<uchar>, min_caller<schar>, min_caller<ushort>, min_caller<short>, min_caller<int>, 
+        min_caller<unsigned char>, min_caller<signed char>, min_caller<unsigned short>, min_caller<short>, min_caller<int>, 
         min_caller<float>, min_caller<double>
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
@@ -761,7 +762,7 @@ void cv::gpu::max(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& s
     typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
-        max_caller<uchar>, max_caller<schar>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<unsigned char>, max_caller<signed char>, max_caller<unsigned short>, max_caller<short>, max_caller<int>, 
         max_caller<float>, max_caller<double>
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
@@ -775,7 +776,7 @@ void cv::gpu::max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream)
     typedef void (*func_t)(const GpuMat& src1, double src2, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[] = 
     {
-        max_caller<uchar>, max_caller<schar>, max_caller<ushort>, max_caller<short>, max_caller<int>, 
+        max_caller<unsigned char>, max_caller<signed char>, max_caller<unsigned short>, max_caller<short>, max_caller<int>, 
         max_caller<float>, max_caller<double>
     };
     funcs[src1.depth()](src1, src2, dst, StreamAccessor::getStream(stream));
@@ -873,6 +874,499 @@ void cv::gpu::pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream)
     };
 
     callers[src.depth()](src.reshape(1), (float)power, dst.reshape(1), StreamAccessor::getStream(stream));    
+}
+
+////////////////////////////////////////////////////////////////////////
+// addWeighted
+
+namespace cv { namespace gpu { namespace device
+{
+    template <typename T1, typename T2, typename D>
+    void addWeighted_gpu(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+}}}
+
+void cv::gpu::addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, int dtype, Stream& stream)
+{
+    CV_Assert(src1.size() == src2.size());
+    CV_Assert(src1.type() == src2.type() || (dtype >= 0 && src1.channels() == src2.channels()));
+
+    dtype = dtype >= 0 ? CV_MAKETYPE(dtype, src1.channels()) : src1.type();
+
+    dst.create(src1.size(), dtype);
+
+    const GpuMat* psrc1 = &src1;
+    const GpuMat* psrc2 = &src2;
+
+    if (src1.depth() > src2.depth())
+    {
+        std::swap(psrc1, psrc2);
+        std::swap(alpha, beta);
+    }
+
+    typedef void (*caller_t)(const DevMem2D& src1, double alpha, const DevMem2D& src2, double beta, double gamma, const DevMem2D& dst, cudaStream_t stream);
+
+    using namespace cv::gpu::device;
+
+    static const caller_t callers[7][7][7] =
+    {
+        {
+            {
+                addWeighted_gpu<unsigned char, unsigned char, unsigned char >,
+                addWeighted_gpu<unsigned char, unsigned char, signed char >,
+                addWeighted_gpu<unsigned char, unsigned char, unsigned short>,
+                addWeighted_gpu<unsigned char, unsigned char, short >,
+                addWeighted_gpu<unsigned char, unsigned char, int   >,
+                addWeighted_gpu<unsigned char, unsigned char, float >,
+                addWeighted_gpu<unsigned char, unsigned char, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, signed char, unsigned char >,
+                addWeighted_gpu<unsigned char, signed char, signed char >,
+                addWeighted_gpu<unsigned char, signed char, unsigned short>,
+                addWeighted_gpu<unsigned char, signed char, short >,
+                addWeighted_gpu<unsigned char, signed char, int   >,
+                addWeighted_gpu<unsigned char, signed char, float >,
+                addWeighted_gpu<unsigned char, signed char, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, unsigned short, unsigned char >,
+                addWeighted_gpu<unsigned char, unsigned short, signed char >,
+                addWeighted_gpu<unsigned char, unsigned short, unsigned short>,
+                addWeighted_gpu<unsigned char, unsigned short, short >,
+                addWeighted_gpu<unsigned char, unsigned short, int   >,
+                addWeighted_gpu<unsigned char, unsigned short, float >,
+                addWeighted_gpu<unsigned char, unsigned short, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, short, unsigned char >,
+                addWeighted_gpu<unsigned char, short, signed char >,
+                addWeighted_gpu<unsigned char, short, unsigned short>,
+                addWeighted_gpu<unsigned char, short, short >,
+                addWeighted_gpu<unsigned char, short, int   >,
+                addWeighted_gpu<unsigned char, short, float >,
+                addWeighted_gpu<unsigned char, short, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, int, unsigned char >,
+                addWeighted_gpu<unsigned char, int, signed char >,
+                addWeighted_gpu<unsigned char, int, unsigned short>,
+                addWeighted_gpu<unsigned char, int, short >,
+                addWeighted_gpu<unsigned char, int, int   >,
+                addWeighted_gpu<unsigned char, int, float >,
+                addWeighted_gpu<unsigned char, int, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, float, unsigned char >,
+                addWeighted_gpu<unsigned char, float, signed char >,
+                addWeighted_gpu<unsigned char, float, unsigned short>,
+                addWeighted_gpu<unsigned char, float, short >,
+                addWeighted_gpu<unsigned char, float, int   >,
+                addWeighted_gpu<unsigned char, float, float >,
+                addWeighted_gpu<unsigned char, float, double>
+            },
+            {
+                addWeighted_gpu<unsigned char, double, unsigned char >,
+                addWeighted_gpu<unsigned char, double, signed char >,
+                addWeighted_gpu<unsigned char, double, unsigned short>,
+                addWeighted_gpu<unsigned char, double, short >,
+                addWeighted_gpu<unsigned char, double, int   >,
+                addWeighted_gpu<unsigned char, double, float >,
+                addWeighted_gpu<unsigned char, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<signed char, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<signed char, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<signed char, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<signed char, unsigned char, short >*/,
+                0/*addWeighted_gpu<signed char, unsigned char, int   >*/,
+                0/*addWeighted_gpu<signed char, unsigned char, float >*/,
+                0/*addWeighted_gpu<signed char, unsigned char, double>*/
+            },
+            {
+                addWeighted_gpu<signed char, signed char, unsigned char >,
+                addWeighted_gpu<signed char, signed char, signed char >,
+                addWeighted_gpu<signed char, signed char, unsigned short>,
+                addWeighted_gpu<signed char, signed char, short >,
+                addWeighted_gpu<signed char, signed char, int   >,
+                addWeighted_gpu<signed char, signed char, float >,
+                addWeighted_gpu<signed char, signed char, double>
+            },
+            {
+                addWeighted_gpu<signed char, unsigned short, unsigned char >,
+                addWeighted_gpu<signed char, unsigned short, signed char >,
+                addWeighted_gpu<signed char, unsigned short, unsigned short>,
+                addWeighted_gpu<signed char, unsigned short, short >,
+                addWeighted_gpu<signed char, unsigned short, int   >,
+                addWeighted_gpu<signed char, unsigned short, float >,
+                addWeighted_gpu<signed char, unsigned short, double>
+            },
+            {
+                addWeighted_gpu<signed char, short, unsigned char >,
+                addWeighted_gpu<signed char, short, signed char >,
+                addWeighted_gpu<signed char, short, unsigned short>,
+                addWeighted_gpu<signed char, short, short >,
+                addWeighted_gpu<signed char, short, int   >,
+                addWeighted_gpu<signed char, short, float >,
+                addWeighted_gpu<signed char, short, double>
+            },
+            {
+                addWeighted_gpu<signed char, int, unsigned char >,
+                addWeighted_gpu<signed char, int, signed char >,
+                addWeighted_gpu<signed char, int, unsigned short>,
+                addWeighted_gpu<signed char, int, short >,
+                addWeighted_gpu<signed char, int, int   >,
+                addWeighted_gpu<signed char, int, float >,
+                addWeighted_gpu<signed char, int, double>
+            },
+            {
+                addWeighted_gpu<signed char, float, unsigned char >,
+                addWeighted_gpu<signed char, float, signed char >,
+                addWeighted_gpu<signed char, float, unsigned short>,
+                addWeighted_gpu<signed char, float, short >,
+                addWeighted_gpu<signed char, float, int   >,
+                addWeighted_gpu<signed char, float, float >,
+                addWeighted_gpu<signed char, float, double>
+            },
+            {
+                addWeighted_gpu<signed char, double, unsigned char >,
+                addWeighted_gpu<signed char, double, signed char >,
+                addWeighted_gpu<signed char, double, unsigned short>,
+                addWeighted_gpu<signed char, double, short >,
+                addWeighted_gpu<signed char, double, int   >,
+                addWeighted_gpu<signed char, double, float >,
+                addWeighted_gpu<signed char, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<unsigned short, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, short >*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, int   >*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, float >*/,
+                0/*addWeighted_gpu<unsigned short, unsigned char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<unsigned short, signed char, unsigned char >*/,
+                0/*addWeighted_gpu<unsigned short, signed char, signed char >*/,
+                0/*addWeighted_gpu<unsigned short, signed char, unsigned short>*/,
+                0/*addWeighted_gpu<unsigned short, signed char, short >*/,
+                0/*addWeighted_gpu<unsigned short, signed char, int   >*/,
+                0/*addWeighted_gpu<unsigned short, signed char, float >*/,
+                0/*addWeighted_gpu<unsigned short, signed char, double>*/
+            },
+            {
+                addWeighted_gpu<unsigned short, unsigned short, unsigned char >,
+                addWeighted_gpu<unsigned short, unsigned short, signed char >,
+                addWeighted_gpu<unsigned short, unsigned short, unsigned short>,
+                addWeighted_gpu<unsigned short, unsigned short, short >,
+                addWeighted_gpu<unsigned short, unsigned short, int   >,
+                addWeighted_gpu<unsigned short, unsigned short, float >,
+                addWeighted_gpu<unsigned short, unsigned short, double>
+            },
+            {
+                addWeighted_gpu<unsigned short, short, unsigned char >,
+                addWeighted_gpu<unsigned short, short, signed char >,
+                addWeighted_gpu<unsigned short, short, unsigned short>,
+                addWeighted_gpu<unsigned short, short, short >,
+                addWeighted_gpu<unsigned short, short, int   >,
+                addWeighted_gpu<unsigned short, short, float >,
+                addWeighted_gpu<unsigned short, short, double>
+            },
+            {
+                addWeighted_gpu<unsigned short, int, unsigned char >,
+                addWeighted_gpu<unsigned short, int, signed char >,
+                addWeighted_gpu<unsigned short, int, unsigned short>,
+                addWeighted_gpu<unsigned short, int, short >,
+                addWeighted_gpu<unsigned short, int, int   >,
+                addWeighted_gpu<unsigned short, int, float >,
+                addWeighted_gpu<unsigned short, int, double>
+            },
+            {
+                addWeighted_gpu<unsigned short, float, unsigned char >,
+                addWeighted_gpu<unsigned short, float, signed char >,
+                addWeighted_gpu<unsigned short, float, unsigned short>,
+                addWeighted_gpu<unsigned short, float, short >,
+                addWeighted_gpu<unsigned short, float, int   >,
+                addWeighted_gpu<unsigned short, float, float >,
+                addWeighted_gpu<unsigned short, float, double>
+            },
+            {
+                addWeighted_gpu<unsigned short, double, unsigned char >,
+                addWeighted_gpu<unsigned short, double, signed char >,
+                addWeighted_gpu<unsigned short, double, unsigned short>,
+                addWeighted_gpu<unsigned short, double, short >,
+                addWeighted_gpu<unsigned short, double, int   >,
+                addWeighted_gpu<unsigned short, double, float >,
+                addWeighted_gpu<unsigned short, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<short, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<short, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<short, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<short, unsigned char, short >*/,
+                0/*addWeighted_gpu<short, unsigned char, int   >*/,
+                0/*addWeighted_gpu<short, unsigned char, float >*/,
+                0/*addWeighted_gpu<short, unsigned char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<short, signed char, unsigned char >*/,
+                0/*addWeighted_gpu<short, signed char, signed char >*/,
+                0/*addWeighted_gpu<short, signed char, unsigned short>*/,
+                0/*addWeighted_gpu<short, signed char, short >*/,
+                0/*addWeighted_gpu<short, signed char, int   >*/,
+                0/*addWeighted_gpu<short, signed char, float >*/,
+                0/*addWeighted_gpu<short, signed char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<short, unsigned short, unsigned char >*/,
+                0/*addWeighted_gpu<short, unsigned short, signed char >*/,
+                0/*addWeighted_gpu<short, unsigned short, unsigned short>*/,
+                0/*addWeighted_gpu<short, unsigned short, short >*/,
+                0/*addWeighted_gpu<short, unsigned short, int   >*/,
+                0/*addWeighted_gpu<short, unsigned short, float >*/,
+                0/*addWeighted_gpu<short, unsigned short, double>*/
+            },
+            {
+                addWeighted_gpu<short, short, unsigned char >,
+                addWeighted_gpu<short, short, signed char >,
+                addWeighted_gpu<short, short, unsigned short>,
+                addWeighted_gpu<short, short, short >,
+                addWeighted_gpu<short, short, int   >,
+                addWeighted_gpu<short, short, float >,
+                addWeighted_gpu<short, short, double>
+            },
+            {
+                addWeighted_gpu<short, int, unsigned char >,
+                addWeighted_gpu<short, int, signed char >,
+                addWeighted_gpu<short, int, unsigned short>,
+                addWeighted_gpu<short, int, short >,
+                addWeighted_gpu<short, int, int   >,
+                addWeighted_gpu<short, int, float >,
+                addWeighted_gpu<short, int, double>
+            },
+            {
+                addWeighted_gpu<short, float, unsigned char >,
+                addWeighted_gpu<short, float, signed char >,
+                addWeighted_gpu<short, float, unsigned short>,
+                addWeighted_gpu<short, float, short >,
+                addWeighted_gpu<short, float, int   >,
+                addWeighted_gpu<short, float, float >,
+                addWeighted_gpu<short, float, double>
+            },
+            {
+                addWeighted_gpu<short, double, unsigned char >,
+                addWeighted_gpu<short, double, signed char >,
+                addWeighted_gpu<short, double, unsigned short>,
+                addWeighted_gpu<short, double, short >,
+                addWeighted_gpu<short, double, int   >,
+                addWeighted_gpu<short, double, float >,
+                addWeighted_gpu<short, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<int, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<int, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<int, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<int, unsigned char, short >*/,
+                0/*addWeighted_gpu<int, unsigned char, int   >*/,
+                0/*addWeighted_gpu<int, unsigned char, float >*/,
+                0/*addWeighted_gpu<int, unsigned char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<int, signed char, unsigned char >*/,
+                0/*addWeighted_gpu<int, signed char, signed char >*/,
+                0/*addWeighted_gpu<int, signed char, unsigned short>*/,
+                0/*addWeighted_gpu<int, signed char, short >*/,
+                0/*addWeighted_gpu<int, signed char, int   >*/,
+                0/*addWeighted_gpu<int, signed char, float >*/,
+                0/*addWeighted_gpu<int, signed char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<int, unsigned short, unsigned char >*/,
+                0/*addWeighted_gpu<int, unsigned short, signed char >*/,
+                0/*addWeighted_gpu<int, unsigned short, unsigned short>*/,
+                0/*addWeighted_gpu<int, unsigned short, short >*/,
+                0/*addWeighted_gpu<int, unsigned short, int   >*/,
+                0/*addWeighted_gpu<int, unsigned short, float >*/,
+                0/*addWeighted_gpu<int, unsigned short, double>*/
+            },
+            {
+                0/*addWeighted_gpu<int, short, unsigned char >*/,
+                0/*addWeighted_gpu<int, short, signed char >*/,
+                0/*addWeighted_gpu<int, short, unsigned short>*/,
+                0/*addWeighted_gpu<int, short, short >*/,
+                0/*addWeighted_gpu<int, short, int   >*/,
+                0/*addWeighted_gpu<int, short, float >*/,
+                0/*addWeighted_gpu<int, short, double>*/
+            },
+            {
+                addWeighted_gpu<int, int, unsigned char >,
+                addWeighted_gpu<int, int, signed char >,
+                addWeighted_gpu<int, int, unsigned short>,
+                addWeighted_gpu<int, int, short >,
+                addWeighted_gpu<int, int, int   >,
+                addWeighted_gpu<int, int, float >,
+                addWeighted_gpu<int, int, double>
+            },
+            {
+                addWeighted_gpu<int, float, unsigned char >,
+                addWeighted_gpu<int, float, signed char >,
+                addWeighted_gpu<int, float, unsigned short>,
+                addWeighted_gpu<int, float, short >,
+                addWeighted_gpu<int, float, int   >,
+                addWeighted_gpu<int, float, float >,
+                addWeighted_gpu<int, float, double>
+            },
+            {
+                addWeighted_gpu<int, double, unsigned char >,
+                addWeighted_gpu<int, double, signed char >,
+                addWeighted_gpu<int, double, unsigned short>,
+                addWeighted_gpu<int, double, short >,
+                addWeighted_gpu<int, double, int   >,
+                addWeighted_gpu<int, double, float >,
+                addWeighted_gpu<int, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<float, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<float, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<float, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<float, unsigned char, short >*/,
+                0/*addWeighted_gpu<float, unsigned char, int   >*/,
+                0/*addWeighted_gpu<float, unsigned char, float >*/,
+                0/*addWeighted_gpu<float, unsigned char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<float, signed char, unsigned char >*/,
+                0/*addWeighted_gpu<float, signed char, signed char >*/,
+                0/*addWeighted_gpu<float, signed char, unsigned short>*/,
+                0/*addWeighted_gpu<float, signed char, short >*/,
+                0/*addWeighted_gpu<float, signed char, int   >*/,
+                0/*addWeighted_gpu<float, signed char, float >*/,
+                0/*addWeighted_gpu<float, signed char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<float, unsigned short, unsigned char >*/,
+                0/*addWeighted_gpu<float, unsigned short, signed char >*/,
+                0/*addWeighted_gpu<float, unsigned short, unsigned short>*/,
+                0/*addWeighted_gpu<float, unsigned short, short >*/,
+                0/*addWeighted_gpu<float, unsigned short, int   >*/,
+                0/*addWeighted_gpu<float, unsigned short, float >*/,
+                0/*addWeighted_gpu<float, unsigned short, double>*/
+            },
+            {
+                0/*addWeighted_gpu<float, short, unsigned char >*/,
+                0/*addWeighted_gpu<float, short, signed char >*/,
+                0/*addWeighted_gpu<float, short, unsigned short>*/,
+                0/*addWeighted_gpu<float, short, short >*/,
+                0/*addWeighted_gpu<float, short, int   >*/,
+                0/*addWeighted_gpu<float, short, float >*/,
+                0/*addWeighted_gpu<float, short, double>*/
+            },
+            {
+                0/*addWeighted_gpu<float, int, unsigned char >*/,
+                0/*addWeighted_gpu<float, int, signed char >*/,
+                0/*addWeighted_gpu<float, int, unsigned short>*/,
+                0/*addWeighted_gpu<float, int, short >*/,
+                0/*addWeighted_gpu<float, int, int   >*/,
+                0/*addWeighted_gpu<float, int, float >*/,
+                0/*addWeighted_gpu<float, int, double>*/
+            },
+            {
+                addWeighted_gpu<float, float, unsigned char >,
+                addWeighted_gpu<float, float, signed char >,
+                addWeighted_gpu<float, float, unsigned short>,
+                addWeighted_gpu<float, float, short >,
+                addWeighted_gpu<float, float, int   >,
+                addWeighted_gpu<float, float, float >,
+                addWeighted_gpu<float, float, double>
+            },
+            {
+                addWeighted_gpu<float, double, unsigned char >,
+                addWeighted_gpu<float, double, signed char >,
+                addWeighted_gpu<float, double, unsigned short>,
+                addWeighted_gpu<float, double, short >,
+                addWeighted_gpu<float, double, int   >,
+                addWeighted_gpu<float, double, float >,
+                addWeighted_gpu<float, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeighted_gpu<double, unsigned char, unsigned char >*/,
+                0/*addWeighted_gpu<double, unsigned char, signed char >*/,
+                0/*addWeighted_gpu<double, unsigned char, unsigned short>*/,
+                0/*addWeighted_gpu<double, unsigned char, short >*/,
+                0/*addWeighted_gpu<double, unsigned char, int   >*/,
+                0/*addWeighted_gpu<double, unsigned char, float >*/,
+                0/*addWeighted_gpu<double, unsigned char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<double, signed char, unsigned char >*/,
+                0/*addWeighted_gpu<double, signed char, signed char >*/,
+                0/*addWeighted_gpu<double, signed char, unsigned short>*/,
+                0/*addWeighted_gpu<double, signed char, short >*/,
+                0/*addWeighted_gpu<double, signed char, int   >*/,
+                0/*addWeighted_gpu<double, signed char, float >*/,
+                0/*addWeighted_gpu<double, signed char, double>*/
+            },
+            {
+                0/*addWeighted_gpu<double, unsigned short, unsigned char >*/,
+                0/*addWeighted_gpu<double, unsigned short, signed char >*/,
+                0/*addWeighted_gpu<double, unsigned short, unsigned short>*/,
+                0/*addWeighted_gpu<double, unsigned short, short >*/,
+                0/*addWeighted_gpu<double, unsigned short, int   >*/,
+                0/*addWeighted_gpu<double, unsigned short, float >*/,
+                0/*addWeighted_gpu<double, unsigned short, double>*/
+            },
+            {
+                0/*addWeighted_gpu<double, short, unsigned char >*/,
+                0/*addWeighted_gpu<double, short, signed char >*/,
+                0/*addWeighted_gpu<double, short, unsigned short>*/,
+                0/*addWeighted_gpu<double, short, short >*/,
+                0/*addWeighted_gpu<double, short, int   >*/,
+                0/*addWeighted_gpu<double, short, float >*/,
+                0/*addWeighted_gpu<double, short, double>*/
+            },
+            {
+                0/*addWeighted_gpu<double, int, unsigned char >*/,
+                0/*addWeighted_gpu<double, int, signed char >*/,
+                0/*addWeighted_gpu<double, int, unsigned short>*/,
+                0/*addWeighted_gpu<double, int, short >*/,
+                0/*addWeighted_gpu<double, int, int   >*/,
+                0/*addWeighted_gpu<double, int, float >*/,
+                0/*addWeighted_gpu<double, int, double>*/
+            },
+            {
+                0/*addWeighted_gpu<double, float, unsigned char >*/,
+                0/*addWeighted_gpu<double, float, signed char >*/,
+                0/*addWeighted_gpu<double, float, unsigned short>*/,
+                0/*addWeighted_gpu<double, float, short >*/,
+                0/*addWeighted_gpu<double, float, int   >*/,
+                0/*addWeighted_gpu<double, float, float >*/,
+                0/*addWeighted_gpu<double, float, double>*/
+            },
+            {
+                addWeighted_gpu<double, double, unsigned char >,
+                addWeighted_gpu<double, double, signed char >,
+                addWeighted_gpu<double, double, unsigned short>,
+                addWeighted_gpu<double, double, short >,
+                addWeighted_gpu<double, double, int   >,
+                addWeighted_gpu<double, double, float >,
+                addWeighted_gpu<double, double, double>
+            }
+        }
+    };
+
+    callers[psrc1->depth()][psrc2->depth()][dst.depth()](psrc1->reshape(1), alpha, psrc2->reshape(1), beta, gamma, dst.reshape(1), StreamAccessor::getStream(stream));
 }
 
 #endif
