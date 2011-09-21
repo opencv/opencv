@@ -57,20 +57,26 @@ class CV_EXPORTS Warper
 public:
     virtual ~Warper() {}
     virtual Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
-                       int interp_mode = INTER_LINEAR, int border_mode = BORDER_REFLECT) = 0;
+                       int interp_mode, int border_mode) = 0;
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
+                       int interp_mode, int border_mode) = 0;
     virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R) = 0;
+    virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T) = 0;
 };
 
 
 struct CV_EXPORTS ProjectorBase
 {
-    void setCameraParams(const Mat &K, const Mat &R);
+    void setCameraParams(const Mat &K = Mat::eye(3, 3, CV_32F), 
+                         const Mat &R = Mat::eye(3, 3, CV_32F), 
+                         const Mat &T = Mat::zeros(3, 1, CV_32F));
 
     float scale;
     float k[9];
     float rinv[9];
     float r_kinv[9];
     float k_rinv[9];
+    float t[3];
 };
 
 
@@ -78,10 +84,12 @@ template <class P>
 class CV_EXPORTS WarperBase : public Warper
 {   
 public:
-    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
-                       int interp_mode, int border_mode);
-
-    virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R);
+    Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+               int interp_mode, int border_mode);
+    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
+               int interp_mode, int border_mode);
+    Rect warpRoi(const Size &sz, const Mat &K, const Mat &R);
+    Rect warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T);
 
 protected:
     // Detects ROI of the destination image. It's correct for any projection.
@@ -108,6 +116,10 @@ class CV_EXPORTS PlaneWarper : public WarperBase<PlaneProjector>
 {
 public:
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
+    void setScale(float scale) { projector_.scale = scale; }
+    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
+               int interp_mode, int border_mode);
+    Rect warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T);
 
 protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br);
@@ -119,6 +131,8 @@ class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 public:
     PlaneWarperGpu(float scale = 1.f) : PlaneWarper(scale) {}
     Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+               int interp_mode, int border_mode);
+    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
                int interp_mode, int border_mode);
 
 private:

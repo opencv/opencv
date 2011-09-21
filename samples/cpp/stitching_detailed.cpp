@@ -485,7 +485,7 @@ int main(int argc, char* argv[])
         K(0,0) *= seam_work_aspect; K(0,2) *= seam_work_aspect;
         K(1,1) *= seam_work_aspect; K(1,2) *= seam_work_aspect;
 
-        corners[i] = warper->warp(images[i], K, cameras[i].R, images_warped[i]);
+        corners[i] = warper->warp(images[i], K, cameras[i].R, images_warped[i], INTER_LINEAR, BORDER_REFLECT);
         sizes[i] = images_warped[i].size();
 
         warper->warp(masks[i], K, cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
@@ -572,7 +572,7 @@ int main(int argc, char* argv[])
         cameras[img_idx].K().convertTo(K, CV_32F);
 
         // Warp the current image
-        warper->warp(img, K, cameras[img_idx].R, img_warped);
+        warper->warp(img, K, cameras[img_idx].R, img_warped, INTER_LINEAR, BORDER_REFLECT);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);

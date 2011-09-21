@@ -81,6 +81,15 @@ Point WarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
 
 
 template <class P>
+Point WarperBase<P>::warp(const Mat &/*src*/, const Mat &/*K*/, const Mat &/*R*/, const Mat &/*T*/, Mat &/*dst*/,
+                          int /*interp_mode*/, int /*border_mode*/)
+{
+    CV_Error(CV_StsNotImplemented, "translation support isn't implemented");
+    return Point();
+}
+
+
+template <class P>
 Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R)
 {
     src_size_ = sz;
@@ -90,6 +99,14 @@ Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R)
     detectResultRoi(dst_tl, dst_br);
 
     return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
+}
+
+
+template <class P>
+Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T)
+{
+    CV_Error(CV_StsNotImplemented, "translation support isn't implemented");
+    return Rect();
 }
 
 
@@ -163,21 +180,24 @@ void PlaneProjector::mapForward(float x, float y, float &u, float &v)
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
-    u = scale * x_ / z_;
-    v = scale * y_ / z_;
+    x_ = t[0] + x_ / z_ * (1 - t[2]);
+    y_ = t[1] + y_ / z_ * (1 - t[2]);
+
+    u = scale * x_;
+    v = scale * y_;
 }
 
 
 inline
 void PlaneProjector::mapBackward(float u, float v, float &x, float &y)
 {
-    u /= scale;
-    v /= scale;
+    u = u / scale - t[0];
+    v = v / scale - t[1];
 
     float z;
-    x = k_rinv[0] * u + k_rinv[1] * v + k_rinv[2];
-    y = k_rinv[3] * u + k_rinv[4] * v + k_rinv[5];
-    z = k_rinv[6] * u + k_rinv[7] * v + k_rinv[8];
+    x = k_rinv[0] * u + k_rinv[1] * v + k_rinv[2] * (1 - t[2]);
+    y = k_rinv[3] * u + k_rinv[4] * v + k_rinv[5] * (1 - t[2]);
+    z = k_rinv[6] * u + k_rinv[7] * v + k_rinv[8] * (1 - t[2]);
 
     x /= z;
     y /= z;
