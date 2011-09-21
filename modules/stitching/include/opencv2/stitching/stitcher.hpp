@@ -47,6 +47,7 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "warpers.hpp"
 #include "detail/matchers.hpp"
+#include "detail/motion_estimators.hpp"
 #include "detail/exposure_compensate.hpp"
 #include "detail/seam_finders.hpp"
 #include "detail/blenders.hpp"
@@ -90,6 +91,11 @@ public:
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
+    Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster_; }
+    const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster_; }
+    void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
+        { bundle_adjuster_ = bundle_adjuster; }
+
     Ptr<WarperCreator> warper() { return warper_; }
     const Ptr<WarperCreator> warper() const { return warper_; }
     void setWarper(Ptr<WarperCreator> warper) { warper_ = warper; }
@@ -117,6 +123,7 @@ private:
     bool horiz_stright_;
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
+    Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
     Ptr<WarperCreator> warper_;
     Ptr<detail::ExposureCompensator> exposure_comp_;
     Ptr<detail::SeamFinder> seam_finder_;

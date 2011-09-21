@@ -138,6 +138,22 @@ private:
 };
 
 
+// Minimizes sun of ray-to-ray distances
+class CV_EXPORTS BundleAdjusterRay : public BundleAdjusterBase
+{
+public:
+    BundleAdjusterRay() : BundleAdjusterBase(4, 3) {}
+
+private:
+    void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
+    void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const;
+    void calcError(Mat &err);
+    void calcJacobian(Mat &jac);
+
+    Mat err1_, err2_;
+};
+
+
 void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats);
 
 

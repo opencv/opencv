@@ -79,6 +79,8 @@ void printUsage()
         "  --conf_thresh <float>\n"
         "      Threshold for two images are from the same panorama confidence.\n"
         "      The default is 1.0.\n"
+        "  --ba (reproj|ray)\n"
+        "      Bundle adjustment cost function. The default is ray.\n"
         "  --wave_correct (no|yes)\n"
         "      Perform wave effect correction. The default is 'yes'.\n"
         "  --save_graph <file_name>\n"
@@ -114,6 +116,7 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
+string ba_cost_func = "ray";
 bool wave_correct = true;
 bool save_graph = false;
 std::string save_graph_to;
@@ -184,6 +187,11 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--conf_thresh")
         {
             conf_thresh = static_cast<float>(atof(argv[i + 1]));
+            i++;
+        }
+        else if (string(argv[i]) == "--ba")
+        {
+            ba_cost_func = argv[i + 1];
             i++;
         }
         else if (string(argv[i]) == "--wave_correct")
@@ -413,9 +421,16 @@ int main(int argc, char* argv[])
         LOGLN("Initial intrinsics #" << indices[i]+1 << ":\n" << cameras[i].K());
     }
 
-    BundleAdjusterReproj adjuster;
-    adjuster.setConfThresh(conf_thresh);
-    adjuster(features, pairwise_matches, cameras);
+    Ptr<detail::BundleAdjusterBase> adjuster;
+    if (ba_cost_func == "reproj") adjuster = new detail::BundleAdjusterReproj();
+    else if (ba_cost_func == "ray") adjuster = new detail::BundleAdjusterRay();
+    else 
+    { 
+        cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n"; 
+        return -1; 
+    }
+    adjuster->setConfThresh(conf_thresh);
+    (*adjuster)(features, pairwise_matches, cameras);
 
     // Find median focal length
     vector<double> focals;

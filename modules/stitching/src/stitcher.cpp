@@ -55,6 +55,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setHorizontalStrightening(true);
     stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
+    stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
 #ifndef ANDROID
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
@@ -189,9 +190,8 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
         LOGLN("Initial intrinsic parameters #" << indices[i]+1 << ":\n " << cameras[i].K());
     }
 
-    detail::BundleAdjusterReproj adjuster;
-    adjuster.setConfThresh(conf_thresh_);
-    adjuster(features, pairwise_matches, cameras);
+    bundle_adjuster_->setConfThresh(conf_thresh_);
+    (*bundle_adjuster_)(features, pairwise_matches, cameras);
 
     // Find median focal length
     vector<double> focals;
