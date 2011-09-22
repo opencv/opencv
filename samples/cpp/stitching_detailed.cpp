@@ -81,6 +81,13 @@ void printUsage()
         "      The default is 1.0.\n"
         "  --ba (reproj|ray)\n"
         "      Bundle adjustment cost function. The default is ray.\n"
+        "  --ba_refine_mask (mask)\n"
+        "      Set refinement mask for bundle adjustment. It looks like 'x_xxx',\n"
+        "      where 'x' means refine respective parameter and '_' means don't\n"
+        "      refine one, and has the following format:\n"
+        "      <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle\n"
+        "      adjustment doesn't support estimation of selected parameter then\n"
+        "      the respective flag is ignored.\n"
         "  --wave_correct (no|yes)\n"
         "      Perform wave effect correction. The default is 'yes'.\n"
         "  --save_graph <file_name>\n"
@@ -117,6 +124,7 @@ double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
 string ba_cost_func = "ray";
+string ba_refine_mask = "xxxxx";
 bool wave_correct = true;
 bool save_graph = false;
 std::string save_graph_to;
@@ -192,6 +200,16 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--ba")
         {
             ba_cost_func = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--ba_refine_mask")
+        {
+            ba_refine_mask = argv[i + 1];
+            if (ba_refine_mask.size() != 5)
+            {
+                cout << "Incorrect refinement mask length.\n";
+                return -1;
+            }
             i++;
         }
         else if (string(argv[i]) == "--wave_correct")
@@ -430,6 +448,13 @@ int main(int argc, char* argv[])
         return -1; 
     }
     adjuster->setConfThresh(conf_thresh);
+    Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
+    if (ba_refine_mask[0] == 'x') refine_mask(0,0) = 1;
+    if (ba_refine_mask[1] == 'x') refine_mask(0,1) = 1;
+    if (ba_refine_mask[2] == 'x') refine_mask(0,2) = 1;
+    if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
+    if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
+    adjuster->setRefinementMask(refine_mask);
     (*adjuster)(features, pairwise_matches, cameras);
 
     // Find median focal length

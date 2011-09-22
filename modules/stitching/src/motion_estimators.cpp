@@ -247,13 +247,14 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
 
 void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &cameras)
 {
-    cam_params_.create(num_images_ * 6, 1, CV_64F);
+    cam_params_.create(num_images_ * 7, 1, CV_64F);
     SVD svd;
     for (int i = 0; i < num_images_; ++i)
     {
-        cam_params_.at<double>(i * 6, 0) = cameras[i].focal;
-        cam_params_.at<double>(i * 6 + 1, 0) = cameras[i].ppx;
-        cam_params_.at<double>(i * 6 + 2, 0) = cameras[i].ppy;
+        cam_params_.at<double>(i * 7, 0) = cameras[i].focal;
+        cam_params_.at<double>(i * 7 + 1, 0) = cameras[i].ppx;
+        cam_params_.at<double>(i * 7 + 2, 0) = cameras[i].ppy;
+        cam_params_.at<double>(i * 7 + 3, 0) = cameras[i].aspect;
 
         svd(cameras[i].R, SVD::FULL_UV);
         Mat R = svd.u * svd.vt;
@@ -263,9 +264,9 @@ void BundleAdjusterReproj::setUpInitialCameraParams(const vector<CameraParams> &
         Mat rvec;
         Rodrigues(R, rvec);
         CV_Assert(rvec.type() == CV_32F);
-        cam_params_.at<double>(i * 6 + 3, 0) = rvec.at<float>(0, 0);
-        cam_params_.at<double>(i * 6 + 4, 0) = rvec.at<float>(1, 0);
-        cam_params_.at<double>(i * 6 + 5, 0) = rvec.at<float>(2, 0);
+        cam_params_.at<double>(i * 7 + 4, 0) = rvec.at<float>(0, 0);
+        cam_params_.at<double>(i * 7 + 5, 0) = rvec.at<float>(1, 0);
+        cam_params_.at<double>(i * 7 + 6, 0) = rvec.at<float>(2, 0);
     }
 }
 
@@ -274,14 +275,15 @@ void BundleAdjusterReproj::obtainRefinedCameraParams(vector<CameraParams> &camer
 {
     for (int i = 0; i < num_images_; ++i)
     {
-        cameras[i].focal = cam_params_.at<double>(i * 6, 0);
-        cameras[i].ppx = cam_params_.at<double>(i * 6 + 1, 0);
-        cameras[i].ppy = cam_params_.at<double>(i * 6 + 2, 0);
+        cameras[i].focal = cam_params_.at<double>(i * 7, 0);
+        cameras[i].ppx = cam_params_.at<double>(i * 7 + 1, 0);
+        cameras[i].ppy = cam_params_.at<double>(i * 7 + 2, 0);
+        cameras[i].aspect = cam_params_.at<double>(i * 7 + 3, 0);
 
         Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 6 + 5, 0);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
         Rodrigues(rvec, cameras[i].R);
 
         Mat tmp;
@@ -300,26 +302,28 @@ void BundleAdjusterReproj::calcError(Mat &err)
     {
         int i = edges_[edge_idx].first;
         int j = edges_[edge_idx].second;
-        double f1 = cam_params_.at<double>(i * 6, 0);
-        double f2 = cam_params_.at<double>(j * 6, 0);
-        double ppx1 = cam_params_.at<double>(i * 6 + 1, 0);
-        double ppx2 = cam_params_.at<double>(j * 6 + 1, 0);
-        double ppy1 = cam_params_.at<double>(i * 6 + 2, 0);
-        double ppy2 = cam_params_.at<double>(j * 6 + 2, 0);
+        double f1 = cam_params_.at<double>(i * 7, 0);
+        double f2 = cam_params_.at<double>(j * 7, 0);
+        double ppx1 = cam_params_.at<double>(i * 7 + 1, 0);
+        double ppx2 = cam_params_.at<double>(j * 7 + 1, 0);
+        double ppy1 = cam_params_.at<double>(i * 7 + 2, 0);
+        double ppy2 = cam_params_.at<double>(j * 7 + 2, 0);
+        double a1 = cam_params_.at<double>(i * 7 + 3, 0);
+        double a2 = cam_params_.at<double>(j * 7 + 3, 0);
 
         double R1[9];
         Mat R1_(3, 3, CV_64F, R1);
         Mat rvec(3, 1, CV_64F);
-        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 6 + 5, 0);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
         Rodrigues(rvec, R1_);
 
         double R2[9];
         Mat R2_(3, 3, CV_64F, R2);
-        rvec.at<double>(0, 0) = cam_params_.at<double>(j * 6 + 3, 0);
-        rvec.at<double>(1, 0) = cam_params_.at<double>(j * 6 + 4, 0);
-        rvec.at<double>(2, 0) = cam_params_.at<double>(j * 6 + 5, 0);
+        rvec.at<double>(0, 0) = cam_params_.at<double>(j * 7 + 4, 0);
+        rvec.at<double>(1, 0) = cam_params_.at<double>(j * 7 + 5, 0);
+        rvec.at<double>(2, 0) = cam_params_.at<double>(j * 7 + 6, 0);
         Rodrigues(rvec, R2_);
 
         const ImageFeatures& features1 = features_[i];
@@ -328,11 +332,11 @@ void BundleAdjusterReproj::calcError(Mat &err)
 
         Mat_<double> K1 = Mat::eye(3, 3, CV_64F);
         K1(0,0) = f1; K1(0,2) = ppx1;
-        K1(1,1) = f1; K1(1,2) = ppy1;
+        K1(1,1) = f1*a1; K1(1,2) = ppy1;
 
         Mat_<double> K2 = Mat::eye(3, 3, CV_64F);
         K2(0,0) = f2; K2(0,2) = ppx2;
-        K2(1,1) = f2; K2(1,2) = ppy2;
+        K2(1,1) = f2*a2; K2(1,2) = ppy2;
 
         Mat_<double> H = K2 * R2_.inv() * R1_ * K1.inv();
 
@@ -358,22 +362,63 @@ void BundleAdjusterReproj::calcError(Mat &err)
 
 void BundleAdjusterReproj::calcJacobian(Mat &jac)
 {
-    jac.create(total_num_matches_ * 2, num_images_ * 6, CV_64F);
+    jac.create(total_num_matches_ * 2, num_images_ * 7, CV_64F);
+    jac.setTo(0);
 
     double val;
     const double step = 1e-4;
 
     for (int i = 0; i < num_images_; ++i)
     {
-        for (int j = 0; j < 6; ++j)
+        if (refinement_mask_.at<uchar>(0, 0))
         {
-            val = cam_params_.at<double>(i * 6 + j, 0);
-            cam_params_.at<double>(i * 6 + j, 0) = val - step;
+            val = cam_params_.at<double>(i * 7, 0);
+            cam_params_.at<double>(i * 7, 0) = val - step;
             calcError(err1_);
-            cam_params_.at<double>(i * 6 + j, 0) = val + step;
+            cam_params_.at<double>(i * 7, 0) = val + step;
             calcError(err2_);
-            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 6 + j));
-            cam_params_.at<double>(i * 6 + j, 0) = val;
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7));
+            cam_params_.at<double>(i * 7, 0) = val;
+        }
+        if (refinement_mask_.at<uchar>(0, 2))        
+        {
+            val = cam_params_.at<double>(i * 7 + 1, 0);
+            cam_params_.at<double>(i * 7 + 1, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 7 + 1, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7 + 1));
+            cam_params_.at<double>(i * 7 + 1, 0) = val;
+        }
+        if (refinement_mask_.at<uchar>(1, 2))        
+        {
+            val = cam_params_.at<double>(i * 7 + 2, 0);
+            cam_params_.at<double>(i * 7 + 2, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 7 + 2, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7 + 2));
+            cam_params_.at<double>(i * 7 + 2, 0) = val;
+        }
+        if (refinement_mask_.at<uchar>(1, 1))
+        {
+            val = cam_params_.at<double>(i * 7 + 3, 0);
+            cam_params_.at<double>(i * 7 + 3, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 7 + 3, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7 + 3));
+            cam_params_.at<double>(i * 7 + 3, 0) = val;
+        }
+        for (int j = 4; j < 7; ++j)
+        {
+            val = cam_params_.at<double>(i * 7 + j, 0);
+            cam_params_.at<double>(i * 7 + j, 0) = val - step;
+            calcError(err1_);
+            cam_params_.at<double>(i * 7 + j, 0) = val + step;
+            calcError(err2_);
+            calcDeriv(err1_, err2_, 2 * step, jac.col(i * 7 + j));
+            cam_params_.at<double>(i * 7 + j, 0) = val;
         }
     }
 }

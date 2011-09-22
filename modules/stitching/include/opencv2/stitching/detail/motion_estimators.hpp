@@ -83,6 +83,13 @@ private:
 class CV_EXPORTS BundleAdjusterBase : public Estimator
 {
 public:
+    const Mat refinementMask() const { return refinement_mask_.clone(); }
+    void setRefinementMask(const Mat &mask) 
+    { 
+        CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
+        refinement_mask_ = mask.clone(); 
+    }
+
     double confThresh() const { return conf_thresh_; }
     void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
@@ -90,7 +97,10 @@ protected:
     BundleAdjusterBase(int num_params_per_cam, int num_errs_per_measurement) 
         : num_params_per_cam_(num_params_per_cam), 
           num_errs_per_measurement_(num_errs_per_measurement) 
-        { setConfThresh(1.); }
+    {    
+        setRefinementMask(Mat::ones(3, 3, CV_8U));
+        setConfThresh(1.); 
+    }
 
     // Runs bundle adjustment
     virtual void estimate(const std::vector<ImageFeatures> &features, 
@@ -101,6 +111,9 @@ protected:
     virtual void obtainRefinedCameraParams(std::vector<CameraParams> &cameras) const = 0;
     virtual void calcError(Mat &err) = 0;
     virtual void calcJacobian(Mat &jac) = 0;
+
+    // 3x3 8U mask, where 0 means don't refine respective parameter, != 0 means refine
+    Mat refinement_mask_;
 
     int num_images_;
     int total_num_matches_;
@@ -122,11 +135,13 @@ protected:
 };
 
 
-// Minimizes reprojection error
+// Minimizes reprojection error.
+// It can estimate focal length, aspect ratio, principal point. 
+// You can affect only on them via the refinement mask.
 class CV_EXPORTS BundleAdjusterReproj : public BundleAdjusterBase
 {
 public:
-    BundleAdjusterReproj() : BundleAdjusterBase(6, 2) {}
+    BundleAdjusterReproj() : BundleAdjusterBase(7, 2) {}
 
 private:
     void setUpInitialCameraParams(const std::vector<CameraParams> &cameras);
@@ -138,7 +153,8 @@ private:
 };
 
 
-// Minimizes sun of ray-to-ray distances
+// Minimizes sun of ray-to-ray distances.
+// It can estimate focal length. It ignores the refinement mask for now.
 class CV_EXPORTS BundleAdjusterRay : public BundleAdjusterBase
 {
 public:

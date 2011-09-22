@@ -103,7 +103,7 @@ Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R)
 
 
 template <class P>
-Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T)
+Rect WarperBase<P>::warpRoi(const Size &/*sz*/, const Mat &/*K*/, const Mat &/*R*/, const Mat &/*T*/)
 {
     CV_Error(CV_StsNotImplemented, "translation support isn't implemented");
     return Rect();
