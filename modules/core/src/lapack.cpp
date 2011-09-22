@@ -674,7 +674,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
     
     if( !Vt )
         return;
-    RNG rng;
+    RNG rng(0x12345678);
     for( i = 0; i < n1; i++ )
     {
         s = i < n ? W[i] : 0;
@@ -687,7 +687,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* W, _Tp* Vt, size_t vstep, int m, int 
             const _Tp val0 = (_Tp)(1./m);
             for( k = 0; k < m; k++ )
             {
-                _Tp val = (rng.next() & 256) ? val0 : -val0;
+                _Tp val = (rng.next() & 256) != 0 ? val0 : -val0;
                 At[i*astep + k] = val;
             }
             for( iter = 0; iter < 2; iter++ )
@@ -1476,7 +1476,10 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     
     if( compute_uv )
         temp_v = Mat(n, n, type, alignPtr(buf + urows*astep + n*esz, 16), vstep);
-        
+    
+    if( urows > n )
+        temp_u = Scalar::all(0);
+    
     if( !at )
         transpose(src, temp_a);
     else
@@ -1484,12 +1487,12 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     
     if( type == CV_32F )
     {
-        JacobiSVD(temp_a.ptr<float>(), temp_a.step, temp_w.ptr<float>(),
+        JacobiSVD(temp_a.ptr<float>(), temp_u.step, temp_w.ptr<float>(),
               temp_v.ptr<float>(), temp_v.step, m, n, compute_uv ? urows : 0);
     }
     else
     {
-        JacobiSVD(temp_a.ptr<double>(), temp_a.step, temp_w.ptr<double>(),
+        JacobiSVD(temp_a.ptr<double>(), temp_u.step, temp_w.ptr<double>(),
               temp_v.ptr<double>(), temp_v.step, m, n, compute_uv ? urows : 0);
     }
     temp_w.copyTo(_w);

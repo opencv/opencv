@@ -877,8 +877,10 @@ Mat _InputArray::getMat(int i) const
     
     if( k == MAT )
     {
-        CV_Assert( i < 0 );
-        return *(const Mat*)obj;
+        const Mat* m = (const Mat*)obj;
+        if( i < 0 )
+            return *m;
+        return m->row(i);
     }
     
     if( k == EXPR )
