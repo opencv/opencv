@@ -803,7 +803,12 @@ void FlannBasedMatcher::convertToDMatches( const DescriptorCollection& collectio
             {
                 int imgIdx, trainIdx;
                 collection.getLocalIdx( idx, imgIdx, trainIdx );
-                matches[i].push_back( DMatch( i, trainIdx, imgIdx, std::sqrt(dists.at<float>(i,j))) );
+                float dist = 0;
+                if (dists.type() == CV_32S)
+                    dist = static_cast<float>( dists.at<int>(i,j) );
+                else
+                    dist = std::sqrt(dists.at<float>(i,j));
+                matches[i].push_back( DMatch( i, trainIdx, imgIdx, dist ) );
             }
         }
     }
