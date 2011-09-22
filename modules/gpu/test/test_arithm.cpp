@@ -1788,4 +1788,76 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, testing::Combine(
                         testing::ValuesIn(types(CV_8U, CV_64F, 1, 1)),
                         testing::ValuesIn(types(CV_8U, CV_64F, 1, 1))));
 
+//////////////////////////////////////////////////////////////////////////////
+// reduce
+
+struct Reduce : testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int, int, int> >
+{
+    cv::gpu::DeviceInfo devInfo;
+    int type;
+    int dim;
+    int reduceOp;
+
+    cv::Size size;
+    cv::Mat src;
+
+    cv::Mat dst_gold;
+
+    virtual void SetUp() 
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        type = std::tr1::get<1>(GetParam());
+        dim = std::tr1::get<2>(GetParam());
+        reduceOp = std::tr1::get<3>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 400), rng.uniform(100, 400));
+
+        src = cvtest::randomMat(rng, size, type, 0.0, 255.0, false);
+
+        cv::reduce(src, dst_gold, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
+
+        if (dim == 1)
+        {
+            dst_gold.cols = dst_gold.rows;
+            dst_gold.rows = 1;
+            dst_gold.step = dst_gold.cols * dst_gold.elemSize();
+        }
+    }
+};
+
+TEST_P(Reduce, Accuracy) 
+{
+    static const char* reduceOpStrs[] = {"CV_REDUCE_SUM", "CV_REDUCE_AVG", "CV_REDUCE_MAX", "CV_REDUCE_MIN"};
+    const char* reduceOpStr = reduceOpStrs[reduceOp];
+
+    PRINT_PARAM(devInfo);
+    PRINT_TYPE(type);
+    PRINT_PARAM(dim);
+    PRINT_PARAM(reduceOpStr);
+    PRINT_PARAM(size);
+
+    cv::Mat dst;
+    
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat dev_dst;
+
+        cv::gpu::reduce(cv::gpu::GpuMat(src), dev_dst, dim, reduceOp, reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? CV_32F : CV_MAT_DEPTH(type));
+
+        dev_dst.download(dst);
+    );
+
+    double norm = reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG ? 1e-1 : 0.0;
+    EXPECT_MAT_NEAR(dst_gold, dst, norm);
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Reduce, testing::Combine(
+                        testing::ValuesIn(devices()),
+                        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                        testing::Values(0, 1),
+                        testing::Values((int)CV_REDUCE_SUM, (int)CV_REDUCE_AVG, (int)CV_REDUCE_MAX, (int)CV_REDUCE_MIN)));
+
 #endif // HAVE_CUDA

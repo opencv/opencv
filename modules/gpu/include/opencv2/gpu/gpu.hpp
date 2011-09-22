@@ -860,6 +860,9 @@ namespace cv
         //! counts non-zero array elements
         CV_EXPORTS int countNonZero(const GpuMat& src, GpuMat& buf);
 
+        //! reduces a matrix to a vector
+        CV_EXPORTS void reduce(const GpuMat& mtx, GpuMat& vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
+
 
         ///////////////////////////// Calibration 3D //////////////////////////////////
 

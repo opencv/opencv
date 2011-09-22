@@ -63,6 +63,7 @@ void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const G
 void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
 int cv::gpu::countNonZero(const GpuMat&) { throw_nogpu(); return 0; }
 int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_nogpu(); return 0; }
+void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_nogpu(); }
 
 #else
 
@@ -596,6 +597,152 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
     Caller caller = callers[src.type()];
     if (!caller) CV_Error(CV_StsBadArg, "countNonZero: unsupported type");
     return caller(src, buf);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// reduce
+
+namespace cv { namespace gpu { namespace mathfunc {
+    template <typename T, typename S, typename D> void reduceRows_gpu(const DevMem2D& src, const DevMem2D& dst, int reduceOp, cudaStream_t stream);
+    template <typename T, typename S, typename D> void reduceCols_gpu(const DevMem2D& src, int cn, const DevMem2D& dst, int reduceOp, cudaStream_t stream);
+}}}
+
+void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int dtype, Stream& stream)
+{
+    using namespace cv::gpu::mathfunc;
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4 && dtype <= CV_32F);
+    CV_Assert(dim == 0 || dim == 1);
+    CV_Assert(reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG || reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN);
+
+    if (dtype < 0)
+        dtype = src.depth();
+
+    dst.create(1, dim == 0 ? src.cols : src.rows, CV_MAKETYPE(dtype, src.channels()));
+
+    if (dim == 0)
+    {
+        typedef void (*caller_t)(const DevMem2D& src, const DevMem2D& dst, int reduceOp, cudaStream_t stream);
+
+        static const caller_t callers[6][6] = 
+        {
+            {
+                reduceRows_gpu<unsigned char, int, unsigned char>,
+                0/*reduceRows_gpu<unsigned char, int, signed char>*/,
+                0/*reduceRows_gpu<unsigned char, int, unsigned short>*/,
+                0/*reduceRows_gpu<unsigned char, int, short>*/,
+                reduceRows_gpu<unsigned char, int, int>,
+                reduceRows_gpu<unsigned char, int, float>
+            },
+            {
+                0/*reduceRows_gpu<signed char, int, unsigned char>*/,
+                0/*reduceRows_gpu<signed char, int, signed char>*/,
+                0/*reduceRows_gpu<signed char, int, unsigned short>*/,
+                0/*reduceRows_gpu<signed char, int, short>*/,
+                0/*reduceRows_gpu<signed char, int, int>*/,
+                0/*reduceRows_gpu<signed char, int, float>*/
+            },
+            {
+                0/*reduceRows_gpu<unsigned short, int, unsigned char>*/,
+                0/*reduceRows_gpu<unsigned short, int, signed char>*/,
+                reduceRows_gpu<unsigned short, int, unsigned short>,
+                0/*reduceRows_gpu<unsigned short, int, short>*/,
+                reduceRows_gpu<unsigned short, int, int>,
+                reduceRows_gpu<unsigned short, int, float>
+            },
+            {
+                0/*reduceRows_gpu<short, int, unsigned char>*/,
+                0/*reduceRows_gpu<short, int, signed char>*/,
+                0/*reduceRows_gpu<short, int, unsigned short>*/,
+                reduceRows_gpu<short, int, short>,
+                reduceRows_gpu<short, int, int>,
+                reduceRows_gpu<short, int, float>
+            },
+            {
+                0/*reduceRows_gpu<int, int, unsigned char>*/,
+                0/*reduceRows_gpu<int, int, signed char>*/,
+                0/*reduceRows_gpu<int, int, unsigned short>*/,
+                0/*reduceRows_gpu<int, int, short>*/,
+                reduceRows_gpu<int, int, int>,
+                reduceRows_gpu<int, int, float>
+            },
+            {
+                0/*reduceRows_gpu<float, float, unsigned char>*/,
+                0/*reduceRows_gpu<float, float, signed char>*/,
+                0/*reduceRows_gpu<float, float, unsigned short>*/,
+                0/*reduceRows_gpu<float, float, short>*/,
+                0/*reduceRows_gpu<float, float, int>*/,
+                reduceRows_gpu<float, float, float>
+            }
+        };
+
+        const caller_t func = callers[src.depth()][dst.depth()];
+        if (!func)
+            CV_Error(CV_StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+
+        func(src.reshape(1), dst.reshape(1), reduceOp, StreamAccessor::getStream(stream));
+    }
+    else
+    {
+        typedef void (*caller_t)(const DevMem2D& src, int cn, const DevMem2D& dst, int reduceOp, cudaStream_t stream);
+
+        static const caller_t callers[6][6] = 
+        {
+            {
+                reduceCols_gpu<unsigned char, int, unsigned char>,
+                0/*reduceCols_gpu<unsigned char, int, signed char>*/,
+                0/*reduceCols_gpu<unsigned char, int, unsigned short>*/,
+                0/*reduceCols_gpu<unsigned char, int, short>*/,
+                reduceCols_gpu<unsigned char, int, int>,
+                reduceCols_gpu<unsigned char, int, float>
+            },
+            {
+                0/*reduceCols_gpu<signed char, int, unsigned char>*/,
+                0/*reduceCols_gpu<signed char, int, signed char>*/,
+                0/*reduceCols_gpu<signed char, int, unsigned short>*/,
+                0/*reduceCols_gpu<signed char, int, short>*/,
+                0/*reduceCols_gpu<signed char, int, int>*/,
+                0/*reduceCols_gpu<signed char, int, float>*/
+            },
+            {
+                0/*reduceCols_gpu<unsigned short, int, unsigned char>*/,
+                0/*reduceCols_gpu<unsigned short, int, signed char>*/,
+                reduceCols_gpu<unsigned short, int, unsigned short>,
+                0/*reduceCols_gpu<unsigned short, int, short>*/,
+                reduceCols_gpu<unsigned short, int, int>,
+                reduceCols_gpu<unsigned short, int, float>
+            },
+            {
+                0/*reduceCols_gpu<short, int, unsigned char>*/,
+                0/*reduceCols_gpu<short, int, signed char>*/,
+                0/*reduceCols_gpu<short, int, unsigned short>*/,
+                reduceCols_gpu<short, int, short>,
+                reduceCols_gpu<short, int, int>,
+                reduceCols_gpu<short, int, float>
+            },
+            {
+                0/*reduceCols_gpu<int, int, unsigned char>*/,
+                0/*reduceCols_gpu<int, int, signed char>*/,
+                0/*reduceCols_gpu<int, int, unsigned short>*/,
+                0/*reduceCols_gpu<int, int, short>*/,
+                reduceCols_gpu<int, int, int>,
+                reduceCols_gpu<int, int, float>
+            },
+            {
+                0/*reduceCols_gpu<float, unsigned char>*/,
+                0/*reduceCols_gpu<float, signed char>*/,
+                0/*reduceCols_gpu<float, unsigned short>*/,
+                0/*reduceCols_gpu<float, short>*/,
+                0/*reduceCols_gpu<float, int>*/,
+                reduceCols_gpu<float, float, float>
+            }
+        };
+
+        const caller_t func = callers[src.depth()][dst.depth()];
+        if (!func)
+            CV_Error(CV_StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+
+        func(src, src.channels(), dst, reduceOp, StreamAccessor::getStream(stream));        
+    }
 }
 
 #endif
