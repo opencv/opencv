@@ -644,6 +644,7 @@ void Index::save(const std::string& filename) const
     if( algo == FLANN_INDEX_LSH )
     {
         saveIndex_<LshIndex>(this, index, fout);
+        fclose(fout);
         return;
     }
     
