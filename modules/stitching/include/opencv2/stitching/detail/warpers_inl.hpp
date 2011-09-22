@@ -79,6 +79,35 @@ Point WarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
     return dst_tl;
 }
 
+template <class P>
+void WarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat &R, Mat &dst, Size dstSize,
+                          int interp_mode, int border_mode)
+{
+    src_size_ = dstSize;
+    projector_.setCameraParams(K, R);
+
+    Point src_tl, src_br;
+    detectResultRoi(src_tl, src_br);
+    CV_Assert(src_br.x - src_tl.x + 1 == src.cols && src_br.y - src_tl.y + 1 == src.rows);
+
+    Mat xmap(dstSize, CV_32F);
+    Mat ymap(dstSize, CV_32F);
+
+    float u, v;
+    for (int y = 0; y < dstSize.height; ++y)
+    {
+        for (int x = 0; x < dstSize.width; ++x)
+        {
+            projector_.mapForward(static_cast<float>(x), static_cast<float>(y), u, v);
+            xmap.at<float>(y, x) = u - src_tl.x;
+            ymap.at<float>(y, x) = v - src_tl.y;
+        }
+    }
+
+    dst.create(dstSize, src.type());
+    remap(src, dst, xmap, ymap, interp_mode, border_mode);
+}
+
 
 template <class P>
 Point WarperBase<P>::warp(const Mat &/*src*/, const Mat &/*K*/, const Mat &/*R*/, const Mat &/*T*/, Mat &/*dst*/,

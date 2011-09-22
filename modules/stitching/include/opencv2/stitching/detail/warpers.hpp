@@ -58,6 +58,8 @@ public:
     virtual ~Warper() {}
     virtual Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
                        int interp_mode, int border_mode) = 0;
+    virtual void warpBackward(const Mat &src, const Mat &K, const Mat &R, Mat &dst, Size dstSize,
+                       int interp_mode, int border_mode) = 0;
     virtual Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
                        int interp_mode, int border_mode) = 0;
     virtual Rect warpRoi(const Size &sz, const Mat &K, const Mat &R) = 0;
@@ -85,6 +87,8 @@ class CV_EXPORTS WarperBase : public Warper
 {   
 public:
     Point warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
+               int interp_mode, int border_mode);
+    void warpBackward(const Mat &src, const Mat &K, const Mat &R, Mat &dst, Size dstSize,
                int interp_mode, int border_mode);
     Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
                int interp_mode, int border_mode);
