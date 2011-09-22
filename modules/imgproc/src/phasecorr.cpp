@@ -38,66 +38,317 @@
 namespace cv
 {
 
-static void divComplex(InputArray _src1, InputArray _src2, OutputArray _dst)
+static void magSpectrums( InputArray _src, OutputArray _dst)
 {
-    Mat src1 = _src1.getMat();
-    Mat src2 = _src2.getMat();
-    
-    CV_Assert( src1.type() == src2.type() && src1.size() == src2.size());
-    CV_Assert( src1.type() == CV_32FC2 || src1.type() == CV_64FC2 );
-    
-    _dst.create(src1.size(), src1.type());
-    Mat dst  = _dst.getMat();
-    
-    int length = src1.rows*src1.cols;
-    
-    if(src1.depth() == CV_32F)
+    Mat src = _src.getMat();
+    int depth = src.depth(), cn = src.channels(), type = src.type();
+    int rows = src.rows, cols = src.cols;
+    int j, k;
+
+    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    if(src.depth() == CV_32F)
+        _dst.create( src.rows, src.cols, CV_32FC1 );
+    else
+        _dst.create( src.rows, src.cols, CV_64FC1 );
+
+    Mat dst = _dst.getMat();
+
+    bool is_1d = (rows == 1 || (cols == 1 && src.isContinuous() && dst.isContinuous()));
+
+    if( is_1d )
+        cols = cols + rows - 1, rows = 1;
+
+    int ncols = cols*cn;
+    int j0 = cn == 1;
+    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+
+    if( depth == CV_32F )
     {
-        const float* dataA = (const float*)src1.data;
-        const float* dataB = (const float*)src2.data;
-        float* dataC = (float*)dst.data;
-        float eps = FLT_EPSILON; // prevent div0 problems
-        
-        for(int j = 0; j < length - 1; j += 2)
+        const float* dataSrc = (const float*)src.data;
+        float* dataDst = (float*)dst.data;
+
+        size_t stepSrc = src.step/sizeof(dataSrc[0]);
+        size_t stepDst = dst.step/sizeof(dataDst[0]);
+
+        if( !is_1d && cn == 1 )
         {
-            double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-            double re = (double)(dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1]);
-            double im = (double)(dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1]);
-            dataC[j] = (float)(re / denom);
-            dataC[j+1] = (float)(im / denom);
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataSrc += cols - 1, dataDst += cols - 1;
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( rows % 2 == 0 )
+                    dataDst[(rows-1)*stepDst] = dataSrc[(rows-1)*stepSrc]*dataSrc[(rows-1)*stepSrc];
+
+                for( j = 1; j <= rows - 2; j += 2 )
+                {
+                    dataDst[j*stepDst] = (double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                         (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc];
+                }
+
+                if( k == 1 )
+                    dataSrc -= cols - 1, dataDst -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataSrc += stepSrc, dataDst += stepDst )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( cols % 2 == 0 )
+                    dataDst[j1] = dataSrc[j1]*dataSrc[j1];
+            }
+
+            for( j = j0; j < j1; j += 2 )
+            {
+                dataDst[j] = (double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1];
+            }
         }
     }
     else
     {
-        const double* dataA = (const double*)src1.data;
-        const double* dataB = (const double*)src2.data;
-        double* dataC = (double*)dst.data;
-        double eps = DBL_EPSILON; // prevent div0 problems
-        
-        for(int j = 0; j < length - 1; j += 2)
+        const double* dataSrc = (const double*)src.data;
+        double* dataDst = (double*)dst.data;
+
+        size_t stepSrc = src.step/sizeof(dataSrc[0]);
+        size_t stepDst = dst.step/sizeof(dataDst[0]);
+
+        if( !is_1d && cn == 1 )
         {
-            double denom = dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps;
-            double re = dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1];
-            double im = dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1];
-            dataC[j] = re / denom;
-            dataC[j+1] = im / denom;
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataSrc += cols - 1, dataDst += cols - 1;
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( rows % 2 == 0 )
+                    dataDst[(rows-1)*stepDst] = dataSrc[(rows-1)*stepSrc]*dataSrc[(rows-1)*stepSrc];
+
+                for( j = 1; j <= rows - 2; j += 2 )
+                {
+                    dataDst[j*stepDst] = dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                         dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc];
+                }
+
+                if( k == 1 )
+                    dataSrc -= cols - 1, dataDst -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataSrc += stepSrc, dataDst += stepDst )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataDst[0] = dataSrc[0]*dataSrc[0];
+                if( cols % 2 == 0 )
+                    dataDst[j1] = dataSrc[j1]*dataSrc[j1];
+            }
+
+            for( j = j0; j < j1; j += 2 )
+            {
+                dataDst[j] = dataSrc[j]*dataSrc[j] + dataSrc[j+1]*dataSrc[j+1];
+            }
         }
     }
+
+    // do batch sqrt to use SSE optimizations...
+    cv::sqrt(dst, dst);
 }
 
-static void absComplex(InputArray _src, OutputArray _dst)
+static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
 {
-    Mat src = _src.getMat();
-    
-    CV_Assert( src.type() == CV_32FC2 || src.type() == CV_64FC2 );
-    
-    vector<Mat> planes;
-    split(src, planes);
-    
-    magnitude(planes[0], planes[1], planes[0]);
-    planes[1] = Mat::zeros(planes[0].size(), planes[0].type());
-    
-    merge(planes, _dst);
+    Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
+    int rows = srcA.rows, cols = srcA.cols;
+    int j, k;
+
+    CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
+    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    _dst.create( srcA.rows, srcA.cols, type );
+    Mat dst = _dst.getMat();
+
+    bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
+             srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
+
+    if( is_1d && !(flags & DFT_ROWS) )
+        cols = cols + rows - 1, rows = 1;
+
+    int ncols = cols*cn;
+    int j0 = cn == 1;
+    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+
+    if( depth == CV_32F )
+    {
+        const float* dataA = (const float*)srcA.data;
+        const float* dataB = (const float*)srcB.data;
+        float* dataC = (float*)dst.data;
+        float eps = FLT_EPSILON; // prevent div0 problems
+
+        size_t stepA = srcA.step/sizeof(dataA[0]);
+        size_t stepB = srcB.step/sizeof(dataB[0]);
+        size_t stepC = dst.step/sizeof(dataC[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
+                dataC[0] = dataA[0] / dataB[0];
+                if( rows % 2 == 0 )
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / dataB[(rows-1)*stepB];
+                if( !conjB )
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+                        double denom = (double)dataB[j*stepB]*dataB[j*stepB] +
+                                       (double)dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + (double)eps;
+
+                        double re = (double)dataA[j*stepA]*dataB[j*stepB] +
+                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] -
+                                    (double)dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = (float)(re / denom);
+                        dataC[(j+1)*stepC] = (float)(im / denom);
+                    }
+                else
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+
+                        double denom = (double)dataB[j*stepB]*dataB[j*stepB] +
+                                       (double)dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + (double)eps;
+
+                        double re = (double)dataA[j*stepA]*dataB[j*stepB] -
+                                    (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] +
+                                    (double)dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = (float)(re / denom);
+                        dataC[(j+1)*stepC] = (float)(im / denom);
+                    }
+                if( k == 1 )
+                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataC[0] = dataA[0] / dataB[0];
+                if( cols % 2 == 0 )
+                    dataC[j1] = dataA[j1] / dataB[j1];
+            }
+
+            if( !conjB )
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
+                    double re = (double)(dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1]);
+                    double im = (double)(dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1]);
+                    dataC[j] = (float)(re / denom);
+                    dataC[j+1] = (float)(im / denom);
+                }
+            else
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
+                    double re = (double)(dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1]);
+                    double im = (double)(dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1]);
+                    dataC[j] = (float)(re / denom);
+                    dataC[j+1] = (float)(im / denom);
+                }
+        }
+    }
+    else
+    {
+        const double* dataA = (const double*)srcA.data;
+        const double* dataB = (const double*)srcB.data;
+        double* dataC = (double*)dst.data;
+        double eps = DBL_EPSILON; // prevent div0 problems
+
+        size_t stepA = srcA.step/sizeof(dataA[0]);
+        size_t stepB = srcB.step/sizeof(dataB[0]);
+        size_t stepC = dst.step/sizeof(dataC[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
+                dataC[0] = dataA[0] / dataB[0];
+                if( rows % 2 == 0 )
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / dataB[(rows-1)*stepB];
+                if( !conjB )
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+                        double denom = dataB[j*stepB]*dataB[j*stepB] +
+                                       dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + eps;
+
+                        double re = dataA[j*stepA]*dataB[j*stepB] +
+                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = dataA[(j+1)*stepA]*dataB[j*stepB] -
+                                    dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = re / denom;
+                        dataC[(j+1)*stepC] = im / denom;
+                    }
+                else
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+                        double denom = dataB[j*stepB]*dataB[j*stepB] +
+                                       dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + eps;
+
+                        double re = dataA[j*stepA]*dataB[j*stepB] -
+                                    dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = dataA[(j+1)*stepA]*dataB[j*stepB] +
+                                    dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = re / denom;
+                        dataC[(j+1)*stepC] = im / denom;
+                    }
+                if( k == 1 )
+                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataC[0] = dataA[0] / dataB[0];
+                if( cols % 2 == 0 )
+                    dataC[j1] = dataA[j1] / dataB[j1];
+            }
+
+            if( !conjB )
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps;
+                    double re = dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1];
+                    double im = dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1];
+                    dataC[j] = re / denom;
+                    dataC[j+1] = im / denom;
+                }
+            else
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps;
+                    double re = dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1];
+                    double im = dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1];
+                    dataC[j] = re / denom;
+                    dataC[j+1] = im / denom;
+                }
+        }
+    }
+
 }
 
 static void fftShift(InputOutputArray _out)
@@ -258,32 +509,17 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
         multiply(paddedWin, padded2, padded2);
     }
 
-    // TODO should be able to improve speed by switching to CCS packed matrices
-    vector<Mat> cplx1, cplx2;
-    cplx1.push_back(padded1);
-    cplx1.push_back(Mat::zeros(padded1.size(), padded1.type()));
-    merge(cplx1, FFT1);
-
-    cplx2.push_back(padded2);
-    cplx2.push_back(Mat::zeros(padded2.size(), padded2.type()));
-    merge(cplx2, FFT2);
-
     // execute phase correlation equation
     // Reference: http://en.wikipedia.org/wiki/Phase_correlation
-    dft(FFT1, FFT1);
-    dft(FFT2, FFT2);
+    dft(padded1, FFT1, DFT_REAL_OUTPUT);
+    dft(padded2, FFT2, DFT_REAL_OUTPUT);
 
     mulSpectrums(FFT1, FFT2, P, 0, true);
 
-    // TODO these two functions need to be changed to work with CCS packed matrices...
-    absComplex(P, Pm);
-    divComplex(P, Pm, C); // FF* / |FF*| (phase correlation equation completed here...)
+    magSpectrums(P, Pm);
+    divSpectrums(P, Pm, C, 0, false); // FF* / |FF*| (phase correlation equation completed here...)
 
     idft(C, C); // gives us the nice peak shift location...
-
-    vector<Mat> Cplanes;
-    split(C, Cplanes);
-    C = Cplanes[0]; // use only the real plane since that's all that's left...
 
     fftShift(C); // shift the energy to the center of the frame.
 
