@@ -1162,7 +1162,10 @@ extern "C" {
                             j_prologue.append( "Mat %(n)s_mat = Converters.%(t)s_to_Mat(%(n)s);" % {"n" : a.name, "t" : a.ctype} )
                         c_prologue.append( "Mat_to_%(t)s( %(n)s_mat, %(n)s );" % {"n" : a.name, "t" : a.ctype} )
                     else:
-                        j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
+                        if type_dict[a.ctype]["j_type"] != "Mat":
+                            j_prologue.append( "Mat %s_mat = new Mat();" % a.name )
+                        else:
+                            j_prologue.append( "Mat %s_mat = %s;" % (a.name, a.name) )
                     if "O" in a.out:
                         if type_dict[a.ctype]["j_type"] != "Mat":
                             j_epilogue.append("Converters.Mat_to_%(t)s(%(n)s_mat, %(n)s);" % {"t" : a.ctype, "n" : a.name})

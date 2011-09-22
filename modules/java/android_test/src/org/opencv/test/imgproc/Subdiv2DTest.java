@@ -1,5 +1,9 @@
 package org.opencv.test.imgproc;
 
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Subdiv2D;
 import org.opencv.test.OpenCVTestCase;
 
 public class Subdiv2DTest extends OpenCVTestCase {
@@ -41,7 +45,25 @@ public class Subdiv2DTest extends OpenCVTestCase {
     }
 
     public void testGetTriangleList() {
-        fail("Not yet implemented");
+    	Subdiv2D s2d = new Subdiv2D( new Rect(0, 0, 50, 50) );
+    	s2d.insert( new Point(10, 10) );
+    	s2d.insert( new Point(20, 10) );
+    	s2d.insert( new Point(20, 20) );
+    	s2d.insert( new Point(10, 20) );
+    	Mat triangles = new Mat();
+    	s2d.getTriangleList(triangles);
+    	assertEquals(10, triangles.rows());
+    	/*
+    	int cnt = triangles.rows();
+    	float buff[] = new float[cnt*6];
+    	triangles.get(0, 0, buff);
+    	for(int i=0; i<cnt; i++)
+    		Log.d("*****", "["+i+"]: " + // (a.x, a.y) -> (b.x, b.y) -> (c.x, c.y)
+    				"("+buff[6*i+0]+","+buff[6*i+1]+")" + "->" +
+    				"("+buff[6*i+2]+","+buff[6*i+3]+")" + "->" +
+    				"("+buff[6*i+4]+","+buff[6*i+5]+")"
+    				);
+    	*/
     }
 
     public void testGetVertexInt() {
