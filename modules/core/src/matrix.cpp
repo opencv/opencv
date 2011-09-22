@@ -1845,7 +1845,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat )
 
                 for( ; i < size.width; i += cn )
                 {
-                    a0 = op(a0, (WT)src[i]);
+                    a0 = op(a0, (WT)src[i+k]);
                 }
                 a0 = op(a0, a1);
                 dst[k] = (ST)a0;
