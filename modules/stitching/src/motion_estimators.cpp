@@ -567,38 +567,36 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
-// TODO replace SVD with eigen
 void waveCorrect(vector<Mat> &rmats)
 {
     LOGLN("Wave correcting...");
     int64 t = getTickCount();
 
-    float data[9];
-    Mat r0(1, 3, CV_32F, data);
-    Mat r1(1, 3, CV_32F, data + 3);
-    Mat r2(1, 3, CV_32F, data + 6);
-    Mat R(3, 3, CV_32F, data);
-
-    Mat cov = Mat::zeros(3, 3, CV_32F);
+    Mat moment = Mat::zeros(3, 3, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
-    {   
-        Mat r0 = rmats[i].col(0);
-        cov += r0 * r0.t();
+    {
+        Mat col = rmats[i].col(0);
+        moment += col * col.t();
     }
+    Mat eigen_vals, eigen_vecs;
+    eigen(moment, eigen_vals, eigen_vecs);
+    Mat rg1 = eigen_vecs.row(2).t();
 
-    SVD svd;
-    svd(cov, SVD::FULL_UV);
-    svd.vt.row(2).copyTo(r1);
-    if (determinant(svd.vt) < 0) r1 *= -1;
-
-    Mat avgz = Mat::zeros(3, 1, CV_32F);
+    Mat img_k = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
-        avgz += rmats[i].col(2);
-    r1.cross(avgz.t()).copyTo(r0);
-    normalize(r0, r0);
+        img_k += rmats[i].col(2);
+    Mat rg0 = rg1.cross(img_k);
+    rg0 /= norm(rg0);
 
-    r1.cross(r0).copyTo(r2);
-    if (determinant(R) < 0) R *= -1;
+    Mat rg2 = rg0.cross(rg1);
+
+    Mat R = Mat::zeros(3, 3, CV_32F);
+    Mat tmp = R.row(0);
+    Mat(rg0.t()).copyTo(tmp);
+    tmp = R.row(1);
+    Mat(rg1.t()).copyTo(tmp);
+    tmp = R.row(2);
+    Mat(rg2.t()).copyTo(tmp);
 
     for (size_t i = 0; i < rmats.size(); ++i)
         rmats[i] = R * rmats[i];
