@@ -129,6 +129,7 @@ protected:
     void detectResultRoi(Point &dst_tl, Point &dst_br);
 };
 
+
 #ifndef ANDROID
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {

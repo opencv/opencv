@@ -170,7 +170,13 @@ private:
 };
 
 
-void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats);
+enum CV_EXPORTS WaveCorrectKind
+{
+    WAVE_CORRECT_HORIZ,
+    WAVE_CORRECT_VERT
+};
+
+void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
 
 
 //////////////////////////////////////////////////////////////////////////////

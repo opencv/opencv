@@ -567,7 +567,7 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void waveCorrect(vector<Mat> &rmats)
+void waveCorrect(vector<Mat> &rmats, WaveCorrectKind kind)
 {
     LOGLN("Wave correcting...");
     int64 t = getTickCount();
@@ -580,7 +580,14 @@ void waveCorrect(vector<Mat> &rmats)
     }
     Mat eigen_vals, eigen_vecs;
     eigen(moment, eigen_vals, eigen_vecs);
-    Mat rg1 = eigen_vecs.row(2).t();
+
+    Mat rg1;
+    if (kind == WAVE_CORRECT_HORIZ)
+        rg1 = eigen_vecs.row(2).t();
+    else if (kind == WAVE_CORRECT_VERT)
+        rg1 = eigen_vecs.row(0).t();
+    else
+        CV_Error(CV_StsBadArg, "unsupported kind of wave correction");
 
     Mat img_k = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
@@ -589,6 +596,29 @@ void waveCorrect(vector<Mat> &rmats)
     rg0 /= norm(rg0);
 
     Mat rg2 = rg0.cross(rg1);
+
+    double conf = 0;
+    if (kind == WAVE_CORRECT_HORIZ)
+    {
+        for (size_t i = 0; i < rmats.size(); ++i)
+            conf += rg0.dot(rmats[i].col(0));
+        if (conf < 0)
+        {
+            rg0 *= -1;
+            rg1 *= -1;
+        }
+    }
+    else if (kind == WAVE_CORRECT_VERT)
+    {
+        for (size_t i = 0; i < rmats.size(); ++i)
+            conf -= rg1.dot(rmats[i].col(0));
+        cout << conf << endl;
+        if (conf < 0)
+        {
+            rg0 *= -1;
+            rg1 *= -1;
+        }
+    }
 
     Mat R = Mat::zeros(3, 3, CV_32F);
     Mat tmp = R.row(0);

@@ -88,8 +88,8 @@ void printUsage()
         "      <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle\n"
         "      adjustment doesn't support estimation of selected parameter then\n"
         "      the respective flag is ignored.\n"
-        "  --wave_correct (no|yes)\n"
-        "      Perform wave effect correction. The default is 'yes'.\n"
+        "  --wave_correct (no|horiz|vert)\n"
+        "      Perform wave effect correction. The default is 'horiz'.\n"
         "  --save_graph <file_name>\n"
         "      Save matches graph represented in DOT language to <file_name> file.\n"
         "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
@@ -125,7 +125,8 @@ double compose_megapix = -1;
 float conf_thresh = 1.f;
 string ba_cost_func = "ray";
 string ba_refine_mask = "xxxxx";
-bool wave_correct = true;
+bool do_wave_correct = true;
+WaveCorrectKind wave_correct = detail::WAVE_CORRECT_HORIZ;
 bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "spherical";
@@ -215,9 +216,17 @@ int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--wave_correct")
         {
             if (string(argv[i + 1]) == "no")
-                wave_correct = false;
-            else if (string(argv[i + 1]) == "yes")
-                wave_correct = true;
+                do_wave_correct = false;
+            else if (string(argv[i + 1]) == "horiz")
+            {
+                do_wave_correct = true;
+                wave_correct = detail::WAVE_CORRECT_HORIZ;
+            }
+            else if (string(argv[i + 1]) == "vert")
+            {
+                do_wave_correct = true;
+                wave_correct = detail::WAVE_CORRECT_VERT;
+            }
             else
             {
                 cout << "Bad --wave_correct flag value\n";
@@ -467,12 +476,12 @@ int main(int argc, char* argv[])
     nth_element(focals.begin(), focals.begin() + focals.size()/2, focals.end());
     float warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
 
-    if (wave_correct)
+    if (do_wave_correct)
     {
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
-        waveCorrect(rmats);
+        waveCorrect(rmats, wave_correct);
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];
     }

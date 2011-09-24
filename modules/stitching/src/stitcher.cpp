@@ -56,6 +56,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setHorizontalStrightening(true);
     stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
     stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
+    stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
 
 #ifndef ANDROID
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
@@ -208,7 +209,7 @@ Stitcher::Status Stitcher::stitch(InputArray imgs_, OutputArray pano_)
         vector<Mat> rmats;
         for (size_t i = 0; i < cameras.size(); ++i)
             rmats.push_back(cameras[i].R);
-        detail::waveCorrect(rmats);
+        detail::waveCorrect(rmats, wave_correct_kind_);
         for (size_t i = 0; i < cameras.size(); ++i)
             cameras[i].R = rmats[i];
     }

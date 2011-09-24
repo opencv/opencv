@@ -100,6 +100,7 @@ public:
               std::vector<Mat> &masks);
 
 private:
+    // To avoid GCGraph dependency
     class Impl;
     Ptr<Impl> impl_;
 };

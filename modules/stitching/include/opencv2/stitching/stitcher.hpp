@@ -96,6 +96,9 @@ public:
     void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
         { bundle_adjuster_ = bundle_adjuster; }
 
+    detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
+    void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
+
     Ptr<WarperCreator> warper() { return warper_; }
     const Ptr<WarperCreator> warper() const { return warper_; }
     void setWarper(Ptr<WarperCreator> warper) { warper_ = warper; }
@@ -124,6 +127,7 @@ private:
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
+    detail::WaveCorrectKind wave_correct_kind_;
     Ptr<WarperCreator> warper_;
     Ptr<detail::ExposureCompensator> exposure_comp_;
     Ptr<detail::SeamFinder> seam_finder_;
