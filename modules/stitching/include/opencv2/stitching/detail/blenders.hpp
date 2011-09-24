@@ -114,11 +114,11 @@ void CV_EXPORTS normalizeUsingWeightMap(const Mat& weight, Mat& src);
 void CV_EXPORTS createWeightMap(const Mat& mask, float sharpness, Mat& weight);
 
 void CV_EXPORTS createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat>& pyr);
-
 void CV_EXPORTS createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat>& pyr);
 
 // Restores source image
 void CV_EXPORTS restoreImageFromLaplacePyr(std::vector<Mat>& pyr);
+void CV_EXPORTS restoreImageFromLaplacePyrGpu(std::vector<Mat>& pyr);
 
 } // namespace detail
 } // namespace cv

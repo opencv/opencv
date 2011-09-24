@@ -177,16 +177,17 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    void add_gpu(const DevMem2D_<short4>& src1, const DevMem2D_<short4>& src2, const DevMem2D_<short4>& dst, cudaStream_t stream);
+    template <typename T>
+    void add_gpu(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
 }}}
 
 void cv::gpu::add(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
 {
-    if (src1.type() == CV_16SC4 && src2.type() == CV_16SC4)
+    if (src1.depth() == CV_16S && src2.depth() == CV_16S)
     {
         CV_Assert(src1.size() == src2.size());
         dst.create(src1.size(), src1.type());
-        device::add_gpu(src1, src2, dst, StreamAccessor::getStream(stream));
+        device::add_gpu<short>(src1.reshape(1), src2.reshape(1), dst.reshape(1), StreamAccessor::getStream(stream));
     }
     else
         nppArithmCaller(src1, src2, dst, nppiAdd_8u_C1RSfs, nppiAdd_8u_C4RSfs, nppiAdd_32s_C1R, nppiAdd_32f_C1R, StreamAccessor::getStream(stream));

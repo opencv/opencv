@@ -289,7 +289,10 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
     for (int i = 0; i <= num_bands_; ++i)
         normalizeUsingWeightMap(dst_band_weights_[i], dst_pyr_laplace_[i]);
 
-    restoreImageFromLaplacePyr(dst_pyr_laplace_);
+    if (can_use_gpu_)
+        restoreImageFromLaplacePyrGpu(dst_pyr_laplace_);
+    else
+        restoreImageFromLaplacePyr(dst_pyr_laplace_);
 
     dst_ = dst_pyr_laplace_[0];
     dst_ = dst_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
@@ -346,6 +349,7 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
     }
 }
 
+
 void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
 #ifndef ANDROID
@@ -368,9 +372,10 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 #endif
 }
 
+
 void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 {
-    if (pyr.size() == 0)
+    if (pyr.empty())
         return;
     Mat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
@@ -378,6 +383,28 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
         pyrUp(pyr[i], tmp, pyr[i - 1].size());
         add(tmp, pyr[i - 1], pyr[i - 1]);
     }
+}
+
+
+void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
+{
+#ifndef ANDROID
+    if (pyr.empty())
+        return;
+
+    vector<gpu::GpuMat> gpu_pyr(pyr.size());
+    for (size_t i = 0; i < pyr.size(); ++i)
+        gpu_pyr[i] = pyr[i];
+
+    gpu::GpuMat tmp;
+    for (size_t i = pyr.size() - 1; i > 0; --i)
+    {
+        gpu::pyrUp(gpu_pyr[i], tmp);
+        gpu::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
+    }
+
+    pyr[0] = gpu_pyr[0];
+#endif
 }
 
 } // namespace detail

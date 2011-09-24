@@ -654,27 +654,18 @@ namespace cv { namespace gpu { namespace device
     //////////////////////////////////////////////////////////////////////////
     // multiply
 
-    struct add_16sc4 : binary_function<short4, short4, short4>
+    template <> struct TransformFunctorTraits< plus<short> > : DefaultTransformFunctorTraits< plus<short> >
     {
-        __device__ __forceinline__ short4 operator ()(short4 a, short4 b) const
-        {
-            return make_short4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
-        }
-    };
-
-    template <> struct TransformFunctorTraits<add_16sc4> : DefaultTransformFunctorTraits<add_16sc4>
-    {
-        enum { smart_block_dim_x = 8 };
         enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
+        enum { smart_shift = 4 };
     };
 
-    void add_gpu(const DevMem2D_<short4>& src1, const DevMem2D_<short4>& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    template <typename T> void add_gpu(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
     {
-        transform(static_cast< DevMem2D_<short4> >(src1), static_cast< DevMem2D_<short4> >(src2), 
-                  static_cast< DevMem2D_<short4> >(dst), add_16sc4(), stream);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, plus<T>(), stream);
     }
 
+    template void add_gpu<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
 
     //////////////////////////////////////////////////////////////////////////
     // multiply
