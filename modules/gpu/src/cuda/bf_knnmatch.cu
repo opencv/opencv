@@ -47,7 +47,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace cv { namespace gpu { namespace bfmatcher
+namespace cv { namespace gpu { namespace bf_knnmatch
 {
     template <typename VecDiff, typename Dist, typename T, typename Mask>
     __device__ void distanceCalcLoop(const PtrStep_<T>& query, const DevMem2D_<T>& train, const Mask& m, int queryIdx,

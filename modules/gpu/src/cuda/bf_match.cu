@@ -47,7 +47,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace cv { namespace gpu { namespace bfmatcher
+namespace cv { namespace gpu { namespace bf_match
 {
     template <int BLOCK_DIM_Y, typename T>
     __device__ void findBestMatch(T& myDist, int2& myIdx, T* smin, int2* sIdx)

@@ -47,81 +47,191 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace cv { namespace gpu { namespace bfmatcher
+namespace cv { namespace gpu { namespace bf_radius_match
 {
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    __global__ void radiusMatch(const PtrStep_<T> query, const DevMem2D_<T> train, float maxDistance, const Mask mask, 
-        DevMem2Di trainIdx_, unsigned int* nMatches, PtrStepf distance)
+    __device__ __forceinline__ void store(const int* sidx, const float* sdist, const unsigned int scount, int* trainIdx, float* distance, int& sglob_ind, const int tid)
     {
-        #if __CUDA_ARCH__ >= 110
-
-        __shared__ typename Dist::result_type smem[BLOCK_DIM_X * BLOCK_DIM_Y];
-
-        typename Dist::result_type* sdiff_row = smem + BLOCK_DIM_X * threadIdx.y;
-        
-        const int queryIdx = blockIdx.x;
-        const T* queryDescs = query.ptr(queryIdx);
-
-        const int trainIdx = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
-
-        if (trainIdx < train.rows)
+        if (tid < scount)
         {
-            const T* trainDescs = train.ptr(trainIdx);
+            trainIdx[sglob_ind + tid] = sidx[tid];
+            distance[sglob_ind + tid] = sdist[tid];
+        }
 
+        if (tid == 0)
+            sglob_ind += scount;
+    }
+
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int BLOCK_STACK, typename VecDiff, typename Dist, typename T, typename Mask>
+    __global__ void radiusMatch(const PtrStep_<T> query, const DevMem2D_<T> train, const float maxDistance, const Mask mask, 
+        DevMem2Di trainIdx_, PtrStepf distance, unsigned int* nMatches)
+    {
+        #if __CUDA_ARCH__ >= 120
+
+        typedef typename Dist::result_type result_type;
+        typedef typename Dist::value_type value_type;
+
+        __shared__ result_type smem[BLOCK_DIM_X * BLOCK_DIM_Y];
+        __shared__ int sidx[BLOCK_STACK];
+        __shared__ float sdist[BLOCK_STACK];
+        __shared__ unsigned int scount;
+        __shared__ int sglob_ind;
+
+        const int queryIdx = blockIdx.x;
+        const int tid = threadIdx.y * BLOCK_DIM_X + threadIdx.x;
+
+        if (tid == 0)
+        {
+            scount = 0;
+            sglob_ind = 0;
+        }
+        __syncthreads();
+
+        int* trainIdx_row = trainIdx_.ptr(queryIdx);
+        float* distance_row = distance.ptr(queryIdx);
+
+        const VecDiff vecDiff(query.ptr(queryIdx), train.cols, (typename Dist::value_type*)smem, tid, threadIdx.x);
+        
+        typename Dist::result_type* sdiffRow = smem + BLOCK_DIM_X * threadIdx.y;
+
+        for (int trainIdx = threadIdx.y; trainIdx < train.rows; trainIdx += BLOCK_DIM_Y)
+        {
             if (mask(queryIdx, trainIdx))
             {
                 Dist dist;
 
-                calcVecDiffGlobal<BLOCK_DIM_X>(queryDescs, trainDescs, train.cols, dist, sdiff_row, threadIdx.x);
+                const T* trainRow = train.ptr(trainIdx);
+                
+                vecDiff.calc(trainRow, train.cols, dist, sdiffRow, threadIdx.x);
 
-                if (threadIdx.x == 0)
+                const typename Dist::result_type val = dist;
+
+                if (threadIdx.x == 0 && val < maxDistance)
                 {
-                    if (dist < maxDistance)
-                    {
-                        unsigned int i = atomicInc(nMatches + queryIdx, (unsigned int) -1);
-                        if (i < trainIdx_.cols)
-                        {
-                            distance.ptr(queryIdx)[i] = dist;
-                            trainIdx_.ptr(queryIdx)[i] = trainIdx;
-                        }
-                    }
+                    unsigned int i = atomicInc(&scount, (unsigned int) -1);
+                    sidx[i] = trainIdx;
+                    sdist[i] = val;
                 }
             }
+            __syncthreads();
+
+            if (scount > BLOCK_STACK - BLOCK_DIM_Y)
+            {
+                store(sidx, sdist, scount, trainIdx_row, distance_row, sglob_ind, tid);
+                if (tid == 0)
+                    scount = 0;
+            }
+            __syncthreads();
         }
+
+        store(sidx, sdist, scount, trainIdx_row, distance_row, sglob_ind, tid);
+
+        if (tid == 0)
+            nMatches[queryIdx] = sglob_ind;
 
         #endif
     }
-        
+
     ///////////////////////////////////////////////////////////////////////////////
     // Radius Match kernel caller
 
-    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, typename Dist, typename T, typename Mask>
-    void radiusMatch_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, float maxDistance, const Mask& mask, 
-        const DevMem2Di& trainIdx, const DevMem2D_<unsigned int>& nMatches, const DevMem2Df& distance, 
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int BLOCK_STACK, typename Dist, typename T, typename Mask>
+    void radiusMatchSimple_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, float maxDistance, const Mask& mask, 
+        const DevMem2Di& trainIdx, const DevMem2Df& distance, unsigned int* nMatches,
         cudaStream_t stream)
     {
-        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
-        const dim3 grid(query.rows, divUp(train.rows, BLOCK_DIM_Y), 1);
+        StaticAssert<BLOCK_STACK >= BLOCK_DIM_Y>::check();
+        StaticAssert<BLOCK_STACK <= BLOCK_DIM_X * BLOCK_DIM_Y>::check();
 
-        radiusMatch<BLOCK_DIM_X, BLOCK_DIM_Y, Dist, T><<<grid, threads, 0, stream>>>(query, train, maxDistance, mask, trainIdx, nMatches.data, distance);
+        const dim3 grid(query.rows, 1, 1);
+        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
+
+        radiusMatch<BLOCK_DIM_X, BLOCK_DIM_Y, BLOCK_STACK, VecDiffGlobal<BLOCK_DIM_X, T>, Dist, T>
+            <<<grid, threads, 0, stream>>>(query, train, maxDistance, mask, trainIdx, distance, nMatches);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-    
-    ///////////////////////////////////////////////////////////////////////////////
-    // Radius Match Dispatcher
 
-    template <typename Dist, typename T, typename Mask>
-    void radiusMatchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, float maxDistance, const Mask& mask, 
-        const DevMem2D& trainIdx, const DevMem2D& nMatches, const DevMem2D& distance, 
+    template <int BLOCK_DIM_X, int BLOCK_DIM_Y, int BLOCK_STACK, int MAX_LEN, bool LEN_EQ_MAX_LEN, typename Dist, typename T, typename Mask>
+    void radiusMatchCached_caller(const DevMem2D_<T>& query, const DevMem2D_<T>& train, float maxDistance, const Mask& mask, 
+        const DevMem2Di& trainIdx, const DevMem2Df& distance, unsigned int* nMatches, 
         cudaStream_t stream)
     {
-        radiusMatch_caller<16, 16, Dist>(query, train, maxDistance, mask, 
-            static_cast<DevMem2Di>(trainIdx), static_cast< const DevMem2D_<unsigned int> >(nMatches), static_cast<DevMem2Df>(distance), 
-            stream);
+        StaticAssert<BLOCK_STACK >= BLOCK_DIM_Y>::check();
+        StaticAssert<BLOCK_STACK <= BLOCK_DIM_X * BLOCK_DIM_Y>::check();
+        StaticAssert<BLOCK_DIM_X * BLOCK_DIM_Y >= MAX_LEN>::check();
+        StaticAssert<MAX_LEN % BLOCK_DIM_X == 0>::check();
+
+        const dim3 grid(query.rows, 1, 1);
+        const dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y, 1);
+
+        radiusMatch<BLOCK_DIM_X, BLOCK_DIM_Y, BLOCK_STACK, VecDiffCachedRegister<BLOCK_DIM_X, MAX_LEN, LEN_EQ_MAX_LEN, typename Dist::value_type>, Dist, T>
+              <<<grid, threads, 0, stream>>>(query, train, maxDistance, mask, trainIdx, distance, nMatches);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // Radius Match Dispatcher
+    
+    template <typename Dist, typename T, typename Mask>
+    void radiusMatchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, float maxDistance, const Mask& mask, 
+        const DevMem2D& trainIdx, const DevMem2D& distance, const DevMem2D& nMatches, 
+        cudaStream_t stream)
+    {
+        if (query.cols < 64)
+        {
+            radiusMatchCached_caller<16, 16, 64, 64, false, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+        else if (query.cols == 64)
+        {
+            radiusMatchCached_caller<16, 16, 64, 64, true, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+        else if (query.cols < 128)
+        {
+            radiusMatchCached_caller<16, 16, 64, 128, false, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+        else if (query.cols == 128)
+        {
+            radiusMatchCached_caller<16, 16, 64, 128, true, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+        else if (query.cols < 256)
+        {
+            radiusMatchCached_caller<16, 16, 64, 256, false, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+        else if (query.cols == 256)
+        {
+            radiusMatchCached_caller<16, 16, 64, 256, true, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data, 
+                stream);
+        }
+        else
+        {
+            radiusMatchSimple_caller<16, 16, 64, Dist>(
+                query, train, maxDistance, mask, 
+                static_cast<DevMem2Di>(trainIdx), static_cast<DevMem2Df>(distance), (unsigned int*)nMatches.data,
+                stream);
+        }
+    }    
     
     ///////////////////////////////////////////////////////////////////////////////
     // Radius Match caller
@@ -133,13 +243,13 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (mask.data)
         {
             radiusMatchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, SingleMask(mask), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
         else
         {
             radiusMatchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, WithOutMask(), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
     }
@@ -158,13 +268,13 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (mask.data)
         {
             radiusMatchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, SingleMask(mask), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
         else
         {
             radiusMatchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, WithOutMask(), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
     }
@@ -183,13 +293,13 @@ namespace cv { namespace gpu { namespace bfmatcher
         if (mask.data)
         {
             radiusMatchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, SingleMask(mask), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
         else
         {
             radiusMatchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), maxDistance, WithOutMask(), 
-                trainIdx, nMatches, distance, 
+                trainIdx, distance, nMatches, 
                 stream);
         }
     }
