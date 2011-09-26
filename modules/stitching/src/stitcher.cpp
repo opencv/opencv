@@ -63,16 +63,17 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     {
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
         stitcher.setWarper(new SphericalWarperGpu());
+        stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
     }
     else
 #endif
     {
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
         stitcher.setWarper(new SphericalWarper());
+        stitcher.setSeamFinder(new detail::GraphCutSeamFinder());
     }
 
     stitcher.setExposureCompenstor(new detail::BlocksGainCompensator());
-    stitcher.setSeamFinder(new detail::GraphCutSeamFinder());
     stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
 
     return stitcher;

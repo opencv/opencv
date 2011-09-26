@@ -51,9 +51,6 @@ namespace detail {
 class CV_EXPORTS SeamFinder
 {
 public:
-    enum { NO, VORONOI, GC_COLOR, GC_COLOR_GRAD };
-    static Ptr<SeamFinder> createDefault(int type);
-
     virtual ~SeamFinder() {}
     virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
                       std::vector<Mat> &masks) = 0;
@@ -89,10 +86,16 @@ private:
 };
 
 
-class CV_EXPORTS GraphCutSeamFinder : public SeamFinder
+class CV_EXPORTS GraphCutSeamFinderBase
 {
 public:
     enum { COST_COLOR, COST_COLOR_GRAD };
+};
+
+
+class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
+{
+public:
     GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
 
@@ -104,6 +107,33 @@ private:
     class Impl;
     Ptr<Impl> impl_;
 };
+
+
+#ifndef ANDROID
+class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
+{
+public:
+    GraphCutSeamFinderGpu(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
+                          float bad_region_penalty = 1000.f)
+                          : cost_type_(cost_type), terminal_cost_(terminal_cost), 
+                            bad_region_penalty_(bad_region_penalty) {}
+
+    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, 
+              std::vector<cv::Mat> &masks);
+    void findInPair(size_t first, size_t second, Rect roi);
+
+private:
+    void setGraphWeightsColor(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &mask1, const cv::Mat &mask2,
+                              cv::Mat &terminals, cv::Mat &leftT, cv::Mat &rightT, cv::Mat &top, cv::Mat &bottom);
+    void setGraphWeightsColorGrad(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &dx1, const cv::Mat &dx2, 
+                                  const cv::Mat &dy1, const cv::Mat &dy2, const cv::Mat &mask1, const cv::Mat &mask2, 
+                                  cv::Mat &terminals, cv::Mat &leftT, cv::Mat &rightT, cv::Mat &top, cv::Mat &bottom);
+    std::vector<Mat> dx_, dy_;
+    int cost_type_;
+    float terminal_cost_;
+    float bad_region_penalty_;
+};
+#endif
 
 } // namespace detail
 } // namespace cv

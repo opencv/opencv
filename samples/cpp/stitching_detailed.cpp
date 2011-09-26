@@ -132,7 +132,7 @@ std::string save_graph_to;
 string warp_type = "spherical";
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 float match_conf = 0.65f;
-int seam_find_type = SeamFinder::GC_COLOR;
+string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
 float blend_strength = 5;
 string result_name = "result.jpg";
@@ -262,14 +262,11 @@ int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--seam")
         {
-            if (string(argv[i + 1]) == "no")
-                seam_find_type = SeamFinder::NO;
-            else if (string(argv[i + 1]) == "voronoi")
-                seam_find_type = SeamFinder::VORONOI;
-            else if (string(argv[i + 1]) == "gc_color")
-                seam_find_type = SeamFinder::GC_COLOR;
-            else if (string(argv[i + 1]) == "gc_colorgrad")
-                seam_find_type = SeamFinder::GC_COLOR_GRAD;
+            if (string(argv[i + 1]) == "no" ||
+                string(argv[i + 1]) == "voronoi" ||
+                string(argv[i + 1]) == "gc_color" ||
+                string(argv[i + 1]) == "gc_colorgrad")
+                seam_find_type = argv[i + 1];
             else
             {
                 cout << "Bad seam finding method\n";
@@ -550,7 +547,35 @@ int main(int argc, char* argv[])
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     compensator->feed(corners, images_warped, masks_warped);
 
-    Ptr<SeamFinder> seam_finder = SeamFinder::createDefault(seam_find_type);
+    Ptr<SeamFinder> seam_finder;
+    if (seam_find_type == "no")
+        seam_finder = new detail::NoSeamFinder();
+    else if (seam_find_type == "voronoi")
+        seam_finder = new detail::VoronoiSeamFinder();
+    else if (seam_find_type == "gc_color")
+    {
+#ifndef ANDROID
+        if (try_gpu)
+            seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
+        else
+#endif
+            seam_finder = new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
+    }
+    else if (seam_find_type == "gc_colorgrad")
+    {
+#ifndef ANDROID
+        if (try_gpu)
+            seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
+        else
+#endif
+            seam_finder = new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR_GRAD);
+    }
+    if (seam_finder.empty())
+    {
+        cout << "Can't create the following seam finder '" << seam_find_type << "'\n";
+        return 1;
+    }
+
     seam_finder->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory
