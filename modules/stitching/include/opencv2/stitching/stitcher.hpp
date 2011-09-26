@@ -51,6 +51,7 @@
 #include "detail/exposure_compensate.hpp"
 #include "detail/seam_finders.hpp"
 #include "detail/blenders.hpp"
+#include "detail/camera.hpp"
 
 namespace cv {
 
@@ -78,8 +79,11 @@ public:
     double panoConfidenceThresh() const { return conf_thresh_; }
     void setPanoConfidenceThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
-    bool horizontalStrightening() const { return horiz_stright_; }
-    void setHorizontalStrightening(bool flag) { horiz_stright_ = flag; }
+    bool waveCorrection() const { return do_wave_correct_; }
+    void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
+
+    detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
+    void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
     Ptr<detail::FeaturesFinder> featuresFinder() { return features_finder_; }
     const Ptr<detail::FeaturesFinder> featuresFinder() const { return features_finder_; }
@@ -95,9 +99,6 @@ public:
     const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster_; }
     void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
         { bundle_adjuster_ = bundle_adjuster; }
-
-    detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
-    void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
     Ptr<WarperCreator> warper() { return warper_; }
     const Ptr<WarperCreator> warper() const { return warper_; }
@@ -119,19 +120,35 @@ public:
 private:
     Stitcher() {}
 
+    Status matchImages();
+    void estimateCameraParams();
+    Status composePanorama(cv::Mat &pano);
+
     double registr_resol_;
     double seam_est_resol_;
     double compose_resol_;
     double conf_thresh_;
-    bool horiz_stright_;
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
+    bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;
     Ptr<WarperCreator> warper_;
     Ptr<detail::ExposureCompensator> exposure_comp_;
     Ptr<detail::SeamFinder> seam_finder_;
     Ptr<detail::Blender> blender_;
+
+    std::vector<cv::Mat> imgs_;
+    std::vector<cv::Size> full_img_sizes_;
+    std::vector<detail::ImageFeatures> features_;
+    std::vector<detail::MatchesInfo> pairwise_matches_;
+    std::vector<cv::Mat> seam_est_imgs_;
+    std::vector<int> indices_;
+    std::vector<detail::CameraParams> cameras_;
+    double work_scale_;
+    double seam_scale_;
+    double seam_work_aspect_;
+    double warped_image_scale_;
 };
 
 } // namespace cv
