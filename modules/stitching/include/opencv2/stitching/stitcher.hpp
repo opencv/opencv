@@ -95,6 +95,13 @@ public:
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
+    const cv::Mat& matchingMask() const { return matching_mask_; }
+    void setMatchingMask(const cv::Mat &mask)
+    { 
+        CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
+        matching_mask_ = mask.clone(); 
+    }
+
     Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster_; }
     const Ptr<detail::BundleAdjusterBase> bundleAdjuster() const { return bundle_adjuster_; }
     void setBundleAdjuster(Ptr<detail::BundleAdjusterBase> bundle_adjuster)
@@ -130,6 +137,7 @@ private:
     double conf_thresh_;
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
+    cv::Mat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
     bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;

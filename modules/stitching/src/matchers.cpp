@@ -45,6 +45,7 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+
 #ifndef ANDROID
 using namespace cv::gpu;
 #endif
@@ -340,14 +341,20 @@ const MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches,
+                                  const Mat &mask)
 {
     const int num_images = static_cast<int>(features.size());
+
+    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    Mat_<uchar> mask_(mask);
+    if (mask_.empty())
+        mask_ = Mat::ones(num_images, num_images, CV_8U);
 
     vector<pair<int,int> > near_pairs;
     for (int i = 0; i < num_images - 1; ++i)
         for (int j = i + 1; j < num_images; ++j)
-            if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0)
+            if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
                 near_pairs.push_back(make_pair(i, j));
 
     pairwise_matches.resize(num_images * num_images);

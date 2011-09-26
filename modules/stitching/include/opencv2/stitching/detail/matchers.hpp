@@ -133,7 +133,9 @@ public:
 
     void operator ()(const ImageFeatures &features1, const ImageFeatures &features2, 
                      MatchesInfo& matches_info) { match(features1, features2, matches_info); }
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches);
+
+    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches, 
+                     const cv::Mat &mask = cv::Mat());
 
     bool isThreadSafe() const { return is_thread_safe_; }
 

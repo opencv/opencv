@@ -165,7 +165,7 @@ Stitcher::Status Stitcher::matchImages()
 
     LOG("Pairwise matching");
     t = getTickCount();
-    (*features_matcher_)(features_, pairwise_matches_);
+    (*features_matcher_)(features_, pairwise_matches_, matching_mask_);
     features_matcher_->collectGarbage();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
