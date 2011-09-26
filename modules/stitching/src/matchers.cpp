@@ -249,7 +249,44 @@ namespace detail {
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 { 
     find(image, features);
+    cout << features.descriptors.cols << " " << features.descriptors.rows << " " << features.descriptors.type() << endl;
     features.img_size = image.size();
+}
+
+
+// TODO add tests for this function
+void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const vector<Rect> &rois)
+{ 
+    vector<ImageFeatures> roi_features;
+    size_t total_kps_count = 0;
+    int total_descriptors_width = 0;
+
+    for (size_t i = 0; i < rois.size(); ++i)
+    {
+        find(image(rois[i]), roi_features[i]);
+        total_kps_count += roi_features[i].keypoints.size();
+        total_descriptors_width += roi_features[i].descriptors.cols;
+    }
+
+    features.img_size = image.size();
+    features.keypoints.resize(total_kps_count);
+    features.descriptors.create(1, total_descriptors_width, roi_features[0].descriptors.type());
+
+    int kp_idx = 0;
+    int descr_offset = 0;
+    for (size_t i = 0; i < rois.size(); ++i)
+    {
+        for (size_t j = 0; j < features.keypoints.size(); ++j, ++kp_idx)
+        {
+            features.keypoints[kp_idx] = roi_features[i].keypoints[j];
+            features.keypoints[kp_idx].pt.x += (float)rois[i].x;
+            features.keypoints[kp_idx].pt.y += (float)rois[i].y;
+        }
+        Mat subdescr = features.descriptors.colRange(
+                descr_offset, descr_offset + roi_features[i].descriptors.cols);
+        roi_features[i].descriptors.copyTo(subdescr);
+        descr_offset += roi_features[i].descriptors.cols;
+    }
 }
 
 

@@ -67,6 +67,7 @@ class CV_EXPORTS FeaturesFinder
 public:
     virtual ~FeaturesFinder() {}
     void operator ()(const Mat &image, ImageFeatures &features);
+    void operator ()(const Mat &image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
     virtual void collectGarbage() {}
 
 protected:

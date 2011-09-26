@@ -66,6 +66,7 @@ public:
 
     // Stitches the biggest found pano. Returns status code.
     Status stitch(InputArray imgs, OutputArray pano);
+    Status stitch(InputArray imgs, const std::vector<std::vector<cv::Rect> > &rois, OutputArray pano);
 
     double registrationResol() const { return registr_resol_; }
     void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
@@ -147,6 +148,7 @@ private:
     Ptr<detail::Blender> blender_;
 
     std::vector<cv::Mat> imgs_;
+    std::vector<std::vector<cv::Rect> > rois_;
     std::vector<cv::Size> full_img_sizes_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;

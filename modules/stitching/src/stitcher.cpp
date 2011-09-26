@@ -100,6 +100,13 @@ Stitcher::Status Stitcher::stitch(InputArray imgs, OutputArray pano)
 }
 
 
+Stitcher::Status Stitcher::stitch(InputArray imgs, const vector<vector<Rect> > &rois, OutputArray pano)
+{    
+    rois_ = rois;
+    return stitch(imgs, pano);
+}
+
+
 Stitcher::Status Stitcher::matchImages()
 {
     if ((int)imgs_.size() < 2)
@@ -148,7 +155,10 @@ Stitcher::Status Stitcher::matchImages()
             is_seam_scale_set = true;
         }
 
-        (*features_finder_)(img, features_[i]);
+        if (rois_.empty())
+            (*features_finder_)(img, features_[i]);
+        else
+            (*features_finder_)(img, features_[i], rois_[i]);
         features_[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
