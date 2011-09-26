@@ -507,7 +507,7 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
 
     gpu::graphcut(terminals_d, leftT_d, rightT_d, top_d, bottom_d, labels_d, buf_d);
 
-    Mat_<uchar> labels = labels_d;
+    Mat_<uchar> labels = (Mat)labels_d;
     for (int y = 0; y < roi.height; ++y)
     {
         for (int x = 0; x < roi.width; ++x)
