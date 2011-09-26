@@ -716,3 +716,34 @@ PERF_TEST_P(DevInfo_Size_MatType, addWeighted, testing::Combine(testing::ValuesI
 
     SANITY_CHECK(dst_host);
 }
+
+PERF_TEST_P(DevInfo_Size_MatType_FlipCode, reduce, testing::Combine(testing::ValuesIn(devices()), 
+                                                                    testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                    testing::Values(CV_8UC1, CV_8UC4, CV_32FC1), 
+                                                                    testing::Values((int)HORIZONTAL_AXIS, (int)VERTICAL_AXIS)))
+{
+    DeviceInfo devInfo = std::tr1::get<0>(GetParam());
+    Size size = std::tr1::get<1>(GetParam());
+    int type = std::tr1::get<2>(GetParam());
+    int dim = std::tr1::get<3>(GetParam());
+
+    setDevice(devInfo.deviceID());
+
+    Mat src_host(size, type);
+
+    declare.in(src_host, WARMUP_RNG);
+
+    GpuMat src(src_host);
+    GpuMat dst(size, type);
+
+    declare.time(0.5).iterations(100);
+
+    SIMPLE_TEST_CYCLE()
+    {
+        reduce(src, dst, dim, CV_REDUCE_MIN);
+    }
+
+    Mat dst_host = dst;
+
+    SANITY_CHECK(dst_host);
+}

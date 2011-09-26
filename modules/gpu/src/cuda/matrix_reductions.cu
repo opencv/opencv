@@ -1894,27 +1894,29 @@ namespace cv { namespace gpu { namespace mathfunc
 
         const int x = blockIdx.x * 16 + threadIdx.x;
 
+        S myVal = op.startValue();
+
         if (x < src.cols)
         {
-            S myVal = op.startValue();
-
             for (int y = threadIdx.y; y < src.rows; y += 16)
                 myVal = op(myVal, src.ptr(y)[x]);
+        }        
 
-            smem[threadIdx.y * 16 + threadIdx.x] = myVal;
-            __syncthreads();
+        smem[threadIdx.x * 16 + threadIdx.y] = myVal;
+        __syncthreads();
 
-            if (threadIdx.y == 0)
-            {
-                myVal = smem[threadIdx.x];
-
-                #pragma unroll
-                for (int i = 1; i < 16; ++i)
-                    myVal = op(myVal, smem[i * 16 + threadIdx.x]);
-
-                dst[x] = saturate_cast<D>(op.result(myVal, src.rows));
-            }
+        if (threadIdx.x < 8)
+        {
+            volatile S* srow = smem + threadIdx.y * 16;
+            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 8]);
+            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 4]);
+            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 2]);
+            srow[threadIdx.x] = op(srow[threadIdx.x], srow[threadIdx.x + 1]);
         }
+        __syncthreads();
+
+        if (threadIdx.y == 0 && x < src.cols)
+            dst[x] = saturate_cast<D>(op.result(smem[threadIdx.x * 16], src.rows));
     }
 
     template <template <typename> class Op, typename T, typename S, typename D> void reduceRows_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
@@ -1965,7 +1967,6 @@ namespace cv { namespace gpu { namespace mathfunc
 
 
 
-
     template <int cn, class Op, typename T, typename S, typename D> __global__ void reduceCols(const DevMem2D_<T> src, D* dst, const Op op)
     {
         __shared__ S smem[256 * cn];
@@ -1980,12 +1981,38 @@ namespace cv { namespace gpu { namespace mathfunc
         for (int c = 0; c < cn; ++c)
             myVal[c] = op.startValue();
 
+#if __CUDA_ARCH__ >= 200
+
+        // For cc >= 2.0 prefer L1 cache
         for (int x = threadIdx.x; x < src.cols; x += 256)
         {
             #pragma unroll
             for (int c = 0; c < cn; ++c)
                 myVal[c] = op(myVal[c], src_row[x * cn + c]);
         }
+
+#else // __CUDA_ARCH__ >= 200
+
+        // For older arch use shared memory for cache
+        for (int x = 0; x < src.cols; x += 256)
+        {
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+            {
+                smem[c * 256 + threadIdx.x] = op.startValue();
+                const int load_x = x * cn + c * 256 + threadIdx.x;
+                if (load_x < src.cols * cn)
+                    smem[c * 256 + threadIdx.x] = src_row[load_x];
+            }
+            __syncthreads();
+
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+                myVal[c] = op(myVal[c], smem[threadIdx.x * cn + c]);
+            __syncthreads();
+        }
+
+#endif // __CUDA_ARCH__ >= 200
 
         #pragma unroll
         for (int c = 0; c < cn; ++c)
@@ -2025,12 +2052,8 @@ namespace cv { namespace gpu { namespace mathfunc
         }
         __syncthreads();
 
-        if (threadIdx.x == 0)
-        {
-            #pragma unroll
-            for (int c = 0; c < cn; ++c)
-                dst[y * cn + c] = saturate_cast<D>(op.result(smem[c * 256], src.cols));
-        }
+        if (threadIdx.x < cn)
+            dst[y * cn + threadIdx.x] = saturate_cast<D>(op.result(smem[threadIdx.x * 256], src.cols));
     }
 
     template <int cn, template <typename> class Op, typename T, typename S, typename D> void reduceCols_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)

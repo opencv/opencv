@@ -1419,3 +1419,39 @@ TEST(Canny)
     gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
     GPU_OFF;
 }
+
+
+TEST(reduce)
+{
+    for (int size = 1000; size < 4000; size += 1000)
+    {
+        Mat src;
+        gen(src, size, size, CV_32F, 0, 255);
+        Mat dst0(1, src.cols, CV_32F);
+        Mat dst1(src.rows, 1, CV_32F);
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst0(1, src.cols, CV_32F);
+        gpu::GpuMat d_dst1(1, src.rows, CV_32F);
+
+        SUBTEST << "size " << size << ", dim = 0";
+
+        CPU_ON;
+        reduce(src, dst0, 0, CV_REDUCE_MIN);
+        CPU_OFF;
+
+        GPU_ON;
+        gpu::reduce(d_src, d_dst0, 0, CV_REDUCE_MIN);
+        GPU_OFF;
+
+        SUBTEST << "size " << size << ", dim = 1";
+
+        CPU_ON;
+        reduce(src, dst1, 1, CV_REDUCE_MIN);
+        CPU_OFF;
+
+        GPU_ON;
+        gpu::reduce(d_src, d_dst1, 1, CV_REDUCE_MIN);
+        GPU_OFF;
+    }
+}
