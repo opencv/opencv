@@ -555,7 +555,7 @@ int main(int argc, char* argv[])
     else if (seam_find_type == "gc_color")
     {
 #ifndef ANDROID
-        if (try_gpu)
+        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
         else
 #endif
@@ -564,7 +564,7 @@ int main(int argc, char* argv[])
     else if (seam_find_type == "gc_colorgrad")
     {
 #ifndef ANDROID
-        if (try_gpu)
+        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
 #endif
