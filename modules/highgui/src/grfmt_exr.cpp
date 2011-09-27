@@ -719,7 +719,7 @@ bool  ExrEncoder::write( const Mat& img, const vector<int>& )
             }
             data += step;
         }
-        delete buffer;
+        delete[] buffer;
     }
 
     return result;
