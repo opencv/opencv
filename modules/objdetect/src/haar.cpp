@@ -184,7 +184,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     int datasize;
     int total_classifiers = 0;
     int total_nodes = 0;
-    char errorstr[100];
+    char errorstr[1000];
     CvHidHaarClassifier* haar_classifier_ptr;
     CvHidHaarTreeNode* haar_node_ptr;
     CvSize orig_window_size;
