@@ -68,7 +68,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
     src = cvGetMat( srcarr, &stub );
 
     if( CV_MAT_TYPE( src->type ) != CV_8UC1 )
-        CV_Error( CV_StsBadMask, "" );
+        CV_Error( CV_StsUnsupportedFormat, "The source image must be 8-bit single-channel (CV_8UC1)" );
 
     if( !corners )
         CV_Error( CV_StsNullPtr, "" );
