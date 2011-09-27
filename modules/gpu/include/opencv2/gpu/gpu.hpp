@@ -1288,16 +1288,16 @@ namespace cv
                 const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false );
 
             // Find best matches for each query descriptor which have distance less than maxDistance.
-            // nMatches.at<unsigned int>(0, queruIdx) will contain matches count for queryIdx.
+            // nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
             // carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
             // because it didn't have enough memory.
-            // trainIdx.at<int>(queruIdx, i) will contain ith train index (i < min(nMatches.at<unsigned int>(0, queruIdx), trainIdx.cols))
-            // distance.at<int>(queruIdx, i) will contain ith distance (i < min(nMatches.at<unsigned int>(0, queruIdx), trainIdx.cols))
-            // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x nTrain,
+            // trainIdx.at<int>(queruIdx, i) will contain ith train index (i < min(nMatches.at<int>(0, queruIdx), trainIdx.cols))
+            // distance.at<int>(queruIdx, i) will contain ith distance (i < min(nMatches.at<int>(0, queruIdx), trainIdx.cols))
+            // If trainIdx is empty, then trainIdx and distance will be created with size nQuery x (nTrain / 2),
             // otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
             // Matches doesn't sorted.
-            void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
-                GpuMat& trainIdx, GpuMat& nMatches, GpuMat& distance, float maxDistance,
+            void radiusMatchSingle(const GpuMat& queryDescs, const GpuMat& trainDescs,
+                GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
                 const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null());
 
             // Download trainIdx, nMatches and distance and convert it to vector with DMatch.
@@ -1305,10 +1305,10 @@ namespace cv
             // compactResult is used when mask is not empty. If compactResult is false matches
             // vector will have the same size as queryDescriptors rows. If compactResult is true
             // matches vector will not contain matches for fully masked out query descriptors.
-            static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& nMatches, const GpuMat& distance,
+            static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches,
                 std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
             // Convert trainIdx, nMatches and distance to vector with DMatch.
-            static void radiusMatchConvert(const Mat& trainIdx, const Mat& nMatches, const Mat& distance,
+            static void radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches,
                 std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
             // Find best matches for each query descriptor which have distance less than maxDistance
@@ -1316,6 +1316,23 @@ namespace cv
             void radiusMatch(const GpuMat& queryDescs, const GpuMat& trainDescs,
                 std::vector< std::vector<DMatch> >& matches, float maxDistance,
                 const GpuMat& mask = GpuMat(), bool compactResult = false);
+
+            // Find best matches for each query descriptor which have distance less than maxDistance.
+            // Matches doesn't sorted.
+            void radiusMatchCollection(const GpuMat& queryDescs, const GpuMat& trainCollection,
+                GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance,
+                const GpuMat& maskCollection, Stream& stream = Stream::Null());
+
+            // Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
+            // matches will be sorted in increasing order of distances.
+            // compactResult is used when mask is not empty. If compactResult is false matches
+            // vector will have the same size as queryDescriptors rows. If compactResult is true
+            // matches vector will not contain matches for fully masked out query descriptors.
+            static void radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+            // Convert trainIdx, nMatches and distance to vector with DMatch.
+            static void radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches,
+                std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
 
             // Find best matches from train collection for each query descriptor which have distance less than
             // maxDistance (in increasing order of distances).

@@ -89,7 +89,7 @@ PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(te
 
     SIMPLE_TEST_CYCLE()
     {
-        matcher.radiusMatch(query, train, trainIdx, nMatches, distance, 2.0);
+        matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
     }
 
     Mat trainIdx_host(trainIdx);
