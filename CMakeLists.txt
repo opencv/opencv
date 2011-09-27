@@ -446,6 +446,7 @@ if(IOS)
 endif()
 
 set(WITH_TBB OFF CACHE BOOL "Include Intel TBB support")
+set(WITH_THREADING_FRAMEWORK OFF CACHE BOOL "Include Threading Framework support (lightweight analogue of TBB for ARM-s)")
 set(WITH_IPP OFF CACHE BOOL "Include Intel IPP support")
 set(WITH_EIGEN ON CACHE BOOL "Include Eigen2/Eigen3 support")
 
@@ -957,10 +958,15 @@ if (WITH_TBB)
 endif(WITH_TBB)
 
 #Threading Framework -- temporary decision for ARM-s instead of TBB
-if (NOT HAVE_TBB)
+set(HAVE_THREADING_FRAMEWORK)
+if (NOT HAVE_TBB AND WITH_THREADING_FRAMEWORK)
     file(GLOB THREADING_FRAMEWORK_HEADER "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/threading_framework.hpp")
     file(GLOB THREADING_FRAMEWORK_SOURCE "${OpenCV_SOURCE_DIR}/modules/core/src/threading_framework.cpp")
+
     if(THREADING_FRAMEWORK_HEADER AND THREADING_FRAMEWORK_SOURCE)
+        set(HAVE_THREADING_FRAMEWORK 1)
+    endif()
+    if (TEGRA_DIR) 
         set(HAVE_THREADING_FRAMEWORK 1)
     endif()
 endif()

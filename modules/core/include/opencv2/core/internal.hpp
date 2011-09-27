@@ -200,7 +200,7 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 
 
 #ifdef HAVE_THREADING_FRAMEWORK 
-#include "threading_framework.hpp"
+#include "opencv2/core/threading_framework.hpp"
 
         template<typename Body> 
         static void parallel_for( const BlockedRange& range, const Body& body )
