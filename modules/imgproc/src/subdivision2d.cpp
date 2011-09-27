@@ -1453,7 +1453,7 @@ void Subdiv2D::getVoronoiFacetList(const vector<int>& idx,
 }
 
 
-void Subdiv2D::check() const
+void Subdiv2D::checkSubdiv() const
 {
     int i, j, total = (int)qedges.size();
     

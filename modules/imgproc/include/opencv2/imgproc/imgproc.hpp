@@ -1085,7 +1085,7 @@ protected:
     int isRightOf(Point2f pt, int edge) const;
     void calcVoronoi();
     void clearVoronoi();
-    void check() const;
+    void checkSubdiv() const;
     
     struct CV_EXPORTS Vertex
     {
