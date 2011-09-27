@@ -249,12 +249,10 @@ namespace detail {
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features)
 { 
     find(image, features);
-    cout << features.descriptors.cols << " " << features.descriptors.rows << " " << features.descriptors.type() << endl;
     features.img_size = image.size();
 }
 
 
-// TODO add tests for this function
 void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, const vector<Rect> &rois)
 { 
     vector<ImageFeatures> roi_features(rois.size());
