@@ -735,9 +735,8 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
     //printf("parse : %s\n", filename);
 
     xmlf = fopen(filename, "rb");
-	if(xmlf == NULL){
-		return LSVM_PARSER_FILE_NOT_FOUND;
-	}
+    if(xmlf == NULL)
+        return LSVM_PARSER_FILE_NOT_FOUND;
     
     i   = 0;
     j   = 0;
@@ -767,7 +766,9 @@ int LSVMparser(const char * filename, CvLSVMFilterObject *** model, int *last, i
             }
         }        
     }
-	return LATENT_SVM_OK;
+    
+    fclose(xmlf);
+    return LATENT_SVM_OK;
 }
 
 int loadModel(
