@@ -342,41 +342,30 @@ int DistanceTransformTwoDimensionalProblem(const float *f,
 {
     int i, j, tmp;
     int resOneDimProblem;
-    float *internalDistTrans;
-    int *internalPointsX;
     int size = n * m;
+    std::vector<float> internalDistTrans(size);
+    std::vector<int> internalPointsX(size);
 
-    // Allocation memory (must be free in this function)
-    internalDistTrans = (float *)malloc(sizeof(float) * size); 
-    internalPointsX = (int *)malloc(sizeof(int) * size);
-
-    
     for (i = 0; i < n; i++)
     {
         resOneDimProblem = DistanceTransformOneDimensionalProblem(
                                     f + i * m, m, 
                                     coeff[0], coeff[2], 
-                                    internalDistTrans + i * m, 
-                                    internalPointsX + i * m); 
+                                    &internalDistTrans[i * m], 
+                                    &internalPointsX[i * m]); 
         if (resOneDimProblem != DISTANCE_TRANSFORM_OK)
-        {
-            free(internalDistTrans);
             return DISTANCE_TRANSFORM_ERROR;
-        } /* if (resOneDimProblem != DISTANCE_TRANSFORM_OK) */
     }
-    Transpose(internalDistTrans, n, m);
+    Transpose(&internalDistTrans[0], n, m);
     for (j = 0; j < m; j++)
     {
         resOneDimProblem = DistanceTransformOneDimensionalProblem(
-                                    internalDistTrans + j * n, n, 
+                                    &internalDistTrans[j * n], n, 
                                     coeff[1], coeff[3], 
                                     distanceTransform + j * n, 
                                     pointsY + j * n);
         if (resOneDimProblem != DISTANCE_TRANSFORM_OK)
-        {
-            free(internalDistTrans);
             return DISTANCE_TRANSFORM_ERROR;
-        } /* if (resOneDimProblem != DISTANCE_TRANSFORM_OK) */
     }
     Transpose(distanceTransform, m, n);
     Transpose_int(pointsY, m, n);
@@ -390,8 +379,5 @@ int DistanceTransformTwoDimensionalProblem(const float *f,
         }
     }
 
-    // Release allocated memory
-    free(internalDistTrans);
-    free(internalPointsX);
     return DISTANCE_TRANSFORM_OK;
 }
