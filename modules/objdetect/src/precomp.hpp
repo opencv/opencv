@@ -60,4 +60,8 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/objdetect/objdetect_tegra.hpp"
+#endif
+
 #endif
