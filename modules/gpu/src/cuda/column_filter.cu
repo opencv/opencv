@@ -52,7 +52,7 @@ using namespace cv::gpu::device;
 
 #define MAX_KERNEL_SIZE 16
 #define BLOCK_DIM_X 16
-#define BLOCK_DIM_Y 8
+#define BLOCK_DIM_Y 4
 #define RESULT_STEPS 8
 #define HALO_STEPS 1
 
