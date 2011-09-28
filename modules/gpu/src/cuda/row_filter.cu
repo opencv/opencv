@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 1993-2011, NVIDIA Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -51,64 +52,85 @@ using namespace cv::gpu::device;
 
 #define MAX_KERNEL_SIZE 16
 #define BLOCK_DIM_X 16
-#define BLOCK_DIM_Y 16
+#define BLOCK_DIM_Y 4
+#define RESULT_STEPS 8
+#define HALO_STEPS 1
 
-namespace filter_krnls_row
+namespace filter_row
 {
-    __constant__ float cLinearKernel[MAX_KERNEL_SIZE];
+    __constant__ float c_kernel[MAX_KERNEL_SIZE];
 
-    void loadLinearKernel(const float kernel[], int ksize)
+    void loadKernel(const float kernel[], int ksize)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(cLinearKernel, kernel, ksize * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
     }
 
-    template <typename T, size_t size> struct SmemType_
+    namespace detail
     {
-        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type smem_t;
-    };
-    template <typename T> struct SmemType_<T, 4>
-    {
-        typedef T smem_t;
-    };
+        template <typename T, size_t size> struct SmemType
+        {
+            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type smem_t;
+        };
+
+        template <typename T> struct SmemType<T, 4>
+        {
+            typedef T smem_t;
+        };
+    }
+
     template <typename T> struct SmemType
     {
-        typedef typename SmemType_<T, sizeof(T)>::smem_t smem_t;
+        typedef typename detail::SmemType<T, sizeof(T)>::smem_t smem_t;
     };
 
-    template <int ksize, typename T, typename D, typename B>
+    template <int KERNEL_SIZE, typename T, typename D, typename B>
     __global__ void linearRowFilter(const DevMem2D_<T> src, PtrStep_<D> dst, int anchor, const B b)
     {
         typedef typename SmemType<T>::smem_t smem_t;
+        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
-        __shared__ smem_t smem[BLOCK_DIM_Y * BLOCK_DIM_X * 3];
+        __shared__ smem_t smem[BLOCK_DIM_Y][(RESULT_STEPS + 2 * HALO_STEPS) * BLOCK_DIM_X];
 
-        const int x = BLOCK_DIM_X * blockIdx.x + threadIdx.x;
-        const int y = BLOCK_DIM_Y * blockIdx.y + threadIdx.y;
-
-        smem_t* sDataRow = smem + threadIdx.y * BLOCK_DIM_X * 3;
+        //Offset to the left halo edge
+        const int x = (blockIdx.x * RESULT_STEPS - HALO_STEPS) * BLOCK_DIM_X + threadIdx.x;
+        const int y = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
 
         if (y < src.rows)
         {
-            const T* rowSrc = src.ptr(y);
+            const T* src_row = src.ptr(y);
 
-            sDataRow[threadIdx.x                  ] = b.at_low(x - BLOCK_DIM_X, rowSrc);
-            sDataRow[threadIdx.x + BLOCK_DIM_X    ] = b.at_high(x, rowSrc);
-            sDataRow[threadIdx.x + BLOCK_DIM_X * 2] = b.at_high(x + BLOCK_DIM_X, rowSrc);
+            //Load main data
+            #pragma unroll
+            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
+                smem[threadIdx.y][threadIdx.x + i * BLOCK_DIM_X] = b.at_high(i * BLOCK_DIM_X + x, src_row);
+
+            //Load left halo
+            #pragma unroll
+            for(int i = 0; i < HALO_STEPS; ++i)
+                smem[threadIdx.y][threadIdx.x + i * BLOCK_DIM_X] = b.at_low(i * BLOCK_DIM_X + x, src_row);
+
+            //Load right halo
+            #pragma unroll
+            for(int i = HALO_STEPS + RESULT_STEPS; i < HALO_STEPS + RESULT_STEPS + HALO_STEPS; ++i)
+                smem[threadIdx.y][threadIdx.x + i * BLOCK_DIM_X] = b.at_high(i * BLOCK_DIM_X + x, src_row);
 
             __syncthreads();
 
-            if (x < src.cols)
+            D* dst_row = dst.ptr(y);
+
+            #pragma unroll
+            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
-                sDataRow += threadIdx.x + BLOCK_DIM_X - anchor;
-
                 #pragma unroll
-                for(int i = 0; i < ksize; ++i)
-                    sum = sum + sDataRow[i] * cLinearKernel[i];
+                for (int j = 0; j < KERNEL_SIZE; ++j)
+                    sum = sum + smem[threadIdx.y][threadIdx.x + i * BLOCK_DIM_X + j - anchor] * c_kernel[j];
 
-                dst.ptr(y)[x] = saturate_cast<D>(sum);
+                int dstX = x + i * BLOCK_DIM_X;
+
+                if (dstX < src.cols)
+                    dst_row[dstX] = saturate_cast<D>(sum);
             }
         }
     }
@@ -119,13 +141,14 @@ namespace cv { namespace gpu { namespace filters
     template <int ksize, typename T, typename D, template<typename> class B>
     void linearRowFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream)
     {
-        dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
-        dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
+        typedef typename filter_row::SmemType<T>::smem_t smem_t;
 
-        typedef typename filter_krnls_row::SmemType<T>::smem_t smem_t;
+        const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
+        const dim3 grid(divUp(src.cols, RESULT_STEPS * BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
+
         B<smem_t> b(src.cols);
 
-        filter_krnls_row::linearRowFilter<ksize, T, D><<<grid, threads, 0, stream>>>(src, dst, anchor, b);
+        filter_row::linearRowFilter<ksize, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, b);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
@@ -235,7 +258,7 @@ namespace cv { namespace gpu { namespace filters
             }
         };
         
-        filter_krnls_row::loadLinearKernel(kernel, ksize);
+        filter_row::loadKernel(kernel, ksize);
 
         callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
     }

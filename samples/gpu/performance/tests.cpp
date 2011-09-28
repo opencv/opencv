@@ -737,32 +737,6 @@ TEST(resize)
 }
 
 
-TEST(Sobel)
-{
-    Mat src, dst;
-    gpu::GpuMat d_src, d_dst;
-
-    for (int size = 2000; size <= 4000; size += 1000)
-    {
-        SUBTEST << "size " << size << ", 32F";
-
-        gen(src, size, size, CV_32F, 0, 1);
-        dst.create(size, size, CV_32F);
-
-        CPU_ON;
-        Sobel(src, dst, dst.depth(), 1, 1);
-        CPU_OFF;
-
-        d_src = src;
-        d_dst.create(size, size, CV_32F);
-
-        GPU_ON;
-        gpu::Sobel(d_src, d_dst, d_dst.depth(), 1, 1);
-        GPU_OFF;
-    }
-}
-
-
 TEST(cvtColor)
 {
     Mat src, dst;
@@ -1068,26 +1042,28 @@ TEST(solvePnPRansac)
 
 TEST(GaussianBlur)
 {
-    for (int size = 1000; size < 10000; size += 3000)
+    for (int size = 1000; size <= 4000; size += 1000)
     {
-        SUBTEST << "16SC3, size " << size;
+        SUBTEST << "8UC1, size " << size;
 
-        Mat src; gen(src, size, size, CV_16SC3, 0, 256);
+        Mat src; gen(src, size, size, CV_8UC1, 0, 256);
         Mat dst(src.size(), src.type());
 
         CPU_ON;
-        GaussianBlur(src, dst, Size(5,5), 0);
+        GaussianBlur(src, dst, Size(3, 3), 1);
         CPU_OFF;
 
         gpu::GpuMat d_src(src);
         gpu::GpuMat d_dst(src.size(), src.type());
+        gpu::GpuMat d_buf;
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
 
         GPU_ON;
-        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
         GPU_OFF;
     }
 
-    for (int size = 1000; size < 10000; size += 3000)
+    for (int size = 1000; size <= 4000; size += 1000)
     {
         SUBTEST << "8UC4, size " << size;
 
@@ -1095,14 +1071,37 @@ TEST(GaussianBlur)
         Mat dst(src.size(), src.type());
 
         CPU_ON;
-        GaussianBlur(src, dst, Size(5,5), 0);
+        GaussianBlur(src, dst, Size(3, 3), 1);
         CPU_OFF;
 
         gpu::GpuMat d_src(src);
         gpu::GpuMat d_dst(src.size(), src.type());
+        gpu::GpuMat d_buf;
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
 
         GPU_ON;
-        gpu::GaussianBlur(d_src, d_dst, Size(5,5), 0);
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
+        GPU_OFF;
+    }
+
+    for (int size = 1000; size <= 4000; size += 1000)
+    {
+        SUBTEST << "32FC1, size " << size;
+
+        Mat src; gen(src, size, size, CV_32FC1, 0, 1);
+        Mat dst(src.size(), src.type());
+
+        CPU_ON;
+        GaussianBlur(src, dst, Size(3, 3), 1);
+        CPU_OFF;
+
+        gpu::GpuMat d_src(src);
+        gpu::GpuMat d_dst(src.size(), src.type());
+        gpu::GpuMat d_buf;
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
+
+        GPU_ON;
+        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
         GPU_OFF;
     }
 }

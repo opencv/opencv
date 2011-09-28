@@ -340,6 +340,8 @@ namespace cv
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter,
             const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU>& rowFilter,
+            const Ptr<BaseColumnFilter_GPU>& columnFilter, int srcType, int bufType, int dstType, GpuMat& buf);
 
         //! returns horizontal 1D box filter
         //! supports only CV_8UC1 source type and CV_32FC1 sum type
@@ -367,6 +369,8 @@ namespace cv
         //! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
         CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel,
             const Point& anchor = Point(-1,-1), int iterations = 1);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createMorphologyFilter_GPU(int op, int type, const Mat& kernel, GpuMat& buf,
+            const Point& anchor = Point(-1,-1), int iterations = 1);
 
         //! returns 2D filter with the specified kernel
         //! supports CV_8UC1 and CV_8UC4 types
@@ -386,7 +390,7 @@ namespace cv
         //! OpenCV version supports only CV_32F as buffer depth and
         //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
         CV_EXPORTS Ptr<BaseRowFilter_GPU> getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel,
-            int anchor = -1, int borderType = BORDER_CONSTANT);
+            int anchor = -1, int borderType = BORDER_DEFAULT);
 
         //! returns the primitive column filter with the specified kernel.
         //! supports only CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC2, CV_32SC1, CV_32FC1 dst type.
@@ -397,19 +401,26 @@ namespace cv
         //! OpenCV version supports only CV_32F as buffer depth and
         //! BORDER_REFLECT101, BORDER_REPLICATE and BORDER_CONSTANT border types.
         CV_EXPORTS Ptr<BaseColumnFilter_GPU> getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel,
-            int anchor = -1, int borderType = BORDER_CONSTANT);
+            int anchor = -1, int borderType = BORDER_DEFAULT);
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel,
             const Mat& columnKernel, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT,
             int columnBorderType = -1);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat& rowKernel,
+            const Mat& columnKernel, GpuMat& buf, const Point& anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT,
+            int columnBorderType = -1);
 
         //! returns filter engine for the generalized Sobel operator
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, GpuMat& buf,
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns the Gaussian filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0,
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, GpuMat& buf, double sigma1, double sigma2 = 0,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
 
         //! returns maximum filter
@@ -426,31 +437,42 @@ namespace cv
         static inline void blur(const GpuMat& src, GpuMat& dst, Size ksize, Point anchor = Point(-1,-1), Stream& stream = Stream::Null()) { boxFilter(src, dst, -1, ksize, anchor, stream); }
 
         //! erodes the image (applies the local minimum operator)
-        CV_EXPORTS void erode( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
+        CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void erode(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
         //! dilates the image (applies the local maximum operator)
-        CV_EXPORTS void dilate( const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
+        CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void dilate(const GpuMat& src, GpuMat& dst, const Mat& kernel, GpuMat& buf, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
         //! applies an advanced morphological operation to the image
-        CV_EXPORTS void morphologyEx( const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
+        CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& kernel, GpuMat& buf1, GpuMat& buf2, Point anchor = Point(-1, -1), int iterations = 1, Stream& stream = Stream::Null());
 
         //! applies non-separable 2D linear filter to the image
         CV_EXPORTS void filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernel, Point anchor=Point(-1,-1), Stream& stream = Stream::Null());
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY,
+            Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS void sepFilter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& kernelX, const Mat& kernelY, GpuMat& buf,
             Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null());
 
         //! applies generalized Sobel operator to the image
         CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1,
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS void Sobel(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, GpuMat& buf, int ksize = 3, double scale = 1,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null());
 
         //! applies the vertical or horizontal Scharr operator to the image
         CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, double scale = 1,
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS void Scharr(const GpuMat& src, GpuMat& dst, int ddepth, int dx, int dy, GpuMat& buf, double scale = 1,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null());
 
         //! smooths the image using Gaussian filter.
         CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, double sigma1, double sigma2 = 0,
+            int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1);
+        CV_EXPORTS void GaussianBlur(const GpuMat& src, GpuMat& dst, Size ksize, GpuMat& buf, double sigma1, double sigma2 = 0,
             int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1, Stream& stream = Stream::Null());
 
         //! applies Laplacian operator to the image

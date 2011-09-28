@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 1993-2011, NVIDIA Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -51,49 +52,64 @@ using namespace cv::gpu::device;
 
 #define MAX_KERNEL_SIZE 16
 #define BLOCK_DIM_X 16
-#define BLOCK_DIM_Y 16
+#define BLOCK_DIM_Y 8
+#define RESULT_STEPS 8
+#define HALO_STEPS 1
 
-namespace filter_krnls_column
+namespace filter_column
 {
-    __constant__ float cLinearKernel[MAX_KERNEL_SIZE];
+    __constant__ float c_kernel[MAX_KERNEL_SIZE];
 
-    void loadLinearKernel(const float kernel[], int ksize)
+    void loadKernel(const float kernel[], int ksize)
     {
-        cudaSafeCall( cudaMemcpyToSymbol(cLinearKernel, kernel, ksize * sizeof(float)) );
+        cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
     }
 
-    template <int ksize, typename T, typename D, typename B>
+    template <int KERNEL_SIZE, typename T, typename D, typename B>
     __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep_<D> dst, int anchor, const B b)
     {
-        __shared__ T smem[BLOCK_DIM_Y * BLOCK_DIM_X * 3];
+        typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
-        const int x = BLOCK_DIM_X * blockIdx.x + threadIdx.x;
-        const int y = BLOCK_DIM_Y * blockIdx.y + threadIdx.y;
+        __shared__ T smem[BLOCK_DIM_X][(RESULT_STEPS + 2 * HALO_STEPS) * BLOCK_DIM_Y + 1];
 
-        T* sDataColumn = smem + threadIdx.x;
+        //Offset to the upper halo edge
+        const int x = blockIdx.x * BLOCK_DIM_X + threadIdx.x;
+        const int y = (blockIdx.y * RESULT_STEPS - HALO_STEPS) * BLOCK_DIM_Y + threadIdx.y;
 
         if (x < src.cols)
         {
-            const T* srcCol = src.ptr() + x;
+            const T* src_col = src.ptr() + x;
 
-            sDataColumn[ threadIdx.y                    * BLOCK_DIM_X] = b.at_low(y - BLOCK_DIM_Y, srcCol, src.step);
-            sDataColumn[(threadIdx.y + BLOCK_DIM_Y)     * BLOCK_DIM_X] = b.at_high(y, srcCol, src.step);
-            sDataColumn[(threadIdx.y + BLOCK_DIM_Y * 2) * BLOCK_DIM_X] = b.at_high(y + BLOCK_DIM_Y, srcCol, src.step);
+            //Main data
+            #pragma unroll
+            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
+                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
+
+            //Upper halo
+            #pragma unroll
+            for(int i = 0; i < HALO_STEPS; ++i)
+                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y] = b.at_low(y + i * BLOCK_DIM_Y, src_col, src.step);
+
+            //Lower halo
+            #pragma unroll
+            for(int i = HALO_STEPS + RESULT_STEPS; i < HALO_STEPS + RESULT_STEPS + HALO_STEPS; ++i)
+                smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y]=  b.at_high(y + i * BLOCK_DIM_Y, src_col, src.step);
 
             __syncthreads();
 
-            if (y < src.rows)
+            #pragma unroll
+            for(int i = HALO_STEPS; i < HALO_STEPS + RESULT_STEPS; ++i)
             {
-                typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
                 sum_t sum = VecTraits<sum_t>::all(0);
 
-                sDataColumn += (threadIdx.y + BLOCK_DIM_Y - anchor) * BLOCK_DIM_X;
-
                 #pragma unroll
-                for(int i = 0; i < ksize; ++i)
-                    sum = sum + sDataColumn[i * BLOCK_DIM_X] * cLinearKernel[i];
+                for(int j = 0; j < KERNEL_SIZE; ++j)
+                    sum = sum + smem[threadIdx.x][threadIdx.y + i * BLOCK_DIM_Y + j - anchor] * c_kernel[j];
 
-                dst.ptr(y)[x] = saturate_cast<D>(sum);
+                int dstY = y + i * BLOCK_DIM_Y;
+
+                if (dstY < src.rows)
+                    dst.ptr(dstY)[x] = saturate_cast<D>(sum);
             }
         }
     }
@@ -103,13 +119,13 @@ namespace cv { namespace gpu { namespace filters
 {
     template <int ksize, typename T, typename D, template<typename> class B>
     void linearColumnFilter_caller(const DevMem2D_<T>& src, const DevMem2D_<D>& dst, int anchor, cudaStream_t stream)
-    {
-        dim3 threads(BLOCK_DIM_X, BLOCK_DIM_Y);
-        dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, BLOCK_DIM_Y));
+    {        
+        const dim3 block(BLOCK_DIM_X, BLOCK_DIM_Y);
+        const dim3 grid(divUp(src.cols, BLOCK_DIM_X), divUp(src.rows, RESULT_STEPS * BLOCK_DIM_Y));
 
         B<T> b(src.rows);
 
-        filter_krnls_column::linearColumnFilter<ksize, T, D><<<grid, threads, 0, stream>>>(src, dst, anchor, b);
+        filter_column::linearColumnFilter<ksize, T, D><<<grid, block, 0, stream>>>(src, dst, anchor, b);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
@@ -219,7 +235,7 @@ namespace cv { namespace gpu { namespace filters
             }
         };
         
-        filter_krnls_column::loadLinearKernel(kernel, ksize);
+        filter_column::loadKernel(kernel, ksize);
 
         callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, stream);
     }

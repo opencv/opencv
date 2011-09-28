@@ -101,17 +101,15 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize, linearFilter, testing::Combine(test
     SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size_MatType_KernelSize_BorderMode, separableLinearFilter, testing::Combine(testing::ValuesIn(devices()), 
-                                                                               testing::Values(GPU_TYPICAL_MAT_SIZES), 
-                                                                               testing::Values(CV_8UC1, CV_8UC4, CV_16SC3, CV_32FC1),
-                                                                               testing::Values(3, 5),
-                                                                               testing::Values((int)BORDER_REFLECT101, (int)BORDER_CONSTANT)))
+PERF_TEST_P(DevInfo_Size_MatType_KernelSize, separableLinearFilter, testing::Combine(testing::ValuesIn(devices()), 
+                                                                                     testing::Values(GPU_TYPICAL_MAT_SIZES), 
+                                                                                     testing::Values(CV_8UC1, CV_8UC4, CV_32FC1),
+                                                                                     testing::Values(3, 5)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     Size size = std::tr1::get<1>(GetParam());
     int type = std::tr1::get<2>(GetParam());
     int ksize = std::tr1::get<3>(GetParam());
-    int borderMode = std::tr1::get<4>(GetParam());
 
     setDevice(devInfo.deviceID());
 
@@ -123,7 +121,7 @@ PERF_TEST_P(DevInfo_Size_MatType_KernelSize_BorderMode, separableLinearFilter, t
     GpuMat dst(size, type);
 
     Mat kernel = getGaussianKernel(ksize, 0.5, CV_32F);
-    Ptr<FilterEngine_GPU> filter = createSeparableLinearFilter_GPU(type, type, kernel, kernel, Point(-1,-1), borderMode);
+    Ptr<FilterEngine_GPU> filter = createSeparableLinearFilter_GPU(type, type, kernel, kernel, Point(-1,-1));
 
     declare.time(1.0).iterations(100);
 
