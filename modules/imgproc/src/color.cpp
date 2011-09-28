@@ -91,6 +91,7 @@
 
 #include "precomp.hpp"
 #include <limits>
+#include <iostream>
 
 namespace cv
 {
@@ -2657,18 +2658,21 @@ struct YUV4202BGR888Invoker
     const uchar* my1, *muv;
     int width;
 
-    YUV4202BGR888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
-        : dst(&_dst), my1(_y1), muv(_uv), width(_width) {}
+    YUV4202BGR888Invoker(Mat* _dst, int _width, const uchar* _y1, const uchar* _uv)
+        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
 
     void operator()(const BlockedRange& range) const
     {
+        int rangeBegin = range.begin() * 2;
+        int rangeEnd = range.end() * 2;
+
         //B = 1.164(Y - 16)                  + 2.018(U - 128)
         //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
         //R = 1.164(Y - 16) + 1.596(V - 128)
 
-        const uchar* y1 = my1 + range.begin() * width, *uv = muv + range.begin() * width / 2;
+        const uchar* y1 = my1 + rangeBegin * width, *uv = muv + rangeBegin * width / 2;
 
-        for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
+        for (int j = rangeBegin; j < rangeEnd; j+=2, y1+=width*2, uv+=width)
         {
             uchar* row1 = dst->ptr<uchar>(j);
             uchar* row2 = dst->ptr<uchar>(j+1);
@@ -2714,18 +2718,21 @@ struct YUV4202BGRA8888Invoker
     const uchar* my1, *muv;
     int width;
 
-    YUV4202BGRA8888Invoker(Mat& _dst, int _width, const uchar* _y1, const uchar* _uv)
-        : dst(&_dst), my1(_y1), muv(_uv), width(_width) {}
+    YUV4202BGRA8888Invoker(Mat* _dst, int _width, const uchar* _y1, const uchar* _uv)
+        : dst(_dst), my1(_y1), muv(_uv), width(_width) {}
 
     void operator()(const BlockedRange& range) const
     {
+        int rangeBegin = range.begin() * 2;
+        int rangeEnd = range.end() * 2;
+
         //B = 1.164(Y - 16)                  + 2.018(U - 128)
         //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
         //R = 1.164(Y - 16) + 1.596(V - 128)
 
-        const uchar* y1 = my1 + range.begin() * width, *uv = muv + range.begin() * width / 2;
+        const uchar* y1 = my1 + rangeBegin * width, *uv = muv + rangeBegin * width / 2;
 
-        for (int j = range.begin(); j < range.end(); j+=2, y1+=width*2, uv+=width)
+        for (int j = rangeBegin; j < rangeEnd; j+=2, y1+=width*2, uv+=width)
         {
             uchar* row1 = dst->ptr<uchar>(j);
             uchar* row2 = dst->ptr<uchar>(j+1);
@@ -3133,30 +3140,30 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     if (CV_YUV420sp2RGB == code || CV_YUV420sp2RGBA == code)
                     {
                         if (dcn == 3)
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<2,0>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGR888Invoker<2,0>(&dst, dstSz.width, y, uv));
                         else
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<2,0>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGRA8888Invoker<2,0>(&dst, dstSz.width, y, uv));
                     }
                     else if (CV_YUV420sp2BGR == code || CV_YUV420sp2BGRA == code)
                     {
                         if (dcn == 3)
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<0,0>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGR888Invoker<0,0>(&dst, dstSz.width, y, uv));
                         else
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<0,0>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGRA8888Invoker<0,0>(&dst, dstSz.width, y, uv));
                     }
                     else if (CV_YUV420i2RGB == code || CV_YUV420i2RGBA == code)
                     {
                         if (dcn == 3)
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<2,1>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGR888Invoker<2,1>(&dst, dstSz.width, y, uv));
                         else
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<2,1>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGRA8888Invoker<2,1>(&dst, dstSz.width, y, uv));
                     }
                     else if (CV_YUV420i2BGR == code || CV_YUV420i2BGRA == code)
                     {
                         if (dcn == 3)
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGR888Invoker<0,1>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGR888Invoker<0,1>(&dst, dstSz.width, y, uv));
                         else
-                            parallel_for(BlockedRange(0, dstSz.height, 2), YUV4202BGRA8888Invoker<0,1>(dst, dstSz.width, y, uv));
+                            parallel_for(BlockedRange(0, dstSz.height/2), YUV4202BGRA8888Invoker<0,1>(&dst, dstSz.width, y, uv));
                     }
                 }
             }
