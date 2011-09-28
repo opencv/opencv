@@ -1820,7 +1820,7 @@ namespace cv { namespace gpu { namespace mathfunc
             return a + b;
         }
 
-        __device__ __forceinline S result(S r, double) const
+        __device__ __forceinline__ S result(S r, double) const
         {
             return r;
         }
@@ -1838,7 +1838,7 @@ namespace cv { namespace gpu { namespace mathfunc
             return a + b;
         }
 
-        __device__ __forceinline double result(S r, double sz) const
+        __device__ __forceinline__ double result(S r, double sz) const
         {
             return r / sz;
         }
@@ -1860,7 +1860,7 @@ namespace cv { namespace gpu { namespace mathfunc
             return ::fmin(a, b);
         }
 
-        __device__ __forceinline S result(S r, double) const
+        __device__ __forceinline__ S result(S r, double) const
         {
             return r;
         }
@@ -1882,7 +1882,7 @@ namespace cv { namespace gpu { namespace mathfunc
             return ::fmax(a, b);
         }
 
-        __device__ __forceinline S result(S r, double) const
+        __device__ __forceinline__ S result(S r, double) const
         {
             return r;
         }
