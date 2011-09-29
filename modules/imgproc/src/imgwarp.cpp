@@ -1320,7 +1320,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
+#ifdef HAVE_TEGRA_OPTIMIZATION__DISABLED
 	    Mat src1 = _src.getMat();
 		Size ssize1 = src1.size();
 

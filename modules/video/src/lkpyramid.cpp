@@ -501,7 +501,7 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            double derivLambda,
                            int flags, double minEigThreshold )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
+#ifdef HAVE_TEGRA_OPTIMIZATION__DISABLED
     if (tegra::calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, derivLambda, flags))
         return;
 #endif
