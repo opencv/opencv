@@ -604,9 +604,7 @@ cvSobel( const void* srcarr, void* dstarr, int dx, int dy, int aperture_size )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
 
-    CV_Assert( src.size() == dst.size() && src.channels() == dst.channels() &&
-        ((src.depth() == CV_8U && (dst.depth() == CV_16S || dst.depth() == CV_32F)) ||
-        (src.depth() == CV_32F && dst.depth() == CV_32F)));
+    CV_Assert( src.size() == dst.size() && src.channels() == dst.channels() );
 
     cv::Sobel( src, dst, dst.depth(), dx, dy, aperture_size, 1, 0, cv::BORDER_REPLICATE );
     if( CV_IS_IMAGE(srcarr) && ((IplImage*)srcarr)->origin && dy % 2 != 0 )
@@ -619,9 +617,7 @@ cvLaplace( const void* srcarr, void* dstarr, int aperture_size )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
 
-    CV_Assert( src.size() == dst.size() && src.channels() == dst.channels() &&
-        ((src.depth() == CV_8U && (dst.depth() == CV_16S || dst.depth() == CV_32F)) ||
-        (src.depth() == CV_32F && dst.depth() == CV_32F)));
+    CV_Assert( src.size() == dst.size() && src.channels() == dst.channels() );
 
     cv::Laplacian( src, dst, dst.depth(), aperture_size, 1, 0, cv::BORDER_REPLICATE );
 }
