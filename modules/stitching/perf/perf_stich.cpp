@@ -19,12 +19,18 @@ PERF_TEST( stitch3, a123 )
     imgs.push_back( imread( getDataPath("stitching/a2.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
 
-    Stitcher stitcher = Stitcher::createDefault();
     Stitcher::Status status;
 
     declare.time(30 * 20);
 
-    TEST_CYCLE(20) { status = stitcher.stitch(imgs, pano); }
+    while(next())
+    {
+        Stitcher stitcher = Stitcher::createDefault();
+
+        startTimer();
+        status = stitcher.stitch(imgs, pano);
+        stopTimer();
+    }
 }
 
 PERF_TEST( stitch2, b12 )
@@ -35,10 +41,16 @@ PERF_TEST( stitch2, b12 )
     imgs.push_back( imread( getDataPath("stitching/b1.jpg") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
 
-    Stitcher stitcher = Stitcher::createDefault();
     Stitcher::Status status;
 
     declare.time(30 * 20);
 
-    TEST_CYCLE(20) { status = stitcher.stitch(imgs, pano); }
+    while(next())
+    {
+        Stitcher stitcher = Stitcher::createDefault();
+
+        startTimer();
+        status = stitcher.stitch(imgs, pano);
+        stopTimer();
+    }
 }

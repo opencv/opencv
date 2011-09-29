@@ -62,3 +62,16 @@ PERF_TEST_P__CORE_ARITHM_SCALAR(subtract, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(absdiff, TYPICAL_MATS_CORE_ARITHM)
 
 
+PERF_TEST(convert, cvRound)
+{
+    double number = theRNG().uniform(-100, 100);
+
+    int result = 0;
+
+    TEST_CYCLE(1000)
+    {
+        for (int i = 0; i < 500000; ++i)
+            result += cvRound(number);
+    }
+}
+
