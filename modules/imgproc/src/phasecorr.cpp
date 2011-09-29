@@ -83,8 +83,8 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
                 for( j = 1; j <= rows - 2; j += 2 )
                 {
-                    dataDst[j*stepDst] = (double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
-                                         (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc];
+                    dataDst[j*stepDst] = (float)((double)dataSrc[j*stepSrc]*dataSrc[j*stepSrc] +
+                                         (double)dataSrc[(j+1)*stepSrc]*dataSrc[(j+1)*stepSrc]);
                 }
 
                 if( k == 1 )
@@ -103,7 +103,7 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 
             for( j = j0; j < j1; j += 2 )
             {
-                dataDst[j] = (double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1];
+                dataDst[j] = (float)((double)dataSrc[j]*dataSrc[j] + (double)dataSrc[j+1]*dataSrc[j+1]);
             }
         }
     }

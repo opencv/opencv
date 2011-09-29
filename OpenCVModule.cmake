@@ -144,7 +144,8 @@ macro(define_opencv_module name)
 
     file(GLOB lib_srcs "src/*.cpp")
     file(GLOB lib_int_hdrs "src/*.h*")
-    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*" "include/opencv2/${name}/detail/*.h*")
+    file(GLOB lib_hdrs "include/opencv2/${name}/*.h*")
+    file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.h*")
 
     if(COMMAND get_module_external_sources)
        get_module_external_sources(${name})
@@ -152,6 +153,8 @@ macro(define_opencv_module name)
 
     source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
     source_group("Include" FILES ${lib_hdrs})
+    source_group("Include\\detail" FILES ${lib_hdrs_detail})    
+    list(APPEND lib_hdrs ${lib_hdrs_detail})
 
     set(the_target "opencv_${name}")
     if (${name} MATCHES "ts" AND MINGW)
