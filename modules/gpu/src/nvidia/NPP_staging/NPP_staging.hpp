@@ -84,6 +84,255 @@ cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream);
 */
 
 
+/** Border type
+ *
+ * Filtering operations assume that each pixel has a neighborhood of pixels.
+ * The following structure describes possible ways to define non-existent pixels.
+ */
+enum NppStBorderType
+{
+    nppStBorderNone   = 0, ///< There is no need to define additional pixels, image is extended already
+    nppStBorderClamp  = 1, ///< Clamp out of range position to borders
+    nppStBorderWrap   = 2, ///< Wrap out of range position. Image becomes periodic.
+    nppStBorderMirror = 3  ///< reflect out of range position across borders
+};
+
+
+/**
+ * Filter types for image resizing
+ */
+enum NppStInterpMode
+{
+    nppStSupersample, ///< Supersampling. For downscaling only
+    nppStBicubic      ///< Bicubic convolution filter, a = -0.5 (cubic Hermite spline)
+};
+
+
+/** Frame interpolation state
+ *
+ * This structure holds parameters required for frame interpolation.
+ * Forward displacement field is a per-pixel mapping from frame 0 to frame 1.
+ * Backward displacement field is a per-pixel mapping from frame 1 to frame 0.
+ */
+
+ struct NppStInterpolationState
+{
+    NcvSize32u size;      ///< frame size
+    Ncv32u nStep;         ///< pitch
+    Ncv32f pos;           ///< new frame position
+    Ncv32f *pSrcFrame0;   ///< frame 0
+    Ncv32f *pSrcFrame1;   ///< frame 1
+    Ncv32f *pFU;          ///< forward horizontal displacement
+    Ncv32f *pFV;          ///< forward vertical displacement
+    Ncv32f *pBU;          ///< backward horizontal displacement
+    Ncv32f *pBV;          ///< backward vertical displacement
+    Ncv32f *pNewFrame;    ///< new frame
+    Ncv32f *ppBuffers[6]; ///< temporary buffers
+};
+
+
+/** Size of a buffer required for interpolation.
+ * 
+ * Requires several such buffers. See \see NppStInterpolationState.
+ *
+ * \param srcSize           [IN]  Frame size (both frames must be of the same size)
+ * \param nStep             [IN]  Frame line step
+ * \param hpSize            [OUT] Where to store computed size (host memory)
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStGetInterpolationBufferSize(NcvSize32u srcSize,
+                                           Ncv32u nStep,
+                                           Ncv32u *hpSize);
+
+
+/** Interpolate frames (images) using provided optical flow (displacement field).
+ * 32-bit floating point images, single channel
+ *
+ * \param pState            [IN] structure containing all required parameters (host memory)
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState);
+
+
+/** Row linear filter. 32-bit floating point image, single channel
+ *
+ * Apply horizontal linear filter
+ *
+ * \param pSrc              [IN]  Source image pointer (CUDA device memory)
+ * \param srcSize           [IN]  Source image size
+ * \param nSrcStep          [IN]  Source image line step
+ * \param pDst              [OUT] Destination image pointer (CUDA device memory)
+ * \param dstSize           [OUT] Destination image size
+ * \param oROI              [IN]  Region of interest in the source image
+ * \param borderType        [IN]  Type of border
+ * \param pKernel           [IN]  Pointer to row kernel values (CUDA device memory)
+ * \param nKernelSize       [IN]  Size of the kernel in pixels
+ * \param nAnchor           [IN]  The kernel row alignment with respect to the position of the input pixel
+ * \param multiplier        [IN]  Value by which the computed result is multiplied
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStFilterRowBorder_32f_C1R(const Ncv32f *pSrc, 
+                                        NcvSize32u srcSize, 
+                                        Ncv32u nSrcStep,
+                                        Ncv32f *pDst, 
+                                        NcvSize32u dstSize, 
+                                        Ncv32u nDstStep,
+                                        NcvRect32u oROI, 
+                                        NppStBorderType borderType,
+                                        const Ncv32f *pKernel, 
+                                        Ncv32s nKernelSize,
+                                        Ncv32s nAnchor, 
+                                        Ncv32f multiplier);
+
+
+/** Column linear filter. 32-bit floating point image, single channel
+ *
+ * Apply vertical linear filter
+ *
+ * \param pSrc              [IN]  Source image pointer (CUDA device memory)
+ * \param srcSize           [IN]  Source image size
+ * \param nSrcStep          [IN]  Source image line step
+ * \param pDst              [OUT] Destination image pointer (CUDA device memory)
+ * \param dstSize           [OUT] Destination image size
+ * \param oROI              [IN]  Region of interest in the source image
+ * \param borderType        [IN]  Type of border
+ * \param pKernel           [IN]  Pointer to column kernel values (CUDA device memory)
+ * \param nKernelSize       [IN]  Size of the kernel in pixels
+ * \param nAnchor           [IN]  The kernel column alignment with respect to the position of the input pixel
+ * \param multiplier        [IN]  Value by which the computed result is multiplied
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStFilterColumnBorder_32f_C1R(const Ncv32f *pSrc,
+                                           NcvSize32u srcSize,
+                                           Ncv32u nSrcStep,
+                                           Ncv32f *pDst,
+                                           NcvSize32u dstSize,
+                                           Ncv32u nDstStep,
+                                           NcvRect32u oROI,
+                                           NppStBorderType borderType,
+                                           const Ncv32f *pKernel,
+                                           Ncv32s nKernelSize,
+                                           Ncv32s nAnchor,
+                                           Ncv32f multiplier);
+
+
+/** Size of buffer required for vector image warping.
+ * 
+ * \param srcSize           [IN]  Source image size
+ * \param nStep             [IN]  Source image line step
+ * \param hpSize            [OUT] Where to store computed size (host memory)
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS 
+NCVStatus nppiStVectorWarpGetBufferSize(NcvSize32u srcSize,
+                                        Ncv32u nSrcStep,
+                                        Ncv32u *hpSize);
+
+
+/** Warp image using provided 2D vector field and 1x1 point spread function.
+ * 32-bit floating point image, single channel
+ *
+ * During warping pixels from the source image may fall between pixels of the destination image.
+ * PSF (point spread function) describes how the source image pixel affects pixels of the destination.
+ * For 1x1 PSF only single pixel with the largest intersection is affected (similar to nearest interpolation).
+ *
+ * Destination image size and line step must be the same as the source image size and line step
+ *
+ * \param pSrc              [IN]  Source image pointer (CUDA device memory)
+ * \param srcSize           [IN]  Source image size
+ * \param nSrcStep          [IN]  Source image line step
+ * \param pU                [IN]  Pointer to horizontal displacement field (CUDA device memory)
+ * \param pV                [IN]  Pointer to vertical displacement field (CUDA device memory)
+ * \param nVFStep           [IN]  Displacement field line step
+ * \param timeScale         [IN]  Value by which displacement field will be scaled for warping
+ * \param pDst              [OUT] Destination image pointer (CUDA device memory)
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStVectorWarp_PSF1x1_32f_C1(const Ncv32f *pSrc,
+                                         NcvSize32u srcSize,
+                                         Ncv32u nSrcStep,
+                                         const Ncv32f *pU,
+                                         const Ncv32f *pV,
+                                         Ncv32u nVFStep,
+                                         Ncv32f timeScale,
+                                         Ncv32f *pDst);
+
+
+/** Warp image using provided 2D vector field and 2x2 point spread function.
+ * 32-bit floating point image, single channel
+ *
+ * During warping pixels from the source image may fall between pixels of the destination image.
+ * PSF (point spread function) describes how the source image pixel affects pixels of the destination.
+ * For 2x2 PSF all four intersected pixels will be affected.
+ *
+ * Destination image size and line step must be the same as the source image size and line step
+ *
+ * \param pSrc              [IN]  Source image pointer (CUDA device memory)
+ * \param srcSize           [IN]  Source image size
+ * \param nSrcStep          [IN]  Source image line step
+ * \param pU                [IN]  Pointer to horizontal displacement field (CUDA device memory)
+ * \param pV                [IN]  Pointer to vertical displacement field (CUDA device memory)
+ * \param nVFStep           [IN]  Displacement field line step
+ * \param timeScale         [IN]  Value by which displacement field will be scaled for warping
+ * \param pDst              [OUT] Destination image pointer (CUDA device memory)
+ *
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStVectorWarp_PSF2x2_32f_C1(const Ncv32f *pSrc,
+                                         NcvSize32u srcSize,
+                                         Ncv32u nSrcStep,
+                                         const Ncv32f *pU,
+                                         const Ncv32f *pV,
+                                         Ncv32u nVFStep,
+                                         Ncv32f *pBuffer,
+                                         Ncv32f timeScale,
+                                         Ncv32f *pDst);
+
+
+/** Resize. 32-bit floating point image, single channel
+ *
+ * Resizes image using specified filter (interpolation type)
+ *
+ * \param pSrc              [IN]  Source image pointer (CUDA device memory)
+ * \param srcSize           [IN]  Source image size
+ * \param nSrcStep          [IN]  Source image line step
+ * \param srcROI            [IN]  Source image region of interest
+ * \param pDst              [OUT] Destination image pointer (CUDA device memory)
+ * \param dstSize           [IN]  Destination image size
+ * \param nDstStep          [IN]  Destination image line step
+ * \param dstROI            [IN]  Destination image region of interest
+ * \param xFactor           [IN]  Row scale factor
+ * \param yFactor           [IN]  Column scale factor
+ * \param interpolation     [IN]  Interpolation type
+ * 
+ * \return NCV status code
+ */
+NCV_EXPORTS
+NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
+                               NcvSize32u srcSize,
+                               Ncv32u nSrcStep,
+                               NcvRect32u srcROI,
+                               Ncv32f *pDst,
+                               NcvSize32u dstSize,
+                               Ncv32u nDstStep,
+                               NcvRect32u dstROI,
+                               Ncv32f xFactor,
+                               Ncv32f yFactor,
+                               NppStInterpMode interpolation);
+
+
 /**
  * Downsamples (decimates) an image using the nearest neighbor algorithm. 32-bit unsigned pixels, single channel.
  *
