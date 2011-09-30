@@ -22,7 +22,7 @@
 #if !defined(HAVE_CUDA)
 int main( int argc, const char** argv )
 {
-    cout << "Please compile the library with CUDA support" << endl;
+    std::cout << "Please compile the library with CUDA support" << std::endl;
     return -1;
 }
 #else
