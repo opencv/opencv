@@ -53,7 +53,7 @@ vector<string> split_string(const string& str, const string& delimiters)
 	vector<string> res;
 
 	string split_str = str;
-	int pos_delim = split_str.find(delimiters);
+	size_t pos_delim = split_str.find(delimiters);
 
 	while ( pos_delim != string::npos)
 	{
@@ -109,11 +109,21 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             buffer.erase(flagPosition);
 
         paramVector = split_string(buffer, "|");
-        buffer = paramVector[0];
-        if (atoi(buffer.c_str()) == 0)
-            buffer = buffer + '|' + paramVector[1];
+		while (paramVector.size() < 4) paramVector.push_back("");
 
-        paramVector.erase(paramVector.begin(), paramVector.begin() + 2);
+		buffer = "";
+		if (paramVector[0] != "")
+		{
+			buffer = paramVector[0];
+			if (paramVector[1] != "")
+				buffer += '|' + paramVector[1];
+		}
+		if (paramVector[1] != "")
+			buffer = paramVector[1];
+
+		//if (buffer == "") CV_ERROR(CV_StsBadArg, "In CommandLineParser need set short and full name");
+
+		paramVector.erase(paramVector.begin(), paramVector.begin() + 2);
         data[buffer] = paramVector;
     }
 
@@ -143,7 +153,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
         for(it = data.begin(); it != data.end(); it++)
         {
             keys_buffer = it->first;
-            keysVector = split_string(keys_buffer, "| ");
+            keysVector = split_string(keys_buffer, "|");
             if (keysVector.size() == 1)
                 keysVector.push_back("");
             values_buffer = it->second[0];
@@ -193,18 +203,34 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
     }
 }
 
+string del_space(string name)
+{
+	while (name.find_first_of(' ') == 0)
+		name.erase(0, 1);
+
+	while (name.find_last_of(' ') == (name.length() - 1))
+		name.erase(name.end() - 1, name.end());
+
+	return name;
+}
+
 bool CommandLineParser::has(const std::string& keys)
 {
     std::map<std::string, std::vector<std::string> >::iterator it;
     std::vector<string> keysVector;
+
     for(it = data.begin(); it != data.end(); it++)
     {
-        keysVector = split_string(it->first, "| ");
-        if (keysVector.size() == 1)
-            keysVector.push_back("");
-        if ((keys == keysVector[0]) || (keys == keysVector[1]))
+        keysVector = split_string(it->first, "|");
+		for (int i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+
+        if (keysVector.size() == 1) keysVector.push_back("");
+
+		if ((del_space(keys).compare(keysVector[0]) == 0) || 
+			(del_space(keys).compare(keysVector[1]) == 0))
             return true;
     }
+
     return false;
 }
 
@@ -215,10 +241,13 @@ std::string CommandLineParser::getString(const std::string& keys)
 
     for(it = data.begin(); it != data.end(); it++)
     {
-        valueVector = split_string(it->first, "| ");
-        if (valueVector.size() == 1)
-            valueVector.push_back("");
-        if ((keys == valueVector[0]) || (keys == valueVector[1]))
+        valueVector = split_string(it->first, "|");
+		for (int i = 0; i < valueVector.size(); i++) valueVector[i] = del_space(valueVector[i]);
+
+        if (valueVector.size() == 1) valueVector.push_back("");
+
+		if ((del_space(keys).compare(valueVector[0]) == 0) || 
+			(del_space(keys).compare(valueVector[1]) == 0))
             return it->second[0];
     }
     return string();
@@ -227,20 +256,7 @@ std::string CommandLineParser::getString(const std::string& keys)
 template<typename _Tp>
  _Tp CommandLineParser::fromStringNumber(const std::string& str)//the default conversion function for numbers
 {
-    const char* c_str=str.c_str();
-    if ((!isdigit(c_str[0]))
-        &&
-        (
-            (c_str[0]!='-') || (strlen(c_str) <= 1) || ( !isdigit(c_str[1]) )
-        )
-    )
-
-    {
-        printf("This string cannot be converted to a number. Zero will be returned %s\n ", str.c_str());
-        return _Tp();
-    }
-
-    return  getData<_Tp>(str);
+    return getData<_Tp>(str);
 }
 
  void CommandLineParser::printParams()
@@ -249,7 +265,7 @@ template<typename _Tp>
      std::vector<string> keysVector;
      for(it = data.begin(); it != data.end(); it++)
      {
-         keysVector = split_string(it->first, "| ");
+         keysVector = split_string(it->first, "|");
          if (keysVector.size() == 1)
              keysVector.push_back("");
          printf("\t%s [%8s] (%12s - by default) - %s\n", keysVector[0].c_str(),
@@ -261,29 +277,24 @@ template<>
 bool CommandLineParser::get<bool>(const std::string& name, bool space_delete)
 {
     std::string str_buf = getString(name);
-    if (space_delete)
+
+	if (space_delete && str_buf != "")
     {
-        while (str_buf.find_first_of(' ') == 0)
-            str_buf.erase(0, 1);
-        while (str_buf.find_last_of(' ') == (str_buf.length() - 1))
-            str_buf.erase(str_buf.end() - 1, str_buf.end());
+		str_buf = del_space(str_buf);
     }
-    if (str_buf == "false")
-        return false;
-    return true;
+
+    if (str_buf == "true")
+        return true;
+
+    return false;
 }
 template<>
 std::string CommandLineParser::analyzeValue<std::string>(const std::string& str, bool space_delete)
 {
     if (space_delete)
     {
-        std::string str_buf = str;
-        while (str_buf.find_first_of(' ') == 0)
-            str_buf.erase(0, 1);
-        while (str_buf.find_last_of('-') == (str.length() - 1))
-            str_buf.erase(str_buf.end() - 1, str_buf.end());
-        return str_buf;
-    }
+		return del_space(str);
+    } 
     return str;
 }
 
