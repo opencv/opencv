@@ -1,5 +1,6 @@
 #include "precomp.hpp"
-#include "iostream"
+
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -111,15 +112,8 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
         paramVector = split_string(buffer, "|");
 		while (paramVector.size() < 4) paramVector.push_back("");
 
-		buffer = "";
-		if (paramVector[0] != "")
-		{
-			buffer = paramVector[0];
-			if (paramVector[1] != "")
-				buffer += '|' + paramVector[1];
-		}
-		if (paramVector[1] != "")
-			buffer = paramVector[1];
+		buffer = paramVector[0];
+		buffer += '|' + paramVector[1];
 
 		//if (buffer == "") CV_ERROR(CV_StsBadArg, "In CommandLineParser need set short and full name");
 
@@ -205,10 +199,10 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
 
 string del_space(string name)
 {
-	while (name.find_first_of(' ') == 0)
+	while ((name.find_first_of(' ') == 0)  && (name.length() > 0))
 		name.erase(0, 1);
 
-	while (name.find_last_of(' ') == (name.length() - 1))
+	while ((name.find_last_of(' ') == (name.length() - 1)) && (name.length() > 0))
 		name.erase(name.end() - 1, name.end());
 
 	return name;
@@ -261,16 +255,32 @@ template<typename _Tp>
 
  void CommandLineParser::printParams()
  {
-     std::map<std::string, std::vector<std::string> >::iterator it;
-     std::vector<string> keysVector;
-     for(it = data.begin(); it != data.end(); it++)
-     {
-         keysVector = split_string(it->first, "|");
-         if (keysVector.size() == 1)
-             keysVector.push_back("");
-         printf("\t%s [%8s] (%12s - by default) - %s\n", keysVector[0].c_str(),
-                keysVector[1].c_str(), it->second[0].c_str(), it->second[1].c_str());
-     }
+	std::map<std::string, std::vector<std::string> >::iterator it;
+	std::vector<string> keysVector;
+	for(it = data.begin(); it != data.end(); it++)
+	{
+		keysVector = split_string(it->first, "|");
+		for (int i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+
+		while (keysVector.size() < 4) keysVector.push_back("");
+
+		cout << "\t";
+		if (keysVector[0] != "")
+		{
+			cout << "-" << keysVector[0];
+			if (keysVector[1] != "") cout << ", --" << keysVector[0];
+		}
+
+		if (keysVector[1] != "") cout << "--" << keysVector[1];
+
+		if (it->second.size() != 0)
+		{
+			if (del_space(it->second[0]) != "") cout << " (" << del_space(it->second[0]) << " - by default)";
+			if (del_space(it->second[1]) != "") cout << " - " << del_space(it->second[1]);
+		}
+		
+		cout << endl;
+	}
  }
 
 template<>
