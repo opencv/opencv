@@ -114,7 +114,7 @@ struct choose_policy<any>
 #define SMALL_POLICY(TYPE) \
     template<> \
     struct choose_policy<TYPE> { typedef small_any_policy<TYPE> type; \
-    };
+    }
 
 SMALL_POLICY(signed char);
 SMALL_POLICY(unsigned char);
