@@ -50,32 +50,35 @@ void helpParser()
 
 vector<string> split_string(const string& str, const string& delimiters)
 {
-    vector<string> res;
-    string::size_type lastPos = str.find_first_not_of(delimiters, 0);
-    string::size_type pos     = str.find_first_of(delimiters, lastPos);
-    while (string::npos != pos || string::npos != lastPos)
-    {
+	vector<string> res;
 
-        res.push_back(str.substr(lastPos, pos - lastPos));
-        lastPos = str.find_first_not_of(delimiters, pos);
-        if (str[pos + 1] == '|' && str[pos] == '|')
-        {
-            res.push_back("");
-            if(str[pos + 2] == '|')
-                res.push_back("");
-        }
-        if (str[pos + 1] == '\0')
-            res.push_back("");
-        pos = str.find_first_of(delimiters, lastPos);
-    }
+	string split_str = str;
+	int pos_delim = split_str.find(delimiters);
 
-    return res;
+	while ( pos_delim != string::npos)
+	{
+		if (pos_delim == 0)
+		{
+			res.push_back("");
+			split_str.erase(0, 1);
+		}
+		else
+		{
+			res.push_back(split_str.substr(0, pos_delim));
+			split_str.erase(0, pos_delim + 1);
+		}
+
+		pos_delim = split_str.find(delimiters);
+	}
+
+	res.push_back(split_str);
+
+	return res;
 }
 
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
 {
-
-    std::string keys_buffer;
+	std::string keys_buffer;
     std::string values_buffer;
     std::string buffer;
     std::string curName;
@@ -188,8 +191,6 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             printf("The current parameter is not defined: %s\n", curName.c_str());
         isFound = false;
     }
-
-
 }
 
 bool CommandLineParser::has(const std::string& keys)
