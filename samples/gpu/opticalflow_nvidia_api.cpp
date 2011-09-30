@@ -429,7 +429,7 @@ int main(int argc, char **argv)
 #endif
 #define SAFE_MAT_DECL(name, allocator, sx, sy) \
     NCVMatrixAlloc<Ncv32f> name(*allocator, sx, sy);\
-    ncvAssertReturn(name##.isMemAllocated(), -1);
+    ncvAssertReturn(name.isMemAllocated(), -1);
 
     SAFE_MAT_DECL (u, g_pGPUMemAllocator, width, height);
     SAFE_MAT_DECL (v, g_pGPUMemAllocator, width, height);
