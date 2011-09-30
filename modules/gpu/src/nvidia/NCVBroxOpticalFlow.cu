@@ -63,7 +63,77 @@
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
 
-using std::tr1::shared_ptr;
+
+
+////////////////////////////////////////////
+template<typename _Tp> class Ptr
+{
+public:
+    Ptr()  : obj(0), refcount(0) {}
+    Ptr(_Tp* _obj);
+    ~Ptr() { release(); }
+    Ptr(const Ptr& ptr);
+    Ptr& operator = (const Ptr& ptr);
+    void addref() { if( refcount ) refcount+=1; }
+    void release();
+    void delete_obj() { if( obj ) delete obj; }
+    bool empty() const { return obj == 0; }
+    _Tp* operator -> () { return obj; }
+    const _Tp* operator -> () const { return obj; }
+    operator _Tp* () { return obj; }
+    operator const _Tp*() const { return obj; }
+protected:
+    _Tp* obj; //< the object pointer.
+    int* refcount; //< the associated reference counter
+};
+
+template<typename _Tp> inline Ptr<_Tp>::Ptr(_Tp* _obj) : obj(_obj)
+{
+    if(obj)
+    {
+        refcount = new int;
+        *refcount = 1;
+    }
+    else
+        refcount = 0;
+}
+
+template<typename _Tp> inline void Ptr<_Tp>::release()
+{
+    if( refcount)
+    {
+        *refcount -= 1;
+        if (*refcount == 0)
+        {
+            delete_obj();
+            delete refcount;
+        }
+    }
+    refcount = 0;
+    obj = 0;
+}
+
+template<typename _Tp> inline Ptr<_Tp>::Ptr(const Ptr<_Tp>& ptr)
+{
+    obj = ptr.obj;
+    refcount = ptr.refcount;
+    addref();
+}
+
+template<typename _Tp> inline Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& ptr)
+{
+    int* _refcount = ptr.refcount;
+    if( _refcount )
+        *_refcount += 1;
+        
+    release();
+    obj = ptr.obj;
+    refcount = _refcount;
+    return *this;
+}
+
+////////////////////////////////////////////
+//using std::tr1::shared_ptr;
 
 typedef NCVVectorAlloc<Ncv32f> FloatVector;
 
@@ -720,7 +790,7 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 #endif
 #define SAFE_VECTOR_DECL(name, allocator, size) \
     FloatVector name((allocator), (size)); \
-    ncvAssertReturn(name##.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
+    ncvAssertReturn(name.isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
     // matrix elements
     SAFE_VECTOR_DECL(diffusivity_x,  gpu_mem_allocator, kSizeInPixelsAligned);
@@ -774,8 +844,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     InitTextures();
 
     //prepare image pyramid
-    std::vector< shared_ptr<FloatVector> > img0_pyramid;
-    std::vector< shared_ptr<FloatVector> > img1_pyramid;
+    std::vector< Ptr<FloatVector> > img0_pyramid;
+    std::vector< Ptr<FloatVector> > img1_pyramid;
 
     std::vector<Ncv32u> w_pyramid;
     std::vector<Ncv32u> h_pyramid;
@@ -785,10 +855,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     float scale = 1.0f;
 
     //cuda arrays for frames
-    shared_ptr<FloatVector> I0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    Ptr<FloatVector> I0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(I0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    shared_ptr<FloatVector> I1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    Ptr<FloatVector> I1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(I1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
     if (!kSkipProcessing)
@@ -827,10 +897,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
         Ncv32u prev_level_pitch = alignUp(prev_level_width, kStrideAlignmentFloat) * sizeof(float);
 
-        shared_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
+        Ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-        shared_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
+        Ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
         ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
@@ -885,8 +955,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     FloatVector* ptrUNew = &u_new;
     FloatVector* ptrVNew = &v_new;
 
-    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img0Iter = img0_pyramid.rbegin();
-    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img1Iter = img1_pyramid.rbegin();
+    std::vector< Ptr<FloatVector> >::const_reverse_iterator img0Iter = img0_pyramid.rbegin();
+    std::vector< Ptr<FloatVector> >::const_reverse_iterator img1Iter = img1_pyramid.rbegin();
     //outer loop
     //warping fixed point iteration
     while(!w_pyramid.empty())
