@@ -60,7 +60,7 @@
 #include <vector>
 #include <memory>
 
-#include "NPP_staging\NPP_staging.hpp"
+#include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
 
 using std::tr1::shared_ptr;
