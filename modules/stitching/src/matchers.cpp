@@ -427,12 +427,6 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
 {
     (*impl_)(features1, features2, matches_info);
 
-    //Mat out;
-    //drawMatches(features1.img, features1.keypoints, features2.img, features2.keypoints, matches_info.matches, out);
-    //stringstream ss;
-    //ss << features1.img_idx << features2.img_idx << ".png";
-    //imwrite(ss.str(), out);
-
     // Check if it makes sense to find homography
     if (matches_info.matches.size() < static_cast<size_t>(num_matches_thresh1_))
         return;
@@ -466,7 +460,13 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
         if (matches_info.inliers_mask[i])
             matches_info.num_inliers++;
 
-    matches_info.confidence = matches_info.num_inliers / (8 + 0.3*matches_info.matches.size());
+    // These coeffs are from paper M. Brown and D. Lowe. "Automatic Panoramic Image Stitching 
+    // using Invariant Features"
+    matches_info.confidence = matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
+
+    // Set zero confidence to remove matches between too close images, as they don't provide 
+    // additional information anyway. The threshold was set experimentally.
+    matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
     // Check if we should try to refine motion
     if (matches_info.num_inliers < num_matches_thresh2_)

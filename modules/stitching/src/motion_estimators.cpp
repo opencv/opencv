@@ -748,11 +748,12 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
     if (static_cast<int>(features_subset.size()) == num_images)
         return indices;
 
-    LOG("Removed some images, because can't match them: (");
-    LOG(indices_removed[0]+1);
+    LOG("Removed some images, because can't match them or there are too similar images: (");
+    LOG(indices_removed[0] + 1);
     for (size_t i = 1; i < indices_removed.size(); ++i) 
         LOG(", " << indices_removed[i]+1);
-    LOGLN("). Try to decrease --match_conf value.");
+    LOGLN(").");
+    LOGLN("Try to decrease --match_conf value and/or check if you're stitching duplicates.");
 
     features = features_subset;
     pairwise_matches = pairwise_matches_subset;
