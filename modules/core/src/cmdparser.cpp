@@ -78,6 +78,17 @@ vector<string> split_string(const string& str, const string& delimiters)
 	return res;
 }
 
+string del_space(string name)
+{
+	while ((name.find_first_of(' ') == 0)  && (name.length() > 0))
+		name.erase(0, 1);
+
+	while ((name.find_last_of(' ') == (name.length() - 1)) && (name.length() > 0))
+		name.erase(name.end() - 1, name.end());
+
+	return name;
+}
+
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
 {
 	std::string keys_buffer;
@@ -145,12 +156,15 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             buffer.erase(0, (buffer.find('=') + 1));
         }
 
+		values_buffer = del_space(values_buffer);
+
         for(it = data.begin(); it != data.end(); it++)
         {
             keys_buffer = it->first;
             keysVector = split_string(keys_buffer, "|");
-            if (keysVector.size() == 1)
-                keysVector.push_back("");
+
+			for (int j = 0; j < keysVector.size(); j++) keysVector[j] = del_space(keysVector[j]);
+
             values_buffer = it->second[0];
             if (((curName == keysVector[0]) || (curName == keysVector[1])) && hasValueThroughEq)
             {
@@ -159,23 +173,25 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
                 break;
             }
 
+            if (!hasValueThroughEq && ((curName == keysVector[0]) || (curName == keysVector[1]))
+				&& (
+					values_buffer.find("false") != values_buffer.npos || 
+					values_buffer == ""
+				))
+            {
+                it->second[0] = "true";
+                isFound = true;
+                break;
+            }
+
             if (!hasValueThroughEq && (values_buffer.find("false") == values_buffer.npos) &&
                 ((curName == keysVector[0]) || (curName == keysVector[1])))
-
             {
                 it->second[0] = argv[++i];
                 isFound = true;
                 break;
             }
 
-            if (!hasValueThroughEq &&  (values_buffer.find("false") != values_buffer.npos)
-                && ((curName == keysVector[0]) || (curName == keysVector[1])))
-
-            {
-                it->second[0] = "true";
-                isFound = true;
-                break;
-            }
 
             if (withNoKey)
             {
@@ -196,17 +212,6 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             printf("The current parameter is not defined: %s\n", curName.c_str());
         isFound = false;
     }
-}
-
-string del_space(string name)
-{
-	while ((name.find_first_of(' ') == 0)  && (name.length() > 0))
-		name.erase(0, 1);
-
-	while ((name.find_last_of(' ') == (name.length() - 1)) && (name.length() > 0))
-		name.erase(name.end() - 1, name.end());
-
-	return name;
 }
 
 bool CommandLineParser::has(const std::string& keys)
