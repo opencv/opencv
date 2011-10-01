@@ -1,6 +1,7 @@
-#include "precomp.hpp"
+﻿#include "precomp.hpp"
 
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 using namespace cv;
@@ -257,29 +258,27 @@ template<typename _Tp>
  {
 	std::map<std::string, std::vector<std::string> >::iterator it;
 	std::vector<string> keysVector;
+	std::string buf;
 	for(it = data.begin(); it != data.end(); it++)
 	{
 		keysVector = split_string(it->first, "|");
 		for (int i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
-		while (keysVector.size() < 4) keysVector.push_back("");
-
-		cout << "\t";
+		cout << "  ";
 		if (keysVector[0] != "")
 		{
-			cout << "-" << keysVector[0];
-			if (keysVector[1] != "") cout << ", --" << keysVector[0];
+			buf = "-" + keysVector[0];
+			if (keysVector[1] != "") buf += ", --" + keysVector[1];
 		}
+		else if (keysVector[1] != "") buf += "--" + keysVector[1];
+		if (del_space(it->second[0]) != "") buf += "=[" + del_space(it->second[0]) + "]";
 
-		if (keysVector[1] != "") cout << "--" << keysVector[1];
+		cout << setw(28) << left << buf;
 
-		if (it->second.size() != 0)
-		{
-			if (del_space(it->second[0]) != "") cout << " (" << del_space(it->second[0]) << " - by default)";
-			if (del_space(it->second[1]) != "") cout << " - " << del_space(it->second[1]);
-		}
-		
-		cout << endl;
+		buf = "";
+		if (del_space(it->second[1]) != "") buf += del_space(it->second[1]);
+				
+		cout << setw(50) << left << buf << endl;
 	}
  }
 
