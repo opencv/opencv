@@ -78,17 +78,15 @@ void ProjectorBase::setCameraParams(const Mat &K, const Mat &R, const Mat &T)
 }
 
 
-Point PlaneWarper::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst,
-                        int interp_mode, int border_mode)
+Rect PlaneWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap)
 {
-    src_size_ = src.size();
     projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
-    Mat xmap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    Mat ymap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
 
     float x, y;
     for (int v = dst_tl.y; v <= dst_br.y; ++v)
@@ -101,26 +99,35 @@ Point PlaneWarper::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T
         }
     }
 
-    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
-    remap(src, dst, xmap, ymap, interp_mode, border_mode);
-
-    return dst_tl;
+    return Rect(dst_tl, dst_br);
 }
 
 
-Rect PlaneWarper::warpRoi(const Size &sz, const Mat &K, const Mat &R, const Mat &T)
+Point PlaneWarper::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+                        Mat &dst)
 {
-    src_size_ = sz;
+    Mat xmap, ymap;
+    Rect dst_roi = buildMaps(src.size(), K, R, T, xmap, ymap);
+
+    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
+    remap(src, dst, xmap, ymap, interp_mode, border_mode);
+
+    return dst_roi.tl();
+}
+
+
+Rect PlaneWarper::warpRoi(Size src_size, const Mat &K, const Mat &R, const Mat &T)
+{
     projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
     return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
 }
 
 
-void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
+void PlaneWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
     float tl_uf = numeric_limits<float>::max();
     float tl_vf = numeric_limits<float>::max();
@@ -133,15 +140,15 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
     br_uf = max(br_uf, u); br_vf = max(br_vf, v);
 
-    projector_.mapForward(0, static_cast<float>(src_size_.height - 1), u, v);
+    projector_.mapForward(0, static_cast<float>(src_size.height - 1), u, v);
     tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
     br_uf = max(br_uf, u); br_vf = max(br_vf, v);
 
-    projector_.mapForward(static_cast<float>(src_size_.width - 1), 0, u, v);
+    projector_.mapForward(static_cast<float>(src_size.width - 1), 0, u, v);
     tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
     br_uf = max(br_uf, u); br_vf = max(br_vf, v);
 
-    projector_.mapForward(static_cast<float>(src_size_.width - 1), static_cast<float>(src_size_.height - 1), u, v);
+    projector_.mapForward(static_cast<float>(src_size.width - 1), static_cast<float>(src_size.height - 1), u, v);
     tl_uf = min(tl_uf, u); tl_vf = min(tl_vf, v);
     br_uf = max(br_uf, u); br_vf = max(br_vf, v);
 
@@ -153,21 +160,20 @@ void PlaneWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 
 
 #ifndef ANDROID
-Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst, 
-                           int interp_mode, int border_mode)
+Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                           Mat &dst)
 {
-    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), dst, interp_mode, border_mode);
+    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
 }
 
 
-Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, Mat &dst, 
-                           int interp_mode, int border_mode)
+Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+                           Mat &dst)
 {
-    src_size_ = src.size();
     projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src.size(), dst_tl, dst_br);
 
     gpu::buildWarpPlaneMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                             K, R, projector_.scale, d_xmap_, d_ymap_);
@@ -186,9 +192,9 @@ Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, const Mat
 #endif
 
 
-void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
+void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
-    detectResultRoiByBorder(dst_tl, dst_br);
+    detectResultRoiByBorder(src_size, dst_tl, dst_br);
 
     float tl_uf = static_cast<float>(dst_tl.x);
     float tl_vf = static_cast<float>(dst_tl.y);
@@ -202,7 +208,7 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     {
         float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
         float y_ = projector_.k[4] * y / z + projector_.k[5];
-        if (x_ > 0.f && x_ < src_size_.width && y_ > 0.f && y_ < src_size_.height)
+        if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
             tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(CV_PI * projector_.scale));
             br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(CV_PI * projector_.scale));
@@ -216,7 +222,7 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
     {
         float x_ = (projector_.k[0] * x + projector_.k[1] * y) / z + projector_.k[2];
         float y_ = projector_.k[4] * y / z + projector_.k[5];
-        if (x_ > 0.f && x_ < src_size_.width && y_ > 0.f && y_ < src_size_.height)
+        if (x_ > 0.f && x_ < src_size.width && y_ > 0.f && y_ < src_size.height)
         {
             tl_uf = min(tl_uf, 0.f); tl_vf = min(tl_vf, static_cast<float>(0));
             br_uf = max(br_uf, 0.f); br_vf = max(br_vf, static_cast<float>(0));
@@ -231,14 +237,13 @@ void SphericalWarper::detectResultRoi(Point &dst_tl, Point &dst_br)
 
 
 #ifndef ANDROID
-Point SphericalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
-                               int interp_mode, int border_mode)
+Point SphericalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                               Mat &dst)
 {
-    src_size_ = src.size();
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src.size(), dst_tl, dst_br);
 
     gpu::buildWarpSphericalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                                 K, R, projector_.scale, d_xmap_, d_ymap_);
@@ -256,14 +261,13 @@ Point SphericalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &
 }
 
 
-Point CylindricalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
-                                 int interp_mode, int border_mode)
+Point CylindricalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                                 Mat &dst)
 {
-    src_size_ = src.size();
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src.size(), dst_tl, dst_br);
 
     gpu::buildWarpCylindricalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
                                   K, R, projector_.scale, d_xmap_, d_ymap_);

@@ -51,28 +51,28 @@ class WarperCreator
 {
 public:
     virtual ~WarperCreator() {}
-    virtual Ptr<detail::Warper> create(float scale) const = 0;
+    virtual Ptr<detail::RotationWarper> create(float scale) const = 0;
 };
 
 
 class PlaneWarper : public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::PlaneWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PlaneWarper(scale); }
 };
 
 
 class CylindricalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::CylindricalWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CylindricalWarper(scale); }
 };
 
 
 class SphericalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::SphericalWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::SphericalWarper(scale); }
 };
 
 
@@ -80,21 +80,21 @@ public:
 class PlaneWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::PlaneWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PlaneWarperGpu(scale); }
 };
 
 
 class CylindricalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::CylindricalWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CylindricalWarperGpu(scale); }
 };
 
 
 class SphericalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::Warper> create(float scale) const { return new detail::SphericalWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return new detail::SphericalWarperGpu(scale); }
 };
 #endif
 

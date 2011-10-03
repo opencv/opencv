@@ -523,7 +523,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     
-    Ptr<Warper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
+    Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
 
     for (int i = 0; i < num_images; ++i)
     {
@@ -532,10 +532,10 @@ int main(int argc, char* argv[])
         K(0,0) *= seam_work_aspect; K(0,2) *= seam_work_aspect;
         K(1,1) *= seam_work_aspect; K(1,2) *= seam_work_aspect;
 
-        corners[i] = warper->warp(images[i], K, cameras[i].R, images_warped[i], INTER_LINEAR, BORDER_REFLECT);
+        corners[i] = warper->warp(images[i], K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
-        warper->warp(masks[i], K, cameras[i].R, masks_warped[i], INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
     vector<Mat> images_warped_f(num_images);
@@ -647,12 +647,12 @@ int main(int argc, char* argv[])
         cameras[img_idx].K().convertTo(K, CV_32F);
 
         // Warp the current image
-        warper->warp(img, K, cameras[img_idx].R, img_warped, INTER_LINEAR, BORDER_REFLECT);
+        warper->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
-        warper->warp(mask, K, cameras[img_idx].R, mask_warped, INTER_NEAREST, BORDER_CONSTANT);
+        warper->warp(mask, K, cameras[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 
         // Compensate exposure
         compensator->apply(img_idx, corners[img_idx], img_warped, mask_warped);

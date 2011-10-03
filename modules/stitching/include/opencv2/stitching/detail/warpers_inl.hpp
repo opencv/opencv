@@ -50,17 +50,15 @@ namespace cv {
 namespace detail {
 
 template <class P>
-Point WarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
-                          int interp_mode, int border_mode)
+Rect RotationWarperBase<P>::buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
 {
-    src_size_ = src.size();
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
-    Mat xmap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    Mat ymap(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
 
     float x, y;
     for (int v = dst_tl.y; v <= dst_br.y; ++v)
@@ -73,30 +71,41 @@ Point WarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, Mat &dst,
         }
     }
 
-    dst.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type());
-    remap(src, dst, xmap, ymap, interp_mode, border_mode);
-
-    return dst_tl;
+    return Rect(dst_tl, dst_br);
 }
 
+
 template <class P>
-void WarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat &R, Mat &dst, Size dstSize,
-                          int interp_mode, int border_mode)
+Point RotationWarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                                  Mat &dst)
+{    
+    Mat xmap, ymap;
+    Rect dst_roi = buildMaps(src.size(), K, R, xmap, ymap);    
+
+    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
+    remap(src, dst, xmap, ymap, interp_mode, border_mode);
+
+    return dst_roi.tl();
+}
+
+
+template <class P>
+void RotationWarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                                         Size dst_size, Mat &dst)
 {
-    src_size_ = dstSize;
     projector_.setCameraParams(K, R);
 
     Point src_tl, src_br;
-    detectResultRoi(src_tl, src_br);
+    detectResultRoi(dst_size, src_tl, src_br);
     CV_Assert(src_br.x - src_tl.x + 1 == src.cols && src_br.y - src_tl.y + 1 == src.rows);
 
-    Mat xmap(dstSize, CV_32F);
-    Mat ymap(dstSize, CV_32F);
+    Mat xmap(dst_size, CV_32F);
+    Mat ymap(dst_size, CV_32F);
 
     float u, v;
-    for (int y = 0; y < dstSize.height; ++y)
+    for (int y = 0; y < dst_size.height; ++y)
     {
-        for (int x = 0; x < dstSize.width; ++x)
+        for (int x = 0; x < dst_size.width; ++x)
         {
             projector_.mapForward(static_cast<float>(x), static_cast<float>(y), u, v);
             xmap.at<float>(y, x) = u - src_tl.x;
@@ -104,43 +113,25 @@ void WarperBase<P>::warpBackward(const Mat &src, const Mat &K, const Mat &R, Mat
         }
     }
 
-    dst.create(dstSize, src.type());
+    dst.create(dst_size, src.type());
     remap(src, dst, xmap, ymap, interp_mode, border_mode);
 }
 
 
 template <class P>
-Point WarperBase<P>::warp(const Mat &/*src*/, const Mat &/*K*/, const Mat &/*R*/, const Mat &/*T*/, Mat &/*dst*/,
-                          int /*interp_mode*/, int /*border_mode*/)
+Rect RotationWarperBase<P>::warpRoi(Size src_size, const Mat &K, const Mat &R)
 {
-    CV_Error(CV_StsNotImplemented, "translation support isn't implemented");
-    return Point();
-}
-
-
-template <class P>
-Rect WarperBase<P>::warpRoi(const Size &sz, const Mat &K, const Mat &R)
-{
-    src_size_ = sz;
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
-    detectResultRoi(dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
     return Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1));
 }
 
 
 template <class P>
-Rect WarperBase<P>::warpRoi(const Size &/*sz*/, const Mat &/*K*/, const Mat &/*R*/, const Mat &/*T*/)
-{
-    CV_Error(CV_StsNotImplemented, "translation support isn't implemented");
-    return Rect();
-}
-
-
-template <class P>
-void WarperBase<P>::detectResultRoi(Point &dst_tl, Point &dst_br)
+void RotationWarperBase<P>::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
     float tl_uf = std::numeric_limits<float>::max();
     float tl_vf = std::numeric_limits<float>::max();
@@ -148,9 +139,9 @@ void WarperBase<P>::detectResultRoi(Point &dst_tl, Point &dst_br)
     float br_vf = -std::numeric_limits<float>::max();
 
     float u, v;
-    for (int y = 0; y < src_size_.height; ++y)
+    for (int y = 0; y < src_size.height; ++y)
     {
-        for (int x = 0; x < src_size_.width; ++x)
+        for (int x = 0; x < src_size.width; ++x)
         {
             projector_.mapForward(static_cast<float>(x), static_cast<float>(y), u, v);
             tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
@@ -166,7 +157,7 @@ void WarperBase<P>::detectResultRoi(Point &dst_tl, Point &dst_br)
 
 
 template <class P>
-void WarperBase<P>::detectResultRoiByBorder(Point &dst_tl, Point &dst_br)
+void RotationWarperBase<P>::detectResultRoiByBorder(Size src_size, Point &dst_tl, Point &dst_br)
 {
     float tl_uf = std::numeric_limits<float>::max();
     float tl_vf = std::numeric_limits<float>::max();
@@ -174,23 +165,23 @@ void WarperBase<P>::detectResultRoiByBorder(Point &dst_tl, Point &dst_br)
     float br_vf = -std::numeric_limits<float>::max();
 
     float u, v;
-    for (float x = 0; x < src_size_.width; ++x)
+    for (float x = 0; x < src_size.width; ++x)
     {
         projector_.mapForward(static_cast<float>(x), 0, u, v);
         tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
         br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
-        projector_.mapForward(static_cast<float>(x), static_cast<float>(src_size_.height - 1), u, v);
+        projector_.mapForward(static_cast<float>(x), static_cast<float>(src_size.height - 1), u, v);
         tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
         br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
     }
-    for (int y = 0; y < src_size_.height; ++y)
+    for (int y = 0; y < src_size.height; ++y)
     {
         projector_.mapForward(0, static_cast<float>(y), u, v);
         tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
         br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
 
-        projector_.mapForward(static_cast<float>(src_size_.width - 1), static_cast<float>(y), u, v);
+        projector_.mapForward(static_cast<float>(src_size.width - 1), static_cast<float>(y), u, v);
         tl_uf = std::min(tl_uf, u); tl_vf = std::min(tl_vf, v);
         br_uf = std::max(br_uf, u); br_vf = std::max(br_vf, v);
     }
