@@ -84,9 +84,9 @@ public:
 };
 
 template<class T>
-NCVStatus CopyData(IplImage *image, Ptr<NCVMatrixAlloc<Ncv32f>> &dst)
+NCVStatus CopyData(IplImage *image, Ptr<NCVMatrixAlloc<Ncv32f> >& dst)
 {
-    dst = Ptr<NCVMatrixAlloc<Ncv32f>> (new NCVMatrixAlloc<Ncv32f> (*g_pHostMemAllocator, image->width, image->height));
+    dst = Ptr<NCVMatrixAlloc<Ncv32f> > (new NCVMatrixAlloc<Ncv32f> (*g_pHostMemAllocator, image->width, image->height));
     ncvAssertReturn (dst->isMemAllocated (), NCV_ALLOCATOR_BAD_ALLOC);
 
     unsigned char *row = reinterpret_cast<unsigned char*> (image->imageData);
@@ -138,8 +138,8 @@ NCVStatus LoadImages (const char *frame0Name,
                       const char *frame1Name, 
                       int &width, 
                       int &height, 
-                      Ptr<NCVMatrixAlloc<Ncv32f>> &src, 
-                      Ptr<NCVMatrixAlloc<Ncv32f>> &dst, 
+                      Ptr<NCVMatrixAlloc<Ncv32f> > &src,
+                      Ptr<NCVMatrixAlloc<Ncv32f> > &dst,
                       IplImage *&firstFrame, 
                       IplImage *&lastFrame)
 {
@@ -403,8 +403,8 @@ int main(int argc, char **argv)
 
     int width, height;
 
-    Ptr<NCVMatrixAlloc<Ncv32f>> src_host;
-    Ptr<NCVMatrixAlloc<Ncv32f>> dst_host;
+    Ptr<NCVMatrixAlloc<Ncv32f> > src_host;
+    Ptr<NCVMatrixAlloc<Ncv32f> > dst_host;
 
     IplImage *firstFrame, *lastFrame;
     if (frame0Name != 0 && frame1Name != 0)
@@ -416,10 +416,10 @@ int main(int argc, char **argv)
         ncvAssertReturnNcvStat (LoadImages ("frame10.bmp", "frame11.bmp", width, height, src_host, dst_host, firstFrame, lastFrame));
     }
 
-    Ptr<NCVMatrixAlloc<Ncv32f>> src (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
+    Ptr<NCVMatrixAlloc<Ncv32f> > src (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
     ncvAssertReturn(src->isMemAllocated(), -1);
 
-    Ptr<NCVMatrixAlloc<Ncv32f>> dst (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
+    Ptr<NCVMatrixAlloc<Ncv32f> > dst (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
     ncvAssertReturn (dst->isMemAllocated (), -1);
 
     ncvAssertReturnNcvStat (src_host->copySolid ( *src, 0 ));
