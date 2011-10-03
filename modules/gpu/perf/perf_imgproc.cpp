@@ -367,7 +367,7 @@ PERF_TEST_P(DevInfo_Size, buildWarpPlaneMaps, testing::Combine(testing::ValuesIn
     SIMPLE_TEST_CYCLE()
     {
         buildWarpPlaneMaps(size, Rect(0, 0, size.width, size.height), Mat::eye(3, 3, CV_32FC1), 
-                           Mat::ones(3, 3, CV_32FC1), 1.0, map_x, map_y);
+                           Mat::ones(3, 3, CV_32FC1), Mat::zeros(1, 3, CV_32F), 1.0, map_x, map_y);
     }
 
     Mat map_x_host(map_x);

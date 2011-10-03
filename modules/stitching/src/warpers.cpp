@@ -216,8 +216,8 @@ Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, const 
     Point dst_tl, dst_br;
     detectResultRoi(src_size, dst_tl, dst_br);
 
-    gpu::buildWarpPlaneMaps(src_size, Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                            K, R, projector_.scale, xmap, ymap);
+    gpu::buildWarpPlaneMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
+                            K, R, T, projector_.scale, xmap, ymap);
 
     return Rect(dst_tl, dst_br);
 }

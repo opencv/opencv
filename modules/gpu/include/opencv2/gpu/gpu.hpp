@@ -671,7 +671,7 @@ namespace cv
         CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR, Stream& stream = Stream::Null());
 
         //! builds plane warping maps
-        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
+        CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T, float scale,
                                            GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
 
         //! builds cylindrical warping maps
