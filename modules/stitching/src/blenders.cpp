@@ -155,6 +155,37 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 }
 
 
+Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Point> &corners,
+                                      vector<Mat> &weight_maps)
+{    
+    weight_maps.resize(masks.size());
+    for (size_t i = 0; i < masks.size(); ++i)
+        createWeightMap(masks[i], sharpness_, weight_maps[i]);
+
+    Rect dst_roi = resultRoi(corners, masks);
+    Mat weights_sum(dst_roi.size(), CV_32F);
+    weights_sum.setTo(0);
+
+    for (size_t i = 0; i < weight_maps.size(); ++i)
+    {
+        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y, 
+                 weight_maps[i].cols, weight_maps[i].rows);
+        weights_sum(roi) += weight_maps[i];
+    }
+
+    for (size_t i = 0; i < weight_maps.size(); ++i)
+    {
+        Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y, 
+                 weight_maps[i].cols, weight_maps[i].rows);
+        Mat tmp = weights_sum(roi);
+        tmp.setTo(1, tmp < numeric_limits<float>::epsilon());
+        divide(weight_maps[i], tmp, weight_maps[i]);
+    }
+
+    return dst_roi;
+}
+
+
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands)
 {
     setNumBands(num_bands);

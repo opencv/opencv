@@ -72,12 +72,18 @@ class CV_EXPORTS FeatherBlender : public Blender
 {
 public:
     FeatherBlender(float sharpness = 0.02f) { setSharpness(sharpness); }
+
     float sharpness() const { return sharpness_; }
     void setSharpness(float val) { sharpness_ = val; }
 
     void prepare(Rect dst_roi);
     void feed(const Mat &img, const Mat &mask, Point tl);
     void blend(Mat &dst, Mat &dst_mask);
+
+    // Creates weight maps for fixed set of source images by their masks and top-left corners.
+    // Final image can be obtained by simple weighting of the source images.
+    Rect createWeightMaps(const std::vector<Mat> &masks, const std::vector<Point> &corners,
+                          std::vector<Mat> &weight_maps);
 
 private:
     float sharpness_;
