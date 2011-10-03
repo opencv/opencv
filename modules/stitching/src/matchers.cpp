@@ -293,8 +293,15 @@ void FeaturesFinder::operator ()(const Mat &image, ImageFeatures &features, cons
 SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int num_layers,
                                        int num_octaves_descr, int num_layers_descr)
 {
-    detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
-    extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
+    if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
+    {
+        surf = new SURF(hess_thresh, num_octaves, num_layers);
+    }
+    else
+    {
+        detector_ = new SurfFeatureDetector(hess_thresh, num_octaves, num_layers);
+        extractor_ = new SurfDescriptorExtractor(num_octaves_descr, num_layers_descr);
+    }
 }
 
 
@@ -303,8 +310,17 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     Mat gray_image;
     CV_Assert(image.depth() == CV_8U);
     cvtColor(image, gray_image, CV_BGR2GRAY);
-    detector_->detect(gray_image, features.keypoints);
-    extractor_->compute(gray_image, features.keypoints, features.descriptors);
+    if (surf == 0)
+    {
+        detector_->detect(gray_image, features.keypoints);
+        extractor_->compute(gray_image, features.keypoints, features.descriptors);
+    }
+    else
+    {
+        vector<float> descriptors;
+        (*surf)(gray_image, Mat(), features.keypoints, descriptors);
+        features.descriptors = Mat(descriptors, true).reshape(1, (int)features.keypoints.size());
+    }
 }
 
 

@@ -79,13 +79,14 @@ class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
 {
 public:
     SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                       int num_octaves_descr = 4, int num_layers_descr = 2);
+                       int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
 
 private:
     void find(const Mat &image, ImageFeatures &features);
 
     Ptr<FeatureDetector> detector_;
     Ptr<DescriptorExtractor> extractor_;
+    Ptr<SURF> surf;
 };
 
 
