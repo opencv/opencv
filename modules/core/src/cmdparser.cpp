@@ -208,8 +208,6 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
 
         withNoKey = false;
         hasValueThroughEq = false;
-        if(!isFound)
-            printf("The current parameter is not defined: %s\n", curName.c_str());
         isFound = false;
     }
 }
@@ -273,6 +271,7 @@ template<typename _Tp>
 		for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
 		cout << "  ";
+		buf = "";
 		if (keysVector[0] != "")
 		{
 			buf = "-" + keysVector[0];
@@ -294,13 +293,19 @@ template<typename _Tp>
 
 		while (true)
 		{
-			bool tr = (buf.length() >= col_d-2) ? true: false;
+			bool tr = (buf.length() > col_d-2) ? true: false;
 			int pos;
 
 			if (tr)
 			{
 				pos = buf.find_first_of(' ');
-				while (buf.find_first_of(' ', pos + 1 ) > 0 && pos < col_d-2) pos = buf.find_first_of(' ', pos + 1);
+				while (true)
+				{
+					if (buf.find_first_of(' ', pos + 1 ) < col_d-2 && buf.find_first_of(' ', pos + 1 ) != std::string::npos)
+						pos = buf.find_first_of(' ', pos + 1);
+					else
+						break;
+				}
 				pos++;
 				cout << setw(col_d-2) << left << buf.substr(0, pos) << endl;
 			}
