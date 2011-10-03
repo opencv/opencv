@@ -66,7 +66,6 @@ public:
     ~CV_LatentSVMDetectorTest();    
 protected:    
     void run(int);
-private:
 	bool isEqual(CvRect r1, CvRect r2);
 };
 
@@ -84,7 +83,7 @@ bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2)
 void CV_LatentSVMDetectorTest::run( int /* start_from */)
 {      
     string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
-	string model_path = string(ts->get_data_path()) + "latentsvmdetector/cat.xml";
+    string model_path = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
     int numThreads = -1;
 #ifdef HAVE_TBB
     numThreads = 2;
@@ -136,4 +135,156 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
     cvReleaseImage( &image );
 }
 
-TEST(Objdetect_LatentSVMDetector, regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
+// Test for c++ version of Latent SVM
+
+class LatentSVMDetectorTest : public cvtest::BaseTest
+{
+public:
+    LatentSVMDetectorTest();
+protected:
+    void run(int);
+};
+
+LatentSVMDetectorTest::LatentSVMDetectorTest()
+{
+}
+
+static void writeDetections( FileStorage& fs, const string& nodeName, const vector<LatentSvmDetector::ObjectDetection>& detections )
+{
+    fs << nodeName << "[";
+    for( size_t i = 0; i < detections.size(); i++ )
+    {
+        const LatentSvmDetector::ObjectDetection& d = detections[i];
+        fs << d.rect.x << d.rect.y << d.rect.width << d.rect.height
+           << d.score << d.classID;
+    }
+    fs << "]";
+}
+
+static void readDetections( FileStorage fs, const string& nodeName, vector<LatentSvmDetector::ObjectDetection>& detections )
+{
+    detections.clear();
+
+    FileNode fn = fs.root()[nodeName];
+    FileNodeIterator fni = fn.begin();
+    while( fni != fn.end() )
+    {
+        LatentSvmDetector::ObjectDetection d;
+        fni >> d.rect.x >> d.rect.y >> d.rect.width >> d.rect.height
+            >> d.score >> d.classID;
+        detections.push_back( d );
+    }
+}
+
+static inline bool isEqual( const LatentSvmDetector::ObjectDetection& d1, const LatentSvmDetector::ObjectDetection& d2)
+{
+    return ((d1.rect.x == d2.rect.x) && (d1.rect.y == d2.rect.y) && (d1.rect.width == d2.rect.width) && (d1.rect.height == d2.rect.height) &&
+            (d1.classID == d2.classID) &&
+            std::abs(d1.score-d2.score) < score_thr );
+}
+
+bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, const vector<LatentSvmDetector::ObjectDetection>& valid )
+{
+    if( calc.size() != valid.size() )
+        return false;
+
+    for( size_t i = 0; i < calc.size(); i++ )
+    {
+        const LatentSvmDetector::ObjectDetection& c = calc[i];
+        const LatentSvmDetector::ObjectDetection& v = valid[i];
+        if( !isEqual(c,v) )
+            return false;
+    }
+    return true;
+}
+
+void LatentSVMDetectorTest::run( int /* start_from */)
+{
+    string img_path_cat = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
+    string img_path_cars = string(ts->get_data_path()) + "latentsvmdetector/cars.jpg";
+
+    string model_path_cat = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
+    string model_path_car = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/car.xml";
+
+    string true_res_path = string(ts->get_data_path()) + "latentsvmdetector/results.xml";
+
+    int numThreads = 1;
+#ifdef HAVE_TBB
+    numThreads = 2;
+#endif
+    Mat image_cat = imread( img_path_cat );
+    Mat image_cars = imread( img_path_cars );
+    if( image_cat.empty() || image_cars.empty() )
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+        return;
+    }
+
+    // We will test 2 cases:
+    // detector1 - to test case of one class 'cat'
+    // detector12 - to test case of two (several) classes 'cat' and car
+
+    // Load detectors
+    LatentSvmDetector detector1( vector<string>(1,model_path_cat) );
+
+    vector<string> models_pathes(2);
+    models_pathes[0] = model_path_cat;
+    models_pathes[1] = model_path_car;
+    LatentSvmDetector detector12( models_pathes );
+
+    if( detector1.empty() || detector12.empty() || detector12.getClassCount() != 2 )
+    {
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+        return;
+    }
+
+    // Run detectors
+    vector<LatentSvmDetector::ObjectDetection> detections1_cat, detections12_cat, detections12_cars;
+    detector1.detect( image_cat, detections1_cat, 0.5, numThreads );
+    detector12.detect( image_cat, detections12_cat, 0.5, numThreads );
+    detector12.detect( image_cars, detections12_cars, 0.5, numThreads );
+
+    // Load true results
+    FileStorage fs( true_res_path, FileStorage::READ );
+    if( fs.isOpened() )
+    {
+        vector<LatentSvmDetector::ObjectDetection> true_detections1_cat, true_detections12_cat, true_detections12_cars;
+        readDetections( fs, "detections1_cat", true_detections1_cat );
+        readDetections( fs, "detections12_cat", true_detections12_cat );
+        readDetections( fs, "detections12_cars", true_detections12_cars );
+
+
+        if( !compareResults(detections1_cat, true_detections1_cat) )
+        {
+            std::cerr << "Results of detector1 are invalid on image cat.jpg" << std::endl;
+            ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
+        }
+        if( !compareResults(detections12_cat, true_detections12_cat) )
+        {
+            std::cerr << "Results of detector12 are invalid on image cat.jpg" << std::endl;
+            ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
+        }
+        if( !compareResults(detections12_cars, true_detections12_cars) )
+        {
+            std::cerr << "Results of detector12 are invalid on image cars.jpg" << std::endl;
+            ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
+        }
+    }
+    else
+    {
+        fs.open( true_res_path, FileStorage::WRITE );
+        if( fs.isOpened() )
+        {
+            writeDetections( fs, "detections1_cat", detections1_cat );
+            writeDetections( fs, "detections12_cat", detections12_cat );
+            writeDetections( fs, "detections12_cars", detections12_cars );
+        }
+        else
+            std::cerr << "File " << true_res_path << " cann't be opened to save test results" << std::endl;
+    }
+
+    ts->set_failed_test_info( cvtest::TS::OK);
+}
+
+TEST(Objdetect_LatentSVMDetector_c, regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
+TEST(Objdetect_LatentSVMDetector_cpp, regression) { LatentSVMDetectorTest test; test.safe_run(); }
