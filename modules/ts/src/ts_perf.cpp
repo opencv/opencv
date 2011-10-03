@@ -382,17 +382,17 @@ int64 TestBase::_timeadjustment = 0;
 
 const char *command_line_keys =
 {
-    "{!!bugbugbugbug!!   |perf_max_outliers   |8        |percent of allowed outliers}"
-    "{!!bugbugbugbug!!   |perf_min_samples    |10       |minimal required numer of samples}"
-    "{!!bugbugbugbug!!   |perf_seed           |809564   |seed for random numbers generator}"
+    "{   |perf_max_outliers   |8        |percent of allowed outliers}"
+    "{   |perf_min_samples    |10       |minimal required numer of samples}"
+    "{   |perf_seed           |809564   |seed for random numbers generator}"
     #if ANDROID
-    "{!!bugbugbugbug!!   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
-    "{!!bugbugbugbug!!   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
+    "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
+    "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
     #else
-    "{!!bugbugbugbug!!   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
+    "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
     #endif
-    "{!!bugbugbugbug!!   |perf_max_deviation  |1.0      |}"
-    "{h                  |help                |false    |}"
+    "{   |perf_max_deviation  |1.0      |}"
+    "{h  |help                |false    |}"
 };
 
 double       param_max_outliers;

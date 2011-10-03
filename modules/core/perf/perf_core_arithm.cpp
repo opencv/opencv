@@ -61,7 +61,7 @@ PERF_TEST_P__CORE_ARITHM_SCALAR(add, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(subtract, TYPICAL_MATS_CORE_ARITHM)
 PERF_TEST_P__CORE_ARITHM_SCALAR(absdiff, TYPICAL_MATS_CORE_ARITHM)
 
-
+#ifdef ANDROID
 PERF_TEST(convert, cvRound)
 {
     double number = theRNG().uniform(-100, 100);
@@ -74,4 +74,4 @@ PERF_TEST(convert, cvRound)
             result += cvRound(number);
     }
 }
-
+#endif
