@@ -1546,17 +1546,22 @@ void cv::gpu::ConvolveBuf::create(Size image_size, Size templ_size)
 Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size templ_size)
 {
     int scale = 40;
-    Size bsize_min(1024, 1024);
+    Size bsize_min(512, 512);
 
     // Check whether we use Fermi generation or newer GPU
     if (DeviceInfo().majorVersion() >= 2)
     {
-        bsize_min.width = 2048;
-        bsize_min.height = 2048;
+        bsize_min.width = 1024;
+        bsize_min.height = 1024;
     }
 
     Size bsize(std::max(templ_size.width * scale, bsize_min.width),
                std::max(templ_size.height * scale, bsize_min.height));
+
+    int blocks_per_row = (result_size.width + bsize.width - 1) / bsize.width;
+    int blocks_per_col = (result_size.height + bsize.height - 1) / bsize.height;
+    bsize.width = (result_size.width + blocks_per_row - 1) / blocks_per_row;
+    bsize.height = (result_size.height + blocks_per_col - 1) / blocks_per_col;
 
     bsize.width = std::min(bsize.width, result_size.width);
     bsize.height = std::min(bsize.height, result_size.height);

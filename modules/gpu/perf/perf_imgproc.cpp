@@ -735,16 +735,18 @@ PERF_TEST_P(DevInfo_Size, dft, testing::Combine(testing::ValuesIn(devices()),
     SANITY_CHECK(dst_host);
 }
 
-PERF_TEST_P(DevInfo_Size, convolve, testing::Combine(testing::ValuesIn(devices()),
-                                                testing::Values(GPU_TYPICAL_MAT_SIZES)))
+PERF_TEST_P(DevInfo_Int_Int, convolve, testing::Combine(testing::ValuesIn(devices()),
+                                                     testing::Values(512, 1024, 1536, 2048, 2560, 3072, 3584),
+                                                     testing::Values(27, 32, 64)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
-    Size size = std::tr1::get<1>(GetParam());
+    int image_size = std::tr1::get<1>(GetParam());
+    int templ_size = std::tr1::get<2>(GetParam());
 
     setDevice(devInfo.deviceID());
 
-    Mat image_host(size, CV_32FC1);
-    Mat templ_host(size, CV_32FC1);
+    Mat image_host(image_size, image_size, CV_32FC1);
+    Mat templ_host(templ_size, templ_size, CV_32FC1);
 
     declare.in(image_host, templ_host, WARMUP_RNG);
 

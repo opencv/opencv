@@ -68,10 +68,14 @@ public:
         cur_subtest_is_empty_ = false;
     }
 
+    bool isListMode() const { return is_list_mode_; }
+    void setListMode(bool value) { is_list_mode_ = value; }
+
 private:
     TestSystem(): cur_subtest_is_empty_(true), cpu_elapsed_(0),
                   gpu_elapsed_(0), speedup_total_(0.0),
-                  num_subtests_called_(0) {}
+                  num_subtests_called_(0),
+                  is_list_mode_(false) {}
 
     void finishCurrentSubtest();
     void resetCurrentSubtest() 
@@ -100,6 +104,8 @@ private:
 
     double speedup_total_;
     int num_subtests_called_;
+
+    bool is_list_mode_;
 };
 
 

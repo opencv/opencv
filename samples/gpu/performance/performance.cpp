@@ -8,9 +8,15 @@ using namespace cv;
 
 void TestSystem::run()
 {
-    // Run test initializers
-    vector<Runnable*>::iterator it = inits_.begin();
-    for (; it != inits_.end(); ++it)
+    if (is_list_mode_)
+    {
+        for (vector<Runnable*>::iterator it = tests_.begin(); it != tests_.end(); ++it)
+            cout << (*it)->name() << endl;
+        return;
+    }
+
+    // Run test initializers    
+    for (vector<Runnable*>::iterator it = inits_.begin(); it != inits_.end(); ++it)
     {
         if ((*it)->name().find(test_filter_, 0) != string::npos)
             (*it)->run();
@@ -19,8 +25,7 @@ void TestSystem::run()
     printHeading();
 
     // Run tests
-    it = tests_.begin();
-    for (; it != tests_.end(); ++it)
+    for (vector<Runnable*>::iterator it = tests_.begin(); it != tests_.end(); ++it)
     {
         try
         {
@@ -145,13 +150,15 @@ int main(int argc, char** argv)
         string key = argv[i];
         if (key == "--help")
         {
-            cout << "Usage: performance_gpu [--filter <test_filter>] [--working-dir <working_dir_with_slash>]\n";
+            cout << "Usage: performance_gpu [--ls] [--filter <test_filter>] [--workdir <working_dir_with_slash>]\n";
             return 0;
         }
         if (key == "--filter" && i + 1 < argc)
             TestSystem::instance().setTestFilter(argv[++i]);
-        else if (key == "--working-dir" && i + 1 < argc)
+        else if (key == "--workdir" && i + 1 < argc)
             TestSystem::instance().setWorkingDir(argv[++i]);
+        else if (key == "--ls")
+            TestSystem::instance().setListMode(true);
         else 
         {
             cout << "Unknown parameter: '" << key << "'" << endl;

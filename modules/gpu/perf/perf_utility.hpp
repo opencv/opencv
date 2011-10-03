@@ -32,6 +32,7 @@ struct CvtColorInfo
 
 typedef TestBaseWithParam<DeviceInfo> DevInfo;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size> > DevInfo_Size;
+typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, int, int> > DevInfo_Int_Int;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, MatType> > DevInfo_MatType;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType> > DevInfo_Size_MatType;
 typedef TestBaseWithParam< std::tr1::tuple<DeviceInfo, Size, MatType, MatType> > DevInfo_Size_MatType_MatType;
