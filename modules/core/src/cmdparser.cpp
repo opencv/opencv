@@ -163,7 +163,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             keys_buffer = it->first;
             keysVector = split_string(keys_buffer, "|");
 
-			for (int j = 0; j < keysVector.size(); j++) keysVector[j] = del_space(keysVector[j]);
+			for (size_t j = 0; j < keysVector.size(); j++) keysVector[j] = del_space(keysVector[j]);
 
             values_buffer = it->second[0];
             if (((curName == keysVector[0]) || (curName == keysVector[1])) && hasValueThroughEq)
@@ -222,7 +222,7 @@ bool CommandLineParser::has(const std::string& keys)
     for(it = data.begin(); it != data.end(); it++)
     {
         keysVector = split_string(it->first, "|");
-		for (int i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+		for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
         if (keysVector.size() == 1) keysVector.push_back("");
 
@@ -242,7 +242,7 @@ std::string CommandLineParser::getString(const std::string& keys)
     for(it = data.begin(); it != data.end(); it++)
     {
         valueVector = split_string(it->first, "|");
-		for (int i = 0; i < valueVector.size(); i++) valueVector[i] = del_space(valueVector[i]);
+		for (size_t i = 0; i < valueVector.size(); i++) valueVector[i] = del_space(valueVector[i]);
 
         if (valueVector.size() == 1) valueVector.push_back("");
 
@@ -267,7 +267,7 @@ template<typename _Tp>
 	for(it = data.begin(); it != data.end(); it++)
 	{
 		keysVector = split_string(it->first, "|");
-		for (int i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+		for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
 		cout << "  ";
 		if (keysVector[0] != "")

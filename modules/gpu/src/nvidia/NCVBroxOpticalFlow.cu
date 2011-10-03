@@ -66,18 +66,17 @@
 
 
 ////////////////////////////////////////////
-template<typename _Tp> class Ptr
+template<typename _Tp> class shared_ptr
 {
 public:
-    Ptr()  : obj(0), refcount(0) {}
-    Ptr(_Tp* _obj);
-    ~Ptr() { release(); }
-    Ptr(const Ptr& ptr);
-    Ptr& operator = (const Ptr& ptr);
+    shared_ptr()  : obj(0), refcount(0) {}
+    shared_ptr(_Tp* _obj);
+    ~shared_ptr() { release(); }
+    shared_ptr(const shared_ptr& ptr);
+    shared_ptr& operator = (const shared_ptr& ptr);
     void addref() { if( refcount ) refcount+=1; }
     void release();
     void delete_obj() { if( obj ) delete obj; }
-    bool empty() const { return obj == 0; }
     _Tp* operator -> () { return obj; }
     const _Tp* operator -> () const { return obj; }
     operator _Tp* () { return obj; }
@@ -87,7 +86,7 @@ protected:
     int* refcount; //< the associated reference counter
 };
 
-template<typename _Tp> inline Ptr<_Tp>::Ptr(_Tp* _obj) : obj(_obj)
+template<typename _Tp> inline shared_ptr<_Tp>::shared_ptr(_Tp* _obj) : obj(_obj)
 {
     if(obj)
     {
@@ -98,7 +97,7 @@ template<typename _Tp> inline Ptr<_Tp>::Ptr(_Tp* _obj) : obj(_obj)
         refcount = 0;
 }
 
-template<typename _Tp> inline void Ptr<_Tp>::release()
+template<typename _Tp> inline void shared_ptr<_Tp>::release()
 {
     if( refcount)
     {
@@ -113,14 +112,14 @@ template<typename _Tp> inline void Ptr<_Tp>::release()
     obj = 0;
 }
 
-template<typename _Tp> inline Ptr<_Tp>::Ptr(const Ptr<_Tp>& ptr)
+template<typename _Tp> inline shared_ptr<_Tp>::shared_ptr(const shared_ptr<_Tp>& ptr)
 {
     obj = ptr.obj;
     refcount = ptr.refcount;
     addref();
 }
 
-template<typename _Tp> inline Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& ptr)
+template<typename _Tp> inline shared_ptr<_Tp>& shared_ptr<_Tp>::operator = (const shared_ptr<_Tp>& ptr)
 {
     int* _refcount = ptr.refcount;
     if( _refcount )
@@ -844,8 +843,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     InitTextures();
 
     //prepare image pyramid
-    std::vector< Ptr<FloatVector> > img0_pyramid;
-    std::vector< Ptr<FloatVector> > img1_pyramid;
+    std::vector< shared_ptr<FloatVector> > img0_pyramid;
+    std::vector< shared_ptr<FloatVector> > img1_pyramid;
 
     std::vector<Ncv32u> w_pyramid;
     std::vector<Ncv32u> h_pyramid;
@@ -855,10 +854,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     float scale = 1.0f;
 
     //cuda arrays for frames
-    Ptr<FloatVector> I0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    shared_ptr<FloatVector> I0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(I0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    Ptr<FloatVector> I1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    shared_ptr<FloatVector> I1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(I1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
     if (!kSkipProcessing)
@@ -897,10 +896,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
         Ncv32u prev_level_pitch = alignUp(prev_level_width, kStrideAlignmentFloat) * sizeof(float);
 
-        Ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
+        shared_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-        Ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
+        shared_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
         ncvAssertCUDAReturn(cudaStreamSynchronize(stream), NCV_CUDA_ERROR);
@@ -955,8 +954,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     FloatVector* ptrUNew = &u_new;
     FloatVector* ptrVNew = &v_new;
 
-    std::vector< Ptr<FloatVector> >::const_reverse_iterator img0Iter = img0_pyramid.rbegin();
-    std::vector< Ptr<FloatVector> >::const_reverse_iterator img1Iter = img1_pyramid.rbegin();
+    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img0Iter = img0_pyramid.rbegin();
+    std::vector< shared_ptr<FloatVector> >::const_reverse_iterator img1Iter = img1_pyramid.rbegin();
     //outer loop
     //warping fixed point iteration
     while(!w_pyramid.empty())
