@@ -138,24 +138,6 @@ protected:
 };
 
 
-#ifndef ANDROID
-class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
-{
-public:
-    PlaneWarperGpu(float scale = 1.f) : PlaneWarper(scale) {}
-
-    Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               Mat &dst);
-
-    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-               Mat &dst);
-
-private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
-};
-#endif
-
-
 struct CV_EXPORTS SphericalProjector : ProjectorBase
 {
     void mapForward(float x, float y, float &u, float &v);
@@ -173,21 +155,6 @@ public:
 protected:
     void detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br);
 };
-
-
-#ifndef ANDROID
-class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
-{
-public:
-    SphericalWarperGpu(float scale) : SphericalWarper(scale) {}
-
-    Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               Mat &dst);
-
-private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
-};
-#endif
 
 
 struct CV_EXPORTS CylindricalProjector : ProjectorBase
@@ -212,16 +179,121 @@ protected:
 
 
 #ifndef ANDROID
+class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
+{
+public:
+    PlaneWarperGpu(float scale = 1.f) : PlaneWarper(scale) {}
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap)
+    {
+        Rect result = buildMaps(src_size, K, R, T, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               Mat &dst)
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+
+    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+               Mat &dst)
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, T, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+
+    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               gpu::GpuMat &dst);
+
+    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+               gpu::GpuMat &dst);
+
+private:
+    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+};
+
+
+class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
+{
+public:
+    SphericalWarperGpu(float scale) : SphericalWarper(scale) {}
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               Mat &dst)
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+
+    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               gpu::GpuMat &dst);
+
+private:
+    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+};
+
+
 class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 {
 public:
     CylindricalWarperGpu(float scale) : CylindricalWarper(scale) {}
 
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
     Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               Mat &dst);
+               Mat &dst)
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+
+    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               gpu::GpuMat &dst);
 
 private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_dst_, d_src_;
+    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 #endif
 

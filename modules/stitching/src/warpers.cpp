@@ -159,39 +159,6 @@ void PlaneWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 }
 
 
-#ifndef ANDROID
-Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                           Mat &dst)
-{
-    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
-}
-
-
-Point PlaneWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-                           Mat &dst)
-{
-    projector_.setCameraParams(K, R, T);
-
-    Point dst_tl, dst_br;
-    detectResultRoi(src.size(), dst_tl, dst_br);
-
-    gpu::buildWarpPlaneMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                            K, R, projector_.scale, d_xmap_, d_ymap_);
-
-    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
-    d_src_.upload(src);
-
-    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
-
-    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
-
-    d_dst_.download(dst);
-
-    return dst_tl;
-}
-#endif
-
-
 void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_br)
 {
     detectResultRoiByBorder(src_size, dst_tl, dst_br);
@@ -237,51 +204,86 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
 
 
 #ifndef ANDROID
-Point SphericalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                               Mat &dst)
+Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
 {
-    projector_.setCameraParams(K, R);
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
+}
+
+Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
-    detectResultRoi(src.size(), dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
-    gpu::buildWarpSphericalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                                K, R, projector_.scale, d_xmap_, d_ymap_);
+    gpu::buildWarpPlaneMaps(src_size, Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
+                            K, R, projector_.scale, xmap, ymap);
 
-    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
-    d_src_.upload(src);
+    return Rect(dst_tl, dst_br);
+}
 
-    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
-
-    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
-
-    d_dst_.download(dst);
-
-    return dst_tl;
+Point PlaneWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                           gpu::GpuMat &dst)
+{
+    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
 }
 
 
-Point CylindricalWarperGpu::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                                 Mat &dst)
+Point PlaneWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+                           gpu::GpuMat &dst)
+{
+    Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
+    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
+    gpu::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
+    return dst_roi.tl();
+}
+
+
+Rect SphericalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
 {
     projector_.setCameraParams(K, R);
 
     Point dst_tl, dst_br;
-    detectResultRoi(src.size(), dst_tl, dst_br);
+    detectResultRoi(src_size, dst_tl, dst_br);
 
-    gpu::buildWarpCylindricalMaps(src.size(), Rect(dst_tl, Point(dst_br.x+1, dst_br.y+1)),
-                                  K, R, projector_.scale, d_xmap_, d_ymap_);
+    gpu::buildWarpSphericalMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
+                                K, R, projector_.scale, xmap, ymap);
 
-    gpu::ensureSizeIsEnough(src.size(), src.type(), d_src_);
-    d_src_.upload(src);
+    return Rect(dst_tl, dst_br);
+}
 
-    gpu::ensureSizeIsEnough(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, src.type(), d_dst_);
 
-    gpu::remap(d_src_, d_dst_, d_xmap_, d_ymap_, interp_mode, border_mode);
+Point SphericalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                               gpu::GpuMat &dst)
+{
+    Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
+    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
+    gpu::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
+    return dst_roi.tl();
+}
 
-    d_dst_.download(dst);
 
-    return dst_tl;
+Rect CylindricalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap)
+{
+    projector_.setCameraParams(K, R);
+
+    Point dst_tl, dst_br;
+    detectResultRoi(src_size, dst_tl, dst_br);
+
+    gpu::buildWarpCylindricalMaps(src_size, Rect(dst_tl, Point(dst_br.x + 1, dst_br.y + 1)),
+                                  K, R, projector_.scale, xmap, ymap);
+
+    return Rect(dst_tl, dst_br);
+}
+
+
+Point CylindricalWarperGpu::warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+                                 gpu::GpuMat &dst)
+{
+    Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
+    dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
+    gpu::remap(src, dst, d_xmap_, d_ymap_, interp_mode, border_mode);
+    return dst_roi.tl();
 }
 #endif
 
