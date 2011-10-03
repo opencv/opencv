@@ -261,6 +261,9 @@ template<typename _Tp>
 
  void CommandLineParser::printParams()
  {
+	int col_p = 30;
+	int col_d = 50;
+
 	std::map<std::string, std::vector<std::string> >::iterator it;
 	std::vector<string> keysVector;
 	std::string buf;
@@ -278,12 +281,39 @@ template<typename _Tp>
 		else if (keysVector[1] != "") buf += "--" + keysVector[1];
 		if (del_space(it->second[0]) != "") buf += "=[" + del_space(it->second[0]) + "]";
 
-		cout << setw(28) << left << buf;
+		cout << setw(col_p-2) << left << buf;
+
+		if (buf.length() > col_p-2) 
+		{
+			cout << endl << "  ";
+			cout << setw(col_p-2) << left << " ";
+		}
 
 		buf = "";
 		if (del_space(it->second[1]) != "") buf += del_space(it->second[1]);
-				
-		cout << setw(50) << left << buf << endl;
+
+		while (true)
+		{
+			bool tr = (buf.length() >= col_d-2) ? true: false;
+			int pos;
+
+			if (tr)
+			{
+				pos = buf.find_first_of(' ');
+				while (buf.find_first_of(' ', pos + 1 ) > 0 && pos < col_d-2) pos = buf.find_first_of(' ', pos + 1);
+				pos++;
+				cout << setw(col_d-2) << left << buf.substr(0, pos) << endl;
+			}
+			else
+			{
+				cout << setw(col_d-2) << left << buf<< endl;
+				break;
+			}
+
+			buf.erase(0, pos);
+			cout << "  ";
+			cout << setw(col_p-2) << left << " ";
+		}
 	}
  }
 
