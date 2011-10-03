@@ -27,7 +27,8 @@ int main( int argc, const char** argv )
 }
 #else
 
-using std::tr1::shared_ptr;
+//using std::tr1::shared_ptr;
+using cv::Ptr;
 
 #define PARAM_INPUT "--input"
 #define PARAM_SCALE "--scale"
@@ -39,8 +40,8 @@ using std::tr1::shared_ptr;
 #define PARAM_TIME_STEP "--time-step"
 #define PARAM_HELP "--help"
 
-shared_ptr<INCVMemAllocator> g_pGPUMemAllocator;
-shared_ptr<INCVMemAllocator> g_pHostMemAllocator;
+Ptr<INCVMemAllocator> g_pGPUMemAllocator;
+Ptr<INCVMemAllocator> g_pHostMemAllocator;
 
 class RgbToMonochrome
 {
@@ -83,9 +84,9 @@ public:
 };
 
 template<class T>
-NCVStatus CopyData(IplImage *image, shared_ptr<NCVMatrixAlloc<Ncv32f>> &dst)
+NCVStatus CopyData(IplImage *image, Ptr<NCVMatrixAlloc<Ncv32f>> &dst)
 {
-    dst = shared_ptr<NCVMatrixAlloc<Ncv32f>> (new NCVMatrixAlloc<Ncv32f> (*g_pHostMemAllocator, image->width, image->height));
+    dst = Ptr<NCVMatrixAlloc<Ncv32f>> (new NCVMatrixAlloc<Ncv32f> (*g_pHostMemAllocator, image->width, image->height));
     ncvAssertReturn (dst->isMemAllocated (), NCV_ALLOCATOR_BAD_ALLOC);
 
     unsigned char *row = reinterpret_cast<unsigned char*> (image->imageData);
@@ -137,8 +138,8 @@ NCVStatus LoadImages (const char *frame0Name,
                       const char *frame1Name, 
                       int &width, 
                       int &height, 
-                      shared_ptr<NCVMatrixAlloc<Ncv32f>> &src, 
-                      shared_ptr<NCVMatrixAlloc<Ncv32f>> &dst, 
+                      Ptr<NCVMatrixAlloc<Ncv32f>> &src, 
+                      Ptr<NCVMatrixAlloc<Ncv32f>> &dst, 
                       IplImage *&firstFrame, 
                       IplImage *&lastFrame)
 {
@@ -394,16 +395,16 @@ int main(int argc, char **argv)
     std::cout << "Using GPU: " << devId << "(" << devProp.name <<
         "), arch=" << devProp.major << "." << devProp.minor << std::endl;
 
-    g_pGPUMemAllocator  = shared_ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeDevice, devProp.textureAlignment));
+    g_pGPUMemAllocator  = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeDevice, devProp.textureAlignment));
     ncvAssertPrintReturn (g_pGPUMemAllocator->isInitialized (), "Device memory allocator isn't initialized", -1);
 
-    g_pHostMemAllocator = shared_ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeHostPageable, devProp.textureAlignment));
+    g_pHostMemAllocator = Ptr<INCVMemAllocator> (new NCVMemNativeAllocator (NCVMemoryTypeHostPageable, devProp.textureAlignment));
     ncvAssertPrintReturn (g_pHostMemAllocator->isInitialized (), "Host memory allocator isn't initialized", -1);
 
     int width, height;
 
-    shared_ptr<NCVMatrixAlloc<Ncv32f>> src_host;
-    shared_ptr<NCVMatrixAlloc<Ncv32f>> dst_host;
+    Ptr<NCVMatrixAlloc<Ncv32f>> src_host;
+    Ptr<NCVMatrixAlloc<Ncv32f>> dst_host;
 
     IplImage *firstFrame, *lastFrame;
     if (frame0Name != 0 && frame1Name != 0)
@@ -415,10 +416,10 @@ int main(int argc, char **argv)
         ncvAssertReturnNcvStat (LoadImages ("frame10.bmp", "frame11.bmp", width, height, src_host, dst_host, firstFrame, lastFrame));
     }
 
-    shared_ptr<NCVMatrixAlloc<Ncv32f>> src (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
+    Ptr<NCVMatrixAlloc<Ncv32f>> src (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
     ncvAssertReturn(src->isMemAllocated(), -1);
 
-    shared_ptr<NCVMatrixAlloc<Ncv32f>> dst (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
+    Ptr<NCVMatrixAlloc<Ncv32f>> dst (new NCVMatrixAlloc<Ncv32f> (*g_pGPUMemAllocator, src_host->width (), src_host->height ()));
     ncvAssertReturn (dst->isMemAllocated (), -1);
 
     ncvAssertReturnNcvStat (src_host->copySolid ( *src, 0 ));
