@@ -97,8 +97,8 @@ RotatedRect CvMeanShiftTracker::updateTrackingWindow(Mat image)
 	prev_trackwindow = Rect(prev_trackwindow.x - r, prev_trackwindow.y - r, prev_trackwindow.x + r,
 			prev_trackwindow.y + r) & Rect(0, 0, cols, rows);
 
-	prev_center.x = prev_trackwindow.x + prev_trackwindow.width / 2;
-	prev_center.y = prev_trackwindow.y + prev_trackwindow.height / 2;
+	prev_center.x = (float)(prev_trackwindow.x + prev_trackwindow.width / 2);
+	prev_center.y = (float)(prev_trackwindow.y + prev_trackwindow.height / 2);
 
 #ifdef DEBUG_HYTRACKER
 	ellipse(image, prev_trackbox, Scalar(0, 0, 255), 1, CV_AA);

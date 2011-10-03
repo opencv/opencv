@@ -220,7 +220,7 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing()
 
 		// ON and OFF channels writing step
 		*(parvocellularOutputON_PTR++)=*(bipolarCellsON_PTR++) = isPositive*pixelDifference;
-		*(parvocellularOutputOFF_PTR++)=*(bipolarCellsOFF_PTR++)= (isPositive-1.0)*pixelDifference;
+		*(parvocellularOutputOFF_PTR++)=*(bipolarCellsOFF_PTR++)= (isPositive-1)*pixelDifference;
 	}
 }
 }

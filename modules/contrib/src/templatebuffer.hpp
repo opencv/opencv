@@ -405,7 +405,7 @@ void TemplateBuffer<type>::normalizeGrayOutput_0_maxOutputValue(type *inputOutpu
 	// change the range of the data to 0->255
 
 	type factor = maxOutputValue/(maxValue-minValue);
-	type offset = -1.0*minValue*factor;
+	type offset = (type)(-minValue*factor);
 
 	inputOutputBufferPTR=inputOutputBuffer;
 	for (register size_t j = 0; j < processedPixels; ++j, ++inputOutputBufferPTR)

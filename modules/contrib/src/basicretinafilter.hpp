@@ -267,7 +267,7 @@ public:
 	* @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
 	* @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
 	*/
-	void setV0CompressionParameter(const float v0, const float maxInputValue, const float){ _v0=v0*maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=maxInputValue*(1.0-v0); _maxInputValue=maxInputValue;};
+	void setV0CompressionParameter(const float v0, const float maxInputValue, const float){ _v0=v0*maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=maxInputValue*(1-v0); _maxInputValue=maxInputValue;};
 
 	/**
 	* update local luminance adaptation setup, initial maxInputValue is kept. This function should be applied for normal local adaptation (not for tone mapping operation)
@@ -280,7 +280,7 @@ public:
 	* local luminance adaptation setup, this function should be applied for normal local adaptation (not for tone mapping operation)
 	* @param v0: compression effect for the local luminance adaptation processing, set a value between 0.6 and 0.9 for best results, a high value yields to a high compression effect
 	*/
-	void setV0CompressionParameter(const float v0){ _v0=v0*_maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=_maxInputValue*(1.0-v0);};
+	void setV0CompressionParameter(const float v0){ _v0=v0*_maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=_maxInputValue*(1-v0);};
 
 	/**
 	* local luminance adaptation setup, this function should be applied for local adaptation applied to tone mapping operation

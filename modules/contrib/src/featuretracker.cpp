@@ -124,7 +124,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 
 		matcher->match(prev_desc, curr_desc, matches);
 
-		for (int i = 0; i < matches.size(); i++)
+		for (int i = 0; i < (int)matches.size(); i++)
 		{
 			prev_keys.push_back(prev_keypoints[matches[i].queryIdx].pt);
 			curr_keys.push_back(curr_keypoints[matches[i].trainIdx].pt);
@@ -132,8 +132,8 @@ Rect CvFeatureTracker::updateTrackingWindowWithSIFT(Mat image)
 
 		Mat T = findHomography(prev_keys, curr_keys, CV_LMEDS);
 
-		prev_trackwindow.x += T.at<double> (0, 2);
-		prev_trackwindow.y += T.at<double> (1, 2);
+		prev_trackwindow.x += cvRound(T.at<double> (0, 2));
+		prev_trackwindow.y += cvRound(T.at<double> (1, 2));
 	}
 
 	prev_center.x = prev_trackwindow.x;
@@ -171,7 +171,7 @@ Rect CvFeatureTracker::updateTrackingWindowWithFlow(Mat image)
 		Point2f feature0_center(0, 0);
 		Point2f feature1_center(0, 0);
 		int goodtracks = 0;
-		for (int i = 0; i < features[1].size(); i++)
+		for (int i = 0; i < (int)features[1].size(); i++)
 		{
 			if (status[i] == 1)
 			{
@@ -213,8 +213,8 @@ Rect CvFeatureTracker::getTrackingWindow()
 Point2f CvFeatureTracker::getTrackingCenter()
 {
 	Point2f center(0, 0);
-	center.x = prev_center.x + prev_trackwindow.width/2.0;
-	center.y = prev_center.y + prev_trackwindow.height/2.0;
+	center.x = (float)(prev_center.x + prev_trackwindow.width/2.0);
+	center.y = (float)(prev_center.y + prev_trackwindow.height/2.0);
 	return center;
 }
 

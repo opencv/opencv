@@ -201,7 +201,7 @@ namespace cv
         // fill _hybridParvoMagnoCoefTable
         int i, j, halfRows=_photoreceptorsPrefilter.getNBrows()/2, halfColumns=_photoreceptorsPrefilter.getNBcolumns()/2;
         float *hybridParvoMagnoCoefTablePTR= &_retinaParvoMagnoMapCoefTable[0];
-        float minDistance=(float)MIN(halfRows, halfColumns)*0.7;
+        float minDistance=MIN(halfRows, halfColumns)*0.7f;
         for (i=0;i<(int)_photoreceptorsPrefilter.getNBrows();++i)
         {
             for (j=0;j<(int)_photoreceptorsPrefilter.getNBcolumns();++j)
@@ -209,12 +209,12 @@ namespace cv
                 float distanceToCenter=sqrt(((float)(i-halfRows)*(i-halfRows)+(j-halfColumns)*(j-halfColumns)));
                 if (distanceToCenter<minDistance)
                 {
-                    float a=*(hybridParvoMagnoCoefTablePTR++)=0.5+0.5*cos(CV_PI*distanceToCenter/minDistance);
-                    *(hybridParvoMagnoCoefTablePTR++)=1.0-a;
+                    float a=*(hybridParvoMagnoCoefTablePTR++)=0.5f+0.5f*(float)cos(CV_PI*distanceToCenter/minDistance);
+                    *(hybridParvoMagnoCoefTablePTR++)=1-a;
                 }else
                 {
                     *(hybridParvoMagnoCoefTablePTR++)=0;
-                    *(hybridParvoMagnoCoefTablePTR++)=1.0;
+                    *(hybridParvoMagnoCoefTablePTR++)=1.f;
                 }
             }
         }
@@ -226,15 +226,15 @@ namespace cv
         _normalizeParvoOutput_0_maxOutputValue=normalizeParvoOutput_0_maxOutputValue;
         _normalizeMagnoOutput_0_maxOutputValue=normalizeMagnoOutput_0_maxOutputValue;
         _maxOutputValue=maxOutputValue;
-        _photoreceptorsPrefilter.setV0CompressionParameter(0.9, maxInputValue, meanValue);
+        _photoreceptorsPrefilter.setV0CompressionParameter(0.9f, maxInputValue, meanValue);
         _photoreceptorsPrefilter.setLPfilterParameters(10, 0, 1.5, 1); // keeps low pass filter with high cut frequency in memory (usefull for the tone mapping function)
         _photoreceptorsPrefilter.setLPfilterParameters(10, 0, 3.0, 2); // keeps low pass filter with low cut frequency in memory (usefull for the tone mapping function)
         _photoreceptorsPrefilter.setLPfilterParameters(0, 0, 10, 3); // keeps low pass filter with low cut frequency in memory (usefull for the tone mapping function)
         //this->setV0CompressionParameter(0.6, maxInputValue, meanValue); // keeps log compression sensitivity parameter (usefull for the tone mapping function)
         _ParvoRetinaFilter.setOPLandParvoFiltersParameters(0,OPLtemporalresponse1, OPLspatialResponse1, OPLassymetryGain, OPLtemporalresponse2, OPLspatialResponse2);
-        _ParvoRetinaFilter.setV0CompressionParameter(0.9, maxInputValue, meanValue);
-        _MagnoRetinaFilter.setCoefficientsTable(LPfilterGain, LPfilterTemporalresponse, LPfilterSpatialResponse, MovingContoursExtractorCoefficient, 0, 2.0*LPfilterSpatialResponse);
-        _MagnoRetinaFilter.setV0CompressionParameter(0.7, maxInputValue, meanValue);
+        _ParvoRetinaFilter.setV0CompressionParameter(0.9f, maxInputValue, meanValue);
+        _MagnoRetinaFilter.setCoefficientsTable(LPfilterGain, LPfilterTemporalresponse, LPfilterSpatialResponse, MovingContoursExtractorCoefficient, 0, 2*LPfilterSpatialResponse);
+        _MagnoRetinaFilter.setV0CompressionParameter(0.7f, maxInputValue, meanValue);
 
         // stability controls value init
         _setInitPeriodCount();

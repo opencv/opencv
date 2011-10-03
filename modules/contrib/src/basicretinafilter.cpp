@@ -166,22 +166,22 @@ void BasicRetinaFilter::setLPfilterParameters(const float beta, const float tau,
 	// check if the spatial constant is correct (avoid 0 value to avoid division by 0)
 	if (desired_k<=0)
 	{
-		k=0.001;
+		k=0.001f;
 		std::cerr<<"BasicRetinaFilter::spatial constant of the low pass filter must be superior to zero !!! correcting parameter setting to 0,001"<<std::endl;
 	}
 
 	float _alpha = k*k;
-	float _mu = 0.8;
+	float _mu = 0.8f;
 	unsigned int tableOffset=filterIndex*3;
 	if (k<=0)
 	{
 		std::cerr<<"BasicRetinaFilter::spatial filtering coefficient must be superior to zero, correcting value to 0.01"<<std::endl;
-		_alpha=0.0001;
+		_alpha=0.0001f;
 	}
 
-	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	float _a = _filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
-	_filteringCoeficientsTable[1+tableOffset]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
+	float _temp =  (1+_beta)/(2*_mu*_alpha);
+	float _a = _filteringCoeficientsTable[tableOffset] = 1 + _temp - (float)sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	_filteringCoeficientsTable[1+tableOffset]=(1-_a)*(1-_a)*(1-_a)*(1-_a)/(1+_beta);
 	_filteringCoeficientsTable[2+tableOffset] =tau;
 
 	//std::cout<<"BasicRetinaFilter::normal:"<<(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta)<<" -> old:"<<(1-_a)*(1-_a)*(1-_a)*(1-_a)/(1+_beta)<<std::endl;
@@ -199,7 +199,7 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const floa
 	}
 
 	float _beta = beta+tau;
-	float _mu=0.8;
+	float _mu=0.8f;
 	if (alpha0<=0)
 	{
 		std::cerr<<"BasicRetinaFilter::spatial filtering coefficient must be superior to zero, correcting value to 0.01"<<std::endl;
@@ -208,13 +208,13 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CentredAccuracy(const floa
 
 	unsigned int tableOffset=filterIndex*3;
 
-	float _alpha=0.8;
-	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	float _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
-	_filteringCoeficientsTable[tableOffset+1]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
+	float _alpha=0.8f;
+	float _temp =  (1+_beta)/(2*_mu*_alpha);
+	float _a=_filteringCoeficientsTable[tableOffset] = 1 + _temp - (float)sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	_filteringCoeficientsTable[tableOffset+1]=(1-_a)*(1-_a)*(1-_a)*(1-_a)/(1+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
-	float commonFactor=alpha0/sqrt((float)(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows)+1.0);
+	float commonFactor=alpha0/(float)sqrt(_halfNBcolumns*_halfNBcolumns+_halfNBrows*_halfNBrows+1.0);
 	//memset(_progressiveSpatialConstant, 255, _filterOutput.getNBpixels());
 	for (unsigned int idColumn=0;idColumn<_halfNBcolumns; ++idColumn)
 		for (unsigned int idRow=0;idRow<_halfNBrows; ++idRow)
@@ -258,16 +258,16 @@ void BasicRetinaFilter::setProgressiveFilterConstants_CustomAccuracy(const float
 
 	float _beta = beta+tau;
 	float _alpha=k*k;
-	float _mu=0.8;
+	float _mu=0.8f;
 	if (k<=0)
 	{
 		std::cerr<<"BasicRetinaFilter::spatial filtering coefficient must be superior to zero, correcting value to 0.01"<<std::endl;
 		//alpha0=0.0001;
 	}
 	unsigned int tableOffset=filterIndex*3;
-	float _temp =  (1.0+_beta)/(2.0*_mu*_alpha);
-	float _a=_filteringCoeficientsTable[tableOffset] = 1.0 + _temp - sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
-	_filteringCoeficientsTable[tableOffset+1]=(1.0-_a)*(1.0-_a)*(1.0-_a)*(1.0-_a)/(1.0+_beta);
+	float _temp =  (1+_beta)/(2*_mu*_alpha);
+	float _a=_filteringCoeficientsTable[tableOffset] = 1 + _temp - (float)sqrt( (1.0+_temp)*(1.0+_temp) - 1.0);
+	_filteringCoeficientsTable[tableOffset+1]=(1-_a)*(1-_a)*(1-_a)*(1-_a)/(1+_beta);
 	_filteringCoeficientsTable[tableOffset+2] =tau;
 
 	//memset(_progressiveSpatialConstant, 255, _filterOutput.getNBpixels());
@@ -345,7 +345,7 @@ void BasicRetinaFilter::_localLuminanceAdaptationPosNegValues(const float *input
 	const float *localLuminancePTR=localLuminance;
 	const float *inputFramePTR=inputFrame;
 	float *outputFramePTR=outputFrame;
-	float factor=_maxInputValue*2/CV_PI;
+	float factor=_maxInputValue*2/(float)CV_PI;
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputFramePTR)
 	{
 		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;

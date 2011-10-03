@@ -144,7 +144,7 @@ void MagnoRetinaFilter::resize(const unsigned int NBrows, const unsigned int NBc
 
 void MagnoRetinaFilter::setCoefficientsTable(const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float localAdaptIntegration_tau, const float localAdaptIntegration_k )
 {
-	_temporalCoefficient=exp(-1.0/amacrinCellsTemporalCutFrequency);
+	_temporalCoefficient=(float)exp(-1.0/amacrinCellsTemporalCutFrequency);
 	// the first set of parameters is dedicated to the low pass filtering property of the ganglion cells
 	BasicRetinaFilter::setLPfilterParameters(parasolCells_beta, parasolCells_tau, parasolCells_k, 0);
 	// the second set of parameters is dedicated to the ganglion cells output intergartion for their local adaptation property

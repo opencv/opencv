@@ -95,7 +95,7 @@ struct LshStats
  */
 inline std::ostream& operator <<(std::ostream& out, const LshStats& stats)
 {
-    size_t w = 20;
+    int w = 20;
     out << "Lsh Table Stats:\n" << std::setw(w) << std::setiosflags(std::ios::right) << "N buckets : "
     << stats.n_buckets_ << "\n" << std::setw(w) << std::setiosflags(std::ios::right) << "mean size : "
     << std::setiosflags(std::ios::left) << stats.bucket_size_mean_ << "\n" << std::setw(w)
@@ -257,7 +257,7 @@ private:
     void initialize(size_t key_size)
     {
         speed_level_ = kHash;
-        key_size_ = key_size;
+        key_size_ = (unsigned)key_size;
     }
 
     /** Optimize the table for speed/space

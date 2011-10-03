@@ -122,7 +122,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  void callBack_rescaleGrayLevelMat(int, void*)
  {
 	 std::cout<<"Histogram clipping value changed, current value = "<<histogramClippingValue<<std::endl;
-	 rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)histogramClippingValue/100.0);
+	 rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)(histogramClippingValue/100.0));
 	 normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, cv::NORM_MINMAX);
  }
 
@@ -132,13 +132,13 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
  void callBack_updateRetinaParams(int, void*)
  {
 
-	 retina->setupOPLandIPLParvoChannel(true, true, (double)localAdaptation_photoreceptors/200.0, 0.5, 0.43, (double)retinaHcellsGain, 1.0, 7.0, (double)localAdaptation_Gcells/200.0);
+	 retina->setupOPLandIPLParvoChannel(true, true, (float)(localAdaptation_photoreceptors/200.0), 0.5f, 0.43f, (double)retinaHcellsGain, 1.f, 7.f, (float)(localAdaptation_Gcells/200.0));
  }
 
  int colorSaturationFactor;
  void callback_saturateColors(int, void*)
  {
-	 retina->setColorSaturation((double)colorSaturationFactor/10.0);
+	 retina->setColorSaturation(true, colorSaturationFactor/10.0f);
  }
 
  int main(int argc, char* argv[]) {
@@ -244,7 +244,7 @@ void drawPlot(const cv::Mat curve, const std::string figureTitle, const int lowe
 		 /////////////////////////////////////////////
 		 // apply default parameters of user interaction variables
 		 rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)histogramClippingValue/100);
-		 retina->setColorSaturation(true,colorSaturationFactor);
+		 retina->setColorSaturation(true,(float)colorSaturationFactor);
 		 callBack_updateRetinaParams(1,NULL); // first call for default parameters setup
 
 		 // processing loop with stop condition

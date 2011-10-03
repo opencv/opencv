@@ -73,8 +73,12 @@
   #endif
     
 #elif defined WIN32 || defined _WIN32
-  #include <intrin.h>
-  #define CV_XADD(addr,delta) _InterlockedExchangeAdd((long volatile*)(addr), (delta))
+  #define WIN32_MEAN_AND_LEAN 
+  #include <windows.h>
+  #undef min
+  #undef max
+  #undef abs
+  #define CV_XADD(addr,delta) InterlockedExchangeAdd((long volatile*)(addr), (delta))
 #else
 
   template<typename _Tp> static inline _Tp CV_XADD(_Tp* addr, _Tp delta)

@@ -299,8 +299,8 @@ void Retina::getMagno(cv::Mat &retinaOutput_magno)
 }
 
 // original API level data accessors
-void Retina::getMagno(std::valarray<float> &retinaOutput_magno){_retinaFilter->getMovingContours();}
-void Retina::getParvo(std::valarray<float> &retinaOutput_parvo){_retinaFilter->getContours();}
+void Retina::getMagno(std::valarray<float> &){_retinaFilter->getMovingContours();}
+void Retina::getParvo(std::valarray<float> &){_retinaFilter->getContours();}
 
 // private method called by constructirs
 void Retina::_init(const std::string parametersSaveFile, const cv::Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)

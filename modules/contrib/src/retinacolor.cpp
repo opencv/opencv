@@ -77,7 +77,7 @@ namespace cv
 // init static values
 static float _LMStoACr1Cr2[]={1.0,  1.0, 0.0,  1.0, -1.0, 0.0,  -0.5, -0.5, 1.0};
 //static double _ACr1Cr2toLMS[]={0.5,  0.5, 0.0,   0.5, -0.5, 0.0,  0.5,  0.0, 1.0};
-static float _LMStoLab[]={0.5774, 0.5774, 0.5774, 0.4082, 0.4082, -0.8165, 0.7071, -0.7071, 0.0};
+static float _LMStoLab[]={0.5774f, 0.5774f, 0.5774f, 0.4082f, 0.4082f, -0.8165f, 0.7071f, -0.7071f, 0.f};
 
 // constructor/desctructor
 RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod)
@@ -103,10 +103,10 @@ RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns
 	// set default spatio-temporal filter parameters
 	setLPfilterParameters(0.0, 0.0, 1.5);
 	setLPfilterParameters(0.0, 0.0, 10.5, 1);// for the low pass filter dedicated to contours energy extraction (demultiplexing process)
-	setLPfilterParameters(0.0, 0.0, 0.9, 2);
+	setLPfilterParameters(0.f, 0.f, 0.9f, 2);
 
 	// init default value on image Gradient
-	_imageGradient=0.57;
+	_imageGradient=0.57f;
 
 	// init color sampling map
 	_initColorSampling();
@@ -167,7 +167,7 @@ void RetinaColor::_initColorSampling()
 {
 
 	// filling the conversion table for multiplexed <=> demultiplexed frame
-	srand(time(NULL));
+	srand((unsigned)time(NULL));
 
 	// preInit cones probabilities
 	_pR=_pB=_pG=0;
@@ -206,7 +206,7 @@ void RetinaColor::_initColorSampling()
 		{
 			_colorSampling[index] = index+((index%3+(index%_filterOutput.getNBcolumns()))%3)*_filterOutput.getNBpixels();
 		}
-		_pR=_pB=_pG=1.0/3.0;
+		_pR=_pB=_pG=1.f/3;
 		break;
 	case RETINA_COLOR_BAYER: // default sets bayer sampling
 		for (unsigned int index=0 ; index<_filterOutput.getNBpixels(); ++index)
@@ -240,7 +240,7 @@ void RetinaColor::_initColorSampling()
 	unsigned int maxNBpixels=3*_filterOutput.getNBpixels();
 	register float *colorLocalDensityPTR=&_colorLocalDensity[0];
 	for (unsigned int i=0;i<maxNBpixels;++i, ++colorLocalDensityPTR)
-		*colorLocalDensityPTR=1.0/ *colorLocalDensityPTR;
+		*colorLocalDensityPTR=1.f/ *colorLocalDensityPTR;
 
 #ifdef RETINACOLORDEBUG
 	std::cout<<"INIT 	_colorLocalDensity max, min: "<<_colorLocalDensity.max()<<", "<<_colorLocalDensity.min()<<std::endl;
@@ -476,7 +476,7 @@ void RetinaColor::_interpolateSingleChannelImage111(float *inputOutputBuffer)
 		for (unsigned int indexc=1 ; indexc<_filterOutput.getNBcolumns()-1; ++indexc)
 		{
 			unsigned int index=indexc+indexr*_filterOutput.getNBcolumns();
-			inputOutputBuffer[index]=(inputOutputBuffer[index-1]+inputOutputBuffer[index]+inputOutputBuffer[index+1])/3.0;
+			inputOutputBuffer[index]=(inputOutputBuffer[index-1]+inputOutputBuffer[index]+inputOutputBuffer[index+1])/3.f;
 		}
 	}
 	for (unsigned int indexc=0 ; indexc<_filterOutput.getNBcolumns(); ++indexc)
@@ -484,7 +484,7 @@ void RetinaColor::_interpolateSingleChannelImage111(float *inputOutputBuffer)
 		for (unsigned int indexr=1 ; indexr<_filterOutput.getNBrows()-1; ++indexr)
 		{
 			unsigned int index=indexc+indexr*_filterOutput.getNBcolumns();
-			inputOutputBuffer[index]=(inputOutputBuffer[index-_filterOutput.getNBcolumns()]+inputOutputBuffer[index]+inputOutputBuffer[index+_filterOutput.getNBcolumns()])/3.0;
+			inputOutputBuffer[index]=(inputOutputBuffer[index-_filterOutput.getNBcolumns()]+inputOutputBuffer[index]+inputOutputBuffer[index+_filterOutput.getNBcolumns()])/3.f;
 		}
 	}
 }
@@ -497,8 +497,8 @@ void RetinaColor::_interpolateBayerRGBchannels(float *inputOutputBuffer)
 		{
 			unsigned int indexR=indexc+indexr*_filterOutput.getNBcolumns();
 			unsigned int indexB=_filterOutput.getDoubleNBpixels()+indexc+1+(indexr+1)*_filterOutput.getNBcolumns();
-			inputOutputBuffer[indexR]=(inputOutputBuffer[indexR-1]+inputOutputBuffer[indexR+1])/2.0;
-			inputOutputBuffer[indexB]=(inputOutputBuffer[indexB-1]+inputOutputBuffer[indexB+1])/2.0;
+			inputOutputBuffer[indexR]=(inputOutputBuffer[indexR-1]+inputOutputBuffer[indexR+1])/2.f;
+			inputOutputBuffer[indexB]=(inputOutputBuffer[indexB-1]+inputOutputBuffer[indexB+1])/2.f;
 		}
 	}
 	for (unsigned int indexr=1 ; indexr<_filterOutput.getNBrows()-1; indexr+=2)
@@ -507,8 +507,8 @@ void RetinaColor::_interpolateBayerRGBchannels(float *inputOutputBuffer)
 		{
 			unsigned int indexR=indexc+indexr*_filterOutput.getNBcolumns();
 			unsigned int indexB=_filterOutput.getDoubleNBpixels()+indexc+1+(indexr+1)*_filterOutput.getNBcolumns();
-			inputOutputBuffer[indexR]=(inputOutputBuffer[indexR-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexR+_filterOutput.getNBcolumns()])/2.0;
-			inputOutputBuffer[indexB]=(inputOutputBuffer[indexB-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexB+_filterOutput.getNBcolumns()])/2.0;
+			inputOutputBuffer[indexR]=(inputOutputBuffer[indexR-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexR+_filterOutput.getNBcolumns()])/2.f;
+			inputOutputBuffer[indexB]=(inputOutputBuffer[indexB-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexB+_filterOutput.getNBcolumns()])/2.f;
 
 		}
 	}
@@ -516,7 +516,7 @@ void RetinaColor::_interpolateBayerRGBchannels(float *inputOutputBuffer)
 		for (unsigned int indexc=0 ; indexc<_filterOutput.getNBcolumns(); indexc+=2)
 		{
 			unsigned int indexG=_filterOutput.getNBpixels()+indexc+(indexr)*_filterOutput.getNBcolumns()+indexr%2;
-			inputOutputBuffer[indexG]=(inputOutputBuffer[indexG-1]+inputOutputBuffer[indexG+1]+inputOutputBuffer[indexG-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexG+_filterOutput.getNBcolumns()])*0.25;
+			inputOutputBuffer[indexG]=(inputOutputBuffer[indexG-1]+inputOutputBuffer[indexG+1]+inputOutputBuffer[indexG-_filterOutput.getNBcolumns()]+inputOutputBuffer[indexG+_filterOutput.getNBcolumns()])*0.25f;
 		}
 }
 
@@ -527,7 +527,7 @@ void RetinaColor::_applyRIFfilter(const float *sourceBuffer, float *destinationB
 		for (unsigned int indexc=1 ; indexc<_filterOutput.getNBcolumns()-1; ++indexc)
 		{
 			unsigned int index=indexc+indexr*_filterOutput.getNBcolumns();
-			_tempMultiplexedFrame[index]=(4.0*sourceBuffer[index]+sourceBuffer[index-1-_filterOutput.getNBcolumns()]+sourceBuffer[index-1+_filterOutput.getNBcolumns()]+sourceBuffer[index+1-_filterOutput.getNBcolumns()]+sourceBuffer[index+1+_filterOutput.getNBcolumns()])*0.125;
+			_tempMultiplexedFrame[index]=(4.f*sourceBuffer[index]+sourceBuffer[index-1-_filterOutput.getNBcolumns()]+sourceBuffer[index-1+_filterOutput.getNBcolumns()]+sourceBuffer[index+1-_filterOutput.getNBcolumns()]+sourceBuffer[index+1+_filterOutput.getNBcolumns()])*0.125f;
 		}
 	}
 	memcpy(destinationBuffer, &_tempMultiplexedFrame[0], sizeof(float)*_filterOutput.getNBpixels());
@@ -536,21 +536,21 @@ void RetinaColor::_applyRIFfilter(const float *sourceBuffer, float *destinationB
 void RetinaColor::_getNormalizedContoursImage(const float *inputFrame, float *outputFrame)
 {
 	float maxValue=0;
-	float normalisationFactor=1.0/3.0;
+	float normalisationFactor=1.f/3;
 	for (unsigned int indexr=1 ; indexr<_filterOutput.getNBrows()-1; ++indexr)
 	{
 		for (unsigned int indexc=1 ; indexc<_filterOutput.getNBcolumns()-1; ++indexc)
 		{
 			unsigned int index=indexc+indexr*_filterOutput.getNBcolumns();
-			outputFrame[index]=normalisationFactor*fabs(8.0*inputFrame[index]-inputFrame[index-1]-inputFrame[index+1]-inputFrame[index-_filterOutput.getNBcolumns()]-inputFrame[index+_filterOutput.getNBcolumns()]-inputFrame[index-1-_filterOutput.getNBcolumns()]-inputFrame[index-1+_filterOutput.getNBcolumns()]-inputFrame[index+1-_filterOutput.getNBcolumns()]-inputFrame[index+1+_filterOutput.getNBcolumns()]);
+			outputFrame[index]=normalisationFactor*fabs(8.f*inputFrame[index]-inputFrame[index-1]-inputFrame[index+1]-inputFrame[index-_filterOutput.getNBcolumns()]-inputFrame[index+_filterOutput.getNBcolumns()]-inputFrame[index-1-_filterOutput.getNBcolumns()]-inputFrame[index-1+_filterOutput.getNBcolumns()]-inputFrame[index+1-_filterOutput.getNBcolumns()]-inputFrame[index+1+_filterOutput.getNBcolumns()]);
 			if (outputFrame[index]>maxValue)
 				maxValue=outputFrame[index];
 		}
 	}
-	normalisationFactor=1.0/maxValue;
+	normalisationFactor=1.f/maxValue;
 	// normalisation [0, 1]
-	                  for (unsigned int indexp=1 ; indexp<_filterOutput.getNBrows()-1; ++indexp)
-	                	  outputFrame[indexp]=outputFrame[indexp]*normalisationFactor;
+    for (unsigned int indexp=1 ; indexp<_filterOutput.getNBrows()-1; ++indexp)
+	   outputFrame[indexp]=outputFrame[indexp]*normalisationFactor;
 }
 
 //////////////////////////////////////////////////////////
@@ -561,7 +561,7 @@ void RetinaColor::_adaptiveSpatialLPfilter(const float *inputFrame, float *outpu
 {
 
 	/**********/
-	_gain = (1-0.57)*(1-0.57)*(1-0.06)*(1-0.06);
+	_gain = (1-0.57f)*(1-0.57f)*(1-0.06f)*(1-0.06f);
 
 	// launch the serie of 1D directional filters in order to compute the 2D low pass filter
 	_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, 0, _filterOutput.getNBrows());
@@ -669,19 +669,19 @@ void RetinaColor::_computeGradient(const float *luminance)
 			const float verticalGrad_n=fabs(luminance[pixelIndex+2*_filterOutput.getNBcolumns()]-luminance[pixelIndex]);
 			const float horizontalGrad_n=fabs(luminance[pixelIndex+2]-luminance[pixelIndex]);
 
-			const float horizontalGradient=0.5*horizontalGrad+0.25*(horizontalGrad_p+horizontalGrad_n);
-			const float verticalGradient=0.5*verticalGrad+0.25*(verticalGrad_p+verticalGrad_n);
+			const float horizontalGradient=0.5f*horizontalGrad+0.25f*(horizontalGrad_p+horizontalGrad_n);
+			const float verticalGradient=0.5f*verticalGrad+0.25f*(verticalGrad_p+verticalGrad_n);
 
 			// compare local gradient means and fill the appropriate filtering coefficient value that will be used in adaptative filters
 			if (horizontalGradient<verticalGradient)
 			{
-				_imageGradient[pixelIndex+_filterOutput.getNBpixels()]=0.06;
-				_imageGradient[pixelIndex]=0.57;
+				_imageGradient[pixelIndex+_filterOutput.getNBpixels()]=0.06f;
+				_imageGradient[pixelIndex]=0.57f;
 			}
 			else
 			{
-				_imageGradient[pixelIndex+_filterOutput.getNBpixels()]=0.57;
-				_imageGradient[pixelIndex]=0.06;
+				_imageGradient[pixelIndex+_filterOutput.getNBpixels()]=0.57f;
+				_imageGradient[pixelIndex]=0.06f;
 			}
 		}
 	}

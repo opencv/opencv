@@ -74,9 +74,7 @@ struct CV_EXPORTS CvMeanShiftTrackerParams
 {
 	enum {	H = 0, HS = 1, HSV = 2	};
 	CvMeanShiftTrackerParams(int tracking_type = CvMeanShiftTrackerParams::HS,
-			CvTermCriteria term_crit = CvTermCriteria())
-	{
-	}
+			CvTermCriteria term_crit = CvTermCriteria());
 
 	int tracking_type;
 	vector<float> h_range;
@@ -105,9 +103,7 @@ struct CV_EXPORTS CvHybridTrackerParams
 	CvHybridTrackerParams(float ft_tracker_weight = 0.5, float ms_tracker_weight = 0.5,
 			CvFeatureTrackerParams ft_params = CvFeatureTrackerParams(),
 			CvMeanShiftTrackerParams ms_params = CvMeanShiftTrackerParams(),
-			CvMotionModel model = CvMotionModel())
-	{
-	}
+			CvMotionModel model = CvMotionModel());
 
 	float ft_tracker_weight;
 	float ms_tracker_weight;

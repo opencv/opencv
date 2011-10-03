@@ -45,6 +45,23 @@
 using namespace cv;
 using namespace std;
 
+CvHybridTrackerParams::CvHybridTrackerParams(float _ft_tracker_weight, float _ms_tracker_weight,
+			CvFeatureTrackerParams _ft_params,
+			CvMeanShiftTrackerParams _ms_params,
+			CvMotionModel)
+{
+	ft_tracker_weight = _ft_tracker_weight;
+	ms_tracker_weight = _ms_tracker_weight;
+	ft_params = _ft_params;
+	ms_params = _ms_params;
+}
+
+CvMeanShiftTrackerParams::CvMeanShiftTrackerParams(int _tracking_type, CvTermCriteria _term_crit)
+{
+	tracking_type = _tracking_type;
+	term_crit = _term_crit;
+}
+
 CvHybridTracker::CvHybridTracker() {
 
 }
@@ -98,7 +115,7 @@ Mat CvHybridTracker::getGaussianProjection(Mat image, int ksize, double sigma,
 	Mat hist(image.size(), CV_64F);
 	for (int i = 0; i < hist.rows; i++)
 		for (int j = 0; j < hist.cols; j++) {
-			int pos = getL2Norm(Point(i, j), center);
+			int pos = cvRound(getL2Norm(Point(i, j), center));
 			if (pos < ksize / 2.0)
 				hist.at<double> (i, j) = 1.0 - (kernel.at<double> (pos) / max);
 		}
@@ -108,8 +125,8 @@ Mat CvHybridTracker::getGaussianProjection(Mat image, int ksize, double sigma,
 
 void CvHybridTracker::newTracker(Mat image, Rect selection) {
 	prev_proj = Mat::zeros(image.size(), CV_64FC1);
-	prev_center = Point2f(selection.x + selection.width / 2.0, selection.y
-			+ selection.height / 2.0);
+	prev_center = Point2f(selection.x + selection.width / 2.0f, selection.y
+			+ selection.height / 2.0f);
 	prev_window = selection;
 
 	mstracker->newTrackingWindow(image, selection);
@@ -160,10 +177,10 @@ void CvHybridTracker::updateTracker(Mat image) {
 	double total_len = ms_len + ft_len;
 
 	params.ms_tracker_weight *= (ittr - 1);
-	params.ms_tracker_weight += (ms_len / total_len);
+	params.ms_tracker_weight += (float)((ms_len / total_len));
 	params.ms_tracker_weight /= ittr;
 	params.ft_tracker_weight *= (ittr - 1);
-	params.ft_tracker_weight += (ft_len / total_len);
+	params.ft_tracker_weight += (float)((ft_len / total_len));
 	params.ft_tracker_weight /= ittr;
 
 	circle(image, prev_center, 3, Scalar(0, 0, 0), -1, 8);
@@ -183,7 +200,7 @@ void CvHybridTracker::updateTrackerWithEM(Mat image) {
 	Mat ms_proj = ms_backproj.mul(ms_distproj);
 
 	float dist_err = getL2Norm(mstracker->getTrackingCenter(), fttracker->getTrackingCenter());
-	Mat ft_gaussproj = getGaussianProjection(image, dist_err, -1, fttracker->getTrackingCenter());
+	Mat ft_gaussproj = getGaussianProjection(image, cvRound(dist_err), -1, fttracker->getTrackingCenter());
 	Mat ft_distproj = getDistanceProjection(image, fttracker->getTrackingCenter());
 	Mat ft_proj = ft_gaussproj.mul(ft_distproj);
 
@@ -215,8 +232,8 @@ void CvHybridTracker::updateTrackerWithLowPassFilter(Mat image) {
 	Point2f ft_center = fttracker->getTrackingCenter();
 
 	float a = params.low_pass_gain;
-	curr_center.x = (1.0 - a) * prev_center.x + a * (params.ms_tracker_weight * ms_track.center.x + params.ft_tracker_weight * ft_center.x);
-	curr_center.y = (1.0 - a) * prev_center.y + a * (params.ms_tracker_weight * ms_track.center.y + params.ft_tracker_weight * ft_center.y);
+	curr_center.x = (1 - a) * prev_center.x + a * (params.ms_tracker_weight * ms_track.center.x + params.ft_tracker_weight * ft_center.x);
+	curr_center.y = (1 - a) * prev_center.y + a * (params.ms_tracker_weight * ms_track.center.y + params.ft_tracker_weight * ft_center.y);
 }
 
 Rect CvHybridTracker::getTrackingWindow() {

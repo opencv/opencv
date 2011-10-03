@@ -221,7 +221,7 @@ public:
 	* setup the local luminance adaptation capability
 	* @param V0CompressionParameter: the compression strengh of the photoreceptors local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 160
 	*/
-	inline void setPhotoreceptorsLocalAdaptationSensitivity(const float V0CompressionParameter){_photoreceptorsPrefilter.setV0CompressionParameter(1.0-V0CompressionParameter);_setInitPeriodCount();};
+	inline void setPhotoreceptorsLocalAdaptationSensitivity(const float V0CompressionParameter){_photoreceptorsPrefilter.setV0CompressionParameter(1-V0CompressionParameter);_setInitPeriodCount();};
 
 	/**
 	* setup the local luminance adaptation capability
@@ -457,7 +457,12 @@ public:
 	* @param projectedRadiusLength: the distance to image center in the retina log sampled space
 	* @return the distance to image center in the input image space
 	*/
-	inline const float getRetinaSamplingBackProjection(const float projectedRadiusLength){if (_photoreceptorsLogSampling)return _photoreceptorsLogSampling->getOriginalRadiusLength(projectedRadiusLength);else return projectedRadiusLength;};
+	inline const float getRetinaSamplingBackProjection(const float projectedRadiusLength)
+	{
+		if (_photoreceptorsLogSampling)
+			return (float)_photoreceptorsLogSampling->getOriginalRadiusLength(projectedRadiusLength);
+		return projectedRadiusLength;
+	};
 
 	/////////////////:
 	// retina dimensions getters

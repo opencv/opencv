@@ -673,7 +673,7 @@ PERF_TEST_P(DevInfo_Size_MatType, countNonZero, testing::Combine(testing::Values
     declare.in(src_host, WARMUP_RNG);
 
     GpuMat src(src_host);
-    int dst;
+    int dst=0;
     GpuMat buf;
 
     declare.time(0.5).iterations(100);
