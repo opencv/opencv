@@ -5,7 +5,7 @@
 	#include <windows.h>
 	#include <tchar.h>
 #else
-	#include <direct.h>
+	#include <dirent.h>
 #endif
 
 namespace cv
