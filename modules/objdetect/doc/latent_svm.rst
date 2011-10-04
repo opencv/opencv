@@ -1,9 +1,6 @@
 Latent SVM
 ===============================================================
 
-.. highlight:: cpp
-
-
 Discriminatively Trained Part Based Models for Object Detection
 ---------------------------------------------------------------
 
@@ -29,6 +26,19 @@ class of models by a mixture of star models. The score of a mixture
 model at a particular position and scale is the maximum over
 components, of the score of that component model at the given
 location.
+
+In OpenCV there are C implementation of Latent SVM and C++ wrapper of it. 
+C version is the structure :ocv:struct:`CvObjectDetection` and a set of functions 
+working with this structure (see :ocv:func:`cvLoadLatentSvmDetector`, 
+:ocv:func:`cvReleaseLatentSvmDetector`, :ocv:func:`cvLatentSvmDetectObjects`).
+C++ version is the class :ocv:class:`LatentSvmDetector` and has slightly different 
+functionality in contrast with C version - it supports loading and detection 
+of several models. 
+
+There are two examples of Latent SVM usage: ``samples/c/latentsvmdetect.cpp``
+and ``samples/cpp/latentsvm_multidetect.cpp``.
+
+.. highlight:: c
 
 
 CvLSVMFilterPosition
@@ -129,7 +139,6 @@ Structure contains the bounding box and confidence level for detected object.
 
 cvLoadLatentSvmDetector
 -----------------------
-
 Loads trained detector from a file.
 
 .. ocv:function:: CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename)
@@ -139,7 +148,6 @@ Loads trained detector from a file.
 
 cvReleaseLatentSvmDetector
 --------------------------
-
 Release memory allocated for CvLatentSvmDetector structure.
 
 .. ocv:function:: void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector)
@@ -149,7 +157,6 @@ Release memory allocated for CvLatentSvmDetector structure.
 
 cvLatentSvmDetectObjects
 ------------------------
-
 Find rectangular regions in the given image that are likely to contain objects 
 and corresponding confidence levels.
 
@@ -161,6 +168,95 @@ and corresponding confidence levels.
     :param overlap_threshold: Threshold for the non-maximum suppression algorithm
     :param numThreads: Number of threads used in parallel version of the algorithm
     
+.. highlight:: cpp
+
+LatentSvmDetector
+-----------------
+.. ocv:class:: LatentSvmDetector
+
+This is a C++ wrapping class of Latent SVM. It contains internal representation of several 
+trained Latent SVM detectors (models) and a set of methods to load the detectors and detect objects 
+using them.
+
+LatentSvmDetector::ObjectDetection
+----------------------------------
+.. ocv:class:: LatentSvmDetector::ObjectDetection
+
+Structure contains the detection information.
+
+    .. ocv:member:: Rect rect
+    
+        bounding box for a detected object
+        
+    .. ocv:member:: float score
+    
+        confidence level
+        
+    .. ocv:member:: int classID
+    
+        class (model or detector) ID that detect an object 
+        
+            
+LatentSvmDetector::LatentSvmDetector
+------------------------------------
+Two types of constructors.
+
+.. ocv:function:: LatentSvmDetector::LatentSvmDetector()
+
+.. ocv:function:: LatentSvmDetector::LatentSvmDetector(const vector<string>& filenames, const vector<string>& classNames=vector<string>())
+
+
+
+    :param filenames: A set of filenames storing the trained detectors (models). Each file contains one model. See examples of such files here /opencv_extra/testdata/cv/latentsvmdetector/models_VOC2007/. 
+        
+    :param classNames: A set of trained models names. If it's empty then the name of each model will be constructed from the name of file containing the model. E.g. the model stored in "/home/user/cat.xml" will get the name "cat".
+
+LatentSvmDetector::~LatentSvmDetector
+------------------------------------
+Destructor.
+
+.. ocv:function:: LatentSvmDetector::~LatentSvmDetector()
+
+LatentSvmDetector::~clear
+-------------------------
+Clear all trained models and their names stored in an class object.
+
+.. ocv:function:: void LatentSvmDetector::clear()
+
+LatentSvmDetector::load
+-----------------------
+Load the trained models from given ``.xml`` files and return ``true`` if at least one model was loaded.
+
+.. ocv:function:: bool LatentSvmDetector::load(const vector<string>& filenames, const vector<string>& classNames)
+    
+    :param filenames: A set of filenames storing the trained detectors (models). Each file contains one model. See examples of such files here /opencv_extra/testdata/cv/latentsvmdetector/models_VOC2007/. 
+        
+    :param classNames: A set of trained models names. If it's empty then the name of each model will be constructed from the name of file containing the model. E.g. the model stored in "/home/user/cat.xml" will get the name "cat".
+
+LatentSvmDetector::detect
+-------------------------
+Find rectangular regions in the given image that are likely to contain objects of loaded classes (models)
+and corresponding confidence levels.
+
+.. ocv:function:: void LatentSvmDetector::detect( const Mat& image, vector<ObjectDetection>& objectDetections, float overlapThreshold=0.5, int numThreads=-1 )
+                                
+    :param image: An image.
+    :param objectDetections: The detections: rectangulars, scores and class IDs.
+    :param overlapThreshold: Threshold for the non-maximum suppression algorithm.
+    :param numThreads: Number of threads used in parallel version of the algorithm.
+    
+LatentSvmDetector::getClassNames
+--------------------------------
+Return the class (model) names that were passed in constructor or method ``load`` or extructed from models filenames in those methods.
+
+.. ocv:function:: const vector<string>& LatentSvmDetector::getClassNames() const
+
+LatentSvmDetector::getClassCount
+--------------------------------
+Return a count of loaded models (classes).
+
+.. ocv:function:: size_t getClassCount() const
+                                
     
 .. [Felzenszwalb2010] Felzenszwalb, P. F. and Girshick, R. B. and McAllester, D. and Ramanan, D. *Object Detection with Discriminatively Trained Part Based Models*. PAMI, vol. 32, no. 9, pp. 1627-1645, September 2010 
 

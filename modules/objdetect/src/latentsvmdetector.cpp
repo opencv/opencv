@@ -169,6 +169,7 @@ void LatentSvmDetector::clear()
     for( size_t i = 0; i < detectors.size(); i++ )
         cvReleaseLatentSvmDetector( &detectors[i] );
     detectors.clear();
+
     classNames.clear();
 }
 
