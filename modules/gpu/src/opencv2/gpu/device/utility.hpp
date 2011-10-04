@@ -58,7 +58,7 @@ namespace cv {  namespace gpu { namespace device
     ///////////////////////////////////////////////////////////////////////////////
     // swap
 
-    template <typename T> void __device__ __forceinline__ swap(T& a, T& b) 
+    template <typename T> void __device__ __host__ __forceinline__ swap(T& a, T& b) 
     {
         const T temp = a;
         a = b;

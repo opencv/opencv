@@ -62,7 +62,7 @@
 
 #include "NPP_staging/NPP_staging.hpp"
 #include "NCVBroxOpticalFlow.hpp"
-
+#include "opencv2/gpu/device/utility.hpp"
 
 
 ////////////////////////////////////////////
@@ -130,6 +130,7 @@ template<typename _Tp> inline shared_ptr<_Tp>& shared_ptr<_Tp>::operator = (cons
     refcount = _refcount;
     return *this;
 }
+
 
 ////////////////////////////////////////////
 //using std::tr1::shared_ptr;
@@ -1181,8 +1182,8 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 				ScaleVector(ptrVNew->ptr(), ptrVNew->ptr(), 1.0f/scale_factor, ns * nh, stream);
             }
 
-            std::swap<FloatVector*>(ptrU, ptrUNew);
-            std::swap<FloatVector*>(ptrV, ptrVNew);
+            cv::gpu::device::swap<FloatVector*>(ptrU, ptrUNew);
+            cv::gpu::device::swap<FloatVector*>(ptrV, ptrVNew);
         }
         scale /= scale_factor;
     }
