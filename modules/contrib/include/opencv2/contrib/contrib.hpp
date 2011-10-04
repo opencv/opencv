@@ -609,9 +609,9 @@ namespace cv
 	class CV_EXPORTS Directory
     {
 	    public:
-			static std::vector<std::string> GetListFiles  ( const string& directoryName, bool addPath = true );
-			static std::vector<std::string> GetListFilesR ( const string& directoryName, bool addPath = true );
-			static std::vector<std::string> GetListFolders( const string& directoryName, bool addPath = true );
+			static std::vector<std::string> GetListFiles  ( const std::string& path, const std::string & exten = "*", bool addPath = true );
+			static std::vector<std::string> GetListFilesR ( const std::string& path, const std::string & exten = "*", bool addPath = true );
+			static std::vector<std::string> GetListFolders( const std::string& path, const std::string & exten = "*", bool addPath = true );
     };
 }
 

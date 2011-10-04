@@ -10,16 +10,16 @@
 
 namespace cv
 {
-	std::vector<std::string> Directory::GetListFiles( const string& directoryName, bool addPath )
+	std::vector<std::string> Directory::GetListFiles(  const std::string& path, const std::string & exten, bool addPath )
 	{
 		std::vector<std::string> list;
 		list.clear();
-		std::string path = directoryName + "/*";
+		std::string path_f = path + "/" + exten;
 		#ifdef WIN32
 			WIN32_FIND_DATA FindFileData;
 			HANDLE hFind;
 
-			hFind = FindFirstFile((LPCSTR)path.c_str(), &FindFileData);
+			hFind = FindFirstFile((LPCSTR)path_f.c_str(), &FindFileData);
 			if (hFind == INVALID_HANDLE_VALUE) 
 			{
 				return list;
@@ -35,7 +35,7 @@ namespace cv
 						FindFileData.dwFileAttributes == FILE_ATTRIBUTE_READONLY)
 					{
 						if (addPath)
-							list.push_back(directoryName + "/" + FindFileData.cFileName);
+							list.push_back(path + "/" + FindFileData.cFileName);
 						else
 							list.push_back(FindFileData.cFileName);
 					}
@@ -62,16 +62,16 @@ namespace cv
 		return list;
 	}
 
-	std::vector<std::string> Directory::GetListFolders( const string& directoryName, bool addPath )
+	std::vector<std::string> Directory::GetListFolders( const std::string& path, const std::string & exten, bool addPath )
 	{
 		std::vector<std::string> list;
-		std::string path = directoryName + "/*";
+		std::string path_f = path + "/" + exten;
 		list.clear();
 		#ifdef WIN32
 			WIN32_FIND_DATA FindFileData;
 			HANDLE hFind;
 
-			hFind = FindFirstFile((LPCSTR)path.c_str(), &FindFileData);
+			hFind = FindFirstFile((LPCSTR)path_f.c_str(), &FindFileData);
 			if (hFind == INVALID_HANDLE_VALUE) 
 			{
 				return list;
@@ -85,7 +85,7 @@ namespace cv
 						strcmp(FindFileData.cFileName, "..") != 0)
 					{
 						if (addPath)
-							list.push_back(directoryName + "/" + FindFileData.cFileName);
+							list.push_back(path + "/" + FindFileData.cFileName);
 						else
 							list.push_back(FindFileData.cFileName);
 					}
@@ -113,16 +113,16 @@ namespace cv
 		return list;
 	}
 
-	std::vector<std::string> Directory::GetListFilesR ( const string& directoryName, bool addPath )
+	std::vector<std::string> Directory::GetListFilesR ( const std::string& path, const std::string & exten, bool addPath )
 	{
-		std::vector<std::string> list = Directory::GetListFiles(directoryName, addPath);
+		std::vector<std::string> list = Directory::GetListFiles(path, exten, addPath);
 
-		std::vector<std::string> dirs = Directory::GetListFolders(directoryName, addPath);
+		std::vector<std::string> dirs = Directory::GetListFolders(path, exten, addPath);
 
 		std::vector<std::string>::const_iterator it;
 		for (it = dirs.begin(); it != dirs.end(); ++it)
 		{
-			std::vector<std::string> cl = Directory::GetListFiles(*it, addPath);
+			std::vector<std::string> cl = Directory::GetListFiles(*it, exten, addPath);
 			list.insert(list.end(), cl.begin(), cl.end());
 		}
 
