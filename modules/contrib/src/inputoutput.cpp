@@ -46,8 +46,8 @@ namespace cv
 		#else
 			DIR *dp;
 			struct dirent *dirp;
-			if((dp  = opendir(directoryName.c_str())) == NULL) 
-			{				
+			if((dp  = opendir(path.c_str())) == NULL) 
+			{
 				return list;
 			}
 
