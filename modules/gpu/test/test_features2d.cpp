@@ -534,7 +534,7 @@ TEST_P(BruteForceMatcher, KnnMatchAdd3)
 
 TEST_P(BruteForceMatcher, RadiusMatch)
 {
-    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
         return;
 
     const char* distStr = dists[distType];
@@ -573,7 +573,7 @@ TEST_P(BruteForceMatcher, RadiusMatch)
 
 TEST_P(BruteForceMatcher, RadiusMatchAdd)
 {
-    if (!supportFeature(devInfo, cv::gpu::GLOBAL_ATOMICS))
+    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
         return;
 
     const char* distStr = dists[distType];

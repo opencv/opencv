@@ -68,7 +68,7 @@ PERF_TEST_P(DevInfo_K_DescSize, BruteForceMatcher_knnMatch, testing::Combine(tes
     SANITY_CHECK(distance_host);
 }
 
-PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(testing::ValuesIn(devices(GLOBAL_ATOMICS)),
+PERF_TEST_P(DevInfo_DescSize, BruteForceMatcher_radiusMatch, testing::Combine(testing::ValuesIn(devices(SHARED_ATOMICS)),
                                                                         testing::Values(64, 128)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
