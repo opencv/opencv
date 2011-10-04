@@ -238,6 +238,7 @@ void LatentSVMDetectorTest::run( int /* start_from */)
         return;
     }
 
+    // 1. Test method detect
     // Run detectors
     vector<LatentSvmDetector::ObjectDetection> detections1_cat, detections12_cat, detections12_cars;
     detector1.detect( image_cat, detections1_cat, 0.5, numThreads );
@@ -281,6 +282,20 @@ void LatentSVMDetectorTest::run( int /* start_from */)
         }
         else
             std::cerr << "File " << true_res_path << " cann't be opened to save test results" << std::endl;
+    }
+
+    // 2. Simple tests of other methods
+    if( detector1.getClassCount() != 1 || detector1.getClassNames()[0] != "cat" )
+    {
+        std::cerr << "Incorrect result of method getClassNames() or getClassCount()" << std::endl;
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT);
+    }
+
+    detector1.clear();
+    if( !detector1.empty() )
+    {
+        std::cerr << "There is a bug in method clear() or empty()" << std::endl;
+        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT);
     }
 
     ts->set_failed_test_info( cvtest::TS::OK);
