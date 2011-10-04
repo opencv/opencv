@@ -4,7 +4,7 @@
 #include "opencv2/contrib/contrib.hpp"
 
 #ifdef WIN32
-//#include <io.h>
+#include <io.h>
 #else
 #include <dirent.h>
 #endif
@@ -62,22 +62,22 @@ void readDirectory( const string& directoryName, vector<string>& filenames, bool
     filenames.clear();
 
 #ifdef WIN32
-//    struct _finddata_t s_file;
-//    string str = directoryName + "\\*.*";
+    struct _finddata_t s_file;
+    string str = directoryName + "\\*.*";
 
-//    intptr_t h_file = _findfirst( str.c_str(), &s_file );
-//    if( h_file == -1L )
-//    {
-//        do
-//        {
-//            if( addDirectoryName )
-//                filenames.push_back(directoryName + "/" + s_file.name);
-//            else
-//                filenames.push_back((string)s_file.name);
-//        }
-//        while( _findnext( h_file, &s_file ) == 0 );
-//    }
-//    _findclose( h_file );
+	intptr_t h_file = _findfirst( str.c_str(), &s_file );
+	if( h_file != static_cast<intptr_t>(-1.0) )
+    {
+        do
+        {
+            if( addDirectoryName )
+                filenames.push_back(directoryName + "\\" + s_file.name);
+            else
+                filenames.push_back((string)s_file.name);
+        }
+        while( _findnext( h_file, &s_file ) == 0 );
+    }
+    _findclose( h_file );
 #else
     DIR* dir = opendir( directoryName.c_str() );
     if( dir != NULL )
