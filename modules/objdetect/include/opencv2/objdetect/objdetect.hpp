@@ -292,10 +292,10 @@ namespace cv
  * 1) provide c++ interface;
  * 2) make it possible to load and detect more than one class (model) unlike CvLatentSvmDetector.
  */
-class CV_EXPORTS_W LatentSvmDetector
+class CV_EXPORTS LatentSvmDetector
 {
 public:
-    struct CV_EXPORTS_W ObjectDetection
+    struct CV_EXPORTS ObjectDetection
     {
         ObjectDetection();
         ObjectDetection( const Rect& rect, float score, int classID=-1 );
@@ -304,18 +304,18 @@ public:
         int classID;
     };
 
-    CV_WRAP LatentSvmDetector();
-    CV_WRAP LatentSvmDetector( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+    LatentSvmDetector();
+    LatentSvmDetector( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
     virtual ~LatentSvmDetector();
 
-    CV_WRAP virtual void clear();
-    CV_WRAP virtual bool empty() const;
-    CV_WRAP bool load( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+    virtual void clear();
+    virtual bool empty() const;
+    bool load( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
 
-    CV_WRAP virtual void detect( const Mat& image,
-                                 vector<ObjectDetection>& objectDetections,
-                                 float overlapThreshold=0.5f,
-                                 int numThreads=-1 );
+    virtual void detect( const Mat& image,
+                         vector<ObjectDetection>& objectDetections,
+                         float overlapThreshold=0.5f,
+                         int numThreads=-1 );
 
     const vector<string>& getClassNames() const;
     size_t getClassCount() const;
