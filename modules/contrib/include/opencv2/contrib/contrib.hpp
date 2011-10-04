@@ -605,6 +605,14 @@ namespace cv
     };
     
     CV_EXPORTS void polyfit(const Mat& srcx, const Mat& srcy, Mat& dst, int order);
+
+	class CV_EXPORTS Directory
+    {
+	    public:
+			static std::vector<std::string> GetListFiles  ( const string& directoryName, bool addPath = true );
+			static std::vector<std::string> GetListFilesR ( const string& directoryName, bool addPath = true );
+			static std::vector<std::string> GetListFolders( const string& directoryName, bool addPath = true );
+    };
 }
 
 #include "opencv2/contrib/retina.hpp"
