@@ -46,7 +46,7 @@ namespace cv
 		#else
 			DIR *dp;
 			struct dirent *dirp;
-			if((dp = opendir(path_f.c_str())) == NULL) 
+			if((dp = opendir(path.c_str())) == NULL) 
 			{
 				return list;
 			}
@@ -54,7 +54,13 @@ namespace cv
 			while ((dirp = readdir(dp)) != NULL) 
 			{
 				if (dirp->d_type == DT_REG)
-					list.push_back(static_cast<std::string>(dirp->d_name));
+				{
+					if (exten.compare("*") == 0)
+						list.push_back(static_cast<std::string>(dirp->d_name));
+					else
+						if (std::string(dirp->d_name).find(exten) != std::string::npos)
+							list.push_back(static_cast<std::string>(dirp->d_name));
+				}
 			}
 			closedir(dp);
 		#endif
@@ -108,7 +114,11 @@ namespace cv
 					strcmp(dirp->d_name, ".") != 0 && 
 					strcmp(dirp->d_name, "..") != 0 )
 				{
-					list.push_back(static_cast<std::string>(dirp->d_name));
+					if (exten.compare("*") == 0)
+						list.push_back(static_cast<std::string>(dirp->d_name));
+					else
+						if (std::string(dirp->d_name).find(exten) != std::string::npos)
+							list.push_back(static_cast<std::string>(dirp->d_name));
 				}
 			}
 			closedir(dp);
