@@ -787,10 +787,14 @@ Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 
 CascadeClassifier::CascadeClassifier()
 {
+    maskGenerator=getDefaultMaskGenerator();
 }
 
 CascadeClassifier::CascadeClassifier(const string& filename)
-{ load(filename); }
+{ 
+    load(filename); 
+    maskGenerator=getDefaultMaskGenerator();
+}
 
 CascadeClassifier::~CascadeClassifier()
 {
@@ -859,12 +863,29 @@ bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& featureEvaluator, const
     return empty() ? false : featureEvaluator->setImage(image, data.origWinSize);
 }
 
+void CascadeClassifier::setMaskGenerator(Ptr<MaskGenerator> _maskGenerator)
+{
+    maskGenerator=_maskGenerator;
+}
+Ptr<CascadeClassifier::MaskGenerator> CascadeClassifier::getMaskGenerator()
+{
+    return maskGenerator;
+}
+
+Ptr<CascadeClassifier::MaskGenerator> CascadeClassifier::getDefaultMaskGenerator()
+{
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    return tegra::getCascadeClassifierMaskGenerator(*this);
+#else
+    return Ptr<CascadeClassifier::MaskGenerator>();
+#endif
+}
+
 struct CascadeClassifierInvoker
 {
-    CascadeClassifierInvoker( const Mat& _image, CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor, 
-        ConcurrentRectVector& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels = false  )
+    CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor, 
+        ConcurrentRectVector& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels, const Mat& _mask)
     {
-        image=_image;
         classifier = &_cc;
         processingRectSize = _sz1;
         stripSize = _stripSize;
@@ -873,15 +894,13 @@ struct CascadeClassifierInvoker
         rectangles = &_vec;
         rejectLevels  = outputLevels ? &_levels : 0;
         levelWeights  = outputLevels ? &_weights : 0;
+        mask=_mask;
     }
     
     void operator()(const BlockedRange& range) const
     {
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        Mat currentMask=tegra::getCascadeClassifierMask(image, classifier->data.origWinSize);
-#endif
         Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor), cvRound(classifier->data.origWinSize.height * scalingFactor));
 
         int y1 = range.begin() * stripSize;
@@ -890,11 +909,9 @@ struct CascadeClassifierInvoker
         {
             for( int x = 0; x < processingRectSize.width; x += yStep )
             {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-                if ( (!currentMask.empty()) && (currentMask.at<uchar>(Point(x,y))==0)) {
+                if ( (!mask.empty()) && (mask.at<uchar>(Point(x,y))==0)) {
                     continue;
                 }
-#endif
 
                 double gypWeight;
                 int result = classifier->runAt(evaluator, Point(x, y), gypWeight);
@@ -918,7 +935,6 @@ struct CascadeClassifierInvoker
         }
     }
     
-    Mat image;
     CascadeClassifier* classifier;
     ConcurrentRectVector* rectangles;
     Size processingRectSize;
@@ -926,6 +942,7 @@ struct CascadeClassifierInvoker
     double scalingFactor;
     vector<int> *rejectLevels;
     vector<double> *levelWeights;
+    Mat mask;
 };
     
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
@@ -937,20 +954,25 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
     if( !featureEvaluator->setImage( image, data.origWinSize ) )
         return false;
 
+    Mat currentMask;
+    if (!maskGenerator.empty()) {
+        currentMask=maskGenerator->generateMask(image);
+    }
+
     ConcurrentRectVector concurrentCandidates;
     vector<int> rejectLevels;
     vector<double> levelWeights;
     if( outputRejectLevels )
     {
-        parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( image, *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, levelWeights, true));
+        parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
+            concurrentCandidates, rejectLevels, levelWeights, true, currentMask));
         levels.insert( levels.end(), rejectLevels.begin(), rejectLevels.end() );
         weights.insert( weights.end(), levelWeights.begin(), levelWeights.end() );
     }
     else
     {
-         parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( image, *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, levelWeights, false));
+         parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
+            concurrentCandidates, rejectLevels, levelWeights, false, currentMask));
     }
     candidates.insert( candidates.end(), concurrentCandidates.begin(), concurrentCandidates.end() );
 

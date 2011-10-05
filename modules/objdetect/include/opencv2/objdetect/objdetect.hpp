@@ -468,6 +468,18 @@ protected:
     Data data;
     Ptr<FeatureEvaluator> featureEvaluator;
     Ptr<CvHaarClassifierCascade> oldCascade;
+
+public:
+    class MaskGenerator
+    {
+        public:
+            virtual cv::Mat generateMask(const cv::Mat& src)=0;
+    };
+    void setMaskGenerator(Ptr<MaskGenerator> maskGenerator);
+    Ptr<MaskGenerator> getMaskGenerator();
+protected:
+    Ptr<MaskGenerator> maskGenerator;
+    Ptr<MaskGenerator> getDefaultMaskGenerator();
 };
 
     
