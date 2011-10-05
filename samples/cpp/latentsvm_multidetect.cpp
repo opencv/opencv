@@ -23,11 +23,12 @@ using namespace cv;
 void help()
 {
     cout << "This program demonstrated the use of the latentSVM detector." << endl <<
-            "It reads in a trained object models and then uses them to detect the object in an images" << endl <<
+            "It reads in a trained object models and then uses them to detect the objects in an images." << endl <<
              endl <<
             "Call:" << endl <<
-            "./latentsvm_multidetect <images_folder> <models_folder> [<threads_number>]" << endl <<
-            "Example of models_folder is opencv_extra/testdata/cv/latentsvmdetector/models_VOC2007" << endl <<
+            "./latentsvm_multidetect <imagesFolder> <modelsFolder> [<overlapThreshold>][<threadsNumber>]" << endl <<
+            "<overlapThreshold> - threshold for the non-maximum suppression algorithm." << endl <<
+            "Example of <modelsFolder> is opencv_extra/testdata/cv/latentsvmdetector/models_VOC2007" << endl <<
              endl <<
             "Keys:" << endl <<
             "'n' - to go to the next image;" << endl <<
@@ -35,13 +36,13 @@ void help()
             endl;
 }
 
-void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, int numThreads )
+void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector<Scalar>& colors, float overlapThreshold, int numThreads )
 {
     vector<LatentSvmDetector::ObjectDetection> detections;
 
     TickMeter tm;
     tm.start();
-    detector.detect( image, detections, 0.5f, numThreads);
+    detector.detect( image, detections, overlapThreshold, numThreads);
     tm.stop();
 
     cout << "Detection time = " << tm.getTimeSec() << " sec" << endl;
@@ -53,7 +54,12 @@ void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector
     {
         const LatentSvmDetector::ObjectDetection& od = detections[i];
         rectangle( image, od.rect, colors[od.classID], 2 );
-        putText( image, classNames[od.classID], Point(od.rect.x+2,od.rect.y+9), FONT_HERSHEY_SIMPLEX, 0.35, colors[od.classID], 1 );
+    }
+    // put text over the all rectangles
+    for( size_t i = 0; i < detections.size(); i++ )
+    {
+        const LatentSvmDetector::ObjectDetection& od = detections[i];
+        putText( image, classNames[od.classID], Point(od.rect.x+4,od.rect.y+13), FONT_HERSHEY_SIMPLEX, 0.55, colors[od.classID], 2 );
     }
 }
 
@@ -107,12 +113,20 @@ int main(int argc, char* argv[])
 	help();
 
     string images_folder, models_folder;
+    float overlapThreshold = 0.2;
     int numThreads = -1;
     if( argc > 2 )
 	{
         images_folder = argv[1];
         models_folder = argv[2];
-        if( argc > 3 ) numThreads = atoi(argv[3]);
+        if( argc > 3 ) overlapThreshold = atof(argv[3]);
+        if( overlapThreshold < 0 || overlapThreshold > 1)
+        {
+            cout << "overlapThreshold must be in interval (0,1)." << endl;
+            exit(-1);
+        }
+
+        if( argc > 4 ) numThreads = atoi(argv[4]);
 	}
 
     vector<string> images_filenames, models_filenames;
@@ -126,6 +140,16 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
+    const vector<string>& classNames = detector.getClassNames();
+    cout << "Loaded " << classNames.size() << " models:" << endl;
+    for( size_t i = 0; i < classNames.size(); i++ )
+    {
+        cout << i << ") " << classNames[i] << "; ";
+    }
+    cout << endl;
+
+    cout << "overlapThreshold = " << overlapThreshold << endl;
+
     vector<Scalar> colors( detector.getClassNames().size() );
     fillRngColors( colors );
 
@@ -135,7 +159,7 @@ int main(int argc, char* argv[])
         if( image.empty() )  continue;
 
         cout << "Process image " << images_filenames[i] << endl;
-        detectAndDrawObjects( image, detector, colors, numThreads );
+        detectAndDrawObjects( image, detector, colors, overlapThreshold, numThreads );
 
         imshow( "result", image );
 
