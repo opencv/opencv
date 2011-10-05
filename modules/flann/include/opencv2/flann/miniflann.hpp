@@ -54,8 +54,6 @@ namespace cv
 namespace flann
 {
 
-using namespace cvflann;
-
 struct CV_EXPORTS IndexParams
 {
     IndexParams();

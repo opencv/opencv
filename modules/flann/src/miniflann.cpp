@@ -13,6 +13,8 @@ namespace cv
 namespace flann
 {
 
+using namespace cvflann;
+    
 IndexParams::IndexParams()
 {
     params = new ::cvflann::IndexParams();
