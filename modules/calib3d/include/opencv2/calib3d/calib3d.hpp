@@ -596,7 +596,7 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 
     
 //! computes the rectification transformation for a stereo camera from its intrinsic and extrinsic parameters
-CV_EXPORTS void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1,
+CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs1,
                                InputArray cameraMatrix2, InputArray distCoeffs2,
                                Size imageSize, InputArray R, InputArray T,
                                OutputArray R1, OutputArray R2,
