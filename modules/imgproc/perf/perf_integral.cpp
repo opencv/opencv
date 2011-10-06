@@ -91,4 +91,3 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral3,
     SANITY_CHECK(sqsum);
     SANITY_CHECK(tilted);
 }
-
