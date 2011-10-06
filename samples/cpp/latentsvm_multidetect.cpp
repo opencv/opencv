@@ -53,7 +53,7 @@ void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const vector
     for( size_t i = 0; i < detections.size(); i++ )
     {
         const LatentSvmDetector::ObjectDetection& od = detections[i];
-        rectangle( image, od.rect, colors[od.classID], 2 );
+        rectangle( image, od.rect, colors[od.classID], 3 );
     }
     // put text over the all rectangles
     for( size_t i = 0; i < detections.size(); i++ )
@@ -102,12 +102,6 @@ void readDirectory( const string& directoryName, vector<string>& filenames, bool
     sort( filenames.begin(), filenames.end() );
 }
 
-void fillRngColors( vector<Scalar>& colors )
-{
-    Mat m = Mat(colors).reshape(1,1);
-    randu( m, 0, 255 );
-}
-
 int main(int argc, char* argv[])
 {
 	help();
@@ -150,8 +144,8 @@ int main(int argc, char* argv[])
 
     cout << "overlapThreshold = " << overlapThreshold << endl;
 
-    vector<Scalar> colors( detector.getClassNames().size() );
-    fillRngColors( colors );
+    vector<Scalar> colors;
+    generateColors( colors, detector.getClassNames().size() );
 
     for( size_t i = 0; i < images_filenames.size(); i++ )
     {
