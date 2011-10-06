@@ -26,7 +26,7 @@ bool CvParams::scanAttr( const String prmName, const String val ) { return false
 
 //---------------------------- FeatureParams --------------------------------------
 
-CvFeatureParams::CvFeatureParams() : maxCatCount( 0 )
+CvFeatureParams::CvFeatureParams() : maxCatCount( 0 ), featSize( 1 )
 {
     name = CC_FEATURE_PARAMS; 
 }
@@ -34,11 +34,13 @@ CvFeatureParams::CvFeatureParams() : maxCatCount( 0 )
 void CvFeatureParams::init( const CvFeatureParams& fp )
 {
     maxCatCount = fp.maxCatCount;
+    featSize = fp.featSize;
 }
 
 void CvFeatureParams::write( FileStorage &fs ) const
 {
     fs << CC_MAX_CAT_COUNT << maxCatCount;
+    fs << CC_FEATURE_SIZE << featSize;
 }
 
 bool CvFeatureParams::read( const FileNode &node )
@@ -46,13 +48,16 @@ bool CvFeatureParams::read( const FileNode &node )
     if ( node.empty() )
         return false;
     maxCatCount = node[CC_MAX_CAT_COUNT];
-    return maxCatCount >= 0;
+    featSize = node[CC_FEATURE_SIZE];
+    return ( maxCatCount >= 0 && featSize >= 1 );
 }
 
 Ptr<CvFeatureParams> CvFeatureParams::create( int featureType )
 {
     return featureType == HAAR ? Ptr<CvFeatureParams>(new CvHaarFeatureParams) :
-        featureType == LBP ? Ptr<CvFeatureParams>(new CvLBPFeatureParams) : Ptr<CvFeatureParams>();
+        featureType == LBP ? Ptr<CvFeatureParams>(new CvLBPFeatureParams) : 
+        featureType == HOG ? Ptr<CvFeatureParams>(new CvHOGFeatureParams) :
+        Ptr<CvFeatureParams>();
 }
 
 //------------------------------------- FeatureEvaluator ---------------------------------------
@@ -79,5 +84,7 @@ void CvFeatureEvaluator::setImage(const Mat &img, uchar clsLabel, int idx)
 Ptr<CvFeatureEvaluator> CvFeatureEvaluator::create(int type)
 {
     return type == CvFeatureParams::HAAR ? Ptr<CvFeatureEvaluator>(new CvHaarEvaluator) :
-        type == CvFeatureParams::LBP ? Ptr<CvFeatureEvaluator>(new CvLBPEvaluator) : Ptr<CvFeatureEvaluator>();
+        type == CvFeatureParams::LBP ? Ptr<CvFeatureEvaluator>(new CvLBPEvaluator) : 
+        type == CvFeatureParams::HOG ? Ptr<CvFeatureEvaluator>(new CvHOGEvaluator) :
+        Ptr<CvFeatureEvaluator>();
 }

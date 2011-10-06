@@ -22,6 +22,7 @@ set(traincascade_files traincascade.cpp
     boost.cpp boost.h features.cpp traincascade_features.h
     haarfeatures.cpp haarfeatures.h
     lbpfeatures.cpp lbpfeatures.h
+	HOGfeatures.cpp HOGfeatures.h
     imagestorage.cpp imagestorage.h)
 
 set(the_target opencv_traincascade)    

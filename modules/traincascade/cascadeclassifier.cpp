@@ -4,7 +4,7 @@
 using namespace std;
 
 static const char* stageTypes[] = { CC_BOOST };
-static const char* featureTypes[] = { CC_HAAR, CC_LBP };
+static const char* featureTypes[] = { CC_HAAR, CC_LBP, CC_HOG };
 
 CvCascadeParams::CvCascadeParams() : stageType( defaultStageType ), 
     featureType( defaultFeatureType ), winSize( cvSize(24, 24) )
@@ -25,7 +25,9 @@ void CvCascadeParams::write( FileStorage &fs ) const
     CV_Assert( !stageTypeStr.empty() );
     fs << CC_STAGE_TYPE << stageTypeStr;
     String featureTypeStr = featureType == CvFeatureParams::HAAR ? CC_HAAR :
-                            featureType == CvFeatureParams::LBP ? CC_LBP : 0;
+                            featureType == CvFeatureParams::LBP ? CC_LBP : 
+                            featureType == CvFeatureParams::HOG ? CC_HOG :
+                            0;
     CV_Assert( !stageTypeStr.empty() );
     fs << CC_FEATURE_TYPE << featureTypeStr;
     fs << CC_HEIGHT << winSize.height;
@@ -49,7 +51,9 @@ bool CvCascadeParams::read( const FileNode &node )
         return false;
     rnode >> featureTypeStr;
     featureType = !featureTypeStr.compare( CC_HAAR ) ? CvFeatureParams::HAAR :
-                  !featureTypeStr.compare( CC_LBP ) ? CvFeatureParams::LBP : -1;
+                  !featureTypeStr.compare( CC_LBP ) ? CvFeatureParams::LBP : 
+                  !featureTypeStr.compare( CC_HOG ) ? CvFeatureParams::HOG :
+                  -1;
     if (featureType == -1)
         return false;
     node[CC_HEIGHT] >> winSize.height;
@@ -509,14 +513,15 @@ bool CvCascadeClassifier::load( const String cascadeDirName )
 
 void CvCascadeClassifier::getUsedFeaturesIdxMap( Mat& featureMap )
 {
-    featureMap.create( 1, featureEvaluator->getNumFeatures(), CV_32SC1 );
+    int varCount = featureEvaluator->getNumFeatures() * featureEvaluator->getFeatureSize();
+    featureMap.create( 1, varCount, CV_32SC1 );
     featureMap.setTo(Scalar(-1));
     
     for( vector< Ptr<CvCascadeBoost> >::const_iterator it = stageClassifiers.begin();
         it != stageClassifiers.end(); it++ )
         ((CvCascadeBoost*)((Ptr<CvCascadeBoost>)(*it)))->markUsedFeaturesInMap( featureMap );
     
-    for( int fi = 0, idx = 0; fi < featureEvaluator->getNumFeatures(); fi++ )
+    for( int fi = 0, idx = 0; fi < varCount; fi++ )
         if ( featureMap.at<int>(0, fi) >= 0 )
             featureMap.ptr<int>(0)[fi] = idx++;
 }

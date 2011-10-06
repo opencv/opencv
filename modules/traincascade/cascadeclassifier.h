@@ -5,6 +5,7 @@
 #include "traincascade_features.h"
 #include "haarfeatures.h"
 #include "lbpfeatures.h"
+#include "HOGfeatures.h" //new
 #include "boost.h"
 #include "cv.h"
 #include "cxcore.h"
@@ -41,6 +42,7 @@
 #define CC_FEATURES       FEATURES
 #define CC_FEATURE_PARAMS "featureParams"
 #define CC_MAX_CAT_COUNT  "maxCatCount"
+#define CC_FEATURE_SIZE   "featSize"
 
 #define CC_HAAR        "HAAR"
 #define CC_MODE        "mode"
@@ -52,6 +54,8 @@
 
 #define CC_LBP  "LBP"
 #define CC_RECT "rect"
+
+#define CC_HOG "HOG"
 
 #ifdef _WIN32
 #define TIME( arg ) (((double) clock()) / CLOCKS_PER_SEC)

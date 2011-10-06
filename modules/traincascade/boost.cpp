@@ -233,7 +233,7 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
 	if( _precalcValBufSize < 0 || _precalcIdxBufSize < 0)
         CV_Error( CV_StsOutOfRange, "_numPrecalcVal and _numPrecalcIdx must be positive or 0" );
 
-	var_count = var_all = featureEvaluator->getNumFeatures();
+	var_count = var_all = featureEvaluator->getNumFeatures() * featureEvaluator->getFeatureSize();
     sample_count = _numSamples;
     
     is_buf_16u = false;     

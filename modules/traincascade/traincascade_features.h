@@ -65,13 +65,14 @@ public:
 class CvFeatureParams : public CvParams
 {
 public:
-    enum { HAAR = 0, LBP = 1 };
+    enum { HAAR = 0, LBP = 1, HOG = 2 };
     CvFeatureParams();
     virtual void init( const CvFeatureParams& fp );
     virtual void write( FileStorage &fs ) const;
     virtual bool read( const FileNode &node );
     static Ptr<CvFeatureParams> create( int featureType );
     int maxCatCount; // 0 in case of numerical features
+    int featSize; // 1 in case of simple features (HAAR, LBP) and N_BINS(9)*N_CELLS(4) in case of Dalal's HOG features
 };
 
 class CvFeatureEvaluator
@@ -87,6 +88,7 @@ public:
 
     int getNumFeatures() const { return numFeatures; }
     int getMaxCatCount() const { return featureParams->maxCatCount; }
+    int getFeatureSize() const { return featureParams->featSize; }
     const Mat& getCls() const { return cls; }
     float getCls(int si) const { return cls.at<float>(si, 0); }
 protected:
