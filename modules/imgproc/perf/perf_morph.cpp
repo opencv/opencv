@@ -4,7 +4,8 @@ using namespace std;
 using namespace cv;
 using namespace perf;
 
-typedef perf::TestBaseWithParam<cv::Size> MatSize;
+#define TYPICAL_MAT_TYPES_MORPH  CV_8UC1, CV_8UC4
+#define TYPICAL_MATS_MORPH       testing::Combine( SZ_ALL_GA, testing::Values( TYPICAL_MAT_TYPES_MORPH) )
 
 /*
  void erode( InputArray src, OutputArray dst, InputArray kernel,
@@ -12,17 +13,20 @@ typedef perf::TestBaseWithParam<cv::Size> MatSize;
              int borderType=BORDER_CONSTANT,
              const Scalar& borderValue=morphologyDefaultBorderValue() );
 */
-PERF_TEST_P( MatSize, erode, ::testing::Values( TYPICAL_MAT_SIZES ))
+PERF_TEST_P(Size_MatType, erode1, TYPICAL_MATS_MORPH)
 {
-    Size sz = GetParam();
-    int type = CV_8UC1;
+    Size sz = std::tr1::get<0>(GetParam());
+    int type = std::tr1::get<1>(GetParam());
 
     Mat src(sz, type);
     Mat dst(sz, type);
 
     declare.in(src, WARMUP_RNG);
 
-    TEST_CYCLE(100) { erode(src, dst, Mat()); }
+    TEST_CYCLE(100) 
+	{ 
+		erode(src, dst, Mat());
+	}
 
     SANITY_CHECK(dst);
 }
