@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <ctime>
 
 using namespace cv;
 using namespace std;
