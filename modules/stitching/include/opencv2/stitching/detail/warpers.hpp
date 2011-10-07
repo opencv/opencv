@@ -57,7 +57,7 @@ class CV_EXPORTS RotationWarper
 public:
     virtual ~RotationWarper() {}
 
-    virtual Point2f warp(const Point2f &pt, const Mat &K, const Mat &R) = 0;
+    virtual Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R) = 0;
 
     virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap) = 0;
 
@@ -91,7 +91,7 @@ template <class P>
 class CV_EXPORTS RotationWarperBase : public RotationWarper
 {   
 public:
-    Point2f warp(const Point2f &pt, const Mat &K, const Mat &R);
+    Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R);
     
     Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
 
@@ -131,7 +131,7 @@ public:
 
     void setScale(float scale) { projector_.scale = scale; }
 
-    Point2f warp(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
+    Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 
     Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
 

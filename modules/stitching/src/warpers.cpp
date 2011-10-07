@@ -78,7 +78,7 @@ void ProjectorBase::setCameraParams(const Mat &K, const Mat &R, const Mat &T)
 }
 
 
-Point2f PlaneWarper::warp(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T)
+Point2f PlaneWarper::warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T)
 {
     projector_.setCameraParams(K, R, T);
     Point2f uv;
