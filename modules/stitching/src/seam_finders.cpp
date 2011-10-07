@@ -49,24 +49,50 @@ void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
                               vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
-    int64 t = getTickCount();
-
-    if (src.size() == 0)
+    if (src.size() == 0) 
         return;
 
+    int64 t = getTickCount();
+
     images_ = src;
+    sizes_.resize(src.size());
+    for (size_t i = 0; i < src.size(); ++i)
+        sizes_[i] = src[i].size();
     corners_ = corners;
     masks_ = masks;
+    run();
 
-    for (size_t i = 0; i < src.size() - 1; ++i)
+    LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+}
+
+
+void PairwiseSeamFinder::run()
+{
+    for (size_t i = 0; i < sizes_.size() - 1; ++i)
     {
-        for (size_t j = i + 1; j < src.size(); ++j)
+        for (size_t j = i + 1; j < sizes_.size(); ++j)
         {
             Rect roi;
-            if (overlapRoi(corners[i], corners[j], src[i].size(), src[j].size(), roi))
+            if (overlapRoi(corners_[i], corners_[j], sizes_[i], sizes_[j], roi))
                 findInPair(i, j, roi);
         }
     }
+}
+
+
+void VoronoiSeamFinder::find(const vector<Size> &sizes, const vector<Point> &corners,
+                             vector<Mat> &masks)
+{
+    LOGLN("Finding seams...");
+    if (sizes.size() == 0) 
+        return;
+
+    int64 t = getTickCount();
+
+    sizes_ = sizes;
+    corners_ = corners;
+    masks_ = masks;
+    run();
 
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
@@ -78,7 +104,7 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
 
-    Mat img1 = images_[first], img2 = images_[second];
+    Size img1 = sizes_[first], img2 = sizes_[second];
     Mat mask1 = masks_[first], mask2 = masks_[second];
     Point tl1 = corners_[first], tl2 = corners_[second];
 
@@ -89,14 +115,14 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
         {
             int y1 = roi.y - tl1.y + y;
             int x1 = roi.x - tl1.x + x;
-            if (y1 >= 0 && x1 >= 0 && y1 < img1.rows && x1 < img1.cols)
+            if (y1 >= 0 && x1 >= 0 && y1 < img1.height && x1 < img1.width)
                 submask1.at<uchar>(y + gap, x + gap) = mask1.at<uchar>(y1, x1);
             else
                 submask1.at<uchar>(y + gap, x + gap) = 0;
 
             int y2 = roi.y - tl2.y + y;
             int x2 = roi.x - tl2.x + x;
-            if (y2 >= 0 && x2 >= 0 && y2 < img2.rows && x2 < img2.cols)
+            if (y2 >= 0 && x2 >= 0 && y2 < img2.height && x2 < img2.width)
                 submask2.at<uchar>(y + gap, x + gap) = mask2.at<uchar>(y2, x2);
             else
                 submask2.at<uchar>(y + gap, x + gap) = 0;

@@ -71,9 +71,11 @@ public:
                       std::vector<Mat> &masks);
 
 protected:
+    void run();
     virtual void findInPair(size_t first, size_t second, Rect roi) = 0;
 
     std::vector<Mat> images_;
+    std::vector<Size> sizes_;
     std::vector<Point> corners_;
     std::vector<Mat> masks_;
 };
@@ -81,6 +83,9 @@ protected:
 
 class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
 {
+public:
+    virtual void find(const std::vector<Size> &size, const std::vector<Point> &corners,
+                      std::vector<Mat> &masks);
 private:
     void findInPair(size_t first, size_t second, Rect roi);
 };

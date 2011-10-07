@@ -78,6 +78,15 @@ void ProjectorBase::setCameraParams(const Mat &K, const Mat &R, const Mat &T)
 }
 
 
+Point2f PlaneWarper::warp(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T)
+{
+    projector_.setCameraParams(K, R, T);
+    Point2f uv;
+    projector_.mapForward(pt.x, pt.y, uv.x, uv.y);
+    return uv;
+}
+
+
 Rect PlaneWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap)
 {
     projector_.setCameraParams(K, R, T);

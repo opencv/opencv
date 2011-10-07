@@ -50,6 +50,16 @@ namespace cv {
 namespace detail {
 
 template <class P>
+Point2f RotationWarperBase<P>::warp(const Point2f &pt, const Mat &K, const Mat &R)
+{
+    projector_.setCameraParams(K, R);
+    Point2f uv;
+    projector_.mapForward(pt.x, pt.y, uv.x, uv.y);
+    return uv;
+}
+
+
+template <class P>
 Rect RotationWarperBase<P>::buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
 {
     projector_.setCameraParams(K, R);

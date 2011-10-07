@@ -57,11 +57,14 @@ class CV_EXPORTS RotationWarper
 public:
     virtual ~RotationWarper() {}
 
+    virtual Point2f warp(const Point2f &pt, const Mat &K, const Mat &R) = 0;
+
     virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap) = 0;
 
     virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                        Mat &dst) = 0;
 
+    // TODO add other backward functions for consistency or move this into a separated interface
     virtual void warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                               Size dst_size, Mat &dst) = 0;
 
@@ -88,6 +91,8 @@ template <class P>
 class CV_EXPORTS RotationWarperBase : public RotationWarper
 {   
 public:
+    Point2f warp(const Point2f &pt, const Mat &K, const Mat &R);
+    
     Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
 
     Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
@@ -125,6 +130,8 @@ public:
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
 
     void setScale(float scale) { projector_.scale = scale; }
+
+    Point2f warp(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 
     Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
 
