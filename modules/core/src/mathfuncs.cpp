@@ -63,60 +63,65 @@ float fastAtan2( float y, float x )
 
 static void FastAtan2_32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees=true )
 {
-	int i = 0;
-	float scale = angleInDegrees ? (float)(180/CV_PI) : 1.f;
+    int i = 0;
+    float scale = angleInDegrees ? (float)(180/CV_PI) : 1.f;
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::FastAtan2_32f(Y, X, angle, len, scale))
+        return;
+#endif
 
 #if CV_SSE2
-    if( USE_SSE2 )
-    {
-        Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
-        __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
-        __m128 _90 = _mm_set1_ps((float)(CV_PI*0.5)), _180 = _mm_set1_ps((float)CV_PI), _360 = _mm_set1_ps((float)(CV_PI*2));
-        __m128 zero = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
-        __m128 p0 = _mm_set1_ps(0.43157974f), q0 = _mm_set1_ps(0.76443945f), q1 = _mm_set1_ps(0.05831938f);
-        
-        for( ; i <= len - 4; i += 4 )
+        if( USE_SSE2 )
         {
-            __m128 x4 = _mm_loadu_ps(X + i), y4 = _mm_loadu_ps(Y + i);
-            __m128 xq4 = _mm_mul_ps(x4, x4), yq4 = _mm_mul_ps(y4, y4);
-            __m128 xly = _mm_cmplt_ps(xq4, yq4);
-            __m128 t = _mm_min_ps(xq4, yq4);
-            xq4 = _mm_max_ps(xq4, yq4); yq4 = t;
-            __m128 z4 = _mm_div_ps(_mm_mul_ps(_mm_mul_ps(x4, y4), _mm_add_ps(xq4, _mm_mul_ps(yq4, p0))),
-                                   _mm_add_ps(eps, _mm_add_ps(_mm_mul_ps(xq4, xq4),
-                                              _mm_mul_ps(yq4, _mm_add_ps(_mm_mul_ps(xq4, q0),
-                                                                         _mm_mul_ps(yq4, q1))))));
-            
-            // a4 <- x < y ? 90 : 0;
-            __m128 a4 = _mm_and_ps(xly, _90);
-            // a4 <- (y < 0 ? 360 - a4 : a4) == ((x < y ? y < 0 ? 270 : 90) : (y < 0 ? 360 : 0))
-            __m128 mask = _mm_cmplt_ps(y4, zero);
-            a4 = _mm_or_ps(_mm_and_ps(_mm_sub_ps(_360, a4), mask), _mm_andnot_ps(mask, a4));
-            // a4 <- (x < 0 && !(x < y) ? 180 : a4)
-            mask = _mm_andnot_ps(xly, _mm_cmplt_ps(x4, zero));
-            a4 = _mm_or_ps(_mm_and_ps(_180, mask), _mm_andnot_ps(mask, a4));
-            
-            // a4 <- (x < y ? a4 - z4 : a4 + z4)
-            a4 = _mm_mul_ps(_mm_add_ps(_mm_xor_ps(z4, _mm_andnot_ps(absmask, xly)), a4), scale4);
-            _mm_storeu_ps(angle + i, a4);
+            Cv32suf iabsmask; iabsmask.i = 0x7fffffff;
+            __m128 eps = _mm_set1_ps((float)DBL_EPSILON), absmask = _mm_set1_ps(iabsmask.f);
+            __m128 _90 = _mm_set1_ps((float)(CV_PI*0.5)), _180 = _mm_set1_ps((float)CV_PI), _360 = _mm_set1_ps((float)(CV_PI*2));
+            __m128 zero = _mm_setzero_ps(), scale4 = _mm_set1_ps(scale);
+            __m128 p0 = _mm_set1_ps(0.43157974f), q0 = _mm_set1_ps(0.76443945f), q1 = _mm_set1_ps(0.05831938f);
+
+            for( ; i <= len - 4; i += 4 )
+            {
+                __m128 x4 = _mm_loadu_ps(X + i), y4 = _mm_loadu_ps(Y + i);
+                __m128 xq4 = _mm_mul_ps(x4, x4), yq4 = _mm_mul_ps(y4, y4);
+                __m128 xly = _mm_cmplt_ps(xq4, yq4);
+                __m128 t = _mm_min_ps(xq4, yq4);
+                xq4 = _mm_max_ps(xq4, yq4); yq4 = t;
+                __m128 z4 = _mm_div_ps(_mm_mul_ps(_mm_mul_ps(x4, y4), _mm_add_ps(xq4, _mm_mul_ps(yq4, p0))),
+                                       _mm_add_ps(eps, _mm_add_ps(_mm_mul_ps(xq4, xq4),
+                                                                  _mm_mul_ps(yq4, _mm_add_ps(_mm_mul_ps(xq4, q0),
+                                                                                             _mm_mul_ps(yq4, q1))))));
+
+                // a4 <- x < y ? 90 : 0;
+                __m128 a4 = _mm_and_ps(xly, _90);
+                // a4 <- (y < 0 ? 360 - a4 : a4) == ((x < y ? y < 0 ? 270 : 90) : (y < 0 ? 360 : 0))
+                __m128 mask = _mm_cmplt_ps(y4, zero);
+                a4 = _mm_or_ps(_mm_and_ps(_mm_sub_ps(_360, a4), mask), _mm_andnot_ps(mask, a4));
+                // a4 <- (x < 0 && !(x < y) ? 180 : a4)
+                mask = _mm_andnot_ps(xly, _mm_cmplt_ps(x4, zero));
+                a4 = _mm_or_ps(_mm_and_ps(_180, mask), _mm_andnot_ps(mask, a4));
+
+                // a4 <- (x < y ? a4 - z4 : a4 + z4)
+                a4 = _mm_mul_ps(_mm_add_ps(_mm_xor_ps(z4, _mm_andnot_ps(absmask, xly)), a4), scale4);
+                _mm_storeu_ps(angle + i, a4);
+            }
         }
-    }
 #endif
-	
+
     for( ; i < len; i++ )
-	{
+    {
         double x = X[i], y = Y[i], x2 = x*x, y2 = y*y, a;
-		
+
         if( y2 <= x2 )
             a = (x < 0 ? CV_PI : y >= 0 ? 0 : CV_PI*2) +
-                x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + (float)DBL_EPSILON);
+                    x*y*(x2 + 0.43157974*y2)/(x2*x2 + y2*(0.76443945*x2 + 0.05831938*y2) + (float)DBL_EPSILON);
         else
         {
             a = (y >= 0 ? CV_PI*0.5 : CV_PI*1.5) -
-                x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + (float)DBL_EPSILON);
+                    x*y*(y2 + 0.43157974*x2)/(y2*y2 + x2*(0.76443945*y2 + 0.05831938*x2) + (float)DBL_EPSILON);
         }
         angle[i] = (float)(a*scale);
-	}
+    }
 }
 
 
