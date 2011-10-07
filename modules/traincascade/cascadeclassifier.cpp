@@ -268,7 +268,7 @@ bool CvCascadeClassifier::updateTrainingSet( double& acceptanceRatio)
         return false;
     cout << "POS count : consumed   " << posCount << " : " << (int)posConsumed << endl;
 
-    int proNumNeg = cvRound( (float)(numNeg * posCount) / numPos ); // apply only a fraction of negative samples.
+    int proNumNeg = cvRound( ( ((double)numNeg) * ((double)posCount) ) / numPos ); // apply only a fraction of negative samples. double is required since overflow is possible
     int negCount = fillPassedSamples( posCount, proNumNeg, false, negConsumed );
     if ( !negCount )
         return false;
