@@ -1576,6 +1576,10 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
     convolve(image, templ, result, ccorr, buf);
 }
 
+namespace cv { namespace gpu { namespace imgproc
+{
+    void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel);
+}}}
 
 void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, 
                        bool ccorr, ConvolveBuf& buf)
@@ -1585,6 +1589,24 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
     CV_Assert(image.type() == CV_32F);
     CV_Assert(templ.type() == CV_32F);
+
+    if (templ.cols < 13 && templ.rows < 13)
+    {
+        result.create(image.size(), CV_32F);
+        GpuMat contKernel;
+
+        if (templ.isContinuous())
+            contKernel = templ;
+        else
+        {
+            contKernel = createContinuous(templ.size(), templ.type());
+            templ.copyTo(contKernel);
+        }
+
+        imgproc::convolve_gpu(image, result, templ.cols, templ.rows, contKernel.ptr<float>());
+
+        return;
+    }
 
     buf.create(image.size(), templ.size());
     result.create(buf.result_size, CV_32F);

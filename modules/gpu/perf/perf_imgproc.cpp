@@ -737,7 +737,7 @@ PERF_TEST_P(DevInfo_Size, dft, testing::Combine(testing::ValuesIn(devices()),
 
 PERF_TEST_P(DevInfo_Int_Int, convolve, testing::Combine(testing::ValuesIn(devices()),
                                                      testing::Values(512, 1024, 1536, 2048, 2560, 3072, 3584),
-                                                     testing::Values(27, 32, 64)))
+                                                     testing::Values(3, 9, 27, 32, 64)))
 {
     DeviceInfo devInfo = std::tr1::get<0>(GetParam());
     int image_size = std::tr1::get<1>(GetParam());
@@ -745,13 +745,12 @@ PERF_TEST_P(DevInfo_Int_Int, convolve, testing::Combine(testing::ValuesIn(device
 
     setDevice(devInfo.deviceID());
 
-    Mat image_host(image_size, image_size, CV_32FC1);
-    Mat templ_host(templ_size, templ_size, CV_32FC1);
+    GpuMat image = createContinuous(image_size, image_size, CV_32FC1);
+    GpuMat templ = createContinuous(templ_size, templ_size, CV_32FC1);
 
-    declare.in(image_host, templ_host, WARMUP_RNG);
+    image.setTo(Scalar(1.0));
+    templ.setTo(Scalar(1.0));
 
-    GpuMat image(image_host);
-    GpuMat templ(templ_host);
     GpuMat dst;
     ConvolveBuf buf;
 

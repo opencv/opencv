@@ -4221,4 +4221,59 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
                         testing::Values(3, 5),
                         testing::Values(false, true)));
 
+////////////////////////////////////////////////////////
+// convolve
+
+struct Convolve: testing::TestWithParam< std::tr1::tuple<cv::gpu::DeviceInfo, int> >
+{    
+    cv::gpu::DeviceInfo devInfo;
+    int ksize;
+    
+    cv::Size size;    
+    cv::Mat src;
+    cv::Mat kernel;
+    
+    cv::Mat dst_gold;
+
+    virtual void SetUp()
+    {
+        devInfo = std::tr1::get<0>(GetParam());
+        ksize = std::tr1::get<1>(GetParam());
+
+        cv::gpu::setDevice(devInfo.deviceID());
+        
+        cv::RNG& rng = cvtest::TS::ptr()->get_rng();
+
+        size = cv::Size(rng.uniform(100, 200), rng.uniform(100, 200));
+
+        src = cvtest::randomMat(rng, size, CV_32FC1, 0.0, 255.0, false);
+        kernel = cvtest::randomMat(rng, cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0, false);
+        
+        cv::filter2D(src, dst_gold, CV_32F, kernel, cv::Point(-1, -1), 0, cv::BORDER_REPLICATE);
+    }
+};
+
+TEST_P(Convolve, Accuracy)
+{
+    PRINT_PARAM(devInfo);
+    PRINT_PARAM(ksize);
+    
+    cv::Mat dst;
+
+    ASSERT_NO_THROW(
+        cv::gpu::GpuMat d_dst;
+
+        cv::gpu::convolve(cv::gpu::GpuMat(src), cv::gpu::GpuMat(kernel), d_dst);
+        
+        d_dst.download(dst);
+    );
+
+    EXPECT_MAT_NEAR(dst, dst_gold, 1e-2);
+}
+
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, testing::Combine(
+                        testing::ValuesIn(devices()), 
+                        testing::Values(3, 5, 7, 9, 11)));
+
 #endif // HAVE_CUDA

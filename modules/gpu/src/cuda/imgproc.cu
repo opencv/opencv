@@ -951,6 +951,84 @@ namespace cv { namespace gpu { namespace imgproc
     }
 
 
+    //////////////////////////////////////////////////////////////////////////
+    // convolve
+
+    #define CONVOLVE_MAX_KERNEL_SIZE 17
+
+    __constant__ float c_convolveKernel[CONVOLVE_MAX_KERNEL_SIZE * CONVOLVE_MAX_KERNEL_SIZE];
+
+    __global__ void convolve(const DevMem2Df src, PtrStepf dst, int kWidth, int kHeight)
+    {
+        __shared__ float smem[16 + 2 * 8][16 + 2 * 8];
+
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        // x | x 0 | 0
+        // -----------
+        // x | x 0 | 0
+        // 0 | 0 0 | 0
+        // -----------
+        // 0 | 0 0 | 0
+        smem[threadIdx.y][threadIdx.x] = src.ptr(min(max(y - 8, 0), src.rows - 1))[min(max(x - 8, 0), src.cols - 1)];
+
+        // 0 | 0 x | x
+        // -----------
+        // 0 | 0 x | x
+        // 0 | 0 0 | 0
+        // -----------
+        // 0 | 0 0 | 0
+        smem[threadIdx.y][threadIdx.x + 16] = src.ptr(min(max(y - 8, 0), src.rows - 1))[min(x + 8, src.cols - 1)];
+
+        // 0 | 0 0 | 0
+        // -----------
+        // 0 | 0 0 | 0
+        // x | x 0 | 0
+        // -----------
+        // x | x 0 | 0
+        smem[threadIdx.y + 16][threadIdx.x] = src.ptr(min(y + 8, src.rows - 1))[min(max(x - 8, 0), src.cols - 1)];
+
+        // 0 | 0 0 | 0
+        // -----------
+        // 0 | 0 0 | 0
+        // 0 | 0 x | x
+        // -----------
+        // 0 | 0 x | x
+        smem[threadIdx.y + 16][threadIdx.x + 16] = src.ptr(min(y + 8, src.rows - 1))[min(x + 8, src.cols - 1)];
+
+        __syncthreads();
+
+        if (x < src.cols && y < src.rows)
+        {
+            float res = 0;
+
+            for (int i = 0; i < kHeight; ++i)
+            {
+                for (int j = 0; j < kWidth; ++j)
+                {
+                    res += smem[threadIdx.y + 8 - kHeight / 2 + i][threadIdx.x + 8 - kWidth / 2 + j] * c_convolveKernel[i * kWidth + j];
+                }
+            }
+
+            dst.ptr(y)[x] = res;
+        }
+    }
+
+    void convolve_gpu(const DevMem2Df& src, const PtrStepf& dst, int kWidth, int kHeight, float* kernel)
+    {
+        cudaSafeCall(cudaMemcpyToSymbol(c_convolveKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+
+        const dim3 block(16, 16);
+        const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+
+        convolve<<<grid, block>>>(src, dst, kWidth, kHeight);
+        cudaSafeCall(cudaGetLastError());
+
+        cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+
 }}}
 
 
