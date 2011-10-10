@@ -8,3 +8,4 @@ OpenCV User Guide
    ug_mat.rst
    ug_features2d.rst
    ug_highgui.rst
+   ug_traincascade.rst
