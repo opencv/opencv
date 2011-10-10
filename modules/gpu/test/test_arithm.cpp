@@ -96,7 +96,7 @@ TEST_P(AddArray, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, AddArray, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 struct AddScalar : ArithmTest {};
 
@@ -130,7 +130,7 @@ TEST_P(AddScalar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, AddScalar, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1, CV_32FC2)));
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1, CV_32FC2)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // subtract
@@ -161,7 +161,7 @@ TEST_P(SubtractArray, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, SubtractArray, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 struct SubtractScalar : ArithmTest {};
 
@@ -195,7 +195,7 @@ TEST_P(SubtractScalar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, SubtractScalar, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1, CV_32FC2)));
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1, CV_32FC2)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // multiply
@@ -226,7 +226,7 @@ TEST_P(MultiplyArray, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, MultiplyArray, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 struct MultiplyScalar : ArithmTest {};
 
@@ -260,7 +260,7 @@ TEST_P(MultiplyScalar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, MultiplyScalar, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // divide
@@ -291,7 +291,7 @@ TEST_P(DivideArray, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, DivideArray, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 struct DivideScalar : ArithmTest {};
 
@@ -325,7 +325,7 @@ TEST_P(DivideScalar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, DivideScalar, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // transpose
@@ -387,7 +387,7 @@ TEST_P(AbsdiffArray, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffArray, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 struct AbsdiffScalar : ArithmTest {};
 
@@ -421,7 +421,7 @@ TEST_P(AbsdiffScalar, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Arithm, AbsdiffScalar, testing::Combine(
                         testing::ValuesIn(devices()),
-                        testing::Values(CV_32FC1)));
+                        testing::Values(CV_8UC1, CV_16UC1, CV_32SC1, CV_32FC1)));
 
 ////////////////////////////////////////////////////////////////////////////////
 // compare
@@ -813,7 +813,7 @@ TEST_P(Pow, Accuracy)
     /*std::cout  << mat << std::endl << std::endl;
     std::cout  << dst << std::endl << std::endl;
     std::cout  << dst_gold << std::endl;*/
-    EXPECT_MAT_NEAR(dst_gold, dst, 1);
+    EXPECT_MAT_NEAR(dst_gold, dst, 2);
 }
 
 INSTANTIATE_TEST_CASE_P(Arithm, Pow, testing::Combine(

@@ -169,8 +169,8 @@ TEST_P(Resize, Accuracy)
         gpuRes2.download(dst2);
     );
 
-    EXPECT_MAT_SIMILAR(dst_gold1, dst1, 0.2);
-    EXPECT_MAT_SIMILAR(dst_gold2, dst2, 0.2);
+    EXPECT_MAT_SIMILAR(dst_gold1, dst1, 0.21);
+    EXPECT_MAT_SIMILAR(dst_gold2, dst2, 0.21);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(

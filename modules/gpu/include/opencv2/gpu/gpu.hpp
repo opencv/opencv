@@ -539,32 +539,41 @@ namespace cv
         //////////////////////////// Per-element operations ////////////////////////////////////
 
         //! adds one matrix to another (c = a + b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        CV_EXPORTS void add(const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
         //! adds scalar to a matrix (c = a + s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+        CV_EXPORTS void add(const GpuMat& a, const Scalar& sc, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
 
         //! subtracts one matrix from another (c = a - b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        CV_EXPORTS void subtract(const GpuMat& a, const GpuMat& b, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
         //! subtracts scalar from a matrix (c = a - s)
-        //! supports CV_32FC1 and CV_32FC2 type
-        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+        CV_EXPORTS void subtract(const GpuMat& a, const Scalar& sc, GpuMat& c, const GpuMat& mask = GpuMat(), int dtype = -1, Stream& stream = Stream::Null());
 
-        //! computes element-wise product of the two arrays (c = a * b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! multiplies matrix to a scalar (c = a * s)
-        //! supports CV_32FC1 type
-        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+        //! computes element-wise weighted product of the two arrays (c = scale * a * b)
+        CV_EXPORTS void multiply(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+        //! weighted multiplies matrix to a scalar (c = scale * a * s)
+        CV_EXPORTS void multiply(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
-        //! computes element-wise quotient of the two arrays (c = a / b)
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! computes element-wise quotient of matrix and scalar (c = a / s)
-        //! supports CV_32FC1 type
-        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, Stream& stream = Stream::Null());
+        //! computes element-wise weighted quotient of the two arrays (c = a / b)
+        CV_EXPORTS void divide(const GpuMat& a, const GpuMat& b, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+        //! computes element-wise weighted quotient of matrix and scalar (c = a / s)
+        CV_EXPORTS void divide(const GpuMat& a, const Scalar& sc, GpuMat& c, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+        //! computes element-wise weighted reciprocal of an array (dst = scale/src2)
+        CV_EXPORTS void divide(double scale, const GpuMat& src2, GpuMat& dst, int dtype = -1, Stream& stream = Stream::Null());
+
+        //! computes the weighted sum of two arrays (dst = alpha*src1 + beta*src2 + gamma)
+        CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, 
+            int dtype = -1, Stream& stream = Stream::Null());
+
+        //! adds scaled array to another one (dst = alpha*src1 + src2)
+        static inline void scaleAdd(const GpuMat& src1, double alpha, const GpuMat& src2, GpuMat& dst, Stream& stream = Stream::Null())
+        {
+            addWeighted(src1, alpha, src2, 1.0, 0.0, dst, -1, stream);
+        }
+
+        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
+        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
+        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
+        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream = Stream::Null());
 
         //! computes exponent of each matrix element (b = e**a)
         //! supports only CV_32FC1 type
@@ -579,13 +588,6 @@ namespace cv
         //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
         //! supports only CV_32FC1 type
         CV_EXPORTS void log(const GpuMat& a, GpuMat& b, Stream& stream = Stream::Null());
-
-        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-        //! supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1 types
-        CV_EXPORTS void absdiff(const GpuMat& a, const GpuMat& b, GpuMat& c, Stream& stream = Stream::Null());
-        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
-        //! supports only CV_32FC1 type
-        CV_EXPORTS void absdiff(const GpuMat& a, const Scalar& s, GpuMat& c, Stream& stream = Stream::Null());
 
         //! compares elements of two arrays (c = a <cmpop> b)
         //! supports CV_8UC4, CV_32FC1 types
@@ -614,10 +616,6 @@ namespace cv
 
         //! computes per-element maximum of array and scalar (dst = max(src1, src2))
         CV_EXPORTS void max(const GpuMat& src1, double src2, GpuMat& dst, Stream& stream = Stream::Null());
-
-        //! computes the weighted sum of two arrays
-        CV_EXPORTS void addWeighted(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, 
-            int dtype = -1, Stream& stream = Stream::Null());
 
 
         ////////////////////////////// Image processing //////////////////////////////

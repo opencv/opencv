@@ -639,17 +639,17 @@ void cv::gpu::morphologyEx(const GpuMat& src, GpuMat& dst, int op, const Mat& ke
     case CV_MOP_GRADIENT:
         erode(src, buf2, kernel, buf1, anchor, iterations, stream);
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
-        subtract(dst, buf2, dst, stream);
+        subtract(dst, buf2, dst, GpuMat(), -1, stream);
         break;
     case CV_MOP_TOPHAT:
         erode(src, dst, kernel, buf1, anchor, iterations, stream);
         dilate(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        subtract(src, buf2, dst, stream);
+        subtract(src, buf2, dst, GpuMat(), -1, stream);
         break;
     case CV_MOP_BLACKHAT:
         dilate(src, dst, kernel, buf1, anchor, iterations, stream);
         erode(dst, buf2, kernel, buf1, anchor, iterations, stream);
-        subtract(buf2, src, dst, stream);
+        subtract(buf2, src, dst, GpuMat(), -1, stream);
         break;
     default:
         CV_Error(CV_StsBadArg, "unknown morphological operation");

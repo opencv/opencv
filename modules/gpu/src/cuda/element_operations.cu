@@ -49,32 +49,1197 @@
 
 namespace cv { namespace gpu { namespace device
 {
+    //////////////////////////////////////////////////////////////////////////
+    // add
+
+    template <typename T, typename D> struct Add : binary_function<T, T, D>
+    {
+        __device__ __forceinline__ D operator ()(T a, T b) const
+        {
+            return saturate_cast<D>(a + b);
+        }
+    };
+
+    template <> struct TransformFunctorTraits< Add<ushort, ushort> > : DefaultTransformFunctorTraits< Add<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Add<short, short> > : DefaultTransformFunctorTraits< Add<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Add<int, int> > : DefaultTransformFunctorTraits< Add<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Add<float, float> > : DefaultTransformFunctorTraits< Add<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void add_gpu(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream)
+    {
+        if (mask.data)
+            transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, mask, Add<T, D>(), stream);
+        else
+            transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Add<T, D>(), stream);
+    }
+
+    template void add_gpu<uchar, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<uchar, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<schar, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<ushort, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<ushort, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<ushort, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<short, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<short, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<short, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<int, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<float, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<float, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<float, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<double, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<double, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    template <typename T, typename D> struct AddScalar : unary_function<T, D>
+    {
+        AddScalar(double val_) : val(val_) {}
+        __device__ __forceinline__ D operator ()(T a) const
+        {
+            return saturate_cast<D>(a + val);
+        }
+        const double val;
+    };
+
+    template <> struct TransformFunctorTraits< AddScalar<ushort, ushort> > : DefaultTransformFunctorTraits< AddScalar<ushort, ushort>  >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddScalar<short, short> > : DefaultTransformFunctorTraits< AddScalar<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddScalar<int, int> > : DefaultTransformFunctorTraits< AddScalar<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AddScalar<float, float> > : DefaultTransformFunctorTraits< AddScalar<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void add_gpu(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&val) );
+        AddScalar<T, D> op(val);
+        if (mask.data)
+            transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, mask, op, stream);
+        else
+            transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void add_gpu<uchar, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<uchar, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<uchar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<schar, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<schar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<ushort, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<ushort, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<ushort, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<ushort, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<short, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<short, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<short, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<short, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<int, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<int, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<int, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<float, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<float, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<float, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<float, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void add_gpu<double, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void add_gpu<double, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void add_gpu<double, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////////////////
+    // subtract
+
+    template <typename T, typename D> struct Subtract : binary_function<T, T, D>
+    {
+        __device__ __forceinline__ D operator ()(T a, T b) const
+        {
+            return saturate_cast<D>(a - b);
+        }
+    };
+
+    template <> struct TransformFunctorTraits< Subtract<ushort, ushort> > : DefaultTransformFunctorTraits< Subtract<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Subtract<short, short> > : DefaultTransformFunctorTraits< Subtract<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Subtract<int, int> > : DefaultTransformFunctorTraits< Subtract<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Subtract<float, float> > : DefaultTransformFunctorTraits< Subtract<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void subtract_gpu(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream)
+    {
+        if (mask.data)
+            transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, mask, Subtract<T, D>(), stream);
+        else
+            transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, Subtract<T, D>(), stream);
+    }
+
+    template void subtract_gpu<uchar, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<uchar, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<schar, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<ushort, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<ushort, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<ushort, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<short, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<short, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<short, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<int, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<float, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<float, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<float, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<double, uchar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, schar>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, short>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, int>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, float>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<double, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    template <typename T, typename D> struct SubtractScalar : unary_function<T, D>
+    {
+        SubtractScalar(double val_) : val(val_) {}
+        __device__ __forceinline__ D operator ()(T a) const
+        {
+            return saturate_cast<D>(a - val);
+        }
+        const double val;
+    };
+
+    template <> struct TransformFunctorTraits< SubtractScalar<ushort, ushort> > : DefaultTransformFunctorTraits< SubtractScalar<ushort, ushort>  >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< SubtractScalar<short, short> > : DefaultTransformFunctorTraits< SubtractScalar<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< SubtractScalar<int, int> > : DefaultTransformFunctorTraits< SubtractScalar<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< SubtractScalar<float, float> > : DefaultTransformFunctorTraits< SubtractScalar<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void subtract_gpu(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&val) );
+        SubtractScalar<T, D> op(val);
+        if (mask.data)
+            transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, mask, op, stream);
+        else
+            transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void subtract_gpu<uchar, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<uchar, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<uchar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<schar, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<schar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<ushort, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<ushort, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<ushort, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<ushort, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<short, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<short, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<short, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<short, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<int, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<int, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<int, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<float, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<float, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<float, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<float, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //template void subtract_gpu<double, uchar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, schar>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, short>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, int>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    //template void subtract_gpu<double, float>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+    template void subtract_gpu<double, double>(const DevMem2D& src1, double val, const DevMem2D& dst, const PtrStep& mask, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////////////////
+    // multiply
+
+    struct multiply_8uc4_32f : binary_function<uint, float, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, float b) const
+        {
+            uint res = 0;
+
+            res |= (saturate_cast<uchar>((0xffu & (a      )) * b)      );
+            res |= (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
+            res |= (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
+            res |= (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
+
+            return res;
+        }
+    };
+
+    template <> struct TransformFunctorTraits<multiply_8uc4_32f> : DefaultTransformFunctorTraits<multiply_8uc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), stream);
+    }
+
+    struct multiply_16sc4_32f : binary_function<short4, float, short4>
+    {
+        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
+        {
+            return make_short4(saturate_cast<short>(a.x * b), saturate_cast<short>(a.y * b),
+                               saturate_cast<short>(a.z * b), saturate_cast<short>(a.w * b));
+        }
+    };
+
+    template <> struct TransformFunctorTraits<multiply_16sc4_32f> : DefaultTransformFunctorTraits<multiply_16sc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<short4> >(src1), src2, 
+                  static_cast< DevMem2D_<short4> >(dst), multiply_16sc4_32f(), stream);
+    }
+
+    template <typename T, typename D> struct Multiply : binary_function<T, T, D>
+    {
+        Multiply(double scale_) : scale(scale_) {}
+        __device__ __forceinline__ D operator ()(T a, T b) const
+        {
+            return saturate_cast<D>(scale * a * b);
+        }
+        const double scale;
+    };
+
+    template <> struct TransformFunctorTraits< Multiply<ushort, ushort> > : DefaultTransformFunctorTraits< Multiply<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Multiply<short, short> > : DefaultTransformFunctorTraits< Multiply<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Multiply<int, int> > : DefaultTransformFunctorTraits< Multiply<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Multiply<float, float> > : DefaultTransformFunctorTraits< Multiply<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void multiply_gpu(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+        Multiply<T, D> op(scale);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void multiply_gpu<uchar, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<uchar, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<schar, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<ushort, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<ushort, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<ushort, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<short, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<short, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<short, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<int, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<float, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<float, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<float, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<double, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<double, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    
+    template <typename T, typename D> struct MultiplyScalar : unary_function<T, D>
+    {
+        MultiplyScalar(double val_, double scale_) : val(val_), scale(scale_) {}
+        __device__ __forceinline__ D operator ()(T a) const
+        {
+            return saturate_cast<D>(scale * a * val);
+        }
+        const double val;
+        const double scale;
+    };
+
+    template <> struct TransformFunctorTraits< MultiplyScalar<ushort, ushort> > : DefaultTransformFunctorTraits< MultiplyScalar<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< MultiplyScalar<short, short> > : DefaultTransformFunctorTraits< MultiplyScalar<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< MultiplyScalar<int, int> > : DefaultTransformFunctorTraits< MultiplyScalar<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< MultiplyScalar<float, float> > : DefaultTransformFunctorTraits< MultiplyScalar<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void multiply_gpu(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&val) );
+        cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+        MultiplyScalar<T, D> op(val, scale);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void multiply_gpu<uchar, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<uchar, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<uchar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<schar, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<schar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<ushort, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<ushort, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<ushort, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<ushort, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<short, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<short, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<short, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<short, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<int, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<int, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<int, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<float, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<float, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<float, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<float, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void multiply_gpu<double, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void multiply_gpu<double, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void multiply_gpu<double, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////////////////
+    // divide
+
+    struct divide_8uc4_32f : binary_function<uchar4, float, uchar4>
+    {
+        __device__ __forceinline__ uchar4 operator ()(uchar4 a, float b) const
+        {
+            return b != 0 ? make_uchar4(saturate_cast<uchar>(a.x / b), saturate_cast<uchar>(a.y / b),
+                                        saturate_cast<uchar>(a.z / b), saturate_cast<uchar>(a.w / b)) 
+                          : make_uchar4(0,0,0,0);
+        }
+    };
+
+    template <> struct TransformFunctorTraits<divide_8uc4_32f> : DefaultTransformFunctorTraits<divide_8uc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<uchar4> >(src1), src2, static_cast< DevMem2D_<uchar4> >(dst), divide_8uc4_32f(), stream);
+    }
+
+
+    struct divide_16sc4_32f : binary_function<short4, float, short4>
+    {
+        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
+        {
+            return b != 0 ? make_short4(saturate_cast<short>(a.x / b), saturate_cast<uchar>(a.y / b),
+                                        saturate_cast<short>(a.z / b), saturate_cast<uchar>(a.w / b))
+                          : make_short4(0,0,0,0);
+        }
+    };
+
+    template <> struct TransformFunctorTraits<divide_16sc4_32f> : DefaultTransformFunctorTraits<divide_16sc4_32f>
+    {
+        enum { smart_block_dim_x = 8 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 8 };
+    };
+
+    void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
+    {
+        transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), divide_16sc4_32f(), stream);
+    }
+
+    template <typename T, typename D> struct Divide : binary_function<T, T, D>
+    {
+        Divide(double scale_) : scale(scale_) {}
+        __device__ __forceinline__ D operator ()(T a, T b) const
+        {
+            return b != 0 ? saturate_cast<D>(scale * a / b) : 0;
+        }
+        const double scale;
+    };
+
+    template <> struct TransformFunctorTraits< Divide<ushort, ushort> > : DefaultTransformFunctorTraits< Divide<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Divide<short, short> > : DefaultTransformFunctorTraits< Divide<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Divide<int, int> > : DefaultTransformFunctorTraits< Divide<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Divide<float, float> > : DefaultTransformFunctorTraits< Divide<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void divide_gpu(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+        Divide<T, D> op(scale);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void divide_gpu<uchar, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<uchar, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<schar, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<ushort, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<ushort, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<ushort, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<short, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<short, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<short, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<int, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<float, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<float, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<float, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<double, uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<double, double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, double scale, cudaStream_t stream);
+    
+    template <typename T, typename D> struct DivideScalar : unary_function<T, D>
+    {
+        DivideScalar(double val_, double scale_) : val(val_), scale(scale_) {}
+        __device__ __forceinline__ D operator ()(T a) const
+        {
+            return saturate_cast<D>(scale * a / val);
+        }
+        const double val;
+        const double scale;
+    };
+
+    template <> struct TransformFunctorTraits< DivideScalar<ushort, ushort> > : DefaultTransformFunctorTraits< DivideScalar<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< DivideScalar<short, short> > : DefaultTransformFunctorTraits< DivideScalar<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< DivideScalar<int, int> > : DefaultTransformFunctorTraits< DivideScalar<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< DivideScalar<float, float> > : DefaultTransformFunctorTraits< DivideScalar<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void divide_gpu(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&val) );
+        cudaSafeCall( cudaSetDoubleForDevice(&scale) );
+        DivideScalar<T, D> op(val, scale);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void divide_gpu<uchar, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<uchar, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<uchar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<schar, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<schar, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<ushort, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<ushort, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<ushort, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<ushort, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<short, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<short, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<short, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<short, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<int, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<int, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<int, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<float, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<float, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<float, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<float, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    //template void divide_gpu<double, uchar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, schar >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, ushort>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, short >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, int   >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    //template void divide_gpu<double, float >(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+    template void divide_gpu<double, double>(const DevMem2D& src1, double val, const DevMem2D& dst, double scale, cudaStream_t stream);
+
+    template <typename T, typename D> struct Reciprocal : unary_function<T, D>
+    {
+        Reciprocal(double scale_) : scale(scale_) {}
+        __device__ __forceinline__ D operator ()(T a) const
+        {
+            return a != 0 ? saturate_cast<D>(scale / a) : 0;
+        }
+        const double scale;
+    };
+
+    template <> struct TransformFunctorTraits< Reciprocal<ushort, ushort> > : DefaultTransformFunctorTraits< Reciprocal<ushort, ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Reciprocal<short, short> > : DefaultTransformFunctorTraits< Reciprocal<short, short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Reciprocal<int, int> > : DefaultTransformFunctorTraits< Reciprocal<int, int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Reciprocal<float, float> > : DefaultTransformFunctorTraits< Reciprocal<float, float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T, typename D> void divide_gpu(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&scalar) );
+        Reciprocal<T, D> op(scalar);
+        transform((DevMem2D_<T>)src2, (DevMem2D_<D>)dst, op, stream);
+    }
+
+    template void divide_gpu<uchar, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<uchar, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<uchar, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<uchar, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<uchar, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<uchar, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<uchar, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<schar, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<schar, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<ushort, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<ushort, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<ushort, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<ushort, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<ushort, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<ushort, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<ushort, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<short, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<short, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<short, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<short, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<short, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<short, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<short, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<int, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<int, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<int, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<int, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<int, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<int, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<int, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<float, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<float, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<float, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<float, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<float, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<float, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<float, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //template void divide_gpu<double, uchar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<double, schar >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<double, ushort>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<double, short >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<double, int   >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void divide_gpu<double, float >(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void divide_gpu<double, double>(double scalar, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    //////////////////////////////////////////////////////////////////////////
+    // absdiff
+
+    template <typename T> struct Absdiff : binary_function<T, T, T>
+    {
+        static __device__ __forceinline__ int abs(int a)
+        {
+            return ::abs(a);
+        }
+        static __device__ __forceinline__ float abs(float a)
+        {
+            return ::fabsf(a);
+        }
+        static __device__ __forceinline__ double abs(double a)
+        {
+            return ::fabs(a);
+        }
+
+        __device__ __forceinline__ T operator ()(T a, T b) const
+        {
+            return saturate_cast<T>(abs(a - b));
+        }
+    };
+
+    template <> struct TransformFunctorTraits< Absdiff<ushort> > : DefaultTransformFunctorTraits< Absdiff<ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Absdiff<short> > : DefaultTransformFunctorTraits< Absdiff<short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Absdiff<int> > : DefaultTransformFunctorTraits< Absdiff<int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Absdiff<float> > : DefaultTransformFunctorTraits< Absdiff<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T> void absdiff_gpu(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    {
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, Absdiff<T>(), stream);
+    }
+
+    //template void absdiff_gpu<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void absdiff_gpu<int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    //template void absdiff_gpu<float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+
+    template <typename T> struct AbsdiffScalar : unary_function<T, T>
+    {
+        AbsdiffScalar(double val_) : val(val_) {}
+        __device__ __forceinline__ T operator ()(T a) const
+        {
+            return saturate_cast<T>(::fabs(a - val));
+        }
+        double val;
+    };
+
+    template <> struct TransformFunctorTraits< AbsdiffScalar<ushort> > : DefaultTransformFunctorTraits< AbsdiffScalar<ushort> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AbsdiffScalar<short> > : DefaultTransformFunctorTraits< AbsdiffScalar<short> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AbsdiffScalar<int> > : DefaultTransformFunctorTraits< AbsdiffScalar<int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< AbsdiffScalar<float> > : DefaultTransformFunctorTraits< AbsdiffScalar<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <typename T> void absdiff_gpu(const DevMem2D& src1, double val, const DevMem2D& dst, cudaStream_t stream)
+    {
+        cudaSafeCall( cudaSetDoubleForDevice(&val) );
+        AbsdiffScalar<T> op(val);
+        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)dst, op, stream);
+    }
+
+    template void absdiff_gpu<uchar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<schar >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<ushort>(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);                  
+    template void absdiff_gpu<short >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+    template void absdiff_gpu<int   >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);                  
+    //template void absdiff_gpu<float >(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);                  
+    template void absdiff_gpu<double>(const DevMem2D& src1, double src2, const DevMem2D& dst, cudaStream_t stream);
+
     //////////////////////////////////////////////////////////////////////////////////////
     // Compare
 
+    template <typename T> struct Equal : binary_function<T, T, uchar>
+    {
+        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        {
+            return static_cast<uchar>((src1 == src2) * 255);
+        }
+    };
     template <typename T> struct NotEqual : binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T src1, T src2) const
         {
-            return static_cast<uchar>(static_cast<int>(src1 != src2) * 255);
+            return static_cast<uchar>((src1 != src2) * 255);
+        }
+    };
+    template <typename T> struct Less : binary_function<T, T, uchar>
+    {
+        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        {
+            return static_cast<uchar>((src1 < src2) * 255);
+        }
+    };
+    template <typename T> struct LessEqual : binary_function<T, T, uchar>
+    {
+        __device__ __forceinline__ uchar operator()(T src1, T src2) const
+        {
+            return static_cast<uchar>((src1 <= src2) * 255);
         }
     };
 
-    template <typename T>
-    inline void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    template <> struct TransformFunctorTraits< Equal<int> > : DefaultTransformFunctorTraits< Equal<int> >
     {
-        NotEqual<T> op;
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Equal<float> > : DefaultTransformFunctorTraits< Equal<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< NotEqual<int> > : DefaultTransformFunctorTraits< NotEqual<int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< NotEqual<float> > : DefaultTransformFunctorTraits< NotEqual<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Less<int> > : DefaultTransformFunctorTraits< Less<int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< Less<float> > : DefaultTransformFunctorTraits< Less<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< LessEqual<int> > : DefaultTransformFunctorTraits< LessEqual<int> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct TransformFunctorTraits< LessEqual<float> > : DefaultTransformFunctorTraits< LessEqual<float> >
+    {
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <template <typename> class Op, typename T> void compare(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    {
+        Op<T> op;
         transform(static_cast< DevMem2D_<T> >(src1), static_cast< DevMem2D_<T> >(src2), dst, op, stream);
     }
 
-    void compare_ne_8uc4(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    template <typename T> void compare_eq(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<uint>(src1, src2, dst, stream);
+        compare<Equal, T>(src1, src2, dst, stream);
     }
-    void compare_ne_32f(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    template <typename T> void compare_ne(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
     {
-        compare_ne<float>(src1, src2, dst, stream);
+        compare<NotEqual, T>(src1, src2, dst, stream);
     }
+    template <typename T> void compare_lt(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    {
+        compare<Less, T>(src1, src2, dst, stream);
+    }
+    template <typename T> void compare_le(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream)
+    {
+        compare<LessEqual, T>(src1, src2, dst, stream);
+    }
+    
+    template void compare_eq<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_eq<double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    
+    template void compare_ne<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_ne<double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    
+    template void compare_lt<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_lt<double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    
+    template void compare_le<uchar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<schar >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<ushort>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<short >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<int   >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<float >(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
+    template void compare_le<double>(const DevMem2D& src1, const DevMem2D& src2, const DevMem2D& dst, cudaStream_t stream);
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -508,21 +1673,6 @@ namespace cv { namespace gpu { namespace device
     template void threshold_gpu<double>(const DevMem2D& src, const DevMem2D& dst, double thresh, double maxVal, int type, cudaStream_t stream);
 
 
-    //////////////////////////////////////////////////////////////////////////
-    // subtract
-
-    template <> struct TransformFunctorTraits< minus<short> > : DefaultTransformFunctorTraits< minus<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-
-    template <typename T> void subtractCaller(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
-    {
-        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, minus<T>(), stream);
-    }
-
-    template void subtractCaller<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -604,151 +1754,7 @@ namespace cv { namespace gpu { namespace device
     template void pow_caller<float>(const DevMem2D& src, float power, DevMem2D dst, cudaStream_t stream);
 
 
-    //////////////////////////////////////////////////////////////////////////
-    // divide
-
-    struct divide_8uc4_32f : binary_function<uchar4, float, uchar4>
-    {
-        __device__ __forceinline__ uchar4 operator ()(uchar4 a, float b) const
-        {
-            return make_uchar4(saturate_cast<uchar>(a.x / b), saturate_cast<uchar>(a.y / b),
-                               saturate_cast<uchar>(a.z / b), saturate_cast<uchar>(a.w / b));
-        }
-    };
-
-    template <> struct TransformFunctorTraits<divide_8uc4_32f> : DefaultTransformFunctorTraits<divide_8uc4_32f>
-    {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
-    };
-
-    void divide_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
-    {
-        transform(static_cast< DevMem2D_<uchar4> >(src1), src2, static_cast< DevMem2D_<uchar4> >(dst), divide_8uc4_32f(), stream);
-    }
-
-
-    struct divide_16sc4_32f : binary_function<short4, float, short4>
-    {
-        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
-        {
-            return make_short4(saturate_cast<short>(a.x / b), saturate_cast<uchar>(a.y / b),
-                               saturate_cast<short>(a.z / b), saturate_cast<uchar>(a.w / b));
-        }
-    };
-
-    template <> struct TransformFunctorTraits<divide_16sc4_32f> : DefaultTransformFunctorTraits<divide_16sc4_32f>
-    {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
-    };
-
-    void divide_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
-    {
-        transform(static_cast< DevMem2D_<short4> >(src1), src2, static_cast< DevMem2D_<short4> >(dst), divide_16sc4_32f(), stream);
-    }
-
-
-    //////////////////////////////////////////////////////////////////////////
-    // multiply
-
-    template <> struct TransformFunctorTraits< plus<short> > : DefaultTransformFunctorTraits< plus<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-
-    template <typename T> void add_gpu(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream)
-    {
-        transform((DevMem2D_<T>)src1, (DevMem2D_<T>)src2, (DevMem2D_<T>)dst, plus<T>(), stream);
-    }
-
-    template void add_gpu<short>(const DevMem2D src1, const DevMem2D src2, DevMem2D dst, cudaStream_t stream);
-
-    //////////////////////////////////////////////////////////////////////////
-    // multiply
-
-    struct multiply_8uc4_32f : binary_function<uint, float, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, float b) const
-        {
-            uint res = 0;
-
-            res |= (saturate_cast<uchar>((0xffu & (a      )) * b)      );
-            res |= (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
-            res |= (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
-            res |= (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
-
-            return res;
-        }
-    };
-
-    template <> struct TransformFunctorTraits<multiply_8uc4_32f> : DefaultTransformFunctorTraits<multiply_8uc4_32f>
-    {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
-    };
-
-    void multiply_gpu(const DevMem2D_<uchar4>& src1, const DevMem2Df& src2, const DevMem2D_<uchar4>& dst, cudaStream_t stream)
-    {
-        transform(static_cast< DevMem2D_<uint> >(src1), src2, static_cast< DevMem2D_<uint> >(dst), multiply_8uc4_32f(), stream);
-    }
-
-    struct multiply_16sc4_32f : binary_function<short4, float, short4>
-    {
-        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
-        {
-            return make_short4(saturate_cast<short>(a.x * b), saturate_cast<short>(a.y * b),
-                               saturate_cast<short>(a.z * b), saturate_cast<short>(a.w * b));
-        }
-    };
-
-    template <> struct TransformFunctorTraits<multiply_16sc4_32f> : DefaultTransformFunctorTraits<multiply_16sc4_32f>
-    {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
-    };
-
-    void multiply_gpu(const DevMem2D_<short4>& src1, const DevMem2Df& src2, const DevMem2D_<short4>& dst, cudaStream_t stream)
-    {
-        transform(static_cast< DevMem2D_<short4> >(src1), src2, 
-                  static_cast< DevMem2D_<short4> >(dst), multiply_16sc4_32f(), stream);
-    }
-
-
-    //////////////////////////////////////////////////////////////////////////
-    // multiply (by scalar)
-
-    template <typename T, typename D, typename S> struct MultiplyScalar : unary_function<T, D>
-    {
-        __host__ __device__ __forceinline__ MultiplyScalar(typename TypeTraits<S>::ParameterType scale_) : scale(scale_) {}
-
-        __device__ __forceinline__ D operator ()(typename TypeTraits<T>::ParameterType a) const
-        {
-            return saturate_cast<D>(a * scale);
-        }
-
-        const S scale;
-    };
-
-    template <> struct TransformFunctorTraits< MultiplyScalar<uchar, uchar, float> > : DefaultTransformFunctorTraits< MultiplyScalar<uchar, uchar, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
-    };
-
-    template <typename T, typename D>
-    void multiplyScalar_gpu(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream)
-    {
-        transform(static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), MultiplyScalar<T, D, float>(scale), stream);
-    }
-
-    template void multiplyScalar_gpu<uchar, uchar>(const DevMem2D& src, float scale, const DevMem2D& dst, cudaStream_t stream);
-
+    
 
     //////////////////////////////////////////////////////////////////////////
     // addWeighted
