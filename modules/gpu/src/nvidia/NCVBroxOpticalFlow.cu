@@ -74,7 +74,7 @@ public:
     ~shared_ptr() { release(); }
     shared_ptr(const shared_ptr& ptr);
     shared_ptr& operator = (const shared_ptr& ptr);
-    void addref() { if( refcount ) refcount+=1; }
+    void addref() { if( refcount ) (*refcount)+=1; }
     void release();
     void delete_obj() { if( obj ) delete obj; }
     _Tp* operator -> () { return obj; }
