@@ -1319,30 +1319,6 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
-
-#ifdef HAVE_TEGRA_OPTIMIZATION__DISABLED
-	    Mat src1 = _src.getMat();
-		Size ssize1 = src1.size();
-
-		int wSrc = ssize1.width;
-		int hSrc = ssize1.height;
-		if (hSrc < 1)
-			return;
-		int wDst = dsize.width;
-		int hDst = dsize.height;
-		_dst.create(dsize, src1.type());
-		Mat dst1 = _dst.getMat();
-		unsigned int *bSrc = (unsigned int*)(src1.data);
-		unsigned int *bDst = (unsigned int*)dst1.data;
-		if(src1.channels()==1){ 
-			tegra::stretch1(bSrc, bDst, wSrc, hSrc, wDst, hDst);
-			return;
-		} 
-		if(src1.channels()==4){
-			tegra::stretch4(bSrc, bDst, wSrc, hSrc, wDst, hDst);
-			return;
-		}
-#endif
     static ResizeFunc linear_tab[] =
     {
         resizeGeneric_<
@@ -1462,6 +1438,12 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     }
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
+
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::resize(src, dst, inv_scale_x, inv_scale_y, interpolation))
+        return;
+#endif
 
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
