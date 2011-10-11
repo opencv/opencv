@@ -282,7 +282,7 @@ template<typename _Tp>
 
 		cout << setw(col_p-2) << left << buf;
 
-		if (buf.length() > col_p-2) 
+		if ((int)buf.length() > col_p-2) 
 		{
 			cout << endl << "  ";
 			cout << setw(col_p-2) << left << " ";
@@ -293,7 +293,7 @@ template<typename _Tp>
 
 		while (true)
 		{
-			bool tr = (buf.length() > col_d-2) ? true: false;
+			bool tr = ((int)buf.length() > col_d-2) ? true: false;
 			int pos;
 
 			if (tr)
@@ -301,7 +301,8 @@ template<typename _Tp>
 				pos = buf.find_first_of(' ');
 				while (true)
 				{
-					if (buf.find_first_of(' ', pos + 1 ) < col_d-2 && buf.find_first_of(' ', pos + 1 ) != std::string::npos)
+					if ((int)buf.find_first_of(' ', pos + 1 ) < col_d-2 &&
+                        (int)buf.find_first_of(' ', pos + 1 ) != (int)std::string::npos)
 						pos = buf.find_first_of(' ', pos + 1);
 					else
 						break;

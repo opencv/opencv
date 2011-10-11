@@ -2104,13 +2104,7 @@ struct CV_EXPORTS SL2
 
     ResultType operator()( const T* a, const T* b, int size ) const
     {
-        ResultType result = ResultType();
-        for( int i = 0; i < size; i++ )
-        {
-            ResultType diff = (ResultType)(a[i] - b[i]);
-            result += diff*diff;
-        }
-        return result;
+        return normL2Sqr<ValueType, ResultType>(a, b, size);
     }
 };
 
@@ -2125,13 +2119,7 @@ struct CV_EXPORTS L2
 
     ResultType operator()( const T* a, const T* b, int size ) const
     {
-        ResultType result = ResultType();
-        for( int i = 0; i < size; i++ )
-        {
-            ResultType diff = (ResultType)(a[i] - b[i]);
-            result += diff*diff;
-        }
-        return (ResultType)sqrt((double)result);
+        return (ResultType)sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
     }
 };
 
@@ -2146,13 +2134,7 @@ struct CV_EXPORTS L1
 
     ResultType operator()( const T* a, const T* b, int size ) const
     {
-        ResultType result = ResultType();
-        for( int i = 0; i < size; i++ )
-        {
-            ResultType diff = a[i] - b[i];
-            result += (ResultType)fabs( diff );
-        }
-        return result;
+        return normL1<ValueType, ResultType>(a, b, size);
     }
 };
 
@@ -2160,40 +2142,20 @@ struct CV_EXPORTS L1
  * Hamming distance functor - counts the bit differences between two strings - useful for the Brief descriptor
  * bit count of A exclusive XOR'ed with B
  */
-struct CV_EXPORTS HammingLUT
+struct CV_EXPORTS Hamming
 {
     typedef unsigned char ValueType;
     typedef int ResultType;
 
     /** this will count the bits in a ^ b
      */
-    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const;
-
-    /** \brief given a byte, count the bits using a compile time generated look up table
-     *  \param b the byte to count bits.  The look up table has an entry for all
-     *  values of b, where that entry is the number of bits.
-     *  \return the number of bits in byte b
-     */
-    static unsigned char byteBitsLookUp(unsigned char b);
+    ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
+    {
+        return normHamming(a, b, size);
+    }
 };
 
-
-/// Hamming distance functor, this one will try to use gcc's __builtin_popcountl
-/// but will fall back on HammingLUT if not available
-/// bit count of A exclusive XOR'ed with B
-struct CV_EXPORTS Hamming
-{
-    typedef unsigned char ValueType;
-
-    //! important that this is signed as weird behavior happens
-    // in BruteForce if not
-    typedef int ResultType;
-
-    /** this will count the bits in a ^ b, using __builtin_popcountl try compiling with sse4
-    */
-    ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const;
-};
-
+typedef Hamming HammingLUT;
 
 /****************************************************************************************\
 *                                      DMatch                                            *

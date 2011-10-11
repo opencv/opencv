@@ -55,7 +55,7 @@ namespace cv
       IEEE Transactions on Pattern Analysis and Machine Intelligence, 15 Jan. 2009.
 
    2. Vincent Lepetit, Pascal Fua,
-      “Towards Recognizing Feature Points Using Classification Trees,”
+      "Towards Recognizing Feature Points Using Classification Trees,"
       Technical Report IC/2004/74, EPFL, 2004.
 */
 

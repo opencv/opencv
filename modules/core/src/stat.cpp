@@ -810,15 +810,218 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
 namespace cv
 {
 
+float normL2Sqr_(const float* a, const float* b, int n)
+{
+    int j = 0; float d = 0.f;
+#if CV_SSE
+    if( USE_SSE2 )
+    {
+        float CV_DECL_ALIGNED(16) buf[4];
+        __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
+        
+        for( ; j <= n - 8; j += 8 )
+        {
+            __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
+            __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
+            d0 = _mm_add_ps(d0, _mm_mul_ps(t0, t0));
+            d1 = _mm_add_ps(d1, _mm_mul_ps(t1, t1));
+        }
+        _mm_store_ps(buf, _mm_add_ps(d0, d1));
+        d = buf[0] + buf[1] + buf[2] + buf[3];
+    }
+    else
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
+            d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
+        }
+    }
+    
+    for( ; j < n; j++ )
+    {
+        float t = a[j] - b[j];
+        d += t*t;
+    }
+    return d;
+}
+
+    
+float normL1_(const float* a, const float* b, int n)
+{
+    int j = 0; float d = 0.f;
+#if CV_SSE
+    if( USE_SSE2 )
+    {
+        float CV_DECL_ALIGNED(16) buf[4];
+        static const float CV_DECL_ALIGNED(16) absbuf[4] = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+        __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
+        __m128 absmask = _mm_load_ps(absbuf);
+        
+        for( ; j <= n - 8; j += 8 )
+        {
+            __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
+            __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
+            d0 = _mm_add_ps(d0, _mm_and_ps(t0, absmask));
+            d1 = _mm_add_ps(d1, _mm_and_ps(t1, absmask));
+        }
+        _mm_store_ps(buf, _mm_add_ps(d0, d1));
+        d = buf[0] + buf[1] + buf[2] + buf[3];
+    }
+    else
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
+                std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
+        }
+    }
+    
+    for( ; j < n; j++ )
+        d += std::abs(a[j] - b[j]);
+    return d;
+}
+
+int normL1_(const uchar* a, const uchar* b, int n)
+{
+    int j = 0, d = 0;
+#if CV_SSE
+    if( USE_SSE2 )
+    {
+        __m128i d0 = _mm_setzero_si128();
+        
+        for( ; j <= n - 16; j += 16 )
+        {
+            __m128i t0 = _mm_loadu_si128((const __m128i*)(a + j));
+            __m128i t1 = _mm_loadu_si128((const __m128i*)(b + j));
+            
+            d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
+        }
+
+        for( ; j <= n - 4; j += 4 )
+        {
+            __m128i t0 = _mm_cvtsi32_si128(*(const int*)(a + j));
+            __m128i t1 = _mm_cvtsi32_si128(*(const int*)(b + j));
+            
+            d0 = _mm_add_epi32(d0, _mm_sad_epu8(t0, t1));
+        }
+        d = _mm_cvtsi128_si32(_mm_add_epi32(d0, _mm_unpackhi_epi64(d0, d0)));
+    }
+    else
+#endif
+    {
+        for( ; j <= n - 4; j += 4 )
+        {
+            d += std::abs(a[j] - b[j]) + std::abs(a[j+1] - b[j+1]) +
+                std::abs(a[j+2] - b[j+2]) + std::abs(a[j+3] - b[j+3]);
+        }
+    }
+    
+    for( ; j < n; j++ )
+        d += std::abs(a[j] - b[j]);
+    return d;
+}
+
+static const uchar popCountTable[] = 
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
+};
+    
+static const uchar popCountTable2[] =
+{
+    0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+    2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4
+};
+    
+static const uchar popCountTable4[] =
+{
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+};
+    
+int normHamming(const uchar* a, const uchar* b, int n)
+{
+    int i = 0, result = 0;
+#if defined __GNUC__ && CV_NEON
+    if (CPU_HAS_NEON_FEATURE)
+    {
+        result = 0;  
+        for( ; i <= n - 16; i += 16 )
+        {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t B_vec = vld1q_u8 (b + i);
+            //uint8x16_t veorq_u8 (uint8x16_t, uint8x16_t)
+            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+            
+            uint8x16_t bitsSet = vcntq_u8 (AxorB);
+            //uint16x8_t vpadalq_u8 (uint16x8_t, uint8x16_t)
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            
+            uint64x2_t bitSet2 = vpaddlq_u32 (bitSet4);
+            result += vgetq_lane_u64 (bitSet2,0);
+            result += vgetq_lane_u64 (bitSet2,1);
+        }
+    }
+    else
+#endif
+        for( ; i <= n - 4; i += 4 )
+            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
+    for( ; i < n; i++ )
+        result += popCountTable[a[i] ^ b[i]];
+    return result;
+}
+    
+int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
+{
+    if( cellSize == 1 )
+        return normHamming(a, b, n);
+    const uchar* tab = 0;
+    if( cellSize == 2 )
+        tab = popCountTable2;
+    else if( cellSize == 4 )
+        tab = popCountTable4;
+    else
+        CV_Error( CV_StsBadSize, "bad cell size (not 1, 2 or 4) in normHamming" );
+    int i = 0, result = 0;
+    for( ; i <= n - 4; i += 4 )
+        result += tab[a[i] ^ b[i]] + tab[a[i+1] ^ b[i+1]] +
+            tab[a[i+2] ^ b[i+2]] + tab[a[i+3] ^ b[i+3]];
+    for( ; i < n; i++ )
+        result += tab[a[i] ^ b[i]];
+    return result;
+}
+    
+    
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
 {
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-            result = std::max(result, ST(std::abs(src[i])));
+        result = std::max(result, normInf<T, ST>(src, len*cn));
     }
     else
     {
@@ -826,7 +1029,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(std::abs(src[k])));
+                    result = std::max(result, ST(fast_abs(src[k])));
             }
     }
     *_result = result;
@@ -839,9 +1042,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-            result += std::abs(src[i]);
+        result += normL1<T, ST>(src, len*cn);
     }
     else
     {
@@ -849,7 +1050,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += std::abs(src[k]);
+                    result += fast_abs(src[k]);
             }
     }
     *_result = result;
@@ -862,12 +1063,7 @@ normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-        {
-            T v = src[i];
-            result += (ST)v*v;
-        }
+        result += normL2Sqr<T, ST>(src, len*cn);
     }
     else
     {
@@ -891,9 +1087,7 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-            result = std::max(result, (ST)std::abs(src1[i] - src2[i]));
+        result = std::max(result, normInf<T, ST>(src1, src2, len*cn));
     }
     else
     {
@@ -914,9 +1108,7 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-            result += std::abs(src1[i] - src2[i]);
+        result += normL1<T, ST>(src1, src2, len*cn);
     }
     else
     {
@@ -937,12 +1129,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     ST result = *_result;
     if( !mask )
     {
-        len *= cn;
-        for( int i = 0; i < len; i++ )
-        {
-            ST v = src1[i] - src2[i];
-            result += v*v;
-        }
+        result += normL2Sqr<T, ST>(src1, src2, len*cn);
     }
     else
     {

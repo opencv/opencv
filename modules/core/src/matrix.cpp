@@ -2161,43 +2161,6 @@ static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& r
 }
 
 
-static inline float distance(const float* a, const float* b, int n)
-{
-    int j = 0; float d = 0.f;
-#if CV_SSE
-    if( USE_SSE2 )
-    {
-        float CV_DECL_ALIGNED(16) buf[4];
-        __m128 d0 = _mm_setzero_ps(), d1 = _mm_setzero_ps();
-
-        for( ; j <= n - 8; j += 8 )
-        {
-            __m128 t0 = _mm_sub_ps(_mm_loadu_ps(a + j), _mm_loadu_ps(b + j));
-            __m128 t1 = _mm_sub_ps(_mm_loadu_ps(a + j + 4), _mm_loadu_ps(b + j + 4));
-            d0 = _mm_add_ps(d0, _mm_mul_ps(t0, t0));
-            d1 = _mm_add_ps(d1, _mm_mul_ps(t1, t1));
-        }
-        _mm_store_ps(buf, _mm_add_ps(d0, d1));
-        d = buf[0] + buf[1] + buf[2] + buf[3];
-    }
-    else
-#endif
-    {
-        for( ; j <= n - 4; j += 4 )
-        {
-            float t0 = a[j] - b[j], t1 = a[j+1] - b[j+1], t2 = a[j+2] - b[j+2], t3 = a[j+3] - b[j+3];
-            d += t0*t0 + t1*t1 + t2*t2 + t3*t3;
-        }
-    }
-
-    for( ; j < n; j++ )
-    {
-        float t = a[j] - b[j];
-        d += t*t;
-    }
-    return d;
-}
-
 /*
 k-means center initialization using the following algorithm:
 Arthur & Vassilvitskii (2007) k-means++: The Advantages of Careful Seeding
@@ -2218,7 +2181,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
 
     for( i = 0; i < N; i++ )
     {
-        dist[i] = distance(data + step*i, data + step*centers[0], dims);
+        dist[i] = normL2Sqr_(data + step*i, data + step*centers[0], dims);
         sum0 += dist[i];
     }
     
@@ -2236,7 +2199,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             int ci = i;
             for( i = 0; i < N; i++ )
             {
-                tdist2[i] = std::min(distance(data + step*i, data + step*ci, dims), dist[i]);
+                tdist2[i] = std::min(normL2Sqr_(data + step*i, data + step*ci, dims), dist[i]);
                 s += tdist2[i];
             }
             
@@ -2434,7 +2397,7 @@ double cv::kmeans( InputArray _data, int K,
                 for( k = 0; k < K; k++ )
                 {
                     const float* center = centers.ptr<float>(k);
-                    double dist = distance(sample, center, dims);
+                    double dist = normL2Sqr_(sample, center, dims);
 
                     if( min_dist > dist )
                     {

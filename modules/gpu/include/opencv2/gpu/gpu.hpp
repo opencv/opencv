@@ -1382,12 +1382,6 @@ namespace cv
             explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
             explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
         };
-        template <> class CV_EXPORTS BruteForceMatcher_GPU< HammingLUT > : public BruteForceMatcher_GPU_base
-        {
-        public:
-            explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(HammingDist) {}
-            explicit BruteForceMatcher_GPU(HammingLUT /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
-        };
         template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BruteForceMatcher_GPU_base
         {
         public:

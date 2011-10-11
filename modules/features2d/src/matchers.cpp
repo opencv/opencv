@@ -342,7 +342,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
     }
     else if( !descriptorMatcherType.compare( "BruteForce-HammingLUT") )
     {
-        dm = new BruteForceMatcher<HammingLUT>();
+        dm = new BruteForceMatcher<Hamming>();
     }
 
     return dm;

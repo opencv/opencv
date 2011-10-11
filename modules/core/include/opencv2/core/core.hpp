@@ -598,6 +598,9 @@ public:
     //! per-element multiplication
     Vec mul(const Vec<_Tp, cn>& v) const;
     
+    //! conjugation (makes sense for complex numbers and quaternions)
+    Vec conj() const;
+    
     /*!
       cross product of the two 3D vectors.
     
