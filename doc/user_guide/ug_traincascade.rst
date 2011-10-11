@@ -30,6 +30,7 @@ and ``opencv_haartraining`` can not load a classifier in another format for the 
 Also there are some auxilary utilities related to the cascade classifier training. 
 
     * ``opencv_createsamples`` is used to prepare the training base of positive samples and the test samples too. ``opencv_createsamples`` produces the positive samples dataset in a format that applicable (supported) both in ``opencv_haartraining`` and ``opencv_traincascade`` applications. 
+    
     * ``opencv_performance`` may be used to evaluate the quality of the classifier trained by ``opencv_haartraining`` application only. It takes a collection of marked up images, applies the classifier and outputs the performance, i.e. number of found objects, number of missed objects, number of false alarms and other information.
 
 Since ``opencv_haartraining`` is obsolete application, only ``opencv_traincascade`` will be described futher. ``opencv_createsamples`` utility is  needed 
