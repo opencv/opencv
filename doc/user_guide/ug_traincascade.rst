@@ -159,7 +159,7 @@ Image img1.jpg contains single object instance with bounding rectangle (140, 100
  
 In order to create positive samples from such collection ``-info`` argument should be specified instead of ``-img``:
 
-* ``info <collection_file_name>``
+* ``-info <collection_file_name>``
 
     Description file of marked up images collection.
  
